@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Music, Users, DollarSign, Plus, Trash2, Edit } from "lucide-react";
 import { format } from "date-fns";
+import { MUSIC_GENRES } from "@/data/genres";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function FestivalsAdminPage() {
   const { toast } = useToast();
@@ -65,10 +67,10 @@ export default function FestivalsAdminPage() {
           end_date: festivalData.end_date,
           description: festivalData.description,
           metadata: {
-            location: festivalData.location,
+            city_id: festivalData.city_id,
             capacity: parseInt(festivalData.capacity),
             ticket_price: parseInt(festivalData.ticket_price),
-            genres: festivalData.genres?.split(",").map((g: string) => g.trim()) || [],
+            genres: festivalData.genres || [],
           },
         })
         .select()
@@ -259,11 +261,32 @@ function FestivalForm({ onSubmit, initialData }: { onSubmit: (data: any) => void
     start_date: initialData?.start_date?.split("T")[0] || "",
     end_date: initialData?.end_date?.split("T")[0] || "",
     description: initialData?.description || "",
-    location: initialData?.metadata?.location || "",
+    city_id: initialData?.metadata?.city_id || "",
     capacity: initialData?.metadata?.capacity || "",
     ticket_price: initialData?.metadata?.ticket_price || "",
-    genres: initialData?.metadata?.genres?.join(", ") || "",
+    genres: initialData?.metadata?.genres || [],
   });
+
+  const { data: cities } = useQuery({
+    queryKey: ["cities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id, name, country")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleGenreToggle = (genre: string) => {
+    setFormData((prev) => {
+      const genres = prev.genres.includes(genre)
+        ? prev.genres.filter((g) => g !== genre)
+        : [...prev.genres, genre];
+      return { ...prev, genres };
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,13 +329,22 @@ function FestivalForm({ onSubmit, initialData }: { onSubmit: (data: any) => void
       </div>
 
       <div>
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          value={formData.location}
-          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-          required
-        />
+        <Label htmlFor="city_id">City</Label>
+        <Select
+          value={formData.city_id}
+          onValueChange={(value) => setFormData({ ...formData, city_id: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a city" />
+          </SelectTrigger>
+          <SelectContent>
+            {cities?.map((city) => (
+              <SelectItem key={city.id} value={city.id}>
+                {city.name}, {city.country}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -339,13 +371,24 @@ function FestivalForm({ onSubmit, initialData }: { onSubmit: (data: any) => void
       </div>
 
       <div>
-        <Label htmlFor="genres">Genres (comma-separated)</Label>
-        <Input
-          id="genres"
-          value={formData.genres}
-          onChange={(e) => setFormData({ ...formData, genres: e.target.value })}
-          placeholder="Rock, Pop, Electronic"
-        />
+        <Label>Genres</Label>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          {MUSIC_GENRES.map((genre) => (
+            <div key={genre} className="flex items-center space-x-2">
+              <Checkbox
+                id={`genre-${genre}`}
+                checked={formData.genres.includes(genre)}
+                onCheckedChange={() => handleGenreToggle(genre)}
+              />
+              <label
+                htmlFor={`genre-${genre}`}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {genre}
+              </label>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div>
