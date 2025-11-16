@@ -5,6 +5,7 @@ import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/tr
 import { checkTravelDisruptions } from "@/utils/gameCalendar";
 import { WeatherDisruptionAlert } from "@/components/travel/WeatherDisruptionAlert";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import type { TravelDisruption } from "@/utils/gameCalendar";
 import {
   Dialog,
@@ -107,6 +108,16 @@ export function TravelBookingDialog({
     
     // Combine date and time
     const scheduledDeparture = new Date(`${departureDate}T${departureTime}`);
+    
+    // Validate departure is not in the past
+    if (scheduledDeparture < new Date()) {
+      toast({
+        title: "Invalid Departure Time",
+        description: "You cannot book travel in the past",
+        variant: "destructive",
+      });
+      return;
+    }
 
     await travelMutation.mutateAsync({
       userId: user.id,

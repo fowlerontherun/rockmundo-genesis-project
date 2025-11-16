@@ -55,7 +55,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
 
-      const { data, error } = await (supabase as any)
+      // Fetch regular scheduled activities
+      const { data: scheduledData, error: scheduledError } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', userId)
@@ -64,8 +65,47 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .in('status', ['scheduled', 'in_progress', 'completed'])
         .order('scheduled_start', { ascending: true });
 
-      if (error) throw error;
-      return (data || []) as ScheduledActivity[];
+      if (scheduledError) throw scheduledError;
+
+      // Fetch travel activities for this day
+      const { data: travelData, error: travelError } = await supabase
+        .from('player_travel_history')
+        .select(`
+          *,
+          from_city:cities!player_travel_history_from_city_id_fkey(name, country),
+          to_city:cities!player_travel_history_to_city_id_fkey(name, country)
+        `)
+        .eq('user_id', userId)
+        .gte('scheduled_departure_time', dayStart.toISOString())
+        .lte('scheduled_departure_time', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress'])
+        .order('scheduled_departure_time', { ascending: true });
+
+      if (travelError) throw travelError;
+
+      // Convert travel to scheduled activity format
+      const travelActivities: ScheduledActivity[] = (travelData || []).map(travel => ({
+        id: travel.id,
+        user_id: travel.user_id,
+        profile_id: travel.user_id,
+        activity_type: 'travel' as ActivityType,
+        scheduled_start: travel.scheduled_departure_time || travel.departure_time,
+        scheduled_end: travel.arrival_time,
+        duration_minutes: travel.travel_duration_hours * 60,
+        status: travel.status as ActivityStatus,
+        title: `Travel to ${travel.to_city?.name || 'Unknown'}`,
+        description: `${travel.transport_type} from ${travel.from_city?.name || 'Unknown'} to ${travel.to_city?.name || 'Unknown'}`,
+        location: `${travel.from_city?.name || 'Unknown'} → ${travel.to_city?.name || 'Unknown'}`,
+        metadata: {
+          transport_type: travel.transport_type,
+          cost_paid: travel.cost_paid,
+          from_city: travel.from_city,
+          to_city: travel.to_city,
+        },
+        created_at: travel.created_at,
+      }));
+
+      return [...(scheduledData || []), ...travelActivities] as ScheduledActivity[];
     },
     enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute
