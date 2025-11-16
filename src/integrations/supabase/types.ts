@@ -4915,9 +4915,11 @@ export type Database = {
           band_id: string
           cost_to_produce: number
           created_at: string
+          custom_design_id: string | null
           design_name: string
           id: string
           item_type: string
+          sales_boost_pct: number | null
           selling_price: number
           stock_quantity: number
           updated_at: string
@@ -4926,9 +4928,11 @@ export type Database = {
           band_id: string
           cost_to_produce?: number
           created_at?: string
+          custom_design_id?: string | null
           design_name: string
           id?: string
           item_type: string
+          sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
           updated_at?: string
@@ -4937,9 +4941,11 @@ export type Database = {
           band_id?: string
           cost_to_produce?: number
           created_at?: string
+          custom_design_id?: string | null
           design_name?: string
           id?: string
           item_type?: string
+          sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
           updated_at?: string
@@ -4950,6 +4956,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_merchandise_custom_design_id_fkey"
+            columns: ["custom_design_id"]
+            isOneToOne: false
+            referencedRelation: "tshirt_designs"
             referencedColumns: ["id"]
           },
         ]
@@ -8587,6 +8600,47 @@ export type Database = {
             columns: ["route_id"]
             isOneToOne: false
             referencedRelation: "city_transport_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tshirt_designs: {
+        Row: {
+          background_color: string
+          band_id: string | null
+          created_at: string | null
+          design_data: Json
+          design_name: string
+          id: string
+          preview_image_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          background_color: string
+          band_id?: string | null
+          created_at?: string | null
+          design_data: Json
+          design_name: string
+          id?: string
+          preview_image_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          background_color?: string
+          band_id?: string | null
+          created_at?: string | null
+          design_data?: Json
+          design_name?: string
+          id?: string
+          preview_image_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tshirt_designs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]

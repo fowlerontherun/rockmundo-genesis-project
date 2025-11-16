@@ -101,6 +101,8 @@ const defaultInventoryStub: MerchInventoryItem = {
   stock_quantity: 64,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  custom_design_id: null,
+  sales_boost_pct: 0,
 };
 
 const generateOrderId = (bandId: string, index: number) => `${bandId}-${index}`;
