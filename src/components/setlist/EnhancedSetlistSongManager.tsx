@@ -135,21 +135,23 @@ export const EnhancedSetlistSongManager = ({
         currentEncoreCount: encoreCount
       });
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("setlist_songs")
         .update({ 
           section: 'encore', 
           position: encoreCount + 1,
           is_encore: true 
         })
-        .eq("id", setlistSongId);
+        .eq("id", setlistSongId)
+        .select();
       
       if (error) {
         console.error('[moveToEncore] Error:', error);
         throw error;
       }
       
-      console.log('[moveToEncore] Successfully moved to encore');
+      console.log('[moveToEncore] Successfully moved to encore:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
@@ -173,21 +175,23 @@ export const EnhancedSetlistSongManager = ({
         currentMainCount: mainCount
       });
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("setlist_songs")
         .update({ 
           section: 'main', 
           position: mainCount + 1,
           is_encore: false 
         })
-        .eq("id", setlistSongId);
+        .eq("id", setlistSongId)
+        .select();
       
       if (error) {
         console.error('[moveToMain] Error:', error);
         throw error;
       }
       
-      console.log('[moveToMain] Successfully moved to main');
+      console.log('[moveToMain] Successfully moved to main:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
