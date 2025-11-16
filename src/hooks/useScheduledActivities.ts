@@ -55,7 +55,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
 
-      const { data, error } = await (supabase as any)
+      // Fetch regular scheduled activities
+      const { data: scheduledData, error: scheduledError } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', userId)
@@ -64,8 +65,111 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .in('status', ['scheduled', 'in_progress', 'completed'])
         .order('scheduled_start', { ascending: true });
 
-      if (error) throw error;
-      return (data || []) as ScheduledActivity[];
+      if (scheduledError) throw scheduledError;
+
+      // Fetch travel activities for this day
+      const { data: travelData, error: travelError } = await supabase
+        .from('player_travel_history')
+        .select(`
+          *,
+          from_city:cities!player_travel_history_from_city_id_fkey(name, country),
+          to_city:cities!player_travel_history_to_city_id_fkey(name, country)
+        `)
+        .eq('user_id', userId)
+        .gte('scheduled_departure_time', dayStart.toISOString())
+        .lte('scheduled_departure_time', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress'])
+        .order('scheduled_departure_time', { ascending: true });
+
+      if (travelError) throw travelError;
+
+      // Fetch profile to get employment info
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      let workActivities: ScheduledActivity[] = [];
+      
+      if (profile) {
+        // Fetch employment with auto_clock_in enabled
+        const { data: employment } = await supabase
+          .from('player_employment')
+          .select(`
+            *,
+            jobs (
+              title,
+              shift_start_hour,
+              shift_duration_hours,
+              work_days
+            )
+          `)
+          .eq('profile_id', profile.id)
+          .eq('status', 'employed')
+          .eq('auto_clock_in', true)
+          .maybeSingle();
+
+        // If auto-attend is enabled and today is a work day, add work shift to schedule
+        if (employment?.jobs) {
+          const job = employment.jobs as any;
+          const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+          const workDays = job.work_days || [];
+          
+          if (workDays.includes(dayOfWeek)) {
+            const shiftStart = new Date(date);
+            shiftStart.setHours(job.shift_start_hour || 9, 0, 0, 0);
+            
+            const shiftEnd = new Date(shiftStart);
+            shiftEnd.setHours(shiftStart.getHours() + (job.shift_duration_hours || 8), 0, 0, 0);
+
+            workActivities.push({
+              id: `work-shift-${employment.id}-${date.toISOString().split('T')[0]}`,
+              user_id: userId,
+              profile_id: profile.id,
+              activity_type: 'work' as ActivityType,
+              scheduled_start: shiftStart.toISOString(),
+              scheduled_end: shiftEnd.toISOString(),
+              status: 'scheduled' as ActivityStatus,
+              title: `Work: ${job.title}`,
+              description: `Auto-scheduled work shift`,
+              metadata: {
+                employment_id: employment.id,
+                job_id: employment.job_id,
+                auto_scheduled: true
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              started_at: null,
+              completed_at: null
+            });
+          }
+        }
+      }
+
+      // Convert travel to scheduled activity format
+      const travelActivities: ScheduledActivity[] = (travelData || []).map(travel => ({
+        id: travel.id,
+        user_id: travel.user_id,
+        profile_id: travel.user_id,
+        activity_type: 'travel' as ActivityType,
+        scheduled_start: travel.scheduled_departure_time || travel.departure_time,
+        scheduled_end: travel.arrival_time,
+        duration_minutes: travel.travel_duration_hours * 60,
+        status: travel.status as ActivityStatus,
+        title: `Travel to ${travel.to_city?.name || 'Unknown'}`,
+        description: `${travel.transport_type} from ${travel.from_city?.name || 'Unknown'} to ${travel.to_city?.name || 'Unknown'}`,
+        location: `${travel.from_city?.name || 'Unknown'} → ${travel.to_city?.name || 'Unknown'}`,
+        metadata: {
+          transport_type: travel.transport_type,
+          cost_paid: travel.cost_paid,
+          from_city: travel.from_city,
+          to_city: travel.to_city,
+        },
+        created_at: travel.created_at,
+      }));
+
+      return [...(scheduledData || []), ...travelActivities, ...workActivities] as ScheduledActivity[];
     },
     enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute

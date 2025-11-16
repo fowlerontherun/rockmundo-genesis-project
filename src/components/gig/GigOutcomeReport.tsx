@@ -10,6 +10,7 @@ import {
   type GearModifierEffects,
 } from "@/utils/gearModifiers";
 import { buildGearOutcomeNarrative, type GearOutcomeNarrative } from "@/utils/gigNarrative";
+import { EnhancedGigMetrics } from "./EnhancedGigMetrics";
 
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -299,6 +300,32 @@ export const GigOutcomeReport = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Enhanced Metrics */}
+          <EnhancedGigMetrics
+            metrics={{
+              attendance: actualAttendance,
+              capacity: venueCapacity,
+              revenue: totalRevenue,
+              fameGained: fameGained,
+              averagePerformanceScore: overallRating * 4, // Convert to percentage
+              crowdEngagement: attendancePercentage,
+              bestSong: songPerformances.length > 0 
+                ? songs.find(s => s.id === songPerformances.reduce((best, curr) => 
+                    curr.performance_score > best.performance_score ? curr : best
+                  ).song_id)?.title
+                : undefined,
+              worstSong: songPerformances.length > 0
+                ? songs.find(s => s.id === songPerformances.reduce((worst, curr) => 
+                    curr.performance_score < worst.performance_score ? curr : worst
+                  ).song_id)?.title
+                : undefined,
+              encoreWorthy: overallRating >= 20,
+              breakdowns: 0, // TODO: Add breakdown tracking
+              perfectSongs: songPerformances.filter(p => p.performance_score >= 23).length,
+              totalSongs: songPerformances.length
+            }}
+          />
 
           {/* Financial Summary */}
           <Card>

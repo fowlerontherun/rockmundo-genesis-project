@@ -100,9 +100,8 @@ const SocialMedia = () => {
 
                   <TabsContent value="feed">
                     <TwaaterFeed
-                      feed={twaaterFeed || []}
-                      isLoading={twaaterFeedLoading}
                       viewerAccountId={twaaterAccount.id}
+                      feedType="feed"
                     />
                   </TabsContent>
 

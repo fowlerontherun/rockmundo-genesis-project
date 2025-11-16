@@ -23,10 +23,10 @@ export function validateSetlistForSlot(
   slotId: string
 ): { valid: boolean; message?: string } {
   const slotLimits: Record<string, { max: number; name: string }> = {
-    kids: { max: 30 * 60, name: 'Kids Slot (30 min max)' },
-    opening: { max: 30 * 60, name: 'Opening Slot (30 min max)' },
-    support: { max: 45 * 60, name: 'Support Slot (45 min max)' },
-    headline: { max: 75 * 60, name: 'Headline Slot (75 min max)' },
+    kids: { max: 35 * 60, name: 'Kids Slot (30 min slot + 5 min flex)' },
+    opening: { max: 35 * 60, name: 'Opening Slot (30 min slot + 5 min flex)' },
+    support: { max: 50 * 60, name: 'Support Slot (45 min slot + 5 min flex)' },
+    headline: { max: 80 * 60, name: 'Headline Slot (75 min slot + 5 min flex)' },
   };
 
   const limit = slotLimits[slotId];

@@ -30,7 +30,6 @@ export interface SetlistSong {
     id: string;
     name: string;
     item_category: string;
-    spotlight_level?: string | null;
   } | null;
 }
 
@@ -81,8 +80,7 @@ export const useSetlistSongs = (setlistId: string | null) => {
           performance_items (
             id,
             name,
-            item_category,
-            spotlight_level
+            category
           )
         `)
         .eq("setlist_id", setlistId)
@@ -221,11 +219,15 @@ export const useAddSongToSetlist = () => {
       songId,
       position,
       notes,
+      section = 'main',
+      itemType = 'song',
     }: {
       setlistId: string;
       songId: string;
       position: number;
       notes?: string;
+      section?: string;
+      itemType?: string;
     }) => {
       const { data, error } = await supabase
         .from("setlist_songs")
@@ -234,6 +236,8 @@ export const useAddSongToSetlist = () => {
           song_id: songId,
           position,
           notes,
+          section,
+          item_type: itemType,
         })
         .select()
         .single();

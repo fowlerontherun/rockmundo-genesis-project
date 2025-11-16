@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type Theme = "nightfall" | "sunrise";
+type Theme = "nightfall" | "sunrise" | "forest" | "midnight";
 
 export const ThemeSwitcher = () => {
   const [theme, setTheme] = useState<Theme>("nightfall");
@@ -38,13 +38,25 @@ export const ThemeSwitcher = () => {
         <DropdownMenuItem onClick={() => switchTheme("nightfall")}>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-[hsl(197,88%,60%)]" />
-            <span>Nightfall (Default)</span>
+            <span>Nightfall</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => switchTheme("sunrise")}>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-[hsl(24,95%,58%)]" />
             <span>Sunrise</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => switchTheme("forest")}>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-[hsl(142,76%,36%)]" />
+            <span>Forest</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => switchTheme("midnight")}>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-[hsl(263,70%,50%)]" />
+            <span>Midnight</span>
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>

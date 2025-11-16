@@ -51,6 +51,9 @@ verify_jwt = false
 [functions.process-scheduled-activities]
 verify_jwt = false
 
+[functions.advisor-chat]
+verify_jwt = true
+
 [functions.generate-gig-offers]
 verify_jwt = false
 

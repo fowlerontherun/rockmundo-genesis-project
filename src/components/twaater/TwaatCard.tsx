@@ -82,13 +82,27 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[hsl(var(--twaater-purple))] to-[hsl(var(--primary))] flex items-center justify-center text-white font-bold">
+          <div 
+            className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[hsl(var(--twaater-purple))] to-[hsl(var(--primary))] flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = `/twaater/${twaat.account.handle}`;
+            }}
+          >
             {twaat.account.display_name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-                <span className="font-bold hover:underline truncate">{twaat.account.display_name}</span>
+                <span 
+                  className="font-bold hover:underline truncate cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.location.href = `/twaater/${twaat.account.handle}`;
+                  }}
+                >
+                  {twaat.account.display_name}
+                </span>
                 {twaat.account.verified && (
                   <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: 'hsl(var(--twaater-purple))' }} />
                 )}
