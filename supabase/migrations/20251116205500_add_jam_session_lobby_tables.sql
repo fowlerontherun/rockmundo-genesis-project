@@ -36,20 +36,37 @@ drop policy if exists "Participants can view session participants" on public.jam
 create policy "Participants can view session participants"
   on public.jam_session_participants
   for select
-  using (auth.role() = 'authenticated');
+  using (
+    jam_session_id in (
+      select jsp.jam_session_id
+      from public.jam_session_participants jsp
+      where jsp.profile_id in (select id from public.profiles where user_id = auth.uid())
+    )
+    or jam_session_id in (
+      select js.id
+      from public.jam_sessions js
+      where js.host_id in (select id from public.profiles where user_id = auth.uid())
+    )
+  );
 
 drop policy if exists "Participants can register themselves" on public.jam_session_participants;
 create policy "Participants can register themselves"
   on public.jam_session_participants
   for insert
-  with check (auth.role() = 'authenticated');
+  with check (
+    profile_id in (select id from public.profiles where user_id = auth.uid())
+  );
 
 drop policy if exists "Participants can update readiness" on public.jam_session_participants;
 create policy "Participants can update readiness"
   on public.jam_session_participants
   for update
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (
+    profile_id in (select id from public.profiles where user_id = auth.uid())
+  )
+  with check (
+    profile_id in (select id from public.profiles where user_id = auth.uid())
+  );
 
 -- Create jam_session_messages table for lobby chat
 create table if not exists public.jam_session_messages (
@@ -66,16 +83,43 @@ create index if not exists jam_session_messages_session_idx
 alter table public.jam_session_messages enable row level security;
 
 drop policy if exists "Jam messages readable by authenticated" on public.jam_session_messages;
-create policy "Jam messages readable by authenticated"
+create policy "Jam session members can read messages"
   on public.jam_session_messages
   for select
-  using (auth.role() = 'authenticated');
+  using (
+    jam_session_id in (
+      select jsp.jam_session_id
+      from public.jam_session_participants jsp
+      where jsp.profile_id in (select id from public.profiles where user_id = auth.uid())
+    )
+    or jam_session_id in (
+      select js.id
+      from public.jam_sessions js
+      where js.host_id in (select id from public.profiles where user_id = auth.uid())
+    )
+  );
 
 drop policy if exists "Jam messages insertable by authenticated" on public.jam_session_messages;
-create policy "Jam messages insertable by authenticated"
+create policy "Jam session members can post messages"
   on public.jam_session_messages
   for insert
-  with check (auth.role() = 'authenticated');
+  with check (
+    sender_profile_id in (select id from public.profiles where user_id = auth.uid())
+    and (
+      exists (
+        select 1
+        from public.jam_session_participants jsp
+        where jsp.jam_session_id = jam_session_messages.jam_session_id
+          and jsp.profile_id = sender_profile_id
+      )
+      or exists (
+        select 1
+        from public.jam_sessions js
+        where js.id = jam_session_messages.jam_session_id
+          and js.host_id = sender_profile_id
+      )
+    )
+  );
 
 -- Track whether a session is broadcast to the community feed
 alter table public.jam_sessions
