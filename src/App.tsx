@@ -60,7 +60,7 @@ const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
-const AwardShows = lazyWithRetry(() => import("./pages/AwardShows"));
+const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
@@ -194,7 +194,7 @@ function App() {
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />
-                    <Route path="awards" element={<AwardShows />} />
+                    <Route path="awards" element={<Awards />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
