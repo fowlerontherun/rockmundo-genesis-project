@@ -1806,6 +1806,66 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_catalog: {
+        Row: {
+          base_price: number
+          brand: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          durability: number | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          model: string | null
+          name: string
+          quality_rating: number | null
+          rarity: string | null
+          required_level: number | null
+          stat_boosts: Json | null
+          subcategory: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_price: number
+          brand?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          durability?: number | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          model?: string | null
+          name: string
+          quality_rating?: number | null
+          rarity?: string | null
+          required_level?: number | null
+          stat_boosts?: Json | null
+          subcategory?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number
+          brand?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          durability?: number | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          model?: string | null
+          name?: string
+          quality_rating?: number | null
+          rarity?: string | null
+          required_level?: number | null
+          stat_boosts?: Json | null
+          subcategory?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       equipment_items: {
         Row: {
           category: string
@@ -1923,6 +1983,71 @@ export type Database = {
         }
         Relationships: []
       }
+      fan_campaigns: {
+        Row: {
+          band_id: string | null
+          budget: number | null
+          campaign_name: string
+          campaign_type: string
+          cost_per_fan: number | null
+          created_at: string | null
+          end_date: string
+          engagement_rate: number | null
+          id: string
+          new_fans: number | null
+          reach: number | null
+          start_date: string
+          status: string | null
+          target_audience: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          budget?: number | null
+          campaign_name: string
+          campaign_type: string
+          cost_per_fan?: number | null
+          created_at?: string | null
+          end_date: string
+          engagement_rate?: number | null
+          id?: string
+          new_fans?: number | null
+          reach?: number | null
+          start_date: string
+          status?: string | null
+          target_audience?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          budget?: number | null
+          campaign_name?: string
+          campaign_type?: string
+          cost_per_fan?: number | null
+          created_at?: string | null
+          end_date?: string
+          engagement_rate?: number | null
+          id?: string
+          new_fans?: number | null
+          reach?: number | null
+          start_date?: string
+          status?: string | null
+          target_audience?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fan_campaigns_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fan_demographics: {
         Row: {
           age_18_25: number | null
@@ -1971,6 +2096,69 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           weekly_growth?: number | null
+        }
+        Relationships: []
+      }
+      fan_interactions: {
+        Row: {
+          created_at: string | null
+          fan_id: string | null
+          id: string
+          interaction_data: Json | null
+          interaction_type: string
+          sentiment: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fan_id?: string | null
+          id?: string
+          interaction_data?: Json | null
+          interaction_type: string
+          sentiment?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fan_id?: string | null
+          id?: string
+          interaction_data?: Json | null
+          interaction_type?: string
+          sentiment?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      fan_segments: {
+        Row: {
+          avg_engagement: number | null
+          created_at: string | null
+          fan_count: number | null
+          id: string
+          segment_criteria: Json
+          segment_name: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avg_engagement?: number | null
+          created_at?: string | null
+          fan_count?: number | null
+          id?: string
+          segment_criteria: Json
+          segment_name: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avg_engagement?: number | null
+          created_at?: string | null
+          fan_count?: number | null
+          id?: string
+          segment_criteria?: Json
+          segment_name?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -4349,6 +4537,53 @@ export type Database = {
             columns: ["equipment_id"]
             isOneToOne: false
             referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_equipment_inventory: {
+        Row: {
+          condition: number | null
+          created_at: string | null
+          equipment_id: string
+          id: string
+          is_equipped: boolean | null
+          last_maintained: string | null
+          maintenance_cost: number | null
+          purchased_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          condition?: number | null
+          created_at?: string | null
+          equipment_id: string
+          id?: string
+          is_equipped?: boolean | null
+          last_maintained?: string | null
+          maintenance_cost?: number | null
+          purchased_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          condition?: number | null
+          created_at?: string | null
+          equipment_id?: string
+          id?: string
+          is_equipped?: boolean | null
+          last_maintained?: string | null
+          maintenance_cost?: number | null
+          purchased_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_equipment_inventory_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_catalog"
             referencedColumns: ["id"]
           },
         ]
