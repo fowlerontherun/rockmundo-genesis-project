@@ -29,7 +29,9 @@ create policy "Authenticated users can create community posts" on public.communi
   for insert with check (auth.uid() = author_id);
 
 create policy "Authors can update their community posts" on public.community_posts
-  for update using (auth.uid() = author_id);
+  for update
+  using (auth.uid() = author_id)
+  with check (auth.uid() = author_id);
 
 create policy "Authors can delete their community posts" on public.community_posts
   for delete using (auth.uid() = author_id);
