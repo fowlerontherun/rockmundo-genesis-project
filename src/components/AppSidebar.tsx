@@ -132,7 +132,7 @@ export function AppSidebar() {
         { icon: Plane, label: t('travel'), path: "/travel" },
         { icon: Building2, label: t('currentCity'), path: cityOverviewPath },
         { icon: TrendingUp, label: t('worldPulse'), path: "/world-pulse" },
-        { icon: Map, label: t('tours'), path: "/tours" },
+        { icon: Map, label: t('tours'), path: "/tour-manager" },
       ],
     },
     {
