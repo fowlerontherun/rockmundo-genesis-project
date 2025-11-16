@@ -95,7 +95,8 @@ export function AppSidebar() {
       items: [
         { icon: Music, label: "Songwriting", path: "/songwriting" },
         { icon: Disc, label: "Song Catalog", path: "/song-manager" },
-        { icon: Disc, label: "Streaming", path: "/streaming-platforms" },
+        { icon: Disc, label: "Streaming", path: "/streaming" },
+        { icon: TrendingUp, label: "Charts", path: "/music/charts" },
         { icon: Music, label: "Song Market", path: "/song-market" },
         { icon: Package, label: "Releases", path: "/release-manager" },
         { icon: Music, label: "Recording", path: "/recording-studio" },
