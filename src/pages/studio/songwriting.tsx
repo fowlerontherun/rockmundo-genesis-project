@@ -25,8 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Music, FileText, Clock, CheckCircle2, Lock } from "lucide-react";
+import { Plus, Music, FileText, Clock, CheckCircle2, Lock, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { MUSIC_GENRES } from "@/data/genres";
+import { Switch } from "@/components/ui/switch";
 
 export default function SongwritingPage() {
   const { user } = useAuth();
@@ -47,6 +49,11 @@ export default function SongwritingPage() {
   const [selectedThemeId, setSelectedThemeId] = useState<string>("");
   const [selectedChordProgressionId, setSelectedChordProgressionId] = useState<string>("");
   const [initialLyrics, setInitialLyrics] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState<string>("");
+  const [selectedMood, setSelectedMood] = useState<string>("");
+  const [useAILyrics, setUseAILyrics] = useState(false);
+  const [coWriters, setCoWriters] = useState<string>("0");
+  const [sessionMusicians, setSessionMusicians] = useState<string>("0");
 
   const selectedProject = projects?.find(p => p.id === selectedProjectId);
 
@@ -58,6 +65,13 @@ export default function SongwritingPage() {
       theme_id: selectedThemeId || null,
       chord_progression_id: selectedChordProgressionId || null,
       initial_lyrics: initialLyrics || null,
+      genres: selectedGenre ? [selectedGenre] : null,
+      creative_brief: {
+        mood: selectedMood || null,
+        useAILyrics,
+        coWriters: parseInt(coWriters) || 0,
+        sessionMusicians: parseInt(sessionMusicians) || 0,
+      },
     });
 
     setIsCreateDialogOpen(false);
@@ -65,6 +79,11 @@ export default function SongwritingPage() {
     setSelectedThemeId("");
     setSelectedChordProgressionId("");
     setInitialLyrics("");
+    setSelectedGenre("");
+    setSelectedMood("");
+    setUseAILyrics(false);
+    setCoWriters("0");
+    setSessionMusicians("0");
   };
 
   const handleUpdateLyrics = async (lyrics: string) => {
@@ -148,6 +167,42 @@ export default function SongwritingPage() {
                   placeholder="My New Song"
                 />
               </div>
+              
+              <div>
+                <Label htmlFor="genre">Genre</Label>
+                <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+                  <SelectTrigger id="genre">
+                    <SelectValue placeholder="Select a genre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MUSIC_GENRES.map((genre) => (
+                      <SelectItem key={genre} value={genre}>
+                        {genre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="mood">Mood Palette (Optional)</Label>
+                <Select value={selectedMood} onValueChange={setSelectedMood}>
+                  <SelectTrigger id="mood">
+                    <SelectValue placeholder="Select a mood" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="upbeat">Upbeat</SelectItem>
+                    <SelectItem value="melancholic">Melancholic</SelectItem>
+                    <SelectItem value="energetic">Energetic</SelectItem>
+                    <SelectItem value="calm">Calm</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="romantic">Romantic</SelectItem>
+                    <SelectItem value="aggressive">Aggressive</SelectItem>
+                    <SelectItem value="introspective">Introspective</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label htmlFor="theme">Theme (Optional)</Label>
                 <Select value={selectedThemeId} onValueChange={setSelectedThemeId}>
@@ -163,6 +218,7 @@ export default function SongwritingPage() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
                 <Label htmlFor="chords">Chord Progression (Optional)</Label>
                 <Select value={selectedChordProgressionId} onValueChange={setSelectedChordProgressionId}>
@@ -178,6 +234,53 @@ export default function SongwritingPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="ai-lyrics">Use AI for Lyrics</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Generate lyrics with AI assistance
+                  </p>
+                </div>
+                <Switch
+                  id="ai-lyrics"
+                  checked={useAILyrics}
+                  onCheckedChange={setUseAILyrics}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="cowriters">Co-Writers</Label>
+                <Input
+                  id="cowriters"
+                  type="number"
+                  min="0"
+                  max="5"
+                  value={coWriters}
+                  onChange={(e) => setCoWriters(e.target.value)}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Collaborate with other songwriters (0-5)
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="musicians">Session Musicians</Label>
+                <Input
+                  id="musicians"
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={sessionMusicians}
+                  onChange={(e) => setSessionMusicians(e.target.value)}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hire session musicians for recording (0-10)
+                </p>
+              </div>
+
               <div>
                 <Label htmlFor="lyrics">Initial Lyrics (Optional)</Label>
                 <Textarea
@@ -188,7 +291,9 @@ export default function SongwritingPage() {
                   rows={4}
                 />
               </div>
+
               <Button onClick={handleCreateProject} className="w-full">
+                <Sparkles className="mr-2 h-4 w-4" />
                 Create Project
               </Button>
             </div>
