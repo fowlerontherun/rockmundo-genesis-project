@@ -100,6 +100,8 @@ const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog")
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
+const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
+const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
@@ -234,6 +236,8 @@ function App() {
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="radio" element={<Radio />} />
+                    <Route path="music-videos" element={<MusicVideos />} />
+                    <Route path="radio-stations" element={<RadioStations />} />
                     <Route path="performance" element={<Performance />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="media" element={<MediaNetworks />} />
