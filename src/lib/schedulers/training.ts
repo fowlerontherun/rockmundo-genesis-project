@@ -137,19 +137,21 @@ export const calculateNextTrainingSession = (
   const intervalDays = getIntervalDays(cadence, sessionsPerWeek);
   const normalizedPreferredDays = normalizeWeekdays(preferredWeekdays);
 
-  let candidate = new Date(baseline);
+  const anchor = new Date(baseline);
+  let candidate: Date;
 
-  if (candidate.getTime() <= reference.getTime()) {
-    candidate = new Date(reference);
+  if (lastCompletedAt) {
+    candidate = cadence === "monthly" ? addMonths(anchor, 1) : addDays(anchor, intervalDays);
+  } else {
+    candidate = anchor.getTime() < reference.getTime() ? new Date(reference) : anchor;
   }
 
   if (cadence === "monthly") {
-    const scheduled = applyPreferredTime(addMonths(candidate, 1), preferredTime);
+    const scheduled = applyPreferredTime(candidate, preferredTime);
     return clampToFuture(scheduled, reference);
   }
 
-  const nextWindow = addDays(candidate, intervalDays);
-  const alignedWeekday = findNextPreferredWeekday(nextWindow, normalizedPreferredDays, reference);
+  const alignedWeekday = findNextPreferredWeekday(candidate, normalizedPreferredDays, reference);
   const scheduled = applyPreferredTime(alignedWeekday, preferredTime);
 
   return clampToFuture(scheduled, reference);
