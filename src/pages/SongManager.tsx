@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SongFilters } from "@/components/songs/SongFilters";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
-import { Music, ArrowLeft, Star, Calendar, Music2 } from "lucide-react";
+import { Music, ArrowLeft, Star, Calendar, Music2, Archive } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { SongArchiveButton } from "@/components/song/SongArchiveButton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SongManager = () => {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ const SongManager = () => {
   const [genreFilter, setGenreFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date_desc");
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: songs, isLoading } = useQuery({
     queryKey: ["user-songs", user?.id],
@@ -80,6 +83,11 @@ const SongManager = () => {
 
     let filtered = [...songs];
 
+    // Filter by archived status
+    filtered = filtered.filter((song) => 
+      showArchived ? song.archived === true : song.archived !== true
+    );
+
     if (searchQuery) {
       filtered = filtered.filter((song) =>
         song.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -110,7 +118,7 @@ const SongManager = () => {
     });
 
     return filtered;
-  }, [songs, searchQuery, genreFilter, sortBy]);
+  }, [songs, searchQuery, genreFilter, sortBy, showArchived]);
 
   const stats = useMemo(() => {
     if (!songs) return { total: 0, avgQuality: 0, genres: 0 };
@@ -184,16 +192,44 @@ const SongManager = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <SongFilters
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        genreFilter={genreFilter}
-        onGenreChange={setGenreFilter}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        availableGenres={availableGenres}
-      />
+      {/* Archive Toggle */}
+      <Tabs defaultValue="active" className="w-full" onValueChange={(v) => setShowArchived(v === "archived")}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="active">
+            Active Songs ({songs?.filter(s => !s.archived).length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="archived">
+            <Archive className="h-4 w-4 mr-2" />
+            Archived ({songs?.filter(s => s.archived).length || 0})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-6">
+          {/* Filters */}
+          <SongFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            genreFilter={genreFilter}
+            onGenreChange={setGenreFilter}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            availableGenres={availableGenres}
+          />
+        </TabsContent>
+
+        <TabsContent value="archived" className="space-y-6">
+          {/* Filters */}
+          <SongFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            genreFilter={genreFilter}
+            onGenreChange={setGenreFilter}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            availableGenres={availableGenres}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Songs Grid */}
       {isLoading ? (
@@ -279,6 +315,16 @@ const SongManager = () => {
                       {song.catalog_status}
                     </Badge>
                   )}
+
+                  {/* Archive Button */}
+                  <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                    <SongArchiveButton 
+                      songId={song.id} 
+                      isArchived={song.archived || false}
+                      variant="ghost"
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </Card>
             );
