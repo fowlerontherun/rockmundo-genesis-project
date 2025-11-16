@@ -11,12 +11,14 @@ import { TwaaterAccountSwitcher } from "@/components/twaater/TwaaterAccountSwitc
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
 import { SuggestedAccounts } from "@/components/twaater/SuggestedAccounts";
 import { TrendingSection } from "@/components/twaater/TrendingSection";
+import { TwaaterProfileEditDialog } from "@/components/twaater/TwaaterProfileEditDialog";
 import { MessageCircle, TrendingUp, Bell } from "lucide-react";
 
 const Twaater = () => {
   const { profile } = useGameData();
   const [selectedOwnerType, setSelectedOwnerType] = useState<"persona" | "band">("persona");
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | undefined>(profile?.id);
+
 
   const { account, isLoading: accountLoading } = useTwaaterAccount(
     selectedOwnerType,
@@ -86,7 +88,7 @@ const Twaater = () => {
           <div className="hidden lg:block w-64 xl:w-80 border-r min-h-screen p-4" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
             <div className="space-y-4 sticky top-20">
               <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--twaater-card))' }}>
-                <div className="mb-2">
+                <div className="mb-2 cursor-pointer" onClick={() => window.location.href = `/twaater/${account.handle}`}>
                   <div className="font-bold text-lg">{account.display_name}</div>
                   <div className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>@{account.handle}</div>
                 </div>
@@ -99,6 +101,9 @@ const Twaater = () => {
                     <span className="font-bold">{account.follower_count.toLocaleString()}</span>
                     <span className="ml-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Followers</span>
                   </div>
+                </div>
+                <div className="mt-3">
+                  <TwaaterProfileEditDialog account={account} ownerType={selectedOwnerType} ownerId={selectedOwnerId || ""} />
                 </div>
               </div>
 
