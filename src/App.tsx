@@ -130,6 +130,7 @@ const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
+const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -200,6 +201,7 @@ function App() {
                     <Route path="band-crew" element={<BandCrewManagement />} />
                     <Route path="stage-equipment-system-plan" element={<StageEquipmentSystemPlan />} />
                     <Route path="finances" element={<Finances />} />
+                    <Route path="gear" element={<Gear />} />
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
