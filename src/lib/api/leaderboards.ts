@@ -1,7 +1,8 @@
-// @ts-nocheck
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
-import { supabase } from "@/lib/supabase-client";
-import type { Database, Tables } from "@/lib/supabase-types";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 
 export type LeaderboardSeasonRecord = Tables<"leaderboard_seasons">;
 export type LeaderboardSnapshotRecord = Tables<"leaderboard_season_snapshots">;

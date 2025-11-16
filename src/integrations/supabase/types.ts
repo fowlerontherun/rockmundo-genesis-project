@@ -3517,6 +3517,100 @@ export type Database = {
           },
         ]
       }
+      music_video_configs: {
+        Row: {
+          art_style: string
+          band_id: string | null
+          budget_amount: number
+          budget_tier: string
+          cast_option: string
+          cast_quality: string | null
+          chart_position: number | null
+          chart_velocity: number
+          created_at: string
+          id: string
+          image_quality: string
+          location_style: string | null
+          mtv_spins: number
+          production_value_score: number
+          release_date: string | null
+          song_id: string | null
+          status: string
+          theme: string
+          updated_at: string
+          user_id: string | null
+          youtube_views: number
+        }
+        Insert: {
+          art_style: string
+          band_id?: string | null
+          budget_amount?: number
+          budget_tier: string
+          cast_option: string
+          cast_quality?: string | null
+          chart_position?: number | null
+          chart_velocity?: number
+          created_at?: string
+          id?: string
+          image_quality: string
+          location_style?: string | null
+          mtv_spins?: number
+          production_value_score?: number
+          release_date?: string | null
+          song_id?: string | null
+          status?: string
+          theme: string
+          updated_at?: string
+          user_id?: string | null
+          youtube_views?: number
+        }
+        Update: {
+          art_style?: string
+          band_id?: string | null
+          budget_amount?: number
+          budget_tier?: string
+          cast_option?: string
+          cast_quality?: string | null
+          chart_position?: number | null
+          chart_velocity?: number
+          created_at?: string
+          id?: string
+          image_quality?: string
+          location_style?: string | null
+          mtv_spins?: number
+          production_value_score?: number
+          release_date?: string | null
+          song_id?: string | null
+          status?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string | null
+          youtube_views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_configs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_configs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "music_video_configs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orchestra_bookings: {
         Row: {
           cost: number
@@ -4117,6 +4211,36 @@ export type Database = {
           },
         ]
       }
+      player_instruments: {
+        Row: {
+          created_at: string
+          experience_points: number
+          id: string
+          instrument: string
+          skill_level: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          experience_points?: number
+          id?: string
+          instrument: string
+          skill_level?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          experience_points?: number
+          id?: string
+          instrument?: string
+          skill_level?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_mentor_sessions: {
         Row: {
           attribute_gains: Json
@@ -4207,6 +4331,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_personal_gear: {
+        Row: {
+          condition_rating: number
+          created_at: string
+          gear_name: string
+          gear_type: string
+          id: string
+          is_equipped: boolean
+          notes: string | null
+          purchase_cost: number | null
+          purchase_date: string | null
+          quality_rating: number
+          stat_boosts: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          condition_rating?: number
+          created_at?: string
+          gear_name: string
+          gear_type: string
+          id?: string
+          is_equipped?: boolean
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          quality_rating?: number
+          stat_boosts?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          condition_rating?: number
+          created_at?: string
+          gear_name?: string
+          gear_type?: string
+          id?: string
+          is_equipped?: boolean
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          quality_rating?: number
+          stat_boosts?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       player_scheduled_activities: {
         Row: {
@@ -4400,6 +4572,51 @@ export type Database = {
           platform_id?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      player_training_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_hours: number
+          focus_area: string | null
+          id: string
+          notes: string | null
+          session_type: string
+          skill_slug: string
+          started_at: string
+          updated_at: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_hours?: number
+          focus_area?: string | null
+          id?: string
+          notes?: string | null
+          session_type?: string
+          skill_slug: string
+          started_at?: string
+          updated_at?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_hours?: number
+          focus_area?: string | null
+          id?: string
+          notes?: string | null
+          session_type?: string
+          skill_slug?: string
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+          xp_earned?: number
         }
         Relationships: []
       }

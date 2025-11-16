@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 
 export interface LegacyMilestone {

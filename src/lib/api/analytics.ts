@@ -1,5 +1,6 @@
-// @ts-nocheck
-import type { Tables } from "@/lib/supabase-types";
+import type { Database } from "@/integrations/supabase/types";
+
+type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 
 export type AnalyticsExperimentRecord = Tables<"marketing_experiments">;
 export type AnalyticsVariantRecord = Tables<"marketing_experiment_variants">;
