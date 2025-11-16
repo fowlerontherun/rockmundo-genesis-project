@@ -66,9 +66,7 @@ export const useMarketplace = (userId?: string) => {
   const { data: royalties = [], isLoading: royaltiesLoading } = useQuery({
     queryKey: ["marketplace-royalties", userId],
     queryFn: async () => {
-      if (!userId) return [];
-      
-      // For now return empty array until royalty system is fully implemented
+      // Return empty array - marketplace transactions table doesn't exist yet
       return [];
     },
     enabled: !!userId,
