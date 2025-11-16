@@ -135,6 +135,7 @@ const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"))
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
+const MediaStudio = lazyWithRetry(() => import("./pages/media/studio"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 const LifestyleHomes = lazyWithRetry(() => import("./pages/lifestyle/homes"));
@@ -228,12 +229,17 @@ function App() {
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
-                    <Route path="twaater" element={<Twaater />} />
-                    <Route path="twaater/:handle" element={<TwaaterProfile />} />
-                    <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
-                    <Route path="employment" element={<Employment />} />
-                    <Route path="inventory" element={<InventoryManager />} />
-                    <Route path="merchandise" element={<Merchandise />} />
+                    <Route path="media/studio" element={<MediaStudio />} />
+                    
+                    {/* Redirects for removed placeholder pages */}
+                    <Route path="tours" element={<RedirectTo to="/travel" />} />
+                    <Route path="schedule" element={<RedirectTo to="/dashboard" />} />
+                    <Route path="equipment" element={<RedirectTo to="/gear" />} />
+                    <Route path="equipment-enhanced" element={<RedirectTo to="/gear" />} />
+                    <Route path="fans" element={<RedirectTo to="/pr" />} />
+                    <Route path="fans-enhanced" element={<RedirectTo to="/pr" />} />
+                    <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
+                    <Route path="streaming" element={<StreamingPlatforms />} />
                     <Route path="labels" element={<RecordLabel />} />
                     
                     {/* Redirects */}
