@@ -5,13 +5,16 @@ import {
   type AdvisorInsights,
   type AdvisorSuggestion,
 } from "@/lib/services/advisor";
+import { streamAdvisorChat } from "@/lib/api/advisor-chat";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
   Bot,
@@ -55,11 +58,13 @@ const formatCurrency = (value: number): string => {
 const AdvisorPage = () => {
   const { user } = useAuth();
   const { profile } = useGameData();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<AdvisorInsights | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   const greeting = useMemo(() => {
     if (!profile) return "";
@@ -140,31 +145,79 @@ const AdvisorPage = () => {
     }
   }, [user, loadInsights]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmed = inputValue.trim();
-    if (!trimmed) return;
+    if (!inputValue.trim() || isStreaming) return;
+    
+    const userMessage: AdvisorChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      kind: "general",
+      content: inputValue.trim(),
+      timestamp: new Date(),
+    };
 
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: `user-${Date.now()}`,
-        role: "user",
-        kind: "general",
-        content: trimmed,
-        timestamp: new Date(),
-      },
-      {
-        id: `advisor-ack-${Date.now()}`,
-        role: "advisor",
-        kind: "general",
-        content:
-          "Appreciate the note! Refresh insights after your next move and I'll decode the new trends.",
-        timestamp: new Date(),
-      },
-    ]);
-
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    setIsStreaming(true);
+
+    const session = await supabase.auth.getSession();
+    if (!session.data.session?.access_token) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to chat with the advisor.",
+        variant: "destructive",
+      });
+      setIsStreaming(false);
+      return;
+    }
+
+    let assistantContent = "";
+    const updateAssistant = (chunk: string) => {
+      assistantContent += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "advisor") {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantContent } : m
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `advisor-${Date.now()}`,
+            role: "advisor",
+            kind: "general",
+            content: assistantContent,
+            timestamp: new Date(),
+          },
+        ];
+      });
+    };
+
+    const conversationHistory = messages
+      .filter((m) => m.kind === "general")
+      .map((m) => ({
+        role: m.role === "advisor" ? ("assistant" as const) : ("user" as const),
+        content: m.content,
+      }));
+
+    await streamAdvisorChat({
+      messages: [...conversationHistory, { role: "user", content: userMessage.content }],
+      insights,
+      summary: insights?.summary,
+      apiKey: session.data.session.access_token,
+      onDelta: updateAssistant,
+      onDone: () => setIsStreaming(false),
+      onError: (err) => {
+        toast({
+          title: "Advisor unavailable",
+          description: err,
+          variant: "destructive",
+        });
+        setIsStreaming(false);
+      },
+    });
   };
 
   const summary = insights?.summary;
@@ -394,9 +447,18 @@ const AdvisorPage = () => {
                 <p className="text-xs text-muted-foreground">
                   Pro tip: update your analytics, then hit refresh for fresh marching orders.
                 </p>
-                <Button type="submit" size="sm" disabled={!inputValue.trim()}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Ask advisor
+                <Button type="submit" size="sm" disabled={!inputValue.trim() || isStreaming}>
+                  {isStreaming ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Thinking...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Ask advisor
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
