@@ -150,12 +150,14 @@ const TrainingPage = () => {
       return;
     }
 
+    const existingEnrollment = enrollments.find((entry) => entry.course_id === course.id);
+
     setEnrollingCourseId(course.id);
     try {
       const enrollment = await upsertTrainingEnrollment({
         profileId: user.id,
         course,
-        progress: 0,
+        progress: existingEnrollment?.progress ?? 0,
         status: "enrolled",
         startDate: new Date(),
       });
