@@ -83,6 +83,70 @@ export function useScheduledActivities(date: Date, userId?: string) {
 
       if (travelError) throw travelError;
 
+      // Fetch profile to get employment info
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      let workActivities: ScheduledActivity[] = [];
+      
+      if (profile) {
+        // Fetch employment with auto_clock_in enabled
+        const { data: employment } = await supabase
+          .from('player_employment')
+          .select(`
+            *,
+            jobs (
+              title,
+              shift_start_hour,
+              shift_duration_hours,
+              work_days
+            )
+          `)
+          .eq('profile_id', profile.id)
+          .eq('status', 'employed')
+          .eq('auto_clock_in', true)
+          .maybeSingle();
+
+        // If auto-attend is enabled and today is a work day, add work shift to schedule
+        if (employment?.jobs) {
+          const job = employment.jobs as any;
+          const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+          const workDays = job.work_days || [];
+          
+          if (workDays.includes(dayOfWeek)) {
+            const shiftStart = new Date(date);
+            shiftStart.setHours(job.shift_start_hour || 9, 0, 0, 0);
+            
+            const shiftEnd = new Date(shiftStart);
+            shiftEnd.setHours(shiftStart.getHours() + (job.shift_duration_hours || 8), 0, 0, 0);
+
+            workActivities.push({
+              id: `work-shift-${employment.id}-${date.toISOString().split('T')[0]}`,
+              user_id: userId,
+              profile_id: profile.id,
+              activity_type: 'work' as ActivityType,
+              scheduled_start: shiftStart.toISOString(),
+              scheduled_end: shiftEnd.toISOString(),
+              status: 'scheduled' as ActivityStatus,
+              title: `Work: ${job.title}`,
+              description: `Auto-scheduled work shift`,
+              metadata: {
+                employment_id: employment.id,
+                job_id: employment.job_id,
+                auto_scheduled: true
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              started_at: null,
+              completed_at: null
+            });
+          }
+        }
+      }
+
       // Convert travel to scheduled activity format
       const travelActivities: ScheduledActivity[] = (travelData || []).map(travel => ({
         id: travel.id,
@@ -105,7 +169,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
         created_at: travel.created_at,
       }));
 
-      return [...(scheduledData || []), ...travelActivities] as ScheduledActivity[];
+      return [...(scheduledData || []), ...travelActivities, ...workActivities] as ScheduledActivity[];
     },
     enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute
