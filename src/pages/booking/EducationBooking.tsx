@@ -4,26 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, GraduationCap, Users, Video } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
-
-const ACTIVITY_TYPES = [
-  { value: "reading", label: "Reading", icon: BookOpen },
-  { value: "university", label: "University", icon: GraduationCap },
-  { value: "mentorship", label: "Mentorship", icon: Users },
-  { value: "youtube_video", label: "YouTube Learning", icon: Video },
-];
+import { useQuery } from "@tanstack/react-query";
 
 export default function EducationBooking() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [date, setDate] = useState<Date>();
-  const [activityType, setActivityType] = useState<string>("");
-  const [timeSlot, setTimeSlot] = useState<string>("");
+
+  const scheduledDate = location.state?.scheduledDate;
+  const scheduledHour = location.state?.scheduledHour;
+
+  const [date, setDate] = useState<Date | undefined>(scheduledDate ? new Date(scheduledDate) : undefined);
+  const [activityType, setActivityType] = useState<string>("reading");
+  const [timeSlot, setTimeSlot] = useState<string>(
+    scheduledHour !== undefined ? `${scheduledHour.toString().padStart(2, "0")}:00` : ""
+  );
+  const [selectedMentor, setSelectedMentor] = useState<string>("");
+
+  // Fetch available mentors
+  const { data: mentors = [] } = useQuery({
+    queryKey: ["mentors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("education_mentors")
+        .select("id, name, specialty, cost")
+        .eq("is_active", true)
+        .order("cost", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const handleBookActivity = async () => {
     if (!date || !activityType || !timeSlot || !user) {
@@ -35,9 +52,21 @@ export default function EducationBooking() {
       return;
     }
 
+    if (activityType === "mentorship" && !selectedMentor) {
+      toast({
+        title: "Select a Mentor",
+        description: "Please choose a mentor for your session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const [hours] = timeSlot.split(":").map(Number);
     const scheduledStart = new Date(date);
     scheduledStart.setHours(hours, 0, 0, 0);
+
+    const metadata: any = {};
+    if (activityType === "mentorship") metadata.mentor_id = selectedMentor;
 
     const { error } = await (supabase as any).from("scheduled_activities").insert({
       user_id: user.id,
@@ -45,7 +74,8 @@ export default function EducationBooking() {
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + 60 * 60 * 1000).toISOString(),
       status: "scheduled",
-      title: `${ACTIVITY_TYPES.find(t => t.value === activityType)?.label} Session`,
+      title: `${activityType === "reading" ? "Reading" : activityType === "university" ? "University" : activityType === "mentorship" ? "Mentorship" : "YouTube Learning"}`,
+      metadata,
     });
 
     if (error) {
@@ -77,61 +107,159 @@ export default function EducationBooking() {
         <p className="text-muted-foreground">Schedule your learning sessions in advance</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Date & Time</CardTitle>
-            <CardDescription>Choose when you want to learn</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-md border"
-            />
-            
-            <div className="space-y-2">
-              <Label>Time Slot</Label>
-              <Select value={timeSlot} onValueChange={setTimeSlot}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map(slot => (
-                    <SelectItem key={slot.value} value={slot.value}>
-                      {slot.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs value={activityType} onValueChange={setActivityType}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="reading">
+            <BookOpen className="h-4 w-4 mr-2" />
+            Reading
+          </TabsTrigger>
+          <TabsTrigger value="university">
+            <GraduationCap className="h-4 w-4 mr-2" />
+            University
+          </TabsTrigger>
+          <TabsTrigger value="mentorship">
+            <Users className="h-4 w-4 mr-2" />
+            Mentorship
+          </TabsTrigger>
+          <TabsTrigger value="youtube_video">
+            <Video className="h-4 w-4 mr-2" />
+            YouTube
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Activity Type</CardTitle>
-            <CardDescription>What would you like to do?</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {ACTIVITY_TYPES.map(type => {
-              const Icon = type.icon;
-              return (
-                <Button
-                  key={type.value}
-                  variant={activityType === type.value ? "default" : "outline"}
-                  className="w-full justify-start"
-                  onClick={() => setActivityType(type.value)}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  {type.label}
-                </Button>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="reading" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Date & Time</CardTitle>
+              <CardDescription>Schedule your reading session</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
+              <div className="space-y-2">
+                <Label>Time Slot</Label>
+                <Select value={timeSlot} onValueChange={setTimeSlot}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map(slot => (
+                      <SelectItem key={slot.value} value={slot.value}>
+                        {slot.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="university" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Date & Time</CardTitle>
+              <CardDescription>Schedule university class</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
+              <div className="space-y-2">
+                <Label>Time Slot</Label>
+                <Select value={timeSlot} onValueChange={setTimeSlot}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map(slot => (
+                      <SelectItem key={slot.value} value={slot.value}>
+                        {slot.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="mentorship" className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Select Date & Time</CardTitle>
+                <CardDescription>Schedule mentorship session</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
+                <div className="space-y-2">
+                  <Label>Time Slot</Label>
+                  <Select value={timeSlot} onValueChange={setTimeSlot}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeSlots.map(slot => (
+                        <SelectItem key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Choose Mentor</CardTitle>
+                <CardDescription>Select your mentor</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 max-h-96 overflow-y-auto">
+                {mentors.map(mentor => (
+                  <Button
+                    key={mentor.id}
+                    variant={selectedMentor === mentor.id ? "default" : "outline"}
+                    className="w-full justify-between"
+                    onClick={() => setSelectedMentor(mentor.id)}
+                  >
+                    <span className="flex flex-col items-start">
+                      <span>{mentor.name}</span>
+                      <span className="text-xs text-muted-foreground">{mentor.specialty}</span>
+                    </span>
+                    <span className="text-xs">${mentor.cost}</span>
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="youtube_video" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Date & Time</CardTitle>
+              <CardDescription>Schedule YouTube learning session</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
+              <div className="space-y-2">
+                <Label>Time Slot</Label>
+                <Select value={timeSlot} onValueChange={setTimeSlot}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map(slot => (
+                      <SelectItem key={slot.value} value={slot.value}>
+                        {slot.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <div className="flex gap-4">
         <Button onClick={handleBookActivity} size="lg" className="flex-1">
