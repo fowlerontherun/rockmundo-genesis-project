@@ -30,10 +30,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const adminSections = [
   {
     title: "Festival Management",
-    description: "Manage festivals, slot offers, and band applications",
+    description: "Create and configure official festivals, lineups, and payouts",
     href: "/admin/festivals",
     action: "Manage festivals",
     Icon: CalendarIcon,
+  },
+  {
+    title: "Festival Applications",
+    description: "Review slot applications and moderate player-created festivals",
+    href: "/admin/festival-applications",
+    action: "Review applications",
+    Icon: Users,
   },
   {
     title: "Game Calendar",
