@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -48,7 +47,7 @@ type RadioStationRow = Database["public"]["Tables"]["radio_stations"]["Row"];
 type RadioShowRow = Database["public"]["Tables"]["radio_shows"]["Row"];
 type RadioSubmissionRow = Database["public"]["Tables"]["radio_submissions"]["Row"];
 type SongRow = Database["public"]["Tables"]["songs"]["Row"];
-type ProcessRadioSubmissionSummary = Database["public"]["Functions"]["process_radio_submission"]["Returns"];
+type ProcessRadioSubmissionSummary = any; // RPC function return type
 
 type RadioStationRecord = RadioStationRow & {
   cities?: { name: string | null; country: string | null } | null;
@@ -384,7 +383,7 @@ export default function Radio() {
         throw new Error("Submission could not be created.");
       }
 
-      const { data: summary, error: rpcError } = await supabase.rpc("process_radio_submission", {
+      const { data: summary, error: rpcError } = await (supabase.rpc as any)("process_radio_submission", {
         p_submission_id: inserted.id,
       });
 
