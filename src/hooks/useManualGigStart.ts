@@ -46,6 +46,8 @@ export const useManualGigStart = () => {
     onSuccess: (data) => {
       toast({ title: data.message });
       queryClient.invalidateQueries({ queryKey: ["gig"] });
+      queryClient.invalidateQueries({ queryKey: ["gigs"] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming-gigs"] });
     },
     onError: (error: Error) => {
       toast({

@@ -272,9 +272,14 @@ export default function PerformGig() {
     }
   };
 
-  const handleStartGig = () => {
+  const handleStartGig = async () => {
     if (gigId) {
-      startGigMutation.mutate(gigId);
+      startGigMutation.mutate(gigId, {
+        onSuccess: () => {
+          // Reload gig data after starting
+          loadGig();
+        }
+      });
     }
   };
 
