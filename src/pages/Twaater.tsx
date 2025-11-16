@@ -10,6 +10,7 @@ import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
 import { TwaaterAccountSwitcher } from "@/components/twaater/TwaaterAccountSwitcher";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
 import { SuggestedAccounts } from "@/components/twaater/SuggestedAccounts";
+import { TrendingSection } from "@/components/twaater/TrendingSection";
 import { MessageCircle, TrendingUp, Bell } from "lucide-react";
 
 const Twaater = () => {
@@ -149,13 +150,7 @@ const Twaater = () => {
                 </TabsContent>
 
                 <TabsContent value="trending" className="mt-0">
-                  <div className="p-8 text-center space-y-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    <TrendingUp className="h-12 w-12 mx-auto opacity-50" />
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">Trending Coming Soon</h3>
-                      <p className="text-sm">We're building an algorithm to surface viral twaats and hot topics.</p>
-                    </div>
-                  </div>
+                  <TrendingSection viewerAccountId={account.id} />
                 </TabsContent>
 
                 <TabsContent value="mentions" className="mt-0">
