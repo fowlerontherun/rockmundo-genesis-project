@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -64,11 +63,12 @@ const AdvisorPage = () => {
 
   const greeting = useMemo(() => {
     if (!profile) return "";
+    const currentProfile = profile as any;
     const stageName =
-      profile.stage_name ??
-      profile.display_name ??
-      profile.username ??
-      profile.name ??
+      currentProfile.stage_name ??
+      currentProfile.display_name ??
+      currentProfile.username ??
+      currentProfile.name ??
       "there";
     return `Hey ${stageName}! I'm tracking your career pulse. Ready for a data-powered game plan?`;
   }, [profile]);

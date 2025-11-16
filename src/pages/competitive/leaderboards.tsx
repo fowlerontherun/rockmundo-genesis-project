@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BadgeGrid } from "@/components/achievements";
@@ -180,7 +179,7 @@ const CompetitiveLeaderboards = () => {
 
   useEffect(() => {
     if (!activeSeasonId && seasons && seasons.length) {
-      const activeSeason = seasons.find(season => season.status === "active");
+      const activeSeason = seasons.find(season => (season as any).status === "active");
       setActiveSeasonId(activeSeason?.id ?? seasons[0].id);
     }
   }, [seasons, activeSeasonId]);
@@ -296,8 +295,8 @@ const CompetitiveLeaderboards = () => {
                 )}
               >
                 <span className="font-medium">{season.name}</span>
-                {season.status === "active" && <Badge className="ml-2" variant="secondary">Active</Badge>}
-                {season.status === "upcoming" && <Badge className="ml-2" variant="outline">Upcoming</Badge>}
+                {(season as any).status === "active" && <Badge className="ml-2" variant="secondary">Active</Badge>}
+                {(season as any).status === "upcoming" && <Badge className="ml-2" variant="outline">Upcoming</Badge>}
               </TabsTrigger>
             ))}
           </TabsList>

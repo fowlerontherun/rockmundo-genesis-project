@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Award, Crown, Flame, History, RefreshCw, Sparkles } from "lucide-react";
@@ -32,7 +31,7 @@ const LegacyPage = () => {
   const gameData = useOptionalGameData();
   const profile = gameData?.profile ?? null;
   const profileId = profile?.id ?? null;
-  const profileName = profile?.stage_name || profile?.name || "Your band";
+  const profileName = (profile as any)?.stage_name || (profile as any)?.name || "Your band";
 
   const {
     data: milestones = [],
