@@ -68,7 +68,7 @@ const Layout = () => {
             </div>
           </header>
           
-          <main className="flex-1 p-4 md:p-6">
+          <main className="flex-1 p-3 md:p-4">
             {profileError && (
               <Alert variant="destructive" className="mb-4 max-w-2xl">
                 <AlertCircle className="h-4 w-4" />
