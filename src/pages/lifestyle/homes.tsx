@@ -54,11 +54,13 @@ const LifestyleHomesPage = () => {
   }, [selectedProperty, selectedFinancingOptionId]);
 
   const totalUpgradeCost = useMemo(
-    () => selectedFeatures.reduce((total, feature) => total + feature.upgrade_cost, 0),
+    () => selectedFeatures.reduce((total, feature) => total + Number(feature.upgrade_cost), 0),
     [selectedFeatures]
   );
 
-  const purchasePrice = selectedProperty ? selectedProperty.base_price + totalUpgradeCost : 0;
+  const purchasePrice = selectedProperty
+    ? Number(selectedProperty.base_price) + totalUpgradeCost
+    : 0;
 
   const monthlyPayment = selectedFinancingOption
     ? calculateMonthlyPayment(purchasePrice, selectedFinancingOption)
@@ -151,7 +153,7 @@ const LifestyleHomesPage = () => {
           id: feature.id,
           name: feature.feature_name,
           type: feature.feature_type,
-          cost: feature.upgrade_cost,
+          cost: Number(feature.upgrade_cost),
         })),
         total_upgrade_cost: totalUpgradeCost,
         purchase_price: purchasePrice,
