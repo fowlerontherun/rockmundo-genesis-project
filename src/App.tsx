@@ -53,6 +53,7 @@ const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerMa
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
+const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
 const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
 const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
@@ -154,6 +155,7 @@ function App() {
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
                     <Route path="todays-news" element={<TodaysNewsPage />} />
+                    <Route path="wellness" element={<WellnessPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
