@@ -69,7 +69,6 @@ export const usePlayerPresenceStats = (
 
     try {
       let nextTotalPlayers = 0;
-      let nextOnlinePlayers = 0;
 
       const totalResult = await supabase.from("profiles").select("*", { count: "exact", head: true });
 
@@ -81,25 +80,14 @@ export const usePlayerPresenceStats = (
         nextTotalPlayers = totalResult.count ?? 0;
       }
 
-      const onlineResult = await supabase
-        .from("chat_participants")
-        .select("*", { count: "exact", head: true })
-        .neq("status", "offline");
-
-      if (onlineResult.error) {
-        if (!isMissingRelationError(onlineResult.error)) {
-          throw onlineResult.error;
-        }
-      } else {
-        nextOnlinePlayers = onlineResult.count ?? 0;
-      }
-
       if (!mountedRef.current) {
         return;
       }
 
       setTotalPlayers(nextTotalPlayers);
-      setOnlinePlayers(nextOnlinePlayers);
+      // Set online players to null since we don't track this in the database
+      // The actual online count is tracked via Realtime presence in the chat components
+      setOnlinePlayers(null);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
