@@ -3691,6 +3691,53 @@ export type Database = {
           },
         ]
       }
+      media_appearances: {
+        Row: {
+          air_date: string
+          audience_reach: number | null
+          band_id: string | null
+          created_at: string | null
+          highlight: string | null
+          id: string
+          media_type: string
+          network: string
+          program_name: string
+          sentiment: string | null
+        }
+        Insert: {
+          air_date: string
+          audience_reach?: number | null
+          band_id?: string | null
+          created_at?: string | null
+          highlight?: string | null
+          id?: string
+          media_type: string
+          network: string
+          program_name: string
+          sentiment?: string | null
+        }
+        Update: {
+          air_date?: string
+          audience_reach?: number | null
+          band_id?: string | null
+          created_at?: string | null
+          highlight?: string | null
+          id?: string
+          media_type?: string
+          network?: string
+          program_name?: string
+          sentiment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_appearances_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_facilities: {
         Row: {
           city_id: string | null
@@ -3737,6 +3784,53 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_offers: {
+        Row: {
+          band_id: string | null
+          compensation: number | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          media_type: string
+          network: string
+          program_name: string
+          proposed_date: string
+          status: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          compensation?: number | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          media_type: string
+          network: string
+          program_name: string
+          proposed_date: string
+          status?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          compensation?: number | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          media_type?: string
+          network?: string
+          program_name?: string
+          proposed_date?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]
@@ -5369,6 +5463,62 @@ export type Database = {
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pr_campaigns: {
+        Row: {
+          band_id: string | null
+          budget: number | null
+          campaign_name: string
+          campaign_type: string
+          created_at: string | null
+          end_date: string
+          engagement_rate: number | null
+          id: string
+          media_impressions: number | null
+          reach: number | null
+          start_date: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          budget?: number | null
+          campaign_name: string
+          campaign_type: string
+          created_at?: string | null
+          end_date: string
+          engagement_rate?: number | null
+          id?: string
+          media_impressions?: number | null
+          reach?: number | null
+          start_date: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          budget?: number | null
+          campaign_name?: string
+          campaign_type?: string
+          created_at?: string | null
+          end_date?: string
+          engagement_rate?: number | null
+          id?: string
+          media_impressions?: number | null
+          reach?: number | null
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_campaigns_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]
