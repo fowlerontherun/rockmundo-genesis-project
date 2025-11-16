@@ -15,15 +15,15 @@ import { Badge } from "@/components/ui/badge";
 
 export default function StreamingNew() {
   const navigate = useNavigate();
-  const { userId } = useGameData();
-  const { releases, platforms, analytics, releaseToStreaming, takeDown } = useStreaming(userId || "");
+  const { user } = useGameData();
+  const { releases, platforms, analytics, releaseToStreaming, takeDown } = useStreaming(user?.id || "");
   
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [selectedSong, setSelectedSong] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("");
 
   const { data: recordedSongs } = useQuery({
-    queryKey: ["recorded-songs", userId],
+    queryKey: ["recorded-songs", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recording_sessions")
@@ -34,16 +34,16 @@ export default function StreamingNew() {
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!user?.id,
   });
 
   const handleRelease = () => {
-    if (!selectedSong || !selectedPlatform || !userId) return;
+    if (!selectedSong || !selectedPlatform || !user?.id) return;
 
     releaseToStreaming.mutate({
       songId: selectedSong,
       platformId: selectedPlatform,
-      userId,
+      userId: user.id,
       bandId: undefined,
     }, {
       onSuccess: () => {
