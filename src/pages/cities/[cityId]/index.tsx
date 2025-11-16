@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { MapPin, Building2, Train, Plane, Music, Sparkles, Loader2 } from "lucide-react";
+import {
+  MapPin,
+  Building2,
+  Train,
+  Plane,
+  Music,
+  Sparkles,
+  Loader2,
+  Layers3,
+  Radar,
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CityMap, type CityMapLayerId } from "@/components/cities/CityMap";
+import { CityMapFilters } from "@/components/cities/CityMapFilters";
 import {
   fetchWorldEnvironmentSnapshot,
   fetchCityEnvironmentDetails,
@@ -18,12 +30,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
 import { CityStudiosSection } from "@/components/city/CityStudiosSection";
 import { CityNightClubsSection } from "@/components/city/CityNightClubsSection";
+import { useCityEvents, useCityVenues } from "@/lib/api/cities";
 
 type CityRouteParams = {
   cityId?: string;
 };
 
 interface CityContentProps {
+  cityId: string;
   city: CityRecord | null;
   details: CityEnvironmentDetails | null;
   detailsLoading: boolean;
@@ -96,6 +110,7 @@ export const loadCityPageData = async (cityId: string): Promise<CityPageLoadResu
 };
 
 export const CityContent = ({
+  cityId,
   city,
   details,
   detailsLoading,
@@ -113,6 +128,58 @@ export const CityContent = ({
     () => (city?.cultural_events ?? []).filter((event) => typeof event === "string" && event.trim().length > 0),
     [city?.cultural_events],
   );
+
+  const [activeLayers, setActiveLayers] = useState<CityMapLayerId[]>(["venues", "events"]);
+  const [selectedVenueType, setSelectedVenueType] = useState<string | null>(null);
+  const [showOnlyActiveEvents, setShowOnlyActiveEvents] = useState(true);
+
+  const {
+    data: venues = [],
+    isLoading: venuesLoading,
+  } = useCityVenues(cityId, {
+    enabled: Boolean(cityId),
+  });
+
+  const {
+    data: events = [],
+    isLoading: eventsLoading,
+  } = useCityEvents(cityId, {
+    enabled: Boolean(cityId),
+    fallbackCulturalEvents: culturalEvents,
+    cityName: city?.name,
+  });
+
+  const availableVenueTypes = useMemo(() => {
+    const types = new Set<string>();
+    venues.forEach((venue) => {
+      if (venue.venueType) {
+        types.add(venue.venueType);
+      }
+    });
+    return Array.from(types).sort((a, b) => a.localeCompare(b));
+  }, [venues]);
+
+  const filteredVenues = useMemo(() => {
+    if (!selectedVenueType) {
+      return venues;
+    }
+    return venues.filter((venue) => venue.venueType === selectedVenueType);
+  }, [venues, selectedVenueType]);
+
+  const filteredEvents = useMemo(() => {
+    if (!showOnlyActiveEvents) {
+      return events;
+    }
+
+    return events.filter((event) => event.isActive);
+  }, [events, showOnlyActiveEvents]);
+
+  const activeEventCount = useMemo(
+    () => events.filter((event) => event.isActive).length,
+    [events],
+  );
+
+  const mapHasData = filteredVenues.length > 0 || filteredEvents.length > 0;
 
   const venueHighlights = city?.venueHighlights ?? [];
   const studioProfiles = city?.studioProfiles ?? [];
@@ -241,6 +308,72 @@ export const CityContent = ({
           </div>
         </div>
       </header>
+
+      <Card className="overflow-hidden border-border/60 bg-background/60">
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Layers3 className="h-5 w-5 text-primary" />
+            Live city map
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Visualize venues and world events impacting {city.name}. Use the controls to focus on the layers that
+            matter for your strategy.
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-border/60 bg-background">
+            <CityMap
+              cityName={city.name}
+              country={city.country}
+              venues={filteredVenues}
+              events={filteredEvents}
+              activeLayers={activeLayers}
+              isDataLoading={venuesLoading || eventsLoading}
+            />
+            {!mapHasData && !(venuesLoading || eventsLoading) && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                <div className="flex max-w-xs flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+                  <Radar className="h-5 w-5 text-primary" />
+                  <p>
+                    No spatial data is available yet. Add venues or world events for {city.name} to populate the map
+                    automatically.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-4">
+            <CityMapFilters
+              activeLayers={activeLayers}
+              onLayerToggle={(layer, enabled) => {
+                setActiveLayers((prev) => {
+                  if (enabled) {
+                    if (prev.includes(layer)) {
+                      return prev;
+                    }
+                    return [...prev, layer];
+                  }
+                  return prev.filter((entry) => entry !== layer);
+                });
+              }}
+              selectedVenueType={selectedVenueType}
+              onVenueTypeChange={setSelectedVenueType}
+              availableVenueTypes={availableVenueTypes}
+              showOnlyActiveEvents={showOnlyActiveEvents}
+              onShowOnlyActiveEventsChange={setShowOnlyActiveEvents}
+              stats={{
+                venues: venues.length,
+                events: events.length,
+                activeEvents: activeEventCount,
+              }}
+            />
+            <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-xs text-muted-foreground">
+              Map markers are layered by category so you can distinguish touring opportunities from temporary event
+              boosts. Toggle layers or filter by venue type to tailor the view to your current objectives.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {detailsError && (
         <Alert variant="default" className="border-yellow-200 bg-yellow-50 text-yellow-900">
@@ -476,6 +609,7 @@ export default function City() {
 
   return (
     <CityContent
+      cityId={cityId}
       city={city}
       details={details}
       detailsLoading={detailsLoading}
