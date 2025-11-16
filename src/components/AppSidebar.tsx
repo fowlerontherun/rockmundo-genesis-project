@@ -47,6 +47,7 @@ import {
   TrendingUp,
   Map,
   Crown,
+  Video,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -131,8 +132,8 @@ export function AppSidebar() {
       items: [
         { icon: Users, label: t('band'), path: "/band" },
         { icon: Twitter, label: "Twaater", path: "/twaater" },
+        { icon: Video, label: "DikCok", path: "/dikcok" },
         { icon: Megaphone, label: t('pr'), path: "/pr" },
-        { icon: Share2, label: t('social'), path: "/social" },
         { icon: HeartHandshake, label: t('relationships'), path: "/relationships" },
       ],
     },

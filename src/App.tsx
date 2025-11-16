@@ -180,7 +180,8 @@ function App() {
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
-                    <Route path="social" element={<SocialMedia />} />
+                    <Route path="social" element={<Navigate to="/dikcok" replace />} />
+                    <Route path="dikcok" element={<SocialMedia />} />
                     <Route path="relationships" element={<Relationships />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
