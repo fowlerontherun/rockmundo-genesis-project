@@ -127,6 +127,7 @@ const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
+const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -151,6 +152,7 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
+                    <Route path="todays-news" element={<TodaysNewsPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
