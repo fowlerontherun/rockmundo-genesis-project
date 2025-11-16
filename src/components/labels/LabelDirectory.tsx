@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -225,17 +226,24 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                       ) : null}
                     </CardContent>
 
-                    <CardFooter className="flex items-center justify-between">
+                    <CardFooter className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Rocket className="h-4 w-4" />
                         <span>{activeContracts} artists signed</span>
                       </div>
-                      <Button
-                        onClick={() => handleRequestContract(label)}
-                        disabled={artistEntities.length === 0}
-                      >
-                        Request contract
-                      </Button>
+                      <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
+                        <Button variant="outline" asChild>
+                          <Link to={`/business/labels/${label.id}/dashboard`}>
+                            Revenue dashboard
+                          </Link>
+                        </Button>
+                        <Button
+                          onClick={() => handleRequestContract(label)}
+                          disabled={artistEntities.length === 0}
+                        >
+                          Request contract
+                        </Button>
+                      </div>
                     </CardFooter>
                   </Card>
                 );
