@@ -62,7 +62,7 @@ const MusicHub = () => {
       title: "Songwriting Studio",
       description: "Write and compose original songs from scratch",
       icon: PenLine,
-      path: "/studio/songwriting",
+      path: "/songwriting",
       stats: "Create songs with themes, progressions, and lyrics",
       color: "text-yellow-500",
     },

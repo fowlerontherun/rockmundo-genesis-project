@@ -109,7 +109,6 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
-const StudioSongwriting = lazyWithRetry(() => import("./pages/studio/songwriting"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -187,7 +186,6 @@ function App() {
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="song-market" element={<SongMarket />} />
-                    <Route path="studio/songwriting" element={<StudioSongwriting />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
