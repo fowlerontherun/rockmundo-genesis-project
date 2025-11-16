@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
+import { useSocialOpportunities } from "@/hooks/useSocialOpportunities";
 
 import { AchievementsSection } from "@/components/character/AchievementsSection";
 import { CurrentLearningSection } from "@/components/character/CurrentLearningSection";
@@ -44,6 +45,7 @@ import {
   sendFriendRequest,
   updateFriendshipStatus,
 } from "@/integrations/supabase/friends";
+import { createCommunityPost } from "@/lib/api/feed";
 
 const formatDate = (input: string | null | undefined) => {
   if (!input) {
@@ -162,6 +164,7 @@ const MyCharacter = () => {
   const [searching, setSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [actionTarget, setActionTarget] = useState<string | null>(null);
+  const [quickAction, setQuickAction] = useState<"shoutout" | "jam" | null>(null);
 
   const loadFriendships = useCallback(async () => {
     const profileId = profile?.id;
@@ -230,6 +233,20 @@ const MyCharacter = () => {
     }
     return ids;
   }, [friendships, profile?.id]);
+
+  const excludedProfileIds = useMemo(() => Array.from(existingProfileIds), [existingProfileIds]);
+
+  const {
+    friendRecommendations,
+    mentorRecommendations,
+    collabInvites: socialCollabInvites,
+    loading: socialOpportunitiesLoading,
+    error: socialOpportunitiesError,
+    refetch: refetchSocialOpportunities,
+  } = useSocialOpportunities({
+    profileId: profile?.id ?? null,
+    excludeProfileIds: excludedProfileIds,
+  });
 
   const { accepted, incoming, outgoing, declined } = useMemo(() => {
     const initial = {
@@ -320,6 +337,7 @@ const MyCharacter = () => {
       });
       setSearchResults((previous) => previous.filter((result) => result.id !== targetProfileId));
       await loadFriendships();
+      await refetchSocialOpportunities();
     } catch (error: any) {
       console.error("Failed to send friend request", error);
       toast({
@@ -341,6 +359,7 @@ const MyCharacter = () => {
         description: "You're now connected. Time to jam!",
       });
       await loadFriendships();
+      await refetchSocialOpportunities();
     } catch (error: any) {
       console.error("Failed to accept friend request", error);
       toast({
@@ -362,6 +381,7 @@ const MyCharacter = () => {
         description: "The player has been notified of your decision.",
       });
       await loadFriendships();
+      await refetchSocialOpportunities();
     } catch (error: any) {
       console.error("Failed to decline friend request", error);
       toast({
@@ -383,6 +403,7 @@ const MyCharacter = () => {
         description: "You can always send another request later.",
       });
       await loadFriendships();
+      await refetchSocialOpportunities();
     } catch (error: any) {
       console.error("Failed to cancel friend request", error);
       toast({
@@ -404,6 +425,7 @@ const MyCharacter = () => {
         description: "They're no longer on your friends list.",
       });
       await loadFriendships();
+      await refetchSocialOpportunities();
     } catch (error: any) {
       console.error("Failed to remove friend", error);
       toast({
@@ -413,6 +435,40 @@ const MyCharacter = () => {
       });
     } finally {
       setActionTarget(null);
+    }
+  };
+
+  const handleQuickActionPost = async (action: "shoutout" | "jam") => {
+    if (!profile?.id) {
+      toast({
+        title: "Profile required",
+        description: "Create a character before posting to the community feed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setQuickAction(action);
+    const templates: Record<"shoutout" | "jam", string> = {
+      shoutout: `${displayName} is hyping the crew—drop your latest win so we can amplify it together!`,
+      jam: `${displayName} is lining up a fresh jam session. Reply if you're ready to trade riffs and ideas.`,
+    } as const;
+
+    try {
+      await createCommunityPost({ authorId: profile.id, content: templates[action] });
+      toast({
+        title: action === "shoutout" ? "Shoutout posted" : "Jam invite sent",
+        description: "Your update is live in the community feed.",
+      });
+    } catch (error: any) {
+      console.error("Failed to publish quick action", error);
+      toast({
+        title: "Unable to post",
+        description: error?.message ?? "Please try again shortly.",
+        variant: "destructive",
+      });
+    } finally {
+      setQuickAction(null);
     }
   };
 
@@ -685,98 +741,286 @@ const MyCharacter = () => {
 
         <TabsContent value="overview" className="space-y-6 mt-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
-            <Card>
-              <CardHeader className="flex flex-col items-center text-center">
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-primary/20 bg-primary/10 text-2xl font-semibold text-primary">
-                  {(profile as any)?.avatar_url ? (
-                    <img 
-                      src={(profile as any).avatar_url} 
-                      alt={`${displayName} avatar`} 
-                      className="h-full w-full object-cover"
-                    />
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-col items-center text-center">
+                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-primary/20 bg-primary/10 text-2xl font-semibold text-primary">
+                    {(profile as any)?.avatar_url ? (
+                      <img
+                        src={(profile as any).avatar_url}
+                        alt={`${displayName} avatar`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      profileInitials
+                    )}
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    <h2 className="text-2xl font-semibold">{displayName}</h2>
+                    {profile.username && profile.username !== displayName && (
+                      <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {profile.bio ? (
+                    <p className="text-sm text-muted-foreground">{profile.bio}</p>
                   ) : (
-                    profileInitials
+                    <p className="text-sm text-muted-foreground">Add a bio to share your origin story.</p>
                   )}
-                </div>
-                <div className="mt-4 space-y-1">
-                  <h2 className="text-2xl font-semibold">{displayName}</h2>
-                  {profile.username && profile.username !== displayName && (
-                    <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {profile.bio ? (
-                  <p className="text-sm text-muted-foreground">{profile.bio}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Add a bio to share your origin story.</p>
-                )}
 
-                <Separator />
+                  <Separator />
 
-                <div className="space-y-3 text-sm">
-                  {PROFILE_META_FIELDS.map(({ key, label, icon: Icon }) => {
-                    const value = profile[key];
+                  <div className="space-y-3 text-sm">
+                    {PROFILE_META_FIELDS.map(({ key, label, icon: Icon }) => {
+                      const value = profile[key];
 
-                    if (value === null || value === undefined || value === "") {
-                      return null;
-                    }
+                      if (value === null || value === undefined || value === "") {
+                        return null;
+                      }
 
-                    return (
-                      <div key={key as string} className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{label}:</span>
-                        <span className="text-muted-foreground">{String(value)}</span>
+                      return (
+                        <div key={key as string} className="flex items-center gap-3">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{label}:</span>
+                          <span className="text-muted-foreground">{String(value)}</span>
+                        </div>
+                      );
+                    })}
+                    {currentCityLabel && (
+                      <div className="flex items-center gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Current City:</span>
+                        <span className="text-muted-foreground">{currentCityLabel}</span>
                       </div>
-                    );
-                  })}
-                  {currentCityLabel && (
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Current City:</span>
-                      <span className="text-muted-foreground">{currentCityLabel}</span>
-                    </div>
-                  )}
-                  {joinedDate && (
-                    <div className="flex items-center gap-3">
-                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Joined:</span>
-                      <span className="text-muted-foreground">{joinedDate}</span>
-                    </div>
-                  )}
-                  {updatedDate && (
-                    <div className="flex items-center gap-3">
-                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Last Active:</span>
-                      <span className="text-muted-foreground">{updatedDate}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                    {joinedDate && (
+                      <div className="flex items-center gap-3">
+                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Joined:</span>
+                        <span className="text-muted-foreground">{joinedDate}</span>
+                      </div>
+                    )}
+                    {updatedDate && (
+                      <div className="flex items-center gap-3">
+                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Last Active:</span>
+                        <span className="text-muted-foreground">{updatedDate}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mic className="h-5 w-5" />
-                  Quick Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Health</span>
-                  <Badge>{profile.health ?? 100}%</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Energy</span>
-                  <Badge>{profile.energy ?? 100}%</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Cash</span>
-                  <Badge>${profile.cash?.toLocaleString() ?? 0}</Badge>
-                </div>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Social Launchpad
+                  </CardTitle>
+                  <CardDescription>Recommended friends, mentors, and invites ready to action.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {socialOpportunitiesError ? (
+                    <p className="text-xs text-destructive">{socialOpportunitiesError}</p>
+                  ) : null}
+                  {socialOpportunitiesLoading ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Friends</p>
+                        {friendRecommendations.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No new friend suggestions right now.</p>
+                        ) : (
+                          friendRecommendations.map((person) => (
+                            <div
+                              key={person.id}
+                              className="flex items-center justify-between rounded-md border border-border/70 p-3"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold">{person.display_name ?? person.username}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Level {person.level ?? 1} • Fame {person.fame ?? 0}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void handleSendRequest(person.id)}
+                                disabled={actionTarget === person.id}
+                              >
+                                {actionTarget === person.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <UserPlus className="mr-2 h-4 w-4" /> Connect
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mentors</p>
+                        {mentorRecommendations.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No mentor openings at the moment.</p>
+                        ) : (
+                          mentorRecommendations.map((mentor) => (
+                            <div
+                              key={mentor.id}
+                              className="flex items-center justify-between rounded-md border border-border/70 p-3"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  {mentor.profile?.display_name ?? mentor.profile?.username ?? "Mentor"}
+                                </p>
+                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                  {mentor.headline ?? mentor.focus_areas?.slice(0, 2).join(", ") ?? "Coaching new artists"}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => mentor.profile?.id && void handleSendRequest(mentor.profile.id)}
+                                disabled={!mentor.profile?.id || actionTarget === mentor.profile?.id}
+                              >
+                                {mentor.profile?.id && actionTarget === mentor.profile.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <UserPlus className="mr-2 h-4 w-4" /> Request
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Collab Invites</p>
+                        {socialCollabInvites.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No pending collaboration invites.</p>
+                        ) : (
+                          socialCollabInvites.map((invite) => (
+                            <div key={invite.friendship.id} className="space-y-2 rounded-md border border-border/70 p-3">
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  {invite.requester?.display_name ?? invite.requester?.username ?? "Player"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Ready to jam • Level {invite.requester?.level ?? "?"}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => handleAccept(invite.friendship.id)}
+                                  disabled={actionTarget === invite.friendship.id}
+                                >
+                                  {actionTarget === invite.friendship.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Music className="mr-2 h-4 w-4" /> Accept
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={() => handleDecline(invite.friendship.id)}
+                                  disabled={actionTarget === invite.friendship.id}
+                                >
+                                  {actionTarget === invite.friendship.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <X className="mr-2 h-4 w-4" /> Decline
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick actions</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleQuickActionPost("shoutout")}
+                            disabled={quickAction === "shoutout"}
+                          >
+                            {quickAction === "shoutout" ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" /> Post shoutout
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleQuickActionPost("jam")}
+                            disabled={quickAction === "jam"}
+                          >
+                            {quickAction === "jam" ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Music className="mr-2 h-4 w-4" /> Invite to jam
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mic className="h-5 w-5" />
+                    Quick Stats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Health</span>
+                    <Badge>{profile.health ?? 100}%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Energy</span>
+                    <Badge>{profile.energy ?? 100}%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Cash</span>
+                    <Badge>${profile.cash?.toLocaleString() ?? 0}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
 
