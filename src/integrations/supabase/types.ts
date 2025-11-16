@@ -3693,222 +3693,211 @@ export type Database = {
         }
         Relationships: []
       }
-      leaderboard_badge_awards: {
+      lifestyle_properties: {
         Row: {
-          awarded_at: string
-          badge_id: string
+          available: boolean
+          area_sq_ft: number | null
+          base_price: number
+          bathrooms: number
+          bedrooms: number
+          city: string
           created_at: string
+          description: string | null
+          district: string | null
+          energy_rating: string | null
+          highlight_features: string[]
           id: string
-          metadata: Json | null
-          profile_id: string | null
-          rank: number | null
-          season_id: string | null
+          image_url: string | null
+          lifestyle_fit: Json
+          lot_size_sq_ft: number | null
+          name: string
+          property_type: string
+          rating: number | null
+        }
+        Insert: {
+          available?: boolean
+          area_sq_ft?: number | null
+          base_price: number
+          bathrooms: number
+          bedrooms: number
+          city: string
+          created_at?: string
+          description?: string | null
+          district?: string | null
+          energy_rating?: string | null
+          highlight_features?: string[]
+          id?: string
+          image_url?: string | null
+          lifestyle_fit?: Json
+          lot_size_sq_ft?: number | null
+          name: string
+          property_type: string
+          rating?: number | null
+        }
+        Update: {
+          available?: boolean
+          area_sq_ft?: number | null
+          base_price?: number
+          bathrooms?: number
+          bedrooms?: number
+          city?: string
+          created_at?: string
+          description?: string | null
+          district?: string | null
+          energy_rating?: string | null
+          highlight_features?: string[]
+          id?: string
+          image_url?: string | null
+          lifestyle_fit?: Json
+          lot_size_sq_ft?: number | null
+          name?: string
+          property_type?: string
+          rating?: number | null
+        }
+        Relationships: []
+      }
+      lifestyle_property_features: {
+        Row: {
+          description: string | null
+          feature_name: string
+          feature_type: string
+          id: string
+          impact: Json
+          property_id: string
+          upgrade_cost: number
+        }
+        Insert: {
+          description?: string | null
+          feature_name: string
+          feature_type: string
+          id?: string
+          impact?: Json
+          property_id: string
+          upgrade_cost?: number
+        }
+        Update: {
+          description?: string | null
+          feature_name?: string
+          feature_type?: string
+          id?: string
+          impact?: Json
+          property_id?: string
+          upgrade_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_features_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lifestyle_property_financing_options: {
+        Row: {
+          closing_cost_pct: number | null
+          description: string | null
+          down_payment_pct: number
+          id: string
+          interest_rate: number
+          name: string
+          property_id: string
+          requirements: Json
+          term_months: number
+        }
+        Insert: {
+          closing_cost_pct?: number | null
+          description?: string | null
+          down_payment_pct?: number
+          id?: string
+          interest_rate?: number
+          name: string
+          property_id: string
+          requirements?: Json
+          term_months?: number
+        }
+        Update: {
+          closing_cost_pct?: number | null
+          description?: string | null
+          down_payment_pct?: number
+          id?: string
+          interest_rate?: number
+          name?: string
+          property_id?: string
+          requirements?: Json
+          term_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_financing_options_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lifestyle_property_purchases: {
+        Row: {
+          created_at: string
+          financing_option_id: string | null
+          id: string
+          notes: string | null
+          property_id: string
+          purchase_price: number
+          selected_features: Json
+          status: string
+          total_upgrade_cost: number
           user_id: string
         }
         Insert: {
-          awarded_at?: string
-          badge_id: string
           created_at?: string
+          financing_option_id?: string | null
           id?: string
-          metadata?: Json | null
-          profile_id?: string | null
-          rank?: number | null
-          season_id?: string | null
+          notes?: string | null
+          property_id: string
+          purchase_price: number
+          selected_features?: Json
+          status?: string
+          total_upgrade_cost?: number
           user_id: string
         }
         Update: {
-          awarded_at?: string
-          badge_id?: string
           created_at?: string
+          financing_option_id?: string | null
           id?: string
-          metadata?: Json | null
-          profile_id?: string | null
-          rank?: number | null
-          season_id?: string | null
+          notes?: string | null
+          property_id?: string
+          purchase_price?: number
+          selected_features?: Json
+          status?: string
+          total_upgrade_cost?: number
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "leaderboard_badge_awards_badge_id_fkey"
-            columns: ["badge_id"]
+            foreignKeyName: "lifestyle_property_purchases_financing_option_id_fkey"
+            columns: ["financing_option_id"]
             isOneToOne: false
-            referencedRelation: "leaderboard_badges"
+            referencedRelation: "lifestyle_property_financing_options"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leaderboard_badge_awards_season_id_fkey"
-            columns: ["season_id"]
+            foreignKeyName: "lifestyle_property_purchases_property_id_fkey"
+            columns: ["property_id"]
             isOneToOne: false
-            referencedRelation: "leaderboard_seasons"
+            referencedRelation: "lifestyle_properties"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      leaderboard_badges: {
-        Row: {
-          code: string
-          created_at: string
-          criteria: Json | null
-          description: string | null
-          icon: string
-          id: string
-          name: string
-          rarity: string
-          season_id: string | null
-          tier: string | null
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          criteria?: Json | null
-          description?: string | null
-          icon?: string
-          id?: string
-          name: string
-          rarity?: string
-          season_id?: string | null
-          tier?: string | null
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          criteria?: Json | null
-          description?: string | null
-          icon?: string
-          id?: string
-          name?: string
-          rarity?: string
-          season_id?: string | null
-          tier?: string | null
-          updated_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "leaderboard_badges_season_id_fkey"
-            columns: ["season_id"]
+            foreignKeyName: "lifestyle_property_purchases_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "leaderboard_seasons"
+            referencedRelation: "users"
             referencedColumns: ["id"]
-          },
+          }
         ]
-      }
-      leaderboard_season_snapshots: {
-        Row: {
-          awarded_badges: string[] | null
-          breakdown: Json | null
-          created_at: string
-          division: string
-          experience: number | null
-          fame: number | null
-          final_rank: number | null
-          final_score: number | null
-          id: string
-          instrument: string
-          profile_id: string | null
-          recorded_at: string
-          region: string
-          season_id: string
-          tier: string | null
-          total_achievements: number | null
-          total_gigs: number | null
-          total_revenue: number | null
-          user_id: string | null
-        }
-        Insert: {
-          awarded_badges?: string[] | null
-          breakdown?: Json | null
-          created_at?: string
-          division: string
-          experience?: number | null
-          fame?: number | null
-          final_rank?: number | null
-          final_score?: number | null
-          id?: string
-          instrument: string
-          profile_id?: string | null
-          recorded_at?: string
-          region: string
-          season_id: string
-          tier?: string | null
-          total_achievements?: number | null
-          total_gigs?: number | null
-          total_revenue?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          awarded_badges?: string[] | null
-          breakdown?: Json | null
-          created_at?: string
-          division?: string
-          experience?: number | null
-          fame?: number | null
-          final_rank?: number | null
-          final_score?: number | null
-          id?: string
-          instrument?: string
-          profile_id?: string | null
-          recorded_at?: string
-          region?: string
-          season_id?: string
-          tier?: string | null
-          total_achievements?: number | null
-          total_gigs?: number | null
-          total_revenue?: number | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leaderboard_season_snapshots_season_id_fkey"
-            columns: ["season_id"]
-            isOneToOne: false
-            referencedRelation: "leaderboard_seasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leaderboard_seasons: {
-        Row: {
-          created_at: string
-          description: string | null
-          end_date: string
-          id: string
-          is_active: boolean
-          metadata: Json | null
-          name: string
-          reward_pool: Json | null
-          season_number: number | null
-          start_date: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          end_date: string
-          id?: string
-          is_active?: boolean
-          metadata?: Json | null
-          name: string
-          reward_pool?: Json | null
-          season_number?: number | null
-          start_date: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          end_date?: string
-          id?: string
-          is_active?: boolean
-          metadata?: Json | null
-          name?: string
-          reward_pool?: Json | null
-          season_number?: number | null
-          start_date?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       manufacturing_costs: {
         Row: {

@@ -137,6 +137,7 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
+const LifestyleHomes = lazyWithRetry(() => import("./pages/lifestyle/homes"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -200,12 +201,11 @@ function App() {
                     <Route path="booking/songwriting" element={<SongwritingBooking />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
-                    <Route path="community/feed" element={<CommunityFeed />} />
-                    <Route path="gig-booking" element={<GigBooking />} />
-                    <Route path="jam-sessions" element={<JamSessions />} />
-                    <Route path="rehearsals" element={<Rehearsals />} />
-                    <Route path="radio" element={<Radio />} />
-                    <Route path="music-videos" element={<MusicVideos />} />
+                    <Route path="tours" element={<TourManager />} />
+                    <Route path="tours-system" element={<TouringSystem />} />
+                    <Route path="equipment" element={<EnhancedEquipmentStore />} />
+                    <Route path="fans" element={<FanManagement />} />
+                    <Route path="lifestyle/homes" element={<LifestyleHomes />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />

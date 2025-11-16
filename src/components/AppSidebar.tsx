@@ -46,11 +46,7 @@ import {
   Target,
   TrendingUp,
   Map,
-  Crown,
-  Video,
-  Radio as RadioIcon,
-  Newspaper,
-  Heart,
+  BedDouble,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -147,7 +143,13 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t('business'),
+      label: "Lifestyle",
+      items: [
+        { icon: BedDouble, label: "Homes", path: "/lifestyle/homes" },
+      ],
+    },
+    {
+      label: "Business",
       items: [
         { icon: Briefcase, label: t('employment'), path: "/employment" },
         { icon: DollarSign, label: t('finances'), path: "/finances" },
