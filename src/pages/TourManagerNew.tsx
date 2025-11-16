@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, MapPin, Music, DollarSign, ArrowLeft, Plus } from "lucide-react";
+import { useGameData } from "@/hooks/useGameData";
 import { useTours } from "@/hooks/useTours";
 import { format } from "date-fns";
 
