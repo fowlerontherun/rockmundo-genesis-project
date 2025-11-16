@@ -70,6 +70,12 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
   };
 
   const handleAddActivity = (hour: number) => {
+    // Check if this hour is blocked by work
+    const hourActivities = getActivitiesForHour(hour);
+    const hasWorkShift = hourActivities.some(a => a.metadata?.auto_scheduled);
+    if (hasWorkShift) {
+      return; // Don't allow adding activities during work hours
+    }
     setSelectedHour(hour);
     setScheduleDialogOpen(true);
   };
@@ -136,13 +142,15 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
                       {hourActivities.map(activity => {
                         const Icon = ACTIVITY_ICONS[activity.activity_type as ActivityType];
                         const colorClass = ACTIVITY_COLORS[activity.activity_type as ActivityType];
+                        const isAutoScheduled = activity.metadata?.auto_scheduled;
                         
                         return (
                           <div
                             key={activity.id}
                             className={cn(
                               "flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded border text-xs md:text-sm",
-                              colorClass
+                              colorClass,
+                              isAutoScheduled && "opacity-80"
                             )}
                           >
                             <Icon className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
@@ -176,14 +184,16 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
                                   <CheckCircle className="h-2.5 w-2.5 md:h-3 md:w-3" />
                                 </Button>
                               )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 md:h-7 px-1.5 md:px-2 text-destructive"
-                                onClick={() => handleDelete(activity.id)}
-                              >
-                                <X className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                              </Button>
+                              {!isAutoScheduled && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 md:h-7 px-1.5 md:px-2 text-destructive"
+                                  onClick={() => handleDelete(activity.id)}
+                                >
+                                  <X className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
