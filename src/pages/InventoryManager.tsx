@@ -1,113 +1,22 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
-import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
-
-// Stub types for non-existent tables
-type SkillBookRow = {
-  id: string;
-  title: string;
-  author: string;
-  skill_slug: string;
-  xp_reward: number;
-};
-
-type PlayerSkillBookRow = {
-  id: string;
-  profile_id: string;
-  skill_books: SkillBookRow | null;
-  acquired_at: string;
-  consumed_at: string | null;
-  xp_awarded_at: string | null;
-};
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { BookOpen, CheckCircle2, Clock } from "lucide-react";
+import { useSkillBooksInventory } from "@/hooks/useSkillBooksInventory";
 
 const InventoryManager = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
-  const [bookInventory, setBookInventory] = useState<PlayerSkillBookRow[]>([]);
-  const [isBookInventorySupported, setIsBookInventorySupported] = useState(true);
-
-  const loadBookInventory = useCallback(
-    async (currentProfileId: string) => {
-      setIsLoadingBooks(true);
-      setIsBookInventorySupported(true);
-      try {
-        // Stub out the missing table query
-        console.info("Book inventory table is not available yet; falling back to empty inventory.");
-        setIsBookInventorySupported(false);
-        setBookInventory([]);
-        return;
-      } catch (error) {
-        console.error("Failed to load book inventory", error);
-        toast({
-          variant: "destructive",
-          title: "Unable to load books",
-          description: "We could not retrieve your book inventory. Please try again later.",
-        });
-      } finally {
-        setIsLoadingBooks(false);
-      }
-    },
-    [toast],
-  );
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    if (!user) {
-      setProfileId(null);
-      setBookInventory([]);
-      setIsBookInventorySupported(true);
-      return;
-    }
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+  }, []);
 
-    let isCurrent = true;
-    setIsLoadingProfile(true);
-
-    const fetchProfile = async () => {
-      try {
-        const profile = await fetchPrimaryProfileForUser(user.id);
-        if (!isCurrent) return;
-        setProfileId(profile?.id ?? null);
-        if (profile?.id) {
-          await loadBookInventory(profile.id);
-        }
-      } catch (error) {
-        console.error("Failed to load active profile", error);
-        if (isCurrent) {
-          toast({
-            variant: "destructive",
-            title: "Unable to load your character",
-            description: "Create a character to start tracking inventory.",
-          });
-        }
-        setProfileId(null);
-      } finally {
-        if (isCurrent) {
-          setIsLoadingProfile(false);
-        }
-      }
-    };
-
-    void fetchProfile();
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [loadBookInventory, toast, user]);
-
-  useEffect(() => {
-    if (!profileId) {
-      setBookInventory([]);
-      return;
-    }
-
-    void loadBookInventory(profileId);
-  }, [loadBookInventory, profileId]);
+  const { books, isLoading, completeBook, isCompleting } = useSkillBooksInventory(user?.id);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -120,13 +29,12 @@ const InventoryManager = () => {
         <CardHeader>
           <CardTitle>Inventory System Preview</CardTitle>
           <CardDescription>
-            Equipment and wardrobe management tools are in development. Track your education books below while we finish the rest of
-            the system.
+            Equipment and wardrobe management tools are in development. Track your education books below.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Future updates will introduce equipment loadouts, wardrobe customization, and detailed inventory analytics. Stay tuned!
+            Future updates will introduce equipment loadouts, wardrobe customization, and detailed inventory analytics.
           </p>
         </CardContent>
       </Card>
@@ -139,56 +47,69 @@ const InventoryManager = () => {
         <CardContent className="space-y-4">
           {!user ? (
             <p className="text-sm text-muted-foreground">Sign in to view your book inventory.</p>
-          ) : isLoadingProfile ? (
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Loading your character...
-            </div>
-          ) : !profileId ? (
-            <p className="text-sm text-muted-foreground">Create a character profile to start collecting books.</p>
-          ) : !isBookInventorySupported ? (
+          ) : isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading your books...</p>
+          ) : books.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Book tracking is being rolled out. Check back soon to see your purchased education books here.
-            </p>
-          ) : isLoadingBooks ? (
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Loading books...
-            </div>
-          ) : bookInventory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              You haven't purchased any books yet. Visit the Education hub to unlock new skills.
+              No books in your inventory yet. Visit the education section to purchase skill books!
             </p>
           ) : (
-            <div className="space-y-4">
-              {bookInventory.map((entry) => {
-                const book = entry.skill_books;
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {books.map((book) => {
+                const isCompleted = !!book.completed_at;
                 return (
-                  <div key={entry.id} className="rounded-lg border bg-muted/20 p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{book?.title ?? "Unknown Book"}</p>
-                        {book?.author ? <p className="text-xs text-muted-foreground">by {book.author}</p> : null}
+                  <Card key={book.id} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5 text-primary" />
+                          <CardTitle className="text-base">{book.book_title}</CardTitle>
+                        </div>
+                        {isCompleted && (
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        )}
                       </div>
-                      <Badge variant={entry.xp_awarded_at ? "default" : "secondary"}>
-                        {entry.xp_awarded_at ? "Completed" : "Owned"}
+                      <Badge variant="secondary" className="w-fit">
+                        {book.skill_focus}
                       </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      {book?.skill_slug ? <Badge variant="outline">{book.skill_slug}</Badge> : null}
-                      {book?.xp_reward ? <Badge variant="outline">+{book.xp_reward} XP</Badge> : null}
-                      {entry.acquired_at ? (
-                        <Badge variant="outline">
-                          Purchased {new Date(entry.acquired_at).toLocaleDateString()}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    {entry.consumed_at ? (
-                      <p className="text-xs text-muted-foreground">
-                        Completed on {new Date(entry.consumed_at).toLocaleDateString()} and XP applied.
-                      </p>
-                    ) : null}
-                  </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Progress</span>
+                          <span>{book.progress_percentage}%</span>
+                        </div>
+                        <Progress value={book.progress_percentage} />
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">XP Reward</span>
+                        <Badge variant="outline">{book.xp_reward} XP</Badge>
+                      </div>
+
+                      {isCompleted ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Completed {new Date(book.completed_at).toLocaleDateString()}</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => completeBook(book.id)}
+                            disabled={isCompleting}
+                          >
+                            {isCompleting ? "Completing..." : "Complete & Claim XP"}
+                          </Button>
+                          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>Purchased {new Date(book.purchased_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>

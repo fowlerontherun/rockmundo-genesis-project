@@ -63,17 +63,17 @@ BEGIN
   -- Determine max duration and slot name based on slot type
   CASE p_slot_type
     WHEN 'kids' THEN
-      max_duration := 25 * 60;  -- 25 minutes
-      slot_name := 'Kids Slot (30 min max)';
+      max_duration := 35 * 60;  -- 30 minute slot + 5 minute flex
+      slot_name := 'Kids Slot (30 min slot + 5 min flex)';
     WHEN 'opening' THEN
-      max_duration := 25 * 60;  -- 25 minutes
-      slot_name := 'Opening Slot (30 min max)';
+      max_duration := 35 * 60;  -- 30 minute slot + 5 minute flex
+      slot_name := 'Opening Slot (30 min slot + 5 min flex)';
     WHEN 'support' THEN
-      max_duration := 40 * 60;  -- 40 minutes
-      slot_name := 'Support Slot (45 min max)';
+      max_duration := 50 * 60;  -- 45 minute slot + 5 minute flex
+      slot_name := 'Support Slot (45 min slot + 5 min flex)';
     ELSE  -- headline or custom
-      max_duration := 70 * 60;  -- 70 minutes
-      slot_name := 'Headline Slot (75 min max)';
+      max_duration := 80 * 60;  -- 75 minute slot + 5 minute flex
+      slot_name := 'Headline Slot (75 min slot + 5 min flex)';
   END CASE;
   
   -- Build result

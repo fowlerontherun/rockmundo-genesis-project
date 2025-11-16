@@ -184,6 +184,126 @@
     --twaater-purple: 270 80% 65%;
     --twaater-purple-hover: 270 80% 70%;
   }
+
+  /* Forest Theme - Green & Nature Palette */
+  [data-theme="forest"] {
+    --background: 140 45% 10%;
+    --foreground: 145 20% 92%;
+
+    --card: 142 40% 16%;
+    --card-foreground: 145 25% 90%;
+
+    --popover: 138 50% 12%;
+    --popover-foreground: 145 20% 94%;
+
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 147 35% 25%;
+    --secondary-foreground: 145 20% 92%;
+
+    --muted: 142 30% 20%;
+    --muted-foreground: 152 18% 72%;
+
+    --accent: 158 64% 52%;
+    --accent-foreground: 140 90% 10%;
+
+    --destructive: 348 79% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 152 64% 48%;
+    --success-foreground: 140 90% 12%;
+
+    --warning: 43 96% 62%;
+    --warning-foreground: 140 90% 14%;
+
+    --border: 145 30% 22%;
+    --input: 145 28% 24%;
+    --ring: 142 76% 36%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(147 90% 20%));
+    --gradient-stage: linear-gradient(180deg, hsl(140 45% 10%) 0%, hsl(142 40% 16%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(140 45% 10%) 100%);
+
+    --shadow-electric: 0 0 24px hsl(142 76% 36% / 0.35);
+    --shadow-glow: 0 0 48px hsl(158 64% 52% / 0.25);
+
+    --sidebar-background: 138 50% 8%;
+    --sidebar-foreground: 145 22% 88%;
+    --sidebar-primary: 142 76% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 142 40% 18%;
+    --sidebar-accent-foreground: 145 24% 90%;
+    --sidebar-border: 145 30% 22%;
+    --sidebar-ring: 142 76% 36%;
+
+    --twaater-bg: 250 30% 12%;
+    --twaater-card: 250 25% 16%;
+    --twaater-border: 250 20% 25%;
+    --twaater-hover: 250 30% 20%;
+    --twaater-purple: 270 80% 65%;
+    --twaater-purple-hover: 270 80% 70%;
+  }
+
+  /* Midnight Theme - Deep Purple & Violet Palette */
+  [data-theme="midnight"] {
+    --background: 263 45% 10%;
+    --foreground: 268 20% 92%;
+
+    --card: 265 40% 16%;
+    --card-foreground: 268 25% 90%;
+
+    --popover: 261 50% 12%;
+    --popover-foreground: 268 20% 94%;
+
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 267 35% 25%;
+    --secondary-foreground: 268 20% 92%;
+
+    --muted: 265 30% 20%;
+    --muted-foreground: 272 18% 72%;
+
+    --accent: 275 80% 60%;
+    --accent-foreground: 260 90% 10%;
+
+    --destructive: 348 79% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 152 64% 48%;
+    --success-foreground: 260 90% 12%;
+
+    --warning: 43 96% 62%;
+    --warning-foreground: 260 90% 14%;
+
+    --border: 268 30% 22%;
+    --input: 268 28% 24%;
+    --ring: 263 70% 50%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(263 70% 50%), hsl(267 90% 20%));
+    --gradient-stage: linear-gradient(180deg, hsl(263 45% 10%) 0%, hsl(265 40% 16%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(275 80% 60%) 0%, hsl(263 45% 10%) 100%);
+
+    --shadow-electric: 0 0 24px hsl(263 70% 50% / 0.35);
+    --shadow-glow: 0 0 48px hsl(275 80% 60% / 0.25);
+
+    --sidebar-background: 261 50% 8%;
+    --sidebar-foreground: 268 22% 88%;
+    --sidebar-primary: 263 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 265 40% 18%;
+    --sidebar-accent-foreground: 268 24% 90%;
+    --sidebar-border: 268 30% 22%;
+    --sidebar-ring: 263 70% 50%;
+
+    --twaater-bg: 250 30% 12%;
+    --twaater-card: 250 25% 16%;
+    --twaater-border: 250 20% 25%;
+    --twaater-hover: 250 30% 20%;
+    --twaater-purple: 270 80% 65%;
+    --twaater-purple-hover: 270 80% 70%;
+  }
 }
 
 @layer base {

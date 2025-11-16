@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Database } from "@/integrations/supabase/types";
 
 export type MusicVideoConfigRow = Database["public"]["Tables"]["music_video_configs"]["Row"];

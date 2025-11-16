@@ -253,7 +253,10 @@ export function RehearsalsTab() {
 
       if (chemistryError) throw chemistryError;
 
+      // Update song familiarity if a song was selected
       if (rehearsal.selected_song_id) {
+        const familiarityGained = rehearsal.familiarity_gained || 0;
+        
         const { data: existing } = await supabase
           .from('band_song_familiarity')
           .select('*')
@@ -261,13 +264,15 @@ export function RehearsalsTab() {
           .eq('song_id', rehearsal.selected_song_id)
           .maybeSingle();
 
-        const newMinutes = (existing?.familiarity_minutes || 0) + (rehearsal.familiarity_gained || 0);
+        const newMinutes = (existing?.familiarity_minutes || 0) + familiarityGained;
+        const newPercentage = Math.min(100, Math.floor(newMinutes / 10));
         
         if (existing) {
           await supabase
             .from('band_song_familiarity')
             .update({
-              familiarity_minutes: Math.min(60, newMinutes),
+              familiarity_minutes: newMinutes,
+              familiarity_percentage: newPercentage,
               last_rehearsed_at: new Date().toISOString(),
             })
             .eq('id', existing.id);
@@ -277,7 +282,8 @@ export function RehearsalsTab() {
             .insert({
               band_id: userBand.id,
               song_id: rehearsal.selected_song_id,
-              familiarity_minutes: Math.min(60, newMinutes),
+              familiarity_minutes: newMinutes,
+              familiarity_percentage: newPercentage,
               last_rehearsed_at: new Date().toISOString(),
             });
         }

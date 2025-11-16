@@ -499,10 +499,32 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Pause session (stubbed)
+  // Pause session
   const pauseSession = useMutation({ 
     mutationFn: async ({ sessionId }: { sessionId: string }) => {
-      return { sessionId };
+      const { data, error } = await supabase
+        .from("songwriting_sessions")
+        .update({ 
+          session_end: new Date().toISOString(),
+          notes: "Session paused by user"
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songwriting-projects"] });
+      toast({ title: "Session paused successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Failed to pause session",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
     }
   });
 

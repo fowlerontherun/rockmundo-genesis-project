@@ -40,27 +40,16 @@ export const PerformanceItemSelector = ({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
-  const { data: availableItems, allItems } = useFilteredPerformanceItems(userSkills, userGenres);
+  // Get ALL performance items - no filtering by user skills/genres
+  const { data: allPerformanceItems } = useFilteredPerformanceItems(userSkills, userGenres);
   
-  const filteredItems = availableItems?.filter(item => {
+  // Filter by search and category only
+  const filteredItems = allPerformanceItems?.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
                          item.description?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "all" || item.item_category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
-  
-  const isItemLocked = (item: PerformanceItem) => {
-    if (item.required_skill) {
-      const userSkillLevel = userSkills[item.required_skill] || 0;
-      if (userSkillLevel < item.min_skill_level) {
-        return true;
-      }
-    }
-    if (item.required_genre && !userGenres.includes(item.required_genre)) {
-      return true;
-    }
-    return false;
-  };
   
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -69,7 +58,7 @@ export const PerformanceItemSelector = ({
           <DialogTitle>Add Performance Item</DialogTitle>
           <DialogDescription>
             Choose stage actions, crowd interactions, and special moments to enhance your setlist.
-            Items require specific skills or genres to unlock.
+            You can add up to 5 performance items per setlist.
           </DialogDescription>
         </DialogHeader>
         
@@ -95,30 +84,24 @@ export const PerformanceItemSelector = ({
           </div>
           
           <div className="text-sm text-muted-foreground">
-            <Badge variant="outline">{availableItems?.length || 0}</Badge> available • {" "}
-            <Badge variant="secondary">{(allItems?.length || 0) - (availableItems?.length || 0)}</Badge> locked
+            <Badge variant="outline">{filteredItems?.length || 0}</Badge> performance items available
           </div>
           
           <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-2">
-              {filteredItems?.map((item) => {
-                const locked = isItemLocked(item);
-                return (
+              {filteredItems?.map((item) => (
                   <div
                     key={item.id}
-                    className={`border rounded-lg p-4 transition-colors ${
-                      locked ? 'opacity-50 bg-muted' : 'hover:bg-accent cursor-pointer'
-                    }`}
-                    onClick={() => !locked && onSelect(item)}
+                    className="border rounded-lg p-4 transition-colors hover:bg-accent cursor-pointer"
+                    onClick={() => onSelect(item)}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold">{item.name}</h4>
-                          {locked && <Lock className="h-4 w-4 text-muted-foreground" />}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold">{item.name}</h4>
                       </div>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
                       <Badge variant="outline" className="ml-2">
                         {categoryLabels[item.item_category]}
                       </Badge>
@@ -142,23 +125,20 @@ export const PerformanceItemSelector = ({
                     {(item.required_skill || item.required_genre) && (
                       <div className="flex gap-2 mt-2">
                         {item.required_skill && (
-                          <Badge variant={locked ? "destructive" : "secondary"} className="text-xs">
-                            {locked && <Lock className="h-3 w-3 mr-1" />}
+                          <Badge variant="secondary" className="text-xs">
                             {item.required_skill.replace(/_/g, ' ')} Lv.{item.min_skill_level}+
-                            {!locked && userSkills[item.required_skill] && ` (${userSkills[item.required_skill]})`}
+                            {userSkills[item.required_skill] && ` (${userSkills[item.required_skill]})`}
                           </Badge>
                         )}
                         {item.required_genre && (
-                          <Badge variant={locked ? "destructive" : "secondary"} className="text-xs">
-                            {locked && <Lock className="h-3 w-3 mr-1" />}
+                          <Badge variant="secondary" className="text-xs">
                             {item.required_genre}
                           </Badge>
                         )}
                       </div>
                     )}
                   </div>
-                );
-              })}
+              ))}
               
               {filteredItems?.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">

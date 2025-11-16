@@ -7,6 +7,8 @@ import { Music, Star, Users, Clock, TrendingUp, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import type { Database } from "@/lib/supabase-types";
+import { CrowdEnergyVisualizer } from "./CrowdEnergyVisualizer";
+import { PerformanceNarrative, generateNarrativeEvent } from "./PerformanceNarrative";
 
 type Gig = Database['public']['Tables']['gigs']['Row'];
 type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'];
@@ -31,6 +33,8 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
   const [rehearsals, setRehearsals] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [commentary, setCommentary] = useState<string>("");
+  const [narrativeEvents, setNarrativeEvents] = useState<any[]>([]);
+  const [crowdEnergy, setCrowdEnergy] = useState(50);
 
   const generateCommentary = useCallback((perf: SongPerformance) => {
     const comments = {
@@ -186,6 +190,33 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
           const comment = generateCommentary(newPerf);
           setCommentary(comment);
           
+          // Update crowd energy based on performance
+          const energyChange = newPerf.crowd_response === 'ecstatic' ? 15 :
+                              newPerf.crowd_response === 'enthusiastic' ? 10 :
+                              newPerf.crowd_response === 'engaged' ? 5 :
+                              newPerf.crowd_response === 'mixed' ? -5 : -10;
+          setCrowdEnergy(prev => Math.max(0, Math.min(100, prev + energyChange)));
+          
+          // Generate narrative events
+          const songTitle = setlistSongs.find(s => s.song_id === newPerf.song_id)?.songs?.title || "Unknown Song";
+          
+          setNarrativeEvents(prev => [
+            ...prev,
+            generateNarrativeEvent("song_start", { songTitle }),
+            generateNarrativeEvent("crowd_reaction", { 
+              crowdResponse: newPerf.crowd_response,
+              performanceScore: newPerf.performance_score 
+            })
+          ]);
+          
+          // Add technical event if score is extreme
+          if (newPerf.performance_score >= 80 || newPerf.performance_score <= 40) {
+            setNarrativeEvents(prev => [
+              ...prev,
+              generateNarrativeEvent("technical", { performanceScore: newPerf.performance_score })
+            ]);
+          }
+          
           // Clear commentary after 5 seconds
           setTimeout(() => setCommentary(""), 5000);
         }
@@ -297,6 +328,20 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Crowd Energy Visualizer */}
+      <CrowdEnergyVisualizer
+        energy={crowdEnergy}
+        crowdResponse={
+          performances.length > 0 
+            ? performances[performances.length - 1].crowd_response as any 
+            : "engaged"
+        }
+        attendance={gig.attendance || gig.estimated_attendance || 0}
+      />
+
+      {/* Performance Narrative */}
+      <PerformanceNarrative events={narrativeEvents} />
 
       {/* Current/Next Song */}
       {currentSong && (
