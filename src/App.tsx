@@ -131,6 +131,7 @@ const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"))
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
+const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
@@ -276,6 +277,7 @@ function App() {
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
+                    <Route path="admin/festivals" element={<FestivalAdmin />} />
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="employment" element={<Employment />} />
