@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase-client";
 import type { Tables } from "@/lib/supabase-types";
-import type { User } from "@supabase/supabase-js";
+import type { PostgrestError, User } from "@supabase/supabase-js";
 
 type ProfileRecord = Tables<"profiles">;
 
@@ -53,6 +53,32 @@ const deriveFallbackNames = (user: User): { username: string; displayName: strin
   };
 };
 
+const USERNAME_MAX_LENGTH = 60;
+const USERNAME_SUFFIX_LENGTH = 6;
+const USERNAME_COLLISION_ATTEMPTS = 5;
+
+const buildUsernameCandidate = (base: string, attempt: number, userId: string): string => {
+  if (attempt === 0) {
+    return base.slice(0, USERNAME_MAX_LENGTH);
+  }
+
+  const suffix = `${userId.slice(0, 2)}${Math.random().toString(36).slice(2, 2 + USERNAME_SUFFIX_LENGTH - 2)}`;
+  const safeBase = base.slice(0, Math.max(1, USERNAME_MAX_LENGTH - suffix.length));
+  return `${safeBase}${suffix}`;
+};
+
+const isUsernameCollisionError = (error: PostgrestError | null): boolean => {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code !== "23505") {
+    return false;
+  }
+
+  return error.message?.includes("profiles_username_key") ?? false;
+};
+
 export const ensurePlayerProfile = async (user: User): Promise<PlayerProfile> => {
   const existing = await getPlayerProfileForUser(user.id);
   if (existing) {
@@ -61,26 +87,38 @@ export const ensurePlayerProfile = async (user: User): Promise<PlayerProfile> =>
 
   const { username, displayName } = deriveFallbackNames(user);
   const avatarUrl = typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null;
+  let attempt = 0;
+  let lastError: PostgrestError | null = null;
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .insert([
-      {
-        user_id: user.id,
-        username,
-        display_name: displayName,
-        avatar_url: avatarUrl,
-        bio: null,
-      },
-    ])
-    .select(PROFILE_COLUMNS)
-    .single();
+  while (attempt < USERNAME_COLLISION_ATTEMPTS) {
+    const candidateUsername = buildUsernameCandidate(username, attempt, user.id);
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert([
+        {
+          user_id: user.id,
+          username: candidateUsername,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+          bio: null,
+        },
+      ])
+      .select(PROFILE_COLUMNS)
+      .single();
 
-  if (error) {
-    throw error;
+    if (!error) {
+      return data as PlayerProfile;
+    }
+
+    if (!isUsernameCollisionError(error)) {
+      throw error;
+    }
+
+    lastError = error;
+    attempt += 1;
   }
 
-  return data as PlayerProfile;
+  throw lastError ?? new Error("Unable to create profile due to username collisions");
 };
 
 export const updatePlayerOnboarding = async (
