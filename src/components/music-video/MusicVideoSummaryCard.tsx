@@ -31,16 +31,53 @@ import {
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-export type MusicVideoConfigWithRelations =
-  Database["public"]["Tables"]["music_video_configs"]["Row"] & {
-    releases?: {
-      id: string;
-      title: string;
-      release_type: string;
-      artist_name: string | null;
-    } | null;
-    music_video_metrics?: Database["public"]["Tables"]["music_video_metrics"]["Row"] | null;
-  };
+export type MusicVideoConfigWithRelations = {
+  id: string;
+  band_id: string;
+  release_id: string | null;
+  theme: string;
+  art_style: string;
+  budget_tier: string;
+  budget_amount: number;
+  image_quality: string;
+  cast_option: string;
+  cast_quality: string | null;
+  location_style: string | null;
+  primary_platform: string | null;
+  status: string;
+  shoot_start_date: string | null;
+  shoot_end_date: string | null;
+  target_release_date: string | null;
+  production_notes: string | null;
+  sync_strategy: string | null;
+  kpi_view_target: number | null;
+  kpi_chart_target: string | null;
+  chart_position: number | null;
+  chart_velocity: number | null;
+  created_at: string;
+  updated_at: string;
+  releases?: {
+    id: string;
+    title: string;
+    release_type: string;
+    artist_name: string | null;
+  } | null;
+  music_video_metrics?: {
+    id: string;
+    music_video_id: string;
+    youtube_views: number | null;
+    chart_position: number | null;
+    chart_name: string | null;
+    chart_velocity: number | null;
+    mtv_spins: number | null;
+    mtv_program: string | null;
+    views_target: number | null;
+    chart_target: string | null;
+    last_synced_at: string | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
+};
 
 interface MusicVideoSummaryCardProps {
   config: MusicVideoConfigWithRelations;

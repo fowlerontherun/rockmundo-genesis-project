@@ -17,7 +17,7 @@ type BandMemberRow = Database["public"]["Tables"]["band_members"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 type MemberWithProfile = BandMemberRow & {
-  profiles: Pick<ProfileRow, "display_name" | "username" | "avatar_url" | "level"> | null;
+  profiles: { user_id: string; display_name: string | null; username: string; avatar_url: string | null; level: number | null; } | null;
 };
 
 type BandMembershipStatusHistory = {
@@ -75,34 +75,41 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
     const fetchRoster = async () => {
       setLoading(true);
       try {
+        // Fetch band members
         const { data: memberData, error: memberError } = await supabase
           .from("band_members")
-          .select(`
-            *,
-            profiles:user_id (
-              display_name,
-              username,
-              avatar_url,
-              level
-            )
-          `)
+          .select("*")
           .eq("band_id", bandId)
           .order("is_touring_member", { ascending: true })
           .order("joined_at", { ascending: true });
 
         if (memberError) throw memberError;
 
+        // Fetch profiles separately
+        const userIds = memberData?.map(m => m.user_id).filter(Boolean) ?? [];
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("user_id, display_name, username, avatar_url, level")
+          .in("user_id", userIds);
+
+        // Merge members with profiles
+        const membersWithProfiles: MemberWithProfile[] = (memberData ?? []).map(member => ({
+          ...member,
+          profiles: profileData?.find(p => p.user_id === member.user_id) ?? null
+        }));
+
+        // Fetch status history
         const { data: historyData, error: historyError } = await supabase
           .from("band_membership_status_history")
           .select("*")
           .eq("band_id", bandId)
           .order("changed_at", { ascending: false });
 
-        if (historyError) throw historyError;
+        if (historyError) console.error("Failed to load status history", historyError);
 
         if (!isMounted) return;
 
-        setMembers((memberData as MemberWithProfile[]) ?? []);
+        setMembers(membersWithProfiles);
 
         const historyMap = (historyData as BandMembershipStatusHistory[] | null)?.reduce(
           (acc, entry) => {
