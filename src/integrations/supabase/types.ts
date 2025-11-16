@@ -1671,6 +1671,45 @@ export type Database = {
         }
         Relationships: []
       }
+      crypto_tokens: {
+        Row: {
+          created_at: string | null
+          current_price: number
+          description: string | null
+          id: string
+          market_cap: number | null
+          name: string
+          price_history: Json | null
+          symbol: string
+          updated_at: string | null
+          volume_24h: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_price?: number
+          description?: string | null
+          id?: string
+          market_cap?: number | null
+          name: string
+          price_history?: Json | null
+          symbol: string
+          updated_at?: string | null
+          volume_24h?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          current_price?: number
+          description?: string | null
+          id?: string
+          market_cap?: number | null
+          name?: string
+          price_history?: Json | null
+          symbol?: string
+          updated_at?: string | null
+          volume_24h?: number | null
+        }
+        Relationships: []
+      }
       education_mentors: {
         Row: {
           attribute_keys: Json
@@ -3464,6 +3503,109 @@ export type Database = {
           },
         ]
       }
+      media_facilities: {
+        Row: {
+          city_id: string | null
+          created_at: string | null
+          facility_type: string
+          id: string
+          name: string
+          reputation: number | null
+          specialization: string | null
+          sponsor_tier: string | null
+          updated_at: string | null
+          user_id: string | null
+          weekly_cost: number | null
+        }
+        Insert: {
+          city_id?: string | null
+          created_at?: string | null
+          facility_type: string
+          id?: string
+          name: string
+          reputation?: number | null
+          specialization?: string | null
+          sponsor_tier?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          weekly_cost?: number | null
+        }
+        Update: {
+          city_id?: string | null
+          created_at?: string | null
+          facility_type?: string
+          id?: string
+          name?: string
+          reputation?: number | null
+          specialization?: string | null
+          sponsor_tier?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          weekly_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_facilities_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_shows: {
+        Row: {
+          created_at: string | null
+          episodes_count: number | null
+          facility_id: string
+          id: string
+          is_active: boolean | null
+          rating: number | null
+          show_format: string | null
+          show_name: string
+          target_audience: string | null
+          updated_at: string | null
+          user_id: string
+          viewership: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          episodes_count?: number | null
+          facility_id: string
+          id?: string
+          is_active?: boolean | null
+          rating?: number | null
+          show_format?: string | null
+          show_name: string
+          target_audience?: string | null
+          updated_at?: string | null
+          user_id: string
+          viewership?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          episodes_count?: number | null
+          facility_id?: string
+          id?: string
+          is_active?: boolean | null
+          rating?: number | null
+          show_format?: string | null
+          show_name?: string
+          target_audience?: string | null
+          updated_at?: string | null
+          user_id?: string
+          viewership?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_shows_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "media_facilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       multiplayer_events: {
         Row: {
           created_at: string | null
@@ -4491,6 +4633,42 @@ export type Database = {
           },
         ]
       }
+      player_skill_books: {
+        Row: {
+          book_id: string
+          book_title: string
+          completed_at: string | null
+          id: string
+          progress_percentage: number | null
+          purchased_at: string | null
+          skill_focus: string
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          book_id: string
+          book_title: string
+          completed_at?: string | null
+          id?: string
+          progress_percentage?: number | null
+          purchased_at?: string | null
+          skill_focus: string
+          user_id: string
+          xp_reward: number
+        }
+        Update: {
+          book_id?: string
+          book_title?: string
+          completed_at?: string | null
+          id?: string
+          progress_percentage?: number | null
+          purchased_at?: string | null
+          skill_focus?: string
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       player_skills: {
         Row: {
           bass: number
@@ -4574,6 +4752,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      player_token_holdings: {
+        Row: {
+          average_buy_price: number | null
+          created_at: string | null
+          id: string
+          quantity: number
+          token_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          average_buy_price?: number | null
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          token_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          average_buy_price?: number | null
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          token_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_token_holdings_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_training_sessions: {
         Row: {
@@ -7385,6 +7601,47 @@ export type Database = {
           region?: string
         }
         Relationships: []
+      }
+      token_transactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          price_per_token: number
+          quantity: number
+          token_id: string
+          total_amount: number
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          price_per_token: number
+          quantity: number
+          token_id: string
+          total_amount: number
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          price_per_token?: number
+          quantity?: number
+          token_id?: string
+          total_amount?: number
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_transactions_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tour_gigs: {
         Row: {
