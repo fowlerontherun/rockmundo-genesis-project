@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimePresence } from "./useRealtimePresence";
 
 interface UsePlayerPresenceStatsOptions {
   refreshInterval?: number | null;
@@ -46,10 +47,10 @@ export const usePlayerPresenceStats = (
   const refreshInterval = options.refreshInterval ?? DEFAULT_REFRESH_INTERVAL;
   const mountedRef = useRef(true);
   const [totalPlayers, setTotalPlayers] = useState<number | null>(null);
-  const [onlinePlayers, setOnlinePlayers] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const { onlineCount } = useRealtimePresence();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -85,9 +86,6 @@ export const usePlayerPresenceStats = (
       }
 
       setTotalPlayers(nextTotalPlayers);
-      // Set online players to null since we don't track this in the database
-      // The actual online count is tracked via Realtime presence in the chat components
-      setOnlinePlayers(null);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -123,7 +121,7 @@ export const usePlayerPresenceStats = (
 
   return {
     totalPlayers,
-    onlinePlayers,
+    onlinePlayers: onlineCount,
     loading,
     error,
     lastUpdated,
