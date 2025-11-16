@@ -26,3 +26,51 @@ create index if not exists songwriting_draft_revisions_draft_id_idx
 
 comment on table public.songwriting_drafts is 'Collaborative songwriting lyric drafts for the studio experience.';
 comment on table public.songwriting_draft_revisions is 'Immutable snapshots captured from songwriting drafts.';
+
+alter table public.songwriting_drafts enable row level security;
+alter table public.songwriting_draft_revisions enable row level security;
+
+create policy "Users can read their songwriting drafts"
+  on public.songwriting_drafts
+  for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert songwriting drafts they own"
+  on public.songwriting_drafts
+  for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their songwriting drafts"
+  on public.songwriting_drafts
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their songwriting drafts"
+  on public.songwriting_drafts
+  for delete
+  using (auth.uid() = user_id);
+
+create policy "Users can read revisions for their drafts"
+  on public.songwriting_draft_revisions
+  for select
+  using (
+    exists (
+      select 1
+      from public.songwriting_drafts d
+      where d.id = songwriting_draft_revisions.draft_id
+        and d.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can add revisions to their drafts"
+  on public.songwriting_draft_revisions
+  for insert
+  with check (
+    exists (
+      select 1
+      from public.songwriting_drafts d
+      where d.id = songwriting_draft_revisions.draft_id
+        and d.user_id = auth.uid()
+    )
+  );
