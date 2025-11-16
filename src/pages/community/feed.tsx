@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import {
@@ -61,6 +60,7 @@ const CommunityFeedPage = () => {
         cursor: typeof pageParam === "string" ? pageParam : null,
         viewerId,
       }),
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: !!viewerId && !authLoading && !profileLoading,
   });
@@ -106,7 +106,7 @@ const CommunityFeedPage = () => {
 
         const nextPages = existing.pages.map((page) => ({
           ...page,
-          posts: page.posts.map((post) => (post.id === updatedPost.id ? updatedPost : post)),
+          posts: page.posts.map((post) => ((post as any).id === (updatedPost as any).id ? updatedPost : post)),
         }));
 
         return {
@@ -263,10 +263,10 @@ const CommunityFeedPage = () => {
   const renderPost = (post: CommunityFeedPost) => {
     const displayName = post.author?.display_name || post.author?.username || "Unknown artist";
     const username = post.author?.username ? `@${post.author.username}` : "@unknown";
-    const createdAt = post.created_at ? new Date(post.created_at) : null;
+    const createdAt = (post as any).created_at ? new Date((post as any).created_at) : null;
 
     return (
-      <Card key={post.id}>
+      <Card key={(post as any).id}>
         <CardHeader className="flex flex-row gap-4">
           <Avatar>
             {post.author?.avatar_url ? (
@@ -284,7 +284,7 @@ const CommunityFeedPage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <p className="whitespace-pre-wrap leading-relaxed text-sm text-foreground/90">{post.content}</p>
+          <p className="whitespace-pre-wrap leading-relaxed text-sm text-foreground/90">{(post as any).content}</p>
         </CardContent>
         <CardFooter className="flex flex-wrap items-center gap-2">
           {reactionOptions.map((reaction) => {
@@ -296,7 +296,7 @@ const CommunityFeedPage = () => {
                 key={reaction.type}
                 variant={isActive ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleToggleReaction(post.id, reaction.type)}
+                onClick={() => handleToggleReaction((post as any).id, reaction.type)}
               >
                 <span role="img" aria-label={reaction.label}>
                   {reaction.emoji}

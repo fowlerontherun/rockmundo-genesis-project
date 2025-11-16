@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchCampaignExperiments,
@@ -222,7 +221,7 @@ const ExperimentsAnalytics = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-semibold leading-tight">{selectedExperiment.name}</h2>
-            <Badge variant={statusVariantMap[selectedExperiment.status]} className="capitalize">
+            <Badge variant={(statusVariantMap[selectedExperiment.status] || "outline") as "default" | "destructive" | "outline" | "secondary"} className="capitalize">
               {selectedExperiment.status}
             </Badge>
           </div>

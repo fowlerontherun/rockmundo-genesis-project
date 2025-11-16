@@ -42,11 +42,12 @@ const statusVariants: Record<string, string> = {
   terminated: "destructive",
 };
 
-const resolveStatusVariant = (status: string | null | undefined) => {
+const resolveStatusVariant = (status: string | null | undefined): "default" | "destructive" | "outline" | "secondary" => {
   if (!status) {
-    return "outline" as const;
+    return "outline";
   }
-  return (statusVariants[status.toLowerCase()] ?? "outline") as const;
+  const variant = statusVariants[status.toLowerCase()] ?? "outline";
+  return variant as "default" | "destructive" | "outline" | "secondary";
 };
 
 const chartColorPalette = {
@@ -185,7 +186,7 @@ const LabelBusinessDashboard = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Operating budget</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {formatCurrency(Number(label.operating_budget ?? 0))}
+            {formatCurrency(Number((label as any).operating_budget ?? 0))}
           </CardContent>
         </Card>
         <Card>
@@ -193,7 +194,7 @@ const LabelBusinessDashboard = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Cash reserves</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {formatCurrency(Number(label.cash_reserves ?? 0))}
+            {formatCurrency(Number((label as any).cash_reserves ?? 0))}
           </CardContent>
         </Card>
         <Card>

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -209,7 +208,7 @@ const OnboardingWizard = () => {
   const canGoBack = currentStep > 0;
   const canGoNext = currentStep < STEPS.length - 1;
   const continueDisabled =
-    mutation.isLoading || (currentStep === 0 && formState.displayName.trim().length === 0);
+    mutation.isPending || (currentStep === 0 && formState.displayName.trim().length === 0);
 
   const handleNext = () => {
     setCurrentStep((step) => Math.min(step + 1, STEPS.length - 1));
@@ -259,7 +258,7 @@ const OnboardingWizard = () => {
         }))
       }
       placeholderInitials={formState.displayName}
-      disabled={mutation.isLoading}
+      disabled={mutation.isPending}
     />
   );
 
@@ -272,7 +271,7 @@ const OnboardingWizard = () => {
           bio: value,
         }))
       }
-      disabled={mutation.isLoading}
+      disabled={mutation.isPending}
     />
   );
 
@@ -316,7 +315,7 @@ const OnboardingWizard = () => {
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
                 {errorMessage}
               </div>
-              <Button variant="outline" onClick={() => profileQuery.refetch()} disabled={mutation.isLoading}>
+              <Button variant="outline" onClick={() => profileQuery.refetch()} disabled={mutation.isPending}>
                 Try again
               </Button>
             </div>
@@ -326,7 +325,7 @@ const OnboardingWizard = () => {
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   {canGoBack && (
-                    <Button variant="ghost" onClick={handlePrev} disabled={mutation.isLoading}>
+                    <Button variant="ghost" onClick={handlePrev} disabled={mutation.isPending}>
                       Back
                     </Button>
                   )}
@@ -337,8 +336,8 @@ const OnboardingWizard = () => {
                       Continue
                     </Button>
                   ) : (
-                    <Button onClick={handleSubmit} disabled={mutation.isLoading}>
-                      {mutation.isLoading ? "Saving..." : "Complete onboarding"}
+                    <Button onClick={handleSubmit} disabled={mutation.isPending}>
+                      {mutation.isPending ? "Saving..." : "Complete onboarding"}
                     </Button>
                   )}
                 </div>

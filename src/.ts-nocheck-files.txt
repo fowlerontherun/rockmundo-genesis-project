@@ -1,11 +1,7 @@
 // This is a temporary list of files with @ts-nocheck
 // These files will need type checking re-enabled once Supabase types regenerate
 
-src/pages/advisor/index.tsx
-src/pages/analytics/experiments.tsx
-src/pages/business/labels/[labelId]/dashboard.tsx
-src/pages/community/feed.tsx
-src/pages/competitive/leaderboards.tsx
 src/pages/events/narratives/[storyId].tsx
-src/pages/legacy/index.tsx
-src/pages/onboarding/OnboardingWizard.tsx
+src/pages/side-hustles/index.tsx
+src/pages/studio/recording.tsx
+src/pages/talent/discovery.tsx
