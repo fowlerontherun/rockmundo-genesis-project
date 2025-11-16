@@ -50,15 +50,38 @@ export const PerformanceItemSelector = ({
   });
   
   const isItemLocked = (item: PerformanceItem) => {
+    console.log('[PerformanceItemSelector] Checking if item is locked:', {
+      itemName: item.name,
+      itemId: item.id,
+      requiredSkill: item.required_skill,
+      minSkillLevel: item.min_skill_level,
+      requiredGenre: item.required_genre,
+      userSkills,
+      userGenres
+    });
+
     if (item.required_skill) {
       const userSkillLevel = userSkills[item.required_skill] || 0;
+      console.log('[PerformanceItemSelector] Skill check:', {
+        requiredSkill: item.required_skill,
+        userSkillLevel,
+        minRequired: item.min_skill_level,
+        isLocked: userSkillLevel < item.min_skill_level
+      });
       if (userSkillLevel < item.min_skill_level) {
         return true;
       }
     }
     if (item.required_genre && !userGenres.includes(item.required_genre)) {
+      console.log('[PerformanceItemSelector] Genre check failed:', {
+        requiredGenre: item.required_genre,
+        userGenres,
+        isLocked: true
+      });
       return true;
     }
+    
+    console.log('[PerformanceItemSelector] Item is unlocked:', item.name);
     return false;
   };
   
