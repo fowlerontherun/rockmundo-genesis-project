@@ -105,6 +105,7 @@ export function AppSidebar() {
         { icon: Mic, label: "Gigs", path: "/gig-booking" },
         { icon: Music, label: "Jam Sessions", path: "/jam-sessions" },
         { icon: Mic, label: "Busking", path: "/busking" },
+        { icon: RadioIcon, label: "Rehearsals", path: "/rehearsals" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
         { icon: HardHat, label: "Band Crew", path: "/band-crew" },
