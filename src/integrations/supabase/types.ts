@@ -7730,6 +7730,7 @@ export type Database = {
       songs: {
         Row: {
           ai_generated_lyrics: boolean | null
+          archived: boolean | null
           arrangement_strength: number | null
           band_id: string | null
           catalog_status: string | null
@@ -7771,6 +7772,7 @@ export type Database = {
         }
         Insert: {
           ai_generated_lyrics?: boolean | null
+          archived?: boolean | null
           arrangement_strength?: number | null
           band_id?: string | null
           catalog_status?: string | null
@@ -7812,6 +7814,7 @@ export type Database = {
         }
         Update: {
           ai_generated_lyrics?: boolean | null
+          archived?: boolean | null
           arrangement_strength?: number | null
           band_id?: string | null
           catalog_status?: string | null

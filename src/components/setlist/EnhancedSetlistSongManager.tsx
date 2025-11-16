@@ -213,6 +213,7 @@ export const EnhancedSetlistSongManager = ({
         .from("songs")
         .select("id, title, genre, quality_score, duration_seconds, duration_display")
         .eq("band_id", bandId)
+        .eq("archived", false) // Filter out archived songs
         .in("status", ["draft", "recorded"])
         .order("title");
 
@@ -230,6 +231,7 @@ export const EnhancedSetlistSongManager = ({
           .select("id, title, genre, quality_score, duration_seconds, duration_display")
           .in("user_id", memberUserIds)
           .is("band_id", null)
+          .eq("archived", false) // Filter out archived songs
           .in("status", ["draft", "recorded"])
           .order("title");
 
