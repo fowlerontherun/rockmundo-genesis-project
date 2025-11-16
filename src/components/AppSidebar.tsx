@@ -46,7 +46,7 @@ import {
   Target,
   TrendingUp,
   Map,
-  BedDouble,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -145,7 +145,11 @@ export function AppSidebar() {
     {
       label: "Lifestyle",
       items: [
-        { icon: BedDouble, label: "Homes", path: "/lifestyle/homes" },
+        { icon: Users, label: "Band", path: "/band" },
+        { icon: Megaphone, label: "PR", path: "/pr" },
+        { icon: Share2, label: "Social", path: "/social" },
+        { icon: HeartHandshake, label: "Relationships", path: "/relationships" },
+        { icon: Handshake, label: "Mentorship", path: "/community/mentorship" },
       ],
     },
     {
