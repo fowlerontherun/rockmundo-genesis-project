@@ -38,6 +38,59 @@ interface LyricContent {
 
 const INITIAL_LYRIC_CONTENT: LyricContent = normalizeContent(DEFAULT_LYRIC_CONTENT);
 
+const ALLOWED_LYRIC_TAGS = new Set([
+  "p",
+  "br",
+  "strong",
+  "b",
+  "em",
+  "i",
+  "u",
+  "ul",
+  "ol",
+  "li",
+  "span",
+  "div",
+]);
+
+function sanitizeLyricHtml(html: string): string {
+  if (typeof DOMParser === "undefined") {
+    return html;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const wrapper = doc.body.firstElementChild;
+
+  if (!wrapper) {
+    return "";
+  }
+
+  const cleanElement = (element: Element) => {
+    Array.from(element.children).forEach((child) => {
+      cleanElement(child);
+
+      const tagName = child.tagName.toLowerCase();
+      if (!ALLOWED_LYRIC_TAGS.has(tagName)) {
+        if (child.childNodes.length > 0) {
+          child.replaceWith(...Array.from(child.childNodes));
+        } else {
+          child.remove();
+        }
+        return;
+      }
+
+      Array.from(child.attributes).forEach((attr) => {
+        child.removeAttribute(attr.name);
+      });
+    });
+  };
+
+  cleanElement(wrapper);
+
+  return wrapper.innerHTML;
+}
+
 function normalizeContent(content: Json | null): LyricContent {
   if (content && typeof content === "object" && !Array.isArray(content) && "html" in content) {
     const htmlValue = (content as { html?: unknown }).html;
@@ -67,16 +120,23 @@ function execCommand(command: string) {
 
 const LyricEditor = ({ value, onChange, readOnly, placeholder }: LyricEditorProps) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const sanitizedHtml = useMemo(() => sanitizeLyricHtml(value.html), [value.html]);
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value.html) {
-      editorRef.current.innerHTML = value.html;
+    if (editorRef.current && editorRef.current.innerHTML !== sanitizedHtml) {
+      editorRef.current.innerHTML = sanitizedHtml;
     }
-  }, [value.html]);
+  }, [sanitizedHtml]);
 
   const handleInput = (event: FormEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
-    onChange({ html: target.innerHTML });
+    const cleanedValue = sanitizeLyricHtml(target.innerHTML);
+
+    if (cleanedValue !== target.innerHTML) {
+      target.innerHTML = cleanedValue;
+    }
+
+    onChange({ html: cleanedValue });
   };
 
   return (
