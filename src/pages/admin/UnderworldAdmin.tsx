@@ -39,12 +39,21 @@ const UnderworldAdmin = () => {
 
   const createToken = useMutation({
     mutationFn: async (tokenData: typeof newToken) => {
+      const initialHistory = [
+        {
+          timestamp: new Date().toISOString(),
+          price: tokenData.current_price,
+        },
+      ];
+
       const { data, error } = await supabase
         .from("crypto_tokens")
-        .insert([{
-          ...tokenData,
-          price_history: [],
-        }])
+        .insert([
+          {
+            ...tokenData,
+            price_history: initialHistory,
+          },
+        ])
         .select()
         .single();
       if (error) throw error;
@@ -66,11 +75,20 @@ const UnderworldAdmin = () => {
   });
 
   const updatePrice = useMutation({
-    mutationFn: async ({ id, price }: { id: string; price: number }) => {
+    mutationFn: async ({ token, price }: { token: any; price: number }) => {
+      const priceHistory = Array.isArray(token.price_history) ? token.price_history : [];
+      const updatedHistory = [
+        ...priceHistory,
+        {
+          timestamp: new Date().toISOString(),
+          price,
+        },
+      ];
+
       const { data, error } = await supabase
         .from("crypto_tokens")
-        .update({ current_price: price })
-        .eq("id", id)
+        .update({ current_price: price, price_history: updatedHistory })
+        .eq("id", token.id)
         .select()
         .single();
       if (error) throw error;
@@ -199,9 +217,9 @@ const UnderworldAdmin = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updatePrice.mutate({ 
-                              id: token.id, 
-                              price: token.current_price * 1.05 
+                            onClick={() => updatePrice.mutate({
+                              token,
+                              price: token.current_price * 1.05,
                             })}
                           >
                             <TrendingUp className="h-4 w-4" />
@@ -209,9 +227,9 @@ const UnderworldAdmin = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updatePrice.mutate({ 
-                              id: token.id, 
-                              price: token.current_price * 0.95 
+                            onClick={() => updatePrice.mutate({
+                              token,
+                              price: token.current_price * 0.95,
                             })}
                           >
                             <TrendingDown className="h-4 w-4" />
