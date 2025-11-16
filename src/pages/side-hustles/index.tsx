@@ -17,6 +17,7 @@ import { useGameData } from "@/hooks/useGameData";
 import {
   calculateProgressUpgrade,
   fetchSideHustleProgress,
+  fetchSideHustleProgressByActivity,
   getDifficultyDescriptor,
   getNextLevelThreshold,
   recordMinigameAttempt,
@@ -128,10 +129,15 @@ const SideHustlesPage = () => {
         throw new Error("You need a profile to run side hustles.");
       }
 
-      const currentProgress = progressMap.get(activity.id);
+      const cachedProgress = progressMap.get(activity.id);
+      const latestProgress = await fetchSideHustleProgressByActivity(
+        profile.id,
+        activity.id,
+      );
+      const activityProgress = latestProgress ?? cachedProgress;
       const skillLevel = Math.min(
         12,
-        Math.max(1, (profile.level ?? 1) + (currentProgress?.level ?? 0)),
+        Math.max(1, (profile.level ?? 1) + (activityProgress?.level ?? 0)),
       );
       const focusLevel = Math.min(
         12,
@@ -145,8 +151,8 @@ const SideHustlesPage = () => {
       });
 
       const progression = calculateProgressUpgrade(
-        currentProgress?.level ?? 1,
-        currentProgress?.experience ?? 0,
+        activityProgress?.level ?? 1,
+        activityProgress?.experience ?? 0,
         result.xpGained,
       );
 
@@ -170,8 +176,8 @@ const SideHustlesPage = () => {
         minigame_type: activity.minigameType,
         level: progression.level,
         experience: progression.experience,
-        best_score: Math.max(currentProgress?.best_score ?? 0, result.score),
-        total_attempts: (currentProgress?.total_attempts ?? 0) + 1,
+        best_score: Math.max(activityProgress?.best_score ?? 0, result.score),
+        total_attempts: (activityProgress?.total_attempts ?? 0) + 1,
         last_result: result.success ? "success" : "retry",
         last_played_at: new Date().toISOString(),
       });

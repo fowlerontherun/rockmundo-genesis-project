@@ -2,6 +2,7 @@ import { simulateLyricScramble } from "./lyricScramble";
 import {
   calculateProgressUpgrade,
   fetchSideHustleProgress,
+  fetchSideHustleProgressByActivity,
   getNextLevelThreshold,
   recordMinigameAttempt,
   upsertSideHustleProgress,
@@ -61,6 +62,7 @@ export const summarizeMinigame = (
 export {
   calculateProgressUpgrade,
   fetchSideHustleProgress,
+  fetchSideHustleProgressByActivity,
   getDifficultyDescriptor,
   getNextLevelThreshold,
   recordMinigameAttempt,

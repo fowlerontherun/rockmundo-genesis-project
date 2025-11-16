@@ -51,6 +51,7 @@ const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
 const AwardShows = lazyWithRetry(() => import("./pages/AwardShows"));
+const SideHustlesPage = lazyWithRetry(() => import("./pages/side-hustles"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
@@ -145,6 +146,7 @@ function App() {
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
+                    <Route path="side-hustles" element={<SideHustlesPage />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />

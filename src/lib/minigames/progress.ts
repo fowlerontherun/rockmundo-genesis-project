@@ -59,6 +59,24 @@ export const fetchSideHustleProgress = async (
   return data ?? [];
 };
 
+export const fetchSideHustleProgressByActivity = async (
+  profileId: string,
+  activityId: string,
+): Promise<SideHustleProgressRow | null> => {
+  const { data, error } = await supabase
+    .from("side_hustle_progress")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("activity_id", activityId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load activity progress: ${error.message}`);
+  }
+
+  return data ?? null;
+};
+
 export const upsertSideHustleProgress = async (
   payload: SideHustleProgressInsert | SideHustleProgressUpdate,
 ): Promise<SideHustleProgressRow> => {

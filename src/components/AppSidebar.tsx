@@ -44,6 +44,7 @@ import {
   Target,
   TrendingUp,
   Map,
+  Gamepad2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -125,6 +126,7 @@ export function AppSidebar() {
         { icon: Store, label: "Gear Shop", path: "/gear-shop" },
         { icon: Package, label: "Inventory", path: "/inventory" },
         { icon: ShoppingCart, label: "Merch", path: "/merchandise" },
+        { icon: Gamepad2, label: "Side Hustles", path: "/side-hustles" },
         { icon: Disc, label: "Record Labels", path: "/labels" },
         { icon: Building2, label: "Venues", path: "/venues" },
       ],
