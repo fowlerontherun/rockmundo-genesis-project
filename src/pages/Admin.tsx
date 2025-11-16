@@ -167,6 +167,48 @@ const adminSections = [
     action: "Manage Radio",
     Icon: Radio,
   },
+  {
+    title: "Songwriting",
+    description: "Manage songwriting mechanics, chord progressions, and quality multipliers.",
+    href: "/admin/songwriting",
+    action: "Manage Songwriting",
+    Icon: Music2,
+  },
+  {
+    title: "Gigs",
+    description: "Configure gig payouts, performance ratings, and fame generation.",
+    href: "/admin/gigs",
+    action: "Manage Gigs",
+    Icon: Music2,
+  },
+  {
+    title: "Charts",
+    description: "Manage music charts, ranking algorithms, and chart rewards.",
+    href: "/admin/charts",
+    action: "Manage Charts",
+    Icon: TrendingUp,
+  },
+  {
+    title: "Twaater",
+    description: "Configure Twaater platform features, engagement, and trending algorithms.",
+    href: "/admin/twaater",
+    action: "Manage Twaater",
+    Icon: Shield,
+  },
+  {
+    title: "Record Labels",
+    description: "Manage record labels, deal types, and royalty systems.",
+    href: "/admin/labels",
+    action: "Manage Labels",
+    Icon: Building2,
+  },
+  {
+    title: "Band & Chemistry",
+    description: "Configure band mechanics, chemistry systems, and collaboration features.",
+    href: "/admin/bands",
+    action: "Manage Bands",
+    Icon: Users,
+  },
 ] as const;
 
 const adminSubSections = [

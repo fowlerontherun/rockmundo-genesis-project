@@ -115,6 +115,12 @@ const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConf
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
+const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
+const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
+const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
+const TwaaterAdmin = lazyWithRetry(() => import("./pages/admin/TwaaterAdmin"));
+const LabelsAdmin = lazyWithRetry(() => import("./pages/admin/LabelsAdmin"));
+const BandAdmin = lazyWithRetry(() => import("./pages/admin/BandAdmin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
@@ -266,6 +272,12 @@ function App() {
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
+                    <Route path="admin/songwriting" element={<SongwritingAdmin />} />
+                    <Route path="admin/gigs" element={<GigsAdmin />} />
+                    <Route path="admin/charts" element={<ChartsAdmin />} />
+                    <Route path="admin/twaater" element={<TwaaterAdmin />} />
+                    <Route path="admin/labels" element={<LabelsAdmin />} />
+                    <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="radio" element={<Radio />} />
                     <Route path="music-videos" element={<MusicVideos />} />
