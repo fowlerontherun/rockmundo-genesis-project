@@ -3,7 +3,9 @@
 
 src/pages/advisor/index.tsx
 src/pages/analytics/experiments.tsx
+src/pages/business/labels/[labelId]/dashboard.tsx
 src/pages/community/feed.tsx
 src/pages/competitive/leaderboards.tsx
+src/pages/events/narratives/[storyId].tsx
 src/pages/legacy/index.tsx
 src/pages/onboarding/OnboardingWizard.tsx
