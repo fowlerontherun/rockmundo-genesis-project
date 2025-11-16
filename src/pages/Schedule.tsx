@@ -25,6 +25,9 @@ const Schedule = () => {
         </div>
         
         <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>
+            Songwriting
+          </Button>
           <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>
             Performance
           </Button>
