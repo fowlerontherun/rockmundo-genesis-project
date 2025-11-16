@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Music, TrendingUp, DollarSign } from "lucide-react";
@@ -58,16 +58,16 @@ export default function StreamingNew() {
   const totalRevenue = analytics?.reduce((sum, a) => sum + (a.daily_revenue || 0), 0) || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate("/music-hub")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Music Hub
+            Back
           </Button>
           <div>
-            <h1 className="text-4xl font-bold">Streaming Platforms</h1>
-            <p className="text-muted-foreground">Release and track your music across streaming services</p>
+            <h1 className="text-3xl sm:text-4xl font-bold">Streaming Platforms</h1>
+            <p className="text-sm text-muted-foreground">Release and track your music</p>
           </div>
         </div>
         
@@ -77,14 +77,14 @@ export default function StreamingNew() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-primary" />
               <p className="text-sm text-muted-foreground">Total Streams</p>
             </div>
-            <p className="text-3xl font-bold">{totalStreams.toLocaleString()}</p>
+            <p className="text-2xl sm:text-3xl font-bold">{totalStreams.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
@@ -93,7 +93,7 @@ export default function StreamingNew() {
               <DollarSign className="h-4 w-4 text-green-500" />
               <p className="text-sm text-muted-foreground">Total Revenue</p>
             </div>
-            <p className="text-3xl font-bold text-green-500">${totalRevenue.toLocaleString()}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-green-500">${totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
@@ -102,27 +102,27 @@ export default function StreamingNew() {
               <Music className="h-4 w-4" />
               <p className="text-sm text-muted-foreground">Active Releases</p>
             </div>
-            <p className="text-3xl font-bold">{releases?.filter(r => r.is_active).length || 0}</p>
+            <p className="text-2xl sm:text-3xl font-bold">{releases?.filter(r => r.is_active).length || 0}</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="releases" className="w-full">
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="releases">My Releases</TabsTrigger>
           <TabsTrigger value="platforms">Platforms</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="releases" className="space-y-4">
+        <TabsContent value="releases" className="space-y-4 mt-6">
           {releases && releases.length > 0 ? (
             <div className="grid gap-4">
               {releases.map((release: any) => (
                 <Card key={release.id}>
                   <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                       <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold">{release.song?.title}</h3>
                           <Badge variant={release.is_active ? "default" : "secondary"}>
                             {release.is_active ? "Active" : "Inactive"}
@@ -171,8 +171,8 @@ export default function StreamingNew() {
           )}
         </TabsContent>
 
-        <TabsContent value="platforms" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value="platforms" className="space-y-4 mt-6">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {platforms?.map((platform) => (
               <Card key={platform.id}>
                 <CardContent className="pt-6">
@@ -193,7 +193,7 @@ export default function StreamingNew() {
           </div>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
+        <TabsContent value="analytics" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Daily Performance</CardTitle>
@@ -209,6 +209,9 @@ export default function StreamingNew() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Release to Streaming</DialogTitle>
+            <DialogDescription>
+              Select a recorded song and platform to release your music
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -241,7 +244,7 @@ export default function StreamingNew() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleRelease} className="w-full">
+            <Button onClick={handleRelease} className="w-full" disabled={!selectedSong || !selectedPlatform}>
               Release Song
             </Button>
           </div>
