@@ -192,17 +192,16 @@ function App() {
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
                     <Route path="community/feed" element={<CommunityFeed />} />
-                    <Route path="tours" element={<TourManager />} />
-                    <Route path="tours-system" element={<TouringSystem />} />
-                    <Route path="equipment" element={<EnhancedEquipmentStore />} />
-                    <Route path="fans" element={<FanManagement />} />
+                    <Route path="gig-booking" element={<GigBooking />} />
+                    <Route path="jam-sessions" element={<JamSessions />} />
+                    <Route path="rehearsals" element={<Rehearsals />} />
+                    <Route path="radio" element={<Radio />} />
+                    <Route path="music-videos" element={<MusicVideos />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
-                    <Route path="social" element={<Navigate to="/dikcok" replace />} />
-                    <Route path="dikcok" element={<SocialMedia />} />
                     <Route path="relationships" element={<Relationships />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
@@ -213,10 +212,8 @@ function App() {
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
                     <Route path="band-crew" element={<BandCrewManagement />} />
-                    <Route path="stage-equipment-system-plan" element={<StageEquipmentSystemPlan />} />
                     <Route path="finances" element={<Finances />} />
                     <Route path="gear" element={<Gear />} />
-                    <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="song-market" element={<SongMarket />} />
@@ -225,22 +222,13 @@ function App() {
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/:handle" element={<TwaaterProfile />} />
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
-
-                    {/* Redirects for removed placeholder pages */}
-                    <Route path="tours" element={<RedirectTo to="/travel" />} />
-                    <Route path="schedule" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="equipment" element={<RedirectTo to="/gear" />} />
-                    <Route path="equipment-enhanced" element={<RedirectTo to="/gear" />} />
-                    <Route path="fans" element={<RedirectTo to="/pr" />} />
-                    <Route path="fans-enhanced" element={<RedirectTo to="/pr" />} />
-                    <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
-                    <Route path="streaming" element={<StreamingPlatforms />} />
+                    <Route path="employment" element={<Employment />} />
+                    <Route path="inventory" element={<InventoryManager />} />
+                    <Route path="merchandise" element={<Merchandise />} />
                     <Route path="labels" element={<RecordLabel />} />
+                    
+                    {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
-                    <Route path="tours-system" element={<RedirectTo to="/travel" />} />
-                    <Route path="charts" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="charts-competitive" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="songs" element={<RedirectTo to="/music" />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="admin" element={<Admin />} />
                     <Route path="admin/players" element={<AdminPlayerManagement />} />
