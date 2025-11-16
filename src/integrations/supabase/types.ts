@@ -83,6 +83,129 @@ export type Database = {
         }
         Relationships: []
       }
+      audio_generation_prompts: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          duration_seconds: number
+          id: string
+          last_error: string | null
+          metadata: Json | null
+          prompt_text: string
+          requested_by: string | null
+          session_id: string
+          started_at: string | null
+          status: string
+          target_model: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_seconds?: number
+          id?: string
+          last_error?: string | null
+          metadata?: Json | null
+          prompt_text: string
+          requested_by?: string | null
+          session_id: string
+          started_at?: string | null
+          status?: string
+          target_model?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_seconds?: number
+          id?: string
+          last_error?: string | null
+          metadata?: Json | null
+          prompt_text?: string
+          requested_by?: string | null
+          session_id?: string
+          started_at?: string | null
+          status?: string
+          target_model?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_generation_prompts_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "audio_generation_prompts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audio_generation_results: {
+        Row: {
+          audio_public_url: string
+          audio_storage_path: string
+          cost_cents: number | null
+          created_at: string | null
+          duration_seconds: number
+          id: string
+          is_preferred: boolean
+          latency_ms: number | null
+          metadata: Json | null
+          model_version: string
+          prompt_id: string
+          seed: string | null
+          session_id: string
+        }
+        Insert: {
+          audio_public_url: string
+          audio_storage_path: string
+          cost_cents?: number | null
+          created_at?: string | null
+          duration_seconds?: number
+          id?: string
+          is_preferred?: boolean
+          latency_ms?: number | null
+          metadata?: Json | null
+          model_version: string
+          prompt_id: string
+          seed?: string | null
+          session_id: string
+        }
+        Update: {
+          audio_public_url?: string
+          audio_storage_path?: string
+          cost_cents?: number | null
+          created_at?: string | null
+          duration_seconds?: number
+          id?: string
+          is_preferred?: boolean
+          latency_ms?: number | null
+          metadata?: Json | null
+          model_version?: string
+          prompt_id?: string
+          seed?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_generation_results_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "audio_generation_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audio_generation_results_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_song_gifts: {
         Row: {
           created_at: string | null
