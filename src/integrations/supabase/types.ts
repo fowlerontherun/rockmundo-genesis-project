@@ -17,6 +17,7 @@ export type Database = {
       achievements: {
         Row: {
           category: string | null
+          broadcast_to_feed: boolean
           created_at: string | null
           description: string | null
           icon: string | null
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          broadcast_to_feed?: boolean
           created_at?: string | null
           description?: string | null
           icon?: string | null
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          broadcast_to_feed?: boolean
           created_at?: string | null
           description?: string | null
           icon?: string | null
@@ -3330,6 +3333,7 @@ export type Database = {
       }
       jam_sessions: {
         Row: {
+          broadcast_to_feed: boolean
           access_code: string | null
           created_at: string | null
           current_participants: number
@@ -3384,6 +3388,93 @@ export type Database = {
           {
             foreignKeyName: "jam_sessions_host_id_fkey"
             columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_messages: {
+        Row: {
+          created_at: string
+          id: string
+          jam_session_id: string
+          message: string
+          sender_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jam_session_id: string
+          message: string
+          sender_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jam_session_id?: string
+          message?: string
+          sender_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_messages_jam_session_id_fkey"
+            columns: ["jam_session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_messages_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_participants: {
+        Row: {
+          co_play_count: number
+          id: string
+          is_ready: boolean
+          jam_session_id: string
+          joined_at: string
+          profile_id: string
+          skill_tier: string
+          updated_at: string
+        }
+        Insert: {
+          co_play_count?: number
+          id?: string
+          is_ready?: boolean
+          jam_session_id: string
+          joined_at?: string
+          profile_id: string
+          skill_tier?: string
+          updated_at?: string
+        }
+        Update: {
+          co_play_count?: number
+          id?: string
+          is_ready?: boolean
+          jam_session_id?: string
+          joined_at?: string
+          profile_id?: string
+          skill_tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_participants_jam_session_id_fkey"
+            columns: ["jam_session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_participants_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
