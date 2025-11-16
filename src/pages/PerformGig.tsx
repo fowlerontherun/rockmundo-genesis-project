@@ -187,7 +187,9 @@ export default function PerformGig() {
   }, [gig]);
 
   // Use realtime gig advancement only when showing live viewer
-  useRealtimeGigAdvancement(gigId || null, shouldShowLiveViewer && !showOutcome);
+  // Always call the hook unconditionally to avoid React hooks violations
+  const isAdvancementEnabled = shouldShowLiveViewer && !showOutcome;
+  useRealtimeGigAdvancement(gigId || null, isAdvancementEnabled);
 
   // Auto-refresh when the 10-minute window elapses after completion
   useEffect(() => {
