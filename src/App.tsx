@@ -61,6 +61,7 @@ const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
 const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
 const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
+const SongwritingBooking = lazyWithRetry(() => import("./pages/booking/SongwritingBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
@@ -189,6 +190,7 @@ function App() {
                     <Route path="booking/education" element={<EducationBooking />} />
                     <Route path="booking/performance" element={<PerformanceBooking />} />
                     <Route path="booking/work" element={<WorkBooking />} />
+                    <Route path="booking/songwriting" element={<SongwritingBooking />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
                     <Route path="community/feed" element={<CommunityFeed />} />
