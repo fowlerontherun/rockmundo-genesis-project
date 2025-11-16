@@ -19,7 +19,6 @@ const RedirectTo = ({ to }: { to: string }) => {
   return null;
 };
 import WorldPulsePage from "./pages/WorldPulse";
-import MusicHub from "./pages/MusicHub";
 import BandManager from "./pages/BandManager";
 import InventoryManager from "./pages/InventoryManager";
 
@@ -28,7 +27,7 @@ const Index = lazyWithRetry(() => import("./pages/Index"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
-const Performance = lazyWithRetry(() => import("./pages/Performance"));
+
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 // Equipment store pages removed - replaced by EnhancedEquipmentStore
@@ -160,7 +159,7 @@ function App() {
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
                     <Route path="my-character" element={<MyCharacter />} />
-                    <Route path="music" element={<MusicHub />} />
+                    
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
                     <Route path="advisor" element={<AdvisorPage />} />
@@ -253,11 +252,9 @@ function App() {
                     <Route path="radio" element={<Radio />} />
                     <Route path="music-videos" element={<MusicVideos />} />
                     <Route path="radio-stations" element={<RadioStations />} />
-                    <Route path="performance" element={<Performance />} />
+                    <Route path="gig-booking" element={<GigBooking />} />
+                    <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
-                    <Route path="media" element={<MediaNetworks />} />
-                    <Route path="busking" element={<Navigate to="/performance?tab=busking" replace />} />
-                    <Route path="jams" element={<Navigate to="/performance?tab=jams" replace />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     {/* <Route path="world-map" element={<WorldMap />} /> */}
                     <Route path="inventory" element={<InventoryManager />} />
