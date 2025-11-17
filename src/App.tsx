@@ -36,9 +36,9 @@ const Onboarding = lazyWithRetry(() => import("./pages/onboarding/OnboardingWiza
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
-// const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia")); // Disabled - missing database tables
+const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
 const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
-// const CommunityMentorship = lazyWithRetry(() => import("./pages/community/mentorship")); // Disabled - missing database tables
+const CommunityMentorship = lazyWithRetry(() => import("./pages/community/mentorship"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
@@ -73,7 +73,7 @@ const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfile = lazyWithRetry(() => import("./pages/TwaaterProfile"));
-// const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed")); // Disabled - missing database tables
+const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
@@ -103,7 +103,7 @@ const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConf
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
-// const AdminAudioGeneration = lazyWithRetry(() => import("./pages/admin/AudioGenerationDashboard")); // Disabled - missing database tables
+const AdminAudioGeneration = lazyWithRetry(() => import("./pages/admin/AudioGenerationDashboard"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
@@ -119,7 +119,7 @@ const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
-// const JamSessions = lazyWithRetry(() => import("./pages/JamSessions")); // Disabled - missing database tables
+const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
 const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
@@ -128,7 +128,7 @@ const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaStudio = lazyWithRetry(() => import("./pages/media/studio"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
-// const LifestyleHomes = lazyWithRetry(() => import("./pages/lifestyle/homes")); // Disabled - missing database tables
+const LifestyleHomes = lazyWithRetry(() => import("./pages/lifestyle/homes"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -176,7 +176,7 @@ function App() {
                     <Route path="band" element={<BandManager />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
                     <Route path="gigs" element={<GigBooking />} />
-                    {/* <Route path="jams" element={<JamSessions />} /> */}
+                    <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
                     <Route path="my-character" element={<MyCharacter />} />
@@ -196,14 +196,14 @@ function App() {
                     <Route path="tours-system" element={<TouringSystem />} />
                     <Route path="equipment" element={<EnhancedEquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
-                    {/* <Route path="lifestyle/homes" element={<LifestyleHomes />} /> */}
+                    <Route path="lifestyle/homes" element={<LifestyleHomes />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="relationships" element={<Relationships />} />
-                    {/* <Route path="community/mentorship" element={<CommunityMentorship />} /> */}
+                    <Route path="community/mentorship" element={<CommunityMentorship />} />
                     <Route path="pr" element={<PublicRelations />} />
                     {/* <Route path="legacy" element={<Legacy />} /> */}
                     <Route path="venues" element={<VenueManagement />} />
@@ -263,7 +263,7 @@ function App() {
                     {/* <Route path="admin/underworld" element={<UnderworldAdmin />} /> */}
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
-                    {/* <Route path="admin/audio-generation" element={<AdminAudioGeneration />} /> */}
+                    <Route path="admin/audio-generation" element={<AdminAudioGeneration />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
