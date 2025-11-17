@@ -291,6 +291,89 @@ export type Database = {
           },
         ]
       }
+      audio_generation_prompts: {
+        Row: {
+          created_at: string | null
+          id: string
+          prompt_text: string
+          session_id: string | null
+          status: string | null
+          target_model: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          prompt_text: string
+          session_id?: string | null
+          status?: string | null
+          target_model?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          prompt_text?: string
+          session_id?: string | null
+          status?: string | null
+          target_model?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_generation_prompts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audio_generation_results: {
+        Row: {
+          audio_url: string | null
+          created_at: string | null
+          id: string
+          is_preferred: boolean | null
+          prompt_id: string | null
+          quality_score: number | null
+          session_id: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_preferred?: boolean | null
+          prompt_id?: string | null
+          quality_score?: number | null
+          session_id?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_preferred?: boolean | null
+          prompt_id?: string | null
+          quality_score?: number | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_generation_results_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "audio_generation_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audio_generation_results_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_activity_lockouts: {
         Row: {
           activity_type: string
@@ -1482,6 +1565,183 @@ export type Database = {
             columns: ["to_city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_feed_posts: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          id: string
+          is_spotlight: boolean | null
+          metadata: Json | null
+          profile_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          is_spotlight?: boolean | null
+          metadata?: Json | null
+          profile_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_spotlight?: boolean | null
+          metadata?: Json | null
+          profile_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_feed_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_mentorship_goals: {
+        Row: {
+          created_at: string | null
+          goal_text: string
+          id: string
+          match_id: string
+          status: string | null
+          target_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          goal_text: string
+          id?: string
+          match_id: string
+          status?: string | null
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          goal_text?: string
+          id?: string
+          match_id?: string
+          status?: string | null
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_goals_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "community_mentorship_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_mentorship_matches: {
+        Row: {
+          created_at: string | null
+          ended_at: string | null
+          id: string
+          match_date: string | null
+          mentee_profile_id: string
+          mentor_profile_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          match_date?: string | null
+          mentee_profile_id: string
+          mentor_profile_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          match_date?: string | null
+          mentee_profile_id?: string
+          mentor_profile_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_matches_mentee_profile_id_fkey"
+            columns: ["mentee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentorship_matches_mentor_profile_id_fkey"
+            columns: ["mentor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "community_mentorship_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_mentorship_profiles: {
+        Row: {
+          availability_status: string | null
+          created_at: string | null
+          experience_level: string | null
+          focus_areas: string[] | null
+          headline: string | null
+          id: string
+          is_open_to_mentor: boolean | null
+          mentor_capacity: number | null
+          mentorship_style: string | null
+          profile_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          availability_status?: string | null
+          created_at?: string | null
+          experience_level?: string | null
+          focus_areas?: string[] | null
+          headline?: string | null
+          id?: string
+          is_open_to_mentor?: boolean | null
+          mentor_capacity?: number | null
+          mentorship_style?: string | null
+          profile_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          availability_status?: string | null
+          created_at?: string | null
+          experience_level?: string | null
+          focus_areas?: string[] | null
+          headline?: string | null
+          id?: string
+          is_open_to_mentor?: boolean | null
+          mentor_capacity?: number | null
+          mentorship_style?: string | null
+          profile_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3200,6 +3460,93 @@ export type Database = {
         }
         Relationships: []
       }
+      jam_session_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          jam_session_id: string
+          message: string
+          sender_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          jam_session_id: string
+          message: string
+          sender_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          jam_session_id?: string
+          message?: string
+          sender_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_messages_jam_session_id_fkey"
+            columns: ["jam_session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_messages_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_participants: {
+        Row: {
+          co_play_count: number | null
+          id: string
+          is_ready: boolean | null
+          jam_session_id: string
+          joined_at: string | null
+          profile_id: string
+          skill_tier: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          co_play_count?: number | null
+          id?: string
+          is_ready?: boolean | null
+          jam_session_id: string
+          joined_at?: string | null
+          profile_id: string
+          skill_tier?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          co_play_count?: number | null
+          id?: string
+          is_ready?: boolean | null
+          jam_session_id?: string
+          joined_at?: string | null
+          profile_id?: string
+          skill_tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_participants_jam_session_id_fkey"
+            columns: ["jam_session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_sessions: {
         Row: {
           access_code: string | null
@@ -3909,6 +4256,217 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      lifestyle_properties: {
+        Row: {
+          area_sq_ft: number | null
+          available: boolean | null
+          base_price: number
+          bathrooms: number
+          bedrooms: number
+          city: string
+          created_at: string | null
+          description: string | null
+          district: string | null
+          energy_rating: string | null
+          highlight_features: string[] | null
+          id: string
+          image_url: string | null
+          lifestyle_fit: Json | null
+          lot_size_sq_ft: number | null
+          name: string
+          property_type: string
+          rating: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          area_sq_ft?: number | null
+          available?: boolean | null
+          base_price: number
+          bathrooms: number
+          bedrooms: number
+          city: string
+          created_at?: string | null
+          description?: string | null
+          district?: string | null
+          energy_rating?: string | null
+          highlight_features?: string[] | null
+          id?: string
+          image_url?: string | null
+          lifestyle_fit?: Json | null
+          lot_size_sq_ft?: number | null
+          name: string
+          property_type: string
+          rating?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          area_sq_ft?: number | null
+          available?: boolean | null
+          base_price?: number
+          bathrooms?: number
+          bedrooms?: number
+          city?: string
+          created_at?: string | null
+          description?: string | null
+          district?: string | null
+          energy_rating?: string | null
+          highlight_features?: string[] | null
+          id?: string
+          image_url?: string | null
+          lifestyle_fit?: Json | null
+          lot_size_sq_ft?: number | null
+          name?: string
+          property_type?: string
+          rating?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lifestyle_property_features: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          feature_name: string
+          feature_type: string
+          id: string
+          impact: Json | null
+          property_id: string
+          upgrade_cost: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          feature_name: string
+          feature_type: string
+          id?: string
+          impact?: Json | null
+          property_id: string
+          upgrade_cost?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          feature_name?: string
+          feature_type?: string
+          id?: string
+          impact?: Json | null
+          property_id?: string
+          upgrade_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_features_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lifestyle_property_financing_options: {
+        Row: {
+          closing_cost_pct: number | null
+          created_at: string | null
+          description: string | null
+          down_payment_pct: number
+          id: string
+          interest_rate: number
+          name: string
+          property_id: string
+          requirements: Json | null
+          term_months: number
+        }
+        Insert: {
+          closing_cost_pct?: number | null
+          created_at?: string | null
+          description?: string | null
+          down_payment_pct: number
+          id?: string
+          interest_rate: number
+          name: string
+          property_id: string
+          requirements?: Json | null
+          term_months: number
+        }
+        Update: {
+          closing_cost_pct?: number | null
+          created_at?: string | null
+          description?: string | null
+          down_payment_pct?: number
+          id?: string
+          interest_rate?: number
+          name?: string
+          property_id?: string
+          requirements?: Json | null
+          term_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_financing_options_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lifestyle_property_purchases: {
+        Row: {
+          created_at: string | null
+          financing_option_id: string | null
+          id: string
+          notes: string | null
+          property_id: string
+          purchase_price: number
+          selected_features: Json | null
+          status: string | null
+          total_upgrade_cost: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          financing_option_id?: string | null
+          id?: string
+          notes?: string | null
+          property_id: string
+          purchase_price: number
+          selected_features?: Json | null
+          status?: string | null
+          total_upgrade_cost?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          financing_option_id?: string | null
+          id?: string
+          notes?: string | null
+          property_id?: string
+          purchase_price?: number
+          selected_features?: Json | null
+          status?: string | null
+          total_upgrade_cost?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_purchases_financing_option_id_fkey"
+            columns: ["financing_option_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_property_financing_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lifestyle_property_purchases_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manufacturing_costs: {
         Row: {
