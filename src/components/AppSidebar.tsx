@@ -47,6 +47,11 @@ import {
   TrendingUp,
   Map,
   Handshake,
+  Newspaper,
+  Heart,
+  Crown,
+  Video,
+  Radio,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -106,7 +111,7 @@ export function AppSidebar() {
         { icon: Mic, label: "Gigs", path: "/gig-booking" },
         { icon: Music, label: "Jam Sessions", path: "/jam-sessions" },
         { icon: Mic, label: "Busking", path: "/busking" },
-        { icon: RadioIcon, label: "Rehearsals", path: "/rehearsals" },
+        { icon: Radio, label: "Rehearsals", path: "/rehearsals" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
         { icon: HardHat, label: "Band Crew", path: "/band-crew" },
@@ -135,7 +140,7 @@ export function AppSidebar() {
       label: t('social'),
       items: [
         { icon: Users, label: t('band'), path: "/band" },
-        { icon: RadioIcon, label: "Band Chemistry", path: "/chemistry" },
+        { icon: Radio, label: "Band Chemistry", path: "/chemistry" },
         { icon: Twitter, label: "Twaater", path: "/twaater" },
         { icon: Video, label: "DikCok", path: "/dikcok" },
         { icon: Megaphone, label: t('pr'), path: "/pr" },
