@@ -17,7 +17,6 @@ export type Database = {
       achievements: {
         Row: {
           category: string | null
-          broadcast_to_feed: boolean
           created_at: string | null
           description: string | null
           icon: string | null
@@ -29,7 +28,6 @@ export type Database = {
         }
         Insert: {
           category?: string | null
-          broadcast_to_feed?: boolean
           created_at?: string | null
           description?: string | null
           icon?: string | null
@@ -41,7 +39,6 @@ export type Database = {
         }
         Update: {
           category?: string | null
-          broadcast_to_feed?: boolean
           created_at?: string | null
           description?: string | null
           icon?: string | null
@@ -82,129 +79,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      audio_generation_prompts: {
-        Row: {
-          completed_at: string | null
-          created_at: string | null
-          duration_seconds: number
-          id: string
-          last_error: string | null
-          metadata: Json | null
-          prompt_text: string
-          requested_by: string | null
-          session_id: string
-          started_at: string | null
-          status: string
-          target_model: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string | null
-          duration_seconds?: number
-          id?: string
-          last_error?: string | null
-          metadata?: Json | null
-          prompt_text: string
-          requested_by?: string | null
-          session_id: string
-          started_at?: string | null
-          status?: string
-          target_model?: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string | null
-          duration_seconds?: number
-          id?: string
-          last_error?: string | null
-          metadata?: Json | null
-          prompt_text?: string
-          requested_by?: string | null
-          session_id?: string
-          started_at?: string | null
-          status?: string
-          target_model?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audio_generation_prompts_requested_by_fkey"
-            columns: ["requested_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "audio_generation_prompts_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "recording_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      audio_generation_results: {
-        Row: {
-          audio_public_url: string
-          audio_storage_path: string
-          cost_cents: number | null
-          created_at: string | null
-          duration_seconds: number
-          id: string
-          is_preferred: boolean
-          latency_ms: number | null
-          metadata: Json | null
-          model_version: string
-          prompt_id: string
-          seed: string | null
-          session_id: string
-        }
-        Insert: {
-          audio_public_url: string
-          audio_storage_path: string
-          cost_cents?: number | null
-          created_at?: string | null
-          duration_seconds?: number
-          id?: string
-          is_preferred?: boolean
-          latency_ms?: number | null
-          metadata?: Json | null
-          model_version: string
-          prompt_id: string
-          seed?: string | null
-          session_id: string
-        }
-        Update: {
-          audio_public_url?: string
-          audio_storage_path?: string
-          cost_cents?: number | null
-          created_at?: string | null
-          duration_seconds?: number
-          id?: string
-          is_preferred?: boolean
-          latency_ms?: number | null
-          metadata?: Json | null
-          model_version?: string
-          prompt_id?: string
-          seed?: string | null
-          session_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audio_generation_results_prompt_id_fkey"
-            columns: ["prompt_id"]
-            isOneToOne: false
-            referencedRelation: "audio_generation_prompts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audio_generation_results_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "recording_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       admin_song_gifts: {
         Row: {
@@ -1612,217 +1486,89 @@ export type Database = {
           },
         ]
       }
-      community_mentorship_goals: {
+      contract_clauses: {
         Row: {
-          check_ins: Json
-          created_at: string
+          clause_key: string
+          contract_type: string
+          created_at: string | null
+          default_terms: Json | null
           description: string | null
-          focus_areas: string[]
           id: string
-          impact_score: number
-          last_check_in: string | null
-          match_id: string
-          metrics: Json
-          milestone_order: number
-          progress: number
-          status: string
-          support_notes: string | null
-          target_date: string | null
+          sort_order: number | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          check_ins?: Json
-          created_at?: string
+          clause_key: string
+          contract_type: string
+          created_at?: string | null
+          default_terms?: Json | null
           description?: string | null
-          focus_areas?: string[]
           id?: string
-          impact_score?: number
-          last_check_in?: string | null
-          match_id: string
-          metrics?: Json
-          milestone_order?: number
-          progress?: number
-          status?: string
-          support_notes?: string | null
-          target_date?: string | null
+          sort_order?: number | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          check_ins?: Json
-          created_at?: string
+          clause_key?: string
+          contract_type?: string
+          created_at?: string | null
+          default_terms?: Json | null
           description?: string | null
-          focus_areas?: string[]
           id?: string
-          impact_score?: number
-          last_check_in?: string | null
-          match_id?: string
-          metrics?: Json
-          milestone_order?: number
-          progress?: number
-          status?: string
-          support_notes?: string | null
-          target_date?: string | null
+          sort_order?: number | null
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "community_mentorship_goals_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "community_mentorship_matches"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      community_mentorship_matches: {
+      contract_negotiations: {
         Row: {
-          alignment_score: number
-          created_at: string
-          ended_at: string | null
-          focus_areas: string[]
+          clause_id: string
+          contract_id: string
+          counter_terms: Json | null
+          created_at: string | null
           id: string
-          initiated_by_profile_id: string
-          mentor_profile_id: string
-          mentee_profile_id: string
-          mentorship_cadence: string
-          notes: string | null
-          started_at: string | null
+          last_action_by: string | null
+          proposed_terms: Json | null
           status: string
-          support_topics: string[]
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          alignment_score?: number
-          created_at?: string
-          ended_at?: string | null
-          focus_areas?: string[]
+          clause_id: string
+          contract_id: string
+          counter_terms?: Json | null
+          created_at?: string | null
           id?: string
-          initiated_by_profile_id: string
-          mentor_profile_id: string
-          mentee_profile_id: string
-          mentorship_cadence?: string
-          notes?: string | null
-          started_at?: string | null
+          last_action_by?: string | null
+          proposed_terms?: Json | null
           status?: string
-          support_topics?: string[]
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          alignment_score?: number
-          created_at?: string
-          ended_at?: string | null
-          focus_areas?: string[]
+          clause_id?: string
+          contract_id?: string
+          counter_terms?: Json | null
+          created_at?: string | null
           id?: string
-          initiated_by_profile_id?: string
-          mentor_profile_id?: string
-          mentee_profile_id?: string
-          mentorship_cadence?: string
-          notes?: string | null
-          started_at?: string | null
+          last_action_by?: string | null
+          proposed_terms?: Json | null
           status?: string
-          support_topics?: string[]
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "community_mentorship_matches_initiated_by_profile_id_fkey"
-            columns: ["initiated_by_profile_id"]
+            foreignKeyName: "contract_negotiations_clause_id_fkey"
+            columns: ["clause_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "contract_clauses"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "community_mentorship_matches_mentor_profile_id_fkey"
-            columns: ["mentor_profile_id"]
+            foreignKeyName: "contract_negotiations_contract_id_fkey"
+            columns: ["contract_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_mentorship_matches_mentee_profile_id_fkey"
-            columns: ["mentee_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      community_mentorship_profiles: {
-        Row: {
-          availability_status: string
-          bio: string | null
-          compatibility_tags: string[]
-          created_at: string
-          current_mentees: number
-          experience_level: string
-          focus_areas: string[]
-          headline: string | null
-          id: string
-          is_open_to_learn: boolean
-          is_open_to_mentor: boolean
-          last_active_at: string | null
-          meeting_preferences: string[]
-          mentor_capacity: number
-          mentorship_style: string[]
-          preferred_genres: string[]
-          profile_id: string
-          support_topics: string[]
-          timezone: string | null
-          updated_at: string
-        }
-        Insert: {
-          availability_status?: string
-          bio?: string | null
-          compatibility_tags?: string[]
-          created_at?: string
-          current_mentees?: number
-          experience_level?: string
-          focus_areas?: string[]
-          headline?: string | null
-          id?: string
-          is_open_to_learn?: boolean
-          is_open_to_mentor?: boolean
-          last_active_at?: string | null
-          meeting_preferences?: string[]
-          mentor_capacity?: number
-          mentorship_style?: string[]
-          preferred_genres?: string[]
-          profile_id: string
-          support_topics?: string[]
-          timezone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          availability_status?: string
-          bio?: string | null
-          compatibility_tags?: string[]
-          created_at?: string
-          current_mentees?: number
-          experience_level?: string
-          focus_areas?: string[]
-          headline?: string | null
-          id?: string
-          is_open_to_learn?: boolean
-          is_open_to_mentor?: boolean
-          last_active_at?: string | null
-          meeting_preferences?: string[]
-          mentor_capacity?: number
-          mentorship_style?: string[]
-          preferred_genres?: string[]
-          profile_id?: string
-          support_topics?: string[]
-          timezone?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_mentorship_profiles_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
+            referencedRelation: "artist_label_contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -3456,7 +3202,6 @@ export type Database = {
       }
       jam_sessions: {
         Row: {
-          broadcast_to_feed: boolean
           access_code: string | null
           created_at: string | null
           current_participants: number
@@ -3511,93 +3256,6 @@ export type Database = {
           {
             foreignKeyName: "jam_sessions_host_id_fkey"
             columns: ["host_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      jam_session_messages: {
-        Row: {
-          created_at: string
-          id: string
-          jam_session_id: string
-          message: string
-          sender_profile_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          jam_session_id: string
-          message: string
-          sender_profile_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          jam_session_id?: string
-          message?: string
-          sender_profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jam_session_messages_jam_session_id_fkey"
-            columns: ["jam_session_id"]
-            isOneToOne: false
-            referencedRelation: "jam_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jam_session_messages_sender_profile_id_fkey"
-            columns: ["sender_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      jam_session_participants: {
-        Row: {
-          co_play_count: number
-          id: string
-          is_ready: boolean
-          jam_session_id: string
-          joined_at: string
-          profile_id: string
-          skill_tier: string
-          updated_at: string
-        }
-        Insert: {
-          co_play_count?: number
-          id?: string
-          is_ready?: boolean
-          jam_session_id: string
-          joined_at?: string
-          profile_id: string
-          skill_tier?: string
-          updated_at?: string
-        }
-        Update: {
-          co_play_count?: number
-          id?: string
-          is_ready?: boolean
-          jam_session_id?: string
-          joined_at?: string
-          profile_id?: string
-          skill_tier?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jam_session_participants_jam_session_id_fkey"
-            columns: ["jam_session_id"]
-            isOneToOne: false
-            referencedRelation: "jam_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jam_session_participants_profile_id_fkey"
-            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4035,211 +3693,222 @@ export type Database = {
         }
         Relationships: []
       }
-      lifestyle_properties: {
+      leaderboard_badge_awards: {
         Row: {
-          available: boolean
-          area_sq_ft: number | null
-          base_price: number
-          bathrooms: number
-          bedrooms: number
-          city: string
+          awarded_at: string
+          badge_id: string
           created_at: string
-          description: string | null
-          district: string | null
-          energy_rating: string | null
-          highlight_features: string[]
           id: string
-          image_url: string | null
-          lifestyle_fit: Json
-          lot_size_sq_ft: number | null
-          name: string
-          property_type: string
-          rating: number | null
-        }
-        Insert: {
-          available?: boolean
-          area_sq_ft?: number | null
-          base_price: number
-          bathrooms: number
-          bedrooms: number
-          city: string
-          created_at?: string
-          description?: string | null
-          district?: string | null
-          energy_rating?: string | null
-          highlight_features?: string[]
-          id?: string
-          image_url?: string | null
-          lifestyle_fit?: Json
-          lot_size_sq_ft?: number | null
-          name: string
-          property_type: string
-          rating?: number | null
-        }
-        Update: {
-          available?: boolean
-          area_sq_ft?: number | null
-          base_price?: number
-          bathrooms?: number
-          bedrooms?: number
-          city?: string
-          created_at?: string
-          description?: string | null
-          district?: string | null
-          energy_rating?: string | null
-          highlight_features?: string[]
-          id?: string
-          image_url?: string | null
-          lifestyle_fit?: Json
-          lot_size_sq_ft?: number | null
-          name?: string
-          property_type?: string
-          rating?: number | null
-        }
-        Relationships: []
-      }
-      lifestyle_property_features: {
-        Row: {
-          description: string | null
-          feature_name: string
-          feature_type: string
-          id: string
-          impact: Json
-          property_id: string
-          upgrade_cost: number
-        }
-        Insert: {
-          description?: string | null
-          feature_name: string
-          feature_type: string
-          id?: string
-          impact?: Json
-          property_id: string
-          upgrade_cost?: number
-        }
-        Update: {
-          description?: string | null
-          feature_name?: string
-          feature_type?: string
-          id?: string
-          impact?: Json
-          property_id?: string
-          upgrade_cost?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lifestyle_property_features_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "lifestyle_properties"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      lifestyle_property_financing_options: {
-        Row: {
-          closing_cost_pct: number | null
-          description: string | null
-          down_payment_pct: number
-          id: string
-          interest_rate: number
-          name: string
-          property_id: string
-          requirements: Json
-          term_months: number
-        }
-        Insert: {
-          closing_cost_pct?: number | null
-          description?: string | null
-          down_payment_pct?: number
-          id?: string
-          interest_rate?: number
-          name: string
-          property_id: string
-          requirements?: Json
-          term_months?: number
-        }
-        Update: {
-          closing_cost_pct?: number | null
-          description?: string | null
-          down_payment_pct?: number
-          id?: string
-          interest_rate?: number
-          name?: string
-          property_id?: string
-          requirements?: Json
-          term_months?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lifestyle_property_financing_options_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "lifestyle_properties"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      lifestyle_property_purchases: {
-        Row: {
-          created_at: string
-          financing_option_id: string | null
-          id: string
-          notes: string | null
-          property_id: string
-          purchase_price: number
-          selected_features: Json
-          status: string
-          total_upgrade_cost: number
+          metadata: Json | null
+          profile_id: string | null
+          rank: number | null
+          season_id: string | null
           user_id: string
         }
         Insert: {
+          awarded_at?: string
+          badge_id: string
           created_at?: string
-          financing_option_id?: string | null
           id?: string
-          notes?: string | null
-          property_id: string
-          purchase_price: number
-          selected_features?: Json
-          status?: string
-          total_upgrade_cost?: number
+          metadata?: Json | null
+          profile_id?: string | null
+          rank?: number | null
+          season_id?: string | null
           user_id: string
         }
         Update: {
+          awarded_at?: string
+          badge_id?: string
           created_at?: string
-          financing_option_id?: string | null
           id?: string
-          notes?: string | null
-          property_id?: string
-          purchase_price?: number
-          selected_features?: Json
-          status?: string
-          total_upgrade_cost?: number
+          metadata?: Json | null
+          profile_id?: string | null
+          rank?: number | null
+          season_id?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "lifestyle_property_purchases_financing_option_id_fkey"
-            columns: ["financing_option_id"]
+            foreignKeyName: "leaderboard_badge_awards_badge_id_fkey"
+            columns: ["badge_id"]
             isOneToOne: false
-            referencedRelation: "lifestyle_property_financing_options"
+            referencedRelation: "leaderboard_badges"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lifestyle_property_purchases_property_id_fkey"
-            columns: ["property_id"]
+            foreignKeyName: "leaderboard_badge_awards_season_id_fkey"
+            columns: ["season_id"]
             isOneToOne: false
-            referencedRelation: "lifestyle_properties"
+            referencedRelation: "leaderboard_seasons"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "lifestyle_property_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
         ]
+      }
+      leaderboard_badges: {
+        Row: {
+          code: string
+          created_at: string
+          criteria: Json | null
+          description: string | null
+          icon: string
+          id: string
+          name: string
+          rarity: string
+          season_id: string | null
+          tier: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          criteria?: Json | null
+          description?: string | null
+          icon?: string
+          id?: string
+          name: string
+          rarity?: string
+          season_id?: string | null
+          tier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          criteria?: Json | null
+          description?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          rarity?: string
+          season_id?: string | null
+          tier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_badges_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_season_snapshots: {
+        Row: {
+          awarded_badges: string[] | null
+          breakdown: Json | null
+          created_at: string
+          division: string
+          experience: number | null
+          fame: number | null
+          final_rank: number | null
+          final_score: number | null
+          id: string
+          instrument: string
+          profile_id: string | null
+          recorded_at: string
+          region: string
+          season_id: string
+          tier: string | null
+          total_achievements: number | null
+          total_gigs: number | null
+          total_revenue: number | null
+          user_id: string | null
+        }
+        Insert: {
+          awarded_badges?: string[] | null
+          breakdown?: Json | null
+          created_at?: string
+          division: string
+          experience?: number | null
+          fame?: number | null
+          final_rank?: number | null
+          final_score?: number | null
+          id?: string
+          instrument: string
+          profile_id?: string | null
+          recorded_at?: string
+          region: string
+          season_id: string
+          tier?: string | null
+          total_achievements?: number | null
+          total_gigs?: number | null
+          total_revenue?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          awarded_badges?: string[] | null
+          breakdown?: Json | null
+          created_at?: string
+          division?: string
+          experience?: number | null
+          fame?: number | null
+          final_rank?: number | null
+          final_score?: number | null
+          id?: string
+          instrument?: string
+          profile_id?: string | null
+          recorded_at?: string
+          region?: string
+          season_id?: string
+          tier?: string | null
+          total_achievements?: number | null
+          total_gigs?: number | null
+          total_revenue?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_season_snapshots_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_seasons: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          reward_pool: Json | null
+          season_number: number | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          reward_pool?: Json | null
+          season_number?: number | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          reward_pool?: Json | null
+          season_number?: number | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       manufacturing_costs: {
         Row: {
@@ -7106,66 +6775,6 @@ export type Database = {
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "city_studios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_prompt_artifacts: {
-        Row: {
-          context_tokens: number
-          created_at: string
-          id: string
-          lyrics_excerpt: string | null
-          metadata: Json
-          prompt: Json
-          session_id: string
-          song_id: string
-          stem_paths: string[]
-          summary: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          context_tokens?: number
-          created_at?: string
-          id?: string
-          lyrics_excerpt?: string | null
-          metadata: Json
-          prompt: Json
-          session_id: string
-          song_id: string
-          stem_paths?: string[]
-          summary: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          context_tokens?: number
-          created_at?: string
-          id?: string
-          lyrics_excerpt?: string | null
-          metadata?: Json
-          prompt?: Json
-          session_id?: string
-          song_id?: string
-          stem_paths?: string[]
-          summary?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_prompt_artifacts_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "recording_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_prompt_artifacts_song_id_fkey"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
             referencedColumns: ["id"]
           },
         ]
