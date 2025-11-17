@@ -83,7 +83,7 @@ serve(async (req) => {
 
         // Calculate total duration
         const totalDuration = setlistSongs.reduce((sum, ss) => {
-          return sum + ((ss as any).songs?.duration_seconds || 180);
+          return sum + (ss.songs?.duration_seconds || 180);
         }, 0);
 
         // Calculate elapsed time since start

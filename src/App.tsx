@@ -38,7 +38,6 @@ const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
 const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
-const CommunityMentorship = lazyWithRetry(() => import("./pages/community/mentorship"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
@@ -49,7 +48,21 @@ const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
-const City = lazyWithRetry(() => import("./pages/cities/[cityId]"));
+const Legacy = lazyWithRetry(() => import("./pages/legacy"));
+const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
+const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
+const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
+const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
+const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
+const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
+const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRelationsAdmin"));
+const UnderworldAdmin = lazyWithRetry(() => import("./pages/admin/UnderworldAdmin"));
+const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
+const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
+const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
+const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
+const SongwritingBooking = lazyWithRetry(() => import("./pages/booking/SongwritingBooking"));
+const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
@@ -62,7 +75,6 @@ const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
-const WellnessPage = lazyWithRetry(() => import("./pages/wellness"));
 const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
 const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentSystem"));
 const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagement"));
@@ -103,14 +115,12 @@ const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConf
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
-const AdminAudioGeneration = lazyWithRetry(() => import("./pages/admin/AudioGenerationDashboard"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
 const TwaaterAdmin = lazyWithRetry(() => import("./pages/admin/TwaaterAdmin"));
 const LabelsAdmin = lazyWithRetry(() => import("./pages/admin/LabelsAdmin"));
 const BandAdmin = lazyWithRetry(() => import("./pages/admin/BandAdmin"));
-const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
@@ -125,10 +135,8 @@ const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"))
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
-const MediaStudio = lazyWithRetry(() => import("./pages/media/studio"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
-const LifestyleHomes = lazyWithRetry(() => import("./pages/lifestyle/homes"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -186,26 +194,26 @@ function App() {
                     <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
-                    {/* <Route path="booking/education" element={<EducationBooking />} /> */}
-                    {/* <Route path="booking/performance" element={<PerformanceBooking />} /> */}
-                    {/* <Route path="booking/work" element={<WorkBooking />} /> */}
-                    {/* <Route path="booking/songwriting" element={<SongwritingBooking />} /> */}
+                    <Route path="booking/education" element={<EducationBooking />} />
+                    <Route path="booking/performance" element={<PerformanceBooking />} />
+                    <Route path="booking/work" element={<WorkBooking />} />
+                    <Route path="booking/songwriting" element={<SongwritingBooking />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
-                    <Route path="tours" element={<TourManager />} />
-                    <Route path="tours-system" element={<TouringSystem />} />
-                    <Route path="equipment" element={<EnhancedEquipmentStore />} />
-                    <Route path="fans" element={<FanManagement />} />
-                    <Route path="lifestyle/homes" element={<LifestyleHomes />} />
+                    <Route path="community/feed" element={<CommunityFeed />} />
+                    <Route path="gig-booking" element={<GigBooking />} />
+                    <Route path="jam-sessions" element={<JamSessions />} />
+                    <Route path="rehearsals" element={<Rehearsals />} />
+                    <Route path="radio" element={<Radio />} />
+                    <Route path="music-videos" element={<MusicVideos />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="relationships" element={<Relationships />} />
-                    <Route path="community/mentorship" element={<CommunityMentorship />} />
                     <Route path="pr" element={<PublicRelations />} />
-                    {/* <Route path="legacy" element={<Legacy />} /> */}
+                    <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<FestivalsNew />} />
                     <Route path="awards" element={<Awards />} />
@@ -220,26 +228,21 @@ function App() {
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
-                    <Route path="media/studio" element={<MediaStudio />} />
-                    
-                    {/* Redirects for removed placeholder pages */}
-                    <Route path="tours" element={<RedirectTo to="/travel" />} />
-                    <Route path="schedule" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="equipment" element={<RedirectTo to="/gear" />} />
-                    <Route path="equipment-enhanced" element={<RedirectTo to="/gear" />} />
-                    <Route path="fans" element={<RedirectTo to="/pr" />} />
-                    <Route path="fans-enhanced" element={<RedirectTo to="/pr" />} />
-                    <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
-                    <Route path="streaming" element={<StreamingPlatforms />} />
+                    <Route path="twaater" element={<Twaater />} />
+                    <Route path="twaater/:handle" element={<TwaaterProfile />} />
+                    <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
+                    <Route path="employment" element={<Employment />} />
+                    <Route path="inventory" element={<InventoryManager />} />
+                    <Route path="merchandise" element={<Merchandise />} />
                     <Route path="labels" element={<RecordLabel />} />
                     
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="admin" element={<Admin />} />
-                    {/* <Route path="admin/players" element={<AdminPlayerManagement />} /> */}
-                    {/* <Route path="admin/achievements" element={<AdminAchievements />} /> */}
-                    {/* <Route path="admin/analytics" element={<AdminAnalytics />} /> */}
+                    <Route path="admin/players" element={<AdminPlayerManagement />} />
+                    <Route path="admin/achievements" element={<AdminAchievements />} />
+                    <Route path="admin/analytics" element={<AdminAnalytics />} />
                     <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
@@ -257,13 +260,12 @@ function App() {
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
-                    {/* <Route path="admin/awards" element={<AwardsAdmin />} /> */}
-                    {/* <Route path="admin/advisor" element={<AdvisorAdmin />} /> */}
-                    {/* <Route path="admin/pr" element={<PublicRelationsAdmin />} /> */}
-                    {/* <Route path="admin/underworld" element={<UnderworldAdmin />} /> */}
+                    <Route path="admin/awards" element={<AwardsAdmin />} />
+                    <Route path="admin/advisor" element={<AdvisorAdmin />} />
+                    <Route path="admin/pr" element={<PublicRelationsAdmin />} />
+                    <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
-                    <Route path="admin/audio-generation" element={<AdminAudioGeneration />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
@@ -275,7 +277,7 @@ function App() {
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
-                    <Route path="admin/festival-applications" element={<FestivalAdmin />} />
+                    <Route path="admin/festivals" element={<FestivalAdmin />} />
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="employment" element={<Employment />} />
@@ -283,7 +285,7 @@ function App() {
                     <Route path="music-videos" element={<MusicVideos />} />
                     <Route path="radio-stations" element={<RadioStations />} />
                     <Route path="gig-booking" element={<GigBooking />} />
-                    {/* <Route path="jam-sessions" element={<JamSessions />} /> */}
+                    <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="world" element={<WorldEnvironment />} />

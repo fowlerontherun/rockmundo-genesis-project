@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
             .eq('status', 'active')
 
           for (const member of bandMembers || []) {
-            if (member.user_id) {
+            if (member.profiles?.user_id) {
               await supabase.functions.invoke('progression', {
                 body: {
                   action: 'award_action_xp',

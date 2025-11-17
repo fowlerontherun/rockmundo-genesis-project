@@ -69,10 +69,8 @@ export default function FestivalAdmin() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Festival Applications</h1>
-            <p className="text-muted-foreground">
-              Review slot submissions and moderate player-created festivals
-            </p>
+            <h1 className="text-3xl font-bold">Festival Administration</h1>
+            <p className="text-muted-foreground">Manage festivals, slots, and applications</p>
           </div>
         </div>
 

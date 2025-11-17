@@ -11,7 +11,7 @@ export type Json =
 interface StartJobRunParams {
   jobName: string;
   functionName: string;
-  supabaseClient: SupabaseClient<any, any, any>;
+  supabaseClient: SupabaseClient<Record<string, unknown>, unknown, unknown>;
   triggeredBy?: string | null;
   requestPayload?: Json;
   requestId?: string | null;
@@ -20,7 +20,7 @@ interface StartJobRunParams {
 interface CompleteJobRunParams {
   jobName: string;
   runId: string | null;
-  supabaseClient: SupabaseClient<any, any, any>;
+  supabaseClient: SupabaseClient<Record<string, unknown>, unknown, unknown>;
   durationMs?: number | null;
   processedCount?: number | null;
   errorCount?: number | null;

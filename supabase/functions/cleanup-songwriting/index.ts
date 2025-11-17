@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
 
       for (const session of sessions || []) {
         try {
-          if (session.xp_earned && session.songwriting_projects?.user_id) {
+          if (session.xp_earned && session.songwriting_projects?.profiles?.id) {
             await supabase.functions.invoke('progression', {
               body: {
                 action: 'award_action_xp',

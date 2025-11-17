@@ -8,10 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "generate:session-prompts": "bun run scripts/generateSessionPrompts.ts",
     "test": "bun test",
-    "preview": "vite preview",
-    "audio:worker": "bun run scripts/audio-generation-worker.ts"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -46,12 +46,11 @@ import {
   Target,
   TrendingUp,
   Map,
-  Handshake,
-  Newspaper,
-  Heart,
   Crown,
   Video,
-  Radio,
+  Radio as RadioIcon,
+  Newspaper,
+  Heart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -111,7 +110,7 @@ export function AppSidebar() {
         { icon: Mic, label: "Gigs", path: "/gig-booking" },
         { icon: Music, label: "Jam Sessions", path: "/jam-sessions" },
         { icon: Mic, label: "Busking", path: "/busking" },
-        { icon: Radio, label: "Rehearsals", path: "/rehearsals" },
+        { icon: RadioIcon, label: "Rehearsals", path: "/rehearsals" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
         { icon: HardHat, label: "Band Crew", path: "/band-crew" },
@@ -140,7 +139,7 @@ export function AppSidebar() {
       label: t('social'),
       items: [
         { icon: Users, label: t('band'), path: "/band" },
-        { icon: Radio, label: "Band Chemistry", path: "/chemistry" },
+        { icon: RadioIcon, label: "Band Chemistry", path: "/chemistry" },
         { icon: Twitter, label: "Twaater", path: "/twaater" },
         { icon: Video, label: "DikCok", path: "/dikcok" },
         { icon: Megaphone, label: t('pr'), path: "/pr" },
@@ -148,17 +147,7 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Lifestyle",
-      items: [
-        { icon: Users, label: "Band", path: "/band" },
-        { icon: Megaphone, label: "PR", path: "/pr" },
-        { icon: Share2, label: "Social", path: "/social" },
-        { icon: HeartHandshake, label: "Relationships", path: "/relationships" },
-        { icon: Handshake, label: "Mentorship", path: "/community/mentorship" },
-      ],
-    },
-    {
-      label: "Business",
+      label: t('business'),
       items: [
         { icon: Briefcase, label: t('employment'), path: "/employment" },
         { icon: DollarSign, label: t('finances'), path: "/finances" },
