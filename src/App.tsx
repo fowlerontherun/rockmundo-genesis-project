@@ -186,10 +186,10 @@ function App() {
                     <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
-                    <Route path="booking/education" element={<EducationBooking />} />
-                    <Route path="booking/performance" element={<PerformanceBooking />} />
-                    <Route path="booking/work" element={<WorkBooking />} />
-                    <Route path="booking/songwriting" element={<SongwritingBooking />} />
+                    {/* <Route path="booking/education" element={<EducationBooking />} /> */}
+                    {/* <Route path="booking/performance" element={<PerformanceBooking />} /> */}
+                    {/* <Route path="booking/work" element={<WorkBooking />} /> */}
+                    {/* <Route path="booking/songwriting" element={<SongwritingBooking />} /> */}
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
                     <Route path="tours" element={<TourManager />} />
@@ -205,7 +205,7 @@ function App() {
                     <Route path="relationships" element={<Relationships />} />
                     <Route path="community/mentorship" element={<CommunityMentorship />} />
                     <Route path="pr" element={<PublicRelations />} />
-                    <Route path="legacy" element={<Legacy />} />
+                    {/* <Route path="legacy" element={<Legacy />} /> */}
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<FestivalsNew />} />
                     <Route path="awards" element={<Awards />} />
@@ -237,9 +237,9 @@ function App() {
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="admin" element={<Admin />} />
-                    <Route path="admin/players" element={<AdminPlayerManagement />} />
-                    <Route path="admin/achievements" element={<AdminAchievements />} />
-                    <Route path="admin/analytics" element={<AdminAnalytics />} />
+                    {/* <Route path="admin/players" element={<AdminPlayerManagement />} /> */}
+                    {/* <Route path="admin/achievements" element={<AdminAchievements />} /> */}
+                    {/* <Route path="admin/analytics" element={<AdminAnalytics />} /> */}
                     <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
@@ -257,10 +257,10 @@ function App() {
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
-                    <Route path="admin/awards" element={<AwardsAdmin />} />
-                    <Route path="admin/advisor" element={<AdvisorAdmin />} />
-                    <Route path="admin/pr" element={<PublicRelationsAdmin />} />
-                    <Route path="admin/underworld" element={<UnderworldAdmin />} />
+                    {/* <Route path="admin/awards" element={<AwardsAdmin />} /> */}
+                    {/* <Route path="admin/advisor" element={<AdvisorAdmin />} /> */}
+                    {/* <Route path="admin/pr" element={<PublicRelationsAdmin />} /> */}
+                    {/* <Route path="admin/underworld" element={<UnderworldAdmin />} /> */}
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
                     <Route path="admin/audio-generation" element={<AdminAudioGeneration />} />
