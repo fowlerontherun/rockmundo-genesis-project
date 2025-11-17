@@ -7,7 +7,8 @@ import {
 import type { Database } from "@/lib/supabase-types";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type MentorProfileRow = Database["public"]["Tables"]["community_mentorship_profiles"]["Row"];
+// type MentorProfileRow = Database["public"]["Tables"]["community_mentorship_profiles"]["Row"];
+type MentorProfileRow = any; // Table doesn't exist in current schema
 type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
 
 type FriendRecommendation = Pick<
@@ -71,33 +72,17 @@ export const useSocialOpportunities = ({
     const exclusionSet = new Set([profileId, ...excludeProfileIds]);
 
     try {
-      const [friendResponse, mentorResponse, friendships] = await Promise.all([
+      const [friendResponse, friendships] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, username, display_name, bio, level, fame, avatar_url")
           .order("fame", { ascending: false })
           .limit(20),
-        supabase
-          .from("community_mentorship_profiles")
-          .select(
-            `
-            id,
-            profile_id,
-            headline,
-            mentor_capacity,
-            mentorship_style,
-            focus_areas,
-            experience_level,
-            availability_status,
-            profile:profiles (id, username, display_name, bio, level, fame, avatar_url)
-          `,
-          )
-          .eq("is_open_to_mentor", true)
-          .gt("mentor_capacity", 0)
-          .order("mentor_capacity", { ascending: false })
-          .limit(MENTOR_RECOMMENDATION_LIMIT + 2),
         fetchFriendshipsForProfile(profileId),
       ]);
+      
+      // Mentor profiles table doesn't exist in current schema
+      const mentorResponse = { data: [], error: null } as any;
 
       if (friendResponse.error) {
         throw friendResponse.error;

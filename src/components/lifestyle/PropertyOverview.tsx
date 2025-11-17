@@ -80,19 +80,19 @@ export function PropertyOverview({ property }: PropertyOverviewProps) {
           )}
         </div>
 
-        {lifestyleFit && (
+        {lifestyleFit && !Array.isArray(lifestyleFit) && (
           <div className="space-y-2 text-sm">
             <p className="font-medium">Lifestyle Fit</p>
-            {lifestyleFit.focus && (
+            {typeof lifestyleFit === 'object' && 'focus' in lifestyleFit && lifestyleFit.focus && (
               <p className="text-muted-foreground">
-                <span className="font-semibold">Ideal for:</span> {lifestyleFit.focus}
+                <span className="font-semibold">Ideal for:</span> {String(lifestyleFit.focus)}
               </p>
             )}
-            {Array.isArray(lifestyleFit.bonuses) && lifestyleFit.bonuses.length > 0 && (
+            {typeof lifestyleFit === 'object' && 'bonuses' in lifestyleFit && Array.isArray(lifestyleFit.bonuses) && lifestyleFit.bonuses.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {lifestyleFit.bonuses.map((bonus: string) => (
-                  <Badge key={bonus} variant="secondary" className="text-xs">
-                    {bonus}
+                {lifestyleFit.bonuses.map((bonus: any) => (
+                  <Badge key={String(bonus)} variant="secondary" className="text-xs">
+                    {String(bonus)}
                   </Badge>
                 ))}
               </div>
