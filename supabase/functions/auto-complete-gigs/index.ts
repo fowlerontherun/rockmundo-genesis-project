@@ -95,42 +95,10 @@ serve(async (req) => {
 
         // Check if all songs should be processed
         if (elapsedSeconds >= totalDuration) {
-          // Get outcome
-          const { data: outcome } = await supabaseClient
-            .from('gig_outcomes')
-            .select('id')
-            .eq('gig_id', gig.id)
-            .maybeSingle();
+          console.log(`[auto-complete-gigs] Gig ${gig.id} duration exceeded, completing...`);
 
-          if (!outcome) {
-            console.log(`[auto-complete-gigs] Skipping gig ${gig.id}: no outcome found`);
-            continue;
-          }
-
-          // Process any missing songs
-          for (let pos = currentPosition; pos < totalSongs; pos++) {
-            const song = setlistSongs[pos];
-            
-            console.log(`[auto-complete-gigs] Processing song at position ${pos} for gig ${gig.id}`);
-            
-            const { error: processSongError } = await supabaseClient.functions.invoke('process-gig-song', {
-              body: {
-                gigId: gig.id,
-                outcomeId: outcome.id,
-                songId: song.song_id,
-                position: pos
-              }
-            });
-
-            if (processSongError) {
-              console.error(`[auto-complete-gigs] Error processing song:`, processSongError);
-              continue;
-            }
-
-            // Advance position
-            await supabaseClient.rpc('advance_gig_song', { p_gig_id: gig.id });
-            processedCount++;
-          }
+          // Just complete the gig directly - the complete-gig function handles everything
+          console.log(`[auto-complete-gigs] Completing gig ${gig.id} (all songs should be done)`);
 
           // Complete the gig
           console.log(`[auto-complete-gigs] Completing gig ${gig.id}`);

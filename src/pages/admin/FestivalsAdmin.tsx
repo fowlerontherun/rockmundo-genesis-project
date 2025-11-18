@@ -83,6 +83,13 @@ export default function FestivalsAdminPage() {
       toast({ title: "Festival created successfully" });
       setIsCreateOpen(false);
     },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to create festival", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
   });
 
   // Delete festival
