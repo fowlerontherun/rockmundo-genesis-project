@@ -67,8 +67,87 @@ export function useScheduledActivities(date: Date, userId?: string) {
 
       if (scheduledError) throw scheduledError;
 
-      // Fetch travel activities for this day
-      const { data: travelData, error: travelError } = await supabase
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!profile) return scheduledData || [];
+
+      // Fetch gigs
+      const { data: gigsData } = await supabase
+        .from('gigs')
+        .select(`
+          *,
+          venue:venues(name, city_id, cities(name))
+        `)
+        .eq('user_id', userId)
+        .gte('scheduled_date', dayStart.toISOString())
+        .lte('scheduled_date', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // Fetch band gigs (for band members)
+      const { data: bandMemberships } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', userId);
+
+      let bandGigsData: any[] = [];
+      if (bandMemberships && bandMemberships.length > 0) {
+        const { data } = await supabase
+          .from('gigs')
+          .select(`
+            *,
+            venue:venues(name, city_id, cities(name))
+          `)
+          .in('band_id', bandMemberships.map(m => m.band_id))
+          .gte('scheduled_date', dayStart.toISOString())
+          .lte('scheduled_date', dayEnd.toISOString())
+          .in('status', ['scheduled', 'in_progress', 'completed']);
+        bandGigsData = data || [];
+      }
+
+      // Fetch rehearsals
+      const { data: rehearsalsData } = await supabase
+        .from('band_rehearsals')
+        .select(`
+          *,
+          band:bands(name),
+          room:rehearsal_rooms(name)
+        `)
+        .in('band_id', bandMemberships?.map(m => m.band_id) || [])
+        .gte('scheduled_start', dayStart.toISOString())
+        .lte('scheduled_start', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // Fetch recording sessions
+      const { data: recordingsData } = await supabase
+        .from('recording_sessions')
+        .select(`
+          *,
+          song:songs(title),
+          studio:city_studios(name)
+        `)
+        .eq('user_id', userId)
+        .gte('scheduled_start', dayStart.toISOString())
+        .lte('scheduled_start', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // Fetch songwriting sessions
+      const { data: songwritingData } = await supabase
+        .from('songwriting_sessions')
+        .select(`
+          *,
+          project:songwriting_projects(title)
+        `)
+        .eq('user_id', userId)
+        .gte('session_start', dayStart.toISOString())
+        .lte('session_start', dayEnd.toISOString());
+
+      // Fetch travel activities
+      const { data: travelData } = await supabase
         .from('player_travel_history')
         .select(`
           *,
@@ -78,41 +157,30 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .eq('user_id', userId)
         .gte('scheduled_departure_time', dayStart.toISOString())
         .lte('scheduled_departure_time', dayEnd.toISOString())
-        .in('status', ['scheduled', 'in_progress'])
-        .order('scheduled_departure_time', { ascending: true });
-
-      if (travelError) throw travelError;
-
-      // Fetch profile to get employment info
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
+        .in('status', ['scheduled', 'in_progress']);
 
       let workActivities: ScheduledActivity[] = [];
       
-      if (profile) {
-        // Fetch employment with auto_clock_in enabled
-        const { data: employment } = await supabase
-          .from('player_employment')
-          .select(`
-            *,
-            jobs (
-              title,
-              shift_start_hour,
-              shift_duration_hours,
-              work_days
-            )
-          `)
-          .eq('profile_id', profile.id)
-          .eq('status', 'employed')
-          .eq('auto_clock_in', true)
-          .maybeSingle();
+      // Fetch employment with auto_clock_in enabled
+      const { data: employment } = await supabase
+        .from('player_employment')
+        .select(`
+          *,
+          jobs (
+            title,
+            shift_start_hour,
+            shift_duration_hours,
+            work_days
+          )
+        `)
+        .eq('profile_id', profile.id)
+        .eq('status', 'employed')
+        .eq('auto_clock_in', true)
+        .maybeSingle();
 
-        // If auto-attend is enabled and today is a work day, add work shift to schedule
-        if (employment?.jobs) {
-          const job = employment.jobs as any;
+      // If auto-attend is enabled and today is a work day, add work shift to schedule
+      if (employment?.jobs) {
+        const job = employment.jobs as any;
           const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
           const workDays = job.work_days || [];
           
