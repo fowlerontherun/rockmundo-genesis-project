@@ -447,9 +447,10 @@ export default function Radio() {
         throw new Error("Submission could not be created.");
       }
 
-      const { data: summary, error: rpcError } = await (supabase.rpc as any)("process_radio_submission", {
-        p_submission_id: inserted.id,
-      });
+      const { data: summary, error: rpcError } = await (supabase.rpc as any)(
+        "process_radio_submission",
+        { p_submission_id: inserted.id }
+      );
 
       if (rpcError) {
         throw new Error(rpcError.message);
@@ -462,12 +463,18 @@ export default function Radio() {
       return summary as ProcessRadioSubmissionSummary;
     },
     onSuccess: (summary) => {
-      toast.success("Your song hit the airwaves!", {
-        description: `Listeners: ${summary.listeners.toLocaleString()} · Streams Boost: ${summary.streams_boost.toLocaleString()}`,
-      });
+      if (summary && typeof summary === 'object' && 'listeners' in summary) {
+        toast.success("Your song hit the airwaves!", {
+          description: `Listeners: ${(summary.listeners || 0).toLocaleString()} · Streams Boost: ${(summary.streams_boost || 0).toLocaleString()}`,
+        });
+      } else {
+        toast.success("Your song has been submitted to the radio station!");
+      }
       queryClient.invalidateQueries({ queryKey: ["my-radio-submissions", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["now-playing", selectedStation] });
       queryClient.invalidateQueries({ queryKey: ["radio-stations", filter] });
+      queryClient.invalidateQueries({ queryKey: ["radio-recent-plays", selectedStation] });
+      queryClient.invalidateQueries({ queryKey: ["station-stats", selectedStation] });
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Unable to submit your song right now.";
