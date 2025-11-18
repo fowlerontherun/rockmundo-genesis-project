@@ -54,9 +54,19 @@ export function useScheduledActivities(date: Date, userId?: string) {
 
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
+      const allActivities: ScheduledActivity[] = [];
 
-      // Fetch regular scheduled activities
-      const { data: scheduledData, error: scheduledError } = await (supabase as any)
+      // Fetch profile first
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!profile) return [];
+
+      // 1. Fetch regular scheduled activities from player_scheduled_activities table
+      const { data: scheduledData } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', userId)
@@ -65,64 +75,112 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .in('status', ['scheduled', 'in_progress', 'completed'])
         .order('scheduled_start', { ascending: true });
 
-      if (scheduledError) throw scheduledError;
+      if (scheduledData) {
+        allActivities.push(...scheduledData);
+      }
 
-      // Fetch profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
+      // 2. Fetch gigs (both solo and band)
+      const { data: bandMemberships } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', userId);
 
-      if (!profile) return scheduledData || [];
+      const bandIds = bandMemberships?.map(m => m.band_id) || [];
 
-      // Fetch gigs
-      const { data: gigsData } = await supabase
+      // Solo gigs
+      const { data: soloGigs } = await supabase
         .from('gigs')
         .select(`
           *,
-          venue:venues(name, city_id, cities(name))
+          venue:venues(name)
         `)
         .eq('user_id', userId)
         .gte('scheduled_date', dayStart.toISOString())
         .lte('scheduled_date', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
-      // Fetch band gigs (for band members)
-      const { data: bandMemberships } = await supabase
-        .from('band_members')
-        .select('band_id')
-        .eq('user_id', userId);
-
-      let bandGigsData: any[] = [];
-      if (bandMemberships && bandMemberships.length > 0) {
+      // Band gigs
+      let bandGigs: any[] = [];
+      if (bandIds.length > 0) {
         const { data } = await supabase
           .from('gigs')
           .select(`
             *,
-            venue:venues(name, city_id, cities(name))
+            venue:venues(name)
           `)
-          .in('band_id', bandMemberships.map(m => m.band_id))
+          .in('band_id', bandIds)
           .gte('scheduled_date', dayStart.toISOString())
           .lte('scheduled_date', dayEnd.toISOString())
           .in('status', ['scheduled', 'in_progress', 'completed']);
-        bandGigsData = data || [];
+        bandGigs = data || [];
       }
 
-      // Fetch rehearsals
-      const { data: rehearsalsData } = await supabase
-        .from('band_rehearsals')
-        .select(`
-          *,
-          band:bands(name),
-          room:rehearsal_rooms(name)
-        `)
-        .in('band_id', bandMemberships?.map(m => m.band_id) || [])
-        .gte('scheduled_start', dayStart.toISOString())
-        .lte('scheduled_start', dayEnd.toISOString())
-        .in('status', ['scheduled', 'in_progress', 'completed']);
+      // Convert gigs to scheduled activities (don't duplicate if already in player_scheduled_activities)
+      const existingGigIds = allActivities
+        .filter(a => a.linked_gig_id)
+        .map(a => a.linked_gig_id);
 
-      // Fetch recording sessions
+      [...(soloGigs || []), ...bandGigs].forEach(gig => {
+        if (!existingGigIds.includes(gig.id)) {
+          const gigEnd = new Date(gig.scheduled_date);
+          gigEnd.setHours(gigEnd.getHours() + 3);
+          
+          allActivities.push({
+            id: `gig-${gig.id}`,
+            user_id: userId,
+            profile_id: profile.id,
+            activity_type: 'gig' as ActivityType,
+            scheduled_start: gig.scheduled_date,
+            scheduled_end: gigEnd.toISOString(),
+            status: gig.status as ActivityStatus,
+            title: `Gig at ${(gig.venue as any)?.name || 'Venue'}`,
+            location: (gig.venue as any)?.name,
+            linked_gig_id: gig.id,
+            metadata: { type: 'gig', gigId: gig.id },
+            created_at: gig.created_at,
+          });
+        }
+      });
+
+      // 3. Fetch rehearsals
+      if (bandIds.length > 0) {
+        const { data: rehearsalsData } = await supabase
+          .from('band_rehearsals')
+          .select(`
+            *,
+            band:bands(name),
+            room:rehearsal_rooms(name)
+          `)
+          .in('band_id', bandIds)
+          .gte('scheduled_start', dayStart.toISOString())
+          .lte('scheduled_start', dayEnd.toISOString())
+          .in('status', ['scheduled', 'in_progress', 'completed']);
+
+        const existingRehearsalIds = allActivities
+          .filter(a => a.linked_rehearsal_id)
+          .map(a => a.linked_rehearsal_id);
+
+        rehearsalsData?.forEach(rehearsal => {
+          if (!existingRehearsalIds.includes(rehearsal.id)) {
+            allActivities.push({
+              id: `rehearsal-${rehearsal.id}`,
+              user_id: userId,
+              profile_id: profile.id,
+              activity_type: 'rehearsal' as ActivityType,
+              scheduled_start: rehearsal.scheduled_start,
+              scheduled_end: rehearsal.scheduled_end,
+              status: rehearsal.status as ActivityStatus,
+              title: `Rehearsal - ${(rehearsal.band as any)?.name || 'Band'}`,
+              location: (rehearsal.room as any)?.name,
+              linked_rehearsal_id: rehearsal.id,
+              metadata: { type: 'rehearsal', rehearsalId: rehearsal.id },
+              created_at: rehearsal.created_at,
+            });
+          }
+        });
+      }
+
+      // 4. Fetch recording sessions
       const { data: recordingsData } = await supabase
         .from('recording_sessions')
         .select(`
@@ -135,33 +193,64 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
-      // Fetch songwriting sessions
-      const { data: songwritingData } = await supabase
-        .from('songwriting_sessions')
-        .select(`
-          *,
-          project:songwriting_projects(title)
-        `)
-        .eq('user_id', userId)
-        .gte('session_start', dayStart.toISOString())
-        .lte('session_start', dayEnd.toISOString());
+      const existingRecordingIds = allActivities
+        .filter(a => a.linked_recording_id)
+        .map(a => a.linked_recording_id);
 
-      // Fetch travel activities
+      recordingsData?.forEach(recording => {
+        if (!existingRecordingIds.includes(recording.id)) {
+          allActivities.push({
+            id: `recording-${recording.id}`,
+            user_id: userId,
+            profile_id: profile.id,
+            activity_type: 'recording' as ActivityType,
+            scheduled_start: recording.scheduled_start,
+            scheduled_end: recording.scheduled_end,
+            status: recording.status as ActivityStatus,
+            title: `Recording - ${(recording.song as any)?.title || 'Song'}`,
+            location: (recording.studio as any)?.name,
+            linked_recording_id: recording.id,
+            metadata: { type: 'recording', recordingId: recording.id },
+            created_at: recording.created_at,
+          });
+        }
+      });
+
+      // 5. Fetch travel activities
       const { data: travelData } = await supabase
         .from('player_travel_history')
         .select(`
           *,
-          from_city:cities!player_travel_history_from_city_id_fkey(name, country),
-          to_city:cities!player_travel_history_to_city_id_fkey(name, country)
+          from_city:cities!player_travel_history_from_city_id_fkey(name),
+          to_city:cities!player_travel_history_to_city_id_fkey(name)
         `)
         .eq('user_id', userId)
         .gte('scheduled_departure_time', dayStart.toISOString())
         .lte('scheduled_departure_time', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress']);
 
-      let workActivities: ScheduledActivity[] = [];
-      
-      // Fetch employment with auto_clock_in enabled
+      travelData?.forEach(travel => {
+        const travelId = `travel-${travel.id}`;
+        if (!allActivities.some(a => a.id === travelId)) {
+          allActivities.push({
+            id: travelId,
+            user_id: travel.user_id,
+            profile_id: profile.id,
+            activity_type: 'travel' as ActivityType,
+            scheduled_start: travel.scheduled_departure_time || travel.departure_time,
+            scheduled_end: travel.arrival_time,
+            duration_minutes: travel.travel_duration_hours * 60,
+            status: travel.status as ActivityStatus,
+            title: `Travel to ${(travel.to_city as any)?.name || 'Unknown'}`,
+            description: `${travel.transport_type}`,
+            location: `${(travel.from_city as any)?.name || 'Unknown'} → ${(travel.to_city as any)?.name || 'Unknown'}`,
+            metadata: { type: 'travel', travelId: travel.id },
+            created_at: travel.created_at,
+          });
+        }
+      });
+
+      // 6. Fetch work shifts (auto-scheduled)
       const { data: employment } = await supabase
         .from('player_employment')
         .select(`
@@ -178,21 +267,22 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .eq('auto_clock_in', true)
         .maybeSingle();
 
-      // If auto-attend is enabled and today is a work day, add work shift to schedule
       if (employment?.jobs) {
         const job = employment.jobs as any;
-          const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-          const workDays = job.work_days || [];
+        const dayOfWeek = date.getDay();
+        const workDays = job.work_days || [];
+        
+        if (workDays.includes(dayOfWeek)) {
+          const shiftStart = new Date(date);
+          shiftStart.setHours(job.shift_start_hour || 9, 0, 0, 0);
           
-          if (workDays.includes(dayOfWeek)) {
-            const shiftStart = new Date(date);
-            shiftStart.setHours(job.shift_start_hour || 9, 0, 0, 0);
-            
-            const shiftEnd = new Date(shiftStart);
-            shiftEnd.setHours(shiftStart.getHours() + (job.shift_duration_hours || 8), 0, 0, 0);
+          const shiftEnd = new Date(shiftStart);
+          shiftEnd.setHours(shiftStart.getHours() + (job.shift_duration_hours || 8), 0, 0, 0);
 
-            workActivities.push({
-              id: `work-shift-${employment.id}-${date.toISOString().split('T')[0]}`,
+          const workId = `work-shift-${employment.id}-${date.toISOString().split('T')[0]}`;
+          if (!allActivities.some(a => a.id === workId)) {
+            allActivities.push({
+              id: workId,
               user_id: userId,
               profile_id: profile.id,
               activity_type: 'work' as ActivityType,
@@ -201,43 +291,19 @@ export function useScheduledActivities(date: Date, userId?: string) {
               status: 'scheduled' as ActivityStatus,
               title: `Work: ${job.title}`,
               description: `Auto-scheduled work shift`,
-              metadata: {
-                employment_id: employment.id,
-                job_id: employment.job_id,
-                auto_scheduled: true
-              },
+              metadata: { auto_scheduled: true, employment_id: employment.id },
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              started_at: null,
-              completed_at: null
             });
           }
         }
       }
 
-      // Convert travel to scheduled activity format
-      const travelActivities: ScheduledActivity[] = (travelData || []).map(travel => ({
-        id: travel.id,
-        user_id: travel.user_id,
-        profile_id: travel.user_id,
-        activity_type: 'travel' as ActivityType,
-        scheduled_start: travel.scheduled_departure_time || travel.departure_time,
-        scheduled_end: travel.arrival_time,
-        duration_minutes: travel.travel_duration_hours * 60,
-        status: travel.status as ActivityStatus,
-        title: `Travel to ${travel.to_city?.name || 'Unknown'}`,
-        description: `${travel.transport_type} from ${travel.from_city?.name || 'Unknown'} to ${travel.to_city?.name || 'Unknown'}`,
-        location: `${travel.from_city?.name || 'Unknown'} → ${travel.to_city?.name || 'Unknown'}`,
-        metadata: {
-          transport_type: travel.transport_type,
-          cost_paid: travel.cost_paid,
-          from_city: travel.from_city,
-          to_city: travel.to_city,
-        },
-        created_at: travel.created_at,
-      }));
+      // Sort by scheduled_start
+      allActivities.sort((a, b) => 
+        new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime()
+      );
 
-      return [...(scheduledData || []), ...travelActivities, ...workActivities] as ScheduledActivity[];
+      return allActivities;
     },
     enabled: !!userId,
     staleTime: 1000 * 60, // 1 minute
