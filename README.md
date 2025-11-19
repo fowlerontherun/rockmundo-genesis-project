@@ -60,6 +60,21 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Testing and QA
+
+Run the suites locally with the following commands:
+
+- Unit/logic tests: `npm run test` (uses Bun under the hood)
+- Component tests: `npm run test:component`
+- End-to-end tests: `npm run test:e2e`
+
+The E2E suite uses Playwright and a mock Supabase layer. Start the dev server with the same settings used in CI to expose the
+app on all interfaces:
+
+```sh
+npm run dev -- --host 0.0.0.0 --port 4173
+```
+
 ## Skills data pipeline
 
 The Supabase schema now includes a `public.skills` table that stores the canonical skill tree used by the game. The table is

@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { awardsMockServer } from "@/mocks/awardsMockServer";
 import { toast } from "sonner";
 
 export interface AwardShow {
@@ -46,8 +48,113 @@ export interface AwardWin {
   won_at: string;
 }
 
-export const useAwards = (userId?: string, bandId?: string) => {
+interface AwardsHookExtras {
+  lifecyclePhase?: string;
+  finalistsByCountry?: Record<string, AwardNomination>;
+  advancePhase?: (phase: string) => Promise<void>;
+  selectFinalists?: () => Promise<void>;
+  votesRemaining?: number;
+  isMocked: boolean;
+}
+
+type AwardsHookReturn = {
+  shows: AwardShow[];
+  showsLoading: boolean;
+  nominations: AwardNomination[];
+  nominationsLoading: boolean;
+  wins: AwardWin[];
+  winsLoading: boolean;
+  fetchShowNominations: (showId: string) => Promise<AwardNomination[]>;
+  submitNomination: (args: any) => Promise<any> | void;
+  castVote: (args: any) => Promise<any> | void;
+  bookPerformance: (args: any) => Promise<any> | void;
+  attendRedCarpet: (args: any) => Promise<any> | void;
+  isSubmitting: boolean;
+  isVoting: boolean;
+  isBooking: boolean;
+  isAttending: boolean;
+} & AwardsHookExtras;
+
+const useAwardsMock = (userId?: string, bandId?: string): AwardsHookReturn => {
+  const [shows, setShows] = useState<AwardShow[]>(awardsMockServer.getShows());
+  const [nominations, setNominations] = useState<AwardNomination[]>(awardsMockServer.getNominations({}));
+  const [wins, setWins] = useState<AwardWin[]>(awardsMockServer.getWins({}));
+  const [phase, setPhase] = useState<string>(awardsMockServer.phase);
+  const [votesRemaining, setVotesRemaining] = useState<number>(3);
+
+  useEffect(() => {
+    return awardsMockServer.subscribe((snapshot) => {
+      setShows(snapshot.shows);
+      setNominations(snapshot.nominations);
+      setWins(snapshot.wins);
+      setPhase(snapshot.phase);
+      const used = snapshot.votesByUser[userId || "mock-user"] || 0;
+      setVotesRemaining(Math.max(0, 3 - used));
+    });
+  }, [userId]);
+
+  const submitNomination = useMutation({
+    mutationFn: async (
+      nomination: Omit<AwardNomination, "id" | "status" | "vote_count" | "created_at">,
+    ) => {
+      if (!userId) throw new Error("User not authenticated");
+      return awardsMockServer.submitNomination(nomination);
+    },
+    onSuccess: () => toast.success("Nomination submitted successfully!"),
+    onError: (error: any) => toast.error(error.message),
+  });
+
+  const castVote = useMutation({
+    mutationFn: async (params: { nomination_id: string; weight?: number }) => {
+      if (!userId) throw new Error("User not authenticated");
+      return awardsMockServer.castVote(params.nomination_id, userId);
+    },
+    onSuccess: () => toast.success("Vote cast successfully!"),
+    onError: (error: any) => toast.error(error.message),
+  });
+
+  const advancePhase = async (next: string) => {
+    awardsMockServer.advancePhase(next as any);
+  };
+
+  const selectFinalists = async () => {
+    awardsMockServer.selectRandomFinalists();
+  };
+
+  const finalistsByCountry = useMemo(() => awardsMockServer.getFinalistsByCountry(), [nominations]);
+
+  return {
+    shows,
+    showsLoading: false,
+    nominations: userId ? nominations.filter((nom) => nom.user_id === userId) : nominations,
+    nominationsLoading: false,
+    wins: userId ? wins.filter((win) => win.user_id === userId) : wins,
+    winsLoading: false,
+    fetchShowNominations: async (showId: string) => awardsMockServer.getNominations({ award_show_id: showId }),
+    submitNomination: submitNomination.mutateAsync,
+    castVote: castVote.mutateAsync,
+    bookPerformance: async () => undefined,
+    attendRedCarpet: async () => undefined,
+    isSubmitting: submitNomination.isPending,
+    isVoting: castVote.isPending,
+    isBooking: false,
+    isAttending: false,
+    lifecyclePhase: phase,
+    finalistsByCountry,
+    advancePhase,
+    selectFinalists,
+    votesRemaining,
+    isMocked: true,
+  };
+};
+
+export const useAwards = (userId?: string, bandId?: string): AwardsHookReturn => {
   const queryClient = useQueryClient();
+  const useMocks = import.meta.env.VITE_E2E_USE_MOCKS === "true";
+
+  if (useMocks) {
+    return useAwardsMock(userId, bandId);
+  }
 
   // Fetch all award shows
   const { data: shows = [], isLoading: showsLoading } = useQuery({
@@ -121,17 +228,11 @@ export const useAwards = (userId?: string, bandId?: string) => {
     return data as AwardNomination[];
   };
 
-  // Submit nomination
+  // Submit new nomination
   const submitNomination = useMutation({
-    mutationFn: async (nomination: {
-      award_show_id: string;
-      category_name: string;
-      nominee_type: string;
-      nominee_id: string;
-      nominee_name: string;
-      band_id?: string;
-      submission_data?: any;
-    }) => {
+    mutationFn: async (
+      nomination: Omit<AwardNomination, "id" | "status" | "vote_count" | "created_at">,
+    ) => {
       if (!userId) throw new Error("User not authenticated");
 
       const { data, error } = await (supabase as any)
@@ -239,7 +340,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       if (!userId) throw new Error("User not authenticated");
 
       // Calculate fame gain based on outfit choice
-      const fameGain = attendance.outfit_choice === "designer" ? 50 : 
+      const fameGain = attendance.outfit_choice === "designer" ? 50 :
                        attendance.outfit_choice === "custom" ? 75 : 25;
 
       const { data, error } = await (supabase as any)
@@ -294,5 +395,11 @@ export const useAwards = (userId?: string, bandId?: string) => {
     isVoting: castVote.isPending,
     isBooking: bookPerformance.isPending,
     isAttending: attendRedCarpet.isPending,
+    lifecyclePhase: undefined,
+    finalistsByCountry: undefined,
+    advancePhase: undefined,
+    selectFinalists: undefined,
+    votesRemaining: undefined,
+    isMocked: false,
   };
 };

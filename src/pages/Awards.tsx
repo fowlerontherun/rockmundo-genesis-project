@@ -12,9 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import { useGameData } from "@/hooks/useGameData";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useAwards } from "@/hooks/useAwards";
-import { 
-  Award as AwardIcon, 
-  Trophy, 
+import {
+  Award as AwardIcon,
+  Trophy,
   Vote, 
   Mic, 
   Camera, 
@@ -43,6 +43,12 @@ export default function Awards() {
     winsLoading,
     submitNomination,
     castVote,
+    lifecyclePhase,
+    finalistsByCountry,
+    advancePhase,
+    selectFinalists,
+    votesRemaining,
+    isMocked,
     bookPerformance,
     attendRedCarpet,
     isSubmitting,
@@ -56,6 +62,7 @@ export default function Awards() {
   const [nomineeType, setNomineeType] = useState<string>("song");
   const [nomineeId, setNomineeId] = useState<string>("");
   const [nomineeName, setNomineeName] = useState<string>("");
+  const [nomineeCountry, setNomineeCountry] = useState<string>("United States");
   const [submissionNotes, setSubmissionNotes] = useState<string>("");
   const [outfitChoice, setOutfitChoice] = useState<string>("casual");
 
@@ -71,13 +78,14 @@ export default function Awards() {
       nominee_id: nomineeId || nomineeName,
       nominee_name: nomineeName,
       band_id: band?.id,
-      submission_data: { notes: submissionNotes },
+      submission_data: { notes: submissionNotes, country: nomineeCountry },
     });
 
     // Reset form
     setSelectedCategory("");
     setNomineeName("");
     setSubmissionNotes("");
+    setNomineeCountry("United States");
   };
 
   const handleVote = (nominationId: string) => {
@@ -100,6 +108,18 @@ export default function Awards() {
       completed: "bg-slate-400",
     };
     return <Badge className={colors[status] || "bg-slate-500"}>{status.replace(/_/g, " ")}</Badge>;
+  };
+
+  const getLifecycleLabel = () => {
+    if (!lifecyclePhase) return null;
+    const labels: Record<string, string> = {
+      submissions: "Submissions Open",
+      selection: "Selection",
+      event_live: "Event Live",
+      voting: "Voting Open",
+      results: "Results",
+    };
+    return labels[lifecyclePhase] || lifecyclePhase;
   };
 
   const getNominationStatusBadge = (status: string) => {
@@ -135,6 +155,22 @@ export default function Awards() {
           </div>
         )}
       </div>
+
+      {lifecyclePhase && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-muted/40 p-4"
+          data-testid="lifecycle-banner"
+        >
+          <div>
+            <p className="text-sm text-muted-foreground">Lifecycle phase</p>
+            <p className="text-xl font-semibold">{getLifecycleLabel()}</p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Votes remaining:</span>
+            <Badge variant="secondary">{votesRemaining ?? 0}</Badge>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="shows" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
@@ -252,7 +288,7 @@ export default function Awards() {
                               <div>
                                 <Label>Category</Label>
                                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                  <SelectTrigger>
+                                  <SelectTrigger data-testid="nomination-category">
                                     <SelectValue placeholder="Select category" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -268,7 +304,7 @@ export default function Awards() {
                               <div>
                                 <Label>Nominee Type</Label>
                                 <Select value={nomineeType} onValueChange={setNomineeType}>
-                                  <SelectTrigger>
+                                  <SelectTrigger data-testid="nominee-type">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -287,6 +323,18 @@ export default function Awards() {
                                   value={nomineeName}
                                   onChange={(e) => setNomineeName(e.target.value)}
                                   placeholder="Enter name of song/album/etc."
+                                  data-testid="nominee-name"
+                                />
+                              </div>
+
+                              <div>
+                                <Label>Country</Label>
+                                <input
+                                  className="w-full p-2 border rounded"
+                                  value={nomineeCountry}
+                                  onChange={(e) => setNomineeCountry(e.target.value)}
+                                  placeholder="Country of origin"
+                                  data-testid="nomination-country"
                                 />
                               </div>
 
@@ -299,10 +347,11 @@ export default function Awards() {
                                 />
                               </div>
 
-                              <Button 
-                                onClick={handleSubmitNomination} 
+                              <Button
+                                onClick={handleSubmitNomination}
                                 disabled={isSubmitting || !selectedCategory || !nomineeName}
                                 className="w-full"
+                                data-testid="submit-nomination"
                               >
                                 Submit Nomination
                               </Button>
@@ -524,15 +573,102 @@ export default function Awards() {
             <CardHeader>
               <CardTitle>Cast Your Votes</CardTitle>
               <CardDescription>
-                Support your favorite nominees in active voting windows
+                Support shortlisted nominees by country. Votes are capped to keep things fair.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-center py-12 text-muted-foreground">
-                Voting interface coming soon! Check back when voting opens.
-              </p>
+            <CardContent className="space-y-4">
+              {isMocked && (
+                <div className="flex flex-wrap gap-2" data-testid="mock-controls">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => selectFinalists?.()}
+                    disabled={lifecyclePhase !== "selection" && lifecyclePhase !== "submissions"}
+                  >
+                    Generate finalists
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => advancePhase?.("selection")}
+                  >
+                    Go to selection
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => advancePhase?.("event_live")}
+                  >
+                    Event live
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => advancePhase?.("voting")}
+                  >
+                    Open voting
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => advancePhase?.("results")}
+                  >
+                    Show results
+                  </Button>
+                </div>
+              )}
+
+              {!finalistsByCountry || Object.keys(finalistsByCountry).length === 0 ? (
+                <p className="text-muted-foreground">Finalists will appear here once selection completes.</p>
+              ) : (
+                <div className="grid gap-3" data-testid="finalists-grid">
+                  {Object.entries(finalistsByCountry).map(([country, nomination]) => (
+                    <div
+                      key={country}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                      data-testid={`finalist-${country.toLowerCase()}`}
+                    >
+                      <div>
+                        <p className="text-sm text-muted-foreground">{country}</p>
+                        <p className="font-semibold">{nomination.nominee_name}</p>
+                        <p className="text-xs text-muted-foreground">{nomination.category_name}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{nomination.vote_count} votes</Badge>
+                        <Button
+                          onClick={() => handleVote(nomination.id)}
+                          disabled={lifecyclePhase !== "voting" || isVoting || (votesRemaining ?? 0) <= 0 || lifecyclePhase === "results"}
+                          data-testid={`vote-${nomination.id}`}
+                        >
+                          Vote
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {lifecyclePhase === "results" && wins.length > 0 && (
+            <Card data-testid="results-panel">
+              <CardHeader>
+                <CardTitle>Results</CardTitle>
+                <CardDescription>Winning entries by category</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                {wins.map((win) => (
+                  <div key={win.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{win.category_name}</p>
+                      <p className="font-semibold">{win.winner_name}</p>
+                    </div>
+                    <Badge variant="secondary">Winner</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
