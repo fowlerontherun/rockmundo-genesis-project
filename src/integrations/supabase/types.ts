@@ -1065,6 +1065,7 @@ export type Database = {
       }
       bands: {
         Row: {
+          allow_applications: boolean | null
           artist_name: string | null
           band_balance: number | null
           chemistry_level: number | null
@@ -1099,6 +1100,7 @@ export type Database = {
           weekly_fans: number | null
         }
         Insert: {
+          allow_applications?: boolean | null
           artist_name?: string | null
           band_balance?: number | null
           chemistry_level?: number | null
@@ -1133,6 +1135,7 @@ export type Database = {
           weekly_fans?: number | null
         }
         Update: {
+          allow_applications?: boolean | null
           artist_name?: string | null
           band_balance?: number | null
           chemistry_level?: number | null

@@ -116,6 +116,10 @@ const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStatio
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
+const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
+const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
+const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
+const BandProfile = lazyWithRetry(() => import("./pages/BandProfile"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
@@ -234,6 +238,10 @@ function App() {
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="inventory" element={<InventoryManager />} />
+                    <Route path="players/search" element={<PlayerSearch />} />
+                    <Route path="player/:playerId" element={<PlayerProfile />} />
+                    <Route path="bands/browse" element={<BandBrowser />} />
+                    <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="labels" element={<RecordLabel />} />
                     
