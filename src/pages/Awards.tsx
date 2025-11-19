@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +25,11 @@ import {
   Users,
   Sparkles,
   Crown,
-  ThumbsUp
+  ThumbsUp,
+  Clock
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export default function Awards() {
   const { profile } = useGameData();
@@ -34,9 +37,9 @@ export default function Awards() {
   const band = bandData?.bands;
   const userId = profile?.user_id;
 
-  const { 
-    shows, 
-    showsLoading, 
+  const {
+    shows,
+    showsLoading,
     nominations, 
     nominationsLoading,
     wins,
@@ -45,10 +48,12 @@ export default function Awards() {
     castVote,
     bookPerformance,
     attendRedCarpet,
+    fetchShowNominations,
+    fetchVoteCountForShow,
     isSubmitting,
     isVoting,
     isBooking,
-    isAttending 
+    isAttending
   } = useAwards(userId, band?.id);
 
   const [selectedShow, setSelectedShow] = useState<string>("");
@@ -58,6 +63,8 @@ export default function Awards() {
   const [nomineeName, setNomineeName] = useState<string>("");
   const [submissionNotes, setSubmissionNotes] = useState<string>("");
   const [outfitChoice, setOutfitChoice] = useState<string>("casual");
+  const [selectedVotingShowId, setSelectedVotingShowId] = useState<string>("");
+  const [votingNominationId, setVotingNominationId] = useState<string | null>(null);
 
   const handleSubmitNomination = () => {
     if (!selectedShow || !selectedCategory || !nomineeName) {
@@ -80,8 +87,63 @@ export default function Awards() {
     setSubmissionNotes("");
   };
 
-  const handleVote = (nominationId: string) => {
-    castVote({ nomination_id: nominationId });
+  const activeVotingShows = useMemo(() => shows.filter((show) => show.status === "voting_open"), [shows]);
+
+  useEffect(() => {
+    if (activeVotingShows.length > 0 && !selectedVotingShowId) {
+      setSelectedVotingShowId(activeVotingShows[0].id);
+    }
+
+    if (activeVotingShows.length === 0) {
+      setSelectedVotingShowId("");
+    }
+  }, [activeVotingShows, selectedVotingShowId]);
+
+  const selectedVotingShow = activeVotingShows.find((show) => show.id === selectedVotingShowId);
+
+  const {
+    data: activeShowNominations = [],
+    isLoading: activeNominationsLoading,
+    isFetching: activeNominationsFetching,
+  } = useQuery({
+    queryKey: ["award-show-nominations", selectedVotingShowId],
+    queryFn: () => fetchShowNominations(selectedVotingShowId),
+    enabled: !!selectedVotingShowId,
+  });
+
+  const { data: voteCount = 0, isLoading: voteCountLoading } = useQuery({
+    queryKey: ["award-show-vote-count", selectedVotingShowId, userId],
+    queryFn: () => fetchVoteCountForShow(selectedVotingShowId),
+    enabled: !!selectedVotingShowId && !!userId,
+  });
+
+  const votingLimit = 5;
+  const votesRemaining = Math.max(0, votingLimit - (voteCount || 0));
+  const votingUnavailable = !selectedVotingShow || selectedVotingShow.status !== "voting_open";
+
+  const handleVote = (nominationId: string, showId: string) => {
+    if (!userId) {
+      toast.error("You need to be signed in to vote.");
+      return;
+    }
+
+    if (!showId) {
+      toast.error("Select an active award show to cast a vote.");
+      return;
+    }
+
+    if (voteCount >= votingLimit) {
+      toast.error("You've reached the 5-vote limit for this event.");
+      return;
+    }
+
+    setVotingNominationId(nominationId);
+    castVote(
+      { nomination_id: nominationId, show_id: showId },
+      {
+        onSettled: () => setVotingNominationId(null),
+      }
+    );
   };
 
   const handleRedCarpet = (showId: string) => {
@@ -527,10 +589,131 @@ export default function Awards() {
                 Support your favorite nominees in active voting windows
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-center py-12 text-muted-foreground">
-                Voting interface coming soon! Check back when voting opens.
-              </p>
+            <CardContent className="space-y-4">
+              {showsLoading ? (
+                <div className="text-center py-12 text-muted-foreground">Loading voting events...</div>
+              ) : activeVotingShows.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No award shows are currently open for voting. Check back when voting begins.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 border rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-purple-500">Voting Live</Badge>
+                      <span className="font-semibold">{selectedVotingShow?.show_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>Voting window: {selectedVotingShow?.schedule?.votingWindow || "TBD"}</span>
+                    </div>
+                  </div>
+
+                  {activeVotingShows.length > 1 && (
+                    <div className="flex flex-col gap-2">
+                      <Label>Choose event</Label>
+                      <Select value={selectedVotingShowId} onValueChange={setSelectedVotingShowId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select award show" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeVotingShows.map((show) => (
+                            <SelectItem key={show.id} value={show.id}>
+                              {show.show_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 border rounded-lg">
+                    <div>
+                      <div className="text-xs uppercase text-muted-foreground">Votes Remaining</div>
+                      <div className="text-2xl font-bold">{voteCountLoading ? "..." : votesRemaining}</div>
+                    </div>
+                    {votingUnavailable ? (
+                      <div className="text-sm text-muted-foreground">Voting is closed for this event.</div>
+                    ) : !userId ? (
+                      <div className="text-sm text-muted-foreground">Sign in to start voting.</div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        You can cast up to 5 votes per event. Votes update in real-time.
+                      </div>
+                    )}
+                  </div>
+
+                  {voteCount >= votingLimit && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700">
+                      You've used all available votes for this event.
+                    </div>
+                  )}
+
+                  {activeNominationsLoading || activeNominationsFetching ? (
+                    <div className="text-center py-12 text-muted-foreground">Loading nominations...</div>
+                  ) : activeShowNominations.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No nominations found for this award show yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(
+                        activeShowNominations.reduce(
+                          (acc: Record<string, typeof activeShowNominations>, nomination) => {
+                            if (!acc[nomination.category_name]) acc[nomination.category_name] = [];
+                            acc[nomination.category_name].push(nomination);
+                            return acc;
+                          },
+                          {}
+                        )
+                      ).map(([category, categoryNominations]) => (
+                        <div key={category} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold">{category}</h4>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedVotingShow?.show_name}
+                            </span>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            {categoryNominations.map((nomination) => (
+                              <Card key={nomination.id} className="border-primary/10">
+                                <CardContent className="p-4 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-semibold">{nomination.nominee_name}</div>
+                                      <div className="text-sm text-muted-foreground capitalize">
+                                        {nomination.nominee_type}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-xs text-muted-foreground">Votes</div>
+                                      <div className="text-xl font-bold">{nomination.vote_count}</div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    onClick={() => handleVote(nomination.id, selectedVotingShowId)}
+                                    disabled={
+                                      votingUnavailable ||
+                                      !userId ||
+                                      voteCount >= votingLimit ||
+                                      isVoting ||
+                                      voteCountLoading ||
+                                      votingNominationId === nomination.id
+                                    }
+                                    className="w-full"
+                                  >
+                                    {votingNominationId === nomination.id ? "Submitting..." : "Cast Vote"}
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
