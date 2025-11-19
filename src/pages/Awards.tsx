@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useGameData } from "@/hooks/useGameData";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useAwards } from "@/hooks/useAwards";
+import { hasReachedVoteCap } from "@/utils/voteCap";
 import { 
   Award as AwardIcon, 
   Trophy, 
@@ -231,6 +232,18 @@ export default function Awards() {
 
                     <Separator />
 
+                    {show.voting_breakdown && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Voting progress</span>
+                          <span className="font-medium">
+                            {show.voting_breakdown.overall_progress || 0}%
+                          </span>
+                        </div>
+                        <Progress value={show.voting_breakdown.overall_progress || 0} />
+                      </div>
+                    )}
+
                     {/* Actions */}
                     <div className="flex flex-wrap gap-2">
                       {show.status === "nominations_open" && (
@@ -359,6 +372,22 @@ export default function Awards() {
                           Book Performance Slot
                         </Button>
                       )}
+
+                      <Button
+                        data-testid={`vote-button-${show.id}`}
+                        onClick={() =>
+                          handleVote(
+                            show.voting_breakdown?.featured_nomination_id || `${show.id}-nomination`
+                          )
+                        }
+                        disabled={
+                          show.status !== "voting_open" || hasReachedVoteCap(show.id) || isVoting
+                        }
+                        variant={show.status === "voting_open" ? "default" : "outline"}
+                      >
+                        <ThumbsUp className="h-4 w-4 mr-2" />
+                        Cast Vote
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
