@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Users, Pause, Music, Video, Calendar, Mic2 } from "lucide-react";
 import { format } from "date-fns";
+import { LastNightGigs } from "@/components/news/LastNightGigs";
+import { BandInvitations } from "@/components/band/BandInvitations";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split('T')[0];
