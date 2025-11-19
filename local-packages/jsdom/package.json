@@ -1,0 +1,6 @@
+{
+  "name": "jsdom",
+  "version": "0.0.0-local",
+  "type": "module",
+  "main": "index.js"
+}
