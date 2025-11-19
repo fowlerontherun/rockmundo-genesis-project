@@ -22,6 +22,7 @@ export function validateSetlistForSlot(
   setlistDurationSeconds: number,
   slotId: string
 ): { valid: boolean; message?: string } {
+  const gracePeriodSeconds = 5 * 60; // Allow 5 minutes over the slot duration
   const slotLimits: Record<string, { max: number; name: string }> = {
     kids: { max: 30 * 60, name: 'Kids Slot (30 min max)' },
     opening: { max: 30 * 60, name: 'Opening Slot (30 min max)' },
@@ -33,12 +34,13 @@ export function validateSetlistForSlot(
   if (!limit) return { valid: true };
 
   const durationMinutes = Math.floor(setlistDurationSeconds / 60);
-  const limitMinutes = Math.floor(limit.max / 60);
+  const limitWithGrace = limit.max + gracePeriodSeconds;
+  const limitMinutes = Math.floor(limitWithGrace / 60);
 
-  if (setlistDurationSeconds > limit.max) {
+  if (setlistDurationSeconds > limitWithGrace) {
     return {
       valid: false,
-      message: `Setlist is ${durationMinutes} min, but ${limit.name} allows max ${limitMinutes} min`,
+      message: `Setlist is ${durationMinutes} min, but ${limit.name} allows max ${limitMinutes} min (including 5 min grace)`,
     };
   }
 
