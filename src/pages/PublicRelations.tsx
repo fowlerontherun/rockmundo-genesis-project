@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import type { PRCampaignCreateInput, MediaAppearance, MediaOffer, PRCampaign } from "@/types/publicRelations";
+
+// Public Relations design notes:
+// - Routes: Accessible via /public-relations (with /pr as an alias) registered in App.tsx.
+// - Required sections: press releases library, media contacts roster, outreach campaigns, media appearances/offers, and a sentiment dashboard summarizing channel health.
+// - User flows: create/manage outreach campaigns, review/respond to media offers, track booked appearances, publish press releases, maintain contact history, and surface sentiment trends for the dashboard.
+// - Data model alignment: PRCampaign, MediaAppearance, MediaOffer, PressReleaseItem, MediaContact, OutreachTask, and PRSentimentSnapshot live in src/types/publicRelations.ts for future Supabase mapping.
 
 const PublicRelations = () => {
   const { data: bandData } = usePrimaryBand();
@@ -30,7 +37,7 @@ const PublicRelations = () => {
     respondToOffer,
   } = usePublicRelations(band?.id);
 
-  const [newCampaign, setNewCampaign] = useState({
+  const [newCampaign, setNewCampaign] = useState<PRCampaignCreateInput>({
     campaign_type: "tv",
     campaign_name: "",
     budget: 5000,
@@ -67,13 +74,13 @@ const PublicRelations = () => {
     }
   };
 
-  const getSentimentBadge = (sentiment: string) => {
+  const getSentimentBadge = (sentiment: MediaAppearance["sentiment"]) => {
     if (sentiment === "positive") return <Badge className="bg-success">Positive</Badge>;
     if (sentiment === "negative") return <Badge variant="destructive">Negative</Badge>;
     return <Badge variant="secondary">Neutral</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: PRCampaign["status"] | MediaOffer["status"]) => {
     if (status === "active") return <Badge className="bg-success">Active</Badge>;
     if (status === "completed") return <Badge variant="secondary">Completed</Badge>;
     if (status === "pending") return <Badge variant="outline">Pending</Badge>;

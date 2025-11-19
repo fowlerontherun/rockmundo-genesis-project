@@ -217,6 +217,7 @@ function App() {
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="relationships" element={<Relationships />} />
+                    <Route path="public-relations" element={<PublicRelations />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
