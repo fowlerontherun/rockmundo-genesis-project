@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  enforceVoteCap,
+  validateNominationSubmission,
+} from "@/lib/api/awards";
 import { toast } from "sonner";
 
 export interface AwardShow {
@@ -134,6 +138,8 @@ export const useAwards = (userId?: string, bandId?: string) => {
     }) => {
       if (!userId) throw new Error("User not authenticated");
 
+      validateNominationSubmission(nomination);
+
       const { data, error } = await (supabase as any)
         .from("award_nominations")
         .insert({
@@ -162,6 +168,16 @@ export const useAwards = (userId?: string, bandId?: string) => {
       weight?: number;
     }) => {
       if (!userId) throw new Error("User not authenticated");
+
+      const { count, error: countError } = await (supabase as any)
+        .from("award_votes")
+        .select("*", { count: "exact", head: true })
+        .eq("nomination_id", params.nomination_id)
+        .eq("voter_id", userId);
+
+      if (countError) throw countError;
+
+      enforceVoteCap(count ?? 0, 3);
 
       const { data, error } = await (supabase as any)
         .from("award_votes")
