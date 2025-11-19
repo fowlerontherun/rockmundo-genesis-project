@@ -43,14 +43,20 @@ serve(async (req) => {
     }
 
     // Get all song performances
-    const { data: performances } = await supabaseClient
+    const { data: performances, error: perfError } = await supabaseClient
       .from('gig_song_performances')
       .select('*')
       .eq('gig_outcome_id', outcome.id)
       .order('position');
 
+    if (perfError) {
+      console.error('Error fetching performances:', perfError);
+      throw perfError;
+    }
+
     if (!performances || performances.length === 0) {
-      throw new Error('No song performances found');
+      console.log('No performances found, gig may not have been processed yet');
+      throw new Error('No song performances found - gig may not have been processed');
     }
 
     // Calculate overall rating (average of all songs)
