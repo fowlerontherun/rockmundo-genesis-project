@@ -1171,6 +1171,210 @@ export type Database = {
         }
         Relationships: []
       }
+      eurovision_entries: {
+        Row: {
+          band_id: string | null
+          country: string
+          created_at: string
+          final_score: number | null
+          id: string
+          running_order: number | null
+          song_id: string | null
+          song_title: string | null
+          year_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          country: string
+          created_at?: string
+          final_score?: number | null
+          id?: string
+          running_order?: number | null
+          song_id?: string | null
+          song_title?: string | null
+          year_id: string
+        }
+        Update: {
+          band_id?: string | null
+          country?: string
+          created_at?: string
+          final_score?: number | null
+          id?: string
+          running_order?: number | null
+          song_id?: string | null
+          song_title?: string | null
+          year_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eurovision_entries_band_id_fkey",
+            columns: ["band_id"],
+            isOneToOne: false,
+            referencedRelation: "bands",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey",
+            columns: ["song_id"],
+            isOneToOne: false,
+            referencedRelation: "band_gift_notifications",
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey",
+            columns: ["song_id"],
+            isOneToOne: false,
+            referencedRelation: "chart_singles",
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey",
+            columns: ["song_id"],
+            isOneToOne: false,
+            referencedRelation: "songs",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_year_id_fkey",
+            columns: ["year_id"],
+            isOneToOne: false,
+            referencedRelation: "eurovision_years",
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eurovision_votes: {
+        Row: {
+          created_at: string
+          entry_id: string
+          from_country: string
+          id: string
+          points: number
+          vote_type: string | null
+          year_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          from_country: string
+          id?: string
+          points: number
+          vote_type?: string | null
+          year_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          from_country?: string
+          id?: string
+          points?: number
+          vote_type?: string | null
+          year_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eurovision_votes_entry_id_fkey",
+            columns: ["entry_id"],
+            isOneToOne: false,
+            referencedRelation: "eurovision_entries",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_votes_year_id_fkey",
+            columns: ["year_id"],
+            isOneToOne: false,
+            referencedRelation: "eurovision_years",
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eurovision_winners: {
+        Row: {
+          created_at: string
+          entry_id: string | null
+          id: string
+          song_id: string | null
+          year_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id?: string | null
+          id?: string
+          song_id?: string | null
+          year_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string | null
+          id?: string
+          song_id?: string | null
+          year_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eurovision_winners_entry_id_fkey",
+            columns: ["entry_id"],
+            isOneToOne: false,
+            referencedRelation: "eurovision_entries",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_winners_song_id_fkey",
+            columns: ["song_id"],
+            isOneToOne: false,
+            referencedRelation: "band_gift_notifications",
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "eurovision_winners_song_id_fkey",
+            columns: ["song_id"],
+            isOneToOne: false,
+            referencedRelation: "chart_singles",
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "eurovision_winners_song_id_fkey",
+            columns: ["song_id"],
+            isOneToOne: false,
+            referencedRelation: "songs",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_winners_year_id_fkey",
+            columns: ["year_id"],
+            isOneToOne: false,
+            referencedRelation: "eurovision_years",
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eurovision_years: {
+        Row: {
+          created_at: string
+          host_city: string | null
+          host_country: string | null
+          id: string
+          theme: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          host_city?: string | null
+          host_country?: string | null
+          id?: string
+          theme?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          host_city?: string | null
+          host_country?: string | null
+          id?: string
+          theme?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
