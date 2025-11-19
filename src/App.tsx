@@ -133,6 +133,7 @@ const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
 const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
+const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
@@ -184,6 +185,7 @@ function App() {
                     <Route path="tour-manager" element={<TourManagerNew />} />
                     <Route path="streaming" element={<StreamingNew />} />
                     <Route path="music/charts" element={<ChartsPage />} />
+                    <Route path="overview" element={<OverviewPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
