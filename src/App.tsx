@@ -147,6 +147,7 @@ const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
   () => import("./pages/events/narratives/[storyId]"),
 );
+const EurovisionPage = lazyWithRetry(() => import("./pages/Eurovision"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
@@ -236,6 +237,7 @@ function App() {
                     <Route path="release-manager" element={<ReleaseManager />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/:handle" element={<TwaaterProfile />} />
+                    <Route path="events/eurovision" element={<EurovisionPage />} />
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="inventory" element={<InventoryManager />} />
