@@ -77,7 +77,7 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
   const loadGig = useCallback(async () => {
     const { data: gigData, error } = await supabase
       .from('gigs')
-      .select('*, bands!inner(id)')
+      .select('*, bands!gigs_band_id_fkey(id, name), venues!gigs_venue_id_fkey(name, capacity)')
       .eq('id', gigId)
       .single();
 
@@ -89,21 +89,29 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
     setGig(gigData);
 
     if (gigData.setlist_id) {
-      const { data: songs } = await supabase
+      const { data: songs, error: songsError } = await supabase
         .from('setlist_songs')
         .select('*, songs!inner(id, title, genre, quality_score, duration_seconds)')
         .eq('setlist_id', gigData.setlist_id)
         .order('position');
+
+      if (songsError) {
+        console.error('Error loading setlist songs:', songsError);
+      }
 
       setSetlistSongs(songs || []);
     }
 
     // Load rehearsal data for the band
     if ((gigData as any).bands?.id) {
-      const { data: rehearsalData } = await supabase
+      const { data: rehearsalData, error: rehearsalError } = await supabase
         .from('song_rehearsals')
         .select('song_id, rehearsal_level')
         .eq('band_id', (gigData as any).bands.id);
+
+      if (rehearsalError) {
+        console.error('Error loading rehearsal data:', rehearsalError);
+      }
       
       setRehearsals(rehearsalData || []);
     }
