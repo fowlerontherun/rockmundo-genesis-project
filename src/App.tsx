@@ -69,6 +69,7 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 const TourManagerNew = lazyWithRetry(() => import("./pages/TourManagerNew"));
 const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
+const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
@@ -184,6 +185,7 @@ function App() {
                     <Route path="tour-manager" element={<TourManagerNew />} />
                     <Route path="streaming" element={<StreamingNew />} />
                     <Route path="music/charts" element={<ChartsPage />} />
+                    <Route path="eurovision" element={<EurovisionResultsPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
