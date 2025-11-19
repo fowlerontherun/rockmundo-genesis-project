@@ -26,6 +26,7 @@ import { Link } from "react-router-dom";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { NationalSelectionsRunner } from "@/components/admin/NationalSelectionsRunner";
 
 const adminSections = [
   {
@@ -267,6 +268,8 @@ export default function Admin() {
             Configure world data and manage gameplay balancing parameters across dedicated admin tools.
           </p>
         </div>
+
+        <NationalSelectionsRunner />
 
         <div className="grid gap-6 md:grid-cols-2">
           {adminSections.map(({ title, description, href, action, Icon }) => (
