@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { publicRelationsApi } from "@/lib/publicRelationsApi";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
 
@@ -52,14 +52,7 @@ export const usePublicRelations = (bandId?: string) => {
     queryKey: ["pr-campaigns", bandId],
     queryFn: async () => {
       if (!bandId) return [];
-      const { data, error } = await (supabase as any)
-        .from("pr_campaigns")
-        .select("*")
-        .eq("band_id", bandId)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
+      return publicRelationsApi.fetchCampaigns(bandId);
     },
     enabled: !!bandId,
   });
@@ -68,14 +61,7 @@ export const usePublicRelations = (bandId?: string) => {
     queryKey: ["media-appearances", bandId],
     queryFn: async () => {
       if (!bandId) return [];
-      const { data, error } = await (supabase as any)
-        .from("media_appearances")
-        .select("*")
-        .eq("band_id", bandId)
-        .order("air_date", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
+      return publicRelationsApi.fetchMediaAppearances(bandId);
     },
     enabled: !!bandId,
   });
@@ -84,14 +70,7 @@ export const usePublicRelations = (bandId?: string) => {
     queryKey: ["media-offers", bandId],
     queryFn: async () => {
       if (!bandId) return [];
-      const { data, error } = await supabase
-        .from("media_offers")
-        .select("*")
-        .eq("band_id", bandId)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return (data as any) || [];
+      return publicRelationsApi.fetchMediaOffers(bandId) as Promise<any[]>;
     },
     enabled: !!bandId,
   });
@@ -104,14 +83,7 @@ export const usePublicRelations = (bandId?: string) => {
       start_date: string;
       end_date: string;
     }) => {
-      const { data, error } = await (supabase as any)
-        .from("pr_campaigns")
-        .insert([{ ...campaignData, band_id: bandId }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      return publicRelationsApi.createCampaign(bandId!, campaignData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pr-campaigns", bandId] });
@@ -124,12 +96,7 @@ export const usePublicRelations = (bandId?: string) => {
 
   const respondToOffer = useMutation({
     mutationFn: async ({ offerId, accept }: { offerId: string; accept: boolean }) => {
-      const { error } = await (supabase as any)
-        .from("media_offers")
-        .update({ status: accept ? "accepted" : "declined" })
-        .eq("id", offerId);
-      
-      if (error) throw error;
+      return publicRelationsApi.respondToOffer(offerId, accept);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["media-offers", bandId] });

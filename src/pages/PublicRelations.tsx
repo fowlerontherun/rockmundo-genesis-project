@@ -3,16 +3,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tv, Radio, Mic2, TrendingUp, Calendar, DollarSign, Eye, ThumbsUp, Plus } from "lucide-react";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { usePublicRelations } from "@/hooks/usePublicRelations";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { PrCampaignForm, type CampaignDraft } from "@/components/pr/PrCampaignForm";
+import MediaAppearancesTable from "@/components/pr/MediaAppearancesTable";
+import MediaOffersTable from "@/components/pr/MediaOffersTable";
 
 const PublicRelations = () => {
   const { data: bandData } = usePrimaryBand();
@@ -30,7 +29,7 @@ const PublicRelations = () => {
     respondToOffer,
   } = usePublicRelations(band?.id);
 
-  const [newCampaign, setNewCampaign] = useState({
+  const [newCampaign, setNewCampaign] = useState<CampaignDraft>({
     campaign_type: "tv",
     campaign_name: "",
     budget: 5000,
@@ -65,12 +64,6 @@ const PublicRelations = () => {
       case "podcast": return <Mic2 className="h-4 w-4" />;
       default: return <Eye className="h-4 w-4" />;
     }
-  };
-
-  const getSentimentBadge = (sentiment: string) => {
-    if (sentiment === "positive") return <Badge className="bg-success">Positive</Badge>;
-    if (sentiment === "negative") return <Badge variant="destructive">Negative</Badge>;
-    return <Badge variant="secondary">Neutral</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
@@ -114,41 +107,7 @@ const PublicRelations = () => {
               <DialogTitle>Create PR Campaign</DialogTitle>
               <DialogDescription>Launch a new media campaign</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Campaign Name</Label>
-                <Input value={newCampaign.campaign_name} onChange={(e) => setNewCampaign({ ...newCampaign, campaign_name: e.target.value })} placeholder="Summer Media Blitz" />
-              </div>
-              <div>
-                <Label>Type</Label>
-                <Select value={newCampaign.campaign_type} onValueChange={(value) => setNewCampaign({ ...newCampaign, campaign_type: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tv">TV</SelectItem>
-                    <SelectItem value="radio">Radio</SelectItem>
-                    <SelectItem value="podcast">Podcast</SelectItem>
-                    <SelectItem value="press">Press</SelectItem>
-                    <SelectItem value="social">Social Media</SelectItem>
-                    <SelectItem value="influencer">Influencer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Budget</Label>
-                <Input type="number" value={newCampaign.budget} onChange={(e) => setNewCampaign({ ...newCampaign, budget: Number(e.target.value) })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input type="date" value={newCampaign.start_date} onChange={(e) => setNewCampaign({ ...newCampaign, start_date: e.target.value })} />
-                </div>
-                <div>
-                  <Label>End Date</Label>
-                  <Input type="date" value={newCampaign.end_date} onChange={(e) => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
-                </div>
-              </div>
-              <Button onClick={handleCreateCampaign} className="w-full">Create Campaign</Button>
-            </div>
+            <PrCampaignForm value={newCampaign} onChange={setNewCampaign} onSubmit={handleCreateCampaign} />
           </DialogContent>
         </Dialog>
       </div>
@@ -185,45 +144,15 @@ const PublicRelations = () => {
         </TabsContent>
 
         <TabsContent value="appearances">
-          {appearancesLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> :
-           appearances.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No appearances yet</CardContent></Card> :
-           <Card><Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Program</TableHead><TableHead>Network</TableHead><TableHead>Air Date</TableHead><TableHead>Reach</TableHead><TableHead>Sentiment</TableHead><TableHead>Highlight</TableHead></TableRow></TableHeader>
-           <TableBody>{appearances.map((a: any) => (
-            <TableRow key={a.id}>
-              <TableCell><div className="flex items-center gap-2">{getMediaIcon(a.media_type)}<span className="capitalize">{a.media_type}</span></div></TableCell>
-              <TableCell className="font-medium">{a.program_name}</TableCell>
-              <TableCell>{a.network}</TableCell>
-              <TableCell>{format(new Date(a.air_date), "MMM d, yyyy")}</TableCell>
-              <TableCell>{a.audience_reach.toLocaleString()}</TableCell>
-              <TableCell>{getSentimentBadge(a.sentiment)}</TableCell>
-              <TableCell className="max-w-xs truncate">{a.highlight}</TableCell>
-            </TableRow>
-          ))}</TableBody></Table></Card>}
+          <MediaAppearancesTable appearances={appearances as any} loading={appearancesLoading} />
         </TabsContent>
 
         <TabsContent value="offers">
-          {offersLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> :
-           offers.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No offers</CardContent></Card> :
-           <div className="grid gap-4">{offers.map((o: any) => (
-            <Card key={o.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">{getMediaIcon(o.media_type)}<CardTitle className="text-lg">{o.program_name}</CardTitle></div>
-                  {getStatusBadge(o.status)}
-                </div>
-                <CardDescription>{o.network} • {format(new Date(o.proposed_date), "MMMM d, yyyy")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div><div className="text-sm text-muted-foreground">Compensation</div><div className="text-2xl font-bold">${o.compensation.toLocaleString()}</div></div>
-                  {o.status === "pending" && <div className="flex gap-2">
-                    <Button onClick={() => respondToOffer({ offerId: o.id, accept: true })} size="sm" className="bg-success">Accept</Button>
-                    <Button onClick={() => respondToOffer({ offerId: o.id, accept: false })} size="sm" variant="destructive">Decline</Button>
-                  </div>}
-                </div>
-              </CardContent>
-            </Card>
-          ))}</div>}
+          <MediaOffersTable
+            offers={offers as any}
+            loading={offersLoading}
+            onRespond={({ offerId, accept }) => respondToOffer.mutate({ offerId, accept })}
+          />
         </TabsContent>
       </Tabs>
     </div>
