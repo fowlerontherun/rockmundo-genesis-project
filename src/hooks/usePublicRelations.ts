@@ -2,53 +2,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
-
-export interface PRCampaign {
-  id: string;
-  band_id: string;
-  campaign_type: string;
-  campaign_name: string;
-  budget: number;
-  start_date: string;
-  end_date: string;
-  status: string;
-  reach: number;
-  engagement_rate: number;
-  media_impressions: number;
-  created_at: string;
-}
-
-export interface MediaAppearance {
-  id: string;
-  band_id: string;
-  media_type: string;
-  program_name: string;
-  network: string;
-  air_date: string;
-  audience_reach: number;
-  sentiment: string;
-  highlight: string;
-  created_at: string;
-}
-
-export interface MediaOffer {
-  id: string;
-  band_id: string;
-  media_type: string;
-  program_name: string;
-  network: string;
-  proposed_date: string;
-  status: string;
-  compensation: number;
-  created_at: string;
-}
+import type {
+  MediaAppearance,
+  MediaOffer,
+  PRCampaign,
+  PRCampaignCreateInput,
+} from "@/types/publicRelations";
 
 export const usePublicRelations = (bandId?: string) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
+  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<PRCampaign[]>({
     queryKey: ["pr-campaigns", bandId],
     queryFn: async () => {
       if (!bandId) return [];
@@ -64,7 +30,7 @@ export const usePublicRelations = (bandId?: string) => {
     enabled: !!bandId,
   });
 
-  const { data: appearances = [], isLoading: appearancesLoading } = useQuery({
+  const { data: appearances = [], isLoading: appearancesLoading } = useQuery<MediaAppearance[]>({
     queryKey: ["media-appearances", bandId],
     queryFn: async () => {
       if (!bandId) return [];
@@ -80,7 +46,7 @@ export const usePublicRelations = (bandId?: string) => {
     enabled: !!bandId,
   });
 
-  const { data: offers = [], isLoading: offersLoading } = useQuery({
+  const { data: offers = [], isLoading: offersLoading } = useQuery<MediaOffer[]>({
     queryKey: ["media-offers", bandId],
     queryFn: async () => {
       if (!bandId) return [];
@@ -97,13 +63,7 @@ export const usePublicRelations = (bandId?: string) => {
   });
 
   const createCampaign = useMutation({
-    mutationFn: async (campaignData: {
-      campaign_type: string;
-      campaign_name: string;
-      budget: number;
-      start_date: string;
-      end_date: string;
-    }) => {
+    mutationFn: async (campaignData: PRCampaignCreateInput) => {
       const { data, error } = await (supabase as any)
         .from("pr_campaigns")
         .insert([{ ...campaignData, band_id: bandId }])
