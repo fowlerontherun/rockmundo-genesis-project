@@ -1,24 +1,118 @@
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import {
+  Calendar,
+  Handshake,
+  Megaphone,
+  Mic2,
+  Newspaper,
+  NotebookPen,
+  Sparkles,
+  Tv,
+} from "lucide-react";
+
+import { MediaContactTable } from "@/components/pr/MediaContactTable";
+import { OutreachPipeline } from "@/components/pr/OutreachPipeline";
+import { PressReleaseForm } from "@/components/pr/PressReleaseForm";
+import { PressReleaseList } from "@/components/pr/PressReleaseList";
+import { SentimentWidget } from "@/components/pr/SentimentWidget";
+import type { MediaContact, OutreachStage, PressRelease, PressReleaseFormValues, SentimentSnapshot } from "@/components/pr/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tv, Radio, Mic2, TrendingUp, Calendar, DollarSign, Eye, ThumbsUp, Plus } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { usePublicRelations } from "@/hooks/usePublicRelations";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+
+const initialPressReleases: PressRelease[] = [
+  {
+    id: "1",
+    title: "Announcing our summer tour across North America",
+    channel: "Official Site",
+    date: new Date().toISOString(),
+    status: "published",
+    sentiment: "positive",
+    reach: 480000,
+    notes: "Coordinated with ticketing partners and local press.",
+  },
+  {
+    id: "2",
+    title: "Studio update: collaborating with surprise guest producer",
+    channel: "Newsletter",
+    date: new Date().toISOString(),
+    status: "scheduled",
+    sentiment: "neutral",
+    reach: 195000,
+  },
+];
+
+const defaultContacts: MediaContact[] = [
+  {
+    id: "c1",
+    name: "Jessie Li",
+    outlet: "IndieWave Blog",
+    role: "Senior Editor",
+    email: "jessie@indiewave.fm",
+    region: "West Coast",
+    lastEngaged: "3 days ago",
+    preferredChannel: "Email",
+    sentiment: "positive",
+  },
+  {
+    id: "c2",
+    name: "Taylor Brooks",
+    outlet: "SoundStage Radio",
+    role: "Producer",
+    email: "tbrooks@soundstage.fm",
+    region: "National",
+    lastEngaged: "1 week ago",
+    preferredChannel: "Call",
+    sentiment: "neutral",
+  },
+  {
+    id: "c3",
+    name: "Morgan Cruz",
+    outlet: "City Beat TV",
+    role: "Segment Booker",
+    email: "mcruz@citybeat.tv",
+    region: "NYC",
+    lastEngaged: "Yesterday",
+    preferredChannel: "Email",
+    sentiment: "positive",
+  },
+];
+
+const outreachStages: OutreachStage[] = [
+  { id: "s1", label: "Prospecting", prospects: 18, conversionRate: 35, nextStep: "Shortlist feature fits" },
+  { id: "s2", label: "Pitched", prospects: 12, conversionRate: 48, nextStep: "Share preview links" },
+  { id: "s3", label: "Negotiating", prospects: 6, conversionRate: 62, nextStep: "Finalize deliverables" },
+  { id: "s4", label: "Booked", prospects: 4, conversionRate: 80, nextStep: "Prep media kits" },
+];
+
+const sentimentSnapshot: SentimentSnapshot = {
+  score: 74,
+  trend: "up",
+  summary: "Momentum is building after the tour announcement; keep nurturing radio contacts.",
+  mentions: 1240,
+};
+
+const noteTone: Record<"campaign" | "appearance" | "offer", string> = {
+  campaign: "bg-primary/10 text-primary",
+  appearance: "bg-success/10 text-success",
+  offer: "bg-warning/10 text-warning-foreground",
+};
 
 const PublicRelations = () => {
   const { data: bandData } = usePrimaryBand();
   const band = bandData?.bands;
   const { toast } = useToast();
-  
+
+  const generateId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Date.now().toString();
+
   const {
     campaigns,
     campaignsLoading,
@@ -26,60 +120,42 @@ const PublicRelations = () => {
     appearancesLoading,
     offers,
     offersLoading,
-    createCampaign,
     respondToOffer,
   } = usePublicRelations(band?.id);
 
-  const [newCampaign, setNewCampaign] = useState({
-    campaign_type: "tv",
-    campaign_name: "",
-    budget: 5000,
-    start_date: "",
-    end_date: "",
-  });
+  const [pressReleases, setPressReleases] = useState<PressRelease[]>(initialPressReleases);
+  const [contacts] = useState<MediaContact[]>(defaultContacts);
+  const [isSubmittingRelease, setIsSubmittingRelease] = useState(false);
 
-  const handleCreateCampaign = () => {
-    if (!newCampaign.campaign_name || !newCampaign.start_date || !newCampaign.end_date) {
+  const totalReach = useMemo(
+    () => campaigns.reduce((sum, campaign) => sum + (campaign.reach || 0), 0),
+    [campaigns],
+  );
+
+  const pendingOffers = useMemo(
+    () => offers.filter((offer) => offer.status === "pending").length,
+    [offers],
+  );
+
+  const handlePressReleaseSubmit = (values: PressReleaseFormValues) => {
+    setIsSubmittingRelease(true);
+    setPressReleases((previous) => [
+      {
+        id: generateId(),
+        reach: 0,
+        sentiment: "neutral",
+        ...values,
+      },
+      ...previous,
+    ]);
+
+    setTimeout(() => {
+      setIsSubmittingRelease(false);
       toast({
-        title: "Missing Information",
-        description: "Please fill in all campaign details",
-        variant: "destructive",
+        title: "Press release added",
+        description: "Draft saved. Share it with your contacts when you're ready.",
       });
-      return;
-    }
-
-    createCampaign(newCampaign);
-    setNewCampaign({
-      campaign_type: "tv",
-      campaign_name: "",
-      budget: 5000,
-      start_date: "",
-      end_date: "",
-    });
-  };
-
-  const getMediaIcon = (type: string) => {
-    switch (type) {
-      case "tv": return <Tv className="h-4 w-4" />;
-      case "radio": return <Radio className="h-4 w-4" />;
-      case "podcast": return <Mic2 className="h-4 w-4" />;
-      default: return <Eye className="h-4 w-4" />;
-    }
-  };
-
-  const getSentimentBadge = (sentiment: string) => {
-    if (sentiment === "positive") return <Badge className="bg-success">Positive</Badge>;
-    if (sentiment === "negative") return <Badge variant="destructive">Negative</Badge>;
-    return <Badge variant="secondary">Neutral</Badge>;
-  };
-
-  const getStatusBadge = (status: string) => {
-    if (status === "active") return <Badge className="bg-success">Active</Badge>;
-    if (status === "completed") return <Badge variant="secondary">Completed</Badge>;
-    if (status === "pending") return <Badge variant="outline">Pending</Badge>;
-    if (status === "accepted") return <Badge className="bg-success">Accepted</Badge>;
-    if (status === "declined" || status === "cancelled") return <Badge variant="destructive">{status}</Badge>;
-    return <Badge>{status}</Badge>;
+    }, 400);
   };
 
   if (!band) {
@@ -95,137 +171,220 @@ const PublicRelations = () => {
     );
   }
 
+  const overviewCards = [
+    {
+      label: "Active Campaigns",
+      value: campaigns.length,
+      icon: Megaphone,
+      tone: "bg-primary/10 text-primary",
+      isLoading: campaignsLoading,
+    },
+    {
+      label: "Pending Offers",
+      value: pendingOffers,
+      icon: Handshake,
+      tone: "bg-warning/15 text-warning-foreground",
+      isLoading: offersLoading,
+    },
+    {
+      label: "Audience Reach",
+      value: totalReach,
+      icon: Mic2,
+      tone: "bg-success/10 text-success",
+      isLoading: campaignsLoading,
+    },
+    {
+      label: "Media Appearances",
+      value: appearances.length,
+      icon: Tv,
+      tone: "bg-secondary/20 text-secondary-foreground",
+      isLoading: appearancesLoading,
+    },
+  ];
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <TrendingUp className="h-8 w-8" />
-            Public Relations
-          </h1>
-          <p className="text-muted-foreground">Manage media campaigns and appearances for {band.name}</p>
+    <div className="container mx-auto space-y-8 p-6">
+      <header className="space-y-2">
+        <Badge variant="outline" className="px-3 py-1 text-xs uppercase tracking-wide">
+          Public Relations
+        </Badge>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Media & PR HQ</h1>
+            <p className="text-muted-foreground">Control how {band.name} shows up across press, radio, and TV.</p>
+          </div>
+          <Button variant="secondary" className="gap-2" onClick={() => toast({ title: "Media kit generated" })}>
+            <Sparkles className="h-4 w-4" />
+            Refresh media kit
+          </Button>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />New Campaign</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create PR Campaign</DialogTitle>
-              <DialogDescription>Launch a new media campaign</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
+      </header>
+
+      <section className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {overviewCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.label} className="border-muted-foreground/20">
+                <CardContent className="flex items-start justify-between gap-3 p-5">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{card.label}</p>
+                    {card.isLoading ? (
+                      <Skeleton className="h-8 w-20" />
+                    ) : (
+                      <p className="text-3xl font-bold">
+                        {card.label === "Audience Reach" ? card.value.toLocaleString() : card.value}
+                      </p>
+                    )}
+                  </div>
+                  <div className={cn("rounded-full p-2", card.tone)}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <SentimentWidget snapshot={sentimentSnapshot} isLoading={campaignsLoading || offersLoading} />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.1fr,1fr]">
+        <PressReleaseForm onSubmit={handlePressReleaseSubmit} isSubmitting={isSubmittingRelease} />
+        <PressReleaseList releases={pressReleases} isLoading={false} />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.4fr,1fr]">
+        <MediaContactTable contacts={contacts} isLoading={false} />
+        <OutreachPipeline stages={outreachStages} isLoading={campaignsLoading} />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.2fr,0.8fr]">
+        <Card className="h-full">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Newspaper className="h-5 w-5" />
               <div>
-                <Label>Campaign Name</Label>
-                <Input value={newCampaign.campaign_name} onChange={(e) => setNewCampaign({ ...newCampaign, campaign_name: e.target.value })} placeholder="Summer Media Blitz" />
+                <CardTitle>Campaign Activity</CardTitle>
+                <CardDescription>Monitor campaigns, offers, and appearances in one place.</CardDescription>
               </div>
-              <div>
-                <Label>Type</Label>
-                <Select value={newCampaign.campaign_type} onValueChange={(value) => setNewCampaign({ ...newCampaign, campaign_type: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tv">TV</SelectItem>
-                    <SelectItem value="radio">Radio</SelectItem>
-                    <SelectItem value="podcast">Podcast</SelectItem>
-                    <SelectItem value="press">Press</SelectItem>
-                    <SelectItem value="social">Social Media</SelectItem>
-                    <SelectItem value="influencer">Influencer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Budget</Label>
-                <Input type="number" value={newCampaign.budget} onChange={(e) => setNewCampaign({ ...newCampaign, budget: Number(e.target.value) })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input type="date" value={newCampaign.start_date} onChange={(e) => setNewCampaign({ ...newCampaign, start_date: e.target.value })} />
-                </div>
-                <div>
-                  <Label>End Date</Label>
-                  <Input type="date" value={newCampaign.end_date} onChange={(e) => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
-                </div>
-              </div>
-              <Button onClick={handleCreateCampaign} className="w-full">Create Campaign</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {campaignsLoading && offersLoading && appearancesLoading ? (
+              <div className="space-y-2">
+                {[...Array(4)].map((_, index) => (
+                  <Skeleton key={index} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : campaigns.length === 0 && offers.length === 0 && appearances.length === 0 ? (
+              <EmptyState
+                title="No PR activity yet"
+                description="Launch a campaign or accept an appearance to see it tracked here."
+                icon={Megaphone}
+              />
+            ) : (
+              <div className="space-y-3">
+                {campaigns.map((campaign) => (
+                  <div key={campaign.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Megaphone className="h-4 w-4" />
+                        <span className="capitalize">{campaign.campaign_type}</span>
+                      </div>
+                      <Badge variant="outline" className="capitalize">
+                        {campaign.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-base font-semibold">{campaign.campaign_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Reach: {campaign.reach.toLocaleString()} • Engagement: {campaign.engagement_rate}%
+                    </p>
+                  </div>
+                ))}
 
-      <Tabs defaultValue="campaigns">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-          <TabsTrigger value="appearances">Appearances</TabsTrigger>
-          <TabsTrigger value="offers">Offers</TabsTrigger>
-        </TabsList>
+                {offers.map((offer) => (
+                  <div key={offer.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Handshake className="h-4 w-4" />
+                        <span className="capitalize">{offer.media_type}</span>
+                      </div>
+                      <Badge className="capitalize" variant={offer.status === "pending" ? "secondary" : "outline"}>
+                        {offer.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-base font-semibold">{offer.program_name}</p>
+                    <p className="text-sm text-muted-foreground">{offer.network}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>{format(new Date(offer.proposed_date), "PPP")}</span>
+                      {offer.status === "pending" && (
+                        <div className="ml-auto flex gap-2">
+                          <Button size="sm" className="bg-success" onClick={() => respondToOffer({ offerId: offer.id, accept: true })}>
+                            Accept
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => respondToOffer({ offerId: offer.id, accept: false })}>
+                            Decline
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
 
-        <TabsContent value="campaigns">
-          {campaignsLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> : 
-           campaigns.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No campaigns yet</CardContent></Card> :
-           <div className="grid gap-4">{campaigns.map((c: any) => (
-            <Card key={c.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">{getMediaIcon(c.campaign_type)}<CardTitle className="text-lg">{c.campaign_name}</CardTitle></div>
-                  {getStatusBadge(c.status)}
-                </div>
-                <CardDescription className="capitalize">{c.campaign_type} Campaign</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div><div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="h-4 w-4" />Budget</div><div className="text-xl font-bold">${c.budget.toLocaleString()}</div></div>
-                  <div><div className="flex items-center gap-2 text-sm text-muted-foreground"><Eye className="h-4 w-4" />Reach</div><div className="text-xl font-bold">{c.reach.toLocaleString()}</div></div>
-                  <div><div className="flex items-center gap-2 text-sm text-muted-foreground"><ThumbsUp className="h-4 w-4" />Engagement</div><div className="text-xl font-bold">{c.engagement_rate}%</div></div>
-                  <div><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />Duration</div><div className="text-sm">{format(new Date(c.start_date), "MMM d")} - {format(new Date(c.end_date), "MMM d")}</div></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}</div>}
-        </TabsContent>
+                {appearances.map((appearance) => (
+                  <div key={appearance.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Tv className="h-4 w-4" />
+                        <span className="capitalize">{appearance.media_type}</span>
+                      </div>
+                      <Badge variant="outline">{appearance.network}</Badge>
+                    </div>
+                    <p className="mt-1 text-base font-semibold">{appearance.program_name}</p>
+                    <p className="text-sm text-muted-foreground">{format(new Date(appearance.air_date), "PPP")}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        <TabsContent value="appearances">
-          {appearancesLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> :
-           appearances.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No appearances yet</CardContent></Card> :
-           <Card><Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Program</TableHead><TableHead>Network</TableHead><TableHead>Air Date</TableHead><TableHead>Reach</TableHead><TableHead>Sentiment</TableHead><TableHead>Highlight</TableHead></TableRow></TableHeader>
-           <TableBody>{appearances.map((a: any) => (
-            <TableRow key={a.id}>
-              <TableCell><div className="flex items-center gap-2">{getMediaIcon(a.media_type)}<span className="capitalize">{a.media_type}</span></div></TableCell>
-              <TableCell className="font-medium">{a.program_name}</TableCell>
-              <TableCell>{a.network}</TableCell>
-              <TableCell>{format(new Date(a.air_date), "MMM d, yyyy")}</TableCell>
-              <TableCell>{a.audience_reach.toLocaleString()}</TableCell>
-              <TableCell>{getSentimentBadge(a.sentiment)}</TableCell>
-              <TableCell className="max-w-xs truncate">{a.highlight}</TableCell>
-            </TableRow>
-          ))}</TableBody></Table></Card>}
-        </TabsContent>
-
-        <TabsContent value="offers">
-          {offersLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> :
-           offers.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No offers</CardContent></Card> :
-           <div className="grid gap-4">{offers.map((o: any) => (
-            <Card key={o.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">{getMediaIcon(o.media_type)}<CardTitle className="text-lg">{o.program_name}</CardTitle></div>
-                  {getStatusBadge(o.status)}
+        <Card className="h-full">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <NotebookPen className="h-5 w-5" />
+              <div>
+                <CardTitle>Notes</CardTitle>
+                <CardDescription>Keep quick reminders for follow-ups and prep.</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline">Team</Badge>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[ 
+              {
+                id: "n1",
+                label: "campaign",
+                text: "Share tour dates with radio list once artwork is approved.",
+                owner: "Eden",
+              },
+              { id: "n2", label: "appearance", text: "Send morning-show run-of-show to crew.", owner: "Rae" },
+              { id: "n3", label: "offer", text: "Hold slot for live podcast pending travel check.", owner: "Milo" },
+            ].map((note) => (
+              <div key={note.id} className="flex items-start gap-3 rounded-lg border p-3">
+                <Badge variant="secondary" className={cn("capitalize", noteTone[note.label])}>
+                  {note.label}
+                </Badge>
+                <div>
+                  <p className="text-sm text-foreground">{note.text}</p>
+                  <p className="text-xs text-muted-foreground">Owner: {note.owner}</p>
                 </div>
-                <CardDescription>{o.network} • {format(new Date(o.proposed_date), "MMMM d, yyyy")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div><div className="text-sm text-muted-foreground">Compensation</div><div className="text-2xl font-bold">${o.compensation.toLocaleString()}</div></div>
-                  {o.status === "pending" && <div className="flex gap-2">
-                    <Button onClick={() => respondToOffer({ offerId: o.id, accept: true })} size="sm" className="bg-success">Accept</Button>
-                    <Button onClick={() => respondToOffer({ offerId: o.id, accept: false })} size="sm" variant="destructive">Decline</Button>
-                  </div>}
-                </div>
-              </CardContent>
-            </Card>
-          ))}</div>}
-        </TabsContent>
-      </Tabs>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 };
