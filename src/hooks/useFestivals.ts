@@ -235,7 +235,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
 
       return participation.festival_id as string;
     },
-    onSuccess: (_data, _variables, festivalId) => {
+    onSuccess: (festivalId) => {
       queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
       queryClient.invalidateQueries({ queryKey: FESTIVALS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: LINEUP_QUERY_KEY(festivalId) });

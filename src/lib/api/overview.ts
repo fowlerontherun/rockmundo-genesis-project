@@ -32,7 +32,7 @@ const buildYearRange = (year?: number | "all") => {
   };
 };
 
-const applyDateRange = <T extends PostgrestFilterBuilder<any, any, any>>(
+const applyDateRange = <T extends PostgrestFilterBuilder<any, any, any, any>>(
   query: T,
   column: string,
   range?: { start: string; end: string },
