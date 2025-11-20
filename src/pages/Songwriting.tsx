@@ -27,6 +27,7 @@ import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
 import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
+import { SongwritingScheduleDialog } from "@/components/songwriting/SongwritingScheduleDialog";
 import {
   Dialog,
   DialogContent,
@@ -434,6 +435,10 @@ const Songwriting = () => {
   const [completedProject, setCompletedProject] = useState<SongwritingProject | null>(null);
   const [completionQuality, setCompletionQuality] = useState<any>(null);
   const [completionXp, setCompletionXp] = useState(0);
+  
+  // Schedule dialog state
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [scheduleProject, setScheduleProject] = useState<SongwritingProject | null>(null);
   
   // Check if player can start songwriting
   const canWrite = useMemo(() => {
@@ -1764,6 +1769,10 @@ const Songwriting = () => {
                   setIsHistoryOpen(true);
                 }}
                 onComplete={() => refetchProjects()}
+                onSchedule={() => {
+                  setScheduleProject(project);
+                  setScheduleDialogOpen(true);
+                }}
               />
             );
           })}
@@ -1905,6 +1914,13 @@ const Songwriting = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <SongwritingScheduleDialog
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+        projectId={scheduleProject?.id}
+        projectTitle={scheduleProject?.title}
+      />
     </div>
   );
 };
