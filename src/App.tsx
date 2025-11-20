@@ -116,6 +116,7 @@ const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStatio
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
+const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
 const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
@@ -295,6 +296,7 @@ function App() {
                     <Route path="admin/festivals" element={<FestivalAdmin />} />
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
+                    <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="radio" element={<Radio />} />
                     <Route path="music-videos" element={<MusicVideos />} />

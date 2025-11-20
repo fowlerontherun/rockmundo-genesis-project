@@ -235,6 +235,13 @@ const adminSubSections = [
     Icon: HardHat,
   },
   {
+    title: "Skill Definitions",
+    description: "Configure skill definitions, slugs, display names, and tier caps for the progression system.",
+    href: "/admin/skill-definitions",
+    action: "Manage skills",
+    Icon: TrendingUp,
+  },
+  {
     title: "Player Management",
     description: "View and manage player accounts, grant resources, and modify stats.",
     href: "/admin/players",
