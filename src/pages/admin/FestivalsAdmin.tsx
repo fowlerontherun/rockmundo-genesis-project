@@ -63,10 +63,10 @@ export default function FestivalsAdminPage() {
         .insert({
           title: festivalData.title,
           event_type: "festival",
-          start_date: festivalData.start_date,
-          end_date: festivalData.end_date,
+          start_date: `${festivalData.start_date}T00:00:00Z`,
+          end_date: `${festivalData.end_date}T23:59:59Z`,
           description: festivalData.description,
-          metadata: {
+          requirements: {
             city_id: festivalData.city_id,
             capacity: parseInt(festivalData.capacity),
             ticket_price: parseInt(festivalData.ticket_price),
