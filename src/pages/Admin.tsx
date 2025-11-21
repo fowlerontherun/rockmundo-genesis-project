@@ -29,11 +29,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const adminSections = [
   {
-    title: "Festival Management",
-    description: "Manage festivals, slot offers, and band applications",
+    title: "Festivals",
+    description: "Create and manage festival events",
     href: "/admin/festivals",
     action: "Manage festivals",
     Icon: CalendarIcon,
+  },
+  {
+    title: "Eurovision",
+    description: "Manage Eurovision years, phases, and entries",
+    href: "/admin/eurovision",
+    action: "Manage Eurovision",
+    Icon: Sparkles,
   },
   {
     title: "Game Calendar",
