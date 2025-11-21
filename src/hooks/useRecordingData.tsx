@@ -24,16 +24,9 @@ export interface RecordingSession {
   studio_id: string;
   producer_id: string;
   song_id: string;
-  session_type: string;
-  is_parent_version: boolean;
-  parent_recording_id: string | null;
+  recording_version: string | null;
   duration_hours: number;
-  studio_cost: number;
-  producer_cost: number;
-  orchestra_cost: number;
   total_cost: number;
-  quality_before: number;
-  quality_after: number;
   quality_improvement: number;
   status: RecordingStatus;
   stage?: RecordingStage | null;
@@ -278,17 +271,9 @@ export const useCreateRecordingSession = () => {
           studio_id: input.studio_id,
           producer_id: input.producer_id,
           song_id: input.song_id,
-          session_type: input.session_type || 'full_recording',
           recording_version: input.recording_version || null,
-          is_parent_version: !input.parent_recording_id,
-          parent_recording_id: input.parent_recording_id || null,
           duration_hours: input.duration_hours,
-          studio_cost: studioCost,
-          producer_cost: producerCost,
-          orchestra_cost: orchestraCost,
           total_cost: totalCost,
-          quality_before: song.quality_score,
-          quality_after: finalQuality,
           quality_improvement: finalQuality - song.quality_score,
           status: 'in_progress',
           scheduled_end: scheduledEnd.toISOString(),
