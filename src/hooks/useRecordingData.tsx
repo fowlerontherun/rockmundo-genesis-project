@@ -172,6 +172,24 @@ export const useCreateRecordingSession = () => {
 
   return useMutation({
     mutationFn: async (input: CreateRecordingSessionInput) => {
+      // Check for scheduling conflicts before starting
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const now = new Date();
+      const sessionEnd = new Date(now.getTime() + input.duration_hours * 60 * 60 * 1000);
+
+      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+        p_user_id: user.id,
+        p_start: now.toISOString(),
+        p_end: sessionEnd.toISOString(),
+        p_exclude_id: null,
+      });
+
+      if (hasConflict) {
+        throw new Error('You have another activity scheduled during this time. Please check your schedule.');
+      }
+      
       // Fetch required data
       const [songResult, studioResult, producerResult] = await Promise.all([
         supabase.from('songs').select('quality_score').eq('id', input.song_id).single(),
