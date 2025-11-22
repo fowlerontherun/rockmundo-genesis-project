@@ -185,8 +185,12 @@ export const useCreateRecordingSession = () => {
       if (studioResult.error || !studioResult.data) {
         throw new Error('Failed to fetch studio data');
       }
-      if (producerResult.error || !producerResult.data) {
+      if (producerResult.error) {
+        console.error('Producer fetch error:', producerResult.error);
         throw new Error('Failed to fetch producer data');
+      }
+      if (!producerResult.data) {
+        throw new Error('Producer not found. Please select a valid producer.');
       }
 
       const song = songResult.data;
