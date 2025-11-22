@@ -286,14 +286,39 @@ export default function PerformGig() {
   };
 
   const handleStartGig = async () => {
-    if (gigId) {
-      startGigMutation.mutate(gigId, {
-        onSuccess: () => {
-          // Reload gig data after starting
-          loadGig();
-        }
+    if (!gigId) return;
+    
+    // Check for scheduling conflicts before starting
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (gig) {
+      const gigStart = new Date(gig.scheduled_date);
+      const gigEnd = new Date(gigStart.getTime() + 2 * 60 * 60 * 1000); // Assume 2 hour gig
+
+      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+        p_user_id: user.id,
+        p_start: gigStart.toISOString(),
+        p_end: gigEnd.toISOString(),
+        p_exclude_id: null,
       });
+
+      if (hasConflict) {
+        toast({
+          title: 'Schedule Conflict',
+          description: 'You have another activity scheduled during this time.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
+    
+    startGigMutation.mutate(gigId, {
+      onSuccess: () => {
+        // Reload gig data after starting
+        loadGig();
+      }
+    });
   };
 
   // All hooks must be called before any early returns
