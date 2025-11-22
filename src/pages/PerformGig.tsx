@@ -87,8 +87,8 @@ export default function PerformGig() {
             .eq('setlist_id', gigData.setlist_id)
             .order('position'),
           supabase
-            .from('band_song_familiarity')
-            .select('song_id, familiarity_percentage, familiarity_minutes')
+            .from('song_rehearsals')
+            .select('song_id, rehearsal_level')
             .eq('band_id', gigData.band_id),
           supabase
             .from('band_stage_equipment')
