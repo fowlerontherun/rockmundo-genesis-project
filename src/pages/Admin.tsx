@@ -21,6 +21,7 @@ import {
   Guitar,
   HardHat,
   Package,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -241,6 +242,13 @@ const adminSubSections = [
     href: "/admin/gear-items",
     action: "Manage gear",
     Icon: Package,
+  },
+  {
+    title: "Page Graphics",
+    description: "Manage hero images, backgrounds, and visual elements for each page across all devices.",
+    href: "/admin/page-graphics",
+    action: "Manage graphics",
+    Icon: ImageIcon,
   },
   {
     title: "Crew Hiring Catalog",
