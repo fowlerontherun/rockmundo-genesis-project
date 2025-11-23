@@ -5146,6 +5146,51 @@ export type Database = {
           },
         ]
       }
+      page_graphics: {
+        Row: {
+          accent_image_url: string | null
+          background_image_url: string | null
+          banner_image_url: string | null
+          created_at: string | null
+          hero_image_url: string | null
+          icon_image_url: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          page_key: string
+          page_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          accent_image_url?: string | null
+          background_image_url?: string | null
+          banner_image_url?: string | null
+          created_at?: string | null
+          hero_image_url?: string | null
+          icon_image_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          page_key: string
+          page_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          accent_image_url?: string | null
+          background_image_url?: string | null
+          banner_image_url?: string | null
+          created_at?: string | null
+          hero_image_url?: string | null
+          icon_image_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          page_key?: string
+          page_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       performance_items: {
         Row: {
           base_quality: number

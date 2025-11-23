@@ -117,6 +117,7 @@ const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStatio
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
+const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphicsAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
@@ -283,6 +284,7 @@ function App() {
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/gear-items" element={<GearItemsAdmin />} />
+                    <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />
