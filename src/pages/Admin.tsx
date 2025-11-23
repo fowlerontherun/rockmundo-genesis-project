@@ -20,6 +20,7 @@ import {
   Radio,
   Guitar,
   HardHat,
+  Package,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -233,6 +234,13 @@ const adminSubSections = [
     href: "/admin/stage-equipment",
     action: "Manage catalog",
     Icon: Guitar,
+  },
+  {
+    title: "Gear Items Catalog",
+    description: "Manage personal gear items for musicians including instruments, pedals, and accessories.",
+    href: "/admin/gear-items",
+    action: "Manage gear",
+    Icon: Package,
   },
   {
     title: "Crew Hiring Catalog",
