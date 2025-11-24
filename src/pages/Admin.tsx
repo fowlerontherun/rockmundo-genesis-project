@@ -22,6 +22,7 @@ import {
   HardHat,
   Package,
   Image as ImageIcon,
+  Theater,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -249,6 +250,13 @@ const adminSubSections = [
     href: "/admin/page-graphics",
     action: "Manage graphics",
     Icon: ImageIcon,
+  },
+  {
+    title: "3D Stage Templates",
+    description: "Create and manage 3D stage templates for the immersive gig viewer.",
+    href: "/admin/stage-templates",
+    action: "Manage stages",
+    Icon: Theater,
   },
   {
     title: "Crew Hiring Catalog",
