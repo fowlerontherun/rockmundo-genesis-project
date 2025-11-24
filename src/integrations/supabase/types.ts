@@ -139,6 +139,48 @@ export type Database = {
           },
         ]
       }
+      animation_sets: {
+        Row: {
+          clip_big_chorus: string | null
+          clip_idle: string | null
+          clip_intro: string | null
+          clip_outro: string | null
+          clip_playing: string | null
+          created_at: string | null
+          id: string
+          instrument_type: string
+          metadata: Json | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          clip_big_chorus?: string | null
+          clip_idle?: string | null
+          clip_intro?: string | null
+          clip_outro?: string | null
+          clip_playing?: string | null
+          created_at?: string | null
+          id?: string
+          instrument_type: string
+          metadata?: Json | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          clip_big_chorus?: string | null
+          clip_idle?: string | null
+          clip_intro?: string | null
+          clip_outro?: string | null
+          clip_playing?: string | null
+          created_at?: string | null
+          id?: string
+          instrument_type?: string
+          metadata?: Json | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       artist_label_contracts: {
         Row: {
           advance_amount: number | null
@@ -405,6 +447,60 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_avatar_presets: {
+        Row: {
+          avatar_model_path: string | null
+          band_id: string | null
+          created_at: string | null
+          default_animation_set_id: string | null
+          gear_model_path: string | null
+          id: string
+          instrument_type: string | null
+          member_index: number
+          metadata: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_model_path?: string | null
+          band_id?: string | null
+          created_at?: string | null
+          default_animation_set_id?: string | null
+          gear_model_path?: string | null
+          id?: string
+          instrument_type?: string | null
+          member_index: number
+          metadata?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_model_path?: string | null
+          band_id?: string | null
+          created_at?: string | null
+          default_animation_set_id?: string | null
+          gear_model_path?: string | null
+          id?: string
+          instrument_type?: string | null
+          member_index?: number
+          metadata?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_avatar_presets_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_avatar_presets_default_animation_set_id_fkey"
+            columns: ["default_animation_set_id"]
+            isOneToOne: false
+            referencedRelation: "animation_sets"
             referencedColumns: ["id"]
           },
         ]
@@ -844,6 +940,44 @@ export type Database = {
             foreignKeyName: "fk_band_members_band"
             columns: ["band_id"]
             isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_merch_assets: {
+        Row: {
+          band_id: string | null
+          created_at: string | null
+          id: string
+          logo_texture_path: string | null
+          metadata: Json | null
+          tshirt_color_variants: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          id?: string
+          logo_texture_path?: string | null
+          metadata?: Json | null
+          tshirt_color_variants?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          id?: string
+          logo_texture_path?: string | null
+          metadata?: Json | null
+          tshirt_color_variants?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_merch_assets_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: true
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
@@ -1976,6 +2110,93 @@ export type Database = {
           triggered_by?: string | null
         }
         Relationships: []
+      }
+      crowd_animation_presets: {
+        Row: {
+          allowed_in_zones: string[] | null
+          animation_clip_path: string | null
+          created_at: string | null
+          energy_level: number | null
+          id: string
+          intensity: number | null
+          metadata: Json | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_in_zones?: string[] | null
+          animation_clip_path?: string | null
+          created_at?: string | null
+          energy_level?: number | null
+          id?: string
+          intensity?: number | null
+          metadata?: Json | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_in_zones?: string[] | null
+          animation_clip_path?: string | null
+          created_at?: string | null
+          energy_level?: number | null
+          id?: string
+          intensity?: number | null
+          metadata?: Json | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      crowd_instances: {
+        Row: {
+          animation_profile_id: string | null
+          created_at: string | null
+          crowd_zone: string
+          density: number | null
+          id: string
+          max_instances: number | null
+          metadata: Json | null
+          stage_template_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          animation_profile_id?: string | null
+          created_at?: string | null
+          crowd_zone: string
+          density?: number | null
+          id?: string
+          max_instances?: number | null
+          metadata?: Json | null
+          stage_template_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          animation_profile_id?: string | null
+          created_at?: string | null
+          crowd_zone?: string
+          density?: number | null
+          id?: string
+          max_instances?: number | null
+          metadata?: Json | null
+          stage_template_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crowd_instances_animation_profile_id_fkey"
+            columns: ["animation_profile_id"]
+            isOneToOne: false
+            referencedRelation: "crowd_animation_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crowd_instances_stage_template_id_fkey"
+            columns: ["stage_template_id"]
+            isOneToOne: false
+            referencedRelation: "stage_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crypto_tokens: {
         Row: {
@@ -3286,6 +3507,54 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_stage_instances: {
+        Row: {
+          created_at: string | null
+          crowd_mood_weights: Json | null
+          gig_id: string | null
+          id: string
+          metadata: Json | null
+          performance_quality: number | null
+          stage_template_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crowd_mood_weights?: Json | null
+          gig_id?: string | null
+          id?: string
+          metadata?: Json | null
+          performance_quality?: number | null
+          stage_template_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crowd_mood_weights?: Json | null
+          gig_id?: string | null
+          id?: string
+          metadata?: Json | null
+          performance_quality?: number | null
+          stage_template_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_stage_instances_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: true
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_stage_instances_stage_template_id_fkey"
+            columns: ["stage_template_id"]
+            isOneToOne: false
+            referencedRelation: "stage_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -9123,6 +9392,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stage_templates: {
+        Row: {
+          camera_offset: Json | null
+          capacity_max: number
+          capacity_min: number
+          created_at: string | null
+          default_light_profile_id: string | null
+          gltf_asset_path: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          size: string
+          slug: string
+          spline_scene_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          camera_offset?: Json | null
+          capacity_max?: number
+          capacity_min?: number
+          created_at?: string | null
+          default_light_profile_id?: string | null
+          gltf_asset_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          size: string
+          slug: string
+          spline_scene_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          camera_offset?: Json | null
+          capacity_max?: number
+          capacity_min?: number
+          created_at?: string | null
+          default_light_profile_id?: string | null
+          gltf_asset_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          size?: string
+          slug?: string
+          spline_scene_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       streaming_analytics: {
         Row: {
