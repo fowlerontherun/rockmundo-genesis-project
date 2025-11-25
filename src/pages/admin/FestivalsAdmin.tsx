@@ -14,6 +14,7 @@ import { Calendar, Music, Users, DollarSign, Plus, Trash2, Edit } from "lucide-r
 import { format } from "date-fns";
 import { MUSIC_GENRES } from "@/data/genres";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FestivalInviteManager } from "@/components/festivals/FestivalInviteManager";
 
 export default function FestivalsAdminPage() {
   const { toast } = useToast();
@@ -257,6 +258,8 @@ export default function FestivalsAdminPage() {
                     </div>
                   </div>
                 )}
+
+                <FestivalInviteManager festivalId={festival.id} />
               </CardContent>
             </Card>
           ))}
