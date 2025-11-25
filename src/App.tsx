@@ -21,6 +21,7 @@ const RedirectTo = ({ to }: { to: string }) => {
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
 import InventoryManager from "./pages/InventoryManager";
+import Sponsorships from "./pages/Sponsorships";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
@@ -109,6 +110,7 @@ const AdminVenues = lazyWithRetry(() => import("./pages/admin/Venues"));
 const AdminRehearsalRooms = lazyWithRetry(() => import("./pages/admin/RehearsalRooms"));
 const AdminTravel = lazyWithRetry(() => import("./pages/admin/Travel"));
 const AdminSongGifts = lazyWithRetry(() => import("./pages/admin/SongGifts"));
+const BrandsAdmin = lazyWithRetry(() => import("./pages/admin/BrandsAdmin"));
 const AdminProducers = lazyWithRetry(() => import("./pages/admin/Producers"));
 const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/TwaaterModeration"));
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
@@ -237,6 +239,7 @@ function App() {
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
                     <Route path="band-crew" element={<BandCrewManagement />} />
                     <Route path="finances" element={<Finances />} />
+                    <Route path="sponsorships" element={<Sponsorships />} />
                     <Route path="gear" element={<Gear />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
@@ -301,7 +304,8 @@ function App() {
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
-                    
+                    <Route path="admin/brands" element={<BrandsAdmin />} />
+
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />

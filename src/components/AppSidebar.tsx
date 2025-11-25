@@ -52,6 +52,7 @@ import {
   Newspaper,
   Heart,
   Sparkles,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -153,6 +154,7 @@ export function AppSidebar() {
       items: [
         { icon: Briefcase, label: t('employment'), path: "/employment" },
         { icon: DollarSign, label: t('finances'), path: "/finances" },
+        { icon: Handshake, label: "Sponsorships", path: "/sponsorships" },
         { icon: Package, label: t('inventory'), path: "/inventory" },
         { icon: ShoppingCart, label: t('merch'), path: "/merchandise" },
         { icon: Disc, label: "Record Labels", path: "/labels" },
@@ -165,6 +167,7 @@ export function AppSidebar() {
         { icon: Settings, label: t('admin'), path: "/admin" },
         { icon: Wrench, label: t('stageEquipment'), path: "/admin/stage-equipment" },
         { icon: HardHat, label: "Crew Catalog", path: "/admin/crew" },
+        { icon: Store, label: "Brands", path: "/admin/brands" },
       ],
     },
   ];
