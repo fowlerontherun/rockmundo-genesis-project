@@ -11,6 +11,7 @@ import {
   BookOpen,
   Briefcase,
   Music2,
+  Activity,
   Plane,
   Calendar as CalendarIcon,
   Calendar,
@@ -170,6 +171,13 @@ const adminSections = [
     href: "/admin/cron-monitor",
     action: "View monitor",
     Icon: Clock,
+  },
+  {
+    title: "Offer Automation",
+    description: "Tune offer frequency, cooldowns, and payout variance while monitoring queue health.",
+    href: "/admin/offer-automation",
+    action: "Configure offers",
+    Icon: Activity,
   },
   {
     title: "Release Configuration",
