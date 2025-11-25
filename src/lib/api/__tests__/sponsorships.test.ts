@@ -77,6 +77,38 @@ describe("sponsorship payouts", () => {
     expect(highRoll.breakdown.baseWithinTier).toBeLessThanOrEqual(2000);
   });
 
+  it("applies type-specific reach and impact multipliers", () => {
+    const festivalMultiplier = calculateSponsorshipPayout({
+      fame: 4000,
+      sponsorableType: "festival",
+      ...baseInput,
+      reach: 0.8,
+      impact: 0.9,
+      random: fixedRandom([0.4, 0.4]),
+    }).breakdown.reachImpactMultiplier;
+
+    const tourMultiplier = calculateSponsorshipPayout({
+      fame: 4000,
+      sponsorableType: "tour",
+      ...baseInput,
+      reach: 0.8,
+      impact: 0.9,
+      random: fixedRandom([0.4, 0.4]),
+    }).breakdown.reachImpactMultiplier;
+
+    const venueMultiplier = calculateSponsorshipPayout({
+      fame: 4000,
+      sponsorableType: "venue",
+      ...baseInput,
+      reach: 0.8,
+      impact: 0.9,
+      random: fixedRandom([0.4, 0.4]),
+    }).breakdown.reachImpactMultiplier;
+
+    expect(festivalMultiplier).toBeGreaterThan(tourMultiplier);
+    expect(tourMultiplier).toBeGreaterThan(venueMultiplier);
+  });
+
   it("applies brand, reach/impact, and momentum bonuses to the payout", () => {
     const noMomentum = calculateSponsorshipPayout({
       fame: 3500,
@@ -108,6 +140,26 @@ describe("sponsorship payouts", () => {
 
     expect(highMomentum.payout).toBeGreaterThan(noMomentum.payout);
     expect(premiumBrand.payout).toBeGreaterThan(noMomentum.payout);
+  });
+
+  it("only rewards positive momentum", () => {
+    const neutral = calculateSponsorshipPayout({
+      fame: 5200,
+      sponsorableType: "tour",
+      ...baseInput,
+      recentFameDelta: -500,
+      random: fixedRandom([0.5, 0.5]),
+    });
+
+    const positive = calculateSponsorshipPayout({
+      fame: 5200,
+      sponsorableType: "tour",
+      ...baseInput,
+      recentFameDelta: 1800,
+      random: fixedRandom([0.5, 0.5]),
+    });
+
+    expect(positive.payout).toBeGreaterThan(neutral.payout);
   });
 
   it("persists payout on offers and propagates to contracts", () => {

@@ -34,6 +34,15 @@ const BASE_PAYOUT_RANGES: Record<SponsorableType, Record<FameTier, PayoutRange>>
   },
 };
 
+const REACH_IMPACT_WEIGHTS: Record<
+  SponsorableType,
+  { reachWeight: number; impactWeight: number }
+> = {
+  tour: { reachWeight: 0.3, impactWeight: 0.2 },
+  festival: { reachWeight: 0.25, impactWeight: 0.3 },
+  venue: { reachWeight: 0.2, impactWeight: 0.2 },
+};
+
 export interface PayoutCalculationInput {
   fame: number;
   sponsorableType: SponsorableType;
@@ -113,8 +122,7 @@ const calculateBrandMultiplier = (brandWealth: number, brandSize: number) => {
 };
 
 const calculateReachImpactMultiplier = (reach: number, impact: number, sponsorableType: SponsorableType) => {
-  const reachWeight = sponsorableType === "tour" ? 0.3 : sponsorableType === "festival" ? 0.25 : 0.2;
-  const impactWeight = sponsorableType === "festival" ? 0.3 : 0.2;
+  const { reachWeight, impactWeight } = REACH_IMPACT_WEIGHTS[sponsorableType];
   const reachContribution = clamp(reach, 0, 1) * reachWeight;
   const impactContribution = clamp(impact, 0, 1) * impactWeight;
   return 1 + reachContribution + impactContribution;
