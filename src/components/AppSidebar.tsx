@@ -46,11 +46,7 @@ import {
   Target,
   TrendingUp,
   Map,
-  Crown,
-  Video,
-  Radio as RadioIcon,
-  Newspaper,
-  Heart,
+  HandHeart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -115,6 +111,7 @@ export function AppSidebar() {
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
         { icon: HardHat, label: "Band Crew", path: "/band-crew" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
+        { icon: Sparkles, label: "Eurovision", path: "/events/eurovision" },
         { icon: Award, label: "Awards", path: "/awards" },
       ],
     },
@@ -147,7 +144,11 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t('business'),
+      label: "Community",
+      items: [{ icon: HandHeart, label: "Charity", path: "/community/charity" }],
+    },
+    {
+      label: "Business",
       items: [
         { icon: Briefcase, label: t('employment'), path: "/employment" },
         { icon: DollarSign, label: t('finances'), path: "/finances" },
