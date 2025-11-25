@@ -41,12 +41,17 @@ export interface FestivalRevenue {
   created_at: string;
 }
 
+const FESTIVALS_QUERY_KEY = ["festivals"] as const;
+const PARTICIPATIONS_QUERY_KEY = (userId?: string, bandId?: string) =>
+  ["festival-participations", userId, bandId] as const;
+const LINEUP_QUERY_KEY = (festivalId?: string) => ["festival-lineup", festivalId] as const;
+
 export const useFestivals = (userId?: string, bandId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all active festivals
   const { data: festivals = [], isLoading: festivalsLoading } = useQuery({
-    queryKey: ["festivals"],
+    queryKey: FESTIVALS_QUERY_KEY,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("game_events")
@@ -63,7 +68,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
 
   // Fetch user/band festival participations
   const { data: participations = [], isLoading: participationsLoading } = useQuery({
-    queryKey: ["festival-participations", userId, bandId],
+    queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId),
     queryFn: async () => {
       if (!userId) return [];
 
@@ -174,9 +179,10 @@ export const useFestivals = (userId?: string, bandId?: string) => {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["festival-participations"] });
-      queryClient.invalidateQueries({ queryKey: ["festivals"] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
+      queryClient.invalidateQueries({ queryKey: FESTIVALS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: LINEUP_QUERY_KEY(variables.festival_id) });
       toast.success("Festival application submitted!");
     },
     onError: (error: any) => {
@@ -227,11 +233,12 @@ export const useFestivals = (userId?: string, bandId?: string) => {
           }
         });
 
-      return participationId;
+      return participation.festival_id as string;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["festival-participations"] });
-      queryClient.invalidateQueries({ queryKey: ["festivals"] });
+    onSuccess: (festivalId) => {
+      queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
+      queryClient.invalidateQueries({ queryKey: FESTIVALS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: LINEUP_QUERY_KEY(festivalId) });
       toast.success("Withdrawn from festival");
     },
     onError: (error: any) => {
@@ -244,8 +251,18 @@ export const useFestivals = (userId?: string, bandId?: string) => {
     mutationFn: async (params: {
       participation_id: string;
       setlist_songs: string[];
+      festival_id?: string;
     }) => {
       if (!userId) throw new Error("User not authenticated");
+
+      const festivalId =
+        params.festival_id ||
+        (await (supabase as any)
+          .from("festival_participants")
+          .select("festival_id")
+          .eq("id", params.participation_id)
+          .maybeSingle()
+          .then((result: any) => result.data?.festival_id));
 
       const { error } = await (supabase as any)
         .from("festival_participants")
@@ -254,10 +271,11 @@ export const useFestivals = (userId?: string, bandId?: string) => {
         .eq("user_id", userId);
 
       if (error) throw error;
-      return params.participation_id;
+      return festivalId as string | undefined;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["festival-participations"] });
+    onSuccess: (festivalId) => {
+      queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
+      queryClient.invalidateQueries({ queryKey: LINEUP_QUERY_KEY(festivalId) });
       toast.success("Setlist updated!");
     },
     onError: (error: any) => {
@@ -287,6 +305,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
 
       // Simulate performance score
       const performanceScore = Math.floor(Math.random() * 30) + 70; // 70-100
+      const festivalId = participation.festival_id as string | undefined;
 
       const { error } = await (supabase as any)
         .from("festival_participants")
@@ -324,11 +343,12 @@ export const useFestivals = (userId?: string, bandId?: string) => {
           });
       }
 
-      return { performanceScore, payment, fame };
+      return { performanceScore, payment, fame, festivalId };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["festival-participations"] });
-      queryClient.invalidateQueries({ queryKey: ["festivals"] });
+      queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
+      queryClient.invalidateQueries({ queryKey: FESTIVALS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: LINEUP_QUERY_KEY(result.festivalId) });
       toast.success(
         `Performance complete! Score: ${result.performanceScore}/100 | +${result.fame} fame | +$${result.payment}`
       );
@@ -344,10 +364,10 @@ export const useFestivals = (userId?: string, bandId?: string) => {
     participations,
     participationsLoading,
     fetchFestivalLineup,
-    applyToFestival: applyToFestival.mutate,
-    withdrawFromFestival: withdrawFromFestival.mutate,
-    updateSetlist: updateSetlist.mutate,
-    performAtFestival: performAtFestival.mutate,
+    applyToFestival,
+    withdrawFromFestival,
+    updateSetlist,
+    performAtFestival,
     isApplying: applyToFestival.isPending,
     isWithdrawing: withdrawFromFestival.isPending,
     isUpdatingSetlist: updateSetlist.isPending,

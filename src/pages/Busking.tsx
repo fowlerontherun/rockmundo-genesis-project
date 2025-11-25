@@ -252,6 +252,35 @@ export default function Busking() {
 
     const now = new Date();
     const sessionEnds = new Date(now.getTime() + selectedLength * 60_000);
+    
+    // Check for scheduling conflicts
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'Not authenticated',
+        variant: 'destructive',
+      });
+      setIsStartingSession(false);
+      return;
+    }
+
+    const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+      p_user_id: user.id,
+      p_start: now.toISOString(),
+      p_end: sessionEnds.toISOString(),
+      p_exclude_id: null,
+    });
+
+    if (hasConflict) {
+      toast({
+        title: 'Schedule Conflict',
+        description: 'You have another activity scheduled during this time. Please check your schedule.',
+        variant: 'destructive',
+      });
+      setIsStartingSession(false);
+      return;
+    }
     const performanceRoll = 0.85 + Math.random() * 0.35;
     const xpGained = Math.max(5, Math.round(activeReward.experience * performanceRoll));
     const cashEarned = Math.max(5, Math.round(activeReward.cash * performanceRoll));
