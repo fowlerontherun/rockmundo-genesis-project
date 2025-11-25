@@ -14,7 +14,10 @@ export const usePublicRelations = (bandId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<PRCampaign[]>({
+  // TODO: Enrich PR analytics by piping performance metrics into Supabase and surfacing engagement rollups alongside each campaign.
+  // TODO: Add AI-assisted pitch drafting that pre-fills campaign proposals and offer responses with on-brand messaging suggestions.
+
+  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
     queryKey: ["pr-campaigns", bandId],
     queryFn: async () => {
       if (!bandId) return [];
