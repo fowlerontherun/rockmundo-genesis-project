@@ -11,6 +11,7 @@ import {
   BookOpen,
   Briefcase,
   Music2,
+  Activity,
   Plane,
   Calendar as CalendarIcon,
   Calendar,
@@ -29,6 +30,7 @@ import { Link } from "react-router-dom";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { NationalSelectionsRunner } from "@/components/admin/NationalSelectionsRunner";
 
 const adminSections = [
   {
@@ -170,6 +172,13 @@ const adminSections = [
     href: "/admin/cron-monitor",
     action: "View monitor",
     Icon: Clock,
+  },
+  {
+    title: "Offer Automation",
+    description: "Tune offer frequency, cooldowns, and payout variance while monitoring queue health.",
+    href: "/admin/offer-automation",
+    action: "Configure offers",
+    Icon: Activity,
   },
   {
     title: "Release Configuration",
@@ -319,6 +328,8 @@ export default function Admin() {
             Configure world data and manage gameplay balancing parameters across dedicated admin tools.
           </p>
         </div>
+
+        <NationalSelectionsRunner />
 
         <div className="grid gap-6 md:grid-cols-2">
           {adminSections.map(({ title, description, href, action, Icon }) => (

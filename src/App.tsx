@@ -27,6 +27,7 @@ const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const OffersDashboard = lazyWithRetry(() => import("./pages/OffersDashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
@@ -71,6 +72,7 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 const TourManagerNew = lazyWithRetry(() => import("./pages/TourManagerNew"));
 const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
+const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
@@ -114,6 +116,7 @@ const BrandsAdmin = lazyWithRetry(() => import("./pages/admin/BrandsAdmin"));
 const AdminProducers = lazyWithRetry(() => import("./pages/admin/Producers"));
 const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/TwaaterModeration"));
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
+const AdminOfferAutomation = lazyWithRetry(() => import("./pages/admin/OfferAutomation"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
@@ -151,6 +154,7 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
+const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -194,8 +198,9 @@ function App() {
                     <Route path="tour-manager" element={<TourManagerNew />} />
                     <Route path="streaming" element={<StreamingNew />} />
                     <Route path="music/charts" element={<ChartsPage />} />
-                    <Route path="overview" element={<OverviewPage />} />
+                    <Route path="eurovision" element={<EurovisionResultsPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
@@ -232,8 +237,9 @@ function App() {
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
-                    <Route path="festivals" element={<FestivalsNew />} />
-                    <Route path="awards" element={<Awards />} />
+                    <Route path="community/charity" element={<CharityPage />} />
+                    <Route path="festivals" element={<Festivals />} />
+                    <Route path="awards" element={<AwardShows />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
@@ -298,6 +304,7 @@ function App() {
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
                     <Route path="admin/twaater-moderation" element={<AdminTwaaterModeration />} />
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
+                    <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
                     <Route path="admin/songwriting" element={<SongwritingAdmin />} />

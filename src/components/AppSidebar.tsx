@@ -150,7 +150,11 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t('business'),
+      label: "Community",
+      items: [{ icon: HandHeart, label: "Charity", path: "/community/charity" }],
+    },
+    {
+      label: "Business",
       items: [
         { icon: Briefcase, label: t('employment'), path: "/employment" },
         { icon: DollarSign, label: t('finances'), path: "/finances" },
