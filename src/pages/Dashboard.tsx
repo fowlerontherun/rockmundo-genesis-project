@@ -29,6 +29,7 @@ import { GameDateWidget } from "@/components/calendar/GameDateWidget";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { useRecentSkillImprovements } from "@/hooks/useRecentSkillImprovements";
 import { TrendingUp as TrendingUpIcon } from "lucide-react";
+import { deriveCityChannel } from "@/utils/chat";
 
 type ChatScope = "general" | "city";
 
@@ -372,14 +373,14 @@ const Dashboard = () => {
                     Local
                   </TabsTrigger>
                 </TabsList>
-                <div className="p-3 md:p-4">
-                  <TabsContent value="general" className="m-0">
-                    <RealtimeChatPanel />
-                  </TabsContent>
-                  <TabsContent value="city" className="m-0">
-                    <RealtimeChatPanel />
-                  </TabsContent>
-                </div>
+              <div className="p-3 md:p-4">
+                <TabsContent value="general" className="m-0">
+                  <RealtimeChatPanel channelKey="general" />
+                </TabsContent>
+                <TabsContent value="city" className="m-0">
+                  <RealtimeChatPanel channelKey={deriveCityChannel(currentCity?.id)} />
+                </TabsContent>
+              </div>
               </Tabs>
             </CardContent>
           </Card>
