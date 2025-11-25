@@ -26,6 +26,7 @@ const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const OffersDashboard = lazyWithRetry(() => import("./pages/OffersDashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
@@ -194,6 +195,7 @@ function App() {
                     <Route path="music/charts" element={<ChartsPage />} />
                     <Route path="overview" element={<OverviewPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
