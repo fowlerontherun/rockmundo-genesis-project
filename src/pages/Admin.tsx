@@ -11,6 +11,7 @@ import {
   BookOpen,
   Briefcase,
   Music2,
+  Activity,
   Plane,
   Calendar as CalendarIcon,
   Calendar,
@@ -20,20 +21,31 @@ import {
   Radio,
   Guitar,
   HardHat,
+  Package,
+  Image as ImageIcon,
+  Theater,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { NationalSelectionsRunner } from "@/components/admin/NationalSelectionsRunner";
 
 const adminSections = [
   {
-    title: "Festival Management",
-    description: "Manage festivals, slot offers, and band applications",
+    title: "Festivals",
+    description: "Create and manage festival events",
     href: "/admin/festivals",
     action: "Manage festivals",
     Icon: CalendarIcon,
+  },
+  {
+    title: "Eurovision",
+    description: "Manage Eurovision years, phases, and entries",
+    href: "/admin/eurovision",
+    action: "Manage Eurovision",
+    Icon: Sparkles,
   },
   {
     title: "Game Calendar",
@@ -162,6 +174,13 @@ const adminSections = [
     Icon: Clock,
   },
   {
+    title: "Offer Automation",
+    description: "Tune offer frequency, cooldowns, and payout variance while monitoring queue health.",
+    href: "/admin/offer-automation",
+    action: "Configure offers",
+    Icon: Activity,
+  },
+  {
     title: "Release Configuration",
     description: "Configure costs and pricing for music releases across all formats (digital, CD, vinyl).",
     href: "/admin/release-config",
@@ -228,11 +247,53 @@ const adminSubSections = [
     Icon: Guitar,
   },
   {
+    title: "Gear Items Catalog",
+    description: "Manage personal gear items for musicians including instruments, pedals, and accessories.",
+    href: "/admin/gear-items",
+    action: "Manage gear",
+    Icon: Package,
+  },
+  {
+    title: "Page Graphics",
+    description: "Manage hero images, backgrounds, and visual elements for each page across all devices.",
+    href: "/admin/page-graphics",
+    action: "Manage graphics",
+    Icon: ImageIcon,
+  },
+  {
+    title: "3D Stage Templates",
+    description: "Create and manage 3D stage templates for the immersive gig viewer.",
+    href: "/admin/stage-templates",
+    action: "Manage stages",
+    Icon: Theater,
+  },
+  {
+    title: "Band Avatars",
+    description: "Configure 3D avatars and animations for band members.",
+    href: "/admin/band-avatars",
+    action: "Manage avatars",
+    Icon: Users,
+  },
+  {
+    title: "Crowd Behavior",
+    description: "Define crowd animation presets and mood states for 3D gigs.",
+    href: "/admin/crowd-behavior",
+    action: "Manage crowd",
+    Icon: Users,
+  },
+  {
     title: "Crew Hiring Catalog",
     description: "Curate the professionals available for hire so bands can build their touring teams.",
     href: "/admin/crew",
     action: "Manage crew",
     Icon: HardHat,
+  },
+  {
+    title: "Skill Definitions",
+    description: "Configure skill definitions, slugs, display names, and tier caps for the progression system.",
+    href: "/admin/skill-definitions",
+    action: "Manage skills",
+    Icon: TrendingUp,
   },
   {
     title: "Player Management",
@@ -267,6 +328,8 @@ export default function Admin() {
             Configure world data and manage gameplay balancing parameters across dedicated admin tools.
           </p>
         </div>
+
+        <NationalSelectionsRunner />
 
         <div className="grid gap-6 md:grid-cols-2">
           {adminSections.map(({ title, description, href, action, Icon }) => (

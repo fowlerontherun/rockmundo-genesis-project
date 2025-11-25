@@ -102,6 +102,21 @@ supabase db reset
 This data-only migration does not change the schema, so the generated Supabase TypeScript definitions stay in sync without any
 additional regeneration.
 
+## Pull request workflow & field reference
+
+Use short, descriptive branches, commit frequently, and open PRs that clearly link to their related tasks. Every PR should
+summarize the change, outline testing, and note deployment considerations (migrations, environment variables, or flags). Include
+screenshots for visible UI updates and call out any Supabase table impacts so reviewers can validate PR data views.
+
+Key PR fields to keep consistent:
+
+- **Title**: Action-oriented summary (e.g., "Add PR analytics rollups to dashboard").
+- **Description**: Context, approach, and risks, including schema/config changes.
+- **Testing notes**: Commands you ran and their outcomes.
+- **Deployment considerations**: Environment variable updates or migrations.
+
+See `docs/pr-workflow-guide.md` for a full checklist, environment variable expectations, and backlog items.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31) and click on Share -> Publish.
