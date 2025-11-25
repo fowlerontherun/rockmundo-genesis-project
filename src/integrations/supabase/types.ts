@@ -1197,6 +1197,63 @@ export type Database = {
           },
         ]
       }
+      brands: {
+        Row: {
+          allows_explicit_imagery: boolean
+          category: Database["public"]["Enums"]["brand_category"]
+          created_at: string
+          default_contract_terms: Json | null
+          description: string | null
+          fsm_score: number
+          id: string
+          is_active: boolean
+          minimum_fame_required: number
+          name: string
+          region: Database["public"]["Enums"]["brand_region"]
+          requires_clean_record: boolean
+          size: Database["public"]["Enums"]["brand_size"]
+          supports_indies: boolean
+          updated_at: string
+          wealth_rating: number
+        }
+        Insert: {
+          allows_explicit_imagery?: boolean
+          category?: Database["public"]["Enums"]["brand_category"]
+          created_at?: string
+          default_contract_terms?: Json | null
+          description?: string | null
+          fsm_score?: number
+          id?: string
+          is_active?: boolean
+          minimum_fame_required?: number
+          name: string
+          region?: Database["public"]["Enums"]["brand_region"]
+          requires_clean_record?: boolean
+          size?: Database["public"]["Enums"]["brand_size"]
+          supports_indies?: boolean
+          updated_at?: string
+          wealth_rating?: number
+        }
+        Update: {
+          allows_explicit_imagery?: boolean
+          category?: Database["public"]["Enums"]["brand_category"]
+          created_at?: string
+          default_contract_terms?: Json | null
+          description?: string | null
+          fsm_score?: number
+          id?: string
+          is_active?: boolean
+          minimum_fame_required?: number
+          name?: string
+          region?: Database["public"]["Enums"]["brand_region"]
+          requires_clean_record?: boolean
+          size?: Database["public"]["Enums"]["brand_size"]
+          supports_indies?: boolean
+          updated_at?: string
+          wealth_rating?: number
+        }
+        Relationships: []
+      }
       bands: {
         Row: {
           allow_applications: boolean | null
@@ -10820,6 +10877,157 @@ export type Database = {
           },
         ]
       }
+      sponsorship_contracts: {
+        Row: {
+          brand_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          is_exclusive: boolean
+          offer_id: string | null
+          sponsorable_id: string
+          sponsorable_type: Database["public"]["Enums"]["sponsorable_entity_type"]
+          start_date: string
+          status: Database["public"]["Enums"]["sponsorship_contract_status"]
+          terms: Json | null
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_exclusive?: boolean
+          offer_id?: string | null
+          sponsorable_id: string
+          sponsorable_type: Database["public"]["Enums"]["sponsorable_entity_type"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["sponsorship_contract_status"]
+          terms?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_exclusive?: boolean
+          offer_id?: string | null
+          sponsorable_id?: string
+          sponsorable_type?: Database["public"]["Enums"]["sponsorable_entity_type"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["sponsorship_contract_status"]
+          terms?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_contracts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_contracts_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_history: {
+        Row: {
+          contract_id: string
+          created_at: string
+          event_type: Database["public"]["Enums"]["sponsorship_history_event"]
+          from_status: Database["public"]["Enums"]["sponsorship_contract_status"] | null
+          id: string
+          notes: string | null
+          to_status: Database["public"]["Enums"]["sponsorship_contract_status"] | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          event_type: Database["public"]["Enums"]["sponsorship_history_event"]
+          from_status?: Database["public"]["Enums"]["sponsorship_contract_status"] | null
+          id?: string
+          notes?: string | null
+          to_status?: Database["public"]["Enums"]["sponsorship_contract_status"] | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["sponsorship_history_event"]
+          from_status?: Database["public"]["Enums"]["sponsorship_contract_status"] | null
+          id?: string
+          notes?: string | null
+          to_status?: Database["public"]["Enums"]["sponsorship_contract_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_history_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_offers: {
+        Row: {
+          brand_id: string
+          cash_value: number
+          created_at: string
+          exclusivity: boolean
+          expires_at: string
+          id: string
+          in_kind_value: number
+          sponsorable_id: string
+          sponsorable_type: Database["public"]["Enums"]["sponsorable_entity_type"]
+          status: Database["public"]["Enums"]["sponsorship_offer_status"]
+          terms: Json | null
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          cash_value?: number
+          created_at?: string
+          exclusivity?: boolean
+          expires_at: string
+          id?: string
+          in_kind_value?: number
+          sponsorable_id: string
+          sponsorable_type: Database["public"]["Enums"]["sponsorable_entity_type"]
+          status?: Database["public"]["Enums"]["sponsorship_offer_status"]
+          terms?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          cash_value?: number
+          created_at?: string
+          exclusivity?: boolean
+          expires_at?: string
+          id?: string
+          in_kind_value?: number
+          sponsorable_id?: string
+          sponsorable_type?: Database["public"]["Enums"]["sponsorable_entity_type"]
+          status?: Database["public"]["Enums"]["sponsorship_offer_status"]
+          terms?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_offers_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chart_albums: {
         Row: {
           band_name: string | null
@@ -10977,10 +11185,47 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       band_status: "active" | "on_hiatus" | "disbanded"
+      brand_category:
+        | "fashion"
+        | "tech"
+        | "food_and_beverage"
+        | "automotive"
+        | "finance"
+        | "lifestyle"
+        | "entertainment"
+        | "other"
+      brand_region:
+        | "local"
+        | "national"
+        | "europe"
+        | "north_america"
+        | "asia_pacific"
+        | "latin_america"
+        | "middle_east_africa"
+        | "global"
+      brand_size: "indie" | "regional" | "national" | "global"
       book_reading_status: "reading" | "completed" | "abandoned"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
+      sponsorable_entity_type: "character" | "tour" | "venue" | "festival" | "band"
+      sponsorship_contract_status: "pending" | "active" | "completed" | "terminated" | "cancelled"
+      sponsorship_history_event:
+        | "offer_created"
+        | "offer_updated"
+        | "offer_expired"
+        | "offer_withdrawn"
+        | "offer_accepted"
+        | "contract_signed"
+        | "status_changed"
+        | "payout_recorded"
+      sponsorship_offer_status:
+        | "draft"
+        | "pending"
+        | "accepted"
+        | "declined"
+        | "expired"
+        | "withdrawn"
       show_type_enum: "concert" | "festival" | "private" | "street"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
