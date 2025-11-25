@@ -93,6 +93,24 @@ class MockSupabaseClient {
 
         return Promise.resolve({ data: null, error: null });
       },
+      update(values: Record<string, unknown>) {
+        return {
+          eq(column: string, value: unknown) {
+            const rows = (client.tables[table] ?? []) as Array<Record<string, unknown>>;
+            const updatedRows = rows.map((row) => {
+              const matches = [...query.filters, { column, value }].every(
+                (filter) => row?.[filter.column] === filter.value,
+              );
+              return matches ? { ...row, ...values } : row;
+            });
+
+            client.tables[table] = updatedRows as never;
+            client.lastUpserts[table as string] = values;
+
+            return Promise.resolve({ data: null, error: null });
+          },
+        };
+      },
     };
 
     return query;
@@ -174,6 +192,6 @@ describe("handleSpendSkillXp", () => {
     expect(skillUpsert.current_xp).toBe(150);
     expect(skillUpsert.required_xp).toBe(Math.floor(100 * Math.pow(1.5, 2)));
 
-    expect(result.wallet?.xp_balance).toBe(600);
+    expect(result.state.wallet?.xp_balance).toBe(600);
   });
 });
