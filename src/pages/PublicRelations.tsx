@@ -3,22 +3,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tv, Radio, Mic2, TrendingUp, Calendar, DollarSign, Eye, ThumbsUp, Plus, Search, Loader2, Send, DownloadCloud, FileCheck, FileX, Filter } from "lucide-react";
+import { Tv, Radio, Mic2, TrendingUp, Calendar, DollarSign, Eye, ThumbsUp, Plus } from "lucide-react";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { usePublicRelations } from "@/hooks/usePublicRelations";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { Textarea } from "@/components/ui/textarea";
+import { PrCampaignForm, type CampaignDraft } from "@/components/pr/PrCampaignForm";
+import MediaAppearancesTable from "@/components/pr/MediaAppearancesTable";
+import MediaOffersTable from "@/components/pr/MediaOffersTable";
 
 const PublicRelations = () => {
   const { data: bandData } = usePrimaryBand();
@@ -38,31 +32,13 @@ const PublicRelations = () => {
     respondToOffer,
   } = usePublicRelations(band?.id);
 
-  const [pressReleases, setPressReleases] = useState<PressRelease[]>(initialPressReleases);
-  const [contacts] = useState<MediaContact[]>(defaultContacts);
-  const [isSubmittingRelease, setIsSubmittingRelease] = useState(false);
-
-  const totalReach = useMemo(
-    () => campaigns.reduce((sum, campaign) => sum + (campaign.reach || 0), 0),
-    [campaigns],
-  );
-
-  const pendingOffers = useMemo(
-    () => offers.filter((offer) => offer.status === "pending").length,
-    [offers],
-  );
-
-  const handlePressReleaseSubmit = (values: PressReleaseFormValues) => {
-    setIsSubmittingRelease(true);
-    setPressReleases((previous) => [
-      {
-        id: generateId(),
-        reach: 0,
-        sentiment: "neutral",
-        ...values,
-      },
-      ...previous,
-    ]);
+  const [newCampaign, setNewCampaign] = useState<CampaignDraft>({
+    campaign_type: "tv",
+    campaign_name: "",
+    budget: 5000,
+    start_date: "",
+    end_date: "",
+  });
 
     setTimeout(() => {
       setIsSubmittingRelease(false);
@@ -297,47 +273,13 @@ const PublicRelations = () => {
     setEditingContactIndex(null);
   };
 
-  const togglePublish = (title: string) => {
-    setPublishingId(title);
-    setTimeout(() => {
-      setPressReleases((prev) =>
-        prev.map((release) =>
-          release.title === title
-            ? {
-                ...release,
-                status: release.status === "published" ? "draft" : "published",
-              }
-            : release
-        )
-      );
-      toast({
-        title: "Status updated",
-        description: "Publish state changed with optimistic UI.",
-      });
-      setPublishingId(null);
-    }, 450);
-  };
-
-  const downloadPdf = (title: string) => {
-    setDownloadId(title);
-    setTimeout(() => {
-      toast({
-        title: "PDF ready",
-        description: `${title} exported for distribution.`,
-      });
-      setDownloadId(null);
-    }, 550);
-  };
-
-  const sendPitch = (email: string) => {
-    setPitchingId(email);
-    setTimeout(() => {
-      toast({
-        title: "Pitch sent",
-        description: `Outreach dispatched to ${email}.`,
-      });
-      setPitchingId(null);
-    }, 550);
+  const getStatusBadge = (status: string) => {
+    if (status === "active") return <Badge className="bg-success">Active</Badge>;
+    if (status === "completed") return <Badge variant="secondary">Completed</Badge>;
+    if (status === "pending") return <Badge variant="outline">Pending</Badge>;
+    if (status === "accepted") return <Badge className="bg-success">Accepted</Badge>;
+    if (status === "declined" || status === "cancelled") return <Badge variant="destructive">{status}</Badge>;
+    return <Badge>{status}</Badge>;
   };
 
   if (!band) {
@@ -400,171 +342,16 @@ const PublicRelations = () => {
             Refresh media kit
           </Button>
         </div>
-      </header>
-
-      <section className="grid gap-4 lg:grid-cols-[2fr,1fr]">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {overviewCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Card key={card.label} className="border-muted-foreground/20">
-                <CardContent className="flex items-start justify-between gap-3 p-5">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{card.label}</p>
-                    {card.isLoading ? (
-                      <Skeleton className="h-8 w-20" />
-                    ) : (
-                      <p className="text-3xl font-bold">
-                        {card.label === "Audience Reach" ? card.value.toLocaleString() : card.value}
-                      </p>
-                    )}
-                  </div>
-                  <div className={cn("rounded-full p-2", card.tone)}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-        <SentimentWidget snapshot={sentimentSnapshot} isLoading={campaignsLoading || offersLoading} />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1.1fr,1fr]">
-        <PressReleaseForm onSubmit={handlePressReleaseSubmit} isSubmitting={isSubmittingRelease} />
-        <PressReleaseList releases={pressReleases} isLoading={false} />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1.4fr,1fr]">
-        <MediaContactTable contacts={contacts} isLoading={false} />
-        <OutreachPipeline stages={outreachStages} isLoading={campaignsLoading} />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1.2fr,0.8fr]">
-        <Card className="h-full">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5" />
-              <div>
-                <CardTitle>Campaign Activity</CardTitle>
-                <CardDescription>Monitor campaigns, offers, and appearances in one place.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {campaignsLoading && offersLoading && appearancesLoading ? (
-              <div className="space-y-2">
-                {[...Array(4)].map((_, index) => (
-                  <Skeleton key={index} className="h-10 w-full" />
-                ))}
-              </div>
-            ) : campaigns.length === 0 && offers.length === 0 && appearances.length === 0 ? (
-              <EmptyState
-                title="No PR activity yet"
-                description="Launch a campaign or accept an appearance to see it tracked here."
-                icon={Megaphone}
-              />
-            ) : (
-              <div className="space-y-3">
-                {campaigns.map((campaign) => (
-                  <div key={campaign.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Megaphone className="h-4 w-4" />
-                        <span className="capitalize">{campaign.campaign_type}</span>
-                      </div>
-                      <Badge variant="outline" className="capitalize">
-                        {campaign.status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-base font-semibold">{campaign.campaign_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Reach: {campaign.reach.toLocaleString()} • Engagement: {campaign.engagement_rate}%
-                    </p>
-                  </div>
-                ))}
-
-                {offers.map((offer) => (
-                  <div key={offer.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Handshake className="h-4 w-4" />
-                        <span className="capitalize">{offer.media_type}</span>
-                      </div>
-                      <Badge className="capitalize" variant={offer.status === "pending" ? "secondary" : "outline"}>
-                        {offer.status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-base font-semibold">{offer.program_name}</p>
-                    <p className="text-sm text-muted-foreground">{offer.network}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{format(new Date(offer.proposed_date), "PPP")}</span>
-                      {offer.status === "pending" && (
-                        <div className="ml-auto flex gap-2">
-                          <Button size="sm" className="bg-success" onClick={() => respondToOffer({ offerId: offer.id, accept: true })}>
-                            Accept
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => respondToOffer({ offerId: offer.id, accept: false })}>
-                            Decline
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {appearances.map((appearance) => (
-                  <div key={appearance.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Tv className="h-4 w-4" />
-                        <span className="capitalize">{appearance.media_type}</span>
-                      </div>
-                      <Badge variant="outline">{appearance.network}</Badge>
-                    </div>
-                    <p className="mt-1 text-base font-semibold">{appearance.program_name}</p>
-                    <p className="text-sm text-muted-foreground">{format(new Date(appearance.air_date), "PPP")}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="h-full">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <NotebookPen className="h-5 w-5" />
-              <div>
-                <CardTitle>Notes</CardTitle>
-                <CardDescription>Keep quick reminders for follow-ups and prep.</CardDescription>
-              </div>
-            </div>
-            <Badge variant="outline">Team</Badge>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[ 
-              {
-                id: "n1",
-                label: "campaign",
-                text: "Share tour dates with radio list once artwork is approved.",
-                owner: "Eden",
-              },
-              { id: "n2", label: "appearance", text: "Send morning-show run-of-show to crew.", owner: "Rae" },
-              { id: "n3", label: "offer", text: "Hold slot for live podcast pending travel check.", owner: "Milo" },
-            ].map((note) => (
-              <div key={note.id} className="flex items-start gap-3 rounded-lg border p-3">
-                <Badge variant="secondary" className={cn("capitalize", noteTone[note.label])}>
-                  {note.label}
-                </Badge>
-                <div>
-                  <p className="text-sm text-foreground">{note.text}</p>
-                  <p className="text-xs text-muted-foreground">Owner: {note.owner}</p>
-                </div>
-              </div>
-              <Button onClick={handleCreateCampaign} className="w-full">Create Campaign</Button>
-            </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button><Plus className="h-4 w-4 mr-2" />New Campaign</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create PR Campaign</DialogTitle>
+              <DialogDescription>Launch a new media campaign</DialogDescription>
+            </DialogHeader>
+            <PrCampaignForm value={newCampaign} onChange={setNewCampaign} onSubmit={handleCreateCampaign} />
           </DialogContent>
         </Dialog>
       </div>
@@ -601,45 +388,15 @@ const PublicRelations = () => {
         </TabsContent>
 
         <TabsContent value="appearances">
-          {appearancesLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> :
-           appearances.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No appearances yet</CardContent></Card> :
-           <Card><Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Program</TableHead><TableHead>Network</TableHead><TableHead>Air Date</TableHead><TableHead>Reach</TableHead><TableHead>Sentiment</TableHead><TableHead>Highlight</TableHead></TableRow></TableHeader>
-           <TableBody>{appearances.map((a: any) => (
-            <TableRow key={a.id}>
-              <TableCell><div className="flex items-center gap-2">{getMediaIcon(a.media_type)}<span className="capitalize">{a.media_type}</span></div></TableCell>
-              <TableCell className="font-medium">{a.program_name}</TableCell>
-              <TableCell>{a.network}</TableCell>
-              <TableCell>{format(new Date(a.air_date), "MMM d, yyyy")}</TableCell>
-              <TableCell>{a.audience_reach.toLocaleString()}</TableCell>
-              <TableCell>{getSentimentBadge(a.sentiment)}</TableCell>
-              <TableCell className="max-w-xs truncate">{a.highlight}</TableCell>
-            </TableRow>
-          ))}</TableBody></Table></Card>}
+          <MediaAppearancesTable appearances={appearances as any} loading={appearancesLoading} />
         </TabsContent>
 
         <TabsContent value="offers">
-          {offersLoading ? <Card><CardContent className="p-6">Loading...</CardContent></Card> :
-           offers.length === 0 ? <Card><CardContent className="p-6 text-center text-muted-foreground">No offers</CardContent></Card> :
-           <div className="grid gap-4">{offers.map((o: any) => (
-            <Card key={o.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">{getMediaIcon(o.media_type)}<CardTitle className="text-lg">{o.program_name}</CardTitle></div>
-                  {getStatusBadge(o.status)}
-                </div>
-                <CardDescription>{o.network} • {format(new Date(o.proposed_date), "MMMM d, yyyy")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div><div className="text-sm text-muted-foreground">Compensation</div><div className="text-2xl font-bold">${o.compensation.toLocaleString()}</div></div>
-                  {o.status === "pending" && <div className="flex gap-2">
-                    <Button onClick={() => respondToOffer({ offerId: o.id, accept: true })} size="sm" className="bg-success">Accept</Button>
-                    <Button onClick={() => respondToOffer({ offerId: o.id, accept: false })} size="sm" variant="destructive">Decline</Button>
-                  </div>}
-                </div>
-              </CardContent>
-            </Card>
-          ))}</div>}
+          <MediaOffersTable
+            offers={offers as any}
+            loading={offersLoading}
+            onRespond={({ offerId, accept }) => respondToOffer.mutate({ offerId, accept })}
+          />
         </TabsContent>
       </Tabs>
 

@@ -61,6 +61,19 @@ class MockSupabaseClient {
         );
         return Promise.resolve({ data: (match ?? null) as unknown, error: null });
       },
+      update(payload: Record<string, unknown>) {
+        client.lastUpserts[`${table as string}-update`] = payload;
+        return {
+          eq(column: string, value: unknown) {
+            const rows = (client.tables[table] ?? []) as Array<Record<string, unknown>>;
+            const updated = rows.map((row) =>
+              row?.[column] === value ? { ...row, ...payload } : row,
+            );
+            client.tables[table] = updated as never;
+            return Promise.resolve({ data: null, error: null });
+          },
+        } as any;
+      },
       upsert(payload: Record<string, unknown> | Record<string, unknown>[], _options?: unknown) {
         const payloads = Array.isArray(payload) ? payload : [payload];
         const existingRows = (client.tables[table] ?? []) as Array<Record<string, unknown>>;
