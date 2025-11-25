@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -252,6 +253,52 @@ const OffersDashboard = () => {
       average: count === 0 ? 0 : total / count,
     }));
   }, [acceptedOffers]);
+
+  const brandTable = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { sent: number; accepted: number; payout: number; acceptanceRate: number }
+    >();
+
+    filteredRecords.forEach(record => {
+      const current =
+        grouped.get(record.brand) || { sent: 0, accepted: 0, payout: 0, acceptanceRate: 0 };
+      current.sent += 1;
+      if (record.status === "accepted") {
+        current.accepted += 1;
+        current.payout += record.basePayout + record.bonusPayout;
+      }
+      grouped.set(record.brand, current);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([name, metrics]) => ({
+        name,
+        ...metrics,
+        acceptanceRate: metrics.sent === 0 ? 0 : Math.round((metrics.accepted / metrics.sent) * 100),
+      }))
+      .sort((a, b) => b.payout - a.payout)
+      .slice(0, 6);
+  }, [filteredRecords]);
+
+  const entityTable = useMemo(() => {
+    const grouped = new Map<string, { brand: string; payout: number; fameImpact: number }>();
+
+    filteredRecords.forEach(record => {
+      if (record.status !== "accepted") return;
+      const current = grouped.get(record.entityName) || { brand: record.brand, payout: 0, fameImpact: 0 };
+      grouped.set(record.entityName, {
+        brand: current.brand,
+        payout: current.payout + record.basePayout + record.bonusPayout,
+        fameImpact: current.fameImpact + record.fameImpact,
+      });
+    });
+
+    return Array.from(grouped.entries())
+      .map(([name, metrics]) => ({ name, ...metrics }))
+      .sort((a, b) => b.payout - a.payout)
+      .slice(0, 6);
+  }, [filteredRecords]);
 
   const brandPerformance = useMemo(() => {
     const byBrand = new Map<string, number>();
@@ -493,16 +540,34 @@ const OffersDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {fameTierAverages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No accepted offers in range.</p>
-          ) : (
-            fameTierAverages.map(item => (
-              <div key={item.tier} className="p-4 rounded-lg border bg-card">
-                <p className="text-sm text-muted-foreground">{item.tier}</p>
-                <p className="text-xl font-bold">{formatCurrency(item.average)}</p>
-              </div>
-            ))
-          )}
+          <div className="md:col-span-2 h-[220px]">
+            {fameTierAverages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No accepted offers in range.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={fameTierAverages}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="tier" />
+                  <YAxis tickFormatter={value => formatCurrency(Number(value))} />
+                  <Tooltip formatter={value => formatCurrency(Number(value))} />
+                  <Bar dataKey="average" fill="#a855f7" name="Avg payout" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {fameTierAverages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tiers to summarize.</p>
+            ) : (
+              fameTierAverages.map(item => (
+                <div key={item.tier} className="rounded-lg border p-3">
+                  <p className="text-xs uppercase text-muted-foreground">{item.tier}</p>
+                  <p className="text-lg font-bold">{formatCurrency(item.average)}</p>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -742,6 +807,95 @@ const OffersDashboard = () => {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <TrendingUp className="h-5 w-5 text-emerald-500" />
+              Top brand & entity tables
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold">Brands by payout</p>
+                <Badge variant="outline">Top {brandTable.length || 0}</Badge>
+              </div>
+              <ScrollArea className="h-[180px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Brand</TableHead>
+                      <TableHead className="text-right">Payout</TableHead>
+                      <TableHead className="text-right">Accepted</TableHead>
+                      <TableHead className="text-right">Acceptance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {brandTable.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                          No data in selected range.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      brandTable.map(row => (
+                        <TableRow key={row.name}>
+                          <TableCell className="font-medium">{row.name}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(row.payout)}</TableCell>
+                          <TableCell className="text-right">{row.accepted}</TableCell>
+                          <TableCell className="text-right">{row.acceptanceRate}%</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold">Entities by payout</p>
+                <Badge variant="outline">Top {entityTable.length || 0}</Badge>
+              </div>
+              <ScrollArea className="h-[180px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Entity</TableHead>
+                      <TableHead>Lead brand</TableHead>
+                      <TableHead className="text-right">Payout</TableHead>
+                      <TableHead className="text-right">Fame Δ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entityTable.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                          No accepted entities in range.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      entityTable.map(row => (
+                        <TableRow key={row.name}>
+                          <TableCell className="font-medium">{row.name}</TableCell>
+                          <TableCell>{row.brand}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(row.payout)}</TableCell>
+                          <TableCell
+                            className={`text-right ${row.fameImpact >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                          >
+                            {row.fameImpact >= 0 ? "+" : ""}
+                            {row.fameImpact}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       </div>

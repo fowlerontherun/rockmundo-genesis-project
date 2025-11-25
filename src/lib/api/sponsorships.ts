@@ -54,6 +54,15 @@ const BASE_PAYOUT_RANGES: Record<SponsorableType, Record<FameTier, PayoutRange>>
   },
 };
 
+const REACH_IMPACT_WEIGHTS: Record<
+  SponsorableType,
+  { reachWeight: number; impactWeight: number }
+> = {
+  tour: { reachWeight: 0.3, impactWeight: 0.2 },
+  festival: { reachWeight: 0.25, impactWeight: 0.3 },
+  venue: { reachWeight: 0.2, impactWeight: 0.2 },
+};
+
 export interface PayoutCalculationInput {
   fame: number;
   sponsorableType: SponsorableType;
@@ -449,5 +458,131 @@ export const issueSponsorshipOfferWithGuardrails = (
       offers: [...baseState.offers, managedOffer],
       history: [...history, issuedHistory],
     },
+  };
+};
+
+const isActiveOrPending = (
+  status: SponsorshipContractStatus
+): boolean => status === "pending" || status === "active";
+
+const isCharacter = (sponsorableType: SponsorshipEntityType): boolean =>
+  sponsorableType === "character";
+
+export const validateSponsorshipOfferGuardrails = (
+  offer: SponsorshipOfferRecord,
+  existingOffers: SponsorshipOfferRecord[],
+  existingContracts: SponsorshipContractRecord[]
+): { isValid: boolean; reasons: string[] } => {
+  const reasons: string[] = [];
+
+  const matchingContracts = existingContracts.filter(
+    (contract) =>
+      contract.sponsorableType === offer.sponsorableType &&
+      contract.sponsorableId === offer.sponsorableId &&
+      isActiveOrPending(contract.status)
+  );
+
+  const matchingPendingOffer = existingOffers.find(
+    (existing) =>
+      existing.brandId === offer.brandId &&
+      existing.sponsorableId === offer.sponsorableId &&
+      existing.sponsorableType === offer.sponsorableType &&
+      existing.status === "pending"
+  );
+
+  if (matchingPendingOffer) {
+    reasons.push("Duplicate pending offer exists for this brand and sponsorable");
+  }
+
+  if (isCharacter(offer.sponsorableType) && matchingContracts.length >= 3) {
+    reasons.push("Character has reached the maximum of three active sponsorship deals");
+  }
+
+  const hasExclusiveBlocker = matchingContracts.find(
+    (contract) =>
+      contract.isExclusive &&
+      contract.brandId !== offer.brandId &&
+      contract.status === "active"
+  );
+
+  if (hasExclusiveBlocker) {
+    reasons.push("Existing exclusive contract prevents issuing this offer");
+  }
+
+  const hasBrandOverlap = matchingContracts.find(
+    (contract) => contract.brandId === offer.brandId
+  );
+
+  if (hasBrandOverlap) {
+    reasons.push("Brand already has an active or pending contract with this sponsorable");
+  }
+
+  if (offer.exclusivity) {
+    const conflictingContract = matchingContracts.find(
+      (contract) => contract.brandId !== offer.brandId
+    );
+
+    if (conflictingContract) {
+      reasons.push("Exclusive offer conflicts with another active or pending contract");
+    }
+  }
+
+  return { isValid: reasons.length === 0, reasons };
+};
+
+export const expireStaleSponsorshipOffers = (
+  offers: SponsorshipOfferRecord[],
+  contracts: SponsorshipContractRecord[],
+  now: Date = new Date()
+): {
+  updatedOffers: SponsorshipOfferRecord[];
+  updatedContracts: SponsorshipContractRecord[];
+  historyEntries: SponsorshipHistoryEntry[];
+  expiredOfferIds: string[];
+  freedSlots: number;
+} => {
+  const nowTime = now.getTime();
+  const expiredOfferIds = new Set<string>();
+
+  const updatedOffers = offers.map((offer) => {
+    if (offer.status === "pending" && new Date(offer.expiresAt).getTime() < nowTime) {
+      expiredOfferIds.add(offer.id);
+      return { ...offer, status: "expired" as const };
+    }
+
+    return offer;
+  });
+
+  const historyEntries: SponsorshipHistoryEntry[] = [];
+  let freedSlots = 0;
+
+  const updatedContracts = contracts.map((contract) => {
+    if (
+      contract.offerId &&
+      expiredOfferIds.has(contract.offerId) &&
+      contract.status === "pending"
+    ) {
+      freedSlots += 1;
+      historyEntries.push({
+        contractId: contract.id,
+        eventType: "offer_expired",
+        fromStatus: contract.status,
+        toStatus: "cancelled",
+        notes: "Offer expired before acceptance",
+        createdAt: now.toISOString(),
+      });
+
+      return { ...contract, status: "cancelled" as const };
+    }
+
+    return contract;
+  });
+
+  return {
+    updatedOffers,
+    updatedContracts,
+    historyEntries,
+    expiredOfferIds: Array.from(expiredOfferIds),
+    freedSlots,
   };
 };
