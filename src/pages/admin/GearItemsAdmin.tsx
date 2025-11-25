@@ -31,7 +31,7 @@ interface EquipmentFormValues {
   image_url: string;
 }
 
-export default function GearItemsAdmin() {
+function GearItemsAdmin() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -207,16 +207,13 @@ export default function GearItemsAdmin() {
 
   if (isLoading) {
     return (
-      <AdminRoute>
-        <div className="container mx-auto p-6">
-          <p className="text-center text-muted-foreground">Loading equipment items...</p>
-        </div>
-      </AdminRoute>
+      <div className="container mx-auto p-6">
+        <p className="text-center text-muted-foreground">Loading equipment items...</p>
+      </div>
     );
   }
 
   return (
-    <AdminRoute>
       <div className="container mx-auto max-w-7xl space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -444,6 +441,13 @@ export default function GearItemsAdmin() {
           </CardContent>
         </Card>
       </div>
+  );
+}
+
+export default function GearItemsAdminPage() {
+  return (
+    <AdminRoute>
+      <GearItemsAdmin />
     </AdminRoute>
   );
 }

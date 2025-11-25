@@ -5,12 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, Music2, DollarSign, Plus, Clock } from "lucide-react";
+import { Calendar, Music2, DollarSign, Plus, Clock, CalendarPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { RehearsalBookingDialog } from "@/components/performance/RehearsalBookingDialog";
+import { PlanRehearsalDialog } from "@/components/performance/PlanRehearsalDialog";
 import { useToast } from "@/hooks/use-toast";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 
@@ -45,6 +46,7 @@ const Rehearsals = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">("upcoming");
   const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
   const [selectedBand, setSelectedBand] = useState<any>(null);
 
   // Fetch all user's bands
@@ -292,17 +294,28 @@ const Rehearsals = () => {
         </div>
         <div className="flex gap-2">
           {userBands.map((band: any) => (
-            <Button 
-              key={band.id}
-              variant={selectedBand?.id === band.id ? "default" : "outline"}
-              onClick={() => {
-                setSelectedBand(band);
-                setShowBookingDialog(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Book for {band.name}
-            </Button>
+            <div key={band.id} className="flex gap-2">
+              <Button 
+                variant={selectedBand?.id === band.id ? "default" : "outline"}
+                onClick={() => {
+                  setSelectedBand(band);
+                  setShowBookingDialog(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Book Now: {band.name}
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setSelectedBand(band);
+                  setShowPlanDialog(true);
+                }}
+              >
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Plan: {band.name}
+              </Button>
+            </div>
           ))}
         </div>
       </div>
@@ -510,6 +523,17 @@ const Rehearsals = () => {
           songs={bandSongs}
           onConfirm={handleBookRehearsal}
           onClose={() => setShowBookingDialog(false)}
+        />
+      )}
+
+      {showPlanDialog && selectedBand && (
+        <PlanRehearsalDialog
+          open={showPlanDialog}
+          onClose={() => setShowPlanDialog(false)}
+          band={selectedBand}
+          rooms={rooms}
+          songs={bandSongs}
+          onConfirm={handleBookRehearsal}
         />
       )}
     </div>

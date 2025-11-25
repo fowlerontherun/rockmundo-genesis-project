@@ -1,0 +1,26 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#04060A"/>
+  <g opacity="0.6" filter="url(#f1)">
+    <path d="M1200 400C1200 600 900 720 600 720C300 720 0 600 0 400C0 200 280 80 580 80C880 80 1200 200 1200 400Z" fill="url(#g1)"/>
+  </g>
+  <g opacity="0.55" filter="url(#f2)">
+    <path d="M1080 360C1080 510 820 650 570 650C320 650 80 520 80 370C80 220 330 180 580 180C830 180 1080 210 1080 360Z" fill="url(#g2)"/>
+  </g>
+  <defs>
+    <filter id="f1" x="-120" y="-40" width="1440" height="880" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="70"/> 
+    </filter>
+    <filter id="f2" x="-40" y="60" width="1300" height="720" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="90"/>
+    </filter>
+    <linearGradient id="g1" x1="200" y1="120" x2="980" y2="680" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6B21A8"/>
+      <stop offset="0.5" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="260" y1="210" x2="900" y2="610" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+</svg>

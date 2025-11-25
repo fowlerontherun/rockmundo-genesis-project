@@ -267,7 +267,7 @@ const Auth = () => {
         return;
       }
 
-      const redirectUrl = `${origin}/`;
+      const redirectUrl = `${origin}/auth`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -415,7 +415,7 @@ const Auth = () => {
         type: "signup",
         email: unverifiedEmail,
         options: {
-          emailRedirectTo: `${origin}/`,
+          emailRedirectTo: `${origin}/auth`,
         },
       });
 
