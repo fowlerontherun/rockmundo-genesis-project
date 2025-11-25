@@ -36,6 +36,7 @@ const MAX_PENDING_PER_ENTITY = 3;
 const ENTITY_THROTTLE_HOURS = 36;
 const BRAND_COOLDOWN_HOURS = 12;
 const EXPIRY_NOTIFICATION_WINDOW_HOURS = 48;
+const MAX_CANDIDATES_PER_BRAND = 5;
 type SponsorshipSupabaseClient = SupabaseClient<Record<string, unknown>, unknown, unknown>;
 
 interface SponsorshipBrand {
@@ -119,14 +120,10 @@ serve(async (req) => {
     for (const brand of brands || []) {
       brandsProcessed++;
 
-      const candidates = validEntities
-        .filter((entity) => isEntityEligible(entity, brand, now))
-        .map((entity) => ({
-          entity,
-          score: calculateMatchScore(entity, brand),
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
+      const candidates = weightedCandidates(validEntities, brand, now).slice(
+        0,
+        MAX_CANDIDATES_PER_BRAND
+      );
 
       for (const { entity, score } of candidates) {
         const pendingCount = await getPendingOfferCount(supabaseClient, entity.id);
@@ -135,7 +132,7 @@ serve(async (req) => {
 
         const offerType = pickOfferType(brand, entity);
         const terms = buildTerms(offerType, brand);
-        const expiresAt = randomExpiry();
+        const expiresAt = randomExpiry(terms.duration_days);
         const exclusivity = brand.exclusivity_pref || terms.exclusive === true;
         const payout = calculatePayout(brand, entity, offerType, score);
 
@@ -252,16 +249,15 @@ function isEntityEligible(entity: SponsorshipEntity, brand: SponsorshipBrand, no
   const notThrottled = !entity.last_offer_at ||
     new Date(entity.last_offer_at).getTime() < now.getTime() - ENTITY_THROTTLE_HOURS * 60 * 60 * 1000;
 
-  return fame >= brand.min_fame_threshold && hasFlags && notThrottled;
+  const belowDealCap = (entity.active_deals ?? 0) < (entity.max_deals ?? 0);
+
+  return fame >= brand.min_fame_threshold && hasFlags && notThrottled && belowDealCap;
 }
 
 function calculateMatchScore(entity: SponsorshipEntity, brand: SponsorshipBrand): number {
   const fame = entity.bands?.fame ?? 0;
   const brandWeight = normalizeBrandWeight(brand.size, brand.wealth_score);
-  const momentum =
-    (entity.fame_momentum ?? 0) * 0.5 +
-    (entity.event_attendance_score ?? 0) * 0.3 +
-    (entity.chart_momentum ?? 0) * 0.2;
+  const momentum = calculateMomentum(entity);
 
   return brandWeight * (1 + fame / 5000) * (1 + momentum / 100);
 }
@@ -291,6 +287,14 @@ function buildTerms(offerType: keyof typeof OFFER_TERM_PRESETS, brand: Sponsorsh
   };
 }
 
+function calculateMomentum(entity: SponsorshipEntity): number {
+  const fameDelta = entity.fame_momentum ?? 0;
+  const attendance = entity.event_attendance_score ?? 0;
+  const chartHeat = entity.chart_momentum ?? 0;
+
+  return fameDelta * 0.5 + attendance * 0.3 + chartHeat * 0.2;
+}
+
 function calculatePayout(
   brand: SponsorshipBrand,
   entity: SponsorshipEntity,
@@ -304,11 +308,46 @@ function calculatePayout(
   return Math.round(base * typeMultiplier * momentumBonus);
 }
 
-function randomExpiry(): Date {
+function randomExpiry(termDurationDays: number): Date {
   const expires = new Date();
-  const days = Math.floor(Math.random() * 7) + 5;
+  const windowStart = Math.max(3, Math.floor(termDurationDays / 4));
+  const windowEnd = Math.max(windowStart + 2, Math.min(termDurationDays, windowStart + 10));
+  const days = Math.floor(Math.random() * (windowEnd - windowStart + 1)) + windowStart;
   expires.setDate(expires.getDate() + days);
   return expires;
+}
+
+function weightedCandidates(
+  entities: SponsorshipEntity[],
+  brand: SponsorshipBrand,
+  now: Date
+): Array<{ entity: SponsorshipEntity; score: number }> {
+  const pool = entities
+    .filter((entity) => isEntityEligible(entity, brand, now))
+    .map((entity) => {
+      const score = calculateMatchScore(entity, brand);
+      const weight = score * (1 + calculateMomentum(entity) / 150);
+      return { entity, score, weight };
+    })
+    .filter((item) => item.weight > 0);
+
+  const selected: Array<{ entity: SponsorshipEntity; score: number }> = [];
+  const working = [...pool];
+
+  while (selected.length < MAX_CANDIDATES_PER_BRAND && working.length > 0) {
+    const totalWeight = working.reduce((sum, item) => sum + item.weight, 0);
+    let target = Math.random() * totalWeight;
+    const index = working.findIndex((item) => {
+      target -= item.weight;
+      return target <= 0;
+    });
+
+    const chosenIndex = index === -1 ? working.length - 1 : index;
+    const chosen = working.splice(chosenIndex, 1)[0];
+    selected.push({ entity: chosen.entity, score: chosen.score });
+  }
+
+  return selected;
 }
 
 async function getPendingOfferCount(
