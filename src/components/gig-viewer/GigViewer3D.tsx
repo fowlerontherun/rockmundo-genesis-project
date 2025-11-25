@@ -3,30 +3,85 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, Maximize2, Minimize2 } from "lucide-react";
+import { X, Maximize2, Minimize2, Music, Users } from "lucide-react";
 import { StageScene } from "./StageScene";
 import { CrowdLayer } from "./CrowdLayer";
 import { BandAvatars } from "./BandAvatars";
 import { LoadingScreen } from "./LoadingScreen";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/lib/supabase-types";
 
 interface GigViewer3DProps {
   gigId: string;
   onClose: () => void;
 }
 
+type GigOutcome = Database['public']['Tables']['gig_outcomes']['Row'];
+type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'];
+
 export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [currentSong, setCurrentSong] = useState("Opening Song");
+  const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [crowdMood, setCrowdMood] = useState(50);
+  const [gigOutcome, setGigOutcome] = useState<GigOutcome | null>(null);
+  const [songPerformances, setSongPerformances] = useState<SongPerformance[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch gig outcome and song performances
   useEffect(() => {
-    // Simulate song progression
+    const fetchGigData = async () => {
+      try {
+        const { data: outcome, error: outcomeError } = await supabase
+          .from('gig_outcomes')
+          .select('*, gig_song_performances(*)')
+          .eq('gig_id', gigId)
+          .single();
+
+        if (outcomeError) throw outcomeError;
+
+        setGigOutcome(outcome);
+        const performances = (outcome.gig_song_performances || []) as SongPerformance[];
+        setSongPerformances(performances.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        
+        // Set initial crowd mood based on first song or overall rating
+        if (performances.length > 0) {
+          const firstSongMood = Math.min(100, Math.max(0, (performances[0].performance_score / 25) * 100));
+          setCrowdMood(firstSongMood);
+        } else {
+          const initialMood = Math.min(100, Math.max(0, (outcome.overall_rating / 25) * 100));
+          setCrowdMood(initialMood);
+        }
+      } catch (error) {
+        console.error('Error fetching gig data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGigData();
+  }, [gigId]);
+
+  // Simulate song progression
+  useEffect(() => {
+    if (songPerformances.length === 0) return;
+
     const interval = setInterval(() => {
-      setCrowdMood(prev => Math.min(100, prev + Math.random() * 10 - 3));
-    }, 2000);
+      setCurrentSongIndex((prev) => {
+        const next = (prev + 1) % songPerformances.length;
+        
+        // Update crowd mood based on current song performance
+        const currentSong = songPerformances[next];
+        if (currentSong) {
+          const songMood = Math.min(100, Math.max(0, (currentSong.performance_score / 25) * 100));
+          setCrowdMood(songMood);
+        }
+        
+        return next;
+      });
+    }, 15000); // Change song every 15 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [songPerformances]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -38,23 +93,52 @@ export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <LoadingScreen />
+      </div>
+    );
+  }
+
+  const currentSong = songPerformances[currentSongIndex];
+  const crowdResponseLabel = currentSong?.crowd_response || "mixed";
+  const attendancePercentage = gigOutcome?.attendance_percentage || 70;
+
   return (
     <div className="fixed inset-0 z-50 bg-black">
       {/* HUD Overlay */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-start">
-        <Card className="bg-black/60 backdrop-blur-sm border-white/20 px-4 py-2">
-          <div className="text-white space-y-1">
-            <div className="text-sm font-oswald">Now Playing</div>
-            <div className="text-lg font-bebas">{currentSong}</div>
-            <div className="flex items-center gap-2 text-xs">
-              <span>Crowd Energy:</span>
-              <div className="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                  style={{ width: `${crowdMood}%` }}
-                />
+        <Card className="bg-black/60 backdrop-blur-sm border-white/20 px-4 py-3">
+          <div className="text-white space-y-3">
+            <div className="flex items-center gap-2">
+              <Music className="h-4 w-4 text-primary" />
+              <div>
+                <div className="text-xs text-white/60">Now Playing</div>
+                <div className="text-base font-bebas">{currentSong?.song_title || "Loading..."}</div>
+                <div className="text-xs text-white/40">
+                  Song {currentSongIndex + 1} of {songPerformances.length}
+                </div>
               </div>
-              <span>{Math.round(crowdMood)}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              <div className="space-y-1">
+                <div className="text-xs text-white/60">Crowd Energy</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-32 h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 transition-all duration-1000"
+                      style={{ width: `${crowdMood}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium">{Math.round(crowdMood)}%</span>
+                </div>
+                <div className="text-xs text-white/50 capitalize">{crowdResponseLabel}</div>
+              </div>
+            </div>
+            <div className="text-xs text-white/40">
+              Attendance: {Math.round(attendancePercentage)}% capacity
             </div>
           </div>
         </Card>
@@ -109,7 +193,7 @@ export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
           <CrowdLayer crowdMood={crowdMood} />
           <BandAvatars gigId={gigId} />
 
-          {/* Controls (disabled for now to maintain POV) */}
+          {/* Controls (limited for POV feel) */}
           <OrbitControls
             enableZoom={false}
             enablePan={false}
