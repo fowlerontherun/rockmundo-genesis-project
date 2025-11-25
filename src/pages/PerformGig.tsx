@@ -11,6 +11,7 @@ import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
+import { GigViewer3D } from '@/components/gig-viewer/GigViewer3D';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
@@ -35,6 +36,7 @@ export default function PerformGig() {
   const [crewCount, setCrewCount] = useState(0);
   const [bandChemistry, setBandChemistry] = useState(0);
   const [showOutcome, setShowOutcome] = useState(false);
+  const [show3DViewer, setShow3DViewer] = useState(false);
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
@@ -87,8 +89,8 @@ export default function PerformGig() {
             .eq('setlist_id', gigData.setlist_id)
             .order('position'),
           supabase
-            .from('band_song_familiarity')
-            .select('song_id, familiarity_percentage, familiarity_minutes')
+            .from('song_rehearsals')
+            .select('song_id, rehearsal_level')
             .eq('band_id', gigData.band_id),
           supabase
             .from('band_stage_equipment')
@@ -286,14 +288,39 @@ export default function PerformGig() {
   };
 
   const handleStartGig = async () => {
-    if (gigId) {
-      startGigMutation.mutate(gigId, {
-        onSuccess: () => {
-          // Reload gig data after starting
-          loadGig();
-        }
+    if (!gigId) return;
+    
+    // Check for scheduling conflicts before starting
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (gig) {
+      const gigStart = new Date(gig.scheduled_date);
+      const gigEnd = new Date(gigStart.getTime() + 2 * 60 * 60 * 1000); // Assume 2 hour gig
+
+      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+        p_user_id: user.id,
+        p_start: gigStart.toISOString(),
+        p_end: gigEnd.toISOString(),
+        p_exclude_id: null,
       });
+
+      if (hasConflict) {
+        toast({
+          title: 'Schedule Conflict',
+          description: 'You have another activity scheduled during this time.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
+    
+    startGigMutation.mutate(gigId, {
+      onSuccess: () => {
+        // Reload gig data after starting
+        loadGig();
+      }
+    });
   };
 
   // All hooks must be called before any early returns
@@ -554,12 +581,22 @@ export default function PerformGig() {
               <Button variant="outline" onClick={() => navigate('/gig-booking')}>
                 Back to Schedule
               </Button>
+              <Button variant="secondary" onClick={() => setShow3DViewer(true)}>
+                Watch 3D Gig
+              </Button>
               <Button onClick={() => setShowOutcome(true)}>
                 View Performance Report
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {show3DViewer && outcome && (
+        <GigViewer3D
+          gigId={gig.id}
+          onClose={() => setShow3DViewer(false)}
+        />
       )}
 
       <GigOutcomeReport

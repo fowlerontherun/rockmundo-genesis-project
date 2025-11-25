@@ -14,6 +14,7 @@ import { Calendar, Music, Users, DollarSign, Plus, Trash2, Edit } from "lucide-r
 import { format } from "date-fns";
 import { MUSIC_GENRES } from "@/data/genres";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FestivalInviteManager } from "@/components/festivals/FestivalInviteManager";
 
 export default function FestivalsAdminPage() {
   const { toast } = useToast();
@@ -58,15 +59,19 @@ export default function FestivalsAdminPage() {
   // Create festival
   const createMutation = useMutation({
     mutationFn: async (festivalData: any) => {
+      if (!festivalData.city_id) {
+        throw new Error("Please select a city for the festival");
+      }
+      
       const { data, error } = await supabase
         .from("game_events")
         .insert({
           title: festivalData.title,
           event_type: "festival",
-          start_date: festivalData.start_date,
-          end_date: festivalData.end_date,
+          start_date: `${festivalData.start_date}T00:00:00Z`,
+          end_date: `${festivalData.end_date}T23:59:59Z`,
           description: festivalData.description,
-          metadata: {
+          requirements: {
             city_id: festivalData.city_id,
             capacity: parseInt(festivalData.capacity),
             ticket_price: parseInt(festivalData.ticket_price),
@@ -182,27 +187,27 @@ export default function FestivalsAdminPage() {
                 <p className="text-sm">{festival.description}</p>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Location</p>
-                    <p className="font-medium">{festival.metadata?.location || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Capacity</p>
-                    <p className="font-medium">{festival.metadata?.capacity?.toLocaleString() || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Ticket Price</p>
-                    <p className="font-medium">${festival.metadata?.ticket_price || 0}</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="font-medium">{festival.requirements?.location || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Capacity</p>
+                  <p className="font-medium">{festival.requirements?.capacity?.toLocaleString() || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ticket Price</p>
+                  <p className="font-medium">${festival.requirements?.ticket_price || 0}</p>
+                </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Participants</p>
                     <p className="font-medium">{festival.festival_participants?.length || 0}</p>
                   </div>
                 </div>
 
-                {festival.metadata?.genres && (
+                {festival.requirements?.genres && (
                   <div className="flex gap-2 flex-wrap">
-                    {festival.metadata.genres.map((genre: string) => (
+                    {festival.requirements.genres.map((genre: string) => (
                       <Badge key={genre} variant="secondary">
                         {genre}
                       </Badge>
@@ -253,6 +258,8 @@ export default function FestivalsAdminPage() {
                     </div>
                   </div>
                 )}
+
+                <FestivalInviteManager festivalId={festival.id} />
               </CardContent>
             </Card>
           ))}
@@ -268,10 +275,10 @@ function FestivalForm({ onSubmit, initialData }: { onSubmit: (data: any) => void
     start_date: initialData?.start_date?.split("T")[0] || "",
     end_date: initialData?.end_date?.split("T")[0] || "",
     description: initialData?.description || "",
-    city_id: initialData?.metadata?.city_id || "",
-    capacity: initialData?.metadata?.capacity || "",
-    ticket_price: initialData?.metadata?.ticket_price || "",
-    genres: initialData?.metadata?.genres || [],
+    city_id: initialData?.requirements?.city_id || "",
+    capacity: initialData?.requirements?.capacity || "",
+    ticket_price: initialData?.requirements?.ticket_price || "",
+    genres: initialData?.requirements?.genres || [],
   });
 
   const { data: cities } = useQuery({
