@@ -259,6 +259,20 @@ const adminSubSections = [
     Icon: Theater,
   },
   {
+    title: "Band Avatars",
+    description: "Configure 3D avatars and animations for band members.",
+    href: "/admin/band-avatars",
+    action: "Manage avatars",
+    Icon: Users,
+  },
+  {
+    title: "Crowd Behavior",
+    description: "Define crowd animation presets and mood states for 3D gigs.",
+    href: "/admin/crowd-behavior",
+    action: "Manage crowd",
+    Icon: Users,
+  },
+  {
     title: "Crew Hiring Catalog",
     description: "Curate the professionals available for hire so bands can build their touring teams.",
     href: "/admin/crew",

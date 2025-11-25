@@ -119,6 +119,8 @@ const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog")
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
 const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphicsAdmin"));
 const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
+const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
+const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
@@ -303,6 +305,9 @@ function App() {
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
+                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
+                    <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
+                    <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="radio" element={<Radio />} />
                     <Route path="music-videos" element={<MusicVideos />} />
