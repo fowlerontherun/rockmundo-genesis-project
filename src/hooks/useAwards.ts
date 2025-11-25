@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  enforceVoteCap,
+  validateNominationSubmission,
+} from "@/lib/api/awards";
 import { toast } from "sonner";
 
 export interface AwardShow {
@@ -121,6 +125,29 @@ export const useAwards = (userId?: string, bandId?: string) => {
     return data as AwardNomination[];
   };
 
+  const fetchVoteCountForShow = async (showId: string) => {
+    if (!userId) return 0;
+
+    const { data: nominations, error: nominationsError } = await (supabase as any)
+      .from("award_nominations")
+      .select("id")
+      .eq("award_show_id", showId);
+
+    if (nominationsError) throw nominationsError;
+
+    const nominationIds = (nominations || []).map((nomination: { id: string }) => nomination.id);
+    if (nominationIds.length === 0) return 0;
+
+    const { count, error } = await (supabase as any)
+      .from("award_votes")
+      .select("id", { count: "exact", head: true })
+      .eq("voter_id", userId)
+      .in("nomination_id", nominationIds);
+
+    if (error) throw error;
+    return count || 0;
+  };
+
   // Submit nomination
   const submitNomination = useMutation({
     mutationFn: async (nomination: {
@@ -133,6 +160,8 @@ export const useAwards = (userId?: string, bandId?: string) => {
       submission_data?: any;
     }) => {
       if (!userId) throw new Error("User not authenticated");
+
+      validateNominationSubmission(nomination);
 
       const { data, error } = await (supabase as any)
         .from("award_nominations")
@@ -159,9 +188,20 @@ export const useAwards = (userId?: string, bandId?: string) => {
   const castVote = useMutation({
     mutationFn: async (params: {
       nomination_id: string;
+      show_id: string;
       weight?: number;
     }) => {
       if (!userId) throw new Error("User not authenticated");
+
+      const { count, error: countError } = await (supabase as any)
+        .from("award_votes")
+        .select("*", { count: "exact", head: true })
+        .eq("nomination_id", params.nomination_id)
+        .eq("voter_id", userId);
+
+      if (countError) throw countError;
+
+      enforceVoteCap(count ?? 0, 3);
 
       const { data, error } = await (supabase as any)
         .from("award_votes")
@@ -182,12 +222,54 @@ export const useAwards = (userId?: string, bandId?: string) => {
       }
       return data;
     },
-    onSuccess: () => {
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ["award-show-nominations", params.show_id] });
+
+      const voteCountKey = ["award-show-vote-count", params.show_id, userId];
+      const previousNominations = queryClient.getQueryData<AwardNomination[]>(["award-show-nominations", params.show_id]);
+      const previousVoteCount = queryClient.getQueryData<number>(voteCountKey);
+
+      if (previousNominations) {
+        const updatedNominations = previousNominations.map((nomination) =>
+          nomination.id === params.nomination_id
+            ? { ...nomination, vote_count: (nomination.vote_count || 0) + 1 }
+            : nomination
+        );
+        queryClient.setQueryData(["award-show-nominations", params.show_id], updatedNominations);
+      }
+
+      if (typeof previousVoteCount === "number") {
+        queryClient.setQueryData(voteCountKey, Math.min(previousVoteCount + 1, 5));
+      }
+
+      return { previousNominations, previousVoteCount, showId: params.show_id };
+    },
+    onSuccess: (_data, params) => {
       queryClient.invalidateQueries({ queryKey: ["award-nominations"] });
+      queryClient.invalidateQueries({ queryKey: ["award-show-nominations", params.show_id] });
+      queryClient.invalidateQueries({ queryKey: ["award-show-vote-count", params.show_id, userId] });
       toast.success("Vote cast successfully!");
     },
-    onError: (error: any) => {
+    onError: (error: any, params, context) => {
+      if (context?.previousNominations) {
+        queryClient.setQueryData(
+          ["award-show-nominations", context.showId],
+          context.previousNominations
+        );
+      }
+
+      if (typeof context?.previousVoteCount === "number") {
+        queryClient.setQueryData(
+          ["award-show-vote-count", context.showId, userId],
+          context.previousVoteCount
+        );
+      }
+
       toast.error("Failed to cast vote", { description: error.message });
+    },
+    onSettled: (_data, _error, params) => {
+      queryClient.invalidateQueries({ queryKey: ["award-show-nominations", params.show_id] });
+      queryClient.invalidateQueries({ queryKey: ["award-show-vote-count", params.show_id, userId] });
     },
   });
 
@@ -286,6 +368,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
     wins,
     winsLoading,
     fetchShowNominations,
+    fetchVoteCountForShow,
     submitNomination: submitNomination.mutate,
     castVote: castVote.mutate,
     bookPerformance: bookPerformance.mutate,

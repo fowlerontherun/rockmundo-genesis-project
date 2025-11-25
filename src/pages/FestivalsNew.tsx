@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import { useGameData } from "@/hooks/useGameData";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useFestivals } from "@/hooks/useFestivals";
@@ -23,7 +24,8 @@ import {
   Clock,
   DollarSign,
   Trophy,
-  TrendingUp
+  TrendingUp,
+  Loader2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -47,6 +49,7 @@ export default function Festivals() {
   const { data: bandData } = usePrimaryBand();
   const band = bandData?.bands;
   const userId = profile?.user_id;
+  const { toast } = useToast();
 
   const { 
     festivals, 
@@ -59,26 +62,75 @@ export default function Festivals() {
     performAtFestival,
     isApplying,
     isWithdrawing,
-    isPerforming 
+    isPerforming
   } = useFestivals(userId, band?.id);
 
   const [selectedFestival, setSelectedFestival] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("prime");
   const [selectedStage, setSelectedStage] = useState<string>("main");
 
-  const handleApply = () => {
-    if (!selectedFestival || !band) return;
+  const [activeAction, setActiveAction] = useState<{ type: "apply" | "withdraw" | "perform" | null; id: string | null }>({
+    type: null,
+    id: null,
+  });
 
-    applyToFestival({
-      festival_id: selectedFestival,
-      band_id: band.id,
-      performance_slot: selectedSlot,
-      stage: selectedStage,
-      setlist_songs: [], // Can be updated later
-      payment_amount: 5000,
-    });
+  const handleApply = async (festivalId: string) => {
+    if (!band) {
+      toast({ title: "Band required", description: "Join or create a band before applying." });
+      return;
+    }
 
-    setSelectedFestival("");
+    setActiveAction({ type: "apply", id: festivalId });
+
+    try {
+      await applyToFestival.mutateAsync({
+        festival_id: festivalId,
+        band_id: band.id,
+        performance_slot: selectedSlot,
+        stage: selectedStage,
+        setlist_songs: [],
+        payment_amount: 5000,
+      });
+      setSelectedFestival("");
+    } catch (error: any) {
+      toast({
+        title: "Application failed",
+        description: error?.message ?? "Unable to submit this festival application.",
+        variant: "destructive",
+      });
+    } finally {
+      setActiveAction({ type: null, id: null });
+    }
+  };
+
+  const handleWithdraw = async (participationId: string) => {
+    setActiveAction({ type: "withdraw", id: participationId });
+    try {
+      await withdrawFromFestival.mutateAsync(participationId);
+    } catch (error: any) {
+      toast({
+        title: "Unable to withdraw",
+        description: error?.message ?? "Try again or refresh before withdrawing.",
+        variant: "destructive",
+      });
+    } finally {
+      setActiveAction({ type: null, id: null });
+    }
+  };
+
+  const handlePerform = async (participationId: string) => {
+    setActiveAction({ type: "perform", id: participationId });
+    try {
+      await performAtFestival.mutateAsync(participationId);
+    } catch (error: any) {
+      toast({
+        title: "Performance failed",
+        description: error?.message ?? "We couldn't start this set. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActiveAction({ type: null, id: null });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -306,12 +358,18 @@ export default function Festivals() {
                                   </div>
                                 </div>
 
-                                <Button 
-                                  onClick={handleApply} 
-                                  disabled={isApplying}
+                                <Button
+                                  onClick={() => handleApply(festival.id)}
+                                  disabled={isApplying || (activeAction.type === "apply" && activeAction.id !== festival.id)}
                                   className="w-full"
                                 >
-                                  Submit Application
+                                  {isApplying && activeAction.id === festival.id ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...
+                                    </>
+                                  ) : (
+                                    "Submit Application"
+                                  )}
                                 </Button>
                               </div>
                             </DialogContent>
@@ -380,19 +438,43 @@ export default function Festivals() {
 
                       <div className="flex gap-2">
                         {participation.status === "confirmed" && (
-                          <Button onClick={() => performAtFestival(participation.id)} disabled={isPerforming}>
-                            <Mic className="h-4 w-4 mr-2" />
-                            Perform Now
+                          <Button
+                            onClick={() => handlePerform(participation.id)}
+                            disabled={
+                              isPerforming ||
+                              (activeAction.type === "perform" && activeAction.id === participation.id)
+                            }
+                          >
+                            {isPerforming && activeAction.id === participation.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Starting...
+                              </>
+                            ) : (
+                              <>
+                                <Mic className="h-4 w-4 mr-2" />
+                                Perform Now
+                              </>
+                            )}
                           </Button>
                         )}
                         
                         {(participation.status === "pending" || participation.status === "confirmed") && (
-                          <Button 
-                            variant="destructive" 
-                            onClick={() => withdrawFromFestival(participation.id)}
-                            disabled={isWithdrawing}
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleWithdraw(participation.id)}
+                            disabled={
+                              isWithdrawing ||
+                              (activeAction.type === "withdraw" && activeAction.id === participation.id)
+                            }
                           >
-                            Withdraw
+                            {isWithdrawing && activeAction.id === participation.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Withdrawing...
+                              </>
+                            ) : (
+                              "Withdraw"
+                            )}
                           </Button>
                         )}
                       </div>
