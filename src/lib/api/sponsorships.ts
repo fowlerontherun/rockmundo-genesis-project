@@ -1,5 +1,13 @@
-export type SponsorableType = "tour" | "festival" | "venue";
+export type SponsorableType = "tour" | "festival" | "venue" | "band" | "character";
 export type FameTier = "local" | "regional" | "national" | "global";
+
+export type SponsorshipOfferStatus = "pending" | "accepted" | "expired" | "declined";
+export type SponsorshipContractStatus =
+  | "pending"
+  | "active"
+  | "completed"
+  | "terminated"
+  | "cancelled";
 
 interface PayoutRange {
   min: number;
@@ -31,6 +39,18 @@ const BASE_PAYOUT_RANGES: Record<SponsorableType, Record<FameTier, PayoutRange>>
     regional: { min: 900, max: 2200 },
     national: { min: 2200, max: 4500 },
     global: { min: 4500, max: 9000 },
+  },
+  band: {
+    local: { min: 1000, max: 2500 },
+    regional: { min: 2800, max: 6500 },
+    national: { min: 6500, max: 14000 },
+    global: { min: 14000, max: 26000 },
+  },
+  character: {
+    local: { min: 600, max: 1400 },
+    regional: { min: 1400, max: 3200 },
+    national: { min: 3200, max: 7500 },
+    global: { min: 7500, max: 14000 },
   },
 };
 
@@ -80,6 +100,70 @@ export interface SponsorshipContract {
   payout: number;
   fameTier: FameTier;
   signedAt: string;
+  status?: SponsorshipContractStatus;
+  sponsorableId?: string;
+  category?: string;
+  exclusive?: boolean;
+}
+
+export interface ManagedSponsorshipOffer extends SponsorshipOffer {
+  sponsorableId: string;
+  brandId: string;
+  brandName: string;
+  category: string;
+  exclusive: boolean;
+  deadline: string;
+  status: SponsorshipOfferStatus;
+}
+
+export interface ManagedSponsorshipContract extends SponsorshipContract {
+  sponsorableId: string;
+  brandId?: string;
+  brandName?: string;
+  category?: string;
+  exclusive?: boolean;
+  status: SponsorshipContractStatus;
+}
+
+export type SponsorshipHistoryEvent =
+  | "offer_issued"
+  | "offer_cap_blocked"
+  | "offer_duplicate_blocked"
+  | "offer_exclusivity_blocked"
+  | "offer_expired";
+
+export interface SponsorshipHistoryEntry {
+  id: string;
+  sponsorableId: string;
+  sponsorableType: SponsorableType;
+  offerId?: string;
+  contractId?: string;
+  event: SponsorshipHistoryEvent;
+  occurredAt: string;
+  details: string;
+}
+
+export interface SponsorshipLifecycleState {
+  offers: ManagedSponsorshipOffer[];
+  contracts: ManagedSponsorshipContract[];
+  history: SponsorshipHistoryEntry[];
+}
+
+export interface IssueSponsorshipOfferInput
+  extends Omit<PayoutCalculationInput, "random"> {
+  sponsorableId: string;
+  brandId: string;
+  brandName: string;
+  category: string;
+  exclusive?: boolean;
+  deadline: string;
+  random?: () => number;
+}
+
+export interface IssueSponsorshipOfferResult {
+  issuedOffer?: ManagedSponsorshipOffer;
+  updatedState: SponsorshipLifecycleState;
+  blockedReason?: string;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -113,7 +197,12 @@ const calculateBrandMultiplier = (brandWealth: number, brandSize: number) => {
 };
 
 const calculateReachImpactMultiplier = (reach: number, impact: number, sponsorableType: SponsorableType) => {
-  const reachWeight = sponsorableType === "tour" ? 0.3 : sponsorableType === "festival" ? 0.25 : 0.2;
+  const reachWeight =
+    sponsorableType === "tour" || sponsorableType === "band"
+      ? 0.3
+      : sponsorableType === "festival"
+        ? 0.25
+        : 0.2;
   const impactWeight = sponsorableType === "festival" ? 0.3 : 0.2;
   const reachContribution = clamp(reach, 0, 1) * reachWeight;
   const impactContribution = clamp(impact, 0, 1) * impactWeight;
@@ -197,5 +286,168 @@ export const acceptSponsorshipOffer = (
     payout: offer.payout,
     fameTier: offer.fameTier,
     signedAt: new Date().toISOString(),
+    status: "active",
+  };
+};
+
+const createHistoryEntry = (
+  sponsorableId: string,
+  sponsorableType: SponsorableType,
+  event: SponsorshipHistoryEvent,
+  details: string,
+  offerId?: string,
+  contractId?: string
+): SponsorshipHistoryEntry => {
+  return {
+    id: `${event}-${offerId ?? contractId ?? Date.now()}`,
+    sponsorableId,
+    sponsorableType,
+    event,
+    occurredAt: new Date().toISOString(),
+    details,
+    offerId,
+    contractId,
+  };
+};
+
+const hasExclusiveConflict = (
+  input: IssueSponsorshipOfferInput,
+  contracts: ManagedSponsorshipContract[]
+) => {
+  return contracts.some(
+    (contract) =>
+      contract.sponsorableId === input.sponsorableId &&
+      contract.sponsorableType === input.sponsorableType &&
+      contract.status === "active" &&
+      (contract.exclusive || contract.category === input.category)
+  );
+};
+
+const hasDuplicatePendingOffer = (
+  input: IssueSponsorshipOfferInput,
+  offers: ManagedSponsorshipOffer[]
+) => {
+  return offers.some(
+    (offer) =>
+      offer.sponsorableId === input.sponsorableId &&
+      offer.sponsorableType === input.sponsorableType &&
+      offer.status === "pending" &&
+      offer.brandId === input.brandId
+  );
+};
+
+export const expireStaleOffers = (
+  state: SponsorshipLifecycleState,
+  now = new Date()
+): SponsorshipLifecycleState => {
+  const expiredEntries: SponsorshipHistoryEntry[] = [];
+
+  const offers = state.offers.map((offer) => {
+    if (offer.status !== "pending") return offer;
+
+    const deadline = new Date(offer.deadline);
+    if (deadline.getTime() < now.getTime()) {
+      expiredEntries.push(
+        createHistoryEntry(
+          offer.sponsorableId,
+          offer.sponsorableType,
+          "offer_expired",
+          `Offer ${offer.id} expired at ${offer.deadline}`,
+          offer.id,
+          undefined
+        )
+      );
+      return { ...offer, status: "expired" as const };
+    }
+    return offer;
+  });
+
+  return {
+    ...state,
+    offers,
+    history: [...state.history, ...expiredEntries],
+  };
+};
+
+export const issueSponsorshipOfferWithGuardrails = (
+  id: string,
+  input: IssueSponsorshipOfferInput,
+  state: SponsorshipLifecycleState
+): IssueSponsorshipOfferResult => {
+  const baseState = expireStaleOffers(state);
+  const history = [...baseState.history];
+
+  const activeCharacterDeals = baseState.contracts.filter(
+    (contract) => contract.sponsorableType === "character" && contract.status === "active"
+  ).length;
+
+  if (input.sponsorableType === "character" && activeCharacterDeals >= 3) {
+    const entry = createHistoryEntry(
+      input.sponsorableId,
+      input.sponsorableType,
+      "offer_cap_blocked",
+      "Character sponsorship cap reached"
+    );
+    return {
+      blockedReason: "character_cap",
+      updatedState: { ...baseState, history: [...history, entry] },
+    };
+  }
+
+  if (hasDuplicatePendingOffer(input, baseState.offers)) {
+    const entry = createHistoryEntry(
+      input.sponsorableId,
+      input.sponsorableType,
+      "offer_duplicate_blocked",
+      "Duplicate pending offer detected",
+      id
+    );
+    return {
+      blockedReason: "duplicate_offer",
+      updatedState: { ...baseState, history: [...history, entry] },
+    };
+  }
+
+  if (input.exclusive && hasExclusiveConflict(input, baseState.contracts)) {
+    const entry = createHistoryEntry(
+      input.sponsorableId,
+      input.sponsorableType,
+      "offer_exclusivity_blocked",
+      "Exclusive offer conflicts with active contract",
+      id
+    );
+    return {
+      blockedReason: "exclusivity_conflict",
+      updatedState: { ...baseState, history: [...history, entry] },
+    };
+  }
+
+  const offer = createSponsorshipOffer(id, input);
+  const managedOffer: ManagedSponsorshipOffer = {
+    ...offer,
+    sponsorableId: input.sponsorableId,
+    brandId: input.brandId,
+    brandName: input.brandName,
+    category: input.category,
+    exclusive: input.exclusive ?? false,
+    deadline: input.deadline,
+    status: "pending",
+  };
+
+  const issuedHistory = createHistoryEntry(
+    input.sponsorableId,
+    input.sponsorableType,
+    "offer_issued",
+    `Issued offer ${id} for ${input.category}`,
+    id
+  );
+
+  return {
+    issuedOffer: managedOffer,
+    updatedState: {
+      ...baseState,
+      offers: [...baseState.offers, managedOffer],
+      history: [...history, issuedHistory],
+    },
   };
 };
