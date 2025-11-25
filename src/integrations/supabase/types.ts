@@ -80,6 +80,124 @@ export type Database = {
         }
         Relationships: []
       }
+      community_charity_campaigns: {
+        Row: {
+          beneficiary: string
+          created_at: string | null
+          end_date: string | null
+          goal_amount: number
+          id: string
+          impact_focus: string | null
+          slug: string
+          start_date: string | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          beneficiary: string
+          created_at?: string | null
+          end_date?: string | null
+          goal_amount: number
+          id?: string
+          impact_focus?: string | null
+          slug: string
+          start_date?: string | null
+          status?: string
+          summary: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          beneficiary?: string
+          created_at?: string | null
+          end_date?: string | null
+          goal_amount?: number
+          id?: string
+          impact_focus?: string | null
+          slug?: string
+          start_date?: string | null
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      community_charity_donations: {
+        Row: {
+          amount: number
+          campaign_id: string
+          donated_at: string | null
+          donor_name: string | null
+          id: string
+          message: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          donated_at?: string | null
+          donor_name?: string | null
+          id?: string
+          message?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          donated_at?: string | null
+          donor_name?: string | null
+          id?: string
+          message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_charity_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "community_charity_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_charity_impact_metrics: {
+        Row: {
+          campaign_id: string
+          description: string | null
+          id: string
+          metric_label: string
+          metric_unit: string | null
+          metric_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          description?: string | null
+          id?: string
+          metric_label: string
+          metric_unit?: string | null
+          metric_value: number
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          description?: string | null
+          id?: string
+          metric_label?: string
+          metric_unit?: string | null
+          metric_value?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_charity_impact_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "community_charity_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_song_gifts: {
         Row: {
           created_at: string | null

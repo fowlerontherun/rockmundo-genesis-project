@@ -152,6 +152,7 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
+const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -234,8 +235,9 @@ function App() {
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
-                    <Route path="festivals" element={<FestivalsNew />} />
-                    <Route path="awards" element={<Awards />} />
+                    <Route path="community/charity" element={<CharityPage />} />
+                    <Route path="festivals" element={<Festivals />} />
+                    <Route path="awards" element={<AwardShows />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
