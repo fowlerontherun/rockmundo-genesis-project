@@ -11,17 +11,14 @@ export interface EquipmentItemRecord {
   id: string;
   name: string;
   category: string;
-  gear_category_id: string;
-  gear_category?: GearCategory | null;
   subcategory: string | null;
-  price_cash: number;
-  price_fame: number;
+  price: number;
   rarity: string | null;
   description: string | null;
   stat_boosts: Record<string, number> | null;
   stock: number | null;
-  is_stock_tracked: boolean;
-  auto_restock: boolean;
+  image_url?: string | null;
+  created_at?: string;
 }
 
 export type EquipmentCurrencyCost = {

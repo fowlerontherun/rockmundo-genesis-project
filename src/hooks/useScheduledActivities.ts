@@ -55,20 +55,53 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
 
-      const { data, error } = await (supabase as any)
+      // Fetch scheduled activities
+      const { data: scheduledData } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', userId)
         .gte('scheduled_start', dayStart.toISOString())
         .lte('scheduled_start', dayEnd.toISOString())
-        .in('status', ['scheduled', 'in_progress', 'completed'])
-        .order('scheduled_start', { ascending: true });
+        .in('status', ['scheduled', 'in_progress', 'completed']);
 
-      if (error) throw error;
-      return (data || []) as ScheduledActivity[];
+      // Fetch gigs
+      const { data: gigs } = await supabase
+        .from('gigs')
+        .select('*, venues:venue_id(name, cities(name)), bands:band_id(name)')
+        .or(`user_id.eq.${userId},band_id.in.(select band_id from band_members where user_id='${userId}')`)
+        .gte('performance_date', dayStart.toISOString())
+        .lte('performance_date', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // Fetch rehearsals
+      const { data: rehearsals } = await supabase
+        .from('band_rehearsals')
+        .select('*, rehearsal_rooms(name, studio_name), bands:band_id(name)')
+        .gte('scheduled_start', dayStart.toISOString())
+        .lte('scheduled_start', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // Fetch recordings
+      const { data: recordings } = await supabase
+        .from('recording_sessions')
+        .select('*, city_studios(name), songs:song_id(title)')
+        .eq('user_id', userId)
+        .gte('scheduled_start', dayStart.toISOString())
+        .lte('scheduled_start', dayEnd.toISOString())
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // Convert to unified format
+      const activities: ScheduledActivity[] = [
+        ...(scheduledData || []),
+        ...(gigs || []).map((g: any) => ({ id: g.id, user_id: userId, profile_id: userId, activity_type: 'gig' as const, scheduled_start: g.performance_date, scheduled_end: g.performance_date, status: g.status, title: `Gig: ${g.venues?.name}`, linked_gig_id: g.id })),
+        ...(rehearsals || []).map((r: any) => ({ id: r.id, user_id: userId, profile_id: userId, activity_type: 'rehearsal' as const, scheduled_start: r.scheduled_start, scheduled_end: r.scheduled_end, status: r.status, title: `Rehearsal: ${r.bands?.name}`, linked_rehearsal_id: r.id })),
+        ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: userId, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: `Recording: ${s.songs?.title}`, linked_recording_id: s.id })),
+      ];
+
+      return activities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
     },
     enabled: !!userId,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 60000,
   });
 }
 

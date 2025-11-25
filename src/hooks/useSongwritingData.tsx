@@ -288,6 +288,24 @@ export const useSongwritingData = (userId?: string | null) => {
     mutationFn: async ({ projectId }: StartSessionInput) => {
       if (!userId) throw new Error("User ID required");
       
+      // Check for scheduling conflicts before starting
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      
+      const now = new Date();
+      const sessionEnd = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+      
+      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+        p_user_id: user.id,
+        p_start: now.toISOString(),
+        p_end: sessionEnd.toISOString(),
+        p_exclude_id: null,
+      });
+
+      if (hasConflict) {
+        throw new Error('You have another activity scheduled during this time. Please check your schedule.');
+      }
+      
       // Fixed 3-hour duration
       const lockDuration = 3 * 60 * 60 * 1000;
       const lockedUntil = new Date(Date.now() + lockDuration).toISOString();
@@ -302,7 +320,7 @@ export const useSongwritingData = (userId?: string | null) => {
       
       // Create session with locked_until timestamp
       const sessionStart = new Date();
-      const sessionEnd = new Date(sessionStart.getTime() + lockDuration);
+      const sessionEndTime = new Date(sessionStart.getTime() + lockDuration);
       
       const { data, error } = await supabase
         .from('songwriting_sessions')
@@ -310,7 +328,7 @@ export const useSongwritingData = (userId?: string | null) => {
           project_id: projectId,
           user_id: userId,
           session_start: sessionStart.toISOString(),
-          locked_until: sessionEnd.toISOString(),
+          locked_until: sessionEndTime.toISOString(),
           music_progress_gained: 0,
           lyrics_progress_gained: 0,
           xp_earned: 0,
@@ -499,10 +517,32 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Pause session (stubbed)
+  // Pause session
   const pauseSession = useMutation({ 
     mutationFn: async ({ sessionId }: { sessionId: string }) => {
-      return { sessionId };
+      const { data, error } = await supabase
+        .from("songwriting_sessions")
+        .update({ 
+          session_end: new Date().toISOString(),
+          notes: "Session paused by user"
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songwriting-projects"] });
+      toast({ title: "Session paused successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Failed to pause session",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
     }
   });
 

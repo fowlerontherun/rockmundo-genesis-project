@@ -124,7 +124,7 @@ export const useTwaaterFeed = (viewerAccountId?: string) => {
     queryKey: ["twaater-feed", viewerAccountId],
     queryFn: async () => {
       if (!viewerAccountId) {
-        // Public feed
+        // Public feed with mix of real and bot posts
         const { data, error } = await supabase
           .from("twaats")
           .select(`

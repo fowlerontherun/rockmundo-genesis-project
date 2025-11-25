@@ -1,72 +1,23 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useTwaaterFeed } from "@/hooks/useTwaats";
+import { useTwaaterMentions } from "@/hooks/useTwaaterMentions";
 import { TwaatCard } from "./TwaatCard";
 import { Loader2 } from "lucide-react";
-
-interface TwaatWithDetails {
-  id: string;
-  body: string;
-  created_at: string;
-  linked_type: string | null;
-  outcome_code: string | null;
-  account: {
-    id: string;
-    handle: string;
-    display_name: string;
-    verified: boolean;
-    owner_type: string;
-  };
-  metrics: {
-    likes: number;
-    replies: number;
-    retwaats: number;
-    impressions: number;
-    clicks: number;
-    rsvps: number;
-    sales: number;
-  };
-}
+import { Card, CardContent } from "@/components/ui/card";
 
 interface TwaaterFeedProps {
-  feed: TwaatWithDetails[];
-  isLoading: boolean;
-  viewerAccountId: string;
+  viewerAccountId?: string;
+  feedType?: "feed" | "mentions";
 }
 
-export const TwaaterFeed = ({ feed, isLoading, viewerAccountId }: TwaaterFeedProps) => {
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedProps) => {
+  const { feed, isLoading: feedLoading } = useTwaaterFeed(feedType === "feed" ? viewerAccountId : undefined);
+  const { mentions, isLoading: mentionsLoading } = useTwaaterMentions(feedType === "mentions" ? viewerAccountId : undefined);
 
-  if (!feed || feed.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-2">
-            <p className="text-muted-foreground">No twaats yet</p>
-            <p className="text-sm text-muted-foreground">
-              Start posting or follow other artists to see content here!
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const isLoading = feedType === "feed" ? feedLoading : mentionsLoading;
+  const items = feedType === "feed" ? feed : mentions?.map(m => m.twaat).filter(Boolean);
 
-  return (
-    <div>
-      {feed.map((twaat) => (
-        <TwaatCard
-          key={twaat.id}
-          twaat={twaat}
-          viewerAccountId={viewerAccountId}
-        />
-      ))}
-    </div>
-  );
+  if (isLoading) return <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>;
+  if (!items?.length) return <Card><CardContent className="py-12 text-center text-muted-foreground">No {feedType === "mentions" ? "mentions" : "twaats"} yet</CardContent></Card>;
+
+  return <div>{items.map((twaat: any) => twaat && <TwaatCard key={twaat.id} twaat={twaat} viewerAccountId={viewerAccountId || ""} />)}</div>;
 };

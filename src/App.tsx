@@ -19,7 +19,6 @@ const RedirectTo = ({ to }: { to: string }) => {
   return null;
 };
 import WorldPulsePage from "./pages/WorldPulse";
-import MusicHub from "./pages/MusicHub";
 import BandManager from "./pages/BandManager";
 import InventoryManager from "./pages/InventoryManager";
 
@@ -27,12 +26,14 @@ const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const OffersDashboard = lazyWithRetry(() => import("./pages/OffersDashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
-const Performance = lazyWithRetry(() => import("./pages/Performance"));
+
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 // Equipment store pages removed - replaced by EnhancedEquipmentStore
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
+const Onboarding = lazyWithRetry(() => import("./pages/onboarding/OnboardingWizard"));
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
@@ -41,16 +42,38 @@ const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
+const AdvisorPage = lazyWithRetry(() => import("./pages/advisor"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
+const Legacy = lazyWithRetry(() => import("./pages/legacy"));
+const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
+const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
+const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
+const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
+const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
+const EurovisionAdminPage = lazyWithRetry(() => import("./pages/admin/EurovisionAdmin"));
+const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
+const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRelationsAdmin"));
+const UnderworldAdmin = lazyWithRetry(() => import("./pages/admin/UnderworldAdmin"));
+const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
+const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
+const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
+const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
+const SongwritingBooking = lazyWithRetry(() => import("./pages/booking/SongwritingBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
-const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
-const AwardShows = lazyWithRetry(() => import("./pages/AwardShows"));
+const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
+const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
+const TourManagerNew = lazyWithRetry(() => import("./pages/TourManagerNew"));
+const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
+const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
+const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
+const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
+const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
@@ -58,11 +81,14 @@ const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"
 const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
 const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentSystem"));
 const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagement"));
+const BandManagementPage = lazyWithRetry(() => import("./pages/bands/[bandId]/management"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
+const TwaaterProfile = lazyWithRetry(() => import("./pages/TwaaterProfile"));
+const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
@@ -88,17 +114,39 @@ const AdminSongGifts = lazyWithRetry(() => import("./pages/admin/SongGifts"));
 const AdminProducers = lazyWithRetry(() => import("./pages/admin/Producers"));
 const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/TwaaterModeration"));
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
+const AdminOfferAutomation = lazyWithRetry(() => import("./pages/admin/OfferAutomation"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
+const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
+const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphicsAdmin"));
+const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
+const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
+const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
+const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
+const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
+const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
+const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
+const BandProfile = lazyWithRetry(() => import("./pages/BandProfile"));
+const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
+const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
+const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
+const TwaaterAdmin = lazyWithRetry(() => import("./pages/admin/TwaaterAdmin"));
+const LabelsAdmin = lazyWithRetry(() => import("./pages/admin/LabelsAdmin"));
+const BandAdmin = lazyWithRetry(() => import("./pages/admin/BandAdmin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
+const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
+const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
+const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
+const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
+const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
@@ -106,11 +154,17 @@ const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
 
-const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
+const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
+const NarrativeStoryPage = lazyWithRetry(
+  () => import("./pages/events/narratives/[storyId]"),
+);
+const EurovisionPage = lazyWithRetry(() => import("./pages/Eurovision"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
+const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
+const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -135,32 +189,51 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
+                    <Route path="todays-news" element={<TodaysNewsPage />} />
+                    <Route path="wellness" element={<WellnessPage />} />
+                    <Route path="underworld" element={<UnderworldNew />} />
+                    <Route path="dikcok" element={<DikCok />} />
+                    <Route path="tour-manager" element={<TourManagerNew />} />
+                    <Route path="streaming" element={<StreamingNew />} />
+                    <Route path="music/charts" element={<ChartsPage />} />
+                    <Route path="eurovision" element={<EurovisionResultsPage />} />
                     <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="offers-dashboard" element={<OffersDashboard />} />
+                    <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
+                    <Route path="bands/:bandId/management" element={<BandManagementPage />} />
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
                     <Route path="my-character" element={<MyCharacter />} />
-                    <Route path="music" element={<MusicHub />} />
+                    
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
+                    <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
+                    <Route path="booking/education" element={<EducationBooking />} />
+                    <Route path="booking/performance" element={<PerformanceBooking />} />
+                    <Route path="booking/work" element={<WorkBooking />} />
+                    <Route path="booking/songwriting" element={<SongwritingBooking />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
-                    <Route path="tours" element={<TourManager />} />
-                    <Route path="tours-system" element={<TouringSystem />} />
-                    <Route path="equipment" element={<EnhancedEquipmentStore />} />
-                    <Route path="fans" element={<FanManagement />} />
+                    <Route path="community/feed" element={<CommunityFeed />} />
+                    <Route path="gig-booking" element={<GigBooking />} />
+                    <Route path="jam-sessions" element={<JamSessions />} />
+                    <Route path="rehearsals" element={<Rehearsals />} />
+                    <Route path="radio" element={<Radio />} />
+                    <Route path="music-videos" element={<MusicVideos />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
-                    <Route path="social" element={<SocialMedia />} />
                     <Route path="relationships" element={<Relationships />} />
+                    <Route path="public-relations" element={<PublicRelations />} />
                     <Route path="pr" element={<PublicRelations />} />
+                    <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="community/charity" element={<CharityPage />} />
                     <Route path="festivals" element={<Festivals />} />
@@ -169,32 +242,33 @@ function App() {
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
                     <Route path="band-crew" element={<BandCrewManagement />} />
-                    <Route path="stage-equipment-system-plan" element={<StageEquipmentSystemPlan />} />
                     <Route path="finances" element={<Finances />} />
-                    <Route path="underworld" element={<Underworld />} />
+                    <Route path="gear" element={<Gear />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
-                    
-                    {/* Redirects for removed placeholder pages */}
-                    <Route path="tours" element={<RedirectTo to="/travel" />} />
-                    <Route path="schedule" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="equipment" element={<RedirectTo to="/gear" />} />
-                    <Route path="equipment-enhanced" element={<RedirectTo to="/gear" />} />
-                    <Route path="fans" element={<RedirectTo to="/pr" />} />
-                    <Route path="fans-enhanced" element={<RedirectTo to="/pr" />} />
-                    <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
-                    <Route path="streaming" element={<StreamingPlatforms />} />
+                    <Route path="twaater" element={<Twaater />} />
+                    <Route path="twaater/:handle" element={<TwaaterProfile />} />
+                    <Route path="events/eurovision" element={<EurovisionPage />} />
+                    <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
+                    <Route path="employment" element={<Employment />} />
+                    <Route path="inventory" element={<InventoryManager />} />
+                    <Route path="players/search" element={<PlayerSearch />} />
+                    <Route path="player/:playerId" element={<PlayerProfile />} />
+                    <Route path="bands/browse" element={<BandBrowser />} />
+                    <Route path="band/:bandId" element={<BandProfile />} />
+                    <Route path="merchandise" element={<Merchandise />} />
                     <Route path="labels" element={<RecordLabel />} />
+                    
+                    {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
-                    <Route path="tours-system" element={<RedirectTo to="/travel" />} />
-                    <Route path="charts" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="charts-competitive" element={<RedirectTo to="/dashboard" />} />
-                    <Route path="songs" element={<RedirectTo to="/music" />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="admin" element={<Admin />} />
+                    <Route path="admin/players" element={<AdminPlayerManagement />} />
+                    <Route path="admin/achievements" element={<AdminAchievements />} />
+                    <Route path="admin/analytics" element={<AdminAnalytics />} />
                     <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
@@ -211,22 +285,44 @@ function App() {
                     <Route path="admin/rehearsal-rooms" element={<AdminRehearsalRooms />} />
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
+                    <Route path="admin/festivals" element={<FestivalsAdminPage />} />
+                    <Route path="admin/eurovision" element={<EurovisionAdminPage />} />
+                    <Route path="admin/awards" element={<AwardsAdmin />} />
+                    <Route path="admin/advisor" element={<AdvisorAdmin />} />
+                    <Route path="admin/pr" element={<PublicRelationsAdmin />} />
+                    <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
+                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
+                    <Route path="admin/gear-items" element={<GearItemsAdmin />} />
+                    <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
                     <Route path="admin/twaater-moderation" element={<AdminTwaaterModeration />} />
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
+                    <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
+                    <Route path="admin/songwriting" element={<SongwritingAdmin />} />
+                    <Route path="admin/gigs" element={<GigsAdmin />} />
+                    <Route path="admin/charts" element={<ChartsAdmin />} />
+                    <Route path="admin/twaater" element={<TwaaterAdmin />} />
+                    
+                    <Route path="admin/labels" element={<LabelsAdmin />} />
+                    <Route path="admin/bands" element={<BandAdmin />} />
+                    <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
+                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
+                    <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
+                    <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="radio" element={<Radio />} />
-                    <Route path="performance" element={<Performance />} />
+                    <Route path="music-videos" element={<MusicVideos />} />
+                    <Route path="radio-stations" element={<RadioStations />} />
+                    <Route path="gig-booking" element={<GigBooking />} />
+                    <Route path="jam-sessions" element={<JamSessions />} />
+                    <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
-                    <Route path="media" element={<MediaNetworks />} />
-                    <Route path="busking" element={<Navigate to="/performance?tab=busking" replace />} />
-                    <Route path="jams" element={<Navigate to="/performance?tab=jams" replace />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     {/* <Route path="world-map" element={<WorldMap />} /> */}
                     <Route path="inventory" element={<InventoryManager />} />

@@ -52,6 +52,7 @@ export const EnhancedSetlistSongManager = ({
   const { data: userSkills } = useQuery({
     queryKey: ['user-skills'],
     queryFn: async () => {
+      console.log('[EnhancedSetlistSongManager] Fetching user skills - currently returning empty object');
       // Return empty object for now - skills integration can be added later
       return {} as Record<string, number>;
     },
@@ -65,13 +66,34 @@ export const EnhancedSetlistSongManager = ({
         .select('genre')
         .eq('id', bandId)
         .single();
+      
+      console.log('[EnhancedSetlistSongManager] Fetched band data:', {
+        bandId,
+        genre: data?.genre
+      });
       return data;
     },
   });
 
   const addPerformanceItemMutation = useMutation({
     mutationFn: async (item: PerformanceItem) => {
+      // Check if we already have 5 performance items
+      const currentPerformanceItems = setlistSongs?.filter(s => s.item_type === 'performance_item') || [];
+      if (currentPerformanceItems.length >= 5) {
+        throw new Error('Maximum 5 performance items per setlist');
+      }
+      
       const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
+      
+      console.log('[EnhancedSetlistSongManager] Adding performance item:', {
+        itemId: item.id,
+        itemName: item.name,
+        setlistId,
+        nextPosition,
+        currentMainSectionCount: setlistSongs?.filter(s => s.section === 'main').length || 0,
+        currentPerformanceItemCount: currentPerformanceItems.length
+      });
+      
       const { error } = await supabase
         .from("setlist_songs")
         .insert({
@@ -82,7 +104,12 @@ export const EnhancedSetlistSongManager = ({
           section: 'main',
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[EnhancedSetlistSongManager] Error adding performance item:', error);
+        throw error;
+      }
+      
+      console.log('[EnhancedSetlistSongManager] Successfully added performance item');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
@@ -99,44 +126,83 @@ export const EnhancedSetlistSongManager = ({
   });
 
   const moveToEncoreMutation = useMutation({
-    mutationFn: async ({ songId, itemType }: { songId: string; itemType: string }) => {
+    mutationFn: async ({ setlistSongId, itemType }: { setlistSongId: string; itemType: string }) => {
       const encoreCount = setlistSongs?.filter(s => s.section === 'encore').length || 0;
-      const { error } = await supabase
+      
+      console.log('[moveToEncore] Moving item:', {
+        setlistSongId,
+        itemType,
+        currentEncoreCount: encoreCount
+      });
+      
+      const { data, error } = await supabase
         .from("setlist_songs")
         .update({ 
           section: 'encore', 
           position: encoreCount + 1,
           is_encore: true 
         })
-        .eq("setlist_id", setlistId)
-        .eq(itemType === 'song' ? 'song_id' : 'performance_item_id', songId);
+        .eq("id", setlistSongId)
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('[moveToEncore] Error:', error);
+        throw error;
+      }
+      
+      console.log('[moveToEncore] Successfully moved to encore:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
       toast({ title: "Moved to encore section" });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to move to encore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const moveToMainMutation = useMutation({
-    mutationFn: async ({ songId, itemType }: { songId: string; itemType: string }) => {
+    mutationFn: async ({ setlistSongId }: { setlistSongId: string }) => {
       const mainCount = setlistSongs?.filter(s => s.section === 'main').length || 0;
-      const { error } = await supabase
+      
+      console.log('[moveToMain] Moving item:', {
+        setlistSongId,
+        currentMainCount: mainCount
+      });
+      
+      const { data, error } = await supabase
         .from("setlist_songs")
         .update({ 
           section: 'main', 
           position: mainCount + 1,
           is_encore: false 
         })
-        .eq("setlist_id", setlistId)
-        .eq(itemType === 'song' ? 'song_id' : 'performance_item_id', songId);
+        .eq("id", setlistSongId)
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('[moveToMain] Error:', error);
+        throw error;
+      }
+      
+      console.log('[moveToMain] Successfully moved to main:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
       toast({ title: "Moved to main setlist" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to move to main",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -147,6 +213,7 @@ export const EnhancedSetlistSongManager = ({
         .from("songs")
         .select("id, title, genre, quality_score, duration_seconds, duration_display")
         .eq("band_id", bandId)
+        .eq("archived", false) // Filter out archived songs
         .in("status", ["draft", "recorded"])
         .order("title");
 
@@ -164,6 +231,7 @@ export const EnhancedSetlistSongManager = ({
           .select("id, title, genre, quality_score, duration_seconds, duration_display")
           .in("user_id", memberUserIds)
           .is("band_id", null)
+          .eq("archived", false) // Filter out archived songs
           .in("status", ["draft", "recorded"])
           .order("title");
 
@@ -183,34 +251,19 @@ export const EnhancedSetlistSongManager = ({
   );
   const unaddedSongs = availableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
-  const handleAddSong = async () => {
+  const handleAddSong = () => {
     if (!selectedSongId) return;
 
     const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
     
-    // Insert with section and item_type
-    const { error } = await supabase
-      .from("setlist_songs")
-      .insert({
-        setlist_id: setlistId,
-        song_id: selectedSongId,
-        position: nextPosition,
-        section: 'main',
-        item_type: 'song',
-      });
+    addSongMutation.mutate({
+      setlistId,
+      songId: selectedSongId,
+      position: nextPosition,
+      section: 'main',
+      itemType: 'song',
+    });
     
-    if (error) {
-      toast({
-        title: "Failed to add song",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
-    queryClient.invalidateQueries({ queryKey: ["setlists"] });
-    toast({ title: "Song added to setlist" });
     setSelectedSongId("");
   };
 
@@ -244,7 +297,7 @@ export const EnhancedSetlistSongManager = ({
           <div className="flex items-baseline gap-2">
             <span className="font-medium">{index + 1}.</span>
             <span className="font-medium">
-              {isPerformanceItem ? ss.performance_items_catalog?.name : ss.songs?.title || "Unknown"}
+              {isPerformanceItem ? ss.performance_items?.name : ss.songs?.title || "Unknown"}
             </span>
             {isPerformanceItem && (
               <Badge variant="secondary" className="text-xs">
@@ -255,7 +308,7 @@ export const EnhancedSetlistSongManager = ({
           </div>
           <div className="text-sm text-muted-foreground">
             {isPerformanceItem 
-              ? ss.performance_items_catalog?.item_category?.replace('_', ' ')
+              ? ss.performance_items?.category?.replace('_', ' ')
               : `${ss.songs?.genre} • Quality: ${ss.songs?.quality_score || "N/A"}`
             }
           </div>
@@ -266,7 +319,7 @@ export const EnhancedSetlistSongManager = ({
               variant="outline"
               size="sm"
               onClick={() => moveToEncoreMutation.mutate({ 
-                songId: isPerformanceItem ? ss.performance_item_id : ss.song_id,
+                setlistSongId: ss.id,
                 itemType: ss.item_type
               })}
             >
@@ -278,8 +331,7 @@ export const EnhancedSetlistSongManager = ({
               variant="outline"
               size="sm"
               onClick={() => moveToMainMutation.mutate({ 
-                songId: isPerformanceItem ? ss.performance_item_id : ss.song_id,
-                itemType: ss.item_type
+                setlistSongId: ss.id
               })}
             >
               Move to Main

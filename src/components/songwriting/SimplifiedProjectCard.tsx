@@ -15,6 +15,7 @@ interface SimplifiedProjectCardProps {
   onDelete: () => void;
   onViewHistory: () => void;
   onComplete?: () => void;
+  onSchedule?: () => void;
   isLocked: boolean;
 }
 
@@ -25,6 +26,7 @@ export const SimplifiedProjectCard = ({
   onDelete,
   onViewHistory,
   onComplete,
+  onSchedule,
   isLocked,
 }: SimplifiedProjectCardProps) => {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -159,15 +161,29 @@ export const SimplifiedProjectCard = ({
             )}
             
             {!canComplete && (
-              <Button
-                onClick={onStartSession}
-                disabled={isLocked || isCompleted}
-                size="sm"
-                className="flex-1"
-              >
-                <Play className="w-3 h-3 mr-1" />
-                Start Session
-              </Button>
+              <>
+                <Button
+                  onClick={onStartSession}
+                  disabled={isLocked || isCompleted}
+                  size="sm"
+                  className="flex-1"
+                >
+                  <Play className="w-3 h-3 mr-1" />
+                  Start Session
+                </Button>
+                
+                {onSchedule && (
+                  <Button
+                    onClick={onSchedule}
+                    variant="outline"
+                    size="sm"
+                    disabled={isLocked}
+                  >
+                    <Clock className="w-3 h-3 mr-1" />
+                    Plan
+                  </Button>
+                )}
+              </>
             )}
             
             <Button

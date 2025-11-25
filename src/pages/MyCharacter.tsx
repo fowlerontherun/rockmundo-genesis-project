@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
-import { HealthSection } from "@/components/character/HealthSection";
+
 import { AchievementsSection } from "@/components/character/AchievementsSection";
 import { CurrentLearningSection } from "@/components/character/CurrentLearningSection";
 import type { Database } from "@/lib/supabase-types";
@@ -676,10 +676,9 @@ const MyCharacter = () => {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-5">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="development">Development</TabsTrigger>
-          <TabsTrigger value="health">Health</TabsTrigger>
           <TabsTrigger value="friends">Friends</TabsTrigger>
           <TabsTrigger value="achievements">Achievements</TabsTrigger>
         </TabsList>
@@ -1390,14 +1389,6 @@ const MyCharacter = () => {
       </Tabs>
     </TabsContent>
 
-    <TabsContent value="health" className="space-y-6 mt-6">
-      <HealthSection
-        profile={profile}
-        attributes={attributes}
-        activityStatus={activityStatus}
-        startActivity={startActivity}
-      />
-    </TabsContent>
 
     <TabsContent value="achievements" className="space-y-6 mt-6">
       <AchievementsSection />
