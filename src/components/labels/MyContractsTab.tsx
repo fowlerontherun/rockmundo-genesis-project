@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Globe2, Layers, ShieldCheck } from "lucide-react";
 import type { ArtistEntity, ContractWithRelations } from "./types";
+import { ContractNotificationsPanel } from "./ContractNotificationsPanel";
+import { buildContractNotifications } from "./contractNotifications";
 
 interface MyContractsTabProps {
   artistEntities: ArtistEntity[];
@@ -66,6 +68,11 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
     return map;
   }, [artistEntities]);
 
+  const { playerMessages, adminAlerts } = useMemo(
+    () => buildContractNotifications(contracts ?? [], entityLookup),
+    [contracts, entityLookup],
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -88,6 +95,8 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
 
   return (
     <div className="grid gap-4">
+      <ContractNotificationsPanel playerMessages={playerMessages} adminAlerts={adminAlerts} />
+
       {contracts.map((contract) => {
         const entity = contract.band_id
           ? entityLookup.get(contract.band_id)
