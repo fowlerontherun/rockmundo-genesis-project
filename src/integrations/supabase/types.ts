@@ -10732,6 +10732,209 @@ export type Database = {
           },
         ]
       }
+      sponsorship_brands: {
+        Row: {
+          available_budget: number
+          cooldown_until: string | null
+          created_at: string
+          exclusivity_pref: boolean
+          id: string
+          is_active: boolean
+          last_offer_at: string | null
+          min_fame_threshold: number
+          name: string
+          size: string
+          targeting_flags: string[]
+          updated_at: string
+          wealth_score: number
+        }
+        Insert: {
+          available_budget?: number
+          cooldown_until?: string | null
+          created_at?: string
+          exclusivity_pref?: boolean
+          id?: string
+          is_active?: boolean
+          last_offer_at?: string | null
+          min_fame_threshold?: number
+          name: string
+          size?: string
+          targeting_flags?: string[]
+          updated_at?: string
+          wealth_score?: number
+        }
+        Update: {
+          available_budget?: number
+          cooldown_until?: string | null
+          created_at?: string
+          exclusivity_pref?: boolean
+          id?: string
+          is_active?: boolean
+          last_offer_at?: string | null
+          min_fame_threshold?: number
+          name?: string
+          size?: string
+          targeting_flags?: string[]
+          updated_at?: string
+          wealth_score?: number
+        }
+        Relationships: []
+      }
+      sponsorship_entities: {
+        Row: {
+          active_deals: number
+          band_id: string | null
+          brand_flags: string[]
+          chart_momentum: number
+          created_at: string
+          event_attendance_score: number
+          fame_momentum: number
+          id: string
+          last_offer_at: string | null
+          max_deals: number
+          updated_at: string
+        }
+        Insert: {
+          active_deals?: number
+          band_id?: string | null
+          brand_flags?: string[]
+          chart_momentum?: number
+          created_at?: string
+          event_attendance_score?: number
+          fame_momentum?: number
+          id?: string
+          last_offer_at?: string | null
+          max_deals?: number
+          updated_at?: string
+        }
+        Update: {
+          active_deals?: number
+          band_id?: string | null
+          brand_flags?: string[]
+          chart_momentum?: number
+          created_at?: string
+          event_attendance_score?: number
+          fame_momentum?: number
+          id?: string
+          last_offer_at?: string | null
+          max_deals?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_entities_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_notifications: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: string
+          offer_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          offer_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          offer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_notifications_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_notifications_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_offers: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          entity_id: string | null
+          exclusivity: boolean
+          expiration_notification_sent: boolean
+          expires_at: string
+          id: string
+          metadata: Json | null
+          offer_type: string
+          payout: number
+          status: string
+          terms: Json | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          exclusivity?: boolean
+          expiration_notification_sent?: boolean
+          expires_at: string
+          id?: string
+          metadata?: Json | null
+          offer_type: string
+          payout: number
+          status?: string
+          terms?: Json | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          exclusivity?: boolean
+          expiration_notification_sent?: boolean
+          expires_at?: string
+          id?: string
+          metadata?: Json | null
+          offer_type?: string
+          payout?: number
+          status?: string
+          terms?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_offers_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_offers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       admin_cron_job_runs: {
