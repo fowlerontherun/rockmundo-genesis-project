@@ -151,7 +151,7 @@ export function AppSidebar() {
     },
     {
       label: "Community",
-      items: [{ icon: HandHeart, label: "Charity", path: "/community/charity" }],
+      items: [{ icon: HeartHandshake, label: "Charity", path: "/community/charity" }],
     },
     {
       label: "Business",
