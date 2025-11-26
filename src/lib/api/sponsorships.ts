@@ -328,7 +328,8 @@ const hasExclusiveConflict = (
       contract.sponsorableId === input.sponsorableId &&
       contract.sponsorableType === input.sponsorableType &&
       contract.status === "active" &&
-      (contract.exclusive || contract.category === input.category)
+      contract.category === input.category &&
+      (contract.exclusive || input.exclusive)
   );
 };
 
@@ -417,7 +418,7 @@ export const issueSponsorshipOfferWithGuardrails = (
     };
   }
 
-  if (input.exclusive && hasExclusiveConflict(input, baseState.contracts)) {
+  if (hasExclusiveConflict(input, baseState.contracts)) {
     const entry = createHistoryEntry(
       input.sponsorableId,
       input.sponsorableType,
