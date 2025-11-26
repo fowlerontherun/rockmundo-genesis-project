@@ -68,6 +68,36 @@ ALTER TABLE public.sponsorship_entities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sponsorship_offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sponsorship_notifications ENABLE ROW LEVEL SECURITY;
 
+-- Allow authenticated users to browse active sponsorship brands
+CREATE POLICY sponsorship_brands_read_all ON public.sponsorship_brands
+FOR SELECT USING (true);
+
+-- Allow bands to access their sponsorship entity profile
+CREATE POLICY sponsorship_entities_read_band ON public.sponsorship_entities
+FOR SELECT USING (
+  band_id IN (SELECT id FROM public.bands WHERE leader_id = auth.uid())
+);
+
+-- Allow bands to see offers tied to their entity
+CREATE POLICY sponsorship_offers_read_band ON public.sponsorship_offers
+FOR SELECT USING (
+  entity_id IN (
+    SELECT id FROM public.sponsorship_entities se
+    WHERE se.id = sponsorship_offers.entity_id
+      AND se.band_id IN (SELECT id FROM public.bands WHERE leader_id = auth.uid())
+  )
+);
+
+-- Allow bands to see notifications tied to their offers
+CREATE POLICY sponsorship_notifications_read_band ON public.sponsorship_notifications
+FOR SELECT USING (
+  entity_id IN (
+    SELECT id FROM public.sponsorship_entities se
+    WHERE se.id = sponsorship_notifications.entity_id
+      AND se.band_id IN (SELECT id FROM public.bands WHERE leader_id = auth.uid())
+  )
+);
+
 -- Register cron job
 INSERT INTO cron_job_config (job_name, edge_function_name, display_name, description, schedule, is_active, allow_manual_trigger)
 VALUES (
