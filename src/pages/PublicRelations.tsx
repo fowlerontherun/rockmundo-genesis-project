@@ -3,7 +3,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tv, Radio, Mic2, TrendingUp, Calendar, DollarSign, Eye, ThumbsUp, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tv, Radio, Mic2, TrendingUp, Calendar, DollarSign, Eye, ThumbsUp, Plus, Megaphone, Handshake, Sparkles } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { usePublicRelations } from "@/hooks/usePublicRelations";
 import { cn } from "@/lib/utils";
@@ -179,9 +188,20 @@ const PublicRelations = () => {
   const handleCreateCampaign = () => {
     if (!newCampaign.campaign_name || !newCampaign.start_date || !newCampaign.end_date) {
       toast({
-        title: "Press release added",
-        description: "Draft saved. Share it with your contacts when you're ready.",
+        title: "Missing Fields",
+        description: "Please fill in campaign name, start date, and end date.",
+        variant: "destructive",
       });
+      return;
+    }
+    
+    toast({
+      title: "Campaign Created",
+      description: "Your campaign has been successfully created.",
+    });
+    
+    setTimeout(() => {
+      campaignNameRef.current?.focus();
     }, 400);
   };
 
@@ -342,8 +362,10 @@ const PublicRelations = () => {
       const diff = a.status.localeCompare(b.status);
       return releaseSort.direction === "asc" ? diff : -diff;
     });
-    campaignNameRef.current?.focus();
-  };
+  }, [pressReleases, releaseStatusFilter, releaseSearch, releaseSort]);
+
+  const filteredContacts = useMemo(() => {
+    let list = [...contacts];
 
     if (contactPriorityFilter !== "all") {
       list = list.filter((contact) => contact.priority === contactPriorityFilter);
@@ -370,42 +392,6 @@ const PublicRelations = () => {
       return contactSort.direction === "asc" ? diff : -diff;
     });
   }, [contacts, contactPriorityFilter, contactSearch, contactSort]);
-
-  const handleSubmitRelease = (values: PressReleaseFormValues) => {
-    if (editingReleaseIndex !== null) {
-      setPressReleases((prev) => prev.map((item, idx) => (idx === editingReleaseIndex ? values : item)));
-      toast({
-        title: "Press release updated",
-        description: "Edits saved with validation.",
-      });
-    } else {
-      setPressReleases((prev) => [...prev, values]);
-      toast({
-        title: "Press release created",
-        description: "Your announcement is queued for distribution.",
-      });
-    }
-
-    setEditingReleaseIndex(null);
-  };
-
-  const handleSubmitContact = (values: ContactFormValues) => {
-    if (editingContactIndex !== null) {
-      setContacts((prev) => prev.map((item, idx) => (idx === editingContactIndex ? values : item)));
-      toast({
-        title: "Contact updated",
-        description: "Relationship details refreshed.",
-      });
-    } else {
-      setContacts((prev) => [...prev, values]);
-      toast({
-        title: "Contact added",
-        description: "Contact saved to your outreach list.",
-      });
-    }
-
-    setEditingContactIndex(null);
-  };
 
   const getStatusBadge = (status: string) => {
     if (status === "active") return <Badge className="bg-success">Active</Badge>;
@@ -532,7 +518,9 @@ const PublicRelations = () => {
             Refresh media kit
           </Button>
         </div>
-        <Dialog>
+      </header>
+
+      <Dialog>
           <DialogTrigger asChild>
             <Button aria-label="Open new campaign dialog"><Plus className="h-4 w-4 mr-2" />New Campaign</Button>
           </DialogTrigger>
@@ -607,7 +595,6 @@ const PublicRelations = () => {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <Card>
         <CardContent className="p-4">
