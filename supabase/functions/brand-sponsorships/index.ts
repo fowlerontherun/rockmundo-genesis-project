@@ -446,13 +446,14 @@ async function handlePayouts(supabase: SupabaseClient, payload: OfferPayload) {
             : 0;
 
     const fameBonus = payload.eventType === "fame_gain" ? fameDelta * 1.5 : fameDelta * 0.4;
-    const bonusAmount = Math.round(baseAmount * slotMultiplier + fameBonus);
+    const basePayoutAmount = Math.round(payload.eventType === "fame_gain" ? 0 : baseAmount * slotMultiplier);
+    const bonusAmount = Math.round(fameBonus);
 
     const { error: payoutError } = await supabase.from("brand_payouts").insert({
       contract_id: contract.id,
       event_type: payload.eventType,
       event_reference: payload.eventName ?? null,
-      base_amount: baseAmount,
+      base_amount: basePayoutAmount,
       bonus_amount: bonusAmount,
       fame_delta: fameDelta,
     });
@@ -470,7 +471,7 @@ async function handlePayouts(supabase: SupabaseClient, payload: OfferPayload) {
       event_details: {
         event_type: payload.eventType,
         event_reference: payload.eventName,
-        base_amount: baseAmount,
+        base_amount: basePayoutAmount,
         bonus_amount: bonusAmount,
         fame_delta: fameDelta,
       },
