@@ -286,6 +286,21 @@ export const validateSponsorshipOfferGuardrails = (
     reasons.push("Duplicate pending offer exists for this brand and sponsorable");
   }
 
+  const pendingOffersForSponsorable = existingOffers.filter(
+    (existing) =>
+      existing.sponsorableId === offer.sponsorableId &&
+      existing.sponsorableType === offer.sponsorableType &&
+      existing.status === "pending"
+  );
+
+  const pendingExclusiveBlocker = pendingOffersForSponsorable.find(
+    (existing) => existing.exclusivity && existing.brandId !== offer.brandId
+  );
+
+  if (pendingExclusiveBlocker) {
+    reasons.push("Existing pending exclusive offer prevents issuing this offer");
+  }
+
   if (isCharacter(offer.sponsorableType) && matchingContracts.length >= 3) {
     reasons.push("Character has reached the maximum of three active sponsorship deals");
   }
@@ -316,6 +331,14 @@ export const validateSponsorshipOfferGuardrails = (
 
     if (conflictingContract) {
       reasons.push("Exclusive offer conflicts with another active or pending contract");
+    }
+
+    const conflictingPendingOffer = pendingOffersForSponsorable.find(
+      (existing) => existing.brandId !== offer.brandId
+    );
+
+    if (conflictingPendingOffer) {
+      reasons.push("Exclusive offer conflicts with another pending offer");
     }
   }
 

@@ -34,6 +34,24 @@ describe("sponsorship guardrails", () => {
     );
   });
 
+  it("blocks offers when a pending exclusive already exists", () => {
+    const existingOffers: SponsorshipOfferRecord[] = [
+      {
+        ...baseOffer,
+        id: "exclusive-offer",
+        brandId: "brand-exclusive",
+        exclusivity: true,
+      },
+    ];
+
+    const result = validateSponsorshipOfferGuardrails(baseOffer, existingOffers, []);
+
+    expect(result.isValid).toBe(false);
+    expect(result.reasons).toContain(
+      "Existing pending exclusive offer prevents issuing this offer"
+    );
+  });
+
   it("enforces character caps and exclusivity conflicts", () => {
     const characterOffer: SponsorshipOfferRecord = {
       ...baseOffer,
