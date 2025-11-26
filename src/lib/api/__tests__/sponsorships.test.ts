@@ -325,6 +325,42 @@ describe("sponsorship guardrails", () => {
     expect(result.updatedState.history.at(-1)?.event).toBe("offer_exclusivity_blocked");
   });
 
+  it("blocks non-exclusive offers when an exclusive contract is active for the category", () => {
+    const exclusiveCategoryState: SponsorshipLifecycleState = {
+      ...baseState,
+      contracts: [
+        {
+          contractId: "contract-1",
+          offerId: "offer-1",
+          sponsorableId: "festival-1",
+          sponsorableType: "festival",
+          status: "active",
+          category: "Technology",
+          exclusive: true,
+          payout: 5000,
+          fameTier: "regional",
+          signedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+    };
+
+    const result = issueSponsorshipOfferWithGuardrails(
+      "offer-non-exclusive",
+      {
+        ...guardrailBaseInput,
+        sponsorableType: "festival",
+        sponsorableId: "festival-1",
+        exclusive: false,
+        category: "Technology",
+      },
+      exclusiveCategoryState
+    );
+
+    expect(result.issuedOffer).toBeUndefined();
+    expect(result.blockedReason).toBe("exclusivity_conflict");
+    expect(result.updatedState.history.at(-1)?.event).toBe("offer_exclusivity_blocked");
+  });
+
   it("expires stale offers and records history", () => {
     const lifecycleState: SponsorshipLifecycleState = {
       ...baseState,
