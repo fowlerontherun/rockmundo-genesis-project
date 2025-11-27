@@ -102,18 +102,43 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
       setSetlistSongs(songs || []);
     }
 
-    // Load rehearsal data for the band
+    // Load rehearsal data from both song_rehearsals and band_song_familiarity
     if ((gigData as any).bands?.id) {
-      const { data: rehearsalData, error: rehearsalError } = await supabase
+      // First try song_rehearsals
+      const { data: songRehearsalData } = await supabase
         .from('song_rehearsals')
         .select('song_id, rehearsal_level')
         .eq('band_id', (gigData as any).bands.id);
 
-      if (rehearsalError) {
-        console.error('Error loading rehearsal data:', rehearsalError);
-      }
+      // Also get familiarity data and convert to rehearsal levels
+      const { data: familiarityData } = await supabase
+        .from('band_song_familiarity')
+        .select('song_id, familiarity_percentage')
+        .eq('band_id', (gigData as any).bands.id);
+
+      // Combine both sources - prioritize song_rehearsals, fall back to familiarity
+      const rehearsalMap = new Map();
       
-      setRehearsals(rehearsalData || []);
+      // Add from song_rehearsals
+      songRehearsalData?.forEach(r => {
+        rehearsalMap.set(r.song_id, r.rehearsal_level);
+      });
+      
+      // Add from familiarity (convert percentage to 0-10 scale)
+      familiarityData?.forEach(f => {
+        if (!rehearsalMap.has(f.song_id)) {
+          const level = Math.round((f.familiarity_percentage / 100) * 10);
+          rehearsalMap.set(f.song_id, level);
+        }
+      });
+      
+      // Convert map to array format
+      const combinedRehearsals = Array.from(rehearsalMap.entries()).map(([song_id, rehearsal_level]) => ({
+        song_id,
+        rehearsal_level
+      }));
+      
+      setRehearsals(combinedRehearsals);
     }
   }, [gigId]);
 

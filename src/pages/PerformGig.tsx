@@ -6,10 +6,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock } from 'lucide-react';
+import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
+import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
 import { GigViewer3D } from '@/components/gig-viewer/GigViewer3D';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
@@ -178,6 +180,13 @@ export default function PerformGig() {
   }, [loadGig]);
 
   const startGigMutation = useManualGigStart();
+  const fixStuckGigs = useFixStuckGigs();
+
+  const handleFixStuckGig = async () => {
+    if (!gigId) return;
+    await fixStuckGigs.mutateAsync([gigId]);
+    loadGig(); // Reload after fixing
+  };
 
   // Determine if we should show live viewer or final report
   const shouldShowLiveViewer = useMemo(() => {
@@ -418,7 +427,7 @@ export default function PerformGig() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Badge variant="secondary">
               <DollarSign className="h-3 w-3 mr-1" />
               ${gig.ticket_price} per ticket
@@ -434,6 +443,19 @@ export default function PerformGig() {
             }>
               {gig.status === 'in_progress' ? '🔴 Live Now' : gig.status}
             </Badge>
+            
+            {/* Fix Stuck Gig Button */}
+            {gig.status === 'in_progress' && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleFixStuckGig}
+                disabled={fixStuckGigs.isPending}
+              >
+                <AlertCircle className="h-3 w-3 mr-1" />
+                {fixStuckGigs.isPending ? 'Fixing...' : 'Fix Stuck Gig'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
