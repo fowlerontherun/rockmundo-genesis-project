@@ -61,6 +61,8 @@ const REACH_IMPACT_WEIGHTS: Record<
   tour: { reachWeight: 0.3, impactWeight: 0.2 },
   festival: { reachWeight: 0.25, impactWeight: 0.3 },
   venue: { reachWeight: 0.2, impactWeight: 0.2 },
+  band: { reachWeight: 0.35, impactWeight: 0.25 },
+  character: { reachWeight: 0.25, impactWeight: 0.15 },
 };
 
 export interface PayoutCalculationInput {
@@ -465,13 +467,13 @@ const isActiveOrPending = (
   status: SponsorshipContractStatus
 ): boolean => status === "pending" || status === "active";
 
-const isCharacter = (sponsorableType: SponsorshipEntityType): boolean =>
+const isCharacter = (sponsorableType: SponsorableType): boolean =>
   sponsorableType === "character";
 
 export const validateSponsorshipOfferGuardrails = (
-  offer: SponsorshipOfferRecord,
-  existingOffers: SponsorshipOfferRecord[],
-  existingContracts: SponsorshipContractRecord[]
+  offer: ManagedSponsorshipOffer,
+  existingOffers: ManagedSponsorshipOffer[],
+  existingContracts: ManagedSponsorshipContract[]
 ): { isValid: boolean; reasons: string[] } => {
   const reasons: string[] = [];
 
@@ -500,7 +502,7 @@ export const validateSponsorshipOfferGuardrails = (
 
   const hasExclusiveBlocker = matchingContracts.find(
     (contract) =>
-      contract.isExclusive &&
+      contract.exclusive &&
       contract.brandId !== offer.brandId &&
       contract.status === "active"
   );
@@ -517,7 +519,7 @@ export const validateSponsorshipOfferGuardrails = (
     reasons.push("Brand already has an active or pending contract with this sponsorable");
   }
 
-  if (offer.exclusivity) {
+  if (offer.exclusive) {
     const conflictingContract = matchingContracts.find(
       (contract) => contract.brandId !== offer.brandId
     );
@@ -531,12 +533,12 @@ export const validateSponsorshipOfferGuardrails = (
 };
 
 export const expireStaleSponsorshipOffers = (
-  offers: SponsorshipOfferRecord[],
-  contracts: SponsorshipContractRecord[],
+  offers: ManagedSponsorshipOffer[],
+  contracts: ManagedSponsorshipContract[],
   now: Date = new Date()
 ): {
-  updatedOffers: SponsorshipOfferRecord[];
-  updatedContracts: SponsorshipContractRecord[];
+  updatedOffers: ManagedSponsorshipOffer[];
+  updatedContracts: ManagedSponsorshipContract[];
   historyEntries: SponsorshipHistoryEntry[];
   expiredOfferIds: string[];
   freedSlots: number;

@@ -63,3 +63,40 @@ export interface OutreachTask {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface MediaAppearance {
+  id: string;
+  title: string;
+  type: string;
+  scheduledDate: string;
+  status: string;
+  reach?: number;
+  createdAt: string;
+}
+
+export interface MediaOffer {
+  id: string;
+  title: string;
+  type: string;
+  deadline: string;
+  payout?: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface PRCampaign {
+  id: string;
+  name: string;
+  status: string;
+  startDate: string;
+  endDate?: string;
+  budget?: number;
+  createdAt: string;
+}
+
+export interface PRCampaignCreateInput {
+  name: string;
+  startDate: string;
+  endDate?: string;
+  budget?: number;
+}
