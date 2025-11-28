@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, C
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
+import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
 
 // Advisor imports
 import { Link } from "react-router-dom";
@@ -362,60 +363,7 @@ const Dashboard = () => {
 
         {/* Skills & Attributes Tab */}
         <TabsContent value="skills" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Skills</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {trainedSkills.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                  You haven't trained any skills yet. Start training to see your progress!
-                </p> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {trainedSkills.map(skill => {
-                const currentXp = skill.current_xp || 0;
-                const currentLevel = skill.current_level || 0;
-                const progress = calculateSkillProgress(currentXp, currentLevel);
-                return <div key={skill.skill_slug} className="space-y-2 p-3 rounded-lg border bg-card">
-                        <div className="flex flex-col gap-2">
-                          <span className="text-sm font-medium capitalize">
-                            {skill.skill_slug.replace(/_/g, " ")}
-                          </span>
-                          <div className="flex items-center justify-between gap-2">
-                            <Badge variant="secondary" className="text-xs">Lv {currentLevel}</Badge>
-                            <span className="text-xs text-muted-foreground">{currentXp} XP</span>
-                          </div>
-                        </div>
-                        <Progress value={progress} className="h-2" />
-                      </div>;
-              })}
-                </div>}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Attributes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {attributes && <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium">Creative Insight</p>
-                    <p className="text-2xl font-bold">{attributes.creative_insight || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Musical Ability</p>
-                    <p className="text-2xl font-bold">{attributes.musical_ability || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Technical Mastery</p>
-                    <p className="text-2xl font-bold">{attributes.technical_mastery || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Stage Presence</p>
-                    <p className="text-2xl font-bold">{attributes.stage_presence || 0}</p>
-                  </div>
-                </div>}
-            </CardContent>
-          </Card>
+          <SkillsAttributesTab profile={profile} />
         </TabsContent>
 
         {/* Friends Tab with Chat */}
