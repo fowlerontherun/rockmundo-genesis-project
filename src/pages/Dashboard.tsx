@@ -519,7 +519,7 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto p-3 md:p-6 space-y-4">
       {/* Top Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
           <CardHeader className="pb-2 space-y-0">
             <CardTitle className="text-xs flex items-center gap-1">
@@ -572,6 +572,8 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground mt-0.5">of {totalPlayers}</p>
           </CardContent>
         </Card>
+
+        <CurrentLocationWidget city={currentCity} loading={false} />
       </div>
 
       {/* Main Tabs */}
@@ -634,11 +636,8 @@ const Dashboard = () => {
 
             {/* Right: Schedule & Activity */}
             <div className="lg:col-span-2 space-y-3">
-              {/* Location & Date */}
-              <div className="grid grid-cols-2 gap-2">
-                <CurrentLocationWidget city={currentCity} loading={false} />
-                <GameDateWidget />
-              </div>
+              {/* Game Date */}
+              <GameDateWidget />
 
               {/* Today's Schedule */}
               <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
