@@ -3,22 +3,25 @@ import { useFrame } from "@react-three/fiber";
 import { Mesh, SpotLight } from "three";
 
 interface BandAvatarsProps {
-  gigId: string;
-  songProgress?: number; // 0-1, represents song progression
+  gigId?: string;
+  bandId?: string;
+  songProgress?: number;
   songSection?: 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
+  bandMemberSkills?: Record<string, number>;
 }
 
 type AnimationState = 'intro' | 'playing' | 'outro';
 
 export const BandAvatars = ({ 
-  gigId, 
-  songProgress = 0.5,
-  songSection = 'chorus'
+  gigId,
+  bandId,
+  songProgress = 0,
+  songSection = 'verse',
+  bandMemberSkills = {}
 }: BandAvatarsProps) => {
   const [animationState, setAnimationState] = useState<AnimationState>('playing');
   const spotlightRef = useRef<SpotLight>(null);
   
-  // Determine animation state based on song progress
   useEffect(() => {
     if (songProgress < 0.1) {
       setAnimationState('intro');
@@ -35,125 +38,108 @@ export const BandAvatars = ({
   const drummerRef = useRef<Mesh>(null);
   const vocalistRef = useRef<Mesh>(null);
 
-  // Get intensity multiplier based on song section
-  const getSectionIntensity = () => {
-    switch (songSection) {
-      case 'intro':
-        return 0.4;
-      case 'verse':
-        return 0.6;
-      case 'chorus':
-        return 1.2;
-      case 'bridge':
-        return 0.8;
-      case 'solo':
-        return 1.0;
-      case 'outro':
-        return 0.5;
-      default:
-        return 1.0;
-    }
+  const getSectionIntensity = (section: string, memberPosition: string): number => {
+    const baseIntensity = {
+      'intro': 0.3,
+      'verse': 0.6,
+      'chorus': 1.0,
+      'bridge': 0.7,
+      'solo': 0.9,
+      'outro': 0.5,
+    }[section] || 0.6;
+
+    const skillLevel = bandMemberSkills[memberPosition] || 50;
+    const skillMultiplier = 0.7 + (skillLevel / 100) * 0.6;
+    
+    return baseIntensity * skillMultiplier;
   };
 
-  // Determine who gets spotlight during solo
-  const getSoloistRef = () => {
-    if (songSection === 'solo') {
-      // Alternate between lead guitarist and drummer
+  const getSoloistRef = (section: string) => {
+    if (section === 'solo') {
       return Math.random() > 0.5 ? guitarist1Ref : drummerRef;
     }
     return null;
   };
 
-  // Animation for band members based on state and section
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime();
-    
-    let baseIntensity = 1.0;
-    let speed = 1.0;
-    
-    switch (animationState) {
-      case 'intro':
-        baseIntensity = 0.5;
-        speed = 0.8;
-        break;
-      case 'playing':
-        baseIntensity = 1.0;
-        speed = 1.0;
-        break;
-      case 'outro':
-        baseIntensity = 0.7;
-        speed = 0.6;
-        break;
-    }
+    const isSolo = songSection === 'solo';
+    const soloistRef = getSoloistRef(songSection);
 
-    const sectionIntensity = getSectionIntensity();
-    const intensity = baseIntensity * sectionIntensity;
-    const soloistRef = getSoloistRef();
-
-    // Lead Guitarist - energetic, moves with the music
     if (guitarist1Ref.current) {
-      const isSoloist = soloistRef === guitarist1Ref;
-      const soloBoost = isSoloist ? 1.5 : (songSection === 'solo' ? 0.6 : 1.0);
+      const intensity = getSectionIntensity(songSection, 'guitarist1');
+      const skillSpeed = 0.7 + (bandMemberSkills['guitarist1'] || 50) / 100 * 0.6;
+      const baseY = 1;
+      guitarist1Ref.current.position.y = baseY + Math.sin(time * 2 * intensity * skillSpeed) * 0.1 * intensity;
+      guitarist1Ref.current.rotation.z = Math.sin(time * 1.5 * skillSpeed) * 0.05 * intensity;
       
-      const bobAmount = 0.1 * intensity * soloBoost;
-      const swayAmount = 0.05 * intensity * soloBoost;
-      
-      guitarist1Ref.current.position.y = 1.3 + Math.sin(time * 2 * speed) * bobAmount;
-      guitarist1Ref.current.rotation.z = Math.sin(time * speed) * swayAmount;
-      
-      if (songSection === 'chorus' || isSoloist) {
-        guitarist1Ref.current.rotation.y = Math.sin(time * 0.8) * 0.15;
+      if (animationState === 'intro') {
+        guitarist1Ref.current.position.y = baseY - 0.3;
+      } else if (animationState === 'outro') {
+        guitarist1Ref.current.position.y = baseY + Math.sin(time * 3) * 0.15;
       }
     }
 
-    // Rhythm Guitarist - steadier, support role
     if (guitarist2Ref.current) {
-      const supportFactor = songSection === 'solo' ? 0.6 : 1.0;
-      const bobAmount = 0.08 * intensity * supportFactor;
-      const swayAmount = 0.04 * intensity * supportFactor;
+      const intensity = getSectionIntensity(songSection, 'guitarist2');
+      const skillSpeed = 0.7 + (bandMemberSkills['guitarist2'] || 50) / 100 * 0.6;
+      const baseY = 1;
+      guitarist2Ref.current.position.y = baseY + Math.cos(time * 2.2 * intensity * skillSpeed) * 0.1 * intensity;
+      guitarist2Ref.current.rotation.z = Math.cos(time * 1.8 * skillSpeed) * 0.05 * intensity;
       
-      guitarist2Ref.current.position.y = 1.3 + Math.sin(time * 2 * speed + 1) * bobAmount;
-      guitarist2Ref.current.rotation.z = Math.sin(time * speed + 1) * swayAmount;
+      if (animationState === 'intro') {
+        guitarist2Ref.current.position.y = baseY - 0.3;
+      } else if (animationState === 'outro') {
+        guitarist2Ref.current.position.y = baseY + Math.cos(time * 3.2) * 0.15;
+      }
     }
 
-    // Bassist - groovy, bounces to the beat
     if (bassistRef.current) {
-      const supportFactor = songSection === 'solo' ? 0.6 : 1.0;
-      const bounceAmount = 0.12 * intensity * supportFactor;
+      const intensity = getSectionIntensity(songSection, 'bassist');
+      const skillSpeed = 0.7 + (bandMemberSkills['bassist'] || 50) / 100 * 0.6;
+      const baseY = 1;
+      bassistRef.current.position.y = baseY + Math.sin(time * 1.8 * intensity * skillSpeed) * 0.08 * intensity;
+      bassistRef.current.rotation.y = Math.sin(time * 1.2 * skillSpeed) * 0.1 * intensity;
       
-      bassistRef.current.position.y = 1.3 + Math.abs(Math.sin(time * 1.5 * speed)) * bounceAmount;
-      
-      if (songSection === 'chorus') {
-        bassistRef.current.rotation.x = Math.sin(time * 2) * 0.15;
+      if (animationState === 'intro') {
+        bassistRef.current.position.y = baseY - 0.2;
+      } else if (animationState === 'outro') {
+        bassistRef.current.position.y = baseY + Math.sin(time * 2.5) * 0.12;
       }
     }
 
-    // Drummer - focused, upper body motion
     if (drummerRef.current) {
-      const isSoloist = soloistRef === drummerRef;
-      const soloBoost = isSoloist ? 1.8 : 1.0;
+      const intensity = getSectionIntensity(songSection, 'drummer');
+      const skillSpeed = 0.7 + (bandMemberSkills['drummer'] || 50) / 100 * 0.6;
+      const baseY = 1;
+      const drumIntensity = intensity * 1.2;
+      drummerRef.current.position.y = baseY + Math.sin(time * 4 * drumIntensity * skillSpeed) * 0.05 * drumIntensity;
+      drummerRef.current.rotation.x = Math.sin(time * 3 * skillSpeed) * 0.03 * drumIntensity;
       
-      drummerRef.current.rotation.y = Math.sin(time * speed * 0.5) * 0.1;
-      
-      if (songSection === 'chorus' || isSoloist) {
-        drummerRef.current.position.y = 1.5 + Math.abs(Math.sin(time * 4 * soloBoost)) * 0.08;
+      if (animationState === 'intro') {
+        drummerRef.current.position.y = baseY - 0.15;
+      } else if (animationState === 'outro') {
+        drummerRef.current.position.y = baseY + Math.sin(time * 5) * 0.08;
       }
     }
 
-    // Vocalist - expressive, front and center
     if (vocalistRef.current) {
-      const expressiveMove = 0.15 * intensity;
-      vocalistRef.current.position.y = 1.3 + Math.sin(time * 1.8 * speed) * expressiveMove;
+      const intensity = getSectionIntensity(songSection, 'vocalist');
+      const skillSpeed = 0.7 + (bandMemberSkills['vocalist'] || 50) / 100 * 0.6;
+      const baseY = 1.2;
+      vocalistRef.current.position.y = baseY + Math.sin(time * 2.5 * intensity * skillSpeed) * 0.12 * intensity;
+      vocalistRef.current.rotation.z = Math.sin(time * 1.3 * skillSpeed) * 0.08 * intensity;
+      vocalistRef.current.position.x = Math.sin(time * 0.8 * skillSpeed) * 0.3 * intensity;
       
-      if (songSection === 'chorus') {
-        vocalistRef.current.rotation.z = Math.sin(time * 0.8) * 0.15;
-        vocalistRef.current.position.x = Math.sin(time * 0.4) * 0.15;
-      } else if (songSection === 'bridge') {
-        vocalistRef.current.rotation.y = Math.sin(time * 0.6) * 0.1;
+      if (animationState === 'intro') {
+        vocalistRef.current.position.y = baseY - 0.4;
+        vocalistRef.current.rotation.y = Math.sin(time) * 0.2;
+      } else if (animationState === 'outro') {
+        vocalistRef.current.position.y = baseY + Math.sin(time * 3.5) * 0.2;
+        vocalistRef.current.rotation.y = Math.sin(time * 2) * 0.3;
       }
     }
 
-    // Spotlight on soloist during solo section
     if (spotlightRef.current && soloistRef?.current) {
       spotlightRef.current.target.position.copy(soloistRef.current.position);
       spotlightRef.current.intensity = 5 + Math.sin(time * 3) * 1;
@@ -165,74 +151,37 @@ export const BandAvatars = ({
   return (
     <>
       <group position={[0, 0, -5]}>
-        {/* Lead Guitarist */}
-        <mesh ref={guitarist1Ref} position={[-2, 1.3, 1]} castShadow>
+        <mesh ref={guitarist1Ref} position={[-2, 1, 1]} castShadow>
           <capsuleGeometry args={[0.3, 1, 4, 8]} />
-          <meshStandardMaterial 
-            color="#ff0066"
-            emissive="#ff0066"
-            emissiveIntensity={0.3}
-            roughness={0.4}
-            metalness={0.6}
-          />
+          <meshStandardMaterial color="#ff6b35" emissive="#ff6b35" emissiveIntensity={0.2} />
         </mesh>
 
-        {/* Rhythm Guitarist */}
-        <mesh ref={guitarist2Ref} position={[2, 1.3, 1]} castShadow>
+        <mesh ref={guitarist2Ref} position={[2, 1, 1]} castShadow>
           <capsuleGeometry args={[0.3, 1, 4, 8]} />
-          <meshStandardMaterial 
-            color="#0066ff"
-            emissive="#0066ff"
-            emissiveIntensity={0.3}
-            roughness={0.4}
-            metalness={0.6}
-          />
+          <meshStandardMaterial color="#004e89" emissive="#004e89" emissiveIntensity={0.2} />
         </mesh>
 
-        {/* Bassist */}
-        <mesh ref={bassistRef} position={[-4, 1.3, 0.5]} castShadow>
+        <mesh ref={bassistRef} position={[-4, 1, 0.5]} castShadow>
           <capsuleGeometry args={[0.3, 1, 4, 8]} />
-          <meshStandardMaterial 
-            color="#00ff66"
-            emissive="#00ff66"
-            emissiveIntensity={0.3}
-            roughness={0.4}
-            metalness={0.6}
-          />
+          <meshStandardMaterial color="#00a878" emissive="#00a878" emissiveIntensity={0.2} />
         </mesh>
 
-        {/* Drummer */}
-        <mesh ref={drummerRef} position={[0, 1.5, -1]} castShadow>
+        <mesh ref={drummerRef} position={[0, 1, -1]} castShadow>
           <capsuleGeometry args={[0.3, 0.8, 4, 8]} />
-          <meshStandardMaterial 
-            color="#ffff00"
-            emissive="#ffff00"
-            emissiveIntensity={0.3}
-            roughness={0.4}
-            metalness={0.6}
-          />
+          <meshStandardMaterial color="#f95738" emissive="#f95738" emissiveIntensity={0.2} />
         </mesh>
 
-        {/* Vocalist - center stage */}
-        <mesh ref={vocalistRef} position={[0, 1.3, 2]} castShadow>
+        <mesh ref={vocalistRef} position={[0, 1.2, 2]} castShadow>
           <capsuleGeometry args={[0.3, 1, 4, 8]} />
-          <meshStandardMaterial 
-            color="#ff00ff"
-            emissive="#ff00ff"
-            emissiveIntensity={0.4}
-            roughness={0.4}
-            metalness={0.6}
-          />
+          <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={0.3} />
         </mesh>
 
-        {/* Simple drum kit representation */}
         <mesh position={[0, 1, -1.5]} castShadow>
           <cylinderGeometry args={[0.4, 0.5, 0.3, 16]} />
           <meshStandardMaterial color="#333333" />
         </mesh>
       </group>
 
-      {/* Solo spotlight */}
       <spotLight
         ref={spotlightRef}
         position={[0, 10, 0]}

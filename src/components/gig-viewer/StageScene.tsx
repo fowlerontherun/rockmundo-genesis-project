@@ -1,14 +1,35 @@
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Mesh } from "three";
+import { supabase } from "@/integrations/supabase/client";
+import { ModelLoader } from "./ModelLoader";
 
 interface StageSceneProps {
-  gigId: string;
+  stageTemplateId?: string | null;
 }
 
-export const StageScene = ({ gigId }: StageSceneProps) => {
+export const StageScene = ({ stageTemplateId }: StageSceneProps) => {
   const stageRef = useRef<Mesh>(null);
+  const [gltfPath, setGltfPath] = useState<string | null>(null);
 
-  return (
+  useEffect(() => {
+    const fetchStageModel = async () => {
+      if (!stageTemplateId) return;
+
+      const { data } = await supabase
+        .from('stage_templates')
+        .select('gltf_asset_path')
+        .eq('id', stageTemplateId)
+        .single();
+
+      if (data?.gltf_asset_path) {
+        setGltfPath(data.gltf_asset_path);
+      }
+    };
+
+    fetchStageModel();
+  }, [stageTemplateId]);
+
+  const fallbackStage = (
     <group position={[0, 0, 0]}>
       {/* Stage Platform */}
       <mesh ref={stageRef} position={[0, 0.5, -5]} receiveShadow>
@@ -51,25 +72,15 @@ export const StageScene = ({ gigId }: StageSceneProps) => {
           <meshStandardMaterial color="#1a1a1a" />
         </mesh>
       </group>
-
-      {/* Stage Lights - More dramatic */}
-      <pointLight position={[-3, 6, -5]} intensity={3} color="#ff00ff" castShadow />
-      <pointLight position={[0, 6, -5]} intensity={3} color="#00ffff" castShadow />
-      <pointLight position={[3, 6, -5]} intensity={3} color="#ff0000" castShadow />
-      
-      {/* Rim lights */}
-      <pointLight position={[-6, 3, -3]} intensity={1.5} color="#0066ff" />
-      <pointLight position={[6, 3, -3]} intensity={1.5} color="#ff6600" />
-      
-      {/* Floor wash */}
-      <spotLight 
-        position={[0, 8, -2]} 
-        angle={0.8}
-        penumbra={0.5}
-        intensity={1.5}
-        color="#ffffff"
-        castShadow
-      />
     </group>
+  );
+
+  return (
+    <ModelLoader 
+      modelPath={gltfPath} 
+      fallback={fallbackStage}
+      scale={1}
+      position={[0, 0, 0]}
+    />
   );
 };

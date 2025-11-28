@@ -7,8 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GigViewer3D } from "@/components/gig-viewer/GigViewer3D";
+import { Textarea } from "@/components/ui/textarea";
 
 type StageTemplate = {
   id: string;
@@ -26,6 +29,7 @@ export default function StageTemplatesAdmin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [previewStageId, setPreviewStageId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -35,6 +39,8 @@ export default function StageTemplatesAdmin() {
     gltf_asset_path: "",
     spline_scene_url: "",
     is_active: true,
+    camera_offset: '{"x": 0, "y": 1.6, "z": 8}',
+    metadata: '{"spotlights": [], "crowdZones": [], "baseIntensity": 1.0}',
   });
 
   const { data: stages, isLoading } = useQuery({
@@ -127,6 +133,8 @@ export default function StageTemplatesAdmin() {
       gltf_asset_path: "",
       spline_scene_url: "",
       is_active: true,
+      camera_offset: '{"x": 0, "y": 1.6, "z": 8}',
+      metadata: '{"spotlights": [], "crowdZones": [], "baseIntensity": 1.0}',
     });
     setEditingId(null);
   };
@@ -140,7 +148,7 @@ export default function StageTemplatesAdmin() {
     }
   };
 
-  const handleEdit = (stage: StageTemplate) => {
+  const handleEdit = (stage: StageTemplate & { camera_offset?: any; metadata?: any }) => {
     setFormData({
       name: stage.name,
       slug: stage.slug,
@@ -150,6 +158,8 @@ export default function StageTemplatesAdmin() {
       gltf_asset_path: stage.gltf_asset_path || "",
       spline_scene_url: stage.spline_scene_url || "",
       is_active: stage.is_active,
+      camera_offset: stage.camera_offset ? JSON.stringify(stage.camera_offset, null, 2) : '{"x": 0, "y": 1.6, "z": 8}',
+      metadata: stage.metadata ? JSON.stringify(stage.metadata, null, 2) : '{"spotlights": [], "crowdZones": [], "baseIntensity": 1.0}',
     });
     setEditingId(stage.id);
   };
@@ -257,6 +267,28 @@ export default function StageTemplatesAdmin() {
                 />
                 <Label htmlFor="is_active">Active</Label>
               </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="camera_offset">Camera Offset (JSON)</Label>
+                <Textarea
+                  id="camera_offset"
+                  value={formData.camera_offset}
+                  onChange={(e) => setFormData({ ...formData, camera_offset: e.target.value })}
+                  placeholder='{"x": 0, "y": 1.6, "z": 8}'
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="metadata">Metadata (JSON - spotlights, crowdZones, baseIntensity)</Label>
+                <Textarea
+                  id="metadata"
+                  value={formData.metadata}
+                  onChange={(e) => setFormData({ ...formData, metadata: e.target.value })}
+                  placeholder='{"spotlights": [], "crowdZones": [], "baseIntensity": 1.0}'
+                  rows={6}
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -293,6 +325,10 @@ export default function StageTemplatesAdmin() {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setPreviewStageId(stage.id)}>
+                      <Eye className="h-4 w-4 mr-1" />
+                      Preview
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(stage)}>
                       Edit
                     </Button>
@@ -311,6 +347,22 @@ export default function StageTemplatesAdmin() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!previewStageId} onOpenChange={() => setPreviewStageId(null)}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Stage Preview</DialogTitle>
+          </DialogHeader>
+          <div className="h-full">
+            <GigViewer3D
+              previewMode={true}
+              previewCrowdMood={70}
+              previewIntensity={0.8}
+              onClose={() => setPreviewStageId(null)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -26,18 +26,20 @@ interface GigViewer3DProps {
 type GigOutcome = Database['public']['Tables']['gig_outcomes']['Row'];
 type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'];
 
-export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdMood = 50, previewSongIntensity = 50 }: GigViewer3DProps) => {
+export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdMood, previewIntensity }: GigViewer3DProps) => {
+  const performanceSettings = usePerformanceSettings();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
-  const [crowdMood, setCrowdMood] = useState(previewMode ? previewCrowdMood : 50);
-  const [songIntensity, setSongIntensity] = useState(previewMode ? previewSongIntensity : 0.5);
+  const [crowdMood, setCrowdMood] = useState(50);
+  const [songIntensity, setSongIntensity] = useState(0.5);
   const [gigOutcome, setGigOutcome] = useState<GigOutcome | null>(null);
   const [songPerformances, setSongPerformances] = useState<SongPerformance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!previewMode);
   const [stageTemplateId, setStageTemplateId] = useState<string | null>(null);
-  const [bandFame, setBandFame] = useState(0);
-  const [bandMerchColor, setBandMerchColor] = useState("#ff0066");
-  const [songSection, setSongSection] = useState<'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro'>('chorus');
+  const [bandFame, setBandFame] = useState(100);
+  const [bandMerchColor, setBandMerchColor] = useState("#ff0000");
+  const [songSection, setSongSection] = useState<'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro'>('intro');
+  const [bandId, setBandId] = useState<string | null>(null);
 
   // Update preview mode values
   useEffect(() => {
@@ -268,15 +270,18 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
 
           {/* Scene Components */}
           <StageFloor />
-          <StageScene gigId={gigId} />
+          <StageScene stageTemplateId={stageTemplateId} />
           <CrowdLayer 
             crowdMood={crowdMood}
-            stageTemplateId={stageTemplateId || undefined}
+            stageTemplateId={stageTemplateId}
             bandFame={bandFame}
             bandMerchColor={bandMerchColor}
+            maxCrowdCount={performanceSettings.maxCrowdCount}
+            densityMultiplier={performanceSettings.crowdDensity}
           />
           <BandAvatars 
-            gigId={gigId} 
+            gigId={gigId}
+            bandId={bandId}
             songProgress={currentSongIndex / Math.max(songPerformances.length, 1)}
             songSection={songSection}
           />
