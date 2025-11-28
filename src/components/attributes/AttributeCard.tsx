@@ -25,9 +25,9 @@ export const AttributeCard = ({
   affectedSystems
 }: AttributeCardProps) => {
   const queryClient = useQueryClient();
-  const cost = getAttributeTrainingCost(currentValue);
+  const cost = 10;
   const progress = currentValue / ATTRIBUTE_MAX_VALUE * 100;
-  const canAfford = xpBalance >= cost;
+  const canAfford = xpBalance >= 10;
   const isMaxed = currentValue >= ATTRIBUTE_MAX_VALUE;
   const trainMutation = useMutation({
     mutationFn: () => spendAttributeXp({
@@ -45,39 +45,30 @@ export const AttributeCard = ({
     }
   });
   return <Card className="hover:border-primary/40 transition-colors">
-      <CardContent className="pt-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-lg">{label}</h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="w-4 h-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="text-sm">{description}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <p className="text-sm text-muted-foreground">{description}</p>
+      <CardContent className="pt-3 pb-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-1">
+            <h3 className="font-medium text-sm">{label}</h3>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-3 h-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-sm">{description}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          
+          <span className="text-xs text-muted-foreground">{currentValue}</span>
         </div>
 
-        <Progress value={progress} className="h-2" />
+        <Progress value={progress} className="h-1.5" />
 
-        <div className="flex flex-wrap gap-1">
-          {affectedSystems.map(system => <Badge key={system} variant="secondary" className="text-xs">
-              {system}
-            </Badge>)}
-        </div>
-
-        <Button onClick={() => trainMutation.mutate()} disabled={!canAfford || isMaxed || trainMutation.isPending} className="w-full" size="sm">
-          {isMaxed ? "Maxed Out" : <>
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Train (+10) - {cost} XP
+        <Button onClick={() => trainMutation.mutate()} disabled={!canAfford || isMaxed || trainMutation.isPending} className="w-full h-7 text-xs" size="sm">
+          {isMaxed ? "Maxed" : <>
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Train - 10 XP
             </>}
         </Button>
       </CardContent>

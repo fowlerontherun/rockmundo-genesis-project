@@ -33,11 +33,11 @@ const ATTRIBUTE_CATEGORIES = {
 
 export const AttributePanel = ({ attributes, xpBalance }: AttributePanelProps) => {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {Object.entries(ATTRIBUTE_CATEGORIES).map(([categoryKey, category]) => (
-        <div key={categoryKey} className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground">{category.title}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div key={categoryKey} className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">{category.title}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {category.keys.map((key) => {
               const metadata = FULL_ATTRIBUTE_METADATA[key];
               const currentValue = getAttributeValue(attributes, key);
