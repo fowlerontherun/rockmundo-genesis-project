@@ -153,7 +153,9 @@ export const GigDemoViewer = ({
             />
           </mesh>
 
-          <StageScene stageTemplateId={stageTemplateId} />
+          {/* Temporarily disabled for debugging */}
+          {/* <StageScene stageTemplateId={stageTemplateId} /> */}
+          
           <CrowdLayer 
             crowdMood={crowdMood}
             stageTemplateId={stageTemplateId}
@@ -162,13 +164,15 @@ export const GigDemoViewer = ({
             maxCrowdCount={maxCrowdCount}
             densityMultiplier={crowdDensity}
           />
-          <BandAvatars 
+          
+          {/* Temporarily disabled for debugging */}
+          {/* <BandAvatars 
             gigId="demo-gig"
             bandId="demo-band"
             songProgress={0.5}
             songSection={songSection}
             bandMemberSkills={mockBandMemberSkills}
-          />
+          /> */}
         </Suspense>
       </Canvas>
     </div>
