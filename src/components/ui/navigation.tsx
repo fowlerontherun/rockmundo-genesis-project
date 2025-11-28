@@ -306,38 +306,60 @@ const Navigation = () => {
 
   return (
     <>
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-background/95 to-background/90 backdrop-blur-md border-b border-primary/20">
-        <div className="flex items-center justify-between p-4">
+      {/* Mobile Header with Hamburger */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-10 w-10 border-primary/50 hover:bg-primary/10"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-6 w-6 text-primary" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-80 p-0 bg-sidebar">
+              <div className="flex flex-col h-full">
+                <NavigationContent isMobile={true} />
+              </div>
+            </SheetContent>
+          </Sheet>
+
           <img 
             src={logo} 
             alt="RockMundo" 
             className="h-8 w-auto object-contain"
           />
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <ActivityStatusIndicator />
             <ThemeSwitcher />
             <LanguageSwitcher />
             <HowToPlayDialog />
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open navigation menu">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-80 p-0 bg-sidebar">
-                <div className="flex flex-col h-full">
-                  <NavigationContent isMobile={true} />
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </div>
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar with Hamburger Toggle */}
       <div className="hidden lg:flex w-64 h-screen bg-sidebar border-r border-sidebar-border flex-col fixed left-0 top-0">
+        <div className="p-4 border-b border-sidebar-border/50 flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 border-primary/50 hover:bg-primary/10"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="h-5 w-5 text-primary" />
+          </Button>
+          <div className="flex items-center gap-1">
+            <ThemeSwitcher />
+            <LanguageSwitcher />
+            <HowToPlayDialog />
+          </div>
+        </div>
         <NavigationContent />
       </div>
 
