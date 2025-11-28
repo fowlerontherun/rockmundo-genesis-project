@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
+import { VersionHeader } from "@/components/VersionHeader";
 import {
   Home,
   Users,
@@ -83,6 +84,13 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
+  
+  // Desktop sidebar collapsed state with localStorage persistence
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(() => {
+    const saved = localStorage.getItem('desktop-sidebar-collapsed');
+    return saved === 'true';
+  });
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Home: true,
     Music: true,
@@ -93,6 +101,15 @@ const Navigation = () => {
     Business: true,
     Admin: true,
   });
+
+  // Persist desktop sidebar state
+  useEffect(() => {
+    localStorage.setItem('desktop-sidebar-collapsed', isDesktopCollapsed.toString());
+  }, [isDesktopCollapsed]);
+
+  const toggleDesktopSidebar = () => {
+    setIsDesktopCollapsed(prev => !prev);
+  };
 
   const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
 
@@ -230,58 +247,64 @@ const Navigation = () => {
 
   interface NavigationContentProps {
     isMobile?: boolean;
+    collapsed?: boolean;
   }
 
-  const NavigationContent = ({ isMobile = false }: NavigationContentProps) => (
+  const NavigationContent = ({ isMobile = false, collapsed = false }: NavigationContentProps) => (
     <>
       {/* Logo */}
-      <div className={`${isMobile ? 'p-6' : 'p-6'} border-b border-sidebar-border/50`}>
-        <div className="flex items-center justify-center">
-          <img 
-            src={logo} 
-            alt="RockMundo - Live The Dream" 
-            className="h-16 w-auto object-contain"
-          />
+      {!collapsed && (
+        <div className={`${isMobile ? 'p-6' : 'p-6'} border-b border-sidebar-border/50`}>
+          <div className="flex items-center justify-center">
+            <img 
+              src={logo} 
+              alt="RockMundo - Live The Dream" 
+              className="h-16 w-auto object-contain"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav className={`flex-1 ${collapsed ? 'p-2' : 'p-4'} space-y-2 overflow-y-auto`}>
         {navSections.map((section) => (
           <Collapsible
             key={section.title}
-            open={openSections[section.title]}
-            onOpenChange={() => toggleSection(section.title)}
+            open={collapsed ? false : openSections[section.title]}
+            onOpenChange={() => !collapsed && toggleSection(section.title)}
           >
-            <CollapsibleTrigger className="w-full group">
-              <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
-                <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
-                  {section.title}
-                </h3>
-                {openSections[section.title] ? (
-                  <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform" />
-                )}
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1 pt-1">
+            {!collapsed && (
+              <CollapsibleTrigger className="w-full group">
+                <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
+                  <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
+                    {section.title}
+                  </h3>
+                  {openSections[section.title] ? (
+                    <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform" />
+                  )}
+                </div>
+              </CollapsibleTrigger>
+            )}
+            <CollapsibleContent className={`${collapsed ? '' : 'space-y-1 pt-1'}`}>
               {section.items.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Button
                     key={`${item.path}-${item.label}`}
                     variant={isActive(item) ? "secondary" : "ghost"}
-                    className={`w-full justify-start gap-3 ${
+                    className={`${collapsed ? 'w-full justify-center p-2' : 'w-full justify-start gap-3'} ${
                       isActive(item)
                         ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                     onClick={() => handleNavigation(item.path, item.search)}
                     aria-current={isActive(item) ? "page" : undefined}
+                    title={collapsed ? item.label : undefined}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    {!collapsed && item.label}
                   </Button>
                 );
               })}
@@ -291,14 +314,15 @@ const Navigation = () => {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-sidebar-border">
+      <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-sidebar-border`}>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive"
+          className={`w-full ${collapsed ? 'justify-center p-2' : 'justify-start gap-3'} text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive`}
           onClick={handleLogout}
+          title={collapsed ? "Logout" : undefined}
         >
           <LogOut className="h-4 w-4" />
-          Logout
+          {!collapsed && "Logout"}
         </Button>
       </div>
     </>
@@ -308,6 +332,7 @@ const Navigation = () => {
     <>
       {/* Mobile Header with Hamburger */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <VersionHeader />
         <div className="flex items-center justify-between px-4 py-3">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
@@ -343,24 +368,27 @@ const Navigation = () => {
       </div>
 
       {/* Desktop Sidebar with Hamburger Toggle */}
-      <div className="hidden lg:flex w-64 h-screen bg-sidebar border-r border-sidebar-border flex-col fixed left-0 top-0">
-        <div className="p-4 border-b border-sidebar-border/50 flex items-center justify-between">
+      <div className={`hidden lg:flex ${isDesktopCollapsed ? 'w-14' : 'w-64'} h-screen bg-sidebar border-r border-sidebar-border flex-col fixed left-0 top-0 transition-all duration-300`}>
+        {!isDesktopCollapsed && <VersionHeader />}
+        <div className={`${isDesktopCollapsed ? 'p-2' : 'p-4'} border-b border-sidebar-border/50 flex ${isDesktopCollapsed ? 'justify-center' : 'items-center justify-between'}`}>
           <Button
             variant="outline"
             size="icon"
             className="h-8 w-8 border-primary/50 hover:bg-primary/10"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={toggleDesktopSidebar}
             aria-label="Toggle navigation menu"
           >
             <Menu className="h-5 w-5 text-primary" />
           </Button>
-          <div className="flex items-center gap-1">
-            <ThemeSwitcher />
-            <LanguageSwitcher />
-            <HowToPlayDialog />
-          </div>
+          {!isDesktopCollapsed && (
+            <div className="flex items-center gap-1">
+              <ThemeSwitcher />
+              <LanguageSwitcher />
+              <HowToPlayDialog />
+            </div>
+          )}
         </div>
-        <NavigationContent />
+        <NavigationContent collapsed={isDesktopCollapsed} />
       </div>
 
       {/* Mobile Bottom Navigation */}
