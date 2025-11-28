@@ -209,7 +209,7 @@ const Auth = () => {
           title: "Welcome back!",
           description: "Successfully logged into Rockmundo"
         });
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred";
