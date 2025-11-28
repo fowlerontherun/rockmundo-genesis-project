@@ -76,8 +76,6 @@ export const BandAvatars = ({
       `
     );
   };
-    );
-  };
   
   useEffect(() => {
     if (songProgress < 0.1) {
