@@ -23,6 +23,11 @@ export const CrowdSprite = ({
   const spriteRef = useRef<Sprite>(null);
   const textures = useCrowdTextures();
 
+  // Don't render until textures are loaded
+  if (!textures.standing || !textures.bouncing || !textures.jumping || !textures.armsUp) {
+    return null;
+  }
+
   const getAnimationType = (mood: number): AnimationType => {
     if (mood < 20) return 'tired';
     if (mood < 40) return 'bored';

@@ -17,6 +17,9 @@ export const LightBeams = ({
   const beamRefs = useRef<Mesh[]>([]);
   const textures = useEffectTextures();
 
+  // Don't render gobo projections until textures are loaded
+  const hasTextures = !!textures.gobo;
+
   const beamData = useMemo(() => {
     return Array.from({ length: count }, (_, i) => {
       const angle = (i / count) * Math.PI * 2;
@@ -73,7 +76,7 @@ export const LightBeams = ({
       ))}
       
       {/* Gobo pattern projections */}
-      {beamData.slice(0, 2).map((data, i) => (
+      {hasTextures && beamData.slice(0, 2).map((data, i) => (
         <sprite 
           key={`gobo-${i}`}
           position={[data.x * 0.5, -8, data.z * 0.5]}

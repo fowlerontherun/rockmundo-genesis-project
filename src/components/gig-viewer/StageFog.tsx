@@ -17,6 +17,9 @@ export const StageFog = ({
   const textures = useEffectTextures();
   const fogSprites = useRef<Sprite[]>([]);
 
+  // Don't render until textures are loaded
+  if (!textures.fog) return null;
+
   const fogPositions = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
       x: (Math.random() - 0.5) * 20,
