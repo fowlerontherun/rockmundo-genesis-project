@@ -160,10 +160,10 @@ interface DecoratedFriendship {
 const Dashboard = () => {
   const [currentTab, setCurrentTab] = useState<ChatScope>("general");
   const [mainTab, setMainTab] = useState<string>("overview");
-  const [scheduleOpen, setScheduleOpen] = useState(true);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [skillsOpen, setSkillsOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const {
     profile,
     skills,
@@ -644,18 +644,18 @@ const Dashboard = () => {
               <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="pb-2 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
+                        <CardTitle className="text-xs flex items-center gap-2">
+                          <Calendar className="h-3 w-3" />
                           Today's Schedule
                         </CardTitle>
-                        {scheduleOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {scheduleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent className="p-0 md:p-4 md:pt-0">
+                    <CardContent className="p-2 max-h-[300px] overflow-y-auto">
                       <DaySchedule date={new Date()} userId={profile.user_id} />
                     </CardContent>
                   </CollapsibleContent>
@@ -667,26 +667,26 @@ const Dashboard = () => {
                 <Collapsible open={skillsOpen} onOpenChange={setSkillsOpen}>
                   <Card>
                     <CollapsibleTrigger asChild>
-                      <CardHeader className="pb-2 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <TrendingUpIcon className="h-4 w-4" />
+                          <CardTitle className="text-xs flex items-center gap-2">
+                            <TrendingUpIcon className="h-3 w-3" />
                             Skills Improved (24hrs)
                           </CardTitle>
-                          {skillsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          {skillsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {recentImprovements.slice(0, 5).map(improvement => (
-                            <div key={improvement.id} className="flex items-center justify-between p-2 rounded-lg bg-accent/50 text-xs">
+                      <CardContent className="p-2">
+                        <div className="space-y-1">
+                          {recentImprovements.slice(0, 3).map(improvement => (
+                            <div key={improvement.id} className="flex items-center justify-between p-1.5 rounded bg-accent/50 text-xs">
                               <div>
                                 <p className="font-medium">{formatSkillName(improvement.skill_name)}</p>
-                                <p className="text-muted-foreground">{improvement.previous_value} → {improvement.new_value}</p>
+                                <p className="text-muted-foreground text-[10px]">{improvement.previous_value} → {improvement.new_value}</p>
                               </div>
-                              <Badge variant="outline" className="text-xs">+{improvement.improvement_amount}</Badge>
+                              <Badge variant="outline" className="text-[10px] h-4">+{improvement.improvement_amount}</Badge>
                             </div>
                           ))}
                         </div>
@@ -700,37 +700,37 @@ const Dashboard = () => {
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="pb-2 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Activity className="h-4 w-4" />
+                        <CardTitle className="text-xs flex items-center gap-2">
+                          <Activity className="h-3 w-3" />
                           Recent Activity
                         </CardTitle>
-                        {activityOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {activityOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent>
+                    <CardContent className="p-2 max-h-[200px] overflow-y-auto">
                       {activityLoading ? (
-                        <div className="space-y-2">
-                          {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
+                        <div className="space-y-1">
+                          {[1, 2, 3].map(i => <Skeleton key={i} className="h-8" />)}
                         </div>
                       ) : activityFeed.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No recent activity.</p>
+                        <p className="text-xs text-muted-foreground p-2">No recent activity.</p>
                       ) : (
-                        <div className="space-y-2">
-                          {activityFeed.slice(0, 5).map(activity => (
-                            <div key={activity.id} className="flex items-start gap-2 p-2 rounded-lg bg-accent/50 text-xs">
+                        <div className="space-y-1">
+                          {activityFeed.slice(0, 3).map(activity => (
+                            <div key={activity.id} className="flex items-start gap-1.5 p-1.5 rounded bg-accent/50 text-xs">
                               <Activity className="h-3 w-3 mt-0.5 shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p>{activity.message}</p>
-                                <p className="text-muted-foreground">
+                                <p className="text-[11px] line-clamp-1">{activity.message}</p>
+                                <p className="text-muted-foreground text-[10px]">
                                   {formatDistanceToNowStrict(new Date(activity.created_at), { addSuffix: true })}
                                 </p>
                               </div>
                               {activity.earnings > 0 && (
-                                <Badge variant="outline" className="text-xs shrink-0">+${activity.earnings}</Badge>
+                                <Badge variant="outline" className="text-[10px] h-4 shrink-0">+${activity.earnings}</Badge>
                               )}
                             </div>
                           ))}
@@ -745,29 +745,33 @@ const Dashboard = () => {
               <Collapsible open={chatOpen} onOpenChange={setChatOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="pb-2 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
+                        <CardTitle className="text-xs flex items-center gap-2">
+                          <MessageSquare className="h-3 w-3" />
                           Chat
                         </CardTitle>
-                        {chatOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {chatOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <CardContent className="p-0">
                       <Tabs value={currentTab} onValueChange={v => setCurrentTab(v as ChatScope)}>
-                        <TabsList className="w-full rounded-none">
-                          <TabsTrigger value="general" className="flex-1 text-xs">General</TabsTrigger>
-                          <TabsTrigger value="city" className="flex-1 text-xs">Local</TabsTrigger>
+                        <TabsList className="w-full rounded-none h-8">
+                          <TabsTrigger value="general" className="flex-1 text-xs h-7">General</TabsTrigger>
+                          <TabsTrigger value="city" className="flex-1 text-xs h-7">Local</TabsTrigger>
                         </TabsList>
-                        <div className="p-3">
+                        <div className="p-2 max-h-[250px] overflow-y-auto">
                           <TabsContent value="general" className="m-0">
-                            <RealtimeChatPanel channelKey="general" />
+                            <div className="text-xs">
+                              <RealtimeChatPanel channelKey="general" />
+                            </div>
                           </TabsContent>
                           <TabsContent value="city" className="m-0">
-                            <RealtimeChatPanel channelKey={deriveCityChannel(currentCity?.id)} />
+                            <div className="text-xs">
+                              <RealtimeChatPanel channelKey={deriveCityChannel(currentCity?.id)} />
+                            </div>
                           </TabsContent>
                         </div>
                       </Tabs>
