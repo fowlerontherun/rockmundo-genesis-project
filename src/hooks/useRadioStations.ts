@@ -4,26 +4,31 @@ import { toast } from "sonner";
 
 export interface RadioStation {
   id: string;
-  station_name: string;
-  city_id: string | null;
-  frequency: string | null;
-  genre_focus: string | null;
-  listener_count: number;
-  reputation: number;
-  hourly_rate: number;
+  name: string;
+  city_id: string;
+  country: string;
+  station_type: string;
+  quality_level: number;
+  listener_base: number;
+  frequency: string;
+  accepted_genres: string[];
+  accepts_submissions: boolean;
+  is_active: boolean;
+  description: string | null;
   created_at: string;
+  updated_at: string;
 }
 
-export interface RadioAirplay {
+export interface RadioSubmission {
   id: string;
   station_id: string;
   song_id: string;
+  user_id: string;
   band_id: string | null;
-  play_count: number;
-  last_played_at: string | null;
-  peak_position: number | null;
-  weeks_on_rotation: number;
-  listener_response: number;
+  status: string;
+  submitted_at: string;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
   station?: RadioStation;
   song?: any;
   band?: any;
@@ -36,53 +41,55 @@ export const useRadioStations = () => {
   const { data: stations = [], isLoading: stationsLoading } = useQuery({
     queryKey: ["radio-stations"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("radio_stations")
         .select("*")
-        .order("listener_count", { ascending: false });
+        .order("listener_base", { ascending: false });
 
       if (error) throw error;
       return data as RadioStation[];
     },
   });
 
-  // Fetch top airplay across all stations
-  const { data: topAirplay = [], isLoading: airplayLoading } = useQuery({
-    queryKey: ["top-radio-airplay"],
+  // Fetch my submissions
+  const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
+    queryKey: ["my-radio-submissions"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("radio_airplay")
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("radio_submissions")
         .select(`
           *,
-          station:radio_stations(station_name, frequency),
-          song:songs(title, genre),
-          band:bands(name)
+          station:radio_stations!inner(id, name, station_type, quality_level),
+          song:songs!inner(id, title, genre)
         `)
-        .order("play_count", { ascending: false })
-        .limit(50);
+        .eq("user_id", user.id)
+        .order("submitted_at", { ascending: false });
 
       if (error) throw error;
-      return data as RadioAirplay[];
+      return data as any[];
     },
   });
 
-  // Fetch airplay for specific station
-  const getStationAirplay = (stationId: string) =>
+  // Fetch submissions for specific station
+  const getStationSubmissions = (stationId: string) =>
     useQuery({
-      queryKey: ["station-airplay", stationId],
+      queryKey: ["station-submissions", stationId],
       queryFn: async () => {
         const { data, error } = await supabase
-          .from("radio_airplay" as any)
+          .from("radio_submissions")
           .select(`
             *,
-            song:songs(title, genre, mood),
-            band:bands(name)
+            song:songs!inner(id, title, genre),
+            band:bands(id, name)
           `)
           .eq("station_id", stationId)
-          .order("play_count", { ascending: false });
+          .eq("status", "accepted")
+          .order("submitted_at", { ascending: false });
 
         if (error) throw error;
-        return data as any as RadioAirplay[];
+        return data as any[];
       },
       enabled: !!stationId,
     });
@@ -102,24 +109,26 @@ export const useRadioStations = () => {
       if (!user) throw new Error("Not authenticated");
 
       // Check if already submitted
-      const { data: existing } = await (supabase as any)
-        .from("radio_airplay")
+      const { data: existing } = await supabase
+        .from("radio_submissions")
         .select("id")
         .eq("station_id", stationId)
         .eq("song_id", songId)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (existing) {
         throw new Error("Song already submitted to this station");
       }
 
-      const { data, error } = await (supabase as any)
-        .from("radio_airplay")
+      const { data, error } = await supabase
+        .from("radio_submissions")
         .insert({
           station_id: stationId,
           song_id: songId,
+          user_id: user.id,
           band_id: bandId || null,
-          play_count: 0,
+          status: "pending",
         })
         .select()
         .single();
@@ -128,65 +137,21 @@ export const useRadioStations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["top-radio-airplay"] });
-      toast.success("Song submitted to radio station");
+      queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
+      toast.success("Song submitted for review");
     },
     onError: (error: any) => {
       toast.error("Failed to submit song", { description: error.message });
     },
   });
 
-  // Log radio play
-  const logRadioPlay = useMutation({
-    mutationFn: async ({
-      airplayId,
-      stationId,
-      estimatedListeners,
-      timeSlot,
-    }: {
-      airplayId: string;
-      stationId: string;
-      estimatedListeners: number;
-      timeSlot: string;
-    }) => {
-      const { error: logError } = await (supabase as any).from("radio_play_logs").insert({
-        airplay_id: airplayId,
-        station_id: stationId,
-        estimated_listeners: estimatedListeners,
-        time_slot: timeSlot,
-      });
-
-      if (logError) throw logError;
-
-      // Increment play count
-      const { data: airplay } = await (supabase as any)
-        .from("radio_airplay")
-        .select("play_count")
-        .eq("id", airplayId)
-        .single();
-
-      if (airplay) {
-        await (supabase as any)
-          .from("radio_airplay")
-          .update({
-            play_count: (airplay as any).play_count + 1,
-            last_played_at: new Date().toISOString(),
-          })
-          .eq("id", airplayId);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["top-radio-airplay"] });
-    },
-  });
 
   return {
     stations,
-    topAirplay,
-    isLoading: stationsLoading || airplayLoading,
-    getStationAirplay,
+    mySubmissions,
+    isLoading: stationsLoading || submissionsLoading,
+    getStationSubmissions,
     submitToStation: submitToStation.mutate,
-    logRadioPlay: logRadioPlay.mutate,
     isSubmitting: submitToStation.isPending,
   };
 };

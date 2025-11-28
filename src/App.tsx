@@ -144,6 +144,7 @@ const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
 const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
 const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
+const RadioStationDetail = lazyWithRetry(() => import("./pages/RadioStationDetail"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
@@ -226,6 +227,8 @@ function App() {
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="radio" element={<Radio />} />
+                    <Route path="radio-stations" element={<RadioStations />} />
+                    <Route path="radio/:stationId" element={<RadioStationDetail />} />
                     <Route path="music-videos" element={<MusicVideos />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
