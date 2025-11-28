@@ -83,8 +83,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         .from('gigs')
         .select('id')
         .eq('band_id', bandId)
-        .eq('status', 'completed')
-        .not('completed_at', 'is', null);
+        .eq('status', 'completed');
       
       if (gigsError) {
         console.error('Error fetching gigs:', gigsError);

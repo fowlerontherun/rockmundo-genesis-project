@@ -211,28 +211,28 @@ const Dashboard = () => {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Profile
+            <User className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Profile</span>
           </TabsTrigger>
           <TabsTrigger value="skills">
-            <Zap className="h-4 w-4 mr-2" />
-            Skills
+            <Zap className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Skills</span>
           </TabsTrigger>
           <TabsTrigger value="friends">
-            <Users className="h-4 w-4 mr-2" />
-            Friends
+            <Users className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Friends</span>
           </TabsTrigger>
           <TabsTrigger value="schedule">
-            <Calendar className="h-4 w-4 mr-2" />
-            Schedule
+            <Calendar className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
           <TabsTrigger value="advisor">
-            <Bot className="h-4 w-4 mr-2" />
-            Advisor
+            <Bot className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Advisor</span>
           </TabsTrigger>
           <TabsTrigger value="achievements">
-            <Trophy className="h-4 w-4 mr-2" />
-            Achievements
+            <Trophy className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Achievements</span>
           </TabsTrigger>
         </TabsList>
 
@@ -423,8 +423,9 @@ const Dashboard = () => {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <CardTitle>Schedule</CardTitle>
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/songwriting'}>
-                    Songwriting
+                  <Button size="sm" variant="outline" className="text-xs sm:text-sm" onClick={() => window.location.href = '/booking/songwriting'}>
+                    <span className="hidden sm:inline">Songwriting</span>
+                    <span className="sm:hidden">Write</span>
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/performance'}>
                     Performance

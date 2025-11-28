@@ -285,39 +285,61 @@ const Rehearsals = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-3xl font-bold">Band Rehearsals</h1>
           <p className="text-muted-foreground">
             Manage rehearsals for all your bands to improve chemistry and song familiarity
           </p>
         </div>
-        <div className="flex gap-2">
-          {userBands.map((band: any) => (
-            <div key={band.id} className="flex gap-2">
-              <Button 
-                variant={selectedBand?.id === band.id ? "default" : "outline"}
-                onClick={() => {
-                  setSelectedBand(band);
-                  setShowBookingDialog(true);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Book Now: {band.name}
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => {
-                  setSelectedBand(band);
-                  setShowPlanDialog(true);
-                }}
-              >
-                <CalendarPlus className="mr-2 h-4 w-4" />
-                Plan: {band.name}
-              </Button>
-            </div>
-          ))}
-        </div>
+        
+        {/* Prominent action card */}
+        {userBands.length > 0 && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h3 className="font-semibold text-lg">Ready to rehearse?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Book a rehearsal session or plan one for later
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {userBands.map((band: any) => (
+                    <div key={band.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between p-3 bg-background rounded-lg border">
+                      <span className="font-medium">{band.name}</span>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBand(band);
+                            setShowBookingDialog(true);
+                          }}
+                          className="flex-1 sm:flex-none"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Book Now
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedBand(band);
+                            setShowPlanDialog(true);
+                          }}
+                          className="flex-1 sm:flex-none"
+                        >
+                          <CalendarPlus className="mr-2 h-4 w-4" />
+                          Plan Session
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Stats Overview */}
