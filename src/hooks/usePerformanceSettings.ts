@@ -96,7 +96,7 @@ const getSettingsForTier = (tier: PerformanceTier): PerformanceSettings => {
         crowdDensity: 0.3,
         shadows: false,
         postProcessing: false,
-        maxCrowdCount: 100,
+        maxCrowdCount: 40,
       };
     case 'medium':
       return {
@@ -104,7 +104,7 @@ const getSettingsForTier = (tier: PerformanceTier): PerformanceSettings => {
         crowdDensity: 0.6,
         shadows: true,
         postProcessing: false,
-        maxCrowdCount: 300,
+        maxCrowdCount: 100,
       };
     case 'high':
       return {
@@ -112,7 +112,7 @@ const getSettingsForTier = (tier: PerformanceTier): PerformanceSettings => {
         crowdDensity: 1.0,
         shadows: true,
         postProcessing: true,
-        maxCrowdCount: 1000,
+        maxCrowdCount: 250,
       };
   }
 };
