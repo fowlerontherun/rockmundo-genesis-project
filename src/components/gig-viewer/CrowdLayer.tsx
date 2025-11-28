@@ -27,23 +27,67 @@ export const CrowdLayer = ({ crowdMood }: CrowdLayerProps) => {
     return data;
   }, []);
 
-  // Animate crowd based on mood
+  // Animate crowd based on mood with distinct states
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
 
     const time = clock.getElapsedTime();
-    const intensity = crowdMood / 100;
+    
+    // Define crowd animation states based on mood
+    let animationState: 'bored' | 'warming' | 'engaged' | 'energetic' | 'ecstatic';
+    if (crowdMood < 20) animationState = 'bored';
+    else if (crowdMood < 40) animationState = 'warming';
+    else if (crowdMood < 60) animationState = 'engaged';
+    else if (crowdMood < 80) animationState = 'energetic';
+    else animationState = 'ecstatic';
 
     crowdData.forEach((person, i) => {
-      const bobHeight = Math.sin(time * 2 + person.animOffset) * 0.2 * intensity;
-      const sway = Math.sin(time + person.animOffset) * 0.1 * intensity;
+      let posY = 0.8;
+      let sway = 0;
+      let rotationY = 0;
+      
+      switch (animationState) {
+        case 'bored':
+          // Minimal movement, standing still
+          posY = 0.8 + Math.sin(time * 0.5 + person.animOffset) * 0.02;
+          sway = Math.sin(time * 0.3 + person.animOffset) * 0.02;
+          break;
+          
+        case 'warming':
+          // Light bobbing, starting to move
+          posY = 0.8 + Math.sin(time * 1 + person.animOffset) * 0.08;
+          sway = Math.sin(time * 0.5 + person.animOffset) * 0.05;
+          rotationY = Math.sin(time * 0.4 + person.animOffset) * 0.1;
+          break;
+          
+        case 'engaged':
+          // Moderate bouncing, swaying to music
+          posY = 0.8 + Math.abs(Math.sin(time * 1.5 + person.animOffset)) * 0.15;
+          sway = Math.sin(time * 0.8 + person.animOffset) * 0.08;
+          rotationY = Math.sin(time * 0.6 + person.animOffset) * 0.15;
+          break;
+          
+        case 'energetic':
+          // Active jumping, arms up motion
+          posY = 0.8 + Math.abs(Math.sin(time * 2 + person.animOffset)) * 0.25;
+          sway = Math.sin(time * 1.2 + person.animOffset) * 0.12;
+          rotationY = Math.sin(time * 0.8 + person.animOffset) * 0.2;
+          break;
+          
+        case 'ecstatic':
+          // Wild jumping, maximum energy
+          posY = 0.8 + Math.abs(Math.sin(time * 2.5 + person.animOffset)) * 0.35;
+          sway = Math.sin(time * 1.5 + person.animOffset) * 0.15;
+          rotationY = Math.sin(time + person.animOffset) * 0.3;
+          break;
+      }
       
       dummy.position.set(
         person.x + sway,
-        0.8 + Math.abs(bobHeight),
+        posY,
         person.z
       );
-      dummy.rotation.y = Math.sin(time * 0.5 + person.animOffset) * 0.2 * intensity;
+      dummy.rotation.y = rotationY;
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     });
@@ -51,13 +95,30 @@ export const CrowdLayer = ({ crowdMood }: CrowdLayerProps) => {
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
+  // Dynamic emissive color based on mood state
+  const getEmissiveColor = () => {
+    if (crowdMood >= 80) return "#ff3300"; // Ecstatic - bright red-orange
+    if (crowdMood >= 60) return "#ff6600"; // Energetic - orange
+    if (crowdMood >= 40) return "#ffaa00"; // Engaged - yellow-orange
+    if (crowdMood >= 20) return "#4444ff"; // Warming - blue
+    return "#000000"; // Bored - no glow
+  };
+
+  const getEmissiveIntensity = () => {
+    if (crowdMood >= 80) return 0.5;
+    if (crowdMood >= 60) return 0.35;
+    if (crowdMood >= 40) return 0.2;
+    if (crowdMood >= 20) return 0.1;
+    return 0;
+  };
+
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow>
       <capsuleGeometry args={[0.2, 0.8, 4, 8]} />
       <meshStandardMaterial 
         color="#1a1a2e"
-        emissive={crowdMood > 70 ? "#ff6600" : crowdMood > 40 ? "#4444ff" : "#000000"}
-        emissiveIntensity={crowdMood > 70 ? 0.3 : crowdMood > 40 ? 0.15 : 0}
+        emissive={getEmissiveColor()}
+        emissiveIntensity={getEmissiveIntensity()}
       />
     </instancedMesh>
   );
