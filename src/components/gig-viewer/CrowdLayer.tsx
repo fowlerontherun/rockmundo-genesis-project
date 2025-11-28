@@ -5,9 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface CrowdLayerProps {
   crowdMood: number;
-  stageTemplateId?: string;
+  stageTemplateId?: string | null;
   bandFame?: number;
   bandMerchColor?: string;
+  maxCrowdCount?: number;
+  densityMultiplier?: number;
 }
 
 interface CrowdZone {
@@ -21,46 +23,47 @@ interface CrowdZone {
 }
 
 interface CrowdPerson {
-  x: number;
-  z: number;
-  animOffset: number;
-  zone: string;
-  hasMerch: boolean;
+  id: string;
+  position: [number, number, number];
+  seed: number;
+  zoneName: string;
+  wearsMerch: boolean;
 }
 
 type AnimationType = 'tired' | 'bored' | 'bouncing' | 'jumping' | 'handsUp' | 'ecstatic';
 
 export const CrowdLayer = ({ 
   crowdMood, 
-  stageTemplateId,
-  bandFame = 0,
-  bandMerchColor = "#ff0066"
+  stageTemplateId, 
+  bandFame = 100, 
+  bandMerchColor = "#ff0000",
+  maxCrowdCount = 1000,
+  densityMultiplier = 1.0 
 }: CrowdLayerProps) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const [crowdZones, setCrowdZones] = useState<CrowdZone[]>([]);
 
-  // Fetch stage template with crowd zones
   useEffect(() => {
     const fetchStageTemplate = async () => {
       if (!stageTemplateId) {
-        // Default zones if no template
         setCrowdZones([
-          { name: "pit", x: 0, z: 4, width: 10, depth: 4, density: 1.2, minMood: 30 },
-          { name: "floor", x: 0, z: 9, width: 12, depth: 6, density: 1.0, minMood: 20 }
+          { name: "pit", x: 0, z: 4, width: 10, depth: 4, density: 1.0, minMood: 0 },
+          { name: "floor", x: 0, z: 10, width: 16, depth: 6, density: 0.8, minMood: 0 },
+          { name: "back", x: 0, z: 18, width: 20, depth: 6, density: 0.5, minMood: 0 }
         ]);
         return;
       }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('stage_templates')
         .select('metadata')
         .eq('id', stageTemplateId)
         .single();
 
-      if (!error && data?.metadata) {
+      if (data?.metadata) {
         const metadata = data.metadata as any;
-        if (metadata.crowdZones) {
+        if (metadata.crowdZones && Array.isArray(metadata.crowdZones)) {
           setCrowdZones(metadata.crowdZones);
         }
       }
@@ -69,7 +72,6 @@ export const CrowdLayer = ({
     fetchStageTemplate();
   }, [stageTemplateId]);
 
-  // Calculate merch percentage based on fame
   const merchPercentage = useMemo(() => {
     if (bandFame < 100) return 0;
     if (bandFame < 500) return 0.05;
@@ -78,116 +80,93 @@ export const CrowdLayer = ({
     return 0.50;
   }, [bandFame]);
 
-  // Generate crowd based on zones
   const crowdData = useMemo(() => {
-    const data: CrowdPerson[] = [];
+    const people: CrowdPerson[] = [];
+    let totalCount = 0;
     
-    crowdZones.forEach((zone) => {
-      // Only show zone if mood meets minimum threshold
-      if (crowdMood < zone.minMood) return;
-
-      const baseCount = Math.floor((zone.width * zone.depth * zone.density) / 0.36);
-      const cols = Math.ceil(Math.sqrt(baseCount * (zone.width / zone.depth)));
-      const rows = Math.ceil(baseCount / cols);
+    crowdZones.forEach(zone => {
+      if (crowdMood < (zone.minMood || 0)) return;
       
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const x = zone.x + (col - cols / 2) * (zone.width / cols) + (Math.random() - 0.5) * 0.2;
-          const z = zone.z - zone.depth / 2 + (row / rows) * zone.depth + (Math.random() - 0.5) * 0.2;
-          const animOffset = Math.random() * Math.PI * 2;
-          const hasMerch = Math.random() < merchPercentage;
-          
-          data.push({ x, z, animOffset, zone: zone.name, hasMerch });
-        }
+      const baseCount = Math.floor(zone.density * 50 * densityMultiplier);
+      const count = Math.min(baseCount, maxCrowdCount - totalCount);
+      
+      if (count <= 0 || totalCount >= maxCrowdCount) return;
+      
+      for (let i = 0; i < count; i++) {
+        const x = zone.x + Math.random() * zone.width - zone.width / 2;
+        const z = zone.z + Math.random() * zone.depth - zone.depth / 2;
+        
+        const wearsMerch = Math.random() < merchPercentage;
+        
+        people.push({
+          id: `${zone.name}-${i}`,
+          position: [x, 0, z],
+          seed: Math.random(),
+          zoneName: zone.name,
+          wearsMerch,
+        });
+        
+        totalCount++;
       }
     });
     
-    return data;
-  }, [crowdZones, crowdMood, merchPercentage]);
+    return people;
+  }, [crowdZones, crowdMood, merchPercentage, maxCrowdCount, densityMultiplier]);
 
-  // Determine animation distribution based on mood
   const getAnimationType = (index: number, mood: number): AnimationType => {
-    const hash = (index * 12345 + mood) % 100;
-    
-    if (mood < 15) {
-      return 'tired';
-    } else if (mood < 30) {
-      return hash < 70 ? 'bored' : 'tired';
-    } else if (mood < 50) {
-      return hash < 60 ? 'bouncing' : hash < 90 ? 'bored' : 'tired';
-    } else if (mood < 70) {
-      return hash < 40 ? 'bouncing' : hash < 75 ? 'jumping' : 'handsUp';
-    } else if (mood < 85) {
-      return hash < 30 ? 'jumping' : hash < 65 ? 'handsUp' : 'ecstatic';
-    } else {
-      return hash < 30 ? 'ecstatic' : hash < 60 ? 'jumping' : 'handsUp';
-    }
+    if (mood < 20) return 'tired';
+    if (mood < 40) return 'bored';
+    if (mood < 60) return 'bouncing';
+    if (mood < 75) return 'jumping';
+    if (mood < 90) return 'handsUp';
+    return 'ecstatic';
   };
 
-  // Animate crowd with 6 distinct animation types
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
 
     const time = clock.getElapsedTime();
-    
+
     crowdData.forEach((person, i) => {
       const animType = getAnimationType(i, crowdMood);
-      let posY = 0.8;
-      let sway = 0;
-      let rotationY = 0;
-      let scaleY = 1;
-      
+      const [x, , z] = person.position;
+      const offset = person.seed * Math.PI * 2;
+
+      let y = 0;
+      let scale = 1;
+      let rotY = 0;
+
       switch (animType) {
         case 'tired':
-          // Barely moving, occasional shift
-          posY = 0.8 + Math.sin(time * 0.3 + person.animOffset) * 0.01;
-          sway = Math.sin(time * 0.2 + person.animOffset) * 0.01;
+          y = Math.sin(time * 0.5 + offset) * 0.05;
+          scale = 0.95;
           break;
-          
         case 'bored':
-          // Standing still, minimal sway
-          posY = 0.8 + Math.sin(time * 0.5 + person.animOffset) * 0.02;
-          sway = Math.sin(time * 0.3 + person.animOffset) * 0.02;
+          y = Math.sin(time * 0.8 + offset) * 0.08;
+          rotY = Math.sin(time * 0.3 + offset) * 0.1;
           break;
-          
         case 'bouncing':
-          // Rhythmic bounce to beat
-          posY = 0.8 + Math.abs(Math.sin(time * 1.2 + person.animOffset)) * 0.12;
-          sway = Math.sin(time * 0.6 + person.animOffset) * 0.06;
-          rotationY = Math.sin(time * 0.5 + person.animOffset) * 0.12;
+          y = Math.abs(Math.sin(time * 2 + offset)) * 0.3;
           break;
-          
         case 'jumping':
-          // Full vertical jumps
-          posY = 0.8 + Math.abs(Math.sin(time * 2 + person.animOffset)) * 0.28;
-          sway = Math.sin(time * 1.0 + person.animOffset) * 0.1;
-          scaleY = 1 + Math.abs(Math.sin(time * 2 + person.animOffset)) * 0.1;
+          y = Math.abs(Math.sin(time * 3 + offset)) * 0.5;
+          scale = 1.0 + Math.sin(time * 3 + offset) * 0.1;
           break;
-          
         case 'handsUp':
-          // Arms raised, swaying
-          posY = 0.8 + Math.sin(time * 1.5 + person.animOffset) * 0.15;
-          sway = Math.sin(time * 0.8 + person.animOffset) * 0.12;
-          rotationY = Math.sin(time * 0.6 + person.animOffset) * 0.18;
-          scaleY = 1.15; // Taller to represent raised arms
+          y = Math.sin(time * 2.5 + offset) * 0.4;
+          scale = 1.1;
+          rotY = Math.sin(time * 0.5 + offset) * 0.2;
           break;
-          
         case 'ecstatic':
-          // Wild jumping, moshing motion
-          posY = 0.8 + Math.abs(Math.sin(time * 2.5 + person.animOffset)) * 0.35;
-          sway = Math.sin(time * 1.5 + person.animOffset) * 0.18;
-          rotationY = Math.sin(time * 1.2 + person.animOffset) * 0.25;
-          scaleY = 1 + Math.abs(Math.sin(time * 2.5 + person.animOffset)) * 0.15;
+          y = Math.abs(Math.sin(time * 4 + offset)) * 0.7;
+          scale = 1.1 + Math.sin(time * 4 + offset) * 0.15;
+          rotY = Math.sin(time * 2 + offset) * 0.3;
           break;
       }
-      
-      dummy.position.set(
-        person.x + sway,
-        posY,
-        person.z
-      );
-      dummy.rotation.y = rotationY;
-      dummy.scale.set(1, scaleY, 1);
+
+      dummy.position.set(x, y + 0.5, z);
+      dummy.rotation.y = rotY;
+      dummy.scale.set(0.3, scale * 0.8, 0.3);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     });
@@ -195,51 +174,45 @@ export const CrowdLayer = ({
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
-  // Dynamic emissive color based on mood state
-  const getEmissiveColor = () => {
-    if (crowdMood >= 85) return "#ff3300"; // Ecstatic - bright red-orange
-    if (crowdMood >= 70) return "#ff6600"; // Energetic - orange
-    if (crowdMood >= 50) return "#ffaa00"; // Engaged - yellow-orange
-    if (crowdMood >= 30) return "#4444ff"; // Warming - blue
-    return "#000000"; // Bored - no glow
+  const getEmissiveColor = (): string => {
+    if (crowdMood > 80) return "#ff00ff";
+    if (crowdMood > 60) return "#ff0066";
+    if (crowdMood > 40) return "#0066ff";
+    return "#003366";
   };
 
-  const getEmissiveIntensity = () => {
-    if (crowdMood >= 85) return 0.5;
-    if (crowdMood >= 70) return 0.35;
-    if (crowdMood >= 50) return 0.2;
-    if (crowdMood >= 30) return 0.1;
-    return 0;
+  const getEmissiveIntensity = (): number => {
+    return (crowdMood / 100) * 0.5;
   };
 
-  // Create color array for merch wearers
   const colors = useMemo(() => {
-    const colorArray = new Float32Array(crowdData.length * 3);
-    const baseColor = new Color("#1a1a2e");
-    const merchColor = new Color(bandMerchColor);
-    
-    crowdData.forEach((person, i) => {
-      const color = person.hasMerch ? merchColor : baseColor;
-      colorArray[i * 3] = color.r;
-      colorArray[i * 3 + 1] = color.g;
-      colorArray[i * 3 + 2] = color.b;
-    });
-    
-    return colorArray;
+    return new Float32Array(
+      crowdData.flatMap(person => {
+        if (person.wearsMerch) {
+          const merchColor = new Color(bandMerchColor);
+          return [merchColor.r, merchColor.g, merchColor.b];
+        } else {
+          const skinTone = new Color().setHSL(0.08, 0.5, 0.4 + Math.random() * 0.2);
+          return [skinTone.r, skinTone.g, skinTone.b];
+        }
+      })
+    );
   }, [crowdData, bandMerchColor]);
 
+  if (crowdData.length === 0) return null;
+
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow>
-      <capsuleGeometry args={[0.2, 0.8, 4, 8]} />
-      <meshStandardMaterial 
+    <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow receiveShadow>
+      <capsuleGeometry args={[0.15, 0.5, 4, 8]} />
+      <meshStandardMaterial
+        color="#cccccc"
         emissive={getEmissiveColor()}
         emissiveIntensity={getEmissiveIntensity()}
-        vertexColors
-      />
-      <instancedBufferAttribute
-        attach="geometry-attributes-color"
-        args={[colors, 3]}
-      />
+        roughness={0.8}
+        metalness={0.2}
+      >
+        <instancedBufferAttribute attach="attributes-color" args={[colors, 3]} />
+      </meshStandardMaterial>
     </instancedMesh>
   );
 };

@@ -1,0 +1,118 @@
+import { useState, useEffect } from 'react';
+
+export type PerformanceTier = 'low' | 'medium' | 'high';
+
+export interface PerformanceSettings {
+  tier: PerformanceTier;
+  crowdDensity: number;
+  shadows: boolean;
+  postProcessing: boolean;
+  maxCrowdCount: number;
+}
+
+const detectDeviceCapabilities = (): PerformanceTier => {
+  if (typeof window === 'undefined') return 'medium';
+
+  const canvas = document.createElement('canvas');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl') as WebGLRenderingContext | null;
+  
+  if (!gl) return 'low';
+
+  // Check for WebGL2 support
+  const hasWebGL2 = !!document.createElement('canvas').getContext('webgl2');
+  
+  // Check renderer info
+  const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = debugInfo ? (gl as any).getParameter((debugInfo as any).UNMASKED_RENDERER_WEBGL) : '';
+  
+  // Mobile devices or low-end GPUs
+  const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const isLowEndGPU = /Intel.*HD|Mali|Adreno [0-4]/i.test(renderer);
+  
+  if (isMobile || isLowEndGPU) return 'low';
+  if (!hasWebGL2) return 'medium';
+  
+  return 'high';
+};
+
+export const usePerformanceSettings = (): PerformanceSettings => {
+  const [settings, setSettings] = useState<PerformanceSettings>(() => {
+    const tier = detectDeviceCapabilities();
+    return getSettingsForTier(tier);
+  });
+
+  useEffect(() => {
+    // Sample FPS after a brief period to adjust tier if needed
+    let frameCount = 0;
+    let lastTime = performance.now();
+    let rafId: number;
+
+    const measureFPS = () => {
+      frameCount++;
+      const currentTime = performance.now();
+      const elapsed = currentTime - lastTime;
+
+      if (elapsed >= 1000) {
+        const fps = (frameCount / elapsed) * 1000;
+        frameCount = 0;
+        lastTime = currentTime;
+
+        // Adjust tier based on FPS
+        if (fps < 25 && settings.tier !== 'low') {
+          setSettings(getSettingsForTier('low'));
+        } else if (fps < 45 && settings.tier === 'high') {
+          setSettings(getSettingsForTier('medium'));
+        }
+      }
+
+      rafId = requestAnimationFrame(measureFPS);
+    };
+
+    // Start measuring after 2 seconds
+    const timeoutId = setTimeout(() => {
+      rafId = requestAnimationFrame(measureFPS);
+    }, 2000);
+
+    // Stop after 5 seconds
+    const stopId = setTimeout(() => {
+      cancelAnimationFrame(rafId);
+    }, 7000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(stopId);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  return settings;
+};
+
+const getSettingsForTier = (tier: PerformanceTier): PerformanceSettings => {
+  switch (tier) {
+    case 'low':
+      return {
+        tier: 'low',
+        crowdDensity: 0.3,
+        shadows: false,
+        postProcessing: false,
+        maxCrowdCount: 100,
+      };
+    case 'medium':
+      return {
+        tier: 'medium',
+        crowdDensity: 0.6,
+        shadows: true,
+        postProcessing: false,
+        maxCrowdCount: 300,
+      };
+    case 'high':
+      return {
+        tier: 'high',
+        crowdDensity: 1.0,
+        shadows: true,
+        postProcessing: true,
+        maxCrowdCount: 1000,
+      };
+  }
+};

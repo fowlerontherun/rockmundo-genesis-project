@@ -1,41 +1,38 @@
 import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { PointLight, SpotLight, Color, Vector3 } from "three";
+import { PointLight, SpotLight } from "three";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StageLightingProps {
   crowdMood: number;
-  songIntensity?: number;
+  songIntensity: number;
   stageTemplateId?: string | null;
+  enableShadows?: boolean;
 }
 
-interface SpotlightConfig {
-  position: Vector3;
-  color: Color;
+interface SpotlightConfigData {
+  position: [number, number, number];
+  color: string;
   intensity: number;
 }
 
-export const StageLighting = ({ crowdMood, songIntensity = 0.5, stageTemplateId }: StageLightingProps) => {
+export const StageLighting = ({ crowdMood, songIntensity, stageTemplateId, enableShadows = true }: StageLightingProps) => {
   const spotLight1Ref = useRef<SpotLight>(null);
   const spotLight2Ref = useRef<SpotLight>(null);
   const spotLight3Ref = useRef<SpotLight>(null);
   const colorLight1Ref = useRef<PointLight>(null);
   const colorLight2Ref = useRef<PointLight>(null);
-  const [spotlights, setSpotlights] = useState<SpotlightConfig[]>([]);
+  const [spotlights, setSpotlights] = useState<SpotlightConfigData[]>([
+    { position: [-4, 8, -3], color: "#ff00ff", intensity: 2 },
+    { position: [4, 8, -3], color: "#00ffff", intensity: 2 },
+    { position: [0, 9, -2], color: "#ffffff", intensity: 2.5 }
+  ]);
   const [baseIntensity, setBaseIntensity] = useState(1.0);
 
   // Fetch lighting config from stage template
   useEffect(() => {
     const fetchLightingConfig = async () => {
-      if (!stageTemplateId) {
-        // Default spotlights
-        setSpotlights([
-          { position: new Vector3(-4, 8, -3), color: new Color("#ff00ff"), intensity: 2 },
-          { position: new Vector3(4, 8, -3), color: new Color("#00ffff"), intensity: 2 },
-          { position: new Vector3(0, 9, -2), color: new Color("#ffffff"), intensity: 2.5 }
-        ]);
-        return;
-      }
+      if (!stageTemplateId) return;
 
       const { data, error } = await supabase
         .from('stage_templates')
@@ -45,16 +42,11 @@ export const StageLighting = ({ crowdMood, songIntensity = 0.5, stageTemplateId 
 
       if (!error && data?.metadata) {
         const metadata = data.metadata as any;
-        if (metadata.spotlights) {
-          const configs = metadata.spotlights.map((light: any) => ({
-            position: new Vector3(light.position[0], light.position[1], light.position[2]),
-            color: new Color(light.color),
-            intensity: light.intensity || 2
-          }));
-          setSpotlights(configs);
+        if (metadata.spotlights && Array.isArray(metadata.spotlights)) {
+          setSpotlights(metadata.spotlights);
         }
-        if (metadata.intensity) {
-          setBaseIntensity(metadata.intensity);
+        if (metadata.baseIntensity !== undefined) {
+          setBaseIntensity(metadata.baseIntensity);
         }
       }
     };
@@ -95,45 +87,24 @@ export const StageLighting = ({ crowdMood, songIntensity = 0.5, stageTemplateId 
 
   return (
     <group>
-      {/* Dynamic spotlights from template config */}
-      {spotlights[0] && (
+      <ambientLight intensity={baseIntensity * 0.3} />
+      <directionalLight
+        position={[10, 10, 5]}
+        intensity={baseIntensity * 0.5}
+        castShadow={enableShadows}
+      />
+      
+      {spotlights.map((spotlight, index) => (
         <spotLight
-          ref={spotLight1Ref}
-          position={spotlights[0].position}
-          angle={0.3}
-          penumbra={0.4}
-          intensity={spotlights[0].intensity}
-          color={spotlights[0].color}
-          castShadow
-          shadow-mapSize={[1024, 1024]}
+          key={index}
+          position={spotlight.position as [number, number, number]}
+          angle={0.5}
+          penumbra={0.5}
+          intensity={spotlight.intensity * songIntensity}
+          color={spotlight.color}
+          castShadow={enableShadows}
         />
-      )}
-
-      {spotlights[1] && (
-        <spotLight
-          ref={spotLight2Ref}
-          position={spotlights[1].position}
-          angle={0.3}
-          penumbra={0.4}
-          intensity={spotlights[1].intensity}
-          color={spotlights[1].color}
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-        />
-      )}
-
-      {spotlights[2] && (
-        <spotLight
-          ref={spotLight3Ref}
-          position={spotlights[2].position}
-          angle={0.4}
-          penumbra={0.3}
-          intensity={spotlights[2].intensity}
-          color={spotlights[2].color}
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-        />
-      )}
+      ))}
 
       {/* Dynamic colored lights */}
       <pointLight
@@ -150,40 +121,6 @@ export const StageLighting = ({ crowdMood, songIntensity = 0.5, stageTemplateId 
         intensity={1.5}
         color="#0066ff"
         distance={12}
-      />
-
-      {/* Back rim lights */}
-      <pointLight
-        position={[-6, 4, -7]}
-        intensity={1}
-        color="#ff6600"
-        distance={10}
-      />
-
-      <pointLight
-        position={[6, 4, -7]}
-        intensity={1}
-        color="#6600ff"
-        distance={10}
-      />
-
-      {/* Floor wash lights */}
-      <spotLight
-        position={[-3, 5, 0]}
-        angle={0.6}
-        penumbra={0.5}
-        intensity={0.8}
-        color="#ff0000"
-        target-position={[0, 0, 2]}
-      />
-
-      <spotLight
-        position={[3, 5, 0]}
-        angle={0.6}
-        penumbra={0.5}
-        intensity={0.8}
-        color="#0000ff"
-        target-position={[0, 0, 2]}
       />
     </group>
   );
