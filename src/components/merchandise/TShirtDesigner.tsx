@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Upload, Save, Undo, Redo } from "lucide-react";
+import { Trash2, Upload, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { TShirtColorPicker } from "./TShirtColorPicker";
 
 interface TShirtDesignerProps {
   bandId: string;
@@ -19,7 +19,7 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
-  const [backgroundColor, setBackgroundColor] = useState<"white" | "black">("white");
+  const [tshirtColor, setTshirtColor] = useState<string>("#ffffff");
   const [designName, setDesignName] = useState("");
   const [imageCount, setImageCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,11 +32,11 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
     const canvas = new FabricCanvas(canvasRef.current, {
       width: 400,
       height: 500,
-      backgroundColor: backgroundColor === "white" ? "#ffffff" : "#000000",
+      backgroundColor: "#f5f5f5",
     });
 
-    // Draw t-shirt outline
-    drawTShirtOutline(canvas, backgroundColor);
+    // Draw t-shirt with initial color
+    drawTShirt(canvas, tshirtColor);
 
     setFabricCanvas(canvas);
 
@@ -51,36 +51,59 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
     loadDesign(existingDesignId);
   }, [fabricCanvas, existingDesignId]);
 
-  // Update background when color changes
+  // Update t-shirt color when changed
   useEffect(() => {
     if (!fabricCanvas) return;
-    fabricCanvas.backgroundColor = backgroundColor === "white" ? "#ffffff" : "#000000";
-    fabricCanvas.renderAll();
-    drawTShirtOutline(fabricCanvas, backgroundColor);
-  }, [backgroundColor, fabricCanvas]);
+    drawTShirt(fabricCanvas, tshirtColor);
+  }, [tshirtColor, fabricCanvas]);
 
-  const drawTShirtOutline = (canvas: FabricCanvas, bgColor: "white" | "black") => {
-    // Remove existing outline
-    const existingOutline = canvas.getObjects().find((obj: any) => obj.id === "tshirt-outline");
-    if (existingOutline) {
-      canvas.remove(existingOutline);
-    }
+  const drawTShirt = (canvas: FabricCanvas, color: string) => {
+    // Remove existing t-shirt shapes
+    const existingShapes = canvas.getObjects().filter((obj: any) => 
+      obj.id === "tshirt-body" || obj.id === "tshirt-shadow"
+    );
+    existingShapes.forEach(shape => canvas.remove(shape));
 
-    // Draw t-shirt shape using SVG path
-    const outlineColor = bgColor === "white" ? "#cccccc" : "#444444";
-    const tshirtPath = `M 100,50 L 100,30 C 100,20 110,10 120,10 L 140,10 C 145,10 150,5 150,0 L 250,0 C 250,5 255,10 260,10 L 280,10 C 290,10 300,20 300,30 L 300,50 L 320,80 L 320,150 L 310,150 L 310,500 L 90,500 L 90,150 L 80,150 L 80,80 Z`;
-    
-    const path = new Path(tshirtPath, {
-      fill: 'transparent',
-      stroke: outlineColor,
-      strokeWidth: 2,
+    // Enhanced t-shirt silhouette with better proportions
+    const bodyPath = `
+      M 100,80 
+      L 100,50 C 100,35 105,25 115,20 
+      L 135,15 C 140,12 145,8 148,0 
+      L 252,0 C 255,8 260,12 265,15 
+      L 285,20 C 295,25 300,35 300,50 
+      L 300,80 
+      L 320,95 L 320,140 
+      L 305,140 L 305,480 C 305,490 300,495 290,495 
+      L 110,495 C 100,495 95,490 95,480 
+L 95,140 L 80,140 L 80,95 Z
+    `;
+
+    // Shadow/depth effect
+    const shadow = new Path(bodyPath, {
+      fill: 'rgba(0, 0, 0, 0.1)',
+      stroke: '',
+      selectable: false,
+      evented: false,
+      left: 2,
+      top: 2,
+    });
+    (shadow as any).id = 'tshirt-shadow';
+    canvas.add(shadow);
+
+    // Main t-shirt body with selected color
+    const body = new Path(bodyPath, {
+      fill: color,
+      stroke: '#00000020',
+      strokeWidth: 1,
       selectable: false,
       evented: false,
     });
-    (path as any).id = 'tshirt-outline';
+    (body as any).id = 'tshirt-body';
+    canvas.add(body);
 
-    canvas.add(path);
-    canvas.bringObjectToFront(path);
+    // Move t-shirt to back but keep above shadow
+    canvas.sendObjectToBack(body);
+    canvas.sendObjectToBack(shadow);
     canvas.renderAll();
   };
 
@@ -88,7 +111,9 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
     const files = e.target.files;
     if (!files || !fabricCanvas) return;
 
-    const currentImages = fabricCanvas.getObjects().filter((obj: any) => obj.type === 'image' && obj.id !== 'tshirt-outline').length;
+    const currentImages = fabricCanvas.getObjects().filter((obj: any) => 
+      obj.type === 'image' && obj.id !== 'tshirt-body' && obj.id !== 'tshirt-shadow'
+    ).length;
     const remainingSlots = 10 - currentImages;
 
     if (files.length > remainingSlots) {
@@ -113,7 +138,9 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
             top: 150 + (index * 20),
           });
           fabricCanvas.add(img);
-          setImageCount(fabricCanvas.getObjects().filter((obj: any) => obj.type === 'image' && obj.id !== 'tshirt-outline').length);
+          setImageCount(fabricCanvas.getObjects().filter((obj: any) => 
+            obj.type === 'image' && obj.id !== 'tshirt-body' && obj.id !== 'tshirt-shadow'
+          ).length);
         });
       };
       reader.readAsDataURL(file);
@@ -127,9 +154,12 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
   const handleDeleteSelected = () => {
     if (!fabricCanvas) return;
     const activeObject = fabricCanvas.getActiveObject();
-    if (activeObject && (activeObject as any).id !== 'tshirt-outline') {
+    const disallowedIds = ['tshirt-body', 'tshirt-shadow'];
+    if (activeObject && !disallowedIds.includes((activeObject as any).id)) {
       fabricCanvas.remove(activeObject);
-      setImageCount(fabricCanvas.getObjects().filter((obj: any) => obj.type === 'image' && obj.id !== 'tshirt-outline').length);
+      setImageCount(fabricCanvas.getObjects().filter((obj: any) => 
+        obj.type === 'image' && !disallowedIds.includes((obj as any).id)
+      ).length);
       toast({
         title: "Image removed",
         description: "Selected image has been deleted from the design.",
@@ -166,7 +196,7 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
         .insert({
           band_id: bandId,
           design_name: designName,
-          background_color: backgroundColor,
+          background_color: tshirtColor,
           design_data: designData,
           preview_image_url: previewDataUrl,
         })
@@ -208,7 +238,7 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
 
       if (data) {
         setDesignName(data.design_name);
-        setBackgroundColor(data.background_color as "white" | "black");
+        setTshirtColor(data.background_color || "#ffffff");
         
         // Load the design data into canvas
         const designJson = typeof data.design_data === 'string' 
@@ -217,7 +247,10 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
         
         fabricCanvas.loadFromJSON(designJson, () => {
           fabricCanvas.renderAll();
-          setImageCount(fabricCanvas.getObjects().filter((obj: any) => obj.type === 'image' && obj.id !== 'tshirt-outline').length);
+          const disallowedIds = ['tshirt-body', 'tshirt-shadow'];
+          setImageCount(fabricCanvas.getObjects().filter((obj: any) => 
+            obj.type === 'image' && !disallowedIds.includes((obj as any).id)
+          ).length);
         });
       }
     } catch (error: any) {
@@ -282,22 +315,10 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>T-Shirt Color</Label>
-              <RadioGroup
-                value={backgroundColor}
-                onValueChange={(value) => setBackgroundColor(value as "white" | "black")}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="white" id="white" />
-                  <Label htmlFor="white" className="cursor-pointer">White</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="black" id="black" />
-                  <Label htmlFor="black" className="cursor-pointer">Black</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <TShirtColorPicker
+              selectedColor={tshirtColor}
+              onColorChange={setTshirtColor}
+            />
 
             <div className="space-y-2">
               <Label>Instructions</Label>
