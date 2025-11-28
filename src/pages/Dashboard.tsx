@@ -53,7 +53,7 @@ interface AdvisorChatMessage {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { profile, skills, attributes } = useGameData();
+  const { profile, skillProgress, attributes } = useGameData();
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
@@ -97,7 +97,7 @@ const Dashboard = () => {
   });
 
   // Filter skills with XP > 0
-  const trainedSkills = skills?.filter(skill => skill.value > 0) || [];
+  const trainedSkills = skillProgress?.filter(skill => (skill.current_xp || 0) > 0) || [];
 
   const getInitials = (name: string) => {
     return name
@@ -108,10 +108,10 @@ const Dashboard = () => {
       .slice(0, 2);
   };
 
-  const calculateSkillProgress = (value: number, level: number) => {
+  const calculateSkillProgress = (currentXp: number, level: number) => {
     const currentLevelXp = Math.pow(level, 2) * 100;
     const nextLevelXp = Math.pow(level + 1, 2) * 100;
-    const progressInLevel = value - currentLevelXp;
+    const progressInLevel = currentXp - currentLevelXp;
     const xpNeededForLevel = nextLevelXp - currentLevelXp;
     return (progressInLevel / xpNeededForLevel) * 100;
   };
@@ -414,7 +414,9 @@ const Dashboard = () => {
               ) : (
                 <div className="space-y-4">
                   {trainedSkills.map((skill) => {
-                    const progress = calculateSkillProgress(skill.value, skill.level);
+                    const currentXp = skill.current_xp || 0;
+                    const currentLevel = skill.current_level || 0;
+                    const progress = calculateSkillProgress(currentXp, currentLevel);
                     return (
                       <div key={skill.skill_slug} className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -422,8 +424,8 @@ const Dashboard = () => {
                             {skill.skill_slug.replace(/_/g, " ")}
                           </span>
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary">Level {skill.level}</Badge>
-                            <span className="text-xs text-muted-foreground">{skill.value} XP</span>
+                            <Badge variant="secondary">Level {currentLevel}</Badge>
+                            <span className="text-xs text-muted-foreground">{currentXp} XP</span>
                           </div>
                         </div>
                         <Progress value={progress} className="h-2" />
