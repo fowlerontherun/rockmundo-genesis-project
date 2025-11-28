@@ -12,8 +12,11 @@ interface DailyStipendCardProps {
 
 export const DailyStipendCard = ({ lastClaimDate }: DailyStipendCardProps) => {
   const queryClient = useQueryClient();
-  const today = format(new Date(), "yyyy-MM-dd");
-  const hasClaimedToday = lastClaimDate === today;
+  
+  // Check if user has claimed today by comparing dates (not timestamps)
+  const hasClaimedToday = lastClaimDate 
+    ? format(new Date(lastClaimDate), "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+    : false;
 
   const claimMutation = useMutation({
     mutationFn: claimDailyXp,
@@ -22,7 +25,12 @@ export const DailyStipendCard = ({ lastClaimDate }: DailyStipendCardProps) => {
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to claim daily XP");
+      // Don't show error toast if it's just the "already claimed" validation
+      if (error.message?.includes("already claimed")) {
+        toast.info("You've already claimed your daily XP today");
+      } else {
+        toast.error(error.message || "Failed to claim daily XP");
+      }
     },
   });
 
