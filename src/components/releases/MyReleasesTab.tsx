@@ -154,8 +154,25 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             )}
 
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" size="sm">View Details</Button>
-              <Button variant="outline" size="sm">Edit</Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.href = `/release/${release.id}`}
+              >
+                View Details
+              </Button>
+              {release.release_status !== "released" && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    // TODO: Implement edit dialog
+                    console.log("Edit release", release.id);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

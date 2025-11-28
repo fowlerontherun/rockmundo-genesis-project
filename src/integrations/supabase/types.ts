@@ -7889,8 +7889,11 @@ export type Database = {
         Row: {
           created_at: string
           distribution_fee_percentage: number | null
+          edition_number: number | null
+          edition_quantity: number | null
           format_type: string
           id: string
+          is_limited_edition: boolean | null
           manufacturing_completion_date: string | null
           manufacturing_cost: number | null
           manufacturing_status: string | null
@@ -7899,12 +7902,16 @@ export type Database = {
           release_id: string
           retail_price: number | null
           updated_at: string
+          vinyl_color: string | null
         }
         Insert: {
           created_at?: string
           distribution_fee_percentage?: number | null
+          edition_number?: number | null
+          edition_quantity?: number | null
           format_type: string
           id?: string
+          is_limited_edition?: boolean | null
           manufacturing_completion_date?: string | null
           manufacturing_cost?: number | null
           manufacturing_status?: string | null
@@ -7913,12 +7920,16 @@ export type Database = {
           release_id: string
           retail_price?: number | null
           updated_at?: string
+          vinyl_color?: string | null
         }
         Update: {
           created_at?: string
           distribution_fee_percentage?: number | null
+          edition_number?: number | null
+          edition_quantity?: number | null
           format_type?: string
           id?: string
+          is_limited_edition?: boolean | null
           manufacturing_completion_date?: string | null
           manufacturing_cost?: number | null
           manufacturing_status?: string | null
@@ -7927,6 +7938,7 @@ export type Database = {
           release_id?: string
           retail_price?: number | null
           updated_at?: string
+          vinyl_color?: string | null
         }
         Relationships: [
           {
@@ -8084,9 +8096,13 @@ export type Database = {
           format_type: string | null
           id: string
           manufacturing_complete_at: string | null
+          pre_order_count: number | null
+          pre_order_start_date: string | null
+          promotion_budget: number | null
           release_status: string
           release_type: string
           scheduled_release_date: string | null
+          streaming_platforms: string[] | null
           title: string
           total_cost: number | null
           total_revenue: number | null
@@ -8108,9 +8124,13 @@ export type Database = {
           format_type?: string | null
           id?: string
           manufacturing_complete_at?: string | null
+          pre_order_count?: number | null
+          pre_order_start_date?: string | null
+          promotion_budget?: number | null
           release_status?: string
           release_type: string
           scheduled_release_date?: string | null
+          streaming_platforms?: string[] | null
           title: string
           total_cost?: number | null
           total_revenue?: number | null
@@ -8132,9 +8152,13 @@ export type Database = {
           format_type?: string | null
           id?: string
           manufacturing_complete_at?: string | null
+          pre_order_count?: number | null
+          pre_order_start_date?: string | null
+          promotion_budget?: number | null
           release_status?: string
           release_type?: string
           scheduled_release_date?: string | null
+          streaming_platforms?: string[] | null
           title?: string
           total_cost?: number | null
           total_revenue?: number | null

@@ -11,6 +11,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useStreaming } from "@/hooks/useStreaming";
 import { useReleasedSongs } from "@/hooks/useReleasedSongs";
 import { Badge } from "@/components/ui/badge";
+import { StreamingCharts } from "@/components/streaming/StreamingCharts";
 
 export default function StreamingNew() {
   const navigate = useNavigate();
@@ -184,29 +185,7 @@ export default function StreamingNew() {
 
         <TabsContent value="analytics" className="space-y-4 mt-6">
           {analytics && analytics.length > 0 ? (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Daily Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {analytics.slice(0, 10).map((stat) => (
-                      <div key={stat.id} className="flex items-center justify-between border-b pb-2">
-                        <div className="flex-1">
-                          <p className="font-medium">Analytics Entry</p>
-                          <p className="text-sm text-muted-foreground">{new Date(stat.analytics_date).toLocaleDateString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{stat.daily_streams?.toLocaleString() || 0} streams</p>
-                          <p className="text-sm text-green-500">${stat.daily_revenue?.toFixed(2) || '0.00'}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
+            <StreamingCharts userId={user?.id} />
           ) : (
             <Card>
               <CardContent className="pt-6 text-center py-12">
