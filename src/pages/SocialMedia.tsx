@@ -17,6 +17,7 @@ import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
 import { TwaaterMentionsFeed } from "@/components/twaater/TwaaterMentionsFeed";
 import { useDailyTwaatXP } from "@/hooks/useDailyTwaatXP";
 import { DikCokExperience } from "@/components/dikcok/DikCokExperience";
+import { TrendingTwaats } from "@/components/twaater/TrendingTwaats";
 
 const SocialMedia = () => {
   const { profile } = useGameData();
@@ -106,13 +107,7 @@ const SocialMedia = () => {
                   </TabsContent>
 
                   <TabsContent value="trending">
-                    <Card>
-                      <CardContent className="py-12">
-                        <p className="text-center text-muted-foreground">
-                          Trending posts coming soon! This will show viral twaats and hot topics.
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <TrendingTwaats viewerAccountId={twaaterAccount.id} />
                   </TabsContent>
 
                   <TabsContent value="mentions">

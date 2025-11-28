@@ -194,14 +194,39 @@ export default function StreamingNew() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Daily Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Detailed analytics coming soon...</p>
-            </CardContent>
-          </Card>
+          {analytics && analytics.length > 0 ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Daily Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {analytics.slice(0, 10).map((stat) => (
+                      <div key={stat.id} className="flex items-center justify-between border-b pb-2">
+                        <div className="flex-1">
+                          <p className="font-medium">Analytics Entry</p>
+                          <p className="text-sm text-muted-foreground">{new Date(stat.analytics_date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{stat.daily_streams?.toLocaleString() || 0} streams</p>
+                          <p className="text-sm text-green-500">${stat.daily_revenue?.toFixed(2) || '0.00'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="pt-6 text-center py-12">
+                <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">No Analytics Yet</h3>
+                <p className="text-muted-foreground">Release songs to start tracking performance</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
