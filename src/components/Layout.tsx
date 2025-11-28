@@ -19,13 +19,8 @@ const Layout = () => {
     }
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    const isOnProfile = location.pathname === "/my-character";
-
-    if (!authLoading && !dataLoading && user && !profile && !isOnProfile) {
-      navigate("/my-character");
-    }
-  }, [authLoading, dataLoading, user, profile, location.pathname, navigate]);
+  // Removed automatic redirect to /my-character
+  // Users can access character creation page directly if needed
 
   if (authLoading || dataLoading) {
     return (
