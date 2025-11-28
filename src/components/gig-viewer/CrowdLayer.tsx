@@ -1,13 +1,17 @@
 import { useRef, useMemo, useState, useEffect } from "react";
-import { useFrame, useLoader } from "@react-three/fiber";
-import { InstancedMesh, Object3D, Color, TextureLoader } from "three";
+import { useFrame } from "@react-three/fiber";
+import { useLoader } from "@react-three/fiber";
+import { TextureLoader, InstancedMesh, Object3D } from "three";
+import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
-import crowdBaseTexture from "@/assets/textures/crowd/crowd-realistic-base.png";
-import crowdExcitedTexture from "@/assets/textures/crowd/crowd-realistic-excited.png";
-import crowdJumpingTexture from "@/assets/textures/crowd/crowd-realistic-jumping.png";
-import crowdPhoneTexture from "@/assets/textures/crowd/crowd-realistic-phone.png";
-import crowdFistTexture from "@/assets/textures/crowd/crowd-realistic-fist.png";
-import crowdMerchTexture from "@/assets/textures/crowd/crowd-realistic-merch.png";
+
+// Import crowd sprite variations
+import crowdSprite01 from "@/assets/crowd-sprite-01.gif";
+import crowdSprite02 from "@/assets/crowd-sprite-02.png";
+import crowdSprite03 from "@/assets/crowd-sprite-03.png";
+import crowdSprite04 from "@/assets/crowd-sprite-04.png";
+import crowdSprite05 from "@/assets/crowd-sprite-05.png";
+import crowdSprite06 from "@/assets/crowd-sprite-06.png";
 
 interface CrowdLayerProps {
   crowdMood: number;
@@ -29,11 +33,11 @@ interface CrowdZone {
 }
 
 interface CrowdPerson {
-  id: string;
   position: [number, number, number];
   seed: number;
-  zoneName: string;
-  wearsMerch: boolean;
+  zone: number;
+  hasMerch: boolean;
+  spriteVariation: number;
 }
 
 type AnimationType = 'tired' | 'bored' | 'bouncing' | 'jumping' | 'handsUp' | 'ecstatic';
@@ -48,34 +52,41 @@ export const CrowdLayer = ({
 }: CrowdLayerProps) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
-  const [crowdZones, setCrowdZones] = useState<CrowdZone[]>([]);
 
-  // Load realistic textures with multiple variations
-  const baseTexture = useLoader(TextureLoader, crowdBaseTexture);
-  const excitedTexture = useLoader(TextureLoader, crowdExcitedTexture);
-  const jumpingTexture = useLoader(TextureLoader, crowdJumpingTexture);
-  const phoneTexture = useLoader(TextureLoader, crowdPhoneTexture);
-  const fistTexture = useLoader(TextureLoader, crowdFistTexture);
-  const merchTexture = useLoader(TextureLoader, crowdMerchTexture);
+  // Load crowd sprite textures
+  const crowdTextures = useLoader(TextureLoader, [
+    crowdSprite01,
+    crowdSprite02,
+    crowdSprite03,
+    crowdSprite04,
+    crowdSprite05,
+    crowdSprite06,
+  ]);
 
+  // Configure textures for better rendering
+  crowdTextures.forEach(texture => {
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearFilter;
+  });
+
+  const [crowdZones, setCrowdZones] = useState<CrowdZone[]>([
+    { name: "pit", x: 0, z: 4, width: 10, depth: 4, density: 1.0, minMood: 0 },
+    { name: "floor", x: 0, z: 10, width: 16, depth: 6, density: 0.8, minMood: 0 },
+    { name: "back", x: 0, z: 18, width: 20, depth: 6, density: 0.5, minMood: 0 }
+  ]);
+
+  // Fetch lighting config from stage template
   useEffect(() => {
-    const fetchStageTemplate = async () => {
-      if (!stageTemplateId) {
-        setCrowdZones([
-          { name: "pit", x: 0, z: 4, width: 10, depth: 4, density: 1.0, minMood: 0 },
-          { name: "floor", x: 0, z: 10, width: 16, depth: 6, density: 0.8, minMood: 0 },
-          { name: "back", x: 0, z: 18, width: 20, depth: 6, density: 0.5, minMood: 0 }
-        ]);
-        return;
-      }
+    const fetchCrowdZones = async () => {
+      if (!stageTemplateId) return;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('stage_templates')
         .select('metadata')
         .eq('id', stageTemplateId)
         .single();
 
-      if (data?.metadata) {
+      if (!error && data?.metadata) {
         const metadata = data.metadata as any;
         if (metadata.crowdZones && Array.isArray(metadata.crowdZones)) {
           setCrowdZones(metadata.crowdZones);
@@ -83,7 +94,7 @@ export const CrowdLayer = ({
       }
     };
 
-    fetchStageTemplate();
+    fetchCrowdZones();
   }, [stageTemplateId]);
 
   const merchPercentage = useMemo(() => {
@@ -95,39 +106,52 @@ export const CrowdLayer = ({
   }, [bandFame]);
 
   const crowdData = useMemo(() => {
-    const people: CrowdPerson[] = [];
-    let totalCount = 0;
+    const generatedCrowd: CrowdPerson[] = [];
     
-    crowdZones.forEach(zone => {
-      if (crowdMood < (zone.minMood || 0)) return;
+    for (let i = 0; i < crowdZones.length; i++) {
+      const zone = crowdZones[i];
       
-      const baseCount = Math.floor(zone.density * 50 * densityMultiplier);
-      const count = Math.min(baseCount, maxCrowdCount - totalCount);
+      if (crowdMood < zone.minMood) continue;
       
-      if (count <= 0 || totalCount >= maxCrowdCount) return;
+      const zoneCount = Math.min(
+        Math.floor(zone.density * zone.width * zone.depth * densityMultiplier * 5),
+        maxCrowdCount - generatedCrowd.length
+      );
       
-      for (let i = 0; i < count; i++) {
-        const x = zone.x + Math.random() * zone.width - zone.width / 2;
-        const z = zone.z + Math.random() * zone.depth - zone.depth / 2;
-        
-        const wearsMerch = Math.random() < merchPercentage;
-        
-        people.push({
-          id: `${zone.name}-${i}`,
-          position: [x, 0, z],
-          seed: Math.random(),
-          zoneName: zone.name,
-          wearsMerch,
-        });
-        
-        totalCount++;
-      }
-    });
-    
-    return people;
-  }, [crowdZones, crowdMood, merchPercentage, maxCrowdCount, densityMultiplier]);
+      const baseX = zone.x - zone.width / 2;
+      const baseZone = zone.z - zone.depth / 2;
+      const verticalSpread = 0.2;
+      const depthSpread = zone.depth;
+      
+      for (let j = 0; j < zoneCount; j++) {
+        const randomX = baseX + Math.random() * zone.width;
+        const baseY = 0;
+        const randomY = baseY + (Math.random() - 0.5) * verticalSpread;
+        const randomZ = baseZone + Math.random() * depthSpread;
 
-  const getAnimationType = (index: number, mood: number): AnimationType => {
+        // Random seed for animation variation
+        const seed = Math.random() * 1000;
+        
+        // Random sprite variation (0-5 for 6 different sprites)
+        const spriteVariation = Math.floor(Math.random() * 6);
+
+        const hasMerch = Math.random() < merchPercentage;
+
+        generatedCrowd.push({
+          position: [randomX, randomY, randomZ],
+          seed,
+          zone: i,
+          hasMerch,
+          spriteVariation
+        });
+      }
+    }
+    
+    return generatedCrowd;
+  }, [crowdZones, crowdMood, merchPercentage, densityMultiplier, maxCrowdCount]);
+
+  // Animation type based on crowd mood
+  const getAnimationType = (mood: number): AnimationType => {
     if (mood < 20) return 'tired';
     if (mood < 40) return 'bored';
     if (mood < 60) return 'bouncing';
@@ -140,47 +164,35 @@ export const CrowdLayer = ({
     if (!meshRef.current) return;
 
     const time = clock.getElapsedTime();
+    const animType = getAnimationType(crowdMood);
 
     crowdData.forEach((person, i) => {
-      const animType = getAnimationType(i, crowdMood);
-      const [x, , z] = person.position;
-      const offset = person.seed * Math.PI * 2;
+      dummy.position.set(...person.position);
 
-      let y = 0;
-      let scale = 1;
-      let rotY = 0;
+      // Set scale - larger for better visibility (0.8 x 1.8 units)
+      const baseScale = 0.8;
 
-      switch (animType) {
-        case 'tired':
-          y = Math.sin(time * 0.5 + offset) * 0.05;
-          scale = 0.95;
-          break;
-        case 'bored':
-          y = Math.sin(time * 0.8 + offset) * 0.08;
-          rotY = Math.sin(time * 0.3 + offset) * 0.1;
-          break;
-        case 'bouncing':
-          y = Math.abs(Math.sin(time * 2 + offset)) * 0.3;
-          break;
-        case 'jumping':
-          y = Math.abs(Math.sin(time * 3 + offset)) * 0.5;
-          scale = 1.0 + Math.sin(time * 3 + offset) * 0.1;
-          break;
-        case 'handsUp':
-          y = Math.sin(time * 2.5 + offset) * 0.4;
-          scale = 1.1;
-          rotY = Math.sin(time * 0.5 + offset) * 0.2;
-          break;
-        case 'ecstatic':
-          y = Math.abs(Math.sin(time * 4 + offset)) * 0.7;
-          scale = 1.1 + Math.sin(time * 4 + offset) * 0.15;
-          rotY = Math.sin(time * 2 + offset) * 0.3;
-          break;
+      // Apply animation based on mood
+      if (animType === 'jumping') {
+        dummy.position.y += Math.sin(time * 3 + person.seed) * 0.3;
+        dummy.scale.set(baseScale, baseScale * 2.2 * (1 + Math.sin(time * 3 + person.seed) * 0.15), baseScale);
+      } else if (animType === 'handsUp') {
+        dummy.scale.set(baseScale * 1.1, baseScale * 2.3, baseScale);
+        dummy.position.y += Math.sin(time * 2 + person.seed) * 0.08;
+      } else if (animType === 'bouncing') {
+        dummy.position.y += Math.sin(time * 4 + person.seed) * 0.15;
+        dummy.scale.set(baseScale, baseScale * 2.2 * (1 + Math.sin(time * 4 + person.seed) * 0.08), baseScale);
+      } else if (animType === 'ecstatic') {
+        dummy.position.y += Math.sin(time * 5 + person.seed) * 0.4;
+        dummy.scale.set(baseScale * 1.15, baseScale * 2.4, baseScale);
+        dummy.rotation.z = Math.sin(time * 3 + person.seed) * 0.1;
+      } else {
+        dummy.scale.set(baseScale, baseScale * 2.2, baseScale);
       }
 
-      dummy.position.set(x, y + 0.5, z);
-      dummy.rotation.y = Math.PI; // Face the stage
-      dummy.scale.set(0.6, scale * 1.5, 1); // Larger, more visible crowd members
+      // Face the stage (back view sprites)
+      dummy.rotation.y = Math.PI;
+
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     });
@@ -188,6 +200,16 @@ export const CrowdLayer = ({
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
+  // Store sprite variations for each crowd member
+  const spriteIndices = useMemo(() => {
+    const indices = new Float32Array(crowdData.length);
+    crowdData.forEach((person, i) => {
+      indices[i] = person.spriteVariation;
+    });
+    return indices;
+  }, [crowdData]);
+
+  // Get emissive properties based on mood
   const getEmissiveColor = (): string => {
     if (crowdMood > 80) return "#ff00ff";
     if (crowdMood > 60) return "#ff0066";
@@ -196,53 +218,81 @@ export const CrowdLayer = ({
   };
 
   const getEmissiveIntensity = (): number => {
-    return (crowdMood / 100) * 0.5;
+    return (crowdMood / 100) * 0.3;
   };
 
-  const colors = useMemo(() => {
-    return new Float32Array(
-      crowdData.flatMap(person => {
-        if (person.wearsMerch) {
-          const merchColor = new Color(bandMerchColor);
-          return [merchColor.r, merchColor.g, merchColor.b];
-        } else {
-          const skinTone = new Color().setHSL(0.08, 0.5, 0.4 + Math.random() * 0.2);
-          return [skinTone.r, skinTone.g, skinTone.b];
-        }
-      })
-    );
-  }, [crowdData, bandMerchColor]);
-
-  const getCurrentTexture = () => {
-    // Cycle through different crowd member variations based on mood
-    const textures = [baseTexture, fistTexture, phoneTexture];
-    
-    if (crowdMood > 80) {
-      return [jumpingTexture, excitedTexture, merchTexture][Math.floor(Math.random() * 3)];
-    }
-    if (crowdMood > 50) {
-      return [excitedTexture, fistTexture, merchTexture][Math.floor(Math.random() * 3)];
-    }
-    return textures[Math.floor(Math.random() * textures.length)];
-  };
+  // Custom shader material to handle multiple sprite variations
+  const spriteShader = useMemo(() => ({
+    uniforms: {
+      ...THREE.UniformsLib.common,
+      sprite0: { value: crowdTextures[0] },
+      sprite1: { value: crowdTextures[1] },
+      sprite2: { value: crowdTextures[2] },
+      sprite3: { value: crowdTextures[3] },
+      sprite4: { value: crowdTextures[4] },
+      sprite5: { value: crowdTextures[5] },
+      emissive: { value: new THREE.Color(getEmissiveColor()) },
+      emissiveIntensity: { value: getEmissiveIntensity() }
+    },
+    vertexShader: `
+      attribute float spriteIndex;
+      varying vec2 vUv;
+      varying float vSpriteIndex;
+      
+      void main() {
+        vUv = uv;
+        vSpriteIndex = spriteIndex;
+        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D sprite0;
+      uniform sampler2D sprite1;
+      uniform sampler2D sprite2;
+      uniform sampler2D sprite3;
+      uniform sampler2D sprite4;
+      uniform sampler2D sprite5;
+      uniform vec3 emissive;
+      uniform float emissiveIntensity;
+      
+      varying vec2 vUv;
+      varying float vSpriteIndex;
+      
+      void main() {
+        vec4 texColor;
+        int index = int(vSpriteIndex);
+        
+        if (index == 0) texColor = texture2D(sprite0, vUv);
+        else if (index == 1) texColor = texture2D(sprite1, vUv);
+        else if (index == 2) texColor = texture2D(sprite2, vUv);
+        else if (index == 3) texColor = texture2D(sprite3, vUv);
+        else if (index == 4) texColor = texture2D(sprite4, vUv);
+        else texColor = texture2D(sprite5, vUv);
+        
+        if (texColor.a < 0.5) discard;
+        
+        vec3 finalColor = texColor.rgb + (emissive * emissiveIntensity);
+        gl_FragColor = vec4(finalColor, texColor.a);
+      }
+    `
+  }), [crowdTextures, crowdMood]);
 
   if (crowdData.length === 0) return null;
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow receiveShadow>
-      <planeGeometry args={[0.6, 1.5]} />
-      <meshStandardMaterial
-        map={getCurrentTexture()}
+    <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]}>
+      <planeGeometry args={[1, 2.2]} />
+      <shaderMaterial
+        args={[spriteShader]}
         transparent
-        alphaTest={0.1}
-        color="#ffffff"
-        emissive={getEmissiveColor()}
-        emissiveIntensity={getEmissiveIntensity()}
-        roughness={0.8}
-        metalness={0.2}
+        side={THREE.DoubleSide}
       >
-        <instancedBufferAttribute attach="attributes.color" args={[colors, 3]} />
-      </meshStandardMaterial>
+        <instancedBufferAttribute
+          attach="attributes-spriteIndex"
+          args={[spriteIndices, 1]}
+        />
+      </shaderMaterial>
     </instancedMesh>
   );
 };
