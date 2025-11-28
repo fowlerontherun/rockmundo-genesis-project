@@ -48,7 +48,7 @@ const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
-const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
+// const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
 const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
@@ -71,9 +71,9 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 const TourManagerNew = lazyWithRetry(() => import("./pages/TourManagerNew"));
 const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
-const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
+// const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
-const Awards = lazyWithRetry(() => import("./pages/Awards"));
+// const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
@@ -122,10 +122,10 @@ const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/Sta
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
 const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphicsAdmin"));
-const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
+// const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
-const Admin3DGigViewer = lazyWithRetry(() => import("./pages/Admin3DGigViewer"));
+// const Admin3DGigViewer = lazyWithRetry(() => import("./pages/Admin3DGigViewer"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
@@ -154,7 +154,7 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
-const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
+// const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -198,7 +198,7 @@ function App() {
                     <Route path="tour-manager" element={<TourManagerNew />} />
                     <Route path="streaming" element={<StreamingNew />} />
                     <Route path="music/charts" element={<ChartsPage />} />
-                    <Route path="eurovision" element={<EurovisionResultsPage />} />
+                    {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
@@ -232,13 +232,13 @@ function App() {
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="relationships" element={<Relationships />} />
-                    <Route path="public-relations" element={<PublicRelations />} />
-                    <Route path="pr" element={<PublicRelations />} />
+                    {/* <Route path="public-relations" element={<PublicRelations />} /> */}
+                    {/* <Route path="pr" element={<PublicRelations />} /> */}
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
-                    <Route path="community/charity" element={<CharityPage />} />
+                    {/* <Route path="community/charity" element={<CharityPage />} /> */}
                     <Route path="festivals" element={<FestivalsNew />} />
-                    <Route path="awards" element={<Awards />} />
+                    {/* <Route path="awards" element={<Awards />} /> */}
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
@@ -294,8 +294,8 @@ function App() {
                     <Route path="admin/pr" element={<PublicRelationsAdmin />} />
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
-                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
-                    <Route path="admin/3d-gig-viewer" element={<Admin3DGigViewer />} />
+                    {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
+                    {/* <Route path="admin/3d-gig-viewer" element={<Admin3DGigViewer />} /> */}
                     <Route path="admin/gear-items" element={<GearItemsAdmin />} />
                     <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
@@ -319,7 +319,7 @@ function App() {
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
-                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
+                    {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="employment" element={<Employment />} />

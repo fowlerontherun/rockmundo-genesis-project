@@ -85,13 +85,14 @@ const Dashboard = () => {
 
   const { data: achievements } = useQuery({
     queryKey: ["player-achievements", user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       if (!user?.id) return [];
-      const { data } = await supabase
+      const client: any = supabase;
+      const result = await client
         .from("player_achievements")
         .select("*, achievements(*)")
         .eq("player_id", user.id);
-      return data || [];
+      return result.data || [];
     },
     enabled: !!user?.id,
   });
