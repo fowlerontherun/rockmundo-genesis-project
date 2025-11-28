@@ -10277,15 +10277,21 @@ export type Database = {
           bio: string | null
           created_at: string | null
           display_name: string
+          engagement_score: number | null
           fame_score: number | null
           follower_count: number | null
+          followers_gained_today: number | null
           following_count: number | null
           handle: string
           id: string
+          last_follower_reset: string | null
+          last_post_at: string | null
           location: string | null
           owner_id: string
           owner_type: Database["public"]["Enums"]["twaater_owner_type"]
+          posts_today: number | null
           profile_views: number | null
+          quality_rating: number | null
           updated_at: string | null
           verified: boolean | null
           website_url: string | null
@@ -10295,15 +10301,21 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           display_name: string
+          engagement_score?: number | null
           fame_score?: number | null
           follower_count?: number | null
+          followers_gained_today?: number | null
           following_count?: number | null
           handle: string
           id?: string
+          last_follower_reset?: string | null
+          last_post_at?: string | null
           location?: string | null
           owner_id: string
           owner_type: Database["public"]["Enums"]["twaater_owner_type"]
+          posts_today?: number | null
           profile_views?: number | null
+          quality_rating?: number | null
           updated_at?: string | null
           verified?: boolean | null
           website_url?: string | null
@@ -10313,20 +10325,58 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           display_name?: string
+          engagement_score?: number | null
           fame_score?: number | null
           follower_count?: number | null
+          followers_gained_today?: number | null
           following_count?: number | null
           handle?: string
           id?: string
+          last_follower_reset?: string | null
+          last_post_at?: string | null
           location?: string | null
           owner_id?: string
           owner_type?: Database["public"]["Enums"]["twaater_owner_type"]
+          posts_today?: number | null
           profile_views?: number | null
+          quality_rating?: number | null
           updated_at?: string | null
           verified?: boolean | null
           website_url?: string | null
         }
         Relationships: []
+      }
+      twaater_ai_preferences: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          interaction_history: Json | null
+          last_updated: string | null
+          preferred_genres: string[] | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          interaction_history?: Json | null
+          last_updated?: string | null
+          preferred_genres?: string[] | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          interaction_history?: Json | null
+          last_updated?: string | null
+          preferred_genres?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_ai_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       twaater_bot_accounts: {
         Row: {
@@ -10667,6 +10717,7 @@ export type Database = {
           outcome_code: string | null
           sentiment: number | null
           visibility: Database["public"]["Enums"]["twaater_visibility"] | null
+          xp_awarded: number | null
         }
         Insert: {
           account_id: string
@@ -10683,6 +10734,7 @@ export type Database = {
           outcome_code?: string | null
           sentiment?: number | null
           visibility?: Database["public"]["Enums"]["twaater_visibility"] | null
+          xp_awarded?: number | null
         }
         Update: {
           account_id?: string
@@ -10699,6 +10751,7 @@ export type Database = {
           outcome_code?: string | null
           sentiment?: number | null
           visibility?: Database["public"]["Enums"]["twaater_visibility"] | null
+          xp_awarded?: number | null
         }
         Relationships: [
           {
@@ -11244,6 +11297,10 @@ export type Database = {
       auto_complete_travel: { Args: never; Returns: undefined }
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       calculate_chart_trends: { Args: never; Returns: undefined }
+      calculate_follower_quality: {
+        Args: { p_follower_account_id: string }
+        Returns: number
+      }
       calculate_predicted_tickets: {
         Args: {
           p_band_id: string
@@ -11267,6 +11324,10 @@ export type Database = {
           p_skill_songwriting: number
         }
         Returns: Json
+      }
+      calculate_twaat_xp: {
+        Args: { p_account_id: string; p_posts_today: number }
+        Returns: number
       }
       check_scheduling_conflict: {
         Args: {
@@ -11302,6 +11363,7 @@ export type Database = {
         Returns: undefined
       }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }

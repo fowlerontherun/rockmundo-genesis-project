@@ -15,9 +15,10 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [linkedType, setLinkedType] = useState<"single" | "album" | "gig" | "tour" | "busking" | null>(null);
   const { createTwaat, isPosting } = useTwaats();
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!body.trim()) return;
 
+    // Rate limit check happens in backend
     createTwaat({
       account_id: accountId,
       body: body.trim(),
