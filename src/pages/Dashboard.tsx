@@ -412,19 +412,19 @@ const Dashboard = () => {
                   You haven't trained any skills yet. Start training to see your progress!
                 </p>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {trainedSkills.map((skill) => {
                     const currentXp = skill.current_xp || 0;
                     const currentLevel = skill.current_level || 0;
                     const progress = calculateSkillProgress(currentXp, currentLevel);
                     return (
-                      <div key={skill.skill_slug} className="space-y-2">
-                        <div className="flex items-center justify-between">
+                      <div key={skill.skill_slug} className="space-y-2 p-3 rounded-lg border bg-card">
+                        <div className="flex flex-col gap-2">
                           <span className="text-sm font-medium capitalize">
                             {skill.skill_slug.replace(/_/g, " ")}
                           </span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">Level {currentLevel}</Badge>
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge variant="secondary" className="text-xs">Lv {currentLevel}</Badge>
                             <span className="text-xs text-muted-foreground">{currentXp} XP</span>
                           </div>
                         </div>
