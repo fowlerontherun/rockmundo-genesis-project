@@ -1,17 +1,19 @@
-import { useRef, useMemo, useState, useEffect } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useLoader } from "@react-three/fiber";
-import { TextureLoader, InstancedMesh, Object3D } from "three";
+import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
+import { InstancedMesh, Object3D } from "three";
 import { supabase } from "@/integrations/supabase/client";
 
-// Import crowd sprite variations
-import crowdSprite01 from "@/assets/crowd-sprite-01.gif";
-import crowdSprite02 from "@/assets/crowd-sprite-02.png";
-import crowdSprite03 from "@/assets/crowd-sprite-03.png";
-import crowdSprite04 from "@/assets/crowd-sprite-04.png";
-import crowdSprite05 from "@/assets/crowd-sprite-05.png";
-import crowdSprite06 from "@/assets/crowd-sprite-06.png";
+// Import all 8 crowd sprite variations
+import crowdSprite1 from "@/assets/crowd-sprite-01.png";
+import crowdSprite2 from "@/assets/crowd-sprite-02.png";
+import crowdSprite3 from "@/assets/crowd-sprite-03.png";
+import crowdSprite4 from "@/assets/crowd-sprite-04.png";
+import crowdSprite5 from "@/assets/crowd-sprite-05.png";
+import crowdSprite6 from "@/assets/crowd-sprite-06.png";
+import crowdSprite7 from "@/assets/crowd-sprite-07.png";
+import crowdSprite8 from "@/assets/crowd-sprite-08.png";
 
 interface CrowdLayerProps {
   crowdMood: number;
@@ -40,42 +42,42 @@ interface CrowdPerson {
   spriteVariation: number;
 }
 
-type AnimationType = 'tired' | 'bored' | 'bouncing' | 'jumping' | 'handsUp' | 'ecstatic';
+type AnimationType = 'bored' | 'jumping' | 'hands_up' | 'bouncing' | 'tired' | 'ecstatic';
 
 export const CrowdLayer = ({ 
   crowdMood, 
-  stageTemplateId, 
-  bandFame = 100, 
+  stageTemplateId,
+  bandFame = 100,
   bandMerchColor = "#ff0000",
   maxCrowdCount = 1000,
-  densityMultiplier = 1.0 
+  densityMultiplier = 1.0
 }: CrowdLayerProps) => {
-  const meshRef = useRef<InstancedMesh>(null);
-  const dummy = useMemo(() => new Object3D(), []);
-
-  // Load crowd sprite textures
-  const crowdTextures = useLoader(TextureLoader, [
-    crowdSprite01,
-    crowdSprite02,
-    crowdSprite03,
-    crowdSprite04,
-    crowdSprite05,
-    crowdSprite06,
-  ]);
-
-  // Configure textures for better rendering
-  crowdTextures.forEach(texture => {
-    texture.magFilter = THREE.LinearFilter;
-    texture.minFilter = THREE.LinearFilter;
-  });
-
+  const meshRefs = useRef<(InstancedMesh | null)[]>([]);
   const [crowdZones, setCrowdZones] = useState<CrowdZone[]>([
     { name: "pit", x: 0, z: 4, width: 10, depth: 4, density: 1.0, minMood: 0 },
     { name: "floor", x: 0, z: 10, width: 16, depth: 6, density: 0.8, minMood: 0 },
     { name: "back", x: 0, z: 18, width: 20, depth: 6, density: 0.5, minMood: 0 }
   ]);
+  
+  // Load all 8 crowd textures
+  const crowdTextures = useTexture([
+    crowdSprite1,
+    crowdSprite2,
+    crowdSprite3,
+    crowdSprite4,
+    crowdSprite5,
+    crowdSprite6,
+    crowdSprite7,
+    crowdSprite8,
+  ]);
 
-  // Fetch lighting config from stage template
+  // Configure textures for pixel-perfect rendering
+  crowdTextures.forEach(texture => {
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.NearestFilter;
+  });
+
+  // Fetch crowd zones from stage template
   useEffect(() => {
     const fetchCrowdZones = async () => {
       if (!stageTemplateId) return;
@@ -97,6 +99,7 @@ export const CrowdLayer = ({
     fetchCrowdZones();
   }, [stageTemplateId]);
 
+  // Calculate percentage wearing merch based on band fame
   const merchPercentage = useMemo(() => {
     if (bandFame < 100) return 0;
     if (bandFame < 500) return 0.05;
@@ -105,9 +108,10 @@ export const CrowdLayer = ({
     return 0.50;
   }, [bandFame]);
 
+  // Generate crowd data distributed across zones
   const crowdData = useMemo(() => {
-    const generatedCrowd: CrowdPerson[] = [];
-    
+    const crowd: CrowdPerson[] = [];
+
     for (let i = 0; i < crowdZones.length; i++) {
       const zone = crowdZones[i];
       
@@ -115,123 +119,146 @@ export const CrowdLayer = ({
       
       const zoneCount = Math.min(
         Math.floor(zone.density * zone.width * zone.depth * densityMultiplier * 5),
-        maxCrowdCount - generatedCrowd.length
+        maxCrowdCount - crowd.length
       );
       
       const baseX = zone.x - zone.width / 2;
-      const baseZone = zone.z - zone.depth / 2;
-      const verticalSpread = 0.2;
-      const depthSpread = zone.depth;
-      
+      const baseZ = zone.z - zone.depth / 2;
+
       for (let j = 0; j < zoneCount; j++) {
-        const randomX = baseX + Math.random() * zone.width;
-        const baseY = 0;
-        const randomY = baseY + (Math.random() - 0.5) * verticalSpread;
-        const randomZ = baseZone + Math.random() * depthSpread;
+        const x = baseX + Math.random() * zone.width;
+        const yOffset = Math.random() * 0.15; // Height variation
+        const y = yOffset;
+        const z = baseZ + Math.random() * zone.depth;
 
-        // Random seed for animation variation
-        const seed = Math.random() * 1000;
-        
-        // Random sprite variation (0-5 for 6 different sprites)
-        const spriteVariation = Math.floor(Math.random() * 6);
-
-        const hasMerch = Math.random() < merchPercentage;
-
-        generatedCrowd.push({
-          position: [randomX, randomY, randomZ],
-          seed,
+        crowd.push({
+          position: [x, y, z],
+          seed: Math.random() * 1000,
           zone: i,
-          hasMerch,
-          spriteVariation
+          hasMerch: Math.random() < merchPercentage,
+          spriteVariation: Math.floor(Math.random() * 8) // 0-7 for 8 sprites
         });
       }
     }
-    
-    return generatedCrowd;
-  }, [crowdZones, crowdMood, merchPercentage, densityMultiplier, maxCrowdCount]);
 
-  // Animation type based on crowd mood
-  const getAnimationType = (mood: number): AnimationType => {
-    if (mood < 20) return 'tired';
-    if (mood < 40) return 'bored';
-    if (mood < 60) return 'bouncing';
-    if (mood < 75) return 'jumping';
-    if (mood < 90) return 'handsUp';
+    return crowd;
+  }, [crowdZones, crowdMood, maxCrowdCount, densityMultiplier, merchPercentage]);
+
+  // Split crowd into 8 groups by sprite variation
+  const crowdGroups = useMemo(() => {
+    const groups: CrowdPerson[][] = [[], [], [], [], [], [], [], []];
+    crowdData.forEach(person => {
+      groups[person.spriteVariation].push(person);
+    });
+    return groups;
+  }, [crowdData]);
+
+  // Determine animation type based on mood
+  const getAnimationType = (): AnimationType => {
+    if (crowdMood < 20) return 'tired';
+    if (crowdMood < 40) return 'bored';
+    if (crowdMood < 60) return 'bouncing';
+    if (crowdMood < 80) return 'hands_up';
+    if (crowdMood < 95) return 'jumping';
     return 'ecstatic';
   };
 
+  // Animation loop for each sprite group
   useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-
     const time = clock.getElapsedTime();
-    const animType = getAnimationType(crowdMood);
+    const animType = getAnimationType();
+    const dummy = new Object3D();
 
-    crowdData.forEach((person, i) => {
-      dummy.position.set(...person.position);
+    crowdGroups.forEach((group, spriteIndex) => {
+      const mesh = meshRefs.current[spriteIndex];
+      if (!mesh || group.length === 0) return;
 
-      // Set scale - larger for better visibility (0.8 x 1.8 units)
-      const baseScale = 0.8;
+      group.forEach((person, i) => {
+        const [x, baseY, z] = person.position;
+        const seed = person.seed;
+        const timeOffset = seed / 100;
+        
+        let y = baseY;
+        let scale = 0.6; // Base scale
 
-      // Apply animation based on mood
-      if (animType === 'jumping') {
-        dummy.position.y += Math.sin(time * 3 + person.seed) * 0.3;
-        dummy.scale.set(baseScale, baseScale * 2.2 * (1 + Math.sin(time * 3 + person.seed) * 0.15), baseScale);
-      } else if (animType === 'handsUp') {
-        dummy.scale.set(baseScale * 1.1, baseScale * 2.3, baseScale);
-        dummy.position.y += Math.sin(time * 2 + person.seed) * 0.08;
-      } else if (animType === 'bouncing') {
-        dummy.position.y += Math.sin(time * 4 + person.seed) * 0.15;
-        dummy.scale.set(baseScale, baseScale * 2.2 * (1 + Math.sin(time * 4 + person.seed) * 0.08), baseScale);
-      } else if (animType === 'ecstatic') {
-        dummy.position.y += Math.sin(time * 5 + person.seed) * 0.4;
-        dummy.scale.set(baseScale * 1.15, baseScale * 2.4, baseScale);
-        dummy.rotation.z = Math.sin(time * 3 + person.seed) * 0.1;
-      } else {
-        dummy.scale.set(baseScale, baseScale * 2.2, baseScale);
-      }
+        // Apply animation based on mood
+        switch (animType) {
+          case 'bored':
+            y += Math.sin(time * 0.5 + timeOffset) * 0.05;
+            scale *= 1.0 + Math.sin(time * 0.3 + timeOffset) * 0.02;
+            break;
+          case 'bouncing':
+            y += Math.abs(Math.sin(time * 2 + timeOffset)) * 0.15;
+            scale *= 1.0 + Math.abs(Math.sin(time * 2 + timeOffset)) * 0.05;
+            break;
+          case 'hands_up':
+            y += Math.abs(Math.sin(time * 2.5 + timeOffset)) * 0.20;
+            scale *= 1.0 + Math.abs(Math.sin(time * 2.5 + timeOffset)) * 0.08;
+            break;
+          case 'jumping':
+            y += Math.abs(Math.sin(time * 3 + timeOffset)) * 0.35;
+            scale *= 1.0 + Math.abs(Math.sin(time * 3 + timeOffset)) * 0.12;
+            break;
+          case 'ecstatic':
+            y += Math.abs(Math.sin(time * 4 + timeOffset)) * 0.50;
+            scale *= 1.0 + Math.abs(Math.sin(time * 4 + timeOffset)) * 0.18;
+            break;
+          case 'tired':
+            y += Math.sin(time * 0.3 + timeOffset) * 0.03;
+            scale *= 0.95;
+            break;
+        }
 
-      // Face the stage (back view sprites)
-      dummy.rotation.y = Math.PI;
+        // Position sprite with slight random rotation
+        dummy.position.set(x, y, z);
+        dummy.rotation.y = Math.PI + (seed / 500 - 1) * 0.3; // Face stage with variance
+        dummy.scale.set(scale, scale * 2.5, scale); // Taller aspect ratio
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      });
 
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
+      mesh.instanceMatrix.needsUpdate = true;
     });
-
-    meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
   // Get emissive properties based on mood
   const getEmissiveColor = (): string => {
     if (crowdMood > 80) return "#ff00ff";
-    if (crowdMood > 60) return "#ff0066";
-    if (crowdMood > 40) return "#0066ff";
-    return "#003366";
+    if (crowdMood > 60) return "#ff6600";
+    if (crowdMood > 40) return "#ffaa00";
+    return "#000000";
   };
 
   const getEmissiveIntensity = (): number => {
-    return (crowdMood / 100) * 0.3;
-  };
-
-  // Select a texture based on crowd data variation - simple cycling approach
-  const getCurrentTexture = () => {
-    // Cycle through textures based on time for variety
-    const textureIndex = Math.floor(Date.now() / 1000) % crowdTextures.length;
-    return crowdTextures[textureIndex];
+    return (crowdMood / 100) * 0.1; // Reduced for natural look
   };
 
   if (crowdData.length === 0) return null;
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]}>
-      <planeGeometry args={[1, 2.2]} />
-      <meshStandardMaterial
-        map={getCurrentTexture()}
-        transparent
-        alphaTest={0.5}
-        side={THREE.DoubleSide}
-        emissive={getEmissiveColor()}
-        emissiveIntensity={getEmissiveIntensity()}
-      />
-    </instancedMesh>
+    <group>
+      {crowdGroups.map((group, spriteIndex) => {
+        if (group.length === 0) return null;
+        
+        return (
+          <instancedMesh 
+            key={spriteIndex}
+            ref={(ref) => { meshRefs.current[spriteIndex] = ref; }}
+            args={[undefined, undefined, group.length]}
+          >
+            <planeGeometry args={[0.6, 1.5]} />
+            <meshStandardMaterial
+              map={crowdTextures[spriteIndex]}
+              transparent
+              alphaTest={0.1}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+              emissive={getEmissiveColor()}
+              emissiveIntensity={getEmissiveIntensity()}
+            />
+          </instancedMesh>
+        );
+      })}
+    </group>
   );
 };
