@@ -1167,127 +1167,22 @@ const Merchandise = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="designer">
-          <Card>
-            <CardHeader>
-              <CardTitle>Custom T-Shirt Designer</CardTitle>
-              <CardDescription>
-                Build a creative brief for your next tee drop. Upload hooks are in-progress — use the planner below to align your
-                design team.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/40 bg-muted/30 p-10 text-center">
-                <UploadCloud className="h-10 w-10 text-muted-foreground" />
-                <div>
-                  <p className="text-lg font-semibold">Artwork Upload Coming Soon</p>
-                  <p className="text-sm text-muted-foreground">
-                    Tap the button below to note concepts for your designer while we finish the interactive mockup tool.
-                  </p>
-                </div>
-                <Button type="button" onClick={handleArtworkUploadClick}>
-                  Notify Me When Ready
-                </Button>
-              </div>
-
-              <form className="grid gap-4 md:grid-cols-2" onSubmit={handleGenerateDesign}>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium" htmlFor="designer-theme">
-                    Theme or Tour Moment
-                  </label>
-                  <Input
-                    id="designer-theme"
-                    placeholder="Neon Skyline Tour"
-                    value={designerForm.theme}
-                    onChange={(event) =>
-                      setDesignerForm((prev) => ({ ...prev, theme: event.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="designer-palette">
-                    Color Palette
-                  </label>
-                  <Input
-                    id="designer-palette"
-                    placeholder="Electric blue, ultraviolet, silver foil"
-                    value={designerForm.palette}
-                    onChange={(event) =>
-                      setDesignerForm((prev) => ({ ...prev, palette: event.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="designer-slogan">
-                    Headline / Slogan
-                  </label>
-                  <Input
-                    id="designer-slogan"
-                    placeholder="Feel the Afterglow"
-                    value={designerForm.slogan}
-                    onChange={(event) =>
-                      setDesignerForm((prev) => ({ ...prev, slogan: event.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="designer-finish">
-                    Garment Finish
-                  </label>
-                  <Select
-                    value={designerForm.finish}
-                    onValueChange={(value: DesignerForm["finish"]) =>
-                      setDesignerForm((prev) => ({ ...prev, finish: value }))
-                    }
-                  >
-                    <SelectTrigger id="designer-finish">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(finishLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="designer-story">
-                    Story Hook / Launch Notes
-                  </label>
-                  <Textarea
-                    id="designer-story"
-                    rows={4}
-                    placeholder="Capture why this drop matters to fans, collaborators involved, or perks unlocked."
-                    value={designerForm.story}
-                    onChange={(event) =>
-                      setDesignerForm((prev) => ({ ...prev, story: event.target.value }))
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Button type="submit" className="w-full">
-                    Generate Creative Outline
-                  </Button>
-                </div>
-              </form>
-
-              {designerPreview.length > 0 && (
-                <Card className="border-dashed">
-                  <CardHeader>
-                    <CardTitle className="text-base">Creative Brief Preview</CardTitle>
-                    <CardDescription>Share these notes with your merch vendor or designer.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    {designerPreview.map((line, index) => (
-                      <p key={index}>• {line}</p>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="designer" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <TShirtDesigner 
+                bandId={bandId}
+                onSave={() => {
+                  queryClient.invalidateQueries({ queryKey: ['tshirt-designs', bandId] });
+                }}
+              />
+            </div>
+            <div>
+              <SavedDesigns 
+                bandId={bandId}
+              />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
