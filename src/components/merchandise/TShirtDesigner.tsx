@@ -64,18 +64,25 @@ export const TShirtDesigner = ({ bandId, onSave, existingDesignId }: TShirtDesig
     );
     existingShapes.forEach(shape => canvas.remove(shape));
 
-    // Enhanced t-shirt silhouette with better proportions
+    // Realistic t-shirt silhouette with proper proportions
     const bodyPath = `
-      M 100,80 
-      L 100,50 C 100,35 105,25 115,20 
-      L 135,15 C 140,12 145,8 148,0 
-      L 252,0 C 255,8 260,12 265,15 
-      L 285,20 C 295,25 300,35 300,50 
-      L 300,80 
-      L 320,95 L 320,140 
-      L 305,140 L 305,480 C 305,490 300,495 290,495 
-      L 110,495 C 100,495 95,490 95,480 
-L 95,140 L 80,140 L 80,95 Z
+      M 150,40
+      C 145,30 140,25 130,20
+      L 110,15 C 105,13 100,10 95,5
+      L 90,0 L 75,0
+      C 70,15 65,25 60,35
+      L 55,45 C 50,55 48,65 48,75
+      L 48,120
+      L 55,120 L 60,420
+      C 60,435 65,445 75,450
+      L 325,450 C 335,445 340,435 340,420
+      L 345,120 L 352,120
+      L 352,75 C 352,65 350,55 345,45
+      L 340,35 C 335,25 330,15 325,0
+      L 310,0 L 305,5
+      C 300,10 295,13 290,15
+      L 270,20 C 260,25 255,30 250,40
+      Z
     `;
 
     // Shadow/depth effect
