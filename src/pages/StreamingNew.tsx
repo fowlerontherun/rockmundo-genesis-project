@@ -6,44 +6,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Music, TrendingUp, DollarSign } from "lucide-react";
+import { ArrowLeft, Music2, TrendingUp, DollarSign } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useStreaming } from "@/hooks/useStreaming";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useReleasedSongs } from "@/hooks/useReleasedSongs";
 import { Badge } from "@/components/ui/badge";
 
 export default function StreamingNew() {
   const navigate = useNavigate();
   const { user } = useGameData();
   const { releases, platforms, analytics, releaseToStreaming, takeDown } = useStreaming(user?.id || "");
+  const { data: releasedSongs } = useReleasedSongs(user?.id);
   
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [selectedSong, setSelectedSong] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("");
 
-  const { data: recordedSongs } = useQuery({
-    queryKey: ["recorded-songs", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("recording_sessions")
-        .select("*, song:songs(*)")
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
   const handleRelease = () => {
     if (!selectedSong || !selectedPlatform || !user?.id) return;
+
+    const song = releasedSongs?.find(s => s.id === selectedSong);
+    if (!song?.release_id) return;
 
     releaseToStreaming.mutate({
       songId: selectedSong,
       platformId: selectedPlatform,
       userId: user.id,
+      releaseId: song.release_id,
       bandId: undefined,
     }, {
       onSuccess: () => {
@@ -72,7 +61,7 @@ export default function StreamingNew() {
         </div>
         
         <Button size="lg" onClick={() => setReleaseDialogOpen(true)}>
-          <Music className="h-4 w-4 mr-2" />
+          <Music2 className="h-4 w-4 mr-2" />
           Release Song
         </Button>
       </div>
@@ -99,7 +88,7 @@ export default function StreamingNew() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-2">
-              <Music className="h-4 w-4" />
+              <Music2 className="h-4 w-4" />
               <p className="text-sm text-muted-foreground">Active Releases</p>
             </div>
             <p className="text-2xl sm:text-3xl font-bold">{releases?.filter(r => r.is_active).length || 0}</p>
@@ -159,11 +148,11 @@ export default function StreamingNew() {
           ) : (
             <Card>
               <CardContent className="pt-6 text-center py-12">
-                <Music className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <Music2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="font-semibold mb-2">No Releases Yet</h3>
                 <p className="text-muted-foreground mb-4">Release your first song to streaming platforms</p>
                 <Button onClick={() => setReleaseDialogOpen(true)}>
-                  <Music className="h-4 w-4 mr-2" />
+                  <Music2 className="h-4 w-4 mr-2" />
                   Release Song
                 </Button>
               </CardContent>
@@ -239,39 +228,54 @@ export default function StreamingNew() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Select Song</Label>
-              <Select value={selectedSong} onValueChange={setSelectedSong}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a recorded song" />
-                </SelectTrigger>
-                <SelectContent>
-                  {recordedSongs?.map((session) => (
-                    <SelectItem key={session.id} value={session.song_id}>
-                      {session.song?.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Select Platform</Label>
-              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a platform" />
-                </SelectTrigger>
-                <SelectContent>
-                  {platforms?.map((platform) => (
-                    <SelectItem key={platform.id} value={platform.id}>
-                      {platform.platform_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleRelease} className="w-full" disabled={!selectedSong || !selectedPlatform}>
-              Release Song
-            </Button>
+            {!releasedSongs || releasedSongs.length === 0 ? (
+              <div className="text-center py-8">
+                <Music2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="font-semibold mb-2">No Released Music Yet</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You need to create and release music in Release Manager first
+                </p>
+                <Button variant="outline" onClick={() => navigate("/releases")}>
+                  Go to Release Manager
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <Label>Select Song</Label>
+                  <Select value={selectedSong} onValueChange={setSelectedSong}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a song from your releases" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {releasedSongs.map((song) => (
+                        <SelectItem key={song.id} value={song.id}>
+                          {song.title} ({song.release_title})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Select Platform</Label>
+                  <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {platforms?.map((platform) => (
+                        <SelectItem key={platform.id} value={platform.id}>
+                          {platform.platform_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleRelease} className="w-full" disabled={!selectedSong || !selectedPlatform}>
+                  Release to Platform
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

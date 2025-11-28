@@ -264,36 +264,65 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const { data: recordedSongs, isLoading: songsLoading } = useQuery<RecordedSong[]>({
-    queryKey: ["recorded-songs", user?.id],
+  const { data: releasedSongs, isLoading: songsLoading } = useQuery<any[]>({
+    queryKey: ["released-songs", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      
+      const { data: userReleases, error: releasesError } = await supabase
+        .from("releases")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("release_status", "released");
+      
+      if (releasesError) throw releasesError;
+      if (!userReleases || userReleases.length === 0) return [];
+
+      const releaseIds = userReleases.map((r: any) => r.id);
+
+      const { data: releaseSongs, error: rsError } = await supabase
+        .from("release_songs")
+        .select("song_id, release_id, release:releases(title)")
+        .in("release_id", releaseIds);
+
+      if (rsError) throw rsError;
+      if (!releaseSongs || releaseSongs.length === 0) return [];
+
+      const songIds = [...new Set(releaseSongs.map((rs: any) => rs.song_id))];
+
+      const { data: songs, error: songsError } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, band_id")
-        .eq("user_id", user.id)
-        .eq("status", "recorded")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as RecordedSong[];
+        .in("id", songIds);
+
+      if (songsError) throw songsError;
+
+      return songs?.map((song: any) => {
+        const rs = releaseSongs.find((rs: any) => rs.song_id === song.id);
+        return {
+          ...song,
+          release_id: rs?.release_id,
+          release_title: rs?.release?.title,
+        };
+      }) || [];
     },
     enabled: !!user?.id,
   });
 
   useEffect(() => {
-    if (!recordedSongs || recordedSongs.length === 0) {
+    if (!releasedSongs || releasedSongs.length === 0) {
       setSelectedSong("");
       return;
     }
-    if (selectedSong && recordedSongs.some((song) => song.id === selectedSong)) {
+    if (selectedSong && releasedSongs.some((song: any) => song.id === selectedSong)) {
       return;
     }
-    setSelectedSong(recordedSongs[0].id);
-  }, [recordedSongs, selectedSong]);
+    setSelectedSong(releasedSongs[0].id);
+  }, [releasedSongs, selectedSong]);
 
   const selectedSongData = useMemo(
-    () => recordedSongs?.find((song) => song.id === selectedSong) ?? null,
-    [recordedSongs, selectedSong],
+    () => releasedSongs?.find((song: any) => song.id === selectedSong) ?? null,
+    [releasedSongs, selectedSong],
   );
 
   const acceptedGenres = useMemo(
@@ -432,6 +461,7 @@ export default function Radio() {
           station_id: selectedStation,
           user_id: user.id,
           band_id: selectedSongData.band_id ?? null,
+          release_id: (selectedSongData as any).release_id ?? null,
           status: "pending",
           submitted_at: new Date().toISOString(),
           week_submitted: weekStart,
@@ -644,7 +674,7 @@ export default function Radio() {
                 <CardDescription>Stations only accept recorded songs that match their current rotation.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!recordedSongs?.length ? (
+                {!releasedSongs?.length ? (
                   <Alert>
                     <AlertTitle>No recorded songs yet</AlertTitle>
                     <AlertDescription>
@@ -660,7 +690,7 @@ export default function Radio() {
                           <SelectValue placeholder="Select a recorded song" />
                         </SelectTrigger>
                         <SelectContent>
-                          {recordedSongs.map((song) => (
+                          {releasedSongs.map((song) => (
                             <SelectItem key={song.id} value={song.id}>
                               {song.title}
                             </SelectItem>

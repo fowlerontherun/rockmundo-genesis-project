@@ -49,19 +49,48 @@ const MusicVideos = () => {
   const [videoBudget, setVideoBudget] = useState("5000");
   const [videoStyle, setVideoStyle] = useState("standard");
 
-  // Fetch user's songs
-  const { data: userSongs = [] } = useQuery({
-    queryKey: ["user-songs-for-videos", profile?.id],
+  // Fetch user's released songs
+  const { data: releasedSongs = [] } = useQuery({
+    queryKey: ["released-songs-for-videos", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
-      const { data, error } = await supabase
+      
+      const { data: userReleases, error: releasesError } = await supabase
+        .from("releases")
+        .select("id")
+        .eq("user_id", profile.id)
+        .eq("release_status", "released");
+      
+      if (releasesError) throw releasesError;
+      if (!userReleases || userReleases.length === 0) return [];
+
+      const releaseIds = userReleases.map(r => r.id);
+
+      const { data: releaseSongs, error: rsError } = await supabase
+        .from("release_songs")
+        .select("song_id, release_id, release:releases(title)")
+        .in("release_id", releaseIds);
+
+      if (rsError) throw rsError;
+      if (!releaseSongs || releaseSongs.length === 0) return [];
+
+      const songIds = [...new Set(releaseSongs.map(rs => rs.song_id))];
+
+      const { data: songs, error: songsError } = await supabase
         .from("songs")
         .select("id, title")
-        .eq("user_id", profile.id)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
+        .in("id", songIds);
+
+      if (songsError) throw songsError;
+
+      return songs?.map((song: any) => {
+        const rs = releaseSongs.find(rs => rs.song_id === song.id);
+        return {
+          ...song,
+          release_id: rs?.release_id,
+          release_title: rs?.release?.title,
+        };
+      }) || [];
     },
     enabled: !!profile?.id,
   });
@@ -87,7 +116,7 @@ const MusicVideos = () => {
 
   // Fetch my videos
   const myVideos = videos.filter(v => 
-    userSongs.some(s => s.id === v.song_id)
+    releasedSongs.some((s: any) => s.id === v.song_id)
   );
 
   // Fetch trending videos
@@ -120,11 +149,15 @@ const MusicVideos = () => {
       if (videoStyle === "premium") qualityScore += 20;
       if (videoStyle === "deluxe") qualityScore += 40;
 
+      // Get release_id for the selected song
+      const song = releasedSongs.find((s: any) => s.id === selectedSong);
+      
       // Create video
       const { data, error } = await supabase
         .from("music_videos")
         .insert({
           song_id: selectedSong,
+          release_id: song?.release_id,
           title: videoTitle,
           description: videoDescription || null,
           budget,
@@ -226,84 +259,99 @@ const MusicVideos = () => {
             </DialogHeader>
             
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="song">Select Song</Label>
-                <Select value={selectedSong} onValueChange={setSelectedSong}>
-                  <SelectTrigger id="song">
-                    <SelectValue placeholder="Choose a song..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {userSongs.map((song) => (
-                      <SelectItem key={song.id} value={song.id}>
-                        {song.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {releasedSongs.length === 0 ? (
+                <div className="text-center py-8">
+                  <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="font-semibold mb-2">No Released Music Yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You need to create and release music in Release Manager first
+                  </p>
+                  <Button variant="outline" onClick={() => window.location.href = "/releases"}>
+                    Go to Release Manager
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="song">Select Song</Label>
+                    <Select value={selectedSong} onValueChange={setSelectedSong}>
+                      <SelectTrigger id="song">
+                        <SelectValue placeholder="Choose a released song..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {releasedSongs.map((song: any) => (
+                          <SelectItem key={song.id} value={song.id}>
+                            {song.title} ({song.release_title})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="title">Video Title</Label>
-                <Input
-                  id="title"
-                  value={videoTitle}
-                  onChange={(e) => setVideoTitle(e.target.value)}
-                  placeholder="Enter video title..."
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Video Title</Label>
+                    <Input
+                      id="title"
+                      value={videoTitle}
+                      onChange={(e) => setVideoTitle(e.target.value)}
+                      placeholder="Enter video title..."
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={videoDescription}
-                  onChange={(e) => setVideoDescription(e.target.value)}
-                  placeholder="Describe your music video concept..."
-                  rows={3}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description (Optional)</Label>
+                    <Textarea
+                      id="description"
+                      value={videoDescription}
+                      onChange={(e) => setVideoDescription(e.target.value)}
+                      placeholder="Describe your music video concept..."
+                      rows={3}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="budget">Production Budget</Label>
-                <Select value={videoBudget} onValueChange={setVideoBudget}>
-                  <SelectTrigger id="budget">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {budgetOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="budget">Production Budget</Label>
+                    <Select value={videoBudget} onValueChange={setVideoBudget}>
+                      <SelectTrigger id="budget">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {budgetOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="style">Production Style</Label>
-                <Select value={videoStyle} onValueChange={setVideoStyle}>
-                  <SelectTrigger id="style">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="premium">Premium (+20% Quality)</SelectItem>
-                    <SelectItem value="deluxe">Deluxe (+40% Quality)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="style">Production Style</Label>
+                    <Select value={videoStyle} onValueChange={setVideoStyle}>
+                      <SelectTrigger id="style">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="premium">Premium (+20% Quality)</SelectItem>
+                        <SelectItem value="deluxe">Deluxe (+40% Quality)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setRecordDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => createVideoMutation.mutate()}
-                  disabled={!selectedSong || !videoTitle || createVideoMutation.isPending}
-                >
-                  {createVideoMutation.isPending ? "Creating..." : "Start Production"}
-                </Button>
-              </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setRecordDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={() => createVideoMutation.mutate()}
+                      disabled={!selectedSong || !videoTitle || createVideoMutation.isPending}
+                    >
+                      {createVideoMutation.isPending ? "Creating..." : "Start Production"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -454,7 +502,7 @@ const MusicVideos = () => {
                       </>
                     )}
 
-                    {video.status === "production" && userSongs.some(s => s.id === video.song_id) && (
+                    {video.status === "production" && releasedSongs.some((s: any) => s.id === video.song_id) && (
                       <Button 
                         className="w-full"
                         onClick={() => releaseVideoMutation.mutate(video.id)}

@@ -65,6 +65,7 @@ export const useStreaming = (userId: string) => {
       songId: string;
       platformId: string;
       userId: string;
+      releaseId: string;
       bandId?: string;
     }) => {
       const { data, error } = await supabase
@@ -74,6 +75,7 @@ export const useStreaming = (userId: string) => {
           platform_id: params.platformId,
           user_id: params.userId,
           band_id: params.bandId,
+          release_id: params.releaseId,
           release_type: "streaming",
           release_date: new Date().toISOString(),
           is_active: true,
