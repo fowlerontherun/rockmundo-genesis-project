@@ -35,6 +35,17 @@ export const Crowd3DLayer = ({
     return 50;
   }, [bandFame]);
 
+  // Determine animation type based on mood
+  const getAnimationType = (mood: number, seed: number): CrowdPerson['animationType'] => {
+    const rand = seed * 100;
+
+    if (mood < 20) return 'idle';
+    if (mood < 40) return rand < 50 ? 'idle' : 'sway';
+    if (mood < 60) return rand < 30 ? 'sway' : rand < 70 ? 'bouncing' : 'handsup';
+    if (mood < 80) return rand < 40 ? 'bouncing' : rand < 70 ? 'handsup' : 'jumping';
+    return rand < 30 ? 'jumping' : rand < 60 ? 'handsup' : 'headbang';
+  };
+
   // Generate crowd data
   const crowdData = useMemo(() => {
     const count = Math.floor(maxCrowdCount * densityMultiplier);
@@ -72,18 +83,7 @@ export const Crowd3DLayer = ({
     }
 
     return crowd;
-  }, [maxCrowdCount, densityMultiplier, crowdMood, merchPercentage]);
-
-  // Determine animation type based on mood
-  const getAnimationType = (mood: number, seed: number): CrowdPerson['animationType'] => {
-    const rand = seed * 100;
-
-    if (mood < 20) return 'idle';
-    if (mood < 40) return rand < 50 ? 'idle' : 'sway';
-    if (mood < 60) return rand < 30 ? 'sway' : rand < 70 ? 'bouncing' : 'handsup';
-    if (mood < 80) return rand < 40 ? 'bouncing' : rand < 70 ? 'handsup' : 'jumping';
-    return rand < 30 ? 'jumping' : rand < 60 ? 'handsup' : 'headbang';
-  };
+  }, [maxCrowdCount, densityMultiplier, crowdMood, merchPercentage, getAnimationType]);
 
   return (
     <group>
