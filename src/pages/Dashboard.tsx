@@ -578,64 +578,17 @@ const Dashboard = () => {
 
       {/* Main Tabs */}
       <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="development" className="text-xs md:text-sm">Development</TabsTrigger>
+          <TabsTrigger value="profile" className="text-xs md:text-sm">Profile</TabsTrigger>
+          <TabsTrigger value="development" className="text-xs md:text-sm">Skills & Attributes</TabsTrigger>
           <TabsTrigger value="friends" className="text-xs md:text-sm">Friends</TabsTrigger>
           <TabsTrigger value="achievements" className="text-xs md:text-sm">Achievements</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-3 mt-3">
-          {/* Centered Profile Card */}
-          <div className="flex justify-center">
-            <Card className="w-full max-w-md">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 text-3xl font-semibold shadow-lg">
-                    {profileInitials}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">{displayName}</h2>
-                    {profile.username && profile.username !== displayName && (
-                      <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {profile.bio && <p className="text-muted-foreground text-center">{profile.bio}</p>}
-                <Separator />
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Health</span>
-                    <Badge variant="outline">{profile.health ?? 100}%</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Energy</span>
-                    <Badge variant="outline">{profile.energy ?? 100}%</Badge>
-                  </div>
-                  {currentCityLabel && (
-                    <div className="flex items-center justify-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-muted-foreground">{currentCityLabel}</span>
-                    </div>
-                  )}
-                  {joinedDate && (
-                    <div className="flex items-center justify-center gap-2">
-                      <CalendarDays className="h-4 w-4" />
-                      <span className="text-muted-foreground">Joined {joinedDate}</span>
-                    </div>
-                  )}
-                </div>
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link to="/my-character/edit">Edit Profile</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Schedule, Activity & Chat Below Profile */}
+          {/* Schedule, Activity & Chat */}
           <div className="space-y-3 max-w-4xl mx-auto">
             {/* Game Date */}
             <div className="flex justify-center">
@@ -784,7 +737,57 @@ const Dashboard = () => {
           </div>
         </TabsContent>
 
-        {/* Development Tab */}
+        {/* Profile Tab */}
+        <TabsContent value="profile" className="space-y-3 mt-3">
+          <div className="flex justify-center">
+            <Card className="w-full max-w-md">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 text-3xl font-semibold shadow-lg">
+                    {profileInitials}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">{displayName}</h2>
+                    {profile.username && profile.username !== displayName && (
+                      <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {profile.bio && <p className="text-muted-foreground text-center">{profile.bio}</p>}
+                <Separator />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Health</span>
+                    <Badge variant="outline">{profile.health ?? 100}%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Energy</span>
+                    <Badge variant="outline">{profile.energy ?? 100}%</Badge>
+                  </div>
+                  {currentCityLabel && (
+                    <div className="flex items-center justify-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-muted-foreground">{currentCityLabel}</span>
+                    </div>
+                  )}
+                  {joinedDate && (
+                    <div className="flex items-center justify-center gap-2">
+                      <CalendarDays className="h-4 w-4" />
+                      <span className="text-muted-foreground">Joined {joinedDate}</span>
+                    </div>
+                  )}
+                </div>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link to="/my-character/edit">Edit Profile</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Skills & Attributes Tab */}
         <TabsContent value="development" className="space-y-3 mt-3">
           {/* Daily XP */}
           <Card>

@@ -30,7 +30,6 @@ const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const OffersDashboard = lazyWithRetry(() => import("./pages/OffersDashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 
-const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 // Equipment store pages removed - replaced by EnhancedEquipmentStore
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
@@ -209,7 +208,6 @@ function App() {
                     <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
-                    <Route path="my-character" element={<MyCharacter />} />
                     
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
