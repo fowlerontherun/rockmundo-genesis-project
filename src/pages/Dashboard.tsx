@@ -828,7 +828,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               {attributes ? (
-                <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+                <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
                   {Object.entries(attributes).map(([attributeKey, score]) => {
                     const numericScore = typeof score === "number" ? score : MIN_ATTRIBUTE_SCORE;
                     const displayScore = Math.max(MIN_ATTRIBUTE_SCORE, numericScore);
@@ -836,10 +836,9 @@ const Dashboard = () => {
                     const xpInputValue = attributeXpInputs[attributeKey] ?? DEFAULT_ATTRIBUTE_SPEND;
                     const isProcessing = attributeSpendPending === dbKey;
                     return (
-                      <div key={attributeKey} className="space-y-1 text-xs">
+                      <div key={attributeKey} className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">{sanitizeAttributeLabel(attributeKey)}</span>
-                          <Badge variant="secondary" className="text-xs">{displayScore}</Badge>
+                          <span className="font-medium text-xs">{sanitizeAttributeLabel(attributeKey)}</span>
                         </div>
                         <div className="h-1.5 w-full rounded-full bg-secondary">
                           <div
@@ -847,30 +846,31 @@ const Dashboard = () => {
                             style={{ width: `${Math.min(100, Math.max(0, ((displayScore - 5) / 995) * 100))}%` }}
                           />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={xpInputValue}
-                            onChange={(e) => {
-                              const parsed = Number(e.target.value);
-                              setAttributeXpInputs((prev) => ({
-                                ...prev,
-                                [attributeKey]: Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0,
-                              }));
-                            }}
-                            className="h-7 w-16 text-xs"
-                            disabled={!hasSpendableXp}
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleSpendAttribute(attributeKey)}
-                            disabled={!hasSpendableXp || xpInputValue <= 0 || xpBalance < xpInputValue || isProcessing}
-                            className="h-7 text-xs"
-                          >
-                            {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "Invest"}
-                          </Button>
-                        </div>
+                        {hasSpendableXp && (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={1}
+                              value={xpInputValue}
+                              onChange={(e) => {
+                                const parsed = Number(e.target.value);
+                                setAttributeXpInputs((prev) => ({
+                                  ...prev,
+                                  [attributeKey]: Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0,
+                                }));
+                              }}
+                              className="h-6 w-14 text-xs"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleSpendAttribute(attributeKey)}
+                              disabled={xpInputValue <= 0 || xpBalance < xpInputValue || isProcessing}
+                              className="h-6 text-xs px-2"
+                            >
+                              {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "Invest"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
