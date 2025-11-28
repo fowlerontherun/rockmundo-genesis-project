@@ -1,242 +1,121 @@
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useTwaaterReactions } from "@/hooks/useTwaaterReactions";
 import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
 import { useTwaaterFollow } from "@/hooks/useTwaaterFollow";
-import { TwaatReplyDialog } from "./TwaatReplyDialog";
-import { TwaatReportDialog } from "./TwaatReportDialog";
-import { Heart, Repeat2, BarChart2, BadgeCheck, MoreHorizontal, Ban, UserPlus, Check } from "lucide-react";
+import { useTwaaterReplies } from "@/hooks/useTwaaterReplies";
+import { useTwaaterBookmarks } from "@/hooks/useTwaaterBookmarks";
+import { TwaatPoll } from "./TwaatPoll";
+import { QuotedTwaat } from "./QuotedTwaat";
+import { Heart, MessageCircle, Repeat2, MoreHorizontal, Flag, UserX, Bookmark, BookmarkCheck, Quote, CheckCircle2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface TwaatCardProps {
-  twaat: {
-    id: string;
-    body: string;
-    created_at: string;
-    linked_type: string | null;
-    outcome_code: string | null;
-    account: {
-      id: string;
-      handle: string;
-      display_name: string;
-      verified: boolean;
-      owner_type: string;
-    };
-    metrics: {
-      likes: number;
-      replies: number;
-      retwaats: number;
-      impressions: number;
-      clicks: number;
-      rsvps: number;
-      sales: number;
-    };
-  };
-  viewerAccountId: string;
+  twaat: any;
+  viewerAccountId?: string;
 }
 
 export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const { toggleLike, toggleRetwaat } = useTwaaterReactions();
-  const { blockAccount, isBlocking, isAccountBlocked } = useTwaaterModeration(viewerAccountId);
-  const { isFollowing, follow, unfollow, isFollowPending } = useTwaaterFollow(viewerAccountId);
+  const { blockAccount } = useTwaaterModeration();
+  const { followAccount, unfollowAccount } = useTwaaterFollow(viewerAccountId);
+  const { postReply, isPosting } = useTwaaterReplies(twaat.id);
+  const { toggleBookmark, isBookmarked } = useTwaaterBookmarks(viewerAccountId);
+  const [showReplyBox, setShowReplyBox] = useState(false);
+  const [replyBody, setReplyBody] = useState("");
+  const navigate = useNavigate();
 
-  const handleLike = () => {
-    toggleLike({ twaatId: twaat.id, accountId: viewerAccountId });
+  const handleReply = () => {
+    if (!replyBody.trim() || !viewerAccountId) return;
+    postReply({ accountId: viewerAccountId, body: replyBody.trim() });
+    setReplyBody("");
+    setShowReplyBox(false);
   };
 
-  const handleRetwaat = () => {
-    toggleRetwaat({ twaatId: twaat.id, accountId: viewerAccountId });
+  const makeHashtagsClickable = (text: string) => {
+    const parts = text.split(/(#\w+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('#')) {
+        const hashtag = part.slice(1);
+        return (
+          <span key={i} onClick={(e) => { e.stopPropagation(); navigate(`/twaater/tag/${hashtag}`); }} className="text-primary hover:underline cursor-pointer">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
   };
-
-  const handleBlock = () => {
-    if (confirm(`Block @${twaat.account.handle}? You won't see their posts anymore.`)) {
-      blockAccount({
-        blockerAccountId: viewerAccountId,
-        blockedAccountId: twaat.account.id,
-      });
-    }
-  };
-
-  const handleFollowClick = () => {
-    if (following) {
-      unfollow({ followedAccountId: twaat.account.id });
-    } else {
-      follow({ followedAccountId: twaat.account.id });
-    }
-  };
-
-  const isOwnPost = twaat.account.id === viewerAccountId;
-  const isBlocked = isAccountBlocked(twaat.account.id);
-  const following = isFollowing(twaat.account.id);
 
   return (
-    <div className="border-b px-4 py-3 hover:bg-[hsl(var(--twaater-hover))] transition-colors cursor-pointer" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
-      <div className="space-y-3">
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <div 
-            className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[hsl(var(--twaater-purple))] to-[hsl(var(--primary))] flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.location.href = `/twaater/${twaat.account.handle}`;
-            }}
-          >
-            {twaat.account.display_name.charAt(0).toUpperCase()}
+    <Card className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/twaater/${twaat.account.handle}`)}>
+              {twaat.account.display_name}
+            </span>
+            {twaat.account.verified && <CheckCircle2 className="h-4 w-4 text-blue-500" />}
+            <span className="text-muted-foreground text-sm">@{twaat.account.handle}</span>
+            <span className="text-muted-foreground text-sm">·</span>
+            <span className="text-muted-foreground text-sm">{formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-                <span 
-                  className="font-bold hover:underline truncate cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.location.href = `/twaater/${twaat.account.handle}`;
-                  }}
-                >
-                  {twaat.account.display_name}
-                </span>
-                {twaat.account.verified && (
-                  <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: 'hsl(var(--twaater-purple))' }} />
-                )}
-                <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                  @{twaat.account.handle} · {formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}
-                </span>
-              </div>
 
-              <div className="flex items-center gap-2">
-                {!isOwnPost && (
-                  <Button
-                    size="sm"
-                    variant={following ? "secondary" : "default"}
-                    onClick={handleFollowClick}
-                    disabled={isFollowPending}
-                    className="h-7"
-                  >
-                    {following ? (
-                      <>
-                        <Check className="h-3 w-3 mr-1" />
-                        Following
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-3 w-3 mr-1" />
-                        Follow
-                      </>
-                    )}
-                  </Button>
-                )}
+          <p className="text-sm mt-1 whitespace-pre-wrap break-words">{makeHashtagsClickable(twaat.body)}</p>
+          
+          {twaat.media_url && <img src={twaat.media_url} alt="Twaat media" className="mt-3 rounded-lg max-h-96 object-cover border" />}
+          {twaat.quoted_twaat_id && <QuotedTwaat twaat={twaat.quoted_twaat} />}
+          <TwaatPoll twaatId={twaat.id} accountId={viewerAccountId} />
 
-                {!isOwnPost && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {!isBlocked && (
-                        <>
-                          <TwaatReportDialog
-                            twaatId={twaat.id}
-                            accountId={twaat.account.id}
-                            viewerAccountId={viewerAccountId}
-                            asMenuItem={true}
-                          />
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
-                      <DropdownMenuItem onClick={handleBlock} disabled={isBlocking} className="text-destructive">
-                        <Ban className="h-4 w-4 mr-2" />
-                        {isBlocked ? "Blocked" : "Block @" + twaat.account.handle}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+          <div className="flex items-center gap-4 mt-3">
+            <Button variant="ghost" size="sm" onClick={() => setShowReplyBox(!showReplyBox)} disabled={!viewerAccountId}>
+              <MessageCircle className="h-4 w-4" />
+              <span className="ml-1">{twaat.metrics?.replies || 0}</span>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={!viewerAccountId}>
+                  <Repeat2 className="h-4 w-4" />
+                  <span className="ml-1">{twaat.metrics?.retwaats || 0}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => toggleRetwaat({ twaatId: twaat.id, accountId: viewerAccountId! })}>
+                  <Repeat2 className="h-4 w-4 mr-2" />Retwaat
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { sessionStorage.setItem('quoteTwaat', JSON.stringify(twaat)); navigate('/twaater'); }}>
+                  <Quote className="h-4 w-4 mr-2" />Quote Twaat
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button variant="ghost" size="sm" onClick={() => toggleLike({ twaatId: twaat.id, accountId: viewerAccountId! })} disabled={!viewerAccountId}>
+              <Heart className="h-4 w-4" />
+              <span className="ml-1">{twaat.metrics?.likes || 0}</span>
+            </Button>
+
+            <Button variant="ghost" size="sm" onClick={() => toggleBookmark({ twaatId: twaat.id })} disabled={!viewerAccountId}>
+              {isBookmarked(twaat.id) ? <BookmarkCheck className="h-4 w-4 text-primary" /> : <Bookmark className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {showReplyBox && (
+            <div className="mt-3 space-y-2">
+              <Textarea value={replyBody} onChange={(e) => setReplyBody(e.target.value)} placeholder="Post your reply..." rows={3} />
+              <div className="flex gap-2">
+                <Button onClick={handleReply} disabled={isPosting || !replyBody.trim()} size="sm">Reply</Button>
+                <Button onClick={() => setShowReplyBox(false)} variant="outline" size="sm">Cancel</Button>
               </div>
             </div>
-
-            {/* Body */}
-            <p className="mt-1 whitespace-pre-wrap break-words">{twaat.body}</p>
-
-            {/* Badges */}
-            {(twaat.linked_type || twaat.outcome_code) && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {twaat.linked_type && (
-                  <Badge variant="secondary" className="text-xs capitalize" style={{ backgroundColor: 'hsl(var(--twaater-purple) / 0.2)', color: 'hsl(var(--twaater-purple))' }}>
-                    {twaat.linked_type}
-                  </Badge>
-                )}
-                {twaat.outcome_code && (
-                  <Badge variant="outline" className="gap-1 text-xs">
-                    <BarChart2 className="h-3 w-3" />
-                    {twaat.outcome_code}
-                  </Badge>
-                )}
-              </div>
-            )}
-
-            {/* Campaign Metrics */}
-            {(twaat.metrics.rsvps > 0 || twaat.metrics.sales > 0 || twaat.metrics.clicks > 0) && (
-              <div className="flex flex-wrap gap-3 mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                {twaat.metrics.rsvps > 0 && (
-                  <span><span className="font-bold">{twaat.metrics.rsvps}</span> RSVPs</span>
-                )}
-                {twaat.metrics.sales > 0 && (
-                  <span><span className="font-bold">{twaat.metrics.sales}</span> sales</span>
-                )}
-                {twaat.metrics.clicks > 0 && (
-                  <span><span className="font-bold">{twaat.metrics.clicks}</span> clicks</span>
-                )}
-              </div>
-            )}
-
-            {/* Metrics */}
-            <div className="flex items-center justify-between max-w-md mt-3">
-              <TwaatReplyDialog
-                twaatId={twaat.id}
-                accountId={viewerAccountId}
-                replyCount={twaat.metrics.replies}
-              />
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRetwaat}
-                className="gap-1 h-8 px-2 hover:text-[hsl(var(--success))] hover:bg-[hsl(var(--success)_/_0.1)]"
-                style={{ color: 'hsl(var(--muted-foreground))' }}
-              >
-                <Repeat2 className="h-4 w-4" />
-                {twaat.metrics.retwaats > 0 && <span className="text-xs">{twaat.metrics.retwaats}</span>}
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLike}
-                className="gap-1 h-8 px-2 hover:text-red-500 hover:bg-red-500/10"
-                style={{ color: 'hsl(var(--muted-foreground))' }}
-              >
-                <Heart className="h-4 w-4" />
-                {twaat.metrics.likes > 0 && <span className="text-xs">{twaat.metrics.likes}</span>}
-              </Button>
-
-              {twaat.metrics.impressions > 0 && (
-                <div className="text-xs ml-auto" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                  {twaat.metrics.impressions.toLocaleString()} views
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };

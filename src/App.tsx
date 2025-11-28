@@ -87,8 +87,9 @@ const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
-const TwaaterProfile = lazyWithRetry(() => import("./pages/TwaaterProfile"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
+const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
+const TwaaterMessagesPage = lazyWithRetry(() => import("./pages/TwaaterMessagesPage"));
 const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
@@ -253,6 +254,8 @@ function App() {
                     <Route path="release-manager" element={<ReleaseManager />} />
                     <Route path="releases/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
+                    <Route path="twaater/tag/:hashtag" element={<TwaaterHashtagView />} />
+                    <Route path="twaater/messages" element={<TwaaterMessagesPage />} />
                     <Route path="twaater/:handle" element={<TwaaterProfileView />} />
                     <Route path="events/eurovision" element={<EurovisionPage />} />
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
