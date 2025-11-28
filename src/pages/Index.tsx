@@ -27,9 +27,9 @@ const Index = () => {
     }
 
     if (!authLoading && !dataLoading && user) {
-      navigate(profile ? "/dashboard" : "/my-character");
+      navigate("/dashboard");
     }
-  }, [authLoading, dataLoading, gameData, navigate, profile, user]);
+  }, [authLoading, dataLoading, gameData, navigate, user]);
 
   if (!gameData || authLoading || dataLoading) {
     return (
