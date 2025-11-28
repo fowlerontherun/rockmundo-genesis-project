@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Music2, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getRehearsalLevel, formatRehearsalTime, getNextLevelInfo } from "@/utils/rehearsalLevels";
 
 interface SongRehearsalStatusProps {
   songId: string;
@@ -17,7 +18,7 @@ export function SongRehearsalStatus({ songId, bandId }: SongRehearsalStatusProps
 
       const { data } = await supabase
         .from("band_song_familiarity")
-        .select("familiarity_minutes, familiarity_percentage, last_rehearsed_at")
+        .select("familiarity_minutes, familiarity_percentage, last_rehearsed_at, rehearsal_stage")
         .eq("song_id", songId)
         .eq("band_id", bandId)
         .maybeSingle();
@@ -34,9 +35,9 @@ export function SongRehearsalStatus({ songId, bandId }: SongRehearsalStatusProps
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="destructive" className="gap-1">
               <Music2 className="h-3 w-3" />
-              Not Rehearsed
+              Unlearned
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -47,10 +48,8 @@ export function SongRehearsalStatus({ songId, bandId }: SongRehearsalStatusProps
     );
   }
 
-  const percentage = familiarity.familiarity_percentage || Math.min(100, (familiarity.familiarity_minutes / 60) * 100);
-  const level = percentage >= 80 ? "Well Rehearsed" : percentage >= 50 ? "Familiar" : "Learning";
-  const variant = percentage >= 80 ? "default" : percentage >= 50 ? "secondary" : "outline";
-
+  const rehearsalInfo = getRehearsalLevel(familiarity.familiarity_minutes);
+  const nextLevelInfo = getNextLevelInfo(familiarity.familiarity_minutes);
   const lastRehearsed = familiarity.last_rehearsed_at
     ? new Date(familiarity.last_rehearsed_at).toLocaleDateString()
     : "Never";
@@ -59,18 +58,26 @@ export function SongRehearsalStatus({ songId, bandId }: SongRehearsalStatusProps
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={variant} className="gap-1">
+          <Badge variant={rehearsalInfo.variant} className="gap-1">
             <Music2 className="h-3 w-3" />
-            {level} ({Math.round(percentage)}%)
+            {rehearsalInfo.name}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
           <div className="space-y-1">
             <p className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {familiarity.familiarity_minutes} minutes rehearsed (60 min max)
+              {formatRehearsalTime(familiarity.familiarity_minutes)} rehearsed
             </p>
             <p className="text-xs text-muted-foreground">Last rehearsed: {lastRehearsed}</p>
+            <p className="text-xs text-muted-foreground">
+              Performance modifier: {rehearsalInfo.performanceModifier > 0 ? '+' : ''}{(rehearsalInfo.performanceModifier * 100).toFixed(0)}%
+            </p>
+            {nextLevelInfo.nextLevel && (
+              <p className="text-xs text-primary">
+                {formatRehearsalTime(nextLevelInfo.minutesNeeded)} to {nextLevelInfo.nextLevel.name}
+              </p>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>

@@ -61,15 +61,18 @@ Deno.serve(async (req) => {
       try {
         console.log(`Processing rehearsal ${rehearsal.id} for band ${rehearsal.band_id}`)
 
+        // Calculate duration in minutes
         const startTime = new Date(rehearsal.scheduled_start)
         const endTime = new Date(rehearsal.scheduled_end)
-        const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+        const durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+        const durationHours = durationMinutes / 60
 
+        // Calculate XP and chemistry based on duration
         const baseXpPerHour = 10 + Math.floor(Math.random() * 10)
         const xpEarned = Math.floor(baseXpPerHour * durationHours)
-        const chemistryGain = Math.floor(Math.random() * 5) + 3
-        const familiarityGain = Math.floor(Math.random() * 10) + 10
+        const chemistryGain = Math.floor(durationHours * 2) + 1 // ~2-3 per hour
 
+        // Update rehearsal record
         const { error: updateError } = await supabase
           .from('band_rehearsals')
           .update({
@@ -77,7 +80,7 @@ Deno.serve(async (req) => {
             completed_at: new Date().toISOString(),
             xp_earned: xpEarned,
             chemistry_gain: chemistryGain,
-            familiarity_gained: familiarityGain,
+            familiarity_gained: durationMinutes,
           })
           .eq('id', rehearsal.id)
 
@@ -85,26 +88,22 @@ Deno.serve(async (req) => {
           throw updateError
         }
 
+        // Award XP to band members
         const { data: bandMembers, error: membersError } = await supabase
           .from('band_members')
-          .select('profile_id')
+          .select('user_id')
           .eq('band_id', rehearsal.band_id)
-          .eq('status', 'active')
+          .eq('member_status', 'active')
 
         if (membersError) {
           throw membersError
         }
 
         for (const member of bandMembers || []) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('id', member.profile_id)
-            .single()
-
-          if (profile?.user_id) {
+          if (member.user_id) {
             await supabase.functions.invoke('progression', {
               body: {
+                user_id: member.user_id,
                 action: 'award_action_xp',
                 amount: xpEarned,
                 category: 'practice',
@@ -121,6 +120,7 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Update band chemistry
         if (chemistryGain > 0) {
           await supabase
             .rpc('increment_band_chemistry', {
@@ -130,84 +130,71 @@ Deno.serve(async (req) => {
             .catch((err) => console.error('Error updating band chemistry:', err))
         }
 
+        // Get songs to update - either from setlist or selected song
+        let songsToUpdate: string[] = []
+        
         if (rehearsal.setlist_id) {
           const { data: setlistSongs } = await supabase
             .from('setlist_songs')
             .select('song_id')
             .eq('setlist_id', rehearsal.setlist_id)
 
-          for (const song of setlistSongs || []) {
-            const { data: existingFamiliarity, error: familiarityFetchError } = await supabase
-              .from('band_song_familiarity')
-              .select('familiarity')
-              .eq('band_id', rehearsal.band_id)
-              .eq('song_id', song.song_id)
-              .maybeSingle()
-
-            if (familiarityFetchError) {
-              throw familiarityFetchError
-            }
-
-            const updatedFamiliarity =
-              (existingFamiliarity?.familiarity ?? 0) + familiarityGain
-
-            await supabase
-              .from('band_song_familiarity')
-              .upsert(
-                {
-                  band_id: rehearsal.band_id,
-                  song_id: song.song_id,
-                  familiarity: updatedFamiliarity,
-                  updated_at: new Date().toISOString(),
-                },
-                {
-                  onConflict: 'band_id,song_id',
-                }
-              )
-
-            const { data: existingRehearsal } = await supabase
-              .from('song_rehearsals')
-              .select('rehearsal_level')
-              .eq('band_id', rehearsal.band_id)
-              .eq('song_id', song.song_id)
-              .single()
-
-            const newLevel = Math.min(10, (existingRehearsal?.rehearsal_level || 0) + 1)
-
-            await supabase
-              .from('song_rehearsals')
-              .upsert(
-                {
-                  band_id: rehearsal.band_id,
-                  song_id: song.song_id,
-                  rehearsal_level: newLevel,
-                  last_rehearsed: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                },
-                {
-                  onConflict: 'band_id,song_id',
-                }
-              )
-          }
+          songsToUpdate = setlistSongs?.map(s => s.song_id) || []
+        } else if (rehearsal.selected_song_id) {
+          songsToUpdate = [rehearsal.selected_song_id]
         }
 
-        if (rehearsal.selected_song_id) {
+        // Calculate familiarity minutes per song
+        const minutesPerSong = songsToUpdate.length > 0 
+          ? Math.floor(durationMinutes / songsToUpdate.length)
+          : 0
+
+        // Update familiarity for each song
+        for (const songId of songsToUpdate) {
+          const { data: existingFamiliarity } = await supabase
+            .from('band_song_familiarity')
+            .select('familiarity_minutes')
+            .eq('band_id', rehearsal.band_id)
+            .eq('song_id', songId)
+            .maybeSingle()
+
+          const currentMinutes = existingFamiliarity?.familiarity_minutes || 0
+          const newMinutes = currentMinutes + minutesPerSong
+
+          await supabase
+            .from('band_song_familiarity')
+            .upsert(
+              {
+                band_id: rehearsal.band_id,
+                song_id: songId,
+                familiarity_minutes: newMinutes,
+                last_rehearsed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              {
+                onConflict: 'band_id,song_id',
+              }
+            )
+
+          // Update song_rehearsals table for tracking
           const { data: existingRehearsal } = await supabase
             .from('song_rehearsals')
-            .select('rehearsal_level')
+            .select('rehearsal_level, times_rehearsed')
             .eq('band_id', rehearsal.band_id)
-            .eq('song_id', rehearsal.selected_song_id)
-            .single()
+            .eq('song_id', songId)
+            .maybeSingle()
 
           const newLevel = Math.min(10, (existingRehearsal?.rehearsal_level || 0) + 1)
+          const timesRehearsed = (existingRehearsal?.times_rehearsed || 0) + 1
 
           await supabase
             .from('song_rehearsals')
             .upsert(
               {
                 band_id: rehearsal.band_id,
-                song_id: rehearsal.selected_song_id,
+                song_id: songId,
                 rehearsal_level: newLevel,
+                times_rehearsed: timesRehearsed,
                 last_rehearsed: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
@@ -220,7 +207,7 @@ Deno.serve(async (req) => {
         completedCount++
         totalXpAwarded += xpEarned
         totalChemistryGain += chemistryGain
-        console.log(`Completed rehearsal ${rehearsal.id}: ${xpEarned} XP, +${chemistryGain} chemistry`)
+        console.log(`Completed rehearsal ${rehearsal.id}: ${xpEarned} XP, +${chemistryGain} chemistry, ${minutesPerSong}min per song`)
       } catch (error) {
         errorCount += 1
         console.error(`Error processing rehearsal ${rehearsal.id}:`, error)

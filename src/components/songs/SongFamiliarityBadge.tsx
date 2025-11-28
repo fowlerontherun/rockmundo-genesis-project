@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Music2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getRehearsalLevel, formatRehearsalTime, getNextLevelInfo } from "@/utils/rehearsalLevels";
 
 interface SongFamiliarityBadgeProps {
   songId: string;
@@ -15,7 +16,7 @@ export function SongFamiliarityBadge({ songId, bandId }: SongFamiliarityBadgePro
     queryFn: async () => {
       const { data } = await supabase
         .from("band_song_familiarity")
-        .select("familiarity_minutes, familiarity_percentage")
+        .select("familiarity_minutes, familiarity_percentage, rehearsal_stage")
         .eq("song_id", songId)
         .eq("band_id", bandId)
         .maybeSingle();
@@ -29,9 +30,9 @@ export function SongFamiliarityBadge({ songId, bandId }: SongFamiliarityBadgePro
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="destructive" className="gap-1">
               <Music2 className="h-3 w-3" />
-              Not Rehearsed
+              Unlearned
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -42,21 +43,30 @@ export function SongFamiliarityBadge({ songId, bandId }: SongFamiliarityBadgePro
     );
   }
 
-  const percentage = familiarity.familiarity_percentage || Math.min(100, (familiarity.familiarity_minutes / 60) * 100);
-  const level = percentage >= 80 ? "Well Rehearsed" : percentage >= 50 ? "Familiar" : "Learning";
-  const variant = percentage >= 80 ? "default" : percentage >= 50 ? "secondary" : "outline";
+  const rehearsalInfo = getRehearsalLevel(familiarity.familiarity_minutes);
+  const nextLevelInfo = getNextLevelInfo(familiarity.familiarity_minutes);
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={variant} className="gap-1">
+          <Badge variant={rehearsalInfo.variant} className="gap-1">
             <Music2 className="h-3 w-3" />
-            {level} ({Math.round(percentage)}%)
+            {rehearsalInfo.name}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{familiarity.familiarity_minutes} minutes rehearsed (60 min max)</p>
+          <div className="space-y-1">
+            <p>{formatRehearsalTime(familiarity.familiarity_minutes)} rehearsed</p>
+            <p className="text-xs text-muted-foreground">
+              Performance: {rehearsalInfo.performanceModifier > 0 ? '+' : ''}{(rehearsalInfo.performanceModifier * 100).toFixed(0)}%
+            </p>
+            {nextLevelInfo.nextLevel && (
+              <p className="text-xs text-primary">
+                {formatRehearsalTime(nextLevelInfo.minutesNeeded)} to {nextLevelInfo.nextLevel.name}
+              </p>
+            )}
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
