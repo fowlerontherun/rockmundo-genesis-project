@@ -33,6 +33,8 @@ export default function Admin3DGigDemo() {
   const [isAutoProgressing, setIsAutoProgressing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState<'full' | 'preview'>('full');
+  const [isOutdoor, setIsOutdoor] = useState(false);
+  const [timeOfDay, setTimeOfDay] = useState<'day' | 'sunset' | 'night'>('night');
 
   // Fetch stage templates
   const { data: stageTemplates } = useQuery({
@@ -195,6 +197,40 @@ export default function Admin3DGigDemo() {
                 </Select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Venue Type</Label>
+              <Select value={isOutdoor ? "outdoor" : "indoor"} onValueChange={(v) => setIsOutdoor(v === "outdoor")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="indoor">🏢 Indoor</SelectItem>
+                  <SelectItem value="outdoor">🌳 Outdoor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isOutdoor && (
+              <div className="space-y-2">
+                <Label>Time of Day</Label>
+                <Select value={timeOfDay} onValueChange={(v: any) => setTimeOfDay(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">☀️ Day</SelectItem>
+                    <SelectItem value="sunset">🌅 Sunset</SelectItem>
+                    <SelectItem value="night">🌙 Night</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {timeOfDay === 'day' && 'Bright daylight with blue sky'}
+                  {timeOfDay === 'sunset' && 'Golden hour with orange/pink gradient'}
+                  {timeOfDay === 'night' && 'Night sky with stars and festival lighting'}
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* Crowd Controls */}
@@ -391,6 +427,8 @@ export default function Admin3DGigDemo() {
             backdropType={backdropType}
             merchColor={merchColor}
             songSection={songSection}
+            isOutdoor={isOutdoor}
+            timeOfDay={timeOfDay}
           />
         </div>
       </div>

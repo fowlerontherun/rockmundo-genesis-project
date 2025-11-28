@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.update-music-charts]
 verify_jwt = false
+
+[functions.generate-sprite]
+verify_jwt = false

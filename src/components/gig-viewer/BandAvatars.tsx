@@ -47,29 +47,35 @@ export const BandAvatars = ({
     texture.colorSpace = THREE.SRGBColorSpace;
   });
 
-  // Custom shader for color-keying background removal
+  // Custom shader for green-screen color-keying (removes #00FF00 background)
   const onBeforeCompile = (shader: any) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `
       #include <map_fragment>
       
-      // Color-key background removal
-      vec3 color = diffuseColor.rgb;
-      float brightness = (color.r + color.g + color.b) / 3.0;
+      // Precise green-screen color-keying for #00FF00 bright green
+      vec3 green = vec3(0.0, 1.0, 0.0);
+      float greenDist = distance(diffuseColor.rgb, green);
       
-      // Discard very bright pixels (white/light grey backgrounds)
-      if (brightness > 0.85 && 
-          abs(color.r - color.g) < 0.1 && 
-          abs(color.g - color.b) < 0.1) {
+      // Discard pixels that are close to pure green
+      if (greenDist < 0.4) {
         discard;
       }
       
-      // Discard very dark pixels (black backgrounds)
-      if (brightness < 0.15) {
+      // Also discard very bright greens
+      float greenDiff = diffuseColor.g - max(diffuseColor.r, diffuseColor.b);
+      if (greenDiff > 0.3 && diffuseColor.g > 0.7) {
+        discard;
+      }
+      
+      // Remove shadows on green background
+      if (diffuseColor.g > 0.5 && diffuseColor.r < 0.3 && diffuseColor.b < 0.3) {
         discard;
       }
       `
+    );
+  };
     );
   };
   
