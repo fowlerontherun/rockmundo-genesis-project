@@ -7,19 +7,50 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TrendingUp, Target, Award, Zap, Calendar, AlertCircle } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
+import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
+import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
+import { AttributePanel } from "@/components/attributes/AttributePanel";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/lib/supabase-types";
 
 const SkillsPage = () => {
   const { user } = useAuth();
-  const { skillProgress, attributes, loading } = useGameData();
+  const { skillProgress, loading, xpWallet, profile, dailyXpGrant } = useGameData();
   const [selectedSkill, setSelectedSkill] = useState<{ slug: string; name: string } | null>(null);
+  const [rawAttributes, setRawAttributes] = useState<Database["public"]["Tables"]["player_attributes"]["Row"] | null>(null);
   
   // Get practice restrictions for current date
   const today = new Date();
   const { data: restrictions } = useSkillPracticeRestrictions(user?.id, today);
+
+  // Fetch full attributes row
+  useEffect(() => {
+    if (profile?.id) {
+      const fetchAttributes = async () => {
+        const { data } = await supabase
+          .from("player_attributes")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .maybeSingle();
+        
+        if (data) {
+          setRawAttributes(data);
+        }
+      };
+      fetchAttributes();
+    }
+  }, [profile?.id]);
+
+  // XP Wallet data
+  const xpBalance = xpWallet?.xp_balance ?? 0;
+  const lifetimeXp = xpWallet?.lifetime_xp ?? 0;
+  const attributePointsAvailable = xpWallet?.attribute_points_earned ?? 0;
+  const attributePointsSpent = rawAttributes?.attribute_points_spent ?? 0;
+  const lastClaimDate = dailyXpGrant?.created_at;
 
   const totalXP = skillProgress?.reduce((sum, skill) => sum + (skill.current_xp || 0), 0) || 0;
   const skillCount = skillProgress?.length || 0;
@@ -38,9 +69,18 @@ const SkillsPage = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Skills & Progression</h1>
+        <h1 className="text-3xl font-bold">Skills & Attributes</h1>
         <p className="text-muted-foreground">Master your craft and unlock new abilities</p>
       </div>
+
+      <XpWalletDisplay
+        xpBalance={xpBalance}
+        lifetimeXp={lifetimeXp}
+        attributePointsAvailable={attributePointsAvailable}
+        attributePointsSpent={attributePointsSpent}
+      />
+
+      <DailyStipendCard lastClaimDate={lastClaimDate} />
 
       {/* Practice Restrictions Alert */}
       {restrictions && !restrictions.canPractice && (
@@ -107,11 +147,16 @@ const SkillsPage = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="tree" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="attributes" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="attributes">Attributes</TabsTrigger>
           <TabsTrigger value="tree">Skill Tree</TabsTrigger>
           <TabsTrigger value="list">Practice Skills</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="attributes" className="mt-6">
+          <AttributePanel attributes={rawAttributes} xpBalance={xpBalance} />
+        </TabsContent>
 
         <TabsContent value="tree" className="mt-6">
           <SkillTree />
@@ -178,27 +223,6 @@ const SkillsPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Attributes Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Attributes</CardTitle>
-          <CardDescription>Core stats that influence your performance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {attributes && Object.entries(attributes).map(([key, value]) => (
-              <div key={key} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                  <span className="font-bold">{value}</span>
-                </div>
-                <Progress value={(value / 100) * 100} className="h-2" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Schedule Practice Dialog */}
       {selectedSkill && (
