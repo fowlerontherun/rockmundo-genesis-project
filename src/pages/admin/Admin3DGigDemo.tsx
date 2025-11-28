@@ -32,6 +32,7 @@ export default function Admin3DGigDemo() {
   const [songSection, setSongSection] = useState<SongSection>('chorus');
   const [isAutoProgressing, setIsAutoProgressing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [viewMode, setViewMode] = useState<'full' | 'preview'>('full');
 
   // Fetch stage templates
   const { data: stageTemplates } = useQuery({
@@ -114,6 +115,20 @@ export default function Admin3DGigDemo() {
           <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Test and preview 3D gig viewer</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'full' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('full')}
+          >
+            Full Demo
+          </Button>
+          <Button
+            variant={viewMode === 'preview' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('preview')}
+          >
+            Preview Only
+          </Button>
           <Button variant="outline" size="sm" onClick={toggleFullscreen}>
             <Maximize2 className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
@@ -123,6 +138,7 @@ export default function Admin3DGigDemo() {
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Control Panel - Horizontal scroll on mobile, vertical on desktop */}
+        {viewMode === 'full' && (
         <div className="lg:w-96 border-b lg:border-b-0 lg:border-r border-border overflow-x-auto lg:overflow-y-auto p-2 md:p-4">
           <div className="flex lg:flex-col gap-2 md:gap-4 min-w-max lg:min-w-0">
           {/* Stage Template */}
@@ -357,6 +373,7 @@ export default function Admin3DGigDemo() {
           </Card>
           </div>
         </div>
+        )}
 
         {/* 3D Preview */}
         <div className="flex-1 relative min-h-[400px]">
