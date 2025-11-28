@@ -126,6 +126,7 @@ const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphics
 const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
+const Admin3DGigViewer = lazyWithRetry(() => import("./pages/Admin3DGigViewer"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
@@ -296,6 +297,7 @@ function App() {
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
+                    <Route path="admin/3d-gig-viewer" element={<Admin3DGigViewer />} />
                     <Route path="admin/gear-items" element={<GearItemsAdmin />} />
                     <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
