@@ -102,7 +102,6 @@ const Navigation = () => {
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: Newspaper, label: "Today's News", path: "/todays-news" },
-        { icon: User, label: "Character", path: "/my-character/edit" },
         { icon: Guitar, label: "Gear", path: "/gear" },
         { icon: HeartPulse, label: "Wellness", path: "/wellness" },
         { icon: BookOpen, label: "Statistics", path: "/statistics" },
@@ -184,7 +183,6 @@ const Navigation = () => {
     { icon: Home, label: t('home'), path: "/dashboard" },
     { icon: Calendar, label: t('gigs'), path: "/gigs" },
     { icon: Music, label: t('music'), path: "/music" },
-    { icon: User, label: t('character'), path: "/my-character" },
   ];
 
   const handleLogout = async () => {
