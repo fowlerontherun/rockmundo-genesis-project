@@ -31,6 +31,7 @@ interface GigDemoViewerProps {
   floorType: string;
   backdropType: string;
   merchColor: string;
+  bandName?: string;
   songSection: SongSection;
   isOutdoor?: boolean;
   timeOfDay?: 'day' | 'sunset' | 'night';
@@ -51,6 +52,7 @@ export const GigDemoViewer = ({
   floorType,
   backdropType,
   merchColor,
+  bandName = "ROCKMUNDO",
   songSection,
   isOutdoor = false,
   timeOfDay = 'night',
@@ -174,6 +176,7 @@ export const GigDemoViewer = ({
             crowdMood={crowdMood}
             bandFame={bandFame}
             bandMerchColor={merchColor}
+            bandName={bandName}
             maxCrowdCount={maxCrowdCount}
             densityMultiplier={crowdDensity}
           />
@@ -206,6 +209,13 @@ export const GigDemoViewer = ({
             animationState={songSection === 'intro' ? 'intro' : songSection === 'outro' ? 'outro' : 'playing'}
             intensity={songIntensity}
             seed={0.7}
+          />
+          <BandMember3D 
+            position={[-4, 1, -5]}
+            instrument="keyboardist"
+            animationState={songSection === 'intro' ? 'intro' : 'playing'}
+            intensity={songIntensity}
+            seed={0.9}
           />
         </Suspense>
       </Canvas>

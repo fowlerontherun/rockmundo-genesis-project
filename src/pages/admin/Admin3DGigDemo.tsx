@@ -30,6 +30,7 @@ export default function Admin3DGigDemo() {
   const [floorType, setFloorType] = useState('wood');
   const [backdropType, setBackdropType] = useState('curtain-black');
   const [merchColor, setMerchColor] = useState(DEFAULT_MERCH_COLOR);
+  const [bandName, setBandName] = useState('ROCKMUNDO');
   const [songSection, setSongSection] = useState<SongSection>('chorus');
   const [isAutoProgressing, setIsAutoProgressing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -82,6 +83,7 @@ export default function Admin3DGigDemo() {
     setFloorType('wood');
     setBackdropType('curtain-black');
     setMerchColor(DEFAULT_MERCH_COLOR);
+    setBandName('ROCKMUNDO');
     setSongSection('chorus');
   };
 
@@ -321,6 +323,21 @@ export default function Admin3DGigDemo() {
             </div>
 
             <div className="space-y-2">
+              <Label>Band Name (on merch)</Label>
+              <input 
+                type="text" 
+                value={bandName}
+                onChange={(e) => setBandName(e.target.value.toUpperCase())}
+                className="w-full px-3 py-2 rounded bg-background border border-border text-foreground"
+                placeholder="BAND NAME"
+                maxLength={15}
+              />
+              <p className="text-xs text-muted-foreground">
+                Appears on T-shirts when fans wear merch
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label>Song Intensity</Label>
               <Slider 
                 value={[songIntensity]} 
@@ -470,6 +487,7 @@ export default function Admin3DGigDemo() {
             floorType={floorType}
             backdropType={backdropType}
             merchColor={merchColor}
+            bandName={bandName}
             songSection={songSection}
             isOutdoor={isOutdoor}
             timeOfDay={timeOfDay}
