@@ -10,21 +10,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { 
-  User, 
-  Trophy, 
-  Users, 
-  Calendar,
-  Bot,
-  Heart,
-  Zap,
-  Coins,
-  MapPin,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays
-} from "lucide-react";
+import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
@@ -38,10 +24,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Loader2, RefreshCw, Send } from "lucide-react";
-
 type ChatRole = "advisor" | "user";
 type ChatKind = "general" | "insights";
-
 interface AdvisorChatMessage {
   id: string;
   role: ChatRole;
@@ -50,14 +34,21 @@ interface AdvisorChatMessage {
   suggestions?: AdvisorSuggestion[];
   timestamp: Date;
 }
-
 const Dashboard = () => {
-  const { user } = useAuth();
-  const { profile, skillProgress, attributes } = useGameData();
-  const { toast } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    profile,
+    skillProgress,
+    attributes
+  } = useGameData();
+  const {
+    toast
+  } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
-  
+
   // Advisor state
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -65,181 +56,147 @@ const Dashboard = () => {
   const [advisorError, setAdvisorError] = useState<string | null>(null);
   const [insights, setInsights] = useState<AdvisorInsights | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-  const { data: friendships } = useQuery({
+  const weekStart = startOfWeek(currentDate, {
+    weekStartsOn: 1
+  });
+  const weekDays = Array.from({
+    length: 7
+  }, (_, i) => addDays(weekStart, i));
+  const {
+    data: friendships
+  } = useQuery({
     queryKey: ["friendships", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data } = await supabase
-        .from("friendships")
-        .select("*, profiles!friendships_user_id_1_fkey(*), profiles!friendships_user_id_2_fkey(*)")
-        .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`)
-        .eq("status", "accepted");
+      const {
+        data
+      } = await supabase.from("friendships").select("*, profiles!friendships_user_id_1_fkey(*), profiles!friendships_user_id_2_fkey(*)").or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`).eq("status", "accepted");
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
-
-  const { data: achievements } = useQuery({
+  const {
+    data: achievements
+  } = useQuery({
     queryKey: ["player-achievements", user?.id],
     queryFn: async (): Promise<any[]> => {
       if (!user?.id) return [];
       const client: any = supabase;
-      const result = await client
-        .from("player_achievements")
-        .select("*, achievements(*)")
-        .eq("player_id", user.id);
+      const result = await client.from("player_achievements").select("*, achievements(*)").eq("player_id", user.id);
       return result.data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   // Filter skills with XP > 0
   const trainedSkills = skillProgress?.filter(skill => (skill.current_xp || 0) > 0) || [];
-
   const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
-
   const calculateSkillProgress = (currentXp: number, level: number) => {
     const currentLevelXp = Math.pow(level, 2) * 100;
     const nextLevelXp = Math.pow(level + 1, 2) * 100;
     const progressInLevel = currentXp - currentLevelXp;
     const xpNeededForLevel = nextLevelXp - currentLevelXp;
-    return (progressInLevel / xpNeededForLevel) * 100;
+    return progressInLevel / xpNeededForLevel * 100;
   };
 
   // Advisor functions
-  const greeting = profile
-    ? `Hey ${(profile as any).stage_name || (profile as any).display_name || (profile as any).username || "there"}! I'm tracking your career pulse. Ready for a data-powered game plan?`
-    : "";
-
+  const greeting = profile ? `Hey ${(profile as any).stage_name || (profile as any).display_name || (profile as any).username || "there"}! I'm tracking your career pulse. Ready for a data-powered game plan?` : "";
   const loadInsights = async () => {
     if (!user) return;
-
     setLoading(true);
     setAdvisorError(null);
-
     try {
       const result = await generateAdvisorInsights(user.id);
       setInsights(result);
-
-      setMessages((previous) => {
-        const retainedMessages = previous.filter((message) => message.kind !== "insights");
-        const advisoryCopy =
-          result.suggestions.length > 0
-            ? "Here's what I'm seeing in your numbers right now."
-            : "No red alerts in the data—stay consistent and check back after your next update.";
-
-        return [
-          ...retainedMessages,
-          {
-            id: `advisor-insights-${Date.now()}`,
-            role: "advisor",
-            kind: "insights",
-            content: advisoryCopy,
-            suggestions: result.suggestions,
-            timestamp: new Date(),
-          },
-        ];
+      setMessages(previous => {
+        const retainedMessages = previous.filter(message => message.kind !== "insights");
+        const advisoryCopy = result.suggestions.length > 0 ? "Here's what I'm seeing in your numbers right now." : "No red alerts in the data—stay consistent and check back after your next update.";
+        return [...retainedMessages, {
+          id: `advisor-insights-${Date.now()}`,
+          role: "advisor",
+          kind: "insights",
+          content: advisoryCopy,
+          suggestions: result.suggestions,
+          timestamp: new Date()
+        }];
       });
     } catch (insightError) {
       console.error(insightError);
-      setAdvisorError(
-        insightError instanceof Error
-          ? insightError.message
-          : "Unable to load advisor insights right now.",
-      );
+      setAdvisorError(insightError instanceof Error ? insightError.message : "Unable to load advisor insights right now.");
     } finally {
       setLoading(false);
     }
   };
-
   const handleAdvisorSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!inputValue.trim() || isStreaming) return;
-    
     const userMessage: AdvisorChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       kind: "general",
       content: inputValue.trim(),
-      timestamp: new Date(),
+      timestamp: new Date()
     };
-
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsStreaming(true);
-
     const session = await supabase.auth.getSession();
     if (!session.data.session?.access_token) {
       toast({
         title: "Authentication required",
         description: "Please log in to chat with the advisor.",
-        variant: "destructive",
+        variant: "destructive"
       });
       setIsStreaming(false);
       return;
     }
-
     let assistantContent = "";
     const updateAssistant = (chunk: string) => {
       assistantContent += chunk;
-      setMessages((prev) => {
+      setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === "advisor") {
-          return prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: assistantContent } : m
-          );
+          return prev.map((m, i) => i === prev.length - 1 ? {
+            ...m,
+            content: assistantContent
+          } : m);
         }
-        return [
-          ...prev,
-          {
-            id: `advisor-${Date.now()}`,
-            role: "advisor",
-            kind: "general",
-            content: assistantContent,
-            timestamp: new Date(),
-          },
-        ];
+        return [...prev, {
+          id: `advisor-${Date.now()}`,
+          role: "advisor",
+          kind: "general",
+          content: assistantContent,
+          timestamp: new Date()
+        }];
       });
     };
-
-    const conversationHistory = messages
-      .filter((m) => m.kind === "general")
-      .map((m) => ({
-        role: m.role === "advisor" ? ("assistant" as const) : ("user" as const),
-        content: m.content,
-      }));
-
+    const conversationHistory = messages.filter(m => m.kind === "general").map(m => ({
+      role: m.role === "advisor" ? "assistant" as const : "user" as const,
+      content: m.content
+    }));
     await streamAdvisorChat({
-      messages: [...conversationHistory, { role: "user", content: userMessage.content }],
+      messages: [...conversationHistory, {
+        role: "user",
+        content: userMessage.content
+      }],
       insights,
       summary: insights?.summary,
       apiKey: session.data.session.access_token,
       onDelta: updateAssistant,
       onDone: () => setIsStreaming(false),
-      onError: (err) => {
+      onError: err => {
         toast({
           title: "Advisor unavailable",
           description: err,
-          variant: "destructive",
+          variant: "destructive"
         });
         setIsStreaming(false);
-      },
+      }
     });
   };
-
-  return (
-    <div className="container mx-auto p-3 md:p-6 space-y-4">
+  return <div className="container mx-auto p-3 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -247,7 +204,7 @@ const Dashboard = () => {
             Welcome back, {(profile as any)?.display_name || (profile as any)?.username || "Player"}
           </p>
         </div>
-        <Badge variant="outline" className="text-xs">v2.0.2</Badge>
+        
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
@@ -338,17 +295,19 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      Joined {(profile as any)?.created_at && formatDistanceToNow(new Date((profile as any).created_at), { addSuffix: true })}
+                      Joined {(profile as any)?.created_at && formatDistanceToNow(new Date((profile as any).created_at), {
+                      addSuffix: true
+                    })}
                     </span>
                   </div>
-                  {(profile as any)?.last_active && (
-                    <div className="flex items-center gap-2">
+                  {(profile as any)?.last_active && <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
-                        Last active {formatDistanceToNow(new Date((profile as any).last_active), { addSuffix: true })}
+                        Last active {formatDistanceToNow(new Date((profile as any).last_active), {
+                      addSuffix: true
+                    })}
                       </span>
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </CardContent>
             </Card>
@@ -408,18 +367,14 @@ const Dashboard = () => {
               <CardTitle>Your Skills</CardTitle>
             </CardHeader>
             <CardContent>
-              {trainedSkills.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
+              {trainedSkills.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
                   You haven't trained any skills yet. Start training to see your progress!
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {trainedSkills.map((skill) => {
-                    const currentXp = skill.current_xp || 0;
-                    const currentLevel = skill.current_level || 0;
-                    const progress = calculateSkillProgress(currentXp, currentLevel);
-                    return (
-                      <div key={skill.skill_slug} className="space-y-2 p-3 rounded-lg border bg-card">
+                </p> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {trainedSkills.map(skill => {
+                const currentXp = skill.current_xp || 0;
+                const currentLevel = skill.current_level || 0;
+                const progress = calculateSkillProgress(currentXp, currentLevel);
+                return <div key={skill.skill_slug} className="space-y-2 p-3 rounded-lg border bg-card">
                         <div className="flex flex-col gap-2">
                           <span className="text-sm font-medium capitalize">
                             {skill.skill_slug.replace(/_/g, " ")}
@@ -430,11 +385,9 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <Progress value={progress} className="h-2" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      </div>;
+              })}
+                </div>}
             </CardContent>
           </Card>
 
@@ -443,8 +396,7 @@ const Dashboard = () => {
               <CardTitle>Attributes</CardTitle>
             </CardHeader>
             <CardContent>
-              {attributes && (
-                <div className="grid gap-4 md:grid-cols-2">
+              {attributes && <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <p className="text-sm font-medium">Creative Insight</p>
                     <p className="text-2xl font-bold">{attributes.creative_insight || 0}</p>
@@ -461,8 +413,7 @@ const Dashboard = () => {
                     <p className="text-sm font-medium">Stage Presence</p>
                     <p className="text-2xl font-bold">{attributes.stage_presence || 0}</p>
                   </div>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -478,23 +429,13 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!friendships || friendships.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                {!friendships || friendships.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
                     No friends yet. Start connecting with other players!
-                  </p>
-                ) : (
-                  <ScrollArea className="h-[500px]">
+                  </p> : <ScrollArea className="h-[500px]">
                     <div className="space-y-2">
                       {friendships.map((friendship: any) => {
-                        const friend =
-                          friendship.user_id_1 === user?.id
-                            ? friendship.profiles
-                            : friendship.profiles;
-                        return (
-                          <div
-                            key={friendship.id}
-                            className="flex items-center gap-3 p-2 rounded-lg border hover:bg-accent/50 transition-colors"
-                          >
+                    const friend = friendship.user_id_1 === user?.id ? friendship.profiles : friendship.profiles;
+                    return <div key={friendship.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-accent/50 transition-colors">
                             <Avatar className="h-10 w-10">
                               <AvatarImage src={friend?.avatar_url} />
                               <AvatarFallback>
@@ -509,12 +450,10 @@ const Dashboard = () => {
                                 @{friend?.username}
                               </p>
                             </div>
-                          </div>
-                        );
-                      })}
+                          </div>;
+                  })}
                     </div>
-                  </ScrollArea>
-                )}
+                  </ScrollArea>}
               </CardContent>
             </Card>
 
@@ -554,72 +493,40 @@ const Dashboard = () => {
             <CardContent>
               <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? -1 : -7))}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? -1 : -7))}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setCurrentDate(new Date())}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setCurrentDate(new Date())}>
                     Today
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? 1 : 7))}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? 1 : 7))}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={viewMode === 'day' ? 'default' : 'outline'}
-                    onClick={() => setViewMode('day')}
-                  >
+                  <Button size="sm" variant={viewMode === 'day' ? 'default' : 'outline'} onClick={() => setViewMode('day')}>
                     <Calendar className="h-4 w-4 mr-1" />
                     Day
                   </Button>
-                  <Button
-                    size="sm"
-                    variant={viewMode === 'week' ? 'default' : 'outline'}
-                    onClick={() => setViewMode('week')}
-                  >
+                  <Button size="sm" variant={viewMode === 'week' ? 'default' : 'outline'} onClick={() => setViewMode('week')}>
                     <CalendarDays className="h-4 w-4 mr-1" />
                     Week
                   </Button>
                 </div>
               </div>
 
-              {viewMode === 'day' ? (
-                <DaySchedule date={currentDate} userId={user?.id} />
-              ) : (
-                <Tabs defaultValue={formatDate(weekDays[0], 'yyyy-MM-dd')} className="w-full">
+              {viewMode === 'day' ? <DaySchedule date={currentDate} userId={user?.id} /> : <Tabs defaultValue={formatDate(weekDays[0], 'yyyy-MM-dd')} className="w-full">
                   <TabsList className="w-full grid grid-cols-7 h-auto">
-                    {weekDays.map(day => (
-                      <TabsTrigger 
-                        key={day.toISOString()} 
-                        value={formatDate(day, 'yyyy-MM-dd')}
-                        className="flex flex-col py-2"
-                      >
+                    {weekDays.map(day => <TabsTrigger key={day.toISOString()} value={formatDate(day, 'yyyy-MM-dd')} className="flex flex-col py-2">
                         <span className="text-xs">{formatDate(day, 'EEE')}</span>
                         <span className="text-lg font-bold">{formatDate(day, 'd')}</span>
-                      </TabsTrigger>
-                    ))}
+                      </TabsTrigger>)}
                   </TabsList>
-                  {weekDays.map(day => (
-                    <TabsContent key={day.toISOString()} value={formatDate(day, 'yyyy-MM-dd')}>
+                  {weekDays.map(day => <TabsContent key={day.toISOString()} value={formatDate(day, 'yyyy-MM-dd')}>
                       <DaySchedule date={day} userId={user?.id} />
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              )}
+                    </TabsContent>)}
+                </Tabs>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -649,103 +556,58 @@ const Dashboard = () => {
             <CardContent className="space-y-4">
               <ScrollArea className="h-[400px] border rounded-lg p-4">
                 <div className="space-y-4">
-                  {messages.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
+                  {messages.length === 0 && <div className="text-center py-8 text-muted-foreground">
                       <Bot className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p className="text-sm">{greeting}</p>
-                    </div>
-                  )}
+                    </div>}
                   
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "flex w-full",
-                        message.role === "user" ? "justify-end" : "justify-start",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-xl rounded-2xl border px-4 py-3",
-                          message.role === "advisor"
-                            ? "border-primary/20 bg-background"
-                            : "border-primary bg-primary text-primary-foreground",
-                        )}
-                      >
+                  {messages.map(message => <div key={message.id} className={cn("flex w-full", message.role === "user" ? "justify-end" : "justify-start")}>
+                      <div className={cn("max-w-xl rounded-2xl border px-4 py-3", message.role === "advisor" ? "border-primary/20 bg-background" : "border-primary bg-primary text-primary-foreground")}>
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          {message.role === "advisor" ? (
-                            <>
+                          {message.role === "advisor" ? <>
                               <Bot className="h-4 w-4" />
                               <span>Advisor</span>
-                            </>
-                          ) : (
-                            <span>You</span>
-                          )}
+                            </> : <span>You</span>}
                         </div>
                         <p className="mt-2 text-sm leading-relaxed">{message.content}</p>
                         
-                        {message.suggestions && message.suggestions.length > 0 && (
-                          <div className="mt-4 space-y-2">
-                            {message.suggestions.map((suggestion) => (
-                              <div
-                                key={suggestion.id}
-                                className="rounded-lg border bg-muted/20 p-3"
-                              >
+                        {message.suggestions && message.suggestions.length > 0 && <div className="mt-4 space-y-2">
+                            {message.suggestions.map(suggestion => <div key={suggestion.id} className="rounded-lg border bg-muted/20 p-3">
                                 <h3 className="text-sm font-semibold">{suggestion.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{suggestion.message}</p>
-                                {suggestion.actions.length > 0 && (
-                                  <div className="mt-2 flex gap-2">
-                                    {suggestion.actions.map((action) => (
-                                      <Button key={action.href} variant="outline" size="sm" asChild>
+                                {suggestion.actions.length > 0 && <div className="mt-2 flex gap-2">
+                                    {suggestion.actions.map(action => <Button key={action.href} variant="outline" size="sm" asChild>
                                         <Link to={action.href}>{action.label}</Link>
-                                      </Button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                                      </Button>)}
+                                  </div>}
+                              </div>)}
+                          </div>}
                       </div>
-                    </div>
-                  ))}
+                    </div>)}
                   
-                  {loading && (
-                    <div className="flex justify-start">
+                  {loading && <div className="flex justify-start">
                       <div className="flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Analyzing...</span>
                       </div>
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </ScrollArea>
 
-              {advisorError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {advisorError && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   {advisorError}
-                </div>
-              )}
+                </div>}
 
               <form onSubmit={handleAdvisorSubmit} className="space-y-2">
-                <Textarea
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask the advisor what to focus on next..."
-                  className="min-h-[80px] resize-none"
-                />
+                <Textarea value={inputValue} onChange={e => setInputValue(e.target.value)} placeholder="Ask the advisor what to focus on next..." className="min-h-[80px] resize-none" />
                 <Button type="submit" size="sm" disabled={!inputValue.trim() || isStreaming} className="w-full">
-                  {isStreaming ? (
-                    <>
+                  {isStreaming ? <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Thinking...
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <Send className="mr-2 h-4 w-4" />
                       Send Message
-                    </>
-                  )}
+                    </>}
                 </Button>
               </form>
             </CardContent>
@@ -762,17 +624,10 @@ const Dashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {!achievements || achievements.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
+              {!achievements || achievements.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
                   No achievements unlocked yet. Keep playing to earn achievements!
-                </p>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {achievements.map((achievement: any) => (
-                    <div
-                      key={achievement.id}
-                      className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
-                    >
+                </p> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {achievements.map((achievement: any) => <div key={achievement.id} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
                       <div className="flex items-start gap-3">
                         <div className="text-3xl">{achievement.achievements?.icon || "🏆"}</div>
                         <div className="flex-1">
@@ -781,20 +636,18 @@ const Dashboard = () => {
                             {achievement.achievements?.description}
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Unlocked {formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true })}
+                            Unlocked {formatDistanceToNow(new Date(achievement.unlocked_at), {
+                        addSuffix: true
+                      })}
                           </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
