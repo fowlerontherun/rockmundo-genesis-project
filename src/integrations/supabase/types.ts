@@ -9636,11 +9636,14 @@ export type Database = {
       }
       stage_templates: {
         Row: {
+          backdrop_texture_url: string | null
           camera_offset: Json | null
           capacity_max: number
           capacity_min: number
           created_at: string | null
+          crowd_sprite_set: string | null
           default_light_profile_id: string | null
+          floor_texture_url: string | null
           gltf_asset_path: string | null
           id: string
           is_active: boolean | null
@@ -9652,11 +9655,14 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          backdrop_texture_url?: string | null
           camera_offset?: Json | null
           capacity_max?: number
           capacity_min?: number
           created_at?: string | null
+          crowd_sprite_set?: string | null
           default_light_profile_id?: string | null
+          floor_texture_url?: string | null
           gltf_asset_path?: string | null
           id?: string
           is_active?: boolean | null
@@ -9668,11 +9674,14 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          backdrop_texture_url?: string | null
           camera_offset?: Json | null
           capacity_max?: number
           capacity_min?: number
           created_at?: string | null
+          crowd_sprite_set?: string | null
           default_light_profile_id?: string | null
+          floor_texture_url?: string | null
           gltf_asset_path?: string | null
           id?: string
           is_active?: boolean | null
