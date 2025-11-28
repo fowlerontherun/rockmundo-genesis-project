@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { GigDemoViewer } from "@/components/gig-viewer/GigDemoViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Music, Users, Sparkles, Settings, RefreshCw, Maximize2 } from "lucide-react";
+import { Music, Users, Sparkles, Settings, RefreshCw, Maximize2, Camera } from "lucide-react";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
+type CameraMode = 'pov' | 'orbit' | 'free' | 'cinematic';
 
 const DEFAULT_MERCH_COLOR = "#ff0066";
 
@@ -35,6 +36,8 @@ export default function Admin3DGigDemo() {
   const [viewMode, setViewMode] = useState<'full' | 'preview'>('full');
   const [isOutdoor, setIsOutdoor] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<'day' | 'sunset' | 'night'>('night');
+  const [cameraMode, setCameraMode] = useState<CameraMode>('pov');
+  const [zoomLevel, setZoomLevel] = useState(13);
 
   // Fetch stage templates
   const { data: stageTemplates } = useQuery({
@@ -356,6 +359,47 @@ export default function Admin3DGigDemo() {
             </Button>
           </Card>
 
+          {/* Camera Controls */}
+          <Card className="p-3 md:p-4 space-y-2 md:space-y-4 min-w-[280px] lg:min-w-0">
+            <div className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold">Camera Controls</h3>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Camera Mode</Label>
+              <Select value={cameraMode} onValueChange={(v) => setCameraMode(v as CameraMode)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pov">👤 POV (Crowd View)</SelectItem>
+                  <SelectItem value="orbit">🔄 Orbit (Free Rotate)</SelectItem>
+                  <SelectItem value="free">🎮 Free Camera</SelectItem>
+                  <SelectItem value="cinematic">🎬 Cinematic</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {cameraMode === 'pov' && 'Locked crowd perspective with head bobbing'}
+                {cameraMode === 'orbit' && 'Click and drag to rotate. Scroll to zoom.'}
+                {cameraMode === 'free' && 'WASD to move. Mouse to look around.'}
+                {cameraMode === 'cinematic' && 'Automated camera sweep around stage'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Zoom Level</Label>
+              <Slider 
+                value={[zoomLevel]} 
+                onValueChange={([v]) => setZoomLevel(v)}
+                min={5}
+                max={30}
+                step={0.5}
+              />
+              <div className="text-xs text-muted-foreground text-center">{zoomLevel.toFixed(1)}m</div>
+            </div>
+          </Card>
+
           {/* Visual Controls */}
           <Card className="p-3 md:p-4 space-y-2 md:space-y-4 min-w-[280px] lg:min-w-0">
             <div className="flex items-center gap-2">
@@ -429,6 +473,8 @@ export default function Admin3DGigDemo() {
             songSection={songSection}
             isOutdoor={isOutdoor}
             timeOfDay={timeOfDay}
+            cameraMode={cameraMode}
+            zoomLevel={zoomLevel}
           />
         </div>
       </div>
