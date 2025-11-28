@@ -7037,6 +7037,7 @@ export type Database = {
           gender: string | null
           health: number
           id: string
+          is_vip: boolean | null
           last_health_update: string | null
           last_weekly_bonus_at: string | null
           level: number | null
@@ -7066,6 +7067,7 @@ export type Database = {
           gender?: string | null
           health?: number
           id?: string
+          is_vip?: boolean | null
           last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -7095,6 +7097,7 @@ export type Database = {
           gender?: string | null
           health?: number
           id?: string
+          is_vip?: boolean | null
           last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
