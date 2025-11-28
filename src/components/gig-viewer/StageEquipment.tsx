@@ -72,19 +72,58 @@ export const StageEquipment = () => {
         <meshStandardMaterial color="#1a1a1a" roughness={1} />
       </mesh>
 
-      {/* Lighting Truss Structure (above stage) */}
-      <mesh position={[0, 5, -2]} castShadow>
-        <boxGeometry args={[12, 0.2, 0.2]} />
-        <meshStandardMaterial color="#333333" roughness={0.3} metalness={0.7} />
+      {/* Lighting truss structure - more detailed */}
+      <group position={[0, 7, -6]}>
+        {/* Main horizontal truss */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[14, 0.3, 0.3]} />
+          <meshStandardMaterial color="#222222" metalness={0.9} roughness={0.1} />
+        </mesh>
+        
+        {/* Truss supports */}
+        <mesh position={[-6, 0, 0]} rotation={[0, 0, Math.PI / 6]}>
+          <boxGeometry args={[0.2, 2, 0.2]} />
+          <meshStandardMaterial color="#222222" metalness={0.9} roughness={0.1} />
+        </mesh>
+        <mesh position={[6, 0, 0]} rotation={[0, 0, -Math.PI / 6]}>
+          <boxGeometry args={[0.2, 2, 0.2]} />
+          <meshStandardMaterial color="#222222" metalness={0.9} roughness={0.1} />
+        </mesh>
+
+        {/* Light fixtures on truss */}
+        {[-5, -2.5, 0, 2.5, 5].map((x, i) => (
+          <mesh key={i} position={[x, -0.5, 0]}>
+            <cylinderGeometry args={[0.2, 0.15, 0.4, 8]} />
+            <meshStandardMaterial color="#111111" metalness={0.8} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Stage monitors - wedge speakers pointing at band */}
+      <mesh position={[-2, 0.3, -4]} rotation={[-Math.PI / 6, 0, 0]}>
+        <boxGeometry args={[0.6, 0.4, 0.5]} />
+        <meshStandardMaterial color="#1a1a1a" />
       </mesh>
-      <mesh position={[-5, 5, -2]} castShadow rotation={[0, 0, Math.PI / 2]}>
-        <boxGeometry args={[1, 0.15, 0.15]} />
-        <meshStandardMaterial color="#333333" roughness={0.3} metalness={0.7} />
+      <mesh position={[2, 0.3, -4]} rotation={[-Math.PI / 6, 0, 0]}>
+        <boxGeometry args={[0.6, 0.4, 0.5]} />
+        <meshStandardMaterial color="#1a1a1a" />
       </mesh>
-      <mesh position={[5, 5, -2]} castShadow rotation={[0, 0, Math.PI / 2]}>
-        <boxGeometry args={[1, 0.15, 0.15]} />
-        <meshStandardMaterial color="#333333" roughness={0.3} metalness={0.7} />
-      </mesh>
+
+      {/* Barrier rails */}
+      <group position={[0, 0.5, 0]}>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[12, 0.1, 0.1]} />
+          <meshStandardMaterial color="#333333" metalness={0.7} />
+        </mesh>
+        <mesh position={[-5.5, -0.25, 0]}>
+          <boxGeometry args={[0.1, 0.5, 0.1]} />
+          <meshStandardMaterial color="#333333" metalness={0.7} />
+        </mesh>
+        <mesh position={[5.5, -0.25, 0]}>
+          <boxGeometry args={[0.1, 0.5, 0.1]} />
+          <meshStandardMaterial color="#333333" metalness={0.7} />
+        </mesh>
+      </group>
     </group>
   );
 };

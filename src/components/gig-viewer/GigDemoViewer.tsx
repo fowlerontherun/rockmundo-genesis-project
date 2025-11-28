@@ -118,10 +118,15 @@ export const GigDemoViewer = ({
             songIntensity={songIntensity}
             stageTemplateId={stageTemplateId}
             enableShadows={enableShadows}
+            songSection={songSection}
           />
 
           {/* Stage effects (haze, particles) */}
-          <StageEffects crowdMood={crowdMood} />
+          <StageEffects 
+            crowdMood={crowdMood} 
+            songIntensity={songIntensity}
+            songSection={songSection}
+          />
 
           {/* Environment */}
           <Environment preset="night" />
