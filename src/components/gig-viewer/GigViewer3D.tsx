@@ -205,7 +205,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           <StageFloor />
           <StageScene gigId={gigId} />
           <CrowdLayer crowdMood={crowdMood} />
-          <BandAvatars gigId={gigId} />
+          <BandAvatars gigId={gigId} songProgress={currentSongIndex / Math.max(songPerformances.length, 1)} />
         </Suspense>
       </Canvas>
     </div>
