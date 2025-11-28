@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, Maximize2, Minimize2, Music, Users } from "lucide-react";
 import { StageScene } from "./StageScene";
-import { CrowdLayer } from "./CrowdLayer";
+import { OptimizedCrowdLayer } from "./OptimizedCrowdLayer";
 import { BandAvatars } from "./BandAvatars";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageFloor } from "./StageFloor";
@@ -272,9 +272,8 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           {/* Scene Components */}
           <StageFloor />
           <StageScene stageTemplateId={stageTemplateId} />
-          <CrowdLayer 
+          <OptimizedCrowdLayer 
             crowdMood={crowdMood}
-            stageTemplateId={stageTemplateId}
             bandFame={bandFame}
             bandMerchColor={bandMerchColor}
             maxCrowdCount={performanceSettings.maxCrowdCount}

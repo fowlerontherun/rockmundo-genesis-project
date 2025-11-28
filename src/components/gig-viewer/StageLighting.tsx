@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { PointLight, SpotLight } from "three";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,12 +72,11 @@ export const StageLighting = ({
     fetchLightingConfig();
   }, [stageTemplateId]);
 
-  // Get color palette based on section and intensity
-  const getLightingPalette = () => {
+  // Get color palette based on section and intensity (memoized)
+  const getLightingPalette = useMemo(() => {
     const intensity = (crowdMood / 100) * songIntensity;
     
     if (songSection === 'chorus' || songSection === 'bigChorus') {
-      // High energy colors
       return {
         primary: intensity > 0.7 ? '#ffffff' : '#ff3366',
         secondary: '#00ffff',
@@ -85,7 +84,6 @@ export const StageLighting = ({
         wash: '#ff00ff'
       };
     } else if (songSection === 'intro' || songSection === 'outro') {
-      // Moody colors
       return {
         primary: '#0066ff',
         secondary: '#6600ff',
@@ -93,7 +91,6 @@ export const StageLighting = ({
         wash: '#330099'
       };
     } else if (songSection === 'bridge') {
-      // Dynamic changing colors
       return {
         primary: '#ff6600',
         secondary: '#00ff66',
@@ -101,7 +98,6 @@ export const StageLighting = ({
         wash: '#6600ff'
       };
     } else {
-      // Verse - medium energy
       return {
         primary: '#ff0066',
         secondary: '#ff9900',
@@ -109,12 +105,18 @@ export const StageLighting = ({
         wash: '#ff00ff'
       };
     }
-  };
+  }, [crowdMood, songIntensity, songSection]);
+
+  // Frame throttling for performance
+  const frameSkip = useRef(0);
 
   useFrame(({ clock }) => {
+    frameSkip.current++;
+    if (frameSkip.current < 3) return; // Update every 3 frames
+    frameSkip.current = 0;
     const time = clock.getElapsedTime();
     const intensity = (crowdMood / 100) * songIntensity * baseIntensity;
-    const palette = getLightingPalette();
+    const palette = getLightingPalette;
 
     // Moving head spotlights with sweeping beams
     if (movingHead1Ref.current) {

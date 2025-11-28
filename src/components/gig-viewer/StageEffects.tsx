@@ -37,8 +37,8 @@ export const StageEffects = ({
   hazeTex.magFilter = THREE.LinearFilter;
   hazeTex.minFilter = THREE.LinearFilter;
 
-  // Create particle positions for atmospheric particles
-  const particleCount = 400;
+  // Create particle positions for atmospheric particles (reduced for performance)
+  const particleCount = 150;
   const positions = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount; i++) {
@@ -49,7 +49,14 @@ export const StageEffects = ({
     return pos;
   }, []);
 
+  // Frame throttling for performance
+  const frameSkip = useRef(0);
+
   useFrame(({ clock }) => {
+    frameSkip.current++;
+    if (frameSkip.current < 2) return; // Update every 2 frames
+    frameSkip.current = 0;
+
     const time = clock.getElapsedTime();
     const intensity = (crowdMood / 100) * songIntensity;
 
