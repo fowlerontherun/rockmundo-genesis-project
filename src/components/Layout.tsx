@@ -1,20 +1,12 @@
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import Navigation from "@/components/ui/navigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { VersionHeader } from "@/components/VersionHeader";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
-
-const BUILD_VERSION = "v1.0.0";
-const BUILD_DATE = "2025-01-16";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -52,37 +44,24 @@ const Layout = () => {
   }
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1">
-          <VersionHeader />
-          <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-            <SidebarTrigger />
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
-              <ActivityStatusIndicator />
-              <ThemeSwitcher />
-              <LanguageSwitcher />
-              <HowToPlayDialog />
-            </div>
-          </header>
-          
-          <main className="flex-1 p-3 md:p-4">
-            {profileError && (
-              <Alert variant="destructive" className="mb-4 max-w-2xl">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Profile error</AlertTitle>
-                <AlertDescription>{profileError}</AlertDescription>
-              </Alert>
-            )}
-            <CharacterGate>
-              <Outlet />
-            </CharacterGate>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full">
+      <Navigation />
+      <main className="flex-1 lg:ml-64 pt-[72px] pb-[72px] lg:pt-0 lg:pb-0">
+        <VersionHeader />
+        <div className="p-3 md:p-4">
+          {profileError && (
+            <Alert variant="destructive" className="mb-4 max-w-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Profile error</AlertTitle>
+              <AlertDescription>{profileError}</AlertDescription>
+            </Alert>
+          )}
+          <CharacterGate>
+            <Outlet />
+          </CharacterGate>
+        </div>
+      </main>
+    </div>
   );
 };
 

@@ -6,7 +6,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
+import { useTranslation } from "@/hooks/useTranslation";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { HowToPlayDialog } from "@/components/HowToPlayDialog";
+import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import {
   Home,
   Users,
@@ -38,6 +42,21 @@ import {
   Guitar,
   Award,
   Briefcase,
+  Newspaper,
+  Radio,
+  Video,
+  Disc,
+  Target,
+  Sparkles,
+  Twitter,
+  UserPlus,
+  HandHeart,
+  Handshake,
+  Building,
+  Star,
+  BookOpen,
+  Wrench,
+  Bus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -60,80 +79,102 @@ const Navigation = () => {
   const { currentCity } = useGameData();
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
 
   const navSections: NavSection[] = [
     {
-      title: "🏠 Home",
+      title: t('home'),
       items: [
-        { icon: Home, label: "Dashboard", path: "/dashboard" },
-        { icon: User, label: "My Character", path: "/my-character" },
-        { icon: Guitar, label: "My Gear", path: "/gear" },
+        { icon: Home, label: t('dashboard'), path: "/dashboard" },
+        { icon: Newspaper, label: t('todaysNews'), path: "/daily-news" },
+        { icon: User, label: t('character'), path: "/my-character" },
+        { icon: Guitar, label: t('gear'), path: "/gear" },
+        { icon: HeartPulse, label: t('wellness'), path: "/wellness" },
+        { icon: BookOpen, label: t('legacy'), path: "/legacy" },
       ],
     },
     {
-      title: "🎵 Music",
+      title: t('music'),
       items: [
-        { icon: Music, label: "Music Hub", path: "/music" },
-        { icon: GraduationCap, label: "Education", path: "/education" },
-        {
-          icon: Music4,
-          label: "Music Videos",
-          path: "/release-manager",
-          search: "?tab=video",
-        },
+        { icon: Music, label: t('musicHub'), path: "/music" },
+        { icon: GraduationCap, label: t('education'), path: "/education" },
+        { icon: Target, label: t('skills'), path: "/skills" },
+        { icon: Disc, label: t('recording'), path: "/recording-studio" },
+        { icon: Radio, label: t('streaming'), path: "/streaming" },
+        { icon: Video, label: t('musicVideos'), path: "/release-manager", search: "?tab=video" },
+        { icon: Radio, label: t('radio'), path: "/radio" },
       ],
     },
     {
-      title: "🎤 Performance",
+      title: t('performance'),
       items: [
-        { icon: Mic, label: "Performance", path: "/performance" },
-        { icon: Calendar, label: "Gigs", path: "/gigs" },
-        { icon: ListMusic, label: "Setlists", path: "/setlists" },
-        { icon: Calendar, label: "Festivals", path: "/festivals" },
-        { icon: Award, label: "Awards", path: "/awards" },
+        { icon: Play, label: t('perform'), path: "/performance" },
+        { icon: Calendar, label: t('gigs'), path: "/gigs" },
+        { icon: Music, label: t('jamSessions'), path: "/jam-sessions" },
+        { icon: Music, label: t('busking'), path: "/busking" },
+        { icon: Music, label: t('rehearsals'), path: "/rehearsals" },
+        { icon: ListMusic, label: t('setlists'), path: "/setlists" },
+        { icon: Calendar, label: t('festivals'), path: "/festivals" },
+        { icon: Star, label: t('eurovision'), path: "/eurovision" },
+        { icon: Trophy, label: t('awards'), path: "/awards" },
+        { icon: Wrench, label: t('stageEquipment'), path: "/stage-equipment" },
       ],
     },
     {
-      title: "🌍 World",
+      title: t('world'),
       items: [
-        { icon: Globe, label: "Cities", path: "/cities" },
-        { icon: Plane, label: "Travel", path: "/travel" },
-        { icon: Building2, label: "Current City", path: cityOverviewPath },
+        { icon: Globe, label: t('cities'), path: "/cities" },
+        { icon: Plane, label: t('travel'), path: "/travel" },
+        { icon: Bus, label: t('tours'), path: "/tours" },
+        { icon: Building2, label: t('currentCity'), path: cityOverviewPath },
       ],
     },
     {
-      title: "👥 Social",
+      title: t('social'),
       items: [
-        { icon: Users, label: "Band", path: "/band" },
-        { icon: Megaphone, label: "PR", path: "/pr" },
-        { icon: Share2, label: "Social", path: "/social" },
+        { icon: Users, label: t('band'), path: "/band" },
+        { icon: Sparkles, label: t('bandChemistry'), path: "/band-chemistry" },
+        { icon: UserPlus, label: t('bandCrew'), path: "/band-crew" },
+        { icon: Megaphone, label: t('pr'), path: "/pr" },
+        { icon: Share2, label: t('social'), path: "/social" },
+        { icon: Twitter, label: t('twaater'), path: "/twaater" },
+        { icon: Video, label: t('dikcok'), path: "/dikcok" },
+        { icon: Heart, label: t('relationships'), path: "/relationships" },
       ],
     },
     {
-      title: "💼 Business",
+      title: t('community'),
       items: [
-        { icon: Briefcase, label: "Employment", path: "/employment" },
-        { icon: DollarSign, label: "Finances", path: "/finances" },
-        { icon: Store, label: "Inventory", path: "/inventory" },
-        { icon: ShoppingCart, label: "Merch", path: "/merchandise" },
-        { icon: Building2, label: "Venues", path: "/venues" },
+        { icon: HandHeart, label: t('community'), path: "/community" },
       ],
     },
     {
-      title: "⚙️ Admin",
+      title: t('business'),
       items: [
-        { icon: Settings, label: "Admin", path: "/admin" },
+        { icon: Briefcase, label: t('employment'), path: "/employment" },
+        { icon: DollarSign, label: t('finances'), path: "/finances" },
+        { icon: Store, label: t('inventory'), path: "/inventory" },
+        { icon: ShoppingCart, label: t('merch'), path: "/merchandise" },
+        { icon: Building2, label: t('venues'), path: "/venues" },
+        { icon: Handshake, label: t('sponsorships'), path: "/sponsorships" },
+        { icon: Building, label: t('recordLabels'), path: "/labels" },
+      ],
+    },
+    {
+      title: t('admin'),
+      items: [
+        { icon: Settings, label: t('admin'), path: "/admin" },
       ],
     },
   ];
 
   const mobileShortcuts = [
-    { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: Mic, label: "Perform", path: "/performance" },
-    { icon: Music, label: "Music", path: "/music" },
-    { icon: User, label: "Character", path: "/my-character" },
+    { icon: Home, label: t('home'), path: "/dashboard" },
+    { icon: Calendar, label: t('gigs'), path: "/gigs" },
+    { icon: Music, label: t('music'), path: "/music" },
+    { icon: User, label: t('character'), path: "/my-character" },
   ];
 
   const handleLogout = async () => {
@@ -248,7 +289,10 @@ const Navigation = () => {
           />
           
           <div className="flex items-center gap-2">
+            <ActivityStatusIndicator />
             <ThemeSwitcher />
+            <LanguageSwitcher />
+            <HowToPlayDialog />
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Open navigation menu">
@@ -266,12 +310,12 @@ const Navigation = () => {
       </div>
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 h-screen bg-sidebar border-r border-sidebar-border flex-col">
+      <div className="hidden lg:flex w-64 h-screen bg-sidebar border-r border-sidebar-border flex-col fixed left-0 top-0">
         <NavigationContent />
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg">
         <div className="flex justify-around items-center py-2">
           {mobileShortcuts.map((item) => {
             const Icon = item.icon;
@@ -289,7 +333,7 @@ const Navigation = () => {
                 aria-current={isActive(item.path) ? "page" : undefined}
               >
                 <Icon className="h-4 w-4" />
-                <span className="text-xs font-oswald">{item.label.split(' ')[0]}</span>
+                <span className="text-xs font-oswald">{item.label}</span>
               </Button>
             );
           })}
@@ -300,7 +344,7 @@ const Navigation = () => {
             onClick={() => setIsOpen(true)}
           >
             <Menu className="h-4 w-4" />
-            <span className="text-xs font-oswald">More</span>
+            <span className="text-xs font-oswald">{t('more')}</span>
           </Button>
         </div>
       </div>
