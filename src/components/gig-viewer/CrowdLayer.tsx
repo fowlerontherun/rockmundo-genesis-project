@@ -1,7 +1,10 @@
 import { useRef, useMemo, useState, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
-import { InstancedMesh, Object3D, Color } from "three";
+import { useFrame, useLoader } from "@react-three/fiber";
+import { InstancedMesh, Object3D, Color, TextureLoader } from "three";
 import { supabase } from "@/integrations/supabase/client";
+import crowdBaseTexture from "@/assets/textures/crowd/crowd-realistic-base.png";
+import crowdExcitedTexture from "@/assets/textures/crowd/crowd-realistic-excited.png";
+import crowdJumpingTexture from "@/assets/textures/crowd/crowd-realistic-jumping.png";
 
 interface CrowdLayerProps {
   crowdMood: number;
@@ -43,6 +46,11 @@ export const CrowdLayer = ({
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const [crowdZones, setCrowdZones] = useState<CrowdZone[]>([]);
+
+  // Load realistic textures
+  const baseTexture = useLoader(TextureLoader, crowdBaseTexture);
+  const excitedTexture = useLoader(TextureLoader, crowdExcitedTexture);
+  const jumpingTexture = useLoader(TextureLoader, crowdJumpingTexture);
 
   useEffect(() => {
     const fetchStageTemplate = async () => {
@@ -165,8 +173,8 @@ export const CrowdLayer = ({
       }
 
       dummy.position.set(x, y + 0.5, z);
-      dummy.rotation.y = rotY;
-      dummy.scale.set(0.3, scale * 0.8, 0.3);
+      dummy.rotation.y = Math.PI; // Face the stage
+      dummy.scale.set(0.4, scale * 1.0, 1);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     });
@@ -199,17 +207,26 @@ export const CrowdLayer = ({
     );
   }, [crowdData, bandMerchColor]);
 
+  const getCurrentTexture = () => {
+    if (crowdMood > 70) return jumpingTexture;
+    if (crowdMood > 40) return excitedTexture;
+    return baseTexture;
+  };
+
   if (crowdData.length === 0) return null;
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow receiveShadow>
-      <capsuleGeometry args={[0.15, 0.5, 4, 8]} />
+      <planeGeometry args={[0.4, 1.0]} />
       <meshStandardMaterial
-        color="#cccccc"
+        map={getCurrentTexture()}
+        transparent
+        alphaTest={0.1}
+        color="#ffffff"
         emissive={getEmissiveColor()}
         emissiveIntensity={getEmissiveIntensity()}
-        roughness={0.8}
-        metalness={0.2}
+        roughness={0.9}
+        metalness={0.1}
       >
         <instancedBufferAttribute attach="attributes.color" args={[colors, 3]} />
       </meshStandardMaterial>
