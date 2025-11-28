@@ -1,5 +1,6 @@
 import { EffectComposer, Bloom, ChromaticAberration, Vignette } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
 
 interface PostProcessingProps {
   performanceTier: 'low' | 'medium' | 'high';
@@ -26,7 +27,7 @@ export const PostProcessing = ({ performanceTier, intensity = 1.0 }: PostProcess
       {performanceTier === 'high' && (
         <ChromaticAberration
           blendFunction={BlendFunction.NORMAL}
-          offset={[chromaticAberrationOffset, chromaticAberrationOffset]}
+          offset={new THREE.Vector2(chromaticAberrationOffset, chromaticAberrationOffset)}
         />
       )}
       
