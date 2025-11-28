@@ -19,6 +19,15 @@ export default function CrowdBehaviorAdmin() {
     intensity: 0.5,
     energy_level: 50,
   });
+  const [fameThreshold, setFameThreshold] = useState(100);
+  const [moodDistribution, setMoodDistribution] = useState({
+    tired: 10,
+    bored: 20,
+    bouncing: 30,
+    jumping: 20,
+    handsUp: 15,
+    ecstatic: 5,
+  });
 
   const { data: presets, isLoading } = useQuery({
     queryKey: ["crowd-animation-presets"],
@@ -108,8 +117,116 @@ export default function CrowdBehaviorAdmin() {
     <div className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bebas mb-2">Crowd Behavior Configuration</h1>
-        <p className="text-muted-foreground font-oswald">Manage crowd animation presets and moods</p>
+        <p className="text-muted-foreground font-oswald">Manage crowd animation presets, mood mappings, and merch thresholds</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Band Merch Fame Thresholds</CardTitle>
+          <CardDescription>Configure when band merchandise appears on crowd members based on fame</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Minimum Fame for Merch: {fameThreshold}</Label>
+            <Slider
+              value={[fameThreshold]}
+              onValueChange={(value) => setFameThreshold(value[0])}
+              min={0}
+              max={10000}
+              step={100}
+              className="mt-2"
+            />
+            <div className="mt-2 text-sm text-muted-foreground">
+              <p>Fame &lt; 100: 0% wearing merch</p>
+              <p>Fame 100-500: 5% wearing merch</p>
+              <p>Fame 500-1000: 15% wearing merch</p>
+              <p>Fame 1000-5000: 30% wearing merch</p>
+              <p>Fame &gt; 5000: 50% wearing merch</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mood-to-Animation Distribution</CardTitle>
+          <CardDescription>Configure how crowd animations are distributed at different mood levels</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Tired: {moodDistribution.tired}%</Label>
+            <Slider
+              value={[moodDistribution.tired]}
+              onValueChange={(value) => setMoodDistribution({ ...moodDistribution, tired: value[0] })}
+              min={0}
+              max={100}
+              step={5}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label>Bored: {moodDistribution.bored}%</Label>
+            <Slider
+              value={[moodDistribution.bored]}
+              onValueChange={(value) => setMoodDistribution({ ...moodDistribution, bored: value[0] })}
+              min={0}
+              max={100}
+              step={5}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label>Bouncing: {moodDistribution.bouncing}%</Label>
+            <Slider
+              value={[moodDistribution.bouncing]}
+              onValueChange={(value) => setMoodDistribution({ ...moodDistribution, bouncing: value[0] })}
+              min={0}
+              max={100}
+              step={5}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label>Jumping: {moodDistribution.jumping}%</Label>
+            <Slider
+              value={[moodDistribution.jumping]}
+              onValueChange={(value) => setMoodDistribution({ ...moodDistribution, jumping: value[0] })}
+              min={0}
+              max={100}
+              step={5}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label>Hands Up: {moodDistribution.handsUp}%</Label>
+            <Slider
+              value={[moodDistribution.handsUp]}
+              onValueChange={(value) => setMoodDistribution({ ...moodDistribution, handsUp: value[0] })}
+              min={0}
+              max={100}
+              step={5}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label>Ecstatic: {moodDistribution.ecstatic}%</Label>
+            <Slider
+              value={[moodDistribution.ecstatic]}
+              onValueChange={(value) => setMoodDistribution({ ...moodDistribution, ecstatic: value[0] })}
+              min={0}
+              max={100}
+              step={5}
+              className="mt-2"
+            />
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Total: {Object.values(moodDistribution).reduce((a, b) => a + b, 0)}%
+            {Object.values(moodDistribution).reduce((a, b) => a + b, 0) !== 100 && (
+              <span className="text-destructive ml-2">(Should equal 100%)</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -34,6 +34,10 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
   const [gigOutcome, setGigOutcome] = useState<GigOutcome | null>(null);
   const [songPerformances, setSongPerformances] = useState<SongPerformance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stageTemplateId, setStageTemplateId] = useState<string | null>(null);
+  const [bandFame, setBandFame] = useState(0);
+  const [bandMerchColor, setBandMerchColor] = useState("#ff0066");
+  const [songSection, setSongSection] = useState<'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro'>('chorus');
 
   // Update preview mode values
   useEffect(() => {
@@ -68,6 +72,45 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           const initialMood = Math.min(100, Math.max(0, (outcome.overall_rating / 25) * 100));
           setCrowdMood(initialMood);
         }
+
+        // Fetch gig to get venue and stage template
+        const { data: gigData } = await supabase
+          .from('gigs')
+          .select('venue_id, bands(fame)')
+          .eq('id', gigId)
+          .single();
+
+        if (gigData) {
+          // Get band fame
+          const bandData = gigData.bands as any;
+          if (bandData) {
+            setBandFame(bandData.fame || 0);
+          }
+
+          // Get venue's default stage template by capacity
+          if (gigData.venue_id) {
+            const { data: venueData } = await supabase
+              .from('venues')
+              .select('capacity')
+              .eq('id', gigData.venue_id)
+              .single();
+
+            if (venueData?.capacity) {
+              // Match venue capacity to stage template
+              const { data: templateData } = await supabase
+                .from('stage_templates')
+                .select('id')
+                .lte('capacity_min', venueData.capacity)
+                .gte('capacity_max', venueData.capacity)
+                .limit(1)
+                .maybeSingle();
+
+              if (templateData?.id) {
+                setStageTemplateId(templateData.id);
+              }
+            }
+          }
+        }
       } catch (error) {
         console.error('Error fetching gig data:', error);
       } finally {
@@ -77,6 +120,24 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
 
     fetchGigData();
   }, [gigId]);
+
+  // Calculate song section based on progress
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const progress = (Date.now() % 15000) / 15000; // 15 second cycle
+      
+      if (progress < 0.1) setSongSection('intro');
+      else if (progress < 0.25) setSongSection('verse');
+      else if (progress < 0.4) setSongSection('chorus');
+      else if (progress < 0.55) setSongSection('verse');
+      else if (progress < 0.7) setSongSection('chorus');
+      else if (progress < 0.8) setSongSection('bridge');
+      else if (progress < 0.9) setSongSection('solo');
+      else setSongSection('outro');
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Simulate song progression
   useEffect(() => {
@@ -184,7 +245,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
       <Canvas shadows gl={{ antialias: true, alpha: false }}>
         <Suspense fallback={<LoadingScreen />}>
           {/* Camera with dynamic movement */}
-          <CameraRig crowdMood={crowdMood} />
+          <CameraRig crowdMood={crowdMood} stageTemplateId={stageTemplateId} />
           
           {/* Base ambient light */}
           <ambientLight intensity={0.15} />
@@ -193,7 +254,11 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           <fog attach="fog" args={["#000000", 5, 25]} />
 
           {/* Dynamic stage lighting system */}
-          <StageLighting crowdMood={crowdMood} songIntensity={currentSong ? 0.7 : 0.5} />
+          <StageLighting 
+            crowdMood={crowdMood} 
+            songIntensity={currentSong ? 0.7 : 0.5}
+            stageTemplateId={stageTemplateId}
+          />
 
           {/* Stage effects (haze, particles) */}
           <StageEffects crowdMood={crowdMood} />
@@ -204,8 +269,17 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           {/* Scene Components */}
           <StageFloor />
           <StageScene gigId={gigId} />
-          <CrowdLayer crowdMood={crowdMood} />
-          <BandAvatars gigId={gigId} songProgress={currentSongIndex / Math.max(songPerformances.length, 1)} />
+          <CrowdLayer 
+            crowdMood={crowdMood}
+            stageTemplateId={stageTemplateId || undefined}
+            bandFame={bandFame}
+            bandMerchColor={bandMerchColor}
+          />
+          <BandAvatars 
+            gigId={gigId} 
+            songProgress={currentSongIndex / Math.max(songPerformances.length, 1)}
+            songSection={songSection}
+          />
         </Suspense>
       </Canvas>
     </div>
