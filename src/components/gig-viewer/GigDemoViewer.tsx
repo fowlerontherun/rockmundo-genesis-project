@@ -155,15 +155,14 @@ export const GigDemoViewer = ({
 
           <StageScene stageTemplateId={stageTemplateId} />
           
-          {/* Temporarily disabled for debugging */}
-          {/* <CrowdLayer 
+          <CrowdLayer 
             crowdMood={crowdMood}
             stageTemplateId={stageTemplateId}
             bandFame={bandFame}
             bandMerchColor={merchColor}
             maxCrowdCount={maxCrowdCount}
             densityMultiplier={crowdDensity}
-          /> */}
+          />
           
           <BandAvatars 
             gigId="demo-gig"
