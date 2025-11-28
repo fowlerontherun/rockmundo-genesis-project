@@ -65,7 +65,49 @@ Deno.serve(async (req) => {
         const endTime = new Date(session.scheduled_end)
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
 
-        const baseQuality = session.base_quality || 50
+        // Get user/band skills for base quality calculation
+        let skillBasedQuality = 50
+        
+        if (session.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('skill_levels, attributes')
+            .eq('user_id', session.user_id)
+            .single()
+          
+          const skillLevels = (profileData?.skill_levels as Record<string, number>) || {}
+          const attributes = (profileData?.attributes as any) || { technical_mastery: 50 }
+          
+          // Calculate skill-based quality
+          const mixingSkill = Math.min(100,
+            (skillLevels['songwriting_basic_mixing'] || 0) * 0.6 +
+            (skillLevels['songwriting_professional_mixing'] || 0) * 0.8 +
+            (skillLevels['songwriting_mastery_mixing'] || 0) * 1.0
+          )
+          
+          const dawSkill = Math.min(100,
+            (skillLevels['songwriting_basic_daw'] || 0) * 0.6 +
+            (skillLevels['songwriting_professional_daw'] || 0) * 0.8 +
+            (skillLevels['songwriting_mastery_daw'] || 0) * 1.0
+          )
+          
+          const productionSkill = Math.min(100,
+            (skillLevels['songwriting_basic_record_production'] || 0) * 0.5 +
+            (skillLevels['songwriting_professional_record_production'] || 0) * 0.75 +
+            (skillLevels['songwriting_mastery_record_production'] || 0) * 1.0
+          )
+          
+          const techBonus = Math.min(20, attributes.technical_mastery * 0.2)
+          
+          skillBasedQuality = Math.round(
+            (mixingSkill * 0.35 + dawSkill * 0.35 + productionSkill * 0.30) + techBonus
+          )
+        }
+        
+        // Add variance (±12%)
+        const variance = (Math.random() - 0.5) * 0.24
+        const baseQuality = Math.max(25, Math.min(95, Math.round(skillBasedQuality * (1 + variance))))
+        
         const producerBonus = session.producer_bonus || 0
         const equipmentBonus = session.equipment_bonus || 0
         const finalQuality = Math.min(100, baseQuality + producerBonus + equipmentBonus)

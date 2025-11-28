@@ -56,6 +56,9 @@ export const CompleteSongDialog = ({
         // Generate random duration between 2:20 and 7:00 (140-420 seconds)
         const durationSeconds = Math.floor(Math.random() * (420 - 140 + 1) + 140);
         
+        // Use project quality_score with minimum threshold
+        const songQuality = Math.max(30, project.quality_score || 50)
+        
         // Create new song from completed project (use 'draft' status, not 'complete')
         const { error: songError } = await supabase
           .from("songs")
@@ -64,7 +67,7 @@ export const CompleteSongDialog = ({
             title: project.title,
             genre: project.genres?.[0] || "Rock",
             lyrics: project.initial_lyrics || "",
-            quality_score: project.quality_score || 50,
+            quality_score: songQuality,
             song_rating: project.song_rating || 1,
             duration_seconds: durationSeconds,
             status: "draft",
