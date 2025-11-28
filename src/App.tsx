@@ -152,6 +152,7 @@ const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"))
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
+const ReleaseDetail = lazyWithRetry(() => import("./pages/ReleaseDetail"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 // const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
@@ -251,6 +252,7 @@ function App() {
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
+                    <Route path="releases/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/:handle" element={<TwaaterProfile />} />
                     <Route path="events/eurovision" element={<EurovisionPage />} />

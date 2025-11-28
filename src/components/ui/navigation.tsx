@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
@@ -57,6 +58,8 @@ import {
   BookOpen,
   Wrench,
   Bus,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -80,92 +83,99 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    Home: true,
+    Music: true,
+    Performance: true,
+    World: true,
+    Social: true,
+    Community: true,
+    Business: true,
+    Admin: true,
+  });
 
   const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
 
   const navSections: NavSection[] = [
     {
-      title: t('home'),
+      title: "Home",
       items: [
-        { icon: Home, label: t('dashboard'), path: "/dashboard" },
-        { icon: Newspaper, label: t('todaysNews'), path: "/daily-news" },
-        { icon: User, label: t('character'), path: "/my-character" },
-        { icon: Guitar, label: t('gear'), path: "/gear" },
-        { icon: HeartPulse, label: t('wellness'), path: "/wellness" },
-        { icon: BookOpen, label: t('legacy'), path: "/legacy" },
+        { icon: Home, label: "Dashboard", path: "/dashboard" },
+        { icon: Newspaper, label: "Today's News", path: "/todays-news" },
+        { icon: User, label: "Character", path: "/my-character/edit" },
+        { icon: Guitar, label: "Gear", path: "/gear" },
+        { icon: HeartPulse, label: "Wellness", path: "/wellness" },
+        { icon: BookOpen, label: "Statistics", path: "/statistics" },
       ],
     },
     {
-      title: t('music'),
+      title: "Music",
       items: [
-        { icon: Music, label: t('musicHub'), path: "/music" },
-        { icon: GraduationCap, label: t('education'), path: "/education" },
-        { icon: Target, label: t('skills'), path: "/skills" },
-        { icon: Disc, label: t('recording'), path: "/recording-studio" },
-        { icon: Radio, label: t('streaming'), path: "/streaming" },
-        { icon: Video, label: t('musicVideos'), path: "/release-manager", search: "?tab=video" },
-        { icon: Radio, label: t('radio'), path: "/radio" },
+        { icon: Music, label: "Songwriting", path: "/songwriting" },
+        { icon: GraduationCap, label: "Education", path: "/education" },
+        { icon: Target, label: "Skills", path: "/skills" },
+        { icon: Disc, label: "Recording", path: "/recording-studio" },
+        { icon: Music4, label: "Release Manager", path: "/release-manager" },
+        { icon: Radio, label: "Streaming", path: "/streaming" },
+        { icon: Video, label: "Music Videos", path: "/music-videos" },
+        { icon: Radio, label: "Radio", path: "/radio" },
       ],
     },
     {
-      title: t('performance'),
+      title: "Performance",
       items: [
-        { icon: Play, label: t('perform'), path: "/performance" },
-        { icon: Calendar, label: t('gigs'), path: "/gigs" },
-        { icon: Music, label: t('jamSessions'), path: "/jam-sessions" },
-        { icon: Music, label: t('busking'), path: "/busking" },
-        { icon: Music, label: t('rehearsals'), path: "/rehearsals" },
-        { icon: ListMusic, label: t('setlists'), path: "/setlists" },
-        { icon: Calendar, label: t('festivals'), path: "/festivals" },
-        { icon: Star, label: t('eurovision'), path: "/eurovision" },
-        { icon: Trophy, label: t('awards'), path: "/awards" },
-        { icon: Wrench, label: t('stageEquipment'), path: "/stage-equipment" },
+        { icon: Calendar, label: "Gigs", path: "/gigs" },
+        { icon: Music, label: "Jam Sessions", path: "/jam-sessions" },
+        { icon: Music, label: "Busking", path: "/busking" },
+        { icon: Music, label: "Rehearsals", path: "/rehearsals" },
+        { icon: ListMusic, label: "Setlists", path: "/setlists" },
+        { icon: Calendar, label: "Festivals", path: "/festivals" },
+        { icon: Star, label: "Eurovision", path: "/events/eurovision" },
+        { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
       ],
     },
     {
-      title: t('world'),
+      title: "World",
       items: [
-        { icon: Globe, label: t('cities'), path: "/cities" },
-        { icon: Plane, label: t('travel'), path: "/travel" },
-        { icon: Bus, label: t('tours'), path: "/tours" },
-        { icon: Building2, label: t('currentCity'), path: cityOverviewPath },
+        { icon: Globe, label: "Cities", path: "/cities" },
+        { icon: Plane, label: "Travel", path: "/travel" },
+        { icon: Bus, label: "Tours", path: "/tour-manager" },
+        { icon: Building2, label: "Current City", path: cityOverviewPath },
       ],
     },
     {
-      title: t('social'),
+      title: "Social",
       items: [
-        { icon: Users, label: t('band'), path: "/band" },
-        { icon: Sparkles, label: t('bandChemistry'), path: "/band-chemistry" },
-        { icon: UserPlus, label: t('bandCrew'), path: "/band-crew" },
-        { icon: Megaphone, label: t('pr'), path: "/pr" },
-        { icon: Share2, label: t('social'), path: "/social" },
-        { icon: Twitter, label: t('twaater'), path: "/twaater" },
-        { icon: Video, label: t('dikcok'), path: "/dikcok" },
-        { icon: Heart, label: t('relationships'), path: "/relationships" },
+        { icon: Users, label: "Band", path: "/band" },
+        { icon: Sparkles, label: "Band Chemistry", path: "/chemistry" },
+        { icon: UserPlus, label: "Band Crew", path: "/band-crew" },
+        { icon: Twitter, label: "Twaater", path: "/twaater" },
+        { icon: Video, label: "DikCok", path: "/dikcok" },
+        { icon: Heart, label: "Relationships", path: "/relationships" },
       ],
     },
     {
-      title: t('community'),
+      title: "Community",
       items: [
-        { icon: HandHeart, label: t('community'), path: "/community" },
+        { icon: HandHeart, label: "Community Feed", path: "/community/feed" },
       ],
     },
     {
-      title: t('business'),
+      title: "Business",
       items: [
-        { icon: Briefcase, label: t('employment'), path: "/employment" },
-        { icon: DollarSign, label: t('finances'), path: "/finances" },
-        { icon: Store, label: t('inventory'), path: "/inventory" },
-        { icon: ShoppingCart, label: t('merch'), path: "/merchandise" },
-        { icon: Building2, label: t('venues'), path: "/venues" },
-        { icon: Handshake, label: t('sponsorships'), path: "/sponsorships" },
-        { icon: Building, label: t('recordLabels'), path: "/labels" },
+        { icon: Briefcase, label: "Employment", path: "/employment" },
+        { icon: DollarSign, label: "Finances", path: "/finances" },
+        { icon: Store, label: "Inventory", path: "/inventory" },
+        { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
+        { icon: Building2, label: "Venues", path: "/venues" },
+        { icon: Handshake, label: "Sponsorships", path: "/sponsorships" },
+        { icon: Building, label: "Record Labels", path: "/labels" },
       ],
     },
     {
-      title: t('admin'),
+      title: "Admin",
       items: [
-        { icon: Settings, label: t('admin'), path: "/admin" },
+        { icon: Settings, label: "Admin Panel", path: "/admin" },
       ],
     },
   ];
@@ -214,6 +224,13 @@ const Navigation = () => {
     setIsOpen(false);
   };
 
+  const toggleSection = (sectionTitle: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [sectionTitle]: !prev[sectionTitle],
+    }));
+  };
+
   interface NavigationContentProps {
     isMobile?: boolean;
   }
@@ -232,13 +249,26 @@ const Navigation = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navSections.map((section) => (
-          <div key={section.title} className="space-y-2">
-            <h3 className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {section.title}
-            </h3>
-            <div className="space-y-1">
+          <Collapsible
+            key={section.title}
+            open={openSections[section.title]}
+            onOpenChange={() => toggleSection(section.title)}
+          >
+            <CollapsibleTrigger className="w-full group">
+              <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
+                <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
+                  {section.title}
+                </h3>
+                {openSections[section.title] ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform" />
+                )}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pt-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -258,8 +288,8 @@ const Navigation = () => {
                   </Button>
                 );
               })}
-            </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         ))}
       </nav>
 
