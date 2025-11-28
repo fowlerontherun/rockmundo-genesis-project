@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { VersionHeader } from "@/components/VersionHeader";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -47,7 +46,6 @@ const Layout = () => {
     <div className="flex min-h-screen w-full">
       <Navigation />
       <main className="flex-1 lg:ml-64 pt-[72px] pb-[72px] lg:pt-0 lg:pb-0">
-        <VersionHeader />
         <div className="p-3 md:p-4">
           {profileError && (
             <Alert variant="destructive" className="mb-4 max-w-2xl">
