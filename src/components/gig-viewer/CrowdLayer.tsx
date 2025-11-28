@@ -71,10 +71,11 @@ export const CrowdLayer = ({
     crowdSprite8,
   ]);
 
-  // Configure textures for pixel-perfect rendering
+  // Configure textures for pixel-perfect rendering with proper transparency
   crowdTextures.forEach(texture => {
-    texture.minFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.NearestFilter;
     texture.magFilter = THREE.NearestFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
   });
 
   // Fetch crowd zones from stage template
@@ -249,10 +250,13 @@ export const CrowdLayer = ({
             <planeGeometry args={[0.6, 1.5]} />
             <meshStandardMaterial
               map={crowdTextures[spriteIndex]}
-              transparent
-              alphaTest={0.1}
+              transparent={true}
+              opacity={0.95}
+              alphaTest={0.05}
               side={THREE.DoubleSide}
               depthWrite={false}
+              depthTest={true}
+              toneMapped={false}
               emissive={getEmissiveColor()}
               emissiveIntensity={getEmissiveIntensity()}
             />
