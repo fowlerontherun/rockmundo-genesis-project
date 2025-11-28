@@ -1,10 +1,13 @@
 import { useRef } from "react";
 import { Mesh, Group } from "three";
 import { useFrame } from "@react-three/fiber";
+import { CharacterHair } from "./CharacterHair";
+import { FaceFeatures } from "./FaceFeatures";
+import { Instruments3D } from "./Instruments3D";
 
 interface BandMember3DProps {
   position: [number, number, number];
-  instrument: 'vocalist' | 'guitarist' | 'bassist' | 'drummer';
+  instrument: 'vocalist' | 'guitarist' | 'bassist' | 'drummer' | 'keyboardist';
   animationState: 'idle' | 'intro' | 'playing' | 'solo' | 'outro';
   intensity: number;
   seed: number;
@@ -23,6 +26,13 @@ export const BandMember3D = ({
   const leftArmRef = useRef<Mesh>(null);
   const rightArmRef = useRef<Mesh>(null);
   const instrumentRef = useRef<Mesh>(null);
+
+  const hairTypes: Array<'short-spiky' | 'long-straight' | 'mohawk' | 'bald' | 'ponytail' | 'curly' | 'rocker' | 'messy'> = [
+    'rocker', 'messy', 'mohawk', 'long-straight'
+  ];
+  const hairType = hairTypes[Math.floor(seed * 4) % 4];
+  const hairColors = ['#1a1a1a', '#3d2616', '#8b4513', '#daa520'];
+  const hairColor = hairColors[Math.floor(seed * 4) % 4];
 
   // Animation based on instrument and state
   useFrame(({ clock }) => {
@@ -67,6 +77,14 @@ export const BandMember3D = ({
           rightArmRef.current.rotation.z = -0.5 - Math.sin(time * 6 + 1) * 0.8 * power;
         }
         break;
+
+      case 'keyboardist':
+        bodyRef.current.position.y = 1 + Math.sin(time * 1) * 0.02 * power;
+        if (leftArmRef.current && rightArmRef.current) {
+          leftArmRef.current.rotation.z = 0.4 + Math.sin(time * 5) * 0.15 * power;
+          rightArmRef.current.rotation.z = -0.4 - Math.sin(time * 5 + 0.5) * 0.15 * power;
+        }
+        break;
     }
   });
 
@@ -74,7 +92,10 @@ export const BandMember3D = ({
   const shirtColor = '#1a1a1a';
   const pantsColor = '#000000';
   const skinColor = '#ffdbac';
-  const instrumentColor = instrument === 'bassist' ? '#8b0000' : '#1a1a2e';
+  const instrumentColor = instrument === 'bassist' ? '#8b0000' : instrument === 'guitarist' ? '#ff4500' : '#1a1a2e';
+
+  const faceExpression = animationState === 'playing' || animationState === 'solo' ? 
+    (instrument === 'vocalist' ? 'singing' : 'intense') : 'neutral';
 
   return (
     <group ref={groupRef} position={position}>
@@ -89,6 +110,16 @@ export const BandMember3D = ({
         <sphereGeometry args={[0.15, 16, 16]} />
         <meshStandardMaterial color={skinColor} />
       </mesh>
+
+      {/* Face */}
+      <group position={[0, 1.5, 0]}>
+        <FaceFeatures skinColor={skinColor} expression={faceExpression} />
+      </group>
+
+      {/* Hair */}
+      <group position={[0, 1.5, 0]}>
+        <CharacterHair hairType={hairType} color={hairColor} />
+      </group>
 
       {/* Left Arm */}
       <mesh ref={leftArmRef} position={[-0.25, 1.2, 0]} rotation={[0, 0, 0.3]} castShadow>
@@ -112,33 +143,45 @@ export const BandMember3D = ({
         <meshStandardMaterial color={pantsColor} />
       </mesh>
 
-      {/* Instrument */}
+      {/* Instruments - Detailed 3D models */}
       {instrument === 'guitarist' && (
-        <mesh ref={instrumentRef} position={[0.15, 0.8, 0.1]} rotation={[0, 0, -0.3]} castShadow>
-          <boxGeometry args={[0.15, 0.6, 0.05]} />
-          <meshStandardMaterial color={instrumentColor} />
-        </mesh>
+        <Instruments3D 
+          type="electric-guitar" 
+          color={instrumentColor}
+          position={[0.15, 0.8, 0.1]} 
+          rotation={[0, 0, -0.3]} 
+        />
       )}
 
       {instrument === 'bassist' && (
-        <mesh ref={instrumentRef} position={[0.15, 0.8, 0.1]} rotation={[0, 0, -0.3]} castShadow>
-          <boxGeometry args={[0.15, 0.7, 0.05]} />
-          <meshStandardMaterial color={instrumentColor} />
-        </mesh>
+        <Instruments3D 
+          type="bass-guitar" 
+          color={instrumentColor}
+          position={[0.15, 0.8, 0.1]} 
+          rotation={[0, 0, -0.3]} 
+        />
       )}
 
       {instrument === 'drummer' && (
-        <group position={[0, 0, 0.3]}>
-          {/* Simple drum representation */}
-          <mesh position={[-0.2, 0.4, 0]} castShadow>
-            <cylinderGeometry args={[0.15, 0.15, 0.2, 16]} />
-            <meshStandardMaterial color="#8b0000" />
-          </mesh>
-          <mesh position={[0.2, 0.4, 0]} castShadow>
-            <cylinderGeometry args={[0.15, 0.15, 0.2, 16]} />
-            <meshStandardMaterial color="#8b0000" />
-          </mesh>
-        </group>
+        <Instruments3D 
+          type="drum-kit" 
+          position={[0, 0, 1]} 
+        />
+      )}
+
+      {instrument === 'vocalist' && (
+        <Instruments3D 
+          type="microphone" 
+          position={[0, 0, 0]} 
+        />
+      )}
+
+      {instrument === 'keyboardist' && (
+        <Instruments3D 
+          type="keyboard" 
+          position={[0, 0.8, 0.3]} 
+          rotation={[0, 0, 0]} 
+        />
       )}
     </group>
   );

@@ -5,6 +5,7 @@ interface Crowd3DLayerProps {
   crowdMood: number;
   bandFame: number;
   bandMerchColor: string;
+  bandName?: string;
   maxCrowdCount: number;
   densityMultiplier: number;
 }
@@ -23,6 +24,7 @@ export const Crowd3DLayer = ({
   crowdMood,
   bandFame,
   bandMerchColor,
+  bandName = "BAND",
   maxCrowdCount,
   densityMultiplier
 }: Crowd3DLayerProps) => {
@@ -96,6 +98,7 @@ export const Crowd3DLayer = ({
           seed={person.seed}
           showMerch={person.showMerch}
           merchColor={bandMerchColor}
+          bandName={bandName}
           scale={person.scale}
         />
       ))}
