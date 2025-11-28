@@ -64,8 +64,8 @@ export const GIG_SLOTS: GigSlot[] = [
     description: 'The main event - maximum exposure and rewards',
     attendanceMultiplier: 1.0,
     paymentMultiplier: 1.0,
-    minPrestigeLevel: 3,
-    minBandFame: 1500,
+    minPrestigeLevel: 0, // Changed: All prestige levels allow headline
+    minBandFame: 0, // Changed: Fame requirement based on venue prestige
     lockoutDuration: 180,
     fameBonus: 1.5,
     duration: 75
@@ -84,5 +84,21 @@ export function getSlotBadgeVariant(slotId: string): 'default' | 'secondary' | '
       return 'secondary';
     default:
       return 'outline';
+  }
+}
+
+// NEW: Get fame requirement based on venue prestige
+export function getHeadlineFameRequirement(venuePrestige: number): number {
+  switch (venuePrestige) {
+    case 1:
+      return 0; // Small venues: no fame needed
+    case 2:
+      return 250; // Medium venues: some recognition needed
+    case 3:
+      return 750; // Good venues: established act needed
+    case 4:
+      return 1500; // Top venues: famous acts only
+    default:
+      return venuePrestige >= 5 ? 2500 : 0;
   }
 }
