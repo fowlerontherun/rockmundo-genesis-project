@@ -200,15 +200,6 @@ export const CrowdLayer = ({
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
-  // Store sprite variations for each crowd member
-  const spriteIndices = useMemo(() => {
-    const indices = new Float32Array(crowdData.length);
-    crowdData.forEach((person, i) => {
-      indices[i] = person.spriteVariation;
-    });
-    return indices;
-  }, [crowdData]);
-
   // Get emissive properties based on mood
   const getEmissiveColor = (): string => {
     if (crowdMood > 80) return "#ff00ff";
@@ -221,78 +212,26 @@ export const CrowdLayer = ({
     return (crowdMood / 100) * 0.3;
   };
 
-  // Custom shader material to handle multiple sprite variations
-  const spriteShader = useMemo(() => ({
-    uniforms: {
-      ...THREE.UniformsLib.common,
-      sprite0: { value: crowdTextures[0] },
-      sprite1: { value: crowdTextures[1] },
-      sprite2: { value: crowdTextures[2] },
-      sprite3: { value: crowdTextures[3] },
-      sprite4: { value: crowdTextures[4] },
-      sprite5: { value: crowdTextures[5] },
-      emissive: { value: new THREE.Color(getEmissiveColor()) },
-      emissiveIntensity: { value: getEmissiveIntensity() }
-    },
-    vertexShader: `
-      attribute float spriteIndex;
-      varying vec2 vUv;
-      varying float vSpriteIndex;
-      
-      void main() {
-        vUv = uv;
-        vSpriteIndex = spriteIndex;
-        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `,
-    fragmentShader: `
-      uniform sampler2D sprite0;
-      uniform sampler2D sprite1;
-      uniform sampler2D sprite2;
-      uniform sampler2D sprite3;
-      uniform sampler2D sprite4;
-      uniform sampler2D sprite5;
-      uniform vec3 emissive;
-      uniform float emissiveIntensity;
-      
-      varying vec2 vUv;
-      varying float vSpriteIndex;
-      
-      void main() {
-        vec4 texColor;
-        int index = int(vSpriteIndex);
-        
-        if (index == 0) texColor = texture2D(sprite0, vUv);
-        else if (index == 1) texColor = texture2D(sprite1, vUv);
-        else if (index == 2) texColor = texture2D(sprite2, vUv);
-        else if (index == 3) texColor = texture2D(sprite3, vUv);
-        else if (index == 4) texColor = texture2D(sprite4, vUv);
-        else texColor = texture2D(sprite5, vUv);
-        
-        if (texColor.a < 0.5) discard;
-        
-        vec3 finalColor = texColor.rgb + (emissive * emissiveIntensity);
-        gl_FragColor = vec4(finalColor, texColor.a);
-      }
-    `
-  }), [crowdTextures, crowdMood]);
+  // Select a texture based on crowd data variation - simple cycling approach
+  const getCurrentTexture = () => {
+    // Cycle through textures based on time for variety
+    const textureIndex = Math.floor(Date.now() / 1000) % crowdTextures.length;
+    return crowdTextures[textureIndex];
+  };
 
   if (crowdData.length === 0) return null;
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]}>
       <planeGeometry args={[1, 2.2]} />
-      <shaderMaterial
-        args={[spriteShader]}
+      <meshStandardMaterial
+        map={getCurrentTexture()}
         transparent
+        alphaTest={0.5}
         side={THREE.DoubleSide}
-      >
-        <instancedBufferAttribute
-          attach="attributes-spriteIndex"
-          args={[spriteIndices, 1]}
-        />
-      </shaderMaterial>
+        emissive={getEmissiveColor()}
+        emissiveIntensity={getEmissiveIntensity()}
+      />
     </instancedMesh>
   );
 };
