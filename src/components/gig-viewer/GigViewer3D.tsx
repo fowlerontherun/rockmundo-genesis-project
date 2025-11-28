@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, Maximize2, Minimize2, Music, Users } from "lucide-react";
@@ -9,6 +9,9 @@ import { CrowdLayer } from "./CrowdLayer";
 import { BandAvatars } from "./BandAvatars";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageFloor } from "./StageFloor";
+import { StageLighting } from "./StageLighting";
+import { CameraRig } from "./CameraRig";
+import { StageEffects } from "./StageEffects";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 
@@ -165,59 +168,22 @@ export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
       </div>
 
       {/* 3D Canvas */}
-      <Canvas shadows>
+      <Canvas shadows gl={{ antialias: true, alpha: false }}>
         <Suspense fallback={<LoadingScreen />}>
-          {/* Camera - Fan POV */}
-          <PerspectiveCamera
-            makeDefault
-            position={[0, 1.6, 8]}
-            fov={75}
-          />
+          {/* Camera with dynamic movement */}
+          <CameraRig crowdMood={crowdMood} />
           
-          {/* Enhanced Lighting */}
-          <ambientLight intensity={0.2} />
+          {/* Base ambient light */}
+          <ambientLight intensity={0.15} />
           
-          {/* Main spotlights */}
-          <spotLight
-            position={[0, 12, 0]}
-            angle={0.6}
-            penumbra={0.3}
-            intensity={2}
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-          />
-          
-          {/* Dynamic colored stage lights */}
-          <pointLight 
-            position={[-4, 7, -5]} 
-            intensity={2.5} 
-            color="#ff00ff"
-            distance={15}
-          />
-          <pointLight 
-            position={[4, 7, -5]} 
-            intensity={2.5} 
-            color="#00ffff"
-            distance={15}
-          />
-          <pointLight 
-            position={[0, 8, -5]} 
-            intensity={3} 
-            color="#ffffff"
-            distance={12}
-          />
-          
-          {/* Crowd area lighting */}
-          <pointLight 
-            position={[-3, 3, 5]} 
-            intensity={0.8} 
-            color="#4444ff"
-          />
-          <pointLight 
-            position={[3, 3, 5]} 
-            intensity={0.8} 
-            color="#ff4444"
-          />
+          {/* Fog for atmosphere */}
+          <fog attach="fog" args={["#000000", 5, 25]} />
+
+          {/* Dynamic stage lighting system */}
+          <StageLighting crowdMood={crowdMood} songIntensity={currentSong ? 0.7 : 0.5} />
+
+          {/* Stage effects (haze, particles) */}
+          <StageEffects crowdMood={crowdMood} />
 
           {/* Environment */}
           <Environment preset="night" />
@@ -227,15 +193,6 @@ export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
           <StageScene gigId={gigId} />
           <CrowdLayer crowdMood={crowdMood} />
           <BandAvatars gigId={gigId} />
-
-          {/* Controls (limited for POV feel) */}
-          <OrbitControls
-            enableZoom={false}
-            enablePan={false}
-            maxPolarAngle={Math.PI / 2}
-            minPolarAngle={Math.PI / 3}
-            target={[0, 2, 0]}
-          />
         </Suspense>
       </Canvas>
     </div>
