@@ -5,13 +5,9 @@ import { StageScene } from "./StageScene";
 import { CrowdLayer } from "./CrowdLayer";
 import { BandAvatars } from "./BandAvatars";
 import { LoadingScreen } from "./LoadingScreen";
-import { StageFloor } from "./StageFloor";
 import { StageLighting } from "./StageLighting";
 import { CameraRig } from "./CameraRig";
 import { StageEffects } from "./StageEffects";
-import { StageFog } from "./StageFog";
-import { LightBeams } from "./LightBeams";
-import { PostProcessing } from "./PostProcessing";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
@@ -117,30 +113,46 @@ export const GigDemoViewer = ({
             enableShadows={enableShadows}
           />
 
-          {/* Light beams */}
-          {performanceTier !== 'low' && (
-            <LightBeams 
-              count={6}
-              intensity={songIntensity}
-            />
-          )}
-
-          {/* Stage fog */}
-          {performanceTier === 'high' && (
-            <StageFog 
-              intensity={songIntensity * 0.8}
-              count={performanceTier === 'high' ? 20 : 10}
-            />
-          )}
-
           {/* Stage effects (haze, particles) */}
           <StageEffects crowdMood={crowdMood} />
 
           {/* Environment */}
           <Environment preset="night" />
 
-          {/* Scene Components */}
-          <StageFloor floorType={floorType} backdropType={backdropType} />
+          {/* Simple floor - NO TEXTURES */}
+          <mesh position={[0, 0, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[30, 30]} />
+            <meshStandardMaterial 
+              color="#1a0033"
+              emissive="#1a0033"
+              emissiveIntensity={0.1}
+              roughness={0.8}
+              metalness={0.2}
+            />
+          </mesh>
+          
+          {/* Stage platform - NO TEXTURES */}
+          <mesh position={[0, 0.05, -5]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[12, 6]} />
+            <meshStandardMaterial 
+              color="#330066"
+              emissive="#330066"
+              emissiveIntensity={0.15}
+              roughness={0.6}
+              metalness={0.4}
+            />
+          </mesh>
+          
+          {/* Backdrop - NO TEXTURES */}
+          <mesh position={[0, 4, -8]} receiveShadow>
+            <planeGeometry args={[14, 8]} />
+            <meshStandardMaterial 
+              color="#000000"
+              roughness={0.9}
+              metalness={0.1}
+            />
+          </mesh>
+
           <StageScene stageTemplateId={stageTemplateId} />
           <CrowdLayer 
             crowdMood={crowdMood}
@@ -157,14 +169,6 @@ export const GigDemoViewer = ({
             songSection={songSection}
             bandMemberSkills={mockBandMemberSkills}
           />
-
-          {/* Post-processing effects */}
-          {enablePostProcessing && (
-            <PostProcessing 
-              performanceTier={performanceTier}
-              intensity={songIntensity}
-            />
-          )}
         </Suspense>
       </Canvas>
     </div>
