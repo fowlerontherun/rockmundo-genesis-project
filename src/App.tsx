@@ -252,7 +252,7 @@ function App() {
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
-                    <Route path="releases/:id" element={<ReleaseDetail />} />
+                    <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/tag/:hashtag" element={<TwaaterHashtagView />} />
                     <Route path="twaater/messages" element={<TwaaterMessagesPage />} />

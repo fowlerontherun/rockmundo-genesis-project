@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { ReleaseTypeSelector } from "./ReleaseTypeSelector";
 import { SongSelectionStep } from "./SongSelectionStep";
 import { FormatSelectionStep } from "./FormatSelectionStep";
+import { StreamingDistributionStep } from "./StreamingDistributionStep";
 
 interface CreateReleaseDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [artistName, setArtistName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<any[]>([]);
+  const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
 
   const queryClient = useQueryClient();
@@ -93,7 +95,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         });
       }
 
-      // Create release with manufacturing timeline
+      // Create release with manufacturing timeline and streaming platforms
       const { data: release, error: releaseError } = await supabase
         .from("releases")
         .insert({
@@ -105,7 +107,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           release_status: "manufacturing",
           total_cost: totalCost,
           manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
-          scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null
+          scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null,
+          streaming_platforms: selectedStreamingPlatforms.length > 0 ? selectedStreamingPlatforms : null
         })
         .select()
         .single();
@@ -178,6 +181,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setArtistName("");
     setSelectedSongs([]);
     setSelectedFormats([]);
+    setSelectedStreamingPlatforms([]);
   };
 
   const handleNext = () => {
@@ -193,14 +197,16 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       toast({ title: "Error", description: "Please select at least one format", variant: "destructive" });
       return;
     }
-    setStep(step + 1);
+    if (step < 4) {
+      setStep(step + 1);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Release - Step {step} of 3</DialogTitle>
+          <DialogTitle>Create New Release - Step {step} of 4</DialogTitle>
         </DialogHeader>
 
         {step === 1 && (
@@ -252,6 +258,16 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             selectedFormats={selectedFormats}
             onFormatsChange={setSelectedFormats}
             onBack={() => setStep(2)}
+            onSubmit={handleNext}
+            isLoading={false}
+          />
+        )}
+
+        {step === 4 && (
+          <StreamingDistributionStep
+            selectedPlatforms={selectedStreamingPlatforms}
+            onPlatformsChange={setSelectedStreamingPlatforms}
+            onBack={() => setStep(3)}
             onSubmit={() => createRelease.mutate()}
             isLoading={createRelease.isPending}
           />

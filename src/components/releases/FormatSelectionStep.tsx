@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Disc3, Globe, Headphones, Radio } from "lucide-react";
+import { Disc3, Globe, Headphones, Radio, Music } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FormatSelectionStepProps {
   selectedFormats: any[];
@@ -27,7 +28,8 @@ export function FormatSelectionStep({
     digital: { release_date: "", quantity: 0, retail_price: 1000, distribution_fee_percentage: 30 },
     streaming: { release_date: "", quantity: 0, retail_price: 0, distribution_fee_percentage: 30 },
     cd: { release_date: "", quantity: 100, retail_price: 1500, distribution_fee_percentage: 30 },
-    vinyl: { release_date: "", quantity: 100, retail_price: 3000, distribution_fee_percentage: 30 }
+    vinyl: { release_date: "", quantity: 100, retail_price: 3000, distribution_fee_percentage: 30, vinyl_color: "black", is_limited_edition: false },
+    cassette: { release_date: "", quantity: 100, retail_price: 800, distribution_fee_percentage: 30 }
   });
 
   const { data: manufacturingCosts } = useQuery({
@@ -57,8 +59,11 @@ export function FormatSelectionStep({
     { type: "digital", label: "Digital", icon: Globe, description: "Download" },
     { type: "streaming", label: "Streaming", icon: Headphones, description: "Spotify, Apple Music" },
     { type: "cd", label: "CD", icon: Disc3, description: "Physical disc" },
-    { type: "vinyl", label: "Vinyl", icon: Radio, description: "Vinyl record" }
+    { type: "vinyl", label: "Vinyl", icon: Radio, description: "Vinyl record" },
+    { type: "cassette", label: "Cassette", icon: Music, description: "Cassette tape" }
   ];
+
+  const vinylColors = ["black", "red", "blue", "green", "white", "clear", "picture-disc"];
 
   const toggleFormat = (formatType: string) => {
     const isSelected = selectedFormats.some(f => f.format_type === formatType);
@@ -135,7 +140,7 @@ export function FormatSelectionStep({
                         />
                       </div>
 
-                      {(format.type === "cd" || format.type === "vinyl") && (
+                      {(format.type === "cd" || format.type === "vinyl" || format.type === "cassette") && (
                         <div>
                           <Label className="text-xs">Quantity</Label>
                           <Input
@@ -146,6 +151,49 @@ export function FormatSelectionStep({
                             className="h-8"
                           />
                         </div>
+                      )}
+
+                      {format.type === "vinyl" && (
+                        <>
+                          <div>
+                            <Label className="text-xs">Vinyl Color</Label>
+                            <Select 
+                              value={formatConfigs.vinyl.vinyl_color}
+                              onValueChange={(value) => updateFormatConfig("vinyl", "vinyl_color", value)}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {vinylColors.map(color => (
+                                  <SelectItem key={color} value={color} className="capitalize">
+                                    {color}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox 
+                              checked={formatConfigs.vinyl.is_limited_edition}
+                              onCheckedChange={(checked) => updateFormatConfig("vinyl", "is_limited_edition", checked)}
+                            />
+                            <Label className="text-xs">Limited Edition</Label>
+                          </div>
+                          {formatConfigs.vinyl.is_limited_edition && (
+                            <div>
+                              <Label className="text-xs">Edition Quantity</Label>
+                              <Input
+                                type="number"
+                                value={formatConfigs.vinyl.edition_quantity || formatConfigs.vinyl.quantity}
+                                onChange={(e) => updateFormatConfig("vinyl", "edition_quantity", e.target.value)}
+                                min="1"
+                                max={formatConfigs.vinyl.quantity}
+                                className="h-8"
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
 
                       <div>
@@ -187,7 +235,7 @@ export function FormatSelectionStep({
           disabled={selectedFormats.length === 0 || isLoading}
           className="flex-1"
         >
-          {isLoading ? "Creating..." : "Create Release"}
+          Next: Streaming Distribution
         </Button>
       </div>
     </div>
