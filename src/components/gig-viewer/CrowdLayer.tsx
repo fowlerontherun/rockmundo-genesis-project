@@ -211,7 +211,7 @@ export const CrowdLayer = ({
         roughness={0.8}
         metalness={0.2}
       >
-        <instancedBufferAttribute attach="attributes-color" args={[colors, 3]} />
+        <instancedBufferAttribute attach="attributes.color" args={[colors, 3]} />
       </meshStandardMaterial>
     </instancedMesh>
   );
