@@ -4,6 +4,7 @@ import { Environment } from "@react-three/drei";
 import { StageScene } from "./StageScene";
 import { CrowdLayer } from "./CrowdLayer";
 import { BandAvatars } from "./BandAvatars";
+import { OutdoorEnvironment } from "./OutdoorEnvironment";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageLighting } from "./StageLighting";
 import { CameraRig } from "./CameraRig";
@@ -28,6 +29,8 @@ interface GigDemoViewerProps {
   backdropType: string;
   merchColor: string;
   songSection: SongSection;
+  isOutdoor?: boolean;
+  timeOfDay?: 'day' | 'sunset' | 'night';
 }
 
 export const GigDemoViewer = ({
@@ -44,6 +47,8 @@ export const GigDemoViewer = ({
   backdropType,
   merchColor,
   songSection,
+  isOutdoor = false,
+  timeOfDay = 'night',
 }: GigDemoViewerProps) => {
   const [fps, setFps] = useState(60);
 

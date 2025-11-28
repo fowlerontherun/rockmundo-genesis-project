@@ -9647,11 +9647,14 @@ export type Database = {
           gltf_asset_path: string | null
           id: string
           is_active: boolean | null
+          is_outdoor: boolean | null
           metadata: Json | null
           name: string
           size: string
+          sky_preset: string | null
           slug: string
           spline_scene_url: string | null
+          time_of_day: string | null
           updated_at: string | null
         }
         Insert: {
@@ -9666,11 +9669,14 @@ export type Database = {
           gltf_asset_path?: string | null
           id?: string
           is_active?: boolean | null
+          is_outdoor?: boolean | null
           metadata?: Json | null
           name: string
           size: string
+          sky_preset?: string | null
           slug: string
           spline_scene_url?: string | null
+          time_of_day?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -9685,11 +9691,14 @@ export type Database = {
           gltf_asset_path?: string | null
           id?: string
           is_active?: boolean | null
+          is_outdoor?: boolean | null
           metadata?: Json | null
           name?: string
           size?: string
+          sky_preset?: string | null
           slug?: string
           spline_scene_url?: string | null
+          time_of_day?: string | null
           updated_at?: string | null
         }
         Relationships: []
