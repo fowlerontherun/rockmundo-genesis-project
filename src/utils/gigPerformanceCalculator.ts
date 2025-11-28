@@ -123,13 +123,13 @@ export function calculateAttendanceForecast(
   realistic: number;
   optimistic: number;
 } {
-  // Base demand from band fame (0-100% of capacity)
-  const fameMultiplier = Math.min(1, (bandFame / 10000) * 0.5 + (bandPopularity / 1000) * 0.5);
+  // IMPROVED: More generous base demand calculation
+  const fameMultiplier = Math.min(1, Math.max(0.15, (bandFame / 2000) * 0.6 + (bandPopularity / 500) * 0.4));
   
-  // Venue match: bands need certain fame for certain venue sizes
-  const idealCapacity = (bandFame / 50) + (bandPopularity / 10);
+  // IMPROVED: Better venue matching - small bands can fill small venues easier
+  const idealCapacity = (bandFame / 30) + (bandPopularity / 8);
   const venueMatchPenalty = venueCapacity > idealCapacity ? 
-    Math.max(0.3, idealCapacity / venueCapacity) : 1.0;
+    Math.max(0.5, Math.min(1.0, idealCapacity / venueCapacity)) : 1.0;
   
   // Price sensitivity: demand curve
   const avgTicketPrice = 20 + (venuePrestige * 5); // baseline $20-$70
