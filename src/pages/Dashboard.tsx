@@ -587,24 +587,24 @@ const Dashboard = () => {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-3 mt-3">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            {/* Left: Profile Card */}
-            <Card className="lg:col-span-1">
+          {/* Centered Profile Card */}
+          <div className="flex justify-center">
+            <Card className="w-full max-w-md">
               <CardHeader className="pb-3">
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-primary/10 text-xl font-semibold">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 text-3xl font-semibold shadow-lg">
                     {profileInitials}
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">{displayName}</h2>
+                    <h2 className="text-xl font-bold">{displayName}</h2>
                     {profile.username && profile.username !== displayName && (
-                      <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                      <p className="text-sm text-muted-foreground">@{profile.username}</p>
                     )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 text-xs">
-                {profile.bio && <p className="text-muted-foreground">{profile.bio}</p>}
+              <CardContent className="space-y-3 text-sm">
+                {profile.bio && <p className="text-muted-foreground text-center">{profile.bio}</p>}
                 <Separator />
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -616,14 +616,14 @@ const Dashboard = () => {
                     <Badge variant="outline">{profile.energy ?? 100}%</Badge>
                   </div>
                   {currentCityLabel && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3" />
+                    <div className="flex items-center justify-center gap-2">
+                      <MapPin className="h-4 w-4" />
                       <span className="text-muted-foreground">{currentCityLabel}</span>
                     </div>
                   )}
                   {joinedDate && (
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-3 w-3" />
+                    <div className="flex items-center justify-center gap-2">
+                      <CalendarDays className="h-4 w-4" />
                       <span className="text-muted-foreground">Joined {joinedDate}</span>
                     </div>
                   )}
@@ -633,70 +633,73 @@ const Dashboard = () => {
                 </Button>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Right: Schedule & Activity */}
-            <div className="lg:col-span-2 space-y-3">
-              {/* Game Date */}
+          {/* Schedule, Activity & Chat Below Profile */}
+          <div className="space-y-3 max-w-4xl mx-auto">
+            {/* Game Date */}
+            <div className="flex justify-center">
               <GameDateWidget />
+            </div>
 
-              {/* Today's Schedule */}
-              <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
+            {/* Today's Schedule */}
+            <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Today's Schedule
+                      </CardTitle>
+                      {scheduleOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="p-3 max-h-[300px] overflow-y-auto">
+                    <DaySchedule date={new Date()} userId={profile.user_id} />
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Recent Skill Improvements */}
+            {recentImprovements.length > 0 && (
+              <Collapsible open={skillsOpen} onOpenChange={setSkillsOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
                     <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs flex items-center gap-2">
-                          <Calendar className="h-3 w-3" />
-                          Today's Schedule
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <TrendingUpIcon className="h-4 w-4" />
+                          Skills Improved (24hrs)
                         </CardTitle>
-                        {scheduleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        {skillsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent className="p-2 max-h-[300px] overflow-y-auto">
-                      <DaySchedule date={new Date()} userId={profile.user_id} />
+                    <CardContent className="p-3">
+                      <div className="space-y-2">
+                        {recentImprovements.slice(0, 3).map(improvement => (
+                          <div key={improvement.id} className="flex items-center justify-between p-2 rounded bg-accent/50 text-xs">
+                            <div>
+                              <p className="font-medium">{formatSkillName(improvement.skill_name)}</p>
+                              <p className="text-muted-foreground text-[10px]">{improvement.previous_value} → {improvement.new_value}</p>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] h-5">+{improvement.improvement_amount}</Badge>
+                          </div>
+                        ))}
+                      </div>
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
+            )}
 
-              {/* Recent Skill Improvements */}
-              {recentImprovements.length > 0 && (
-                <Collapsible open={skillsOpen} onOpenChange={setSkillsOpen}>
-                  <Card>
-                    <CollapsibleTrigger asChild>
-                      <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-xs flex items-center gap-2">
-                            <TrendingUpIcon className="h-3 w-3" />
-                            Skills Improved (24hrs)
-                          </CardTitle>
-                          {skillsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        </div>
-                      </CardHeader>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <CardContent className="p-2">
-                        <div className="space-y-1">
-                          {recentImprovements.slice(0, 3).map(improvement => (
-                            <div key={improvement.id} className="flex items-center justify-between p-1.5 rounded bg-accent/50 text-xs">
-                              <div>
-                                <p className="font-medium">{formatSkillName(improvement.skill_name)}</p>
-                                <p className="text-muted-foreground text-[10px]">{improvement.previous_value} → {improvement.new_value}</p>
-                              </div>
-                              <Badge variant="outline" className="text-[10px] h-4">+{improvement.improvement_amount}</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </CollapsibleContent>
-                  </Card>
-                </Collapsible>
-              )}
-
-              {/* Recent Activity */}
-              <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+            {/* Recent Activity */}
+            <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
                     <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
@@ -778,7 +781,6 @@ const Dashboard = () => {
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
-            </div>
           </div>
         </TabsContent>
 
