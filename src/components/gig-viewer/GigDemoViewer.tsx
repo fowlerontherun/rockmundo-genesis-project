@@ -165,14 +165,13 @@ export const GigDemoViewer = ({
             densityMultiplier={crowdDensity}
           /> */}
           
-          {/* Temporarily disabled for debugging */}
-          {/* <BandAvatars 
+          <BandAvatars 
             gigId="demo-gig"
             bandId="demo-band"
             songProgress={0.5}
             songSection={songSection}
             bandMemberSkills={mockBandMemberSkills}
-          /> */}
+          />
         </Suspense>
       </Canvas>
     </div>
