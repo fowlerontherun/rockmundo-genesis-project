@@ -18,21 +18,34 @@ import type { Database } from "@/lib/supabase-types";
 interface GigViewer3DProps {
   gigId: string;
   onClose: () => void;
+  previewMode?: boolean;
+  previewCrowdMood?: number;
+  previewSongIntensity?: number;
 }
 
 type GigOutcome = Database['public']['Tables']['gig_outcomes']['Row'];
 type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'];
 
-export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
+export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdMood = 50, previewSongIntensity = 50 }: GigViewer3DProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
-  const [crowdMood, setCrowdMood] = useState(50);
+  const [crowdMood, setCrowdMood] = useState(previewMode ? previewCrowdMood : 50);
+  const [songIntensity, setSongIntensity] = useState(previewMode ? previewSongIntensity : 0.5);
   const [gigOutcome, setGigOutcome] = useState<GigOutcome | null>(null);
   const [songPerformances, setSongPerformances] = useState<SongPerformance[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch gig outcome and song performances
+  // Update preview mode values
   useEffect(() => {
+    if (previewMode) {
+      setCrowdMood(previewCrowdMood);
+      setSongIntensity(previewSongIntensity / 100);
+    }
+  }, [previewMode, previewCrowdMood, previewSongIntensity]);
+
+  // Fetch gig data (skip in preview mode)
+  useEffect(() => {
+    if (previewMode) return;
     const fetchGigData = async () => {
       try {
         const { data: outcome, error: outcomeError } = await supabase
