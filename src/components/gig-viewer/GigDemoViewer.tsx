@@ -2,8 +2,8 @@ import { Suspense, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import { StageScene } from "./StageScene";
-import { CrowdLayer } from "./CrowdLayer";
-import { BandAvatars } from "./BandAvatars";
+import { Crowd3DLayer } from "./Crowd3DLayer";
+import { BandMember3D } from "./BandMember3D";
 import { OutdoorEnvironment } from "./OutdoorEnvironment";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageLighting } from "./StageLighting";
@@ -11,9 +11,12 @@ import { CameraRig } from "./CameraRig";
 import { StageFloor } from './StageFloor';
 import { StageEquipment } from './StageEquipment';
 import { StageEffects } from "./StageEffects";
+import { LightCone } from "./LightCone";
+import { CrowdBarrier } from "./CrowdBarrier";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
+type CameraMode = 'pov' | 'orbit' | 'free' | 'cinematic';
 
 interface GigDemoViewerProps {
   crowdMood: number;
@@ -31,6 +34,8 @@ interface GigDemoViewerProps {
   songSection: SongSection;
   isOutdoor?: boolean;
   timeOfDay?: 'day' | 'sunset' | 'night';
+  cameraMode?: CameraMode;
+  zoomLevel?: number;
 }
 
 export const GigDemoViewer = ({
@@ -49,6 +54,8 @@ export const GigDemoViewer = ({
   songSection,
   isOutdoor = false,
   timeOfDay = 'night',
+  cameraMode = 'pov',
+  zoomLevel = 13,
 }: GigDemoViewerProps) => {
   const [fps, setFps] = useState(60);
 
@@ -108,14 +115,19 @@ export const GigDemoViewer = ({
         camera={{ fov: 75, near: 0.1, far: 1000 }}
       >
         <Suspense fallback={<LoadingScreen />}>
-          {/* Camera with dynamic movement */}
-          <CameraRig crowdMood={crowdMood} stageTemplateId={stageTemplateId} />
+          {/* Multi-mode camera system */}
+          <CameraRig 
+            crowdMood={crowdMood} 
+            stageTemplateId={stageTemplateId}
+            mode={cameraMode}
+            zoomLevel={zoomLevel}
+          />
           
           {/* Base ambient light */}
           <ambientLight intensity={0.15} />
           
           {/* Fog for atmosphere */}
-          <fog attach="fog" args={["#000000", 5, 25]} />
+          <fog attach="fog" args={["#000000", 5, 30]} />
 
           {/* Dynamic stage lighting system */}
           <StageLighting 
@@ -126,6 +138,11 @@ export const GigDemoViewer = ({
             songSection={songSection}
           />
 
+          {/* Volumetric light cones */}
+          <LightCone position={[-4, 6, -6]} color="#ff00ff" intensity={songIntensity} />
+          <LightCone position={[0, 6, -6]} color="#00ffff" intensity={songIntensity} />
+          <LightCone position={[4, 6, -6]} color="#ffff00" intensity={songIntensity} />
+
           {/* Stage effects (haze, particles) */}
           <StageEffects 
             crowdMood={crowdMood} 
@@ -134,31 +151,61 @@ export const GigDemoViewer = ({
           />
 
           {/* Environment */}
-          <Environment preset="night" />
+          {isOutdoor ? (
+            <OutdoorEnvironment timeOfDay={timeOfDay} />
+          ) : (
+            <Environment preset="night" />
+          )}
 
-          {/* Use proper StageFloor component with realistic textures */}
-          <StageFloor floorType="concrete" backdropType="led-screen" />
+          {/* Stage floor and backdrop */}
+          <StageFloor floorType={floorType} backdropType={backdropType} />
 
           {/* Stage Equipment */}
           <StageEquipment />
 
+          {/* Stage scene */}
           <StageScene stageTemplateId={stageTemplateId} />
+
+          {/* Crowd barrier */}
+          <CrowdBarrier />
           
-          <CrowdLayer 
+          {/* 3D Procedural Crowd */}
+          <Crowd3DLayer 
             crowdMood={crowdMood}
-            stageTemplateId={stageTemplateId}
             bandFame={bandFame}
             bandMerchColor={merchColor}
             maxCrowdCount={maxCrowdCount}
             densityMultiplier={crowdDensity}
           />
           
-          <BandAvatars 
-            gigId="demo-gig"
-            bandId="demo-band"
-            songProgress={0.5}
-            songSection={songSection}
-            bandMemberSkills={mockBandMemberSkills}
+          {/* 3D Band Members */}
+          <BandMember3D 
+            position={[-2, 1, -5]}
+            instrument="guitarist"
+            animationState={songSection === 'intro' ? 'intro' : songSection === 'solo' ? 'solo' : 'playing'}
+            intensity={songIntensity}
+            seed={0.1}
+          />
+          <BandMember3D 
+            position={[2, 1, -5]}
+            instrument="bassist"
+            animationState={songSection === 'intro' ? 'intro' : 'playing'}
+            intensity={songIntensity}
+            seed={0.3}
+          />
+          <BandMember3D 
+            position={[0, 1.6, -7]}
+            instrument="drummer"
+            animationState={songSection === 'intro' ? 'intro' : 'playing'}
+            intensity={songIntensity}
+            seed={0.5}
+          />
+          <BandMember3D 
+            position={[0, 1, -4]}
+            instrument="vocalist"
+            animationState={songSection === 'intro' ? 'intro' : songSection === 'outro' ? 'outro' : 'playing'}
+            intensity={songIntensity}
+            seed={0.7}
           />
         </Suspense>
       </Canvas>
