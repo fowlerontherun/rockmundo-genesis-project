@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import crowdBaseTexture from "@/assets/textures/crowd/crowd-realistic-base.png";
 import crowdExcitedTexture from "@/assets/textures/crowd/crowd-realistic-excited.png";
 import crowdJumpingTexture from "@/assets/textures/crowd/crowd-realistic-jumping.png";
+import crowdPhoneTexture from "@/assets/textures/crowd/crowd-realistic-phone.png";
+import crowdFistTexture from "@/assets/textures/crowd/crowd-realistic-fist.png";
+import crowdMerchTexture from "@/assets/textures/crowd/crowd-realistic-merch.png";
 
 interface CrowdLayerProps {
   crowdMood: number;
@@ -47,10 +50,13 @@ export const CrowdLayer = ({
   const dummy = useMemo(() => new Object3D(), []);
   const [crowdZones, setCrowdZones] = useState<CrowdZone[]>([]);
 
-  // Load realistic textures
+  // Load realistic textures with multiple variations
   const baseTexture = useLoader(TextureLoader, crowdBaseTexture);
   const excitedTexture = useLoader(TextureLoader, crowdExcitedTexture);
   const jumpingTexture = useLoader(TextureLoader, crowdJumpingTexture);
+  const phoneTexture = useLoader(TextureLoader, crowdPhoneTexture);
+  const fistTexture = useLoader(TextureLoader, crowdFistTexture);
+  const merchTexture = useLoader(TextureLoader, crowdMerchTexture);
 
   useEffect(() => {
     const fetchStageTemplate = async () => {
@@ -174,7 +180,7 @@ export const CrowdLayer = ({
 
       dummy.position.set(x, y + 0.5, z);
       dummy.rotation.y = Math.PI; // Face the stage
-      dummy.scale.set(0.4, scale * 1.0, 1);
+      dummy.scale.set(0.6, scale * 1.5, 1); // Larger, more visible crowd members
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     });
@@ -208,16 +214,23 @@ export const CrowdLayer = ({
   }, [crowdData, bandMerchColor]);
 
   const getCurrentTexture = () => {
-    if (crowdMood > 70) return jumpingTexture;
-    if (crowdMood > 40) return excitedTexture;
-    return baseTexture;
+    // Cycle through different crowd member variations based on mood
+    const textures = [baseTexture, fistTexture, phoneTexture];
+    
+    if (crowdMood > 80) {
+      return [jumpingTexture, excitedTexture, merchTexture][Math.floor(Math.random() * 3)];
+    }
+    if (crowdMood > 50) {
+      return [excitedTexture, fistTexture, merchTexture][Math.floor(Math.random() * 3)];
+    }
+    return textures[Math.floor(Math.random() * textures.length)];
   };
 
   if (crowdData.length === 0) return null;
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow receiveShadow>
-      <planeGeometry args={[0.4, 1.0]} />
+      <planeGeometry args={[0.6, 1.5]} />
       <meshStandardMaterial
         map={getCurrentTexture()}
         transparent
@@ -225,8 +238,8 @@ export const CrowdLayer = ({
         color="#ffffff"
         emissive={getEmissiveColor()}
         emissiveIntensity={getEmissiveIntensity()}
-        roughness={0.9}
-        metalness={0.1}
+        roughness={0.8}
+        metalness={0.2}
       >
         <instancedBufferAttribute attach="attributes.color" args={[colors, 3]} />
       </meshStandardMaterial>
