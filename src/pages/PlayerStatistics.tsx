@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { TrendingUp, Award, Music, Users, Star, DollarSign } from 'lucide-react';
+import { PlayerAchievements } from '@/components/player-stats/PlayerAchievements';
+import { PerformanceHistory } from '@/components/player-stats/PerformanceHistory';
 
 export default function PlayerStatistics() {
   const { user } = useAuth();
@@ -150,28 +152,11 @@ export default function PlayerStatistics() {
         </TabsContent>
 
         <TabsContent value="achievements" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Achievement system coming soon...</p>
-            </CardContent>
-          </Card>
+          <PlayerAchievements userId={user?.id} />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Performance tracking coming soon...</p>
-            </CardContent>
-          </Card>
+          <PerformanceHistory userId={user?.id} />
         </TabsContent>
       </Tabs>
     </div>
