@@ -111,21 +111,6 @@ export const CrowdLayer = ({
       `
     );
   };
-      
-      // Discard very bright pixels (white/light grey backgrounds)
-      if (brightness > 0.85 && 
-          abs(color.r - color.g) < 0.1 && 
-          abs(color.g - color.b) < 0.1) {
-        discard;
-      }
-      
-      // Discard very dark pixels (black backgrounds)
-      if (brightness < 0.15) {
-        discard;
-      }
-      `
-    );
-  };
 
   // Fetch crowd zones from stage template
   useEffect(() => {
