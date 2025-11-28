@@ -1,389 +1,185 @@
-import {
-  AudioLines,
-  Building2,
-  Disc3,
-  Gift,
-  GraduationCap,
-  NotebookPen,
-  PlaySquare,
-  Sparkles,
-  Users,
-  BookOpen,
-  Briefcase,
-  Music2,
-  Activity,
-  Plane,
-  Calendar as CalendarIcon,
-  Calendar,
-  TrendingUp,
-  Shield,
-  Clock,
-  Radio,
-  Guitar,
-  HardHat,
-  Package,
-  Image as ImageIcon,
-  Theater,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-
+import React, { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AdminRoute } from "@/components/AdminRoute";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, LayoutDashboard } from "lucide-react";
+import { AdminNav, adminCategories } from "@/components/admin/AdminNav";
+import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 import { NationalSelectionsRunner } from "@/components/admin/NationalSelectionsRunner";
 
-const adminSections = [
-  {
-    title: "Festivals",
-    description: "Create and manage festival events",
-    href: "/admin/festivals",
-    action: "Manage festivals",
-    Icon: CalendarIcon,
-  },
-  {
-    title: "Eurovision",
-    description: "Manage Eurovision years, phases, and entries",
-    href: "/admin/eurovision",
-    action: "Manage Eurovision",
-    Icon: Sparkles,
-  },
-  {
-    title: "Game Calendar",
-    description: "Configure in-game time progression, seasons, and seasonal modifiers for genres.",
-    href: "/admin/game-calendar",
-    action: "Manage calendar",
-    Icon: CalendarIcon,
-  },
-  {
-    title: "Cities",
-    description: "Manage destination data, cultural hooks, and gameplay modifiers for each city.",
-    href: "/admin/cities",
-    action: "Manage cities",
-    Icon: Building2,
-  },
-  {
-    title: "Universities",
-    description: "Curate the university roster that shapes the world's education economy.",
-    href: "/admin/universities",
-    action: "Manage universities",
-    Icon: GraduationCap,
-  },
-  {
-    title: "University Courses",
-    description: "Configure courses, prerequisites, pricing, and XP rewards for each university.",
-    href: "/admin/courses",
-    action: "Manage courses",
-    Icon: BookOpen,
-  },
-  {
-    title: "Night Clubs",
-    description: "Curate nightlife venues, DJ slot requirements, and social actions by city.",
-    href: "/admin/night-clubs",
-    action: "Manage night clubs",
-    Icon: Disc3,
-  },
-  {
-    title: "Skill Books",
-    description: "Configure purchasable books that unlock skills and deliver XP to players.",
-    href: "/admin/skill-books",
-    action: "Manage skill books",
-    Icon: NotebookPen,
-  },
-  {
-    title: "Mentors",
-    description: "Control the mentor roster powering education XP and progression boosts.",
-    href: "/admin/mentors",
-    action: "Manage mentors",
-    Icon: Users,
-  },
-  {
-    title: "Jobs",
-    description: "Create and manage employment opportunities with schedules, salaries, and impacts.",
-    href: "/admin/jobs",
-    action: "Manage jobs",
-    Icon: Briefcase,
-  },
-  {
-    title: "Venues",
-    description: "Manage performance venues, capacities, prestige levels, and booking requirements.",
-    href: "/admin/venues",
-    action: "Manage venues",
-    Icon: Music2,
-  },
-  {
-    title: "Rehearsal Rooms",
-    description: "Manage rehearsal spaces where bands practice to improve chemistry and gig readiness.",
-    href: "/admin/rehearsal-rooms",
-    action: "Manage rehearsal rooms",
-    Icon: Music2,
-  },
-  {
-    title: "Travel Routes",
-    description: "Configure transportation routes between cities with costs, duration, and comfort ratings.",
-    href: "/admin/travel",
-    action: "Manage travel routes",
-    Icon: Plane,
-  },
-  {
-    title: "Song Gifts",
-    description: "Create fully-featured songs with all attributes and gift them to bands.",
-    href: "/admin/song-gifts",
-    action: "Gift songs",
-    Icon: Gift,
-  },
-  {
-    title: "Streaming Platforms",
-    description: "Manage streaming platforms, configure payout rates, and set quality requirements.",
-    href: "/admin/streaming-platforms",
-    action: "Manage platforms",
-    Icon: Music2,
-  },
-  {
-    title: "Song Marketplace",
-    description: "Moderate listings, manage disputes, configure fees, and view transaction analytics.",
-    href: "/admin/marketplace",
-    action: "Manage marketplace",
-    Icon: TrendingUp,
-  },
-  {
-    title: "Recording Studios",
-    description: "Manage city recording studios with quality ratings, hourly rates, specialties, and equipment.",
-    href: "/admin/city-studios",
-    action: "Manage studios",
-    Icon: Music2,
-  },
-  {
-    title: "Recording Producers",
-    description: "Manage producers available for recording sessions with skills, costs, and specializations.",
-    href: "/admin/producers",
-    action: "Manage producers",
-    Icon: AudioLines,
-  },
-  {
-    title: "Twaater Moderation",
-    description: "Review reported content, manage filter words, and moderate user-generated posts.",
-    href: "/admin/twaater-moderation",
-    action: "Moderate content",
-    Icon: Shield,
-  },
-  {
-    title: "Cron Monitor",
-    description: "Monitor automated background tasks, view execution logs, and manually trigger functions.",
-    href: "/admin/cron-monitor",
-    action: "View monitor",
-    Icon: Clock,
-  },
-  {
-    title: "Offer Automation",
-    description: "Tune offer frequency, cooldowns, and payout variance while monitoring queue health.",
-    href: "/admin/offer-automation",
-    action: "Configure offers",
-    Icon: Activity,
-  },
-  {
-    title: "Release Configuration",
-    description: "Configure costs and pricing for music releases across all formats (digital, CD, vinyl).",
-    href: "/admin/release-config",
-    action: "Manage config",
-    Icon: Disc3,
-  },
-  {
-    title: "Radio Stations",
-    description: "Manage national and local radio stations and shows",
-    href: "/admin/radio-stations",
-    action: "Manage Radio",
-    Icon: Radio,
-  },
-  {
-    title: "Songwriting",
-    description: "Manage songwriting mechanics, chord progressions, and quality multipliers.",
-    href: "/admin/songwriting",
-    action: "Manage Songwriting",
-    Icon: Music2,
-  },
-  {
-    title: "Gigs",
-    description: "Configure gig payouts, performance ratings, and fame generation.",
-    href: "/admin/gigs",
-    action: "Manage Gigs",
-    Icon: Music2,
-  },
-  {
-    title: "Charts",
-    description: "Manage music charts, ranking algorithms, and chart rewards.",
-    href: "/admin/charts",
-    action: "Manage Charts",
-    Icon: TrendingUp,
-  },
-  {
-    title: "Twaater",
-    description: "Configure Twaater platform features, engagement, and trending algorithms.",
-    href: "/admin/twaater",
-    action: "Manage Twaater",
-    Icon: Shield,
-  },
-  {
-    title: "Record Labels",
-    description: "Manage record labels, deal types, and royalty systems.",
-    href: "/admin/labels",
-    action: "Manage Labels",
-    Icon: Building2,
-  },
-  {
-    title: "Band & Chemistry",
-    description: "Configure band mechanics, chemistry systems, and collaboration features.",
-    href: "/admin/bands",
-    action: "Manage Bands",
-    Icon: Users,
-  },
-] as const;
+const Admin = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+  const navigate = useNavigate();
 
-const adminSubSections = [
-  {
-    title: "Stage Equipment Catalog",
-    description: "Manage the equipment catalog players browse in the stage equipment market.",
-    href: "/admin/stage-equipment",
-    action: "Manage catalog",
-    Icon: Guitar,
-  },
-  {
-    title: "Gear Items Catalog",
-    description: "Manage personal gear items for musicians including instruments, pedals, and accessories.",
-    href: "/admin/gear-items",
-    action: "Manage gear",
-    Icon: Package,
-  },
-  {
-    title: "Page Graphics",
-    description: "Manage hero images, backgrounds, and visual elements for each page across all devices.",
-    href: "/admin/page-graphics",
-    action: "Manage graphics",
-    Icon: ImageIcon,
-  },
-  {
-    title: "3D Stage Templates",
-    description: "Create and manage 3D stage templates for the immersive gig viewer.",
-    href: "/admin/stage-templates",
-    action: "Manage stages",
-    Icon: Theater,
-  },
-  {
-    title: "Band Avatars",
-    description: "Configure 3D avatars and animations for band members.",
-    href: "/admin/band-avatars",
-    action: "Manage avatars",
-    Icon: Users,
-  },
-  {
-    title: "Crowd Behavior",
-    description: "Define crowd animation presets and mood states for 3D gigs.",
-    href: "/admin/crowd-behavior",
-    action: "Manage crowd",
-    Icon: Users,
-  },
-  {
-    title: "Crew Hiring Catalog",
-    description: "Curate the professionals available for hire so bands can build their touring teams.",
-    href: "/admin/crew",
-    action: "Manage crew",
-    Icon: HardHat,
-  },
-  {
-    title: "Skill Definitions",
-    description: "Configure skill definitions, slugs, display names, and tier caps for the progression system.",
-    href: "/admin/skill-definitions",
-    action: "Manage skills",
-    Icon: TrendingUp,
-  },
-  {
-    title: "Player Management",
-    description: "View and manage player accounts, grant resources, and modify stats.",
-    href: "/admin/players",
-    action: "Manage players",
-    Icon: Shield,
-  },
-  {
-    title: "Achievements",
-    description: "Create and manage achievements with requirements and rewards.",
-    href: "/admin/achievements",
-    action: "Manage achievements",
-    Icon: TrendingUp,
-  },
-  {
-    title: "Analytics",
-    description: "View game statistics, player activity, and performance metrics.",
-    href: "/admin/analytics",
-    action: "View analytics",
-    Icon: TrendingUp,
-  },
-] as const;
+  // Filter items based on search
+  const filteredCategories = adminCategories.map(category => ({
+    ...category,
+    items: category.items.filter(item => 
+      item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(category => category.items.length > 0);
 
-export default function Admin() {
+  // Get category for active tab
+  const activeCategory = activeTab === "all" ? null : adminCategories.find(c => c.id === activeTab);
+
   return (
     <AdminRoute>
-      <div className="container mx-auto max-w-5xl space-y-6 p-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Admin Panel</h1>
-          <p className="text-muted-foreground">
-            Configure world data and manage gameplay balancing parameters across dedicated admin tools.
-          </p>
+      <div className="container mx-auto p-4 md:p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Admin Control Panel</h1>
+              <p className="text-muted-foreground text-sm">Manage all game systems and configuration</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="flex items-center gap-2 w-fit">
+            <LayoutDashboard className="h-4 w-4" />
+            {adminCategories.length} Categories • {adminCategories.reduce((sum, cat) => sum + cat.items.length, 0)} Tools
+          </Badge>
         </div>
 
+        {/* Quick Actions */}
         <NationalSelectionsRunner />
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {adminSections.map(({ title, description, href, action, Icon }) => (
-            <Card key={title} className="flex flex-col justify-between">
-              <CardHeader className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="rounded-full bg-primary/10 p-2 text-primary">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <CardTitle className="text-xl">{title}</CardTitle>
-                    <CardDescription>{description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Button asChild className="w-full">
-                  <Link to={href}>{action}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Search */}
+        <div className="max-w-md">
+          <Input
+            type="search"
+            placeholder="Search admin tools..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
         </div>
 
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight">Admin sub sections</h2>
-          <p className="text-muted-foreground">
-            Tune the live performance catalogs powering stage setups and touring crew recruitment.
-          </p>
-        </div>
+        {/* Tabs for categories */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              All Tools
+            </TabsTrigger>
+            {adminCategories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <TabsTrigger 
+                  key={category.id} 
+                  value={category.id}
+                  className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{category.title}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {adminSubSections.map(({ title, description, href, action, Icon }) => (
-            <Card key={title} className="flex flex-col justify-between">
-              <CardHeader className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="rounded-full bg-primary/10 p-2 text-primary">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <CardTitle className="text-xl">{title}</CardTitle>
-                    <CardDescription>{description}</CardDescription>
+          {/* All Tools Tab */}
+          <TabsContent value="all" className="mt-6">
+            {searchQuery ? (
+              filteredCategories.length > 0 ? (
+                <div className="space-y-6">
+                  <p className="text-sm text-muted-foreground">
+                    Found {filteredCategories.reduce((sum, cat) => sum + cat.items.length, 0)} results
+                  </p>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredCategories.map((category) => {
+                      const Icon = category.icon;
+                      return (
+                        <Card key={category.id} className="hover:border-primary/50 transition-colors">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 rounded-lg bg-primary/10">
+                                <Icon className="h-5 w-5 text-primary" />
+                              </div>
+                              <CardTitle className="text-lg">{category.title}</CardTitle>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-1">
+                            {category.items.map((item) => (
+                              <button
+                                key={item.path}
+                                onClick={() => navigate(item.path)}
+                                className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors group"
+                              >
+                                <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                                  {item.label}
+                                </span>
+                                {item.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                                )}
+                              </button>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <Button asChild className="w-full">
-                  <Link to={href}>{action}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ) : (
+                <Alert>
+                  <AlertDescription>No admin tools match your search.</AlertDescription>
+                </Alert>
+              )
+            ) : (
+              <AdminNav onNavigate={(path) => navigate(path)} />
+            )}
+          </TabsContent>
+
+          {/* Individual Category Tabs */}
+          {adminCategories.map((category) => {
+            const Icon = category.icon;
+            return (
+              <TabsContent key={category.id} value={category.id} className="mt-6">
+                <div className="space-y-6">
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-lg bg-primary/10">
+                          <Icon className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-2xl">{category.title}</CardTitle>
+                          <CardDescription className="mt-1">{category.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {category.items.map((item) => (
+                      <Card 
+                        key={item.path}
+                        className="hover:border-primary hover:shadow-md transition-all cursor-pointer group"
+                        onClick={() => navigate(item.path)}
+                      >
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base group-hover:text-primary transition-colors">
+                            {item.label}
+                          </CardTitle>
+                          {item.description && (
+                            <CardDescription className="text-xs">{item.description}</CardDescription>
+                          )}
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
       </div>
     </AdminRoute>
   );
-}
+};
+
+export default Admin;

@@ -307,6 +307,9 @@ function App() {
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
+                    <Route path="admin/experience-rewards" element={<AdminExperienceRewards />} />
+                    <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
+                    <Route path="admin/band-learning" element={<AdminBandLearning />} />
                     <Route path="admin/songwriting" element={<SongwritingAdmin />} />
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/charts" element={<ChartsAdmin />} />
