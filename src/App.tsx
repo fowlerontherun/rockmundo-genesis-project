@@ -154,7 +154,6 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const ReleaseDetail = lazyWithRetry(() => import("./pages/ReleaseDetail"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
-const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 // const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
@@ -219,7 +218,6 @@ function App() {
                     <Route path="booking/performance" element={<PerformanceBooking />} />
                     <Route path="booking/work" element={<WorkBooking />} />
                     <Route path="booking/songwriting" element={<SongwritingBooking />} />
-                    <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
                     <Route path="community/feed" element={<CommunityFeed />} />
                     <Route path="gig-booking" element={<GigBooking />} />

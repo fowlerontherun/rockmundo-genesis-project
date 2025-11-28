@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useGameData } from '@/hooks/useGameData';
-import { MAX_SKILL_LEVEL } from '@/data/skillConstants';
-import { Lock, Star, Trophy, Music, Users, Mic, Zap } from 'lucide-react';
+import { Star, Music, Users, Mic, Zap } from 'lucide-react';
+import { HierarchicalSkillNode } from './skills/HierarchicalSkillNode';
 
 type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
 type SkillProgress = Database['public']['Tables']['skill_progress']['Row'];
@@ -189,52 +186,20 @@ export const SkillTree: React.FC = () => {
     return progress.find(p => p.skill_slug === skillSlug) || null;
   };
 
-  const practiceSkill = async (skillSlug: string) => {
-    if (!profile) {
-      toast.error('Please select a character first');
-      return;
-    }
-
-    try {
-      const existingProgress = getSkillProgress(skillSlug);
-      const currentXp = existingProgress?.current_xp || 0;
-      const newXp = currentXp + 10;
-      const unclampedLevel = Math.floor(newXp / 100);
-      const newLevel = Math.min(unclampedLevel, MAX_SKILL_LEVEL);
-      const cappedXp = newLevel >= MAX_SKILL_LEVEL ? currentXp : newXp;
-      const requiredXp =
-        newLevel >= MAX_SKILL_LEVEL ? existingProgress?.required_xp ?? (MAX_SKILL_LEVEL + 1) * 100 : (newLevel + 1) * 100;
-
-      const { error } = await supabase
-        .from('skill_progress')
-        .upsert({
-          profile_id: profile.id,
-          skill_slug: skillSlug,
-          current_level: newLevel,
-          current_xp: cappedXp,
-          required_xp: requiredXp,
-        } as any, { onConflict: 'profile_id,skill_slug' });
-
-      if (error) throw error;
-
-      // Refresh progress
-      const { data: progressData } = await supabase
-        .from('skill_progress')
-        .select('*')
-        .eq('profile_id', profile.id);
-
-      setProgress(progressData || []);
-      toast.success(`Practiced ${skillSlug.replace(/_/g, ' ')}! +10 XP`);
-    } catch (error) {
-      console.error('Error practicing skill:', error);
-      toast.error('Failed to practice skill');
-    }
+  // Group skills by tier within each category
+  const groupSkillsByTier = (skills: SkillDefinition[]) => {
+    const basic = skills.filter(s => getSkillTier(s.slug) === 'basic');
+    const professional = skills.filter(s => getSkillTier(s.slug) === 'professional');
+    const mastery = skills.filter(s => getSkillTier(s.slug) === 'mastery');
+    return { basic, professional, mastery };
   };
 
   const categories = categorizeSkills();
   const selectedCategoryData = categories.find(cat => 
     cat.name.toLowerCase().includes(selectedCategory)
   ) || categories[0];
+
+  const { basic, professional, mastery } = groupSkillsByTier(selectedCategoryData.skills);
 
   if (loading) {
     return (
@@ -247,7 +212,7 @@ export const SkillTree: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <h2 className="text-2xl font-bold">Skills Tree</h2>
+        <h2 className="text-2xl font-bold">Skill Hierarchy</h2>
         
         <div className="flex flex-wrap gap-2">
           {categories.map((category) => (
@@ -265,51 +230,122 @@ export const SkillTree: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {selectedCategoryData.skills.map((skill) => {
-          const skillProgress = getSkillProgress(skill.slug);
-          const tier = getSkillTier(skill.slug);
-          const level = skillProgress?.current_level || 0;
-          const xp = skillProgress?.current_xp || 0;
-          const requiredXp = skillProgress?.required_xp || 100;
-          const progressPercent = (xp / requiredXp) * 100;
-
-          return (
-            <Card key={skill.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getSkillIcon(skill.slug)}
-                    <CardTitle className="text-sm font-medium">
-                      {skill.display_name}
-                    </CardTitle>
-                  </div>
-                  <Badge className={getTierColor(tier)} variant="outline">
-                    {tier}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {skill.description}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Level {level}</span>
-                  <span>{xp}/{requiredXp} XP</span>
-                </div>
-                <Progress value={progressPercent} className="h-2" />
-                <Button
-                  size="sm"
-                  onClick={() => practiceSkill(skill.slug)}
-                  className="w-full"
-                  variant="outline"
+      <div className="space-y-4">
+        {/* Basic Skills */}
+        {basic.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-green-700">Basic Skills</h3>
+            {basic.map((skill) => {
+              const skillProgress = getSkillProgress(skill.slug);
+              return (
+                <HierarchicalSkillNode
+                  key={skill.id}
+                  skill={skill}
+                  progress={skillProgress ? {
+                    current_level: skillProgress.current_level || 0,
+                    current_xp: skillProgress.current_xp || 0,
+                    required_xp: skillProgress.required_xp || 100
+                  } : null}
+                  tier="basic"
                 >
-                  Practice (+10 XP)
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+                  {/* Professional skills that build on this basic skill */}
+                  {professional
+                    .filter(prof => prof.slug.includes(skill.slug.replace('basic_', '')))
+                    .map(profSkill => {
+                      const profProgress = getSkillProgress(profSkill.slug);
+                      return (
+                        <HierarchicalSkillNode
+                          key={profSkill.id}
+                          skill={profSkill}
+                          progress={profProgress ? {
+                            current_level: profProgress.current_level || 0,
+                            current_xp: profProgress.current_xp || 0,
+                            required_xp: profProgress.required_xp || 100
+                          } : null}
+                          tier="professional"
+                          isLocked={!skillProgress || (skillProgress.current_level || 0) < 5}
+                        >
+                          {/* Mastery skills that build on this professional skill */}
+                          {mastery
+                            .filter(mast => mast.slug.includes(profSkill.slug.replace('professional_', '')))
+                            .map(mastSkill => {
+                              const mastProgress = getSkillProgress(mastSkill.slug);
+                              return (
+                                <HierarchicalSkillNode
+                                  key={mastSkill.id}
+                                  skill={mastSkill}
+                                  progress={mastProgress ? {
+                                    current_level: mastProgress.current_level || 0,
+                                    current_xp: mastProgress.current_xp || 0,
+                                    required_xp: mastProgress.required_xp || 100
+                                  } : null}
+                                  tier="mastery"
+                                  isLocked={!profProgress || (profProgress.current_level || 0) < 10}
+                                />
+                              );
+                            })}
+                        </HierarchicalSkillNode>
+                      );
+                    })}
+                </HierarchicalSkillNode>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Standalone Professional Skills */}
+        {professional.filter(prof => !basic.some(b => prof.slug.includes(b.slug.replace('basic_', '')))).length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-blue-700">Professional Skills</h3>
+            {professional
+              .filter(prof => !basic.some(b => prof.slug.includes(b.slug.replace('basic_', ''))))
+              .map((skill) => {
+                const skillProgress = getSkillProgress(skill.slug);
+                return (
+                  <HierarchicalSkillNode
+                    key={skill.id}
+                    skill={skill}
+                    progress={skillProgress ? {
+                      current_level: skillProgress.current_level || 0,
+                      current_xp: skillProgress.current_xp || 0,
+                      required_xp: skillProgress.required_xp || 100
+                    } : null}
+                    tier="professional"
+                  />
+                );
+              })}
+          </div>
+        )}
+
+        {/* Standalone Mastery Skills */}
+        {mastery.filter(mast => 
+          !professional.some(prof => mast.slug.includes(prof.slug.replace('professional_', ''))) &&
+          !basic.some(b => mast.slug.includes(b.slug.replace('basic_', '')))
+        ).length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-purple-700">Mastery Skills</h3>
+            {mastery
+              .filter(mast => 
+                !professional.some(prof => mast.slug.includes(prof.slug.replace('professional_', ''))) &&
+                !basic.some(b => mast.slug.includes(b.slug.replace('basic_', '')))
+              )
+              .map((skill) => {
+                const skillProgress = getSkillProgress(skill.slug);
+                return (
+                  <HierarchicalSkillNode
+                    key={skill.id}
+                    skill={skill}
+                    progress={skillProgress ? {
+                      current_level: skillProgress.current_level || 0,
+                      current_xp: skillProgress.current_xp || 0,
+                      required_xp: skillProgress.required_xp || 100
+                    } : null}
+                    tier="mastery"
+                  />
+                );
+              })}
+          </div>
+        )}
       </div>
 
       {selectedCategoryData.skills.length === 0 && (

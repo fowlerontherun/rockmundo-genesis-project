@@ -112,7 +112,6 @@ const Navigation = () => {
       items: [
         { icon: Music, label: "Songwriting", path: "/songwriting" },
         { icon: GraduationCap, label: "Education", path: "/education" },
-        { icon: Target, label: "Skills", path: "/skills" },
         { icon: Disc, label: "Recording", path: "/recording-studio" },
         { icon: Music4, label: "Release Manager", path: "/release-manager" },
         { icon: Radio, label: "Streaming", path: "/streaming" },
