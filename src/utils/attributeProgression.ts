@@ -12,6 +12,23 @@ export type AttributeKey = keyof Pick<
   | 'vocal_talent'
 >;
 
+export type FullAttributeKey = keyof Pick<
+  AttributeSnapshot,
+  | 'charisma'
+  | 'looks'
+  | 'mental_focus'
+  | 'musicality'
+  | 'physical_endurance'
+  | 'stage_presence'
+  | 'crowd_engagement'
+  | 'social_reach'
+  | 'musical_ability'
+  | 'vocal_talent'
+  | 'rhythm_sense'
+  | 'creative_insight'
+  | 'technical_mastery'
+>;
+
 export const ATTRIBUTE_MAX_VALUE = 1000;
 export const ATTRIBUTE_TRAINING_INCREMENT = 10;
 
@@ -20,6 +37,22 @@ export const ATTRIBUTE_KEYS: AttributeKey[] = [
   'vocal_talent',
   'rhythm_sense',
   'stage_presence',
+  'creative_insight',
+  'technical_mastery',
+];
+
+export const FULL_ATTRIBUTE_KEYS: FullAttributeKey[] = [
+  'charisma',
+  'looks',
+  'mental_focus',
+  'musicality',
+  'physical_endurance',
+  'stage_presence',
+  'crowd_engagement',
+  'social_reach',
+  'musical_ability',
+  'vocal_talent',
+  'rhythm_sense',
   'creative_insight',
   'technical_mastery',
 ];
@@ -61,6 +94,78 @@ export const ATTRIBUTE_METADATA: Record<AttributeKey, {
   },
 };
 
+export const FULL_ATTRIBUTE_METADATA: Record<FullAttributeKey, {
+  label: string;
+  description: string;
+  affectedSystems: string[];
+}> = {
+  charisma: {
+    label: 'Charisma',
+    description: 'Personal magnetism that influences interviews, sponsors, and fan interactions.',
+    affectedSystems: ['Interviews', 'Sponsors', 'Social Media'],
+  },
+  looks: {
+    label: 'Looks',
+    description: 'Physical appearance that affects photo shoots, magazine covers, and sponsor appeal.',
+    affectedSystems: ['Photo Shoots', 'Sponsors', 'Fan Appeal'],
+  },
+  mental_focus: {
+    label: 'Mental Focus',
+    description: 'Concentration and learning efficiency that speeds up skill training.',
+    affectedSystems: ['Learning', 'Skill Training', 'Practice'],
+  },
+  musicality: {
+    label: 'Musicality',
+    description: 'Natural musical sense that enhances all musical output quality.',
+    affectedSystems: ['Songwriting', 'Recording', 'Performance'],
+  },
+  physical_endurance: {
+    label: 'Physical Endurance',
+    description: 'Stamina for tours and performances, reducing fatigue and health drain.',
+    affectedSystems: ['Tours', 'Gigs', 'Health'],
+  },
+  stage_presence: {
+    label: 'Stage Presence',
+    description: 'Charisma, confidence, and crowd engagement during live shows.',
+    affectedSystems: ['Gigs', 'Encores', 'Fan Satisfaction'],
+  },
+  crowd_engagement: {
+    label: 'Crowd Engagement',
+    description: 'Ability to connect with audiences, driving fan growth and ticket sales.',
+    affectedSystems: ['Gigs', 'Fan Growth', 'Ticket Sales'],
+  },
+  social_reach: {
+    label: 'Social Reach',
+    description: 'Influence on social media platforms, increasing viral chances and follower growth.',
+    affectedSystems: ['Social Media', 'Viral Content', 'Fan Growth'],
+  },
+  musical_ability: {
+    label: 'Musical Ability',
+    description: 'Overall instrumental precision, tone, and fretboard mastery.',
+    affectedSystems: ['Songwriting', 'Recording', 'Performance'],
+  },
+  vocal_talent: {
+    label: 'Vocal Talent',
+    description: 'Pitch control, range, and the nuances that make performances soar.',
+    affectedSystems: ['Vocals', 'Recording', 'Performance'],
+  },
+  rhythm_sense: {
+    label: 'Rhythm Sense',
+    description: 'Timing, groove, and percussive instincts that anchor a band.',
+    affectedSystems: ['Drums', 'Recording', 'Performance'],
+  },
+  creative_insight: {
+    label: 'Creative Insight',
+    description: 'Songwriting intuition, lyrical storytelling, and innovative ideas.',
+    affectedSystems: ['Songwriting', 'Lyrics', 'Composition'],
+  },
+  technical_mastery: {
+    label: 'Technical Mastery',
+    description: 'Studio expertise, production prowess, and sound engineering instincts.',
+    affectedSystems: ['Recording', 'Mixing', 'Production'],
+  },
+};
+
 export const SKILL_ATTRIBUTE_MAP: Record<string, AttributeKey> = {
   guitar: 'musical_ability',
   bass: 'musical_ability',
@@ -78,7 +183,7 @@ export const getAttributeTrainingCost = (currentValue: number) =>
 
 export const getAttributeValue = (
   attributes: AttributeSnapshot | null | undefined,
-  key: AttributeKey,
+  key: AttributeKey | FullAttributeKey,
 ) => {
   const raw = attributes?.[key];
   if (typeof raw !== 'number' || Number.isNaN(raw)) {
