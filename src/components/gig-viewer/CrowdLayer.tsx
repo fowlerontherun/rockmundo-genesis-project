@@ -54,7 +54,11 @@ export const CrowdLayer = ({ crowdMood }: CrowdLayerProps) => {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, crowdData.length]} castShadow>
       <capsuleGeometry args={[0.2, 0.8, 4, 8]} />
-      <meshStandardMaterial color="#2a2a3a" />
+      <meshStandardMaterial 
+        color="#1a1a2e"
+        emissive={crowdMood > 70 ? "#ff6600" : crowdMood > 40 ? "#4444ff" : "#000000"}
+        emissiveIntensity={crowdMood > 70 ? 0.3 : crowdMood > 40 ? 0.15 : 0}
+      />
     </instancedMesh>
   );
 };

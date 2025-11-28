@@ -35,25 +35,49 @@ export const BandAvatars = ({ gigId }: BandAvatarsProps) => {
       {/* Lead Guitarist */}
       <mesh ref={guitarist1Ref} position={[-2, 1.3, 1]} castShadow>
         <capsuleGeometry args={[0.3, 1, 4, 8]} />
-        <meshStandardMaterial color="#ff0066" />
+        <meshStandardMaterial 
+          color="#ff0066"
+          emissive="#ff0066"
+          emissiveIntensity={0.3}
+          roughness={0.4}
+          metalness={0.6}
+        />
       </mesh>
 
       {/* Rhythm Guitarist */}
       <mesh ref={guitarist2Ref} position={[2, 1.3, 1]} castShadow>
         <capsuleGeometry args={[0.3, 1, 4, 8]} />
-        <meshStandardMaterial color="#0066ff" />
+        <meshStandardMaterial 
+          color="#0066ff"
+          emissive="#0066ff"
+          emissiveIntensity={0.3}
+          roughness={0.4}
+          metalness={0.6}
+        />
       </mesh>
 
       {/* Bassist */}
       <mesh ref={bassistRef} position={[-4, 1.3, 0.5]} castShadow>
         <capsuleGeometry args={[0.3, 1, 4, 8]} />
-        <meshStandardMaterial color="#00ff66" />
+        <meshStandardMaterial 
+          color="#00ff66"
+          emissive="#00ff66"
+          emissiveIntensity={0.3}
+          roughness={0.4}
+          metalness={0.6}
+        />
       </mesh>
 
       {/* Drummer */}
       <mesh ref={drummerRef} position={[0, 1.5, -1]} castShadow>
         <capsuleGeometry args={[0.3, 0.8, 4, 8]} />
-        <meshStandardMaterial color="#ffff00" />
+        <meshStandardMaterial 
+          color="#ffff00"
+          emissive="#ffff00"
+          emissiveIntensity={0.3}
+          roughness={0.4}
+          metalness={0.6}
+        />
       </mesh>
 
       {/* Simple drum kit representation */}

@@ -82,8 +82,15 @@ serve(async (req) => {
     const totalRevenue = outcome.ticket_revenue + merchRevenue;
     const netProfit = totalRevenue - totalCosts;
 
-    // Calculate fame gained (based on rating and attendance)
-    const fameGained = Math.floor((avgRating / 25) * 100 * (outcome.actual_attendance / 100));
+    // Calculate fame gained - improved formula
+    // Base: rating/25 * 200 (max 200 for perfect show)
+    // Attendance multiplier: 0.5 to 2.0 based on attendance
+    const attendanceMultiplier = 0.5 + (outcome.actual_attendance / 100) * 1.5;
+    const baseFame = (avgRating / 25) * 200;
+    const fameGained = Math.floor(baseFame * attendanceMultiplier);
+    
+    // Calculate individual member XP (higher for good performances)
+    const memberXpBase = Math.floor(fameGained * 1.5); // Members get 1.5x fame as XP
 
     // Calculate chemistry impact (-2 to +3 based on performance)
     let chemistryChange = 0;
@@ -155,8 +162,9 @@ serve(async (req) => {
       .eq('is_touring_member', false);
 
     if (members && members.length > 0) {
-      const xpPerMember = Math.floor(fameGained / members.length);
+      const xpPerMember = Math.floor(memberXpBase / members.length);
       
+      // Award XP to each member
       for (const member of members) {
         await supabaseClient
           .from('experience_ledger')
@@ -164,7 +172,12 @@ serve(async (req) => {
             user_id: member.user_id,
             activity_type: 'gig_performance',
             xp_amount: xpPerMember,
-            metadata: { gig_id: gigId, band_id: gig.band_id }
+            metadata: { 
+              gig_id: gigId, 
+              band_id: gig.band_id,
+              rating: avgRating.toFixed(1),
+              attendance: outcome.actual_attendance
+            }
           });
       }
     }

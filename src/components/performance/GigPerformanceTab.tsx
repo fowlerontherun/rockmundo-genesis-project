@@ -150,6 +150,27 @@ export function GigPerformanceTab() {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Ticket Sales Info */}
+                  {gig.predicted_tickets > 0 && (
+                    <div className="mt-2 rounded-md bg-muted/50 p-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Tickets Sold</span>
+                        <span className="font-semibold">
+                          {gig.tickets_sold} / {gig.predicted_tickets}
+                          <span className="ml-1 text-muted-foreground">
+                            ({Math.round((gig.tickets_sold / gig.predicted_tickets) * 100)}%)
+                          </span>
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-background">
+                        <div 
+                          className="h-full bg-primary transition-all"
+                          style={{ width: `${Math.min(100, (gig.tickets_sold / gig.predicted_tickets) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
