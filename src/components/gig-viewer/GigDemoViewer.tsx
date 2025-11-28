@@ -153,8 +153,7 @@ export const GigDemoViewer = ({
             />
           </mesh>
 
-          {/* Temporarily disabled for debugging */}
-          {/* <StageScene stageTemplateId={stageTemplateId} /> */}
+          <StageScene stageTemplateId={stageTemplateId} />
           
           {/* Temporarily disabled for debugging */}
           {/* <CrowdLayer 
