@@ -40,11 +40,38 @@ export const BandAvatars = ({
     vocalist: vocalistSprite
   });
 
-  // Configure textures for better rendering
+  // Configure textures for pixel-perfect rendering
   Object.values(bandTextures).forEach(texture => {
-    texture.magFilter = THREE.LinearFilter;
-    texture.minFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
   });
+
+  // Custom shader for color-keying background removal
+  const onBeforeCompile = (shader: any) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `
+      #include <map_fragment>
+      
+      // Color-key background removal
+      vec3 color = diffuseColor.rgb;
+      float brightness = (color.r + color.g + color.b) / 3.0;
+      
+      // Discard very bright pixels (white/light grey backgrounds)
+      if (brightness > 0.85 && 
+          abs(color.r - color.g) < 0.1 && 
+          abs(color.g - color.b) < 0.1) {
+        discard;
+      }
+      
+      // Discard very dark pixels (black backgrounds)
+      if (brightness < 0.15) {
+        discard;
+      }
+      `
+    );
+  };
   
   useEffect(() => {
     if (songProgress < 0.1) {
@@ -191,9 +218,13 @@ export const BandAvatars = ({
           <meshStandardMaterial 
             map={bandTextures.guitarist1}
             transparent
-            alphaTest={0.3}
+            alphaTest={0.5}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
             emissive="#ffffff"
             emissiveIntensity={0.1}
+            onBeforeCompile={onBeforeCompile}
           />
         </mesh>
       </Billboard>
@@ -205,9 +236,13 @@ export const BandAvatars = ({
           <meshStandardMaterial 
             map={bandTextures.guitarist2}
             transparent
-            alphaTest={0.3}
+            alphaTest={0.5}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
             emissive="#ffffff"
             emissiveIntensity={0.1}
+            onBeforeCompile={onBeforeCompile}
           />
         </mesh>
       </Billboard>
@@ -219,9 +254,13 @@ export const BandAvatars = ({
           <meshStandardMaterial 
             map={bandTextures.bassist}
             transparent
-            alphaTest={0.3}
+            alphaTest={0.5}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
             emissive="#ffffff"
             emissiveIntensity={0.1}
+            onBeforeCompile={onBeforeCompile}
           />
         </mesh>
       </Billboard>
@@ -233,9 +272,13 @@ export const BandAvatars = ({
           <meshStandardMaterial 
             map={bandTextures.drummer}
             transparent
-            alphaTest={0.3}
+            alphaTest={0.5}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
             emissive="#ffffff"
             emissiveIntensity={0.1}
+            onBeforeCompile={onBeforeCompile}
           />
         </mesh>
       </Billboard>
@@ -247,9 +290,13 @@ export const BandAvatars = ({
           <meshStandardMaterial 
             map={bandTextures.vocalist}
             transparent
-            alphaTest={0.3}
+            alphaTest={0.5}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
             emissive="#ffffff"
             emissiveIntensity={0.1}
+            onBeforeCompile={onBeforeCompile}
           />
         </mesh>
       </Billboard>

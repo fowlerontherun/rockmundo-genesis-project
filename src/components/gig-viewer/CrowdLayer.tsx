@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { InstancedMesh, Object3D } from "three";
 import { supabase } from "@/integrations/supabase/client";
 
-// Import all 8 crowd sprite variations
+// Import all 10 crowd sprite variations
 import crowdSprite1 from "@/assets/crowd-sprite-01.png";
 import crowdSprite2 from "@/assets/crowd-sprite-02.png";
 import crowdSprite3 from "@/assets/crowd-sprite-03.png";
@@ -14,6 +14,8 @@ import crowdSprite5 from "@/assets/crowd-sprite-05.png";
 import crowdSprite6 from "@/assets/crowd-sprite-06.png";
 import crowdSprite7 from "@/assets/crowd-sprite-07.png";
 import crowdSprite8 from "@/assets/crowd-sprite-08.png";
+import crowdSprite9 from "@/assets/crowd-sprite-09.png";
+import crowdSprite10 from "@/assets/crowd-sprite-10.png";
 
 interface CrowdLayerProps {
   crowdMood: number;
@@ -59,7 +61,7 @@ export const CrowdLayer = ({
     { name: "back", x: 0, z: 18, width: 20, depth: 6, density: 0.5, minMood: 0 }
   ]);
   
-  // Load all 8 crowd textures
+  // Load all 10 crowd textures
   const crowdTextures = useTexture([
     crowdSprite1,
     crowdSprite2,
@@ -69,6 +71,8 @@ export const CrowdLayer = ({
     crowdSprite6,
     crowdSprite7,
     crowdSprite8,
+    crowdSprite9,
+    crowdSprite10,
   ]);
 
   // Configure textures for pixel-perfect rendering with proper transparency
@@ -77,6 +81,32 @@ export const CrowdLayer = ({
     texture.magFilter = THREE.NearestFilter;
     texture.colorSpace = THREE.SRGBColorSpace;
   });
+
+  // Custom shader for color-keying background removal
+  const onBeforeCompile = (shader: any) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `
+      #include <map_fragment>
+      
+      // Color-key background removal
+      vec3 color = diffuseColor.rgb;
+      float brightness = (color.r + color.g + color.b) / 3.0;
+      
+      // Discard very bright pixels (white/light grey backgrounds)
+      if (brightness > 0.85 && 
+          abs(color.r - color.g) < 0.1 && 
+          abs(color.g - color.b) < 0.1) {
+        discard;
+      }
+      
+      // Discard very dark pixels (black backgrounds)
+      if (brightness < 0.15) {
+        discard;
+      }
+      `
+    );
+  };
 
   // Fetch crowd zones from stage template
   useEffect(() => {
@@ -137,7 +167,7 @@ export const CrowdLayer = ({
           seed: Math.random() * 1000,
           zone: i,
           hasMerch: Math.random() < merchPercentage,
-          spriteVariation: Math.floor(Math.random() * 8) // 0-7 for 8 sprites
+          spriteVariation: Math.floor(Math.random() * 10) // 0-9 for 10 sprites
         });
       }
     }
@@ -145,9 +175,9 @@ export const CrowdLayer = ({
     return crowd;
   }, [crowdZones, crowdMood, maxCrowdCount, densityMultiplier, merchPercentage]);
 
-  // Split crowd into 8 groups by sprite variation
+  // Split crowd into 10 groups by sprite variation
   const crowdGroups = useMemo(() => {
-    const groups: CrowdPerson[][] = [[], [], [], [], [], [], [], []];
+    const groups: CrowdPerson[][] = [[], [], [], [], [], [], [], [], [], []];
     crowdData.forEach(person => {
       groups[person.spriteVariation].push(person);
     });
@@ -251,14 +281,14 @@ export const CrowdLayer = ({
             <meshStandardMaterial
               map={crowdTextures[spriteIndex]}
               transparent={true}
-              opacity={0.95}
-              alphaTest={0.05}
+              alphaTest={0.5}
               side={THREE.DoubleSide}
               depthWrite={false}
               depthTest={true}
               toneMapped={false}
               emissive={getEmissiveColor()}
               emissiveIntensity={getEmissiveIntensity()}
+              onBeforeCompile={onBeforeCompile}
             />
           </instancedMesh>
         );
