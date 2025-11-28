@@ -14,13 +14,14 @@ import { CameraRig } from "./CameraRig";
 import { StageEffects } from "./StageEffects";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
+import { usePerformanceSettings } from "@/hooks/usePerformanceSettings";
 
 interface GigViewer3DProps {
   gigId: string;
   onClose: () => void;
   previewMode?: boolean;
   previewCrowdMood?: number;
-  previewSongIntensity?: number;
+  previewIntensity?: number;
 }
 
 type GigOutcome = Database['public']['Tables']['gig_outcomes']['Row'];
@@ -44,10 +45,10 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
   // Update preview mode values
   useEffect(() => {
     if (previewMode) {
-      setCrowdMood(previewCrowdMood);
-      setSongIntensity(previewSongIntensity / 100);
+      setCrowdMood(previewCrowdMood || 50);
+      setSongIntensity((previewIntensity || 50) / 100);
     }
-  }, [previewMode, previewCrowdMood, previewSongIntensity]);
+  }, [previewMode, previewCrowdMood, previewIntensity]);
 
   // Fetch gig data (skip in preview mode)
   useEffect(() => {
@@ -116,7 +117,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
       } catch (error) {
         console.error('Error fetching gig data:', error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -173,7 +174,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <LoadingScreen />
