@@ -108,24 +108,25 @@ export default function Admin3DGigDemo() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between">
+      <div className="border-b border-border p-2 md:p-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bebas text-foreground">3D Gig Demo Viewer</h1>
-          <p className="text-sm text-muted-foreground">Test and preview 3D gig viewer configurations</p>
+          <h1 className="text-lg md:text-2xl font-bebas text-foreground">3D Gig Demo</h1>
+          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Test and preview 3D gig viewer</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={toggleFullscreen}>
-            <Maximize2 className="h-4 w-4 mr-2" />
-            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            <Maximize2 className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Control Panel */}
-        <div className="w-96 border-r border-border overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Control Panel - Horizontal scroll on mobile, vertical on desktop */}
+        <div className="lg:w-96 border-b lg:border-b-0 lg:border-r border-border overflow-x-auto lg:overflow-y-auto p-2 md:p-4">
+          <div className="flex lg:flex-col gap-2 md:gap-4 min-w-max lg:min-w-0">
           {/* Stage Template */}
-          <Card className="p-4 space-y-3">
+          <Card className="p-3 md:p-4 space-y-2 md:space-y-3 min-w-[280px] lg:min-w-0">
             <div className="flex items-center gap-2">
               <Settings className="h-4 w-4 text-primary" />
               <h3 className="font-semibold">Stage Setup</h3>
@@ -181,7 +182,7 @@ export default function Admin3DGigDemo() {
           </Card>
 
           {/* Crowd Controls */}
-          <Card className="p-4 space-y-4">
+          <Card className="p-3 md:p-4 space-y-2 md:space-y-4 min-w-[280px] lg:min-w-0">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
               <h3 className="font-semibold">Crowd Controls</h3>
@@ -228,7 +229,7 @@ export default function Admin3DGigDemo() {
           </Card>
 
           {/* Band Controls */}
-          <Card className="p-4 space-y-4">
+          <Card className="p-3 md:p-4 space-y-2 md:space-y-4 min-w-[280px] lg:min-w-0">
             <div className="flex items-center gap-2">
               <Music className="h-4 w-4 text-primary" />
               <h3 className="font-semibold">Band & Performance</h3>
@@ -304,7 +305,7 @@ export default function Admin3DGigDemo() {
           </Card>
 
           {/* Visual Controls */}
-          <Card className="p-4 space-y-4">
+          <Card className="p-3 md:p-4 space-y-2 md:space-y-4 min-w-[280px] lg:min-w-0">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
               <h3 className="font-semibold">Visual Quality</h3>
@@ -336,16 +337,16 @@ export default function Admin3DGigDemo() {
           </Card>
 
           {/* Quick Actions */}
-          <div className="space-y-2">
-            <Button onClick={resetToDefaults} variant="outline" className="w-full">
+          <div className="space-y-2 min-w-[280px] lg:min-w-0">
+            <Button onClick={resetToDefaults} variant="outline" className="w-full text-xs md:text-sm">
               <RefreshCw className="h-4 w-4 mr-2" />
-              Reset to Defaults
+              Reset
             </Button>
           </div>
 
           {/* Info Panel */}
-          <Card className="p-4 space-y-2 bg-muted/50">
-            <h4 className="font-semibold text-sm">Current State</h4>
+          <Card className="p-3 md:p-4 space-y-2 bg-muted/50 min-w-[280px] lg:min-w-0">
+            <h4 className="font-semibold text-xs md:text-sm">Current State</h4>
             <div className="text-xs space-y-1 text-muted-foreground">
               <div>• Crowd: {getMoodLabel(crowdMood)} ({crowdMood}%)</div>
               <div>• Density: {Math.round(crowdDensity * 100)}% ({maxCrowdCount} max)</div>
@@ -354,10 +355,11 @@ export default function Admin3DGigDemo() {
               <div>• Quality: {performanceTier.toUpperCase()}</div>
             </div>
           </Card>
+          </div>
         </div>
 
         {/* 3D Preview */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-[400px]">
           <GigDemoViewer
             crowdMood={crowdMood}
             bandFame={bandFame}

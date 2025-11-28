@@ -77,24 +77,29 @@ export const GigDemoViewer = ({
   };
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="relative w-full h-full bg-black touch-none">
       {/* FPS Counter */}
-      <div className="absolute top-4 right-4 z-10 bg-black/60 backdrop-blur-sm px-3 py-1 rounded text-white text-xs font-mono">
-        FPS: {fps}
+      <div className="absolute top-2 right-2 z-10 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-white text-xs font-mono">
+        {fps} FPS
       </div>
 
       {/* Info Overlay */}
-      <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-sm px-4 py-3 rounded space-y-2 text-white text-xs">
-        <div className="font-semibold">Live Preview</div>
+      <div className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-sm px-2 md:px-4 py-2 md:py-3 rounded space-y-1 md:space-y-2 text-white text-xs">
+        <div className="font-semibold hidden md:block">Live Preview</div>
         <div className="space-y-1 text-white/70">
           <div>Mood: {crowdMood}%</div>
-          <div>Section: {songSection.toUpperCase()}</div>
-          <div>Quality: {performanceTier.toUpperCase()}</div>
+          <div className="hidden sm:block">Section: {songSection.toUpperCase()}</div>
+          <div className="hidden md:block">Quality: {performanceTier.toUpperCase()}</div>
         </div>
       </div>
 
       {/* 3D Canvas */}
-      <Canvas shadows={enableShadows} gl={{ antialias: true, alpha: false }}>
+      <Canvas 
+        shadows={enableShadows} 
+        gl={{ antialias: true, alpha: false }}
+        dpr={[1, 2]}
+        camera={{ fov: 75, near: 0.1, far: 1000 }}
+      >
         <Suspense fallback={<LoadingScreen />}>
           {/* Camera with dynamic movement */}
           <CameraRig crowdMood={crowdMood} stageTemplateId={stageTemplateId} />
