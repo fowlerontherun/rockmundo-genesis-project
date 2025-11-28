@@ -3571,9 +3571,11 @@ export type Database = {
           estimated_revenue: number | null
           fan_gain: number | null
           id: string
+          last_ticket_update: string | null
           payment: number | null
           performance_calculation: Json | null
           pre_gig_forecast: Json | null
+          predicted_tickets: number | null
           promoter_id: string | null
           scheduled_date: string
           setlist_duration_minutes: number | null
@@ -3587,6 +3589,7 @@ export type Database = {
           started_at: string | null
           status: string | null
           ticket_price: number | null
+          tickets_sold: number | null
           time_slot: string | null
           tour_id: string | null
           updated_at: string | null
@@ -3603,9 +3606,11 @@ export type Database = {
           estimated_revenue?: number | null
           fan_gain?: number | null
           id?: string
+          last_ticket_update?: string | null
           payment?: number | null
           performance_calculation?: Json | null
           pre_gig_forecast?: Json | null
+          predicted_tickets?: number | null
           promoter_id?: string | null
           scheduled_date: string
           setlist_duration_minutes?: number | null
@@ -3619,6 +3624,7 @@ export type Database = {
           started_at?: string | null
           status?: string | null
           ticket_price?: number | null
+          tickets_sold?: number | null
           time_slot?: string | null
           tour_id?: string | null
           updated_at?: string | null
@@ -3635,9 +3641,11 @@ export type Database = {
           estimated_revenue?: number | null
           fan_gain?: number | null
           id?: string
+          last_ticket_update?: string | null
           payment?: number | null
           performance_calculation?: Json | null
           pre_gig_forecast?: Json | null
+          predicted_tickets?: number | null
           promoter_id?: string | null
           scheduled_date?: string
           setlist_duration_minutes?: number | null
@@ -3651,6 +3659,7 @@ export type Database = {
           started_at?: string | null
           status?: string | null
           ticket_price?: number | null
+          tickets_sold?: number | null
           time_slot?: string | null
           tour_id?: string | null
           updated_at?: string | null
@@ -10919,6 +10928,14 @@ export type Database = {
       auto_complete_travel: { Args: never; Returns: undefined }
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       calculate_chart_trends: { Args: never; Returns: undefined }
+      calculate_predicted_tickets: {
+        Args: {
+          p_band_id: string
+          p_scheduled_date: string
+          p_venue_capacity: number
+        }
+        Returns: number
+      }
       calculate_setlist_duration: {
         Args: { p_setlist_id: string }
         Returns: number
@@ -10969,6 +10986,7 @@ export type Database = {
         Returns: undefined
       }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      simulate_ticket_sales: { Args: never; Returns: undefined }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json

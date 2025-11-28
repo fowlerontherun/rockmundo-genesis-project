@@ -52,10 +52,24 @@ export const StageScene = ({ gigId }: StageSceneProps) => {
         </mesh>
       </group>
 
-      {/* Stage Lights */}
-      <pointLight position={[-3, 6, -5]} intensity={2} color="#ff00ff" />
-      <pointLight position={[0, 6, -5]} intensity={2} color="#00ff00" />
-      <pointLight position={[3, 6, -5]} intensity={2} color="#ff0000" />
+      {/* Stage Lights - More dramatic */}
+      <pointLight position={[-3, 6, -5]} intensity={3} color="#ff00ff" castShadow />
+      <pointLight position={[0, 6, -5]} intensity={3} color="#00ffff" castShadow />
+      <pointLight position={[3, 6, -5]} intensity={3} color="#ff0000" castShadow />
+      
+      {/* Rim lights */}
+      <pointLight position={[-6, 3, -3]} intensity={1.5} color="#0066ff" />
+      <pointLight position={[6, 3, -3]} intensity={1.5} color="#ff6600" />
+      
+      {/* Floor wash */}
+      <spotLight 
+        position={[0, 8, -2]} 
+        angle={0.8}
+        penumbra={0.5}
+        intensity={1.5}
+        color="#ffffff"
+        castShadow
+      />
     </group>
   );
 };

@@ -8,6 +8,7 @@ import { StageScene } from "./StageScene";
 import { CrowdLayer } from "./CrowdLayer";
 import { BandAvatars } from "./BandAvatars";
 import { LoadingScreen } from "./LoadingScreen";
+import { StageFloor } from "./StageFloor";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 
@@ -173,22 +174,56 @@ export const GigViewer3D = ({ gigId, onClose }: GigViewer3DProps) => {
             fov={75}
           />
           
-          {/* Basic Lighting */}
-          <ambientLight intensity={0.3} />
+          {/* Enhanced Lighting */}
+          <ambientLight intensity={0.2} />
+          
+          {/* Main spotlights */}
           <spotLight
-            position={[0, 10, 0]}
-            angle={0.5}
-            penumbra={0.5}
-            intensity={1}
+            position={[0, 12, 0]}
+            angle={0.6}
+            penumbra={0.3}
+            intensity={2}
             castShadow
+            shadow-mapSize={[2048, 2048]}
           />
-          <pointLight position={[-5, 5, 5]} intensity={0.5} color="#ff0000" />
-          <pointLight position={[5, 5, 5]} intensity={0.5} color="#0000ff" />
+          
+          {/* Dynamic colored stage lights */}
+          <pointLight 
+            position={[-4, 7, -5]} 
+            intensity={2.5} 
+            color="#ff00ff"
+            distance={15}
+          />
+          <pointLight 
+            position={[4, 7, -5]} 
+            intensity={2.5} 
+            color="#00ffff"
+            distance={15}
+          />
+          <pointLight 
+            position={[0, 8, -5]} 
+            intensity={3} 
+            color="#ffffff"
+            distance={12}
+          />
+          
+          {/* Crowd area lighting */}
+          <pointLight 
+            position={[-3, 3, 5]} 
+            intensity={0.8} 
+            color="#4444ff"
+          />
+          <pointLight 
+            position={[3, 3, 5]} 
+            intensity={0.8} 
+            color="#ff4444"
+          />
 
           {/* Environment */}
           <Environment preset="night" />
 
           {/* Scene Components */}
+          <StageFloor />
           <StageScene gigId={gigId} />
           <CrowdLayer crowdMood={crowdMood} />
           <BandAvatars gigId={gigId} />

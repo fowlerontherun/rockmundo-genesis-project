@@ -78,28 +78,47 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
     queryKey: ['gig-history', bandId],
     queryFn: async () => {
+      // First get gig IDs for this band
+      const { data: gigs, error: gigsError } = await supabase
+        .from('gigs')
+        .select('id')
+        .eq('band_id', bandId)
+        .eq('status', 'completed')
+        .not('completed_at', 'is', null);
+      
+      if (gigsError) {
+        console.error('Error fetching gigs:', gigsError);
+        throw gigsError;
+      }
+      
+      if (!gigs || gigs.length === 0) {
+        return [];
+      }
+      
+      const gigIds = gigs.map(g => g.id);
+      
+      // Then get outcomes with full details
       const { data, error } = await supabase
         .from('gig_outcomes')
         .select(`
           *,
-          gigs!inner(
+          gigs!gig_outcomes_gig_id_fkey(
             *,
             venues(name, capacity, location),
             setlists(name)
           )
         `)
-        .eq('gigs.band_id', bandId)
-        .eq('gigs.status', 'completed')
-        .not('gigs.completed_at', 'is', null)
+        .in('gig_id', gigIds)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching gig history:', error);
         throw error;
       }
+      
       return (data ?? []) as unknown as GigHistoryOutcome[];
     },
-    refetchInterval: 10000, // Refetch every 10 seconds to catch newly completed gigs
+    refetchInterval: 30000, // Refetch every 30 seconds
     enabled: !!bandId,
   });
 
