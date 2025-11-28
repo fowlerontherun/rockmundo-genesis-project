@@ -653,80 +653,76 @@ const Dashboard = () => {
 
             {/* Recent Activity */}
             <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
-                <Card>
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs flex items-center gap-2">
-                          <Activity className="h-3 w-3" />
-                          Recent Activity
-                        </CardTitle>
-                        {activityOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="py-3 px-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Activity className="h-4 w-4" />
+                        Recent Activity
+                      </CardTitle>
+                      {activityOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="p-3 max-h-[300px] overflow-y-auto">
+                    {activityLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
                       </div>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent className="p-2 max-h-[200px] overflow-y-auto">
-                      {activityLoading ? (
-                        <div className="space-y-1">
-                          {[1, 2, 3].map(i => <Skeleton key={i} className="h-8" />)}
-                        </div>
-                      ) : activityFeed.length === 0 ? (
-                        <p className="text-xs text-muted-foreground p-2">No recent activity.</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {activityFeed.slice(0, 3).map(activity => (
-                            <div key={activity.id} className="flex items-start gap-1.5 p-1.5 rounded bg-accent/50 text-xs">
-                              <Activity className="h-3 w-3 mt-0.5 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] line-clamp-1">{activity.message}</p>
-                                <p className="text-muted-foreground text-[10px]">
-                                  {formatDistanceToNowStrict(new Date(activity.created_at), { addSuffix: true })}
-                                </p>
-                              </div>
-                              {activity.earnings > 0 && (
-                                <Badge variant="outline" className="text-[10px] h-4 shrink-0">+${activity.earnings}</Badge>
-                              )}
+                    ) : activityFeed.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {activityFeed.slice(0, 5).map(activity => (
+                          <div key={activity.id} className="flex items-start gap-2 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                            <Activity className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{activity.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDistanceToNowStrict(new Date(activity.created_at), { addSuffix: true })}
+                              </p>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
+                            {activity.earnings > 0 && (
+                              <Badge variant="outline" className="shrink-0">+${activity.earnings}</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
               {/* Chat */}
               <Collapsible open={chatOpen} onOpenChange={setChatOpen}>
                 <Card>
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardHeader className="py-3 px-4 cursor-pointer hover:bg-accent/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-xs flex items-center gap-2">
-                          <MessageSquare className="h-3 w-3" />
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
                           Chat
                         </CardTitle>
-                        {chatOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        {chatOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <CardContent className="p-0">
-                      <Tabs value={currentTab} onValueChange={v => setCurrentTab(v as ChatScope)}>
-                        <TabsList className="w-full rounded-none h-8">
-                          <TabsTrigger value="general" className="flex-1 text-xs h-7">General</TabsTrigger>
-                          <TabsTrigger value="city" className="flex-1 text-xs h-7">Local</TabsTrigger>
+                      <Tabs value={currentTab} onValueChange={v => setCurrentTab(v as ChatScope)} className="w-full">
+                        <TabsList className="w-full rounded-none h-10 grid grid-cols-2">
+                          <TabsTrigger value="general" className="text-sm">General</TabsTrigger>
+                          <TabsTrigger value="city" className="text-sm">Local</TabsTrigger>
                         </TabsList>
-                        <div className="p-2 max-h-[250px] overflow-y-auto">
-                          <TabsContent value="general" className="m-0">
-                            <div className="text-xs">
-                              <RealtimeChatPanel channelKey="general" />
-                            </div>
+                        <div className="p-3">
+                          <TabsContent value="general" className="m-0 min-h-[250px]">
+                            <RealtimeChatPanel channelKey="general" />
                           </TabsContent>
-                          <TabsContent value="city" className="m-0">
-                            <div className="text-xs">
-                              <RealtimeChatPanel channelKey={deriveCityChannel(currentCity?.id)} />
-                            </div>
+                          <TabsContent value="city" className="m-0 min-h-[250px]">
+                            <RealtimeChatPanel channelKey={deriveCityChannel(currentCity?.id)} />
                           </TabsContent>
                         </div>
                       </Tabs>
@@ -740,45 +736,115 @@ const Dashboard = () => {
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-3 mt-3">
           <div className="flex justify-center">
-            <Card className="w-full max-w-md">
+            <Card className="w-full max-w-2xl">
               <CardHeader className="pb-3">
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 text-3xl font-semibold shadow-lg">
-                    {profileInitials}
+                <div className="flex flex-col items-center text-center space-y-4">
+                  {/* Profile Picture & Avatar */}
+                  <div className="flex gap-6 items-center">
+                    {/* Profile Picture */}
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 text-3xl font-semibold shadow-lg">
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} alt={displayName} className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        profileInitials
+                      )}
+                    </div>
+                    {/* Character Avatar Placeholder */}
+                    <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 border-border bg-muted/50">
+                      <Mic className="h-10 w-10 text-muted-foreground" />
+                    </div>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">{displayName}</h2>
+                    <h2 className="text-2xl font-bold">{displayName}</h2>
                     {profile.username && profile.username !== displayName && (
                       <p className="text-sm text-muted-foreground">@{profile.username}</p>
                     )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {profile.bio && <p className="text-muted-foreground text-center">{profile.bio}</p>}
+              <CardContent className="space-y-4">
+                {profile.bio && (
+                  <>
+                    <p className="text-muted-foreground text-center">{profile.bio}</p>
+                    <Separator />
+                  </>
+                )}
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                    <Cake className="h-5 w-5 mb-1 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Age</span>
+                    <span className="text-lg font-semibold">{profile.age ?? 16}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                    <Users className="h-5 w-5 mb-1 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Gender</span>
+                    <span className="text-sm font-medium capitalize">{(profile as any).gender ?? 'unspecified'}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                    <Star className="h-5 w-5 mb-1 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Fame</span>
+                    <span className="text-lg font-semibold">{profile.fame ?? 0}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                    <Users className="h-5 w-5 mb-1 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Fans</span>
+                    <span className="text-lg font-semibold">{profile.fans ?? 0}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                    <DollarSign className="h-5 w-5 mb-1 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Cash</span>
+                    <span className="text-lg font-semibold">${profile.cash ?? 0}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                    <Clock className="h-5 w-5 mb-1 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Hours Played</span>
+                    <span className="text-lg font-semibold">{(profile as any).total_hours_played ?? 0}</span>
+                  </div>
+                </div>
+
                 <Separator />
+
+                {/* Health & Energy */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Health</span>
+                    <span className="text-sm font-medium">Health</span>
                     <Badge variant="outline">{profile.health ?? 100}%</Badge>
                   </div>
+                  <Progress value={profile.health ?? 100} className="h-2" />
+                  
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Energy</span>
+                    <span className="text-sm font-medium">Energy</span>
                     <Badge variant="outline">{profile.energy ?? 100}%</Badge>
                   </div>
+                  <Progress value={profile.energy ?? 100} className="h-2" />
+                </div>
+
+                <Separator />
+
+                {/* Meta Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
                   {currentCityLabel && (
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      <span className="text-muted-foreground">{currentCityLabel}</span>
+                      <span>Location: {currentCityLabel}</span>
                     </div>
                   )}
                   {joinedDate && (
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center gap-2">
                       <CalendarDays className="h-4 w-4" />
-                      <span className="text-muted-foreground">Joined {joinedDate}</span>
+                      <span>Joined {joinedDate}</span>
+                    </div>
+                  )}
+                  {profile.updated_at && (
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      <span>Last active {formatDistanceToNowStrict(new Date(profile.updated_at), { addSuffix: true })}</span>
                     </div>
                   )}
                 </div>
+
                 <Button asChild variant="outline" size="sm" className="w-full">
                   <Link to="/my-character/edit">Edit Profile</Link>
                 </Button>
@@ -884,57 +950,44 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Skills */}
+          {/* Skills with XP */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Guitar className="h-4 w-4" />
-                Skill Training
+                Skills Progress
               </CardTitle>
+              <CardDescription className="text-xs">Skills you've awarded XP to</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {trackedSkillProgress.length > 0 ? (
-                <>
-                  <div className="space-y-2 text-xs">
-                    <Label htmlFor="skill-select">Choose skill</Label>
-                    <Select value={selectedSkill} onValueChange={setSelectedSkill}>
-                      <SelectTrigger id="skill-select" className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {trackedSkillProgress.map((entry) => (
-                          <SelectItem key={entry.skill_slug} value={entry.skill_slug} className="text-xs">
-                            {formatSkillName(entry.skill_slug)} (Lvl {entry.current_level})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      value={skillXpAmount}
-                      onChange={(e) => {
-                        const parsed = Number(e.target.value);
-                        setSkillXpAmount(Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : DEFAULT_SKILL_SPEND);
-                      }}
-                      className="h-8 w-20 text-xs"
-                      disabled={!hasSpendableXp}
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleSpendSkill}
-                      disabled={!hasSpendableXp || skillXpAmount <= 0 || xpBalance < skillXpAmount || skillSpendPending}
-                      className="h-8 text-xs flex-1"
-                    >
-                      {skillSpendPending ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : null}
-                      Train Skill
-                    </Button>
-                  </div>
-                </>
+            <CardContent>
+              {skills && Object.entries(skills).filter(([key, value]) => 
+                !['id', 'user_id', 'created_at', 'updated_at'].includes(key) && typeof value === 'number' && value > 0
+              ).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(skills)
+                    .filter(([key, value]) => 
+                      !['id', 'user_id', 'created_at', 'updated_at'].includes(key) && typeof value === 'number' && value > 0
+                    )
+                    .map(([skillKey, level]) => {
+                      const numericLevel = typeof level === 'number' ? level : 0;
+                      return (
+                        <div key={skillKey} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{formatSkillName(skillKey)}</span>
+                            <Badge variant="secondary" className="text-xs">Lvl {numericLevel}</Badge>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-secondary">
+                            <div
+                              className="h-2 rounded-full bg-primary transition-all"
+                              style={{ width: `${Math.min(100, (numericLevel / 100) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               ) : (
-                <p className="text-xs text-muted-foreground">No tracked skills yet.</p>
+                <p className="text-xs text-muted-foreground">No skills trained yet. Start training skills through activities!</p>
               )}
             </CardContent>
           </Card>

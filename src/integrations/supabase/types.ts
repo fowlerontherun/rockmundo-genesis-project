@@ -7034,12 +7034,14 @@ export type Database = {
           experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
+          gender: string | null
           health: number
           id: string
           last_health_update: string | null
           last_weekly_bonus_at: string | null
           level: number | null
           rest_required_until: string | null
+          total_hours_played: number | null
           updated_at: string | null
           user_id: string
           username: string
@@ -7061,12 +7063,14 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          gender?: string | null
           health?: number
           id?: string
           last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
           rest_required_until?: string | null
+          total_hours_played?: number | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -7088,12 +7092,14 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          gender?: string | null
           health?: number
           id?: string
           last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
           rest_required_until?: string | null
+          total_hours_played?: number | null
           updated_at?: string | null
           user_id?: string
           username?: string
