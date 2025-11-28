@@ -1,5 +1,6 @@
 import { useTexture } from '@react-three/drei';
 import { useMemo } from 'react';
+import * as THREE from 'three';
 
 // Import all generated textures
 import stageFloorWood from '@/assets/textures/floors/stage-floor-wood.png';
@@ -101,11 +102,11 @@ export function useStageTextures(
   // Configure textures
   const configuredTextures = useMemo(() => {
     if (floorTexture) {
-      floorTexture.wrapS = floorTexture.wrapT = 1000; // RepeatWrapping
+      floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
       floorTexture.repeat.set(4, 4);
     }
     if (backdropTexture) {
-      backdropTexture.wrapS = backdropTexture.wrapT = 1000; // RepeatWrapping
+      backdropTexture.wrapS = backdropTexture.wrapT = THREE.RepeatWrapping;
       backdropTexture.repeat.set(2, 2);
     }
     return { floorTexture, backdropTexture };
