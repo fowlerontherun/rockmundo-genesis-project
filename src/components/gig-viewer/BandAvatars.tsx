@@ -2,11 +2,11 @@ import { useRef, useState, useEffect } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { Mesh, SpotLight, TextureLoader } from "three";
 import { Billboard } from "./Billboard";
-import leadGuitaristTexture from "@/assets/textures/avatars/band-lead-guitarist.png";
-import rhythmGuitaristTexture from "@/assets/textures/avatars/band-rhythm-guitarist.png";
-import bassistTexture from "@/assets/textures/avatars/band-bassist.png";
-import drummerTexture from "@/assets/textures/avatars/band-drummer.png";
-import vocalistTexture from "@/assets/textures/avatars/band-vocalist.png";
+import leadGuitaristTexture from "@/assets/textures/band/lead-guitarist.png";
+import rhythmGuitaristTexture from "@/assets/textures/band/rhythm-guitarist.png";
+import bassistTexture from "@/assets/textures/band/bassist.png";
+import drummerTexture from "@/assets/textures/band/drummer.png";
+import vocalistTexture from "@/assets/textures/band/vocalist.png";
 
 interface BandAvatarsProps {
   gigId?: string;
@@ -177,13 +177,15 @@ export const BandAvatars = ({
         {/* Lead Guitarist - Billboard sprite */}
         <Billboard position={[-2, 0, 1]}>
           <mesh ref={guitarist1Ref} castShadow>
-            <planeGeometry args={[1.2, 2.4]} />
+            <planeGeometry args={[1.8, 3.6]} />
             <meshStandardMaterial 
               map={leadGuitarTexture}
               transparent
               alphaTest={0.1}
               emissive="#ff6b35" 
               emissiveIntensity={0.15}
+              roughness={0.8}
+              metalness={0.2}
             />
           </mesh>
         </Billboard>
@@ -191,13 +193,15 @@ export const BandAvatars = ({
         {/* Rhythm Guitarist - Billboard sprite */}
         <Billboard position={[2, 0, 1]}>
           <mesh ref={guitarist2Ref} castShadow>
-            <planeGeometry args={[1.2, 2.4]} />
+            <planeGeometry args={[1.8, 3.6]} />
             <meshStandardMaterial 
               map={rhythmGuitarTexture}
               transparent
               alphaTest={0.1}
               emissive="#004e89" 
               emissiveIntensity={0.15}
+              roughness={0.8}
+              metalness={0.2}
             />
           </mesh>
         </Billboard>
@@ -205,13 +209,15 @@ export const BandAvatars = ({
         {/* Bassist - Billboard sprite */}
         <Billboard position={[-4, 0, 0.5]}>
           <mesh ref={bassistRef} castShadow>
-            <planeGeometry args={[1.2, 2.4]} />
+            <planeGeometry args={[1.8, 3.6]} />
             <meshStandardMaterial 
               map={bassTexture}
               transparent
               alphaTest={0.1}
               emissive="#00a878" 
               emissiveIntensity={0.15}
+              roughness={0.8}
+              metalness={0.2}
             />
           </mesh>
         </Billboard>
@@ -219,13 +225,15 @@ export const BandAvatars = ({
         {/* Drummer - Billboard sprite (larger for visibility) */}
         <Billboard position={[0, 0.2, -1]}>
           <mesh ref={drummerRef} castShadow>
-            <planeGeometry args={[1.5, 2.0]} />
+            <planeGeometry args={[2.2, 3.0]} />
             <meshStandardMaterial 
               map={drumTexture}
               transparent
               alphaTest={0.1}
               emissive="#f95738" 
               emissiveIntensity={0.15}
+              roughness={0.8}
+              metalness={0.2}
             />
           </mesh>
         </Billboard>
@@ -233,13 +241,15 @@ export const BandAvatars = ({
         {/* Vocalist - Billboard sprite */}
         <Billboard position={[0, 0, 2]}>
           <mesh ref={vocalistRef} castShadow>
-            <planeGeometry args={[1.2, 2.4]} />
+            <planeGeometry args={[1.8, 3.6]} />
             <meshStandardMaterial 
               map={vocalTexture}
               transparent
               alphaTest={0.1}
               emissive="#ff00ff" 
               emissiveIntensity={0.2}
+              roughness={0.8}
+              metalness={0.2}
             />
           </mesh>
         </Billboard>

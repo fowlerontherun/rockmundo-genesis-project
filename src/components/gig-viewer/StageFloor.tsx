@@ -1,7 +1,7 @@
-import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { Mesh } from "three";
-import { useStageTextures } from "@/hooks/useStageTextures";
+import { useLoader } from '@react-three/fiber';
+import { TextureLoader } from 'three';
+import venueFloorTexture from "@/assets/textures/venue/venue-floor-concrete.png";
+import stageBackdropTexture from "@/assets/textures/venue/stage-backdrop-led.png";
 
 interface StageFloorProps {
   floorType?: string;
@@ -9,96 +9,52 @@ interface StageFloorProps {
 }
 
 export const StageFloor = ({ floorType = 'wood', backdropType = 'curtain-black' }: StageFloorProps) => {
-  const floorRef = useRef<Mesh>(null);
-  const { floorTexture, backdropTexture } = useStageTextures(floorType, backdropType);
-
-  // Don't render until textures are loaded
-  if (!floorTexture || !backdropTexture) {
-    return (
-      <>
-        {/* Fallback floor without textures */}
-        <mesh position={[0, 0, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[30, 30]} />
-          <meshStandardMaterial 
-            color="#1a0033"
-            emissive="#1a0033"
-            emissiveIntensity={0.1}
-            roughness={0.8}
-            metalness={0.2}
-          />
-        </mesh>
-        
-        <mesh position={[0, 0.05, -5]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[12, 6]} />
-          <meshStandardMaterial 
-            color="#330066"
-            emissive="#330066"
-            emissiveIntensity={0.15}
-            roughness={0.6}
-            metalness={0.4}
-          />
-        </mesh>
-        
-        <mesh position={[0, 4, -8]} receiveShadow>
-          <planeGeometry args={[14, 8]} />
-          <meshStandardMaterial 
-            color="#000000"
-            roughness={0.9}
-            metalness={0.1}
-          />
-        </mesh>
-      </>
-    );
-  }
-
-  // Subtle pulsing effect
-  useFrame(({ clock }) => {
-    if (!floorRef.current) return;
-    
-    const time = clock.getElapsedTime();
-    const intensity = 0.1 + Math.sin(time * 0.5) * 0.05;
-    
-    // @ts-ignore - accessing material property
-    if (floorRef.current.material) {
-      // @ts-ignore
-      floorRef.current.material.emissiveIntensity = intensity;
-    }
-  });
+  // Load realistic venue textures
+  const venueFloor = useLoader(TextureLoader, venueFloorTexture);
+  const stageBackdrop = useLoader(TextureLoader, stageBackdropTexture);
 
   return (
     <>
-      {/* Main floor with texture */}
-      <mesh ref={floorRef} position={[0, 0, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Main venue floor with realistic concrete texture */}
+      <mesh position={[0, 0, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[30, 30]} />
         <meshStandardMaterial 
-          map={floorTexture}
-          emissive="#1a0033"
-          emissiveIntensity={0.1}
+          map={venueFloor}
+          roughness={0.95}
+          metalness={0.05}
+        />
+      </mesh>
+      
+      {/* Stage platform - elevated wooden stage */}
+      <mesh position={[0, 0.05, -5]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[12, 6]} />
+        <meshStandardMaterial 
+          color="#0a0a0a"
           roughness={0.8}
           metalness={0.2}
         />
       </mesh>
       
-      {/* Stage platform with texture */}
-      <mesh position={[0, 0.05, -5]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[12, 6]} />
-        <meshStandardMaterial 
-          map={floorTexture}
-          emissive="#330066"
-          emissiveIntensity={0.15}
-          roughness={0.6}
-          metalness={0.4}
-        />
-      </mesh>
-      
-      {/* Backdrop with texture */}
+      {/* Backdrop with realistic stage backdrop texture */}
       <mesh position={[0, 4, -8]} receiveShadow>
         <planeGeometry args={[14, 8]} />
         <meshStandardMaterial 
-          map={backdropTexture}
-          roughness={0.9}
-          metalness={0.1}
+          map={stageBackdrop}
+          roughness={0.7}
+          metalness={0.4}
+          emissive="#0a1a3a"
+          emissiveIntensity={0.2}
         />
+      </mesh>
+
+      {/* Side walls for venue depth */}
+      <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
+        <planeGeometry args={[15, 5]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.95} />
+      </mesh>
+      <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
+        <planeGeometry args={[15, 5]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.95} />
       </mesh>
     </>
   );

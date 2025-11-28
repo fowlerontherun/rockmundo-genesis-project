@@ -7,6 +7,8 @@ import { BandAvatars } from "./BandAvatars";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageLighting } from "./StageLighting";
 import { CameraRig } from "./CameraRig";
+import { StageFloor } from './StageFloor';
+import { StageEquipment } from './StageEquipment';
 import { StageEffects } from "./StageEffects";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
@@ -124,39 +126,11 @@ export const GigDemoViewer = ({
           {/* Environment */}
           <Environment preset="night" />
 
-          {/* Simple floor - NO TEXTURES */}
-          <mesh position={[0, 0, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[30, 30]} />
-            <meshStandardMaterial 
-              color="#1a0033"
-              emissive="#1a0033"
-              emissiveIntensity={0.1}
-              roughness={0.8}
-              metalness={0.2}
-            />
-          </mesh>
-          
-          {/* Stage platform - NO TEXTURES */}
-          <mesh position={[0, 0.05, -5]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[12, 6]} />
-            <meshStandardMaterial 
-              color="#330066"
-              emissive="#330066"
-              emissiveIntensity={0.15}
-              roughness={0.6}
-              metalness={0.4}
-            />
-          </mesh>
-          
-          {/* Backdrop - NO TEXTURES */}
-          <mesh position={[0, 4, -8]} receiveShadow>
-            <planeGeometry args={[14, 8]} />
-            <meshStandardMaterial 
-              color="#000000"
-              roughness={0.9}
-              metalness={0.1}
-            />
-          </mesh>
+          {/* Use proper StageFloor component with realistic textures */}
+          <StageFloor floorType="concrete" backdropType="led-screen" />
+
+          {/* Stage Equipment */}
+          <StageEquipment />
 
           <StageScene stageTemplateId={stageTemplateId} />
           
