@@ -14,7 +14,6 @@ import { CalendarIcon } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { createScheduledActivity } from '@/hooks/useActivityBooking';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
 type Band = Database['public']['Tables']['bands']['Row'];
@@ -83,7 +82,7 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
       const scheduledStart = new Date(selectedDate);
       scheduledStart.setHours(selectedTime, 0, 0, 0);
       
-      const rehearsalId = await onConfirm(
+      await onConfirm(
         selectedRoomId,
         selectedDuration,
         practiceType === 'song' ? selectedSongId : null,
@@ -91,30 +90,9 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
         scheduledStart
       );
       
-      // Create schedule entry
-      if (rehearsalId) {
-        const scheduledEnd = new Date(scheduledStart);
-        scheduledEnd.setHours(scheduledStart.getHours() + selectedDuration, 0, 0, 0);
-        
-        try {
-          await createScheduledActivity({
-            activityType: 'rehearsal',
-            scheduledStart,
-            scheduledEnd,
-            title: `Band Rehearsal - ${selectedRoom?.name}`,
-            location: selectedRoom?.name,
-            linkedRehearsalId: rehearsalId as string,
-            metadata: {
-              roomId: selectedRoomId,
-              duration: selectedDuration,
-              songId: practiceType === 'song' ? selectedSongId : null,
-              setlistId: practiceType === 'setlist' ? selectedSetlistId : null,
-            },
-          });
-        } catch (error) {
-          console.error('Failed to create schedule entry:', error);
-        }
-      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to book rehearsal:', error);
     } finally {
       setBooking(false);
     }
