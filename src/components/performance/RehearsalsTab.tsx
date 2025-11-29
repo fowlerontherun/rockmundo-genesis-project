@@ -9,6 +9,7 @@ import { Music2, Plus } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { RehearsalBookingDialog } from './RehearsalBookingDialog';
 import { format } from 'date-fns';
+import { useRehearsalBooking } from '@/hooks/useRehearsalBooking';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
 type BandRehearsal = Database['public']['Tables']['band_rehearsals']['Row'] & {
@@ -20,6 +21,7 @@ type Band = Database['public']['Tables']['bands']['Row'];
 export function RehearsalsTab() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { bookRehearsal, isBooking } = useRehearsalBooking();
   const [loading, setLoading] = useState(true);
   const [userBand, setUserBand] = useState<Band | null>(null);
   const [rehearsals, setRehearsals] = useState<BandRehearsal[]>([]);
@@ -177,56 +179,32 @@ export function RehearsalsTab() {
       return;
     }
 
+    const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
+    const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
+    const familiarityGained = duration * 60;
+
     try {
-      const endTime = new Date(scheduledStart.getTime() + duration * 60 * 60 * 1000);
-      const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
-      const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
-      const familiarityGained = duration * 60;
-
-      const { data: rehearsalData, error: rehearsalError } = await supabase
-        .from('band_rehearsals')
-        .insert([{
-          band_id: userBand.id,
-          rehearsal_room_id: roomId,
-          duration_hours: duration,
-          scheduled_start: scheduledStart.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          total_cost: totalCost,
-          chemistry_gain: chemistryGain,
-          xp_earned: xpEarned,
-          selected_song_id: songId,
-          familiarity_gained: familiarityGained,
-          status: 'in_progress',
-        }])
-        .select('id')
-        .single();
-
-      if (rehearsalError) throw rehearsalError;
-
-      const { error: balanceError } = await supabase
-        .from('bands')
-        .update({ band_balance: currentBalance - totalCost })
-        .eq('id', userBand.id);
-
-      if (balanceError) throw balanceError;
-
-      toast({
-        title: 'Rehearsal Booked!',
-        description: `Your band is rehearsing for ${duration} hours`,
+      const rehearsalId = await bookRehearsal({
+        bandId: userBand.id,
+        roomId,
+        duration,
+        songId,
+        setlistId,
+        scheduledStart,
+        totalCost,
+        chemistryGain,
+        xpEarned,
+        familiarityGained,
+        roomName: room.name,
+        roomLocation: room.location || '',
       });
 
       setShowBookingDialog(false);
       await loadData();
-      
-      // Return rehearsal ID for schedule integration
-      return rehearsalData?.id;
+      return rehearsalId;
     } catch (error) {
-      console.error('Error booking rehearsal:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to book rehearsal',
-        variant: 'destructive',
-      });
+      // Error handling done in hook
+      return;
     }
   };
 

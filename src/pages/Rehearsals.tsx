@@ -11,9 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { RehearsalBookingDialog } from "@/components/performance/RehearsalBookingDialog";
-import { PlanRehearsalDialog } from "@/components/performance/PlanRehearsalDialog";
 import { useToast } from "@/hooks/use-toast";
-import { createScheduledActivity } from "@/hooks/useActivityBooking";
+import { useRehearsalBooking } from "@/hooks/useRehearsalBooking";
 
 interface Rehearsal {
   id: string;
@@ -44,9 +43,9 @@ const Rehearsals = () => {
   const { profile } = useGameData();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { bookRehearsal, isBooking } = useRehearsalBooking();
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">("upcoming");
   const [showBookingDialog, setShowBookingDialog] = useState(false);
-  const [showPlanDialog, setShowPlanDialog] = useState(false);
   const [selectedBand, setSelectedBand] = useState<any>(null);
 
   // Fetch all user's bands
@@ -61,7 +60,9 @@ const Rehearsals = () => {
           band_id,
           bands (
             id,
-            name
+            name,
+            band_balance,
+            chemistry_level
           )
         `)
         .eq("user_id", profile.id);
@@ -209,65 +210,32 @@ const Rehearsals = () => {
       return;
     }
 
-    const scheduledEnd = new Date(scheduledStart);
-    scheduledEnd.setHours(scheduledEnd.getHours() + duration);
+    const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
+    const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
+    const familiarityGained = duration * 60;
 
-    const { data, error } = await supabase
-      .from("band_rehearsals")
-      .insert({
-        band_id: selectedBand.id,
-        rehearsal_room_id: roomId,
-        duration_hours: duration,
-        total_cost: totalCost,
-        scheduled_start: scheduledStart.toISOString(),
-        scheduled_end: scheduledEnd.toISOString(),
-        selected_song_id: songId,
-        status: "scheduled",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Deduct cost from band balance
-    await supabase
-      .from("bands")
-      .update({ band_balance: currentBalance - totalCost })
-      .eq("id", selectedBand.id);
-
-    // Create scheduled activity
-    await createScheduledActivity({
-      activityType: "rehearsal",
-      scheduledStart,
-      scheduledEnd,
-      title: `Band Rehearsal - ${room.name}`,
-      location: room.location,
-      linkedRehearsalId: data.id,
-      metadata: {
-        rehearsalId: data.id,
+    try {
+      const rehearsalId = await bookRehearsal({
         bandId: selectedBand.id,
         roomId,
+        duration,
         songId,
         setlistId,
-      },
-    });
+        scheduledStart,
+        totalCost,
+        chemistryGain,
+        xpEarned,
+        familiarityGained,
+        roomName: room.name,
+        roomLocation: room.location || '',
+      });
 
-    toast({
-      title: "Rehearsal Booked!",
-      description: `${duration}-hour rehearsal scheduled at ${room.name}`,
-    });
-
-    queryClient.invalidateQueries({ queryKey: ["all-rehearsals"] });
-    queryClient.invalidateQueries({ queryKey: ["user-bands"] });
-    setShowBookingDialog(false);
-    return data.id;
+      setShowBookingDialog(false);
+      return rehearsalId;
+    } catch (error) {
+      // Error handling done in hook
+      return;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -315,22 +283,10 @@ const Rehearsals = () => {
                             setSelectedBand(band);
                             setShowBookingDialog(true);
                           }}
-                          className="flex-1 sm:flex-none"
+                          className="w-full sm:w-auto"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Book Now
-                        </Button>
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedBand(band);
-                            setShowPlanDialog(true);
-                          }}
-                          className="flex-1 sm:flex-none"
-                        >
-                          <CalendarPlus className="mr-2 h-4 w-4" />
-                          Plan Session
+                          Book Rehearsal
                         </Button>
                       </div>
                     </div>
@@ -545,17 +501,6 @@ const Rehearsals = () => {
           songs={bandSongs}
           onConfirm={handleBookRehearsal}
           onClose={() => setShowBookingDialog(false)}
-        />
-      )}
-
-      {showPlanDialog && selectedBand && (
-        <PlanRehearsalDialog
-          open={showPlanDialog}
-          onClose={() => setShowPlanDialog(false)}
-          band={selectedBand}
-          rooms={rooms}
-          songs={bandSongs}
-          onConfirm={handleBookRehearsal}
         />
       )}
     </div>
