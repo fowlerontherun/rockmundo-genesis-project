@@ -423,6 +423,114 @@ export type Database = {
           },
         ]
       }
+      avatar_clothing_items: {
+        Row: {
+          category: string
+          color_variants: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_premium: boolean | null
+          name: string
+          price: number | null
+          rarity: string | null
+          shape_config: Json | null
+        }
+        Insert: {
+          category: string
+          color_variants?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean | null
+          name: string
+          price?: number | null
+          rarity?: string | null
+          shape_config?: Json | null
+        }
+        Update: {
+          category?: string
+          color_variants?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean | null
+          name?: string
+          price?: number | null
+          rarity?: string | null
+          shape_config?: Json | null
+        }
+        Relationships: []
+      }
+      avatar_face_options: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          feature_type: string
+          id: string
+          is_premium: boolean | null
+          name: string
+          price: number | null
+          shape_config: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          feature_type: string
+          id?: string
+          is_premium?: boolean | null
+          name: string
+          price?: number | null
+          shape_config?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          feature_type?: string
+          id?: string
+          is_premium?: boolean | null
+          name?: string
+          price?: number | null
+          shape_config?: Json | null
+        }
+        Relationships: []
+      }
+      avatar_hair_styles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_premium: boolean | null
+          name: string
+          preview_color: string | null
+          price: number | null
+          rarity: string | null
+          style_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean | null
+          name: string
+          preview_color?: string | null
+          price?: number | null
+          rarity?: string | null
+          style_key: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean | null
+          name?: string
+          preview_color?: string | null
+          price?: number | null
+          rarity?: string | null
+          style_key?: string
+        }
+        Relationships: []
+      }
       band_activity_lockouts: {
         Row: {
           activity_type: string
@@ -2728,6 +2836,53 @@ export type Database = {
           video_url?: string
         }
         Relationships: []
+      }
+      equipment_3d_models: {
+        Row: {
+          color_accent: string | null
+          color_primary: string | null
+          color_secondary: string | null
+          created_at: string | null
+          equipment_id: string
+          id: string
+          model_type: string
+          rarity_effect: string | null
+          shape_config: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          color_accent?: string | null
+          color_primary?: string | null
+          color_secondary?: string | null
+          created_at?: string | null
+          equipment_id: string
+          id?: string
+          model_type: string
+          rarity_effect?: string | null
+          shape_config?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          color_accent?: string | null
+          color_primary?: string | null
+          color_secondary?: string | null
+          created_at?: string | null
+          equipment_id?: string
+          id?: string
+          model_type?: string
+          rarity_effect?: string | null
+          shape_config?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_3d_models_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: true
+            referencedRelation: "equipment_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       equipment_catalog: {
         Row: {
@@ -5788,6 +5943,44 @@ export type Database = {
           },
         ]
       }
+      player_avatar_config: {
+        Row: {
+          body_type: string | null
+          created_at: string | null
+          height: number | null
+          id: string
+          profile_id: string
+          skin_tone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          body_type?: string | null
+          created_at?: string | null
+          height?: number | null
+          id?: string
+          profile_id: string
+          skin_tone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          body_type?: string | null
+          created_at?: string | null
+          height?: number | null
+          id?: string
+          profile_id?: string
+          skin_tone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_avatar_config_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_birthday_rewards: {
         Row: {
           cash_awarded: number
@@ -6309,6 +6502,41 @@ export type Database = {
             columns: ["custom_design_id"]
             isOneToOne: false
             referencedRelation: "tshirt_designs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_owned_skins: {
+        Row: {
+          id: string
+          is_equipped: boolean | null
+          item_id: string
+          item_type: string
+          profile_id: string
+          purchased_at: string | null
+        }
+        Insert: {
+          id?: string
+          is_equipped?: boolean | null
+          item_id: string
+          item_type: string
+          profile_id: string
+          purchased_at?: string | null
+        }
+        Update: {
+          id?: string
+          is_equipped?: boolean | null
+          item_id?: string
+          item_type?: string
+          profile_id?: string
+          purchased_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_owned_skins_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
