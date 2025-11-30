@@ -1,7 +1,4 @@
-import { useLoader } from '@react-three/fiber';
-import { TextureLoader } from 'three';
-import venueFloorTexture from "@/assets/textures/venue/venue-floor-concrete.png";
-import stageBackdropTexture from "@/assets/textures/venue/stage-backdrop-led.png";
+import { useStageTextures } from '@/hooks/useStageTextures';
 
 interface StageFloorProps {
   floorType?: string;
@@ -9,9 +6,8 @@ interface StageFloorProps {
 }
 
 export const StageFloor = ({ floorType = 'wood', backdropType = 'curtain-black' }: StageFloorProps) => {
-  // Load realistic venue textures
-  const venueFloor = useLoader(TextureLoader, venueFloorTexture);
-  const stageBackdrop = useLoader(TextureLoader, stageBackdropTexture);
+  // Load textures using hook
+  const { floorTexture, backdropTexture } = useStageTextures(floorType, backdropType);
 
   return (
     <>
@@ -19,7 +15,7 @@ export const StageFloor = ({ floorType = 'wood', backdropType = 'curtain-black' 
       <mesh position={[0, 0, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[30, 30]} />
         <meshStandardMaterial 
-          map={venueFloor}
+          map={floorTexture}
           roughness={0.95}
           metalness={0.05}
         />
@@ -39,7 +35,7 @@ export const StageFloor = ({ floorType = 'wood', backdropType = 'curtain-black' 
       <mesh position={[0, 4, -8]} receiveShadow>
         <planeGeometry args={[14, 8]} />
         <meshStandardMaterial 
-          map={stageBackdrop}
+          map={backdropTexture}
           roughness={0.7}
           metalness={0.4}
           emissive="#0a1a3a"

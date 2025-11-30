@@ -10,6 +10,7 @@ import { GigDemoViewer } from "@/components/gig-viewer/GigDemoViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Music, Users, Sparkles, Settings, RefreshCw, Maximize2, Camera } from "lucide-react";
+import { type VenueTheme } from "@/components/gig-viewer/VenueEnvironment";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
@@ -39,6 +40,7 @@ export default function Admin3DGigDemo() {
   const [timeOfDay, setTimeOfDay] = useState<'day' | 'sunset' | 'night'>('night');
   const [cameraMode, setCameraMode] = useState<CameraMode>('pov');
   const [zoomLevel, setZoomLevel] = useState(13);
+  const [venueTheme, setVenueTheme] = useState<VenueTheme>('default');
 
   // Fetch stage templates
   const { data: stageTemplates } = useQuery({
@@ -236,6 +238,33 @@ export default function Admin3DGigDemo() {
                 </p>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Venue Theme</Label>
+              <Select value={venueTheme} onValueChange={(v) => setVenueTheme(v as VenueTheme)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">🏛️ Default (No Theme)</SelectItem>
+                  <SelectItem value="beach">🏖️ Beach</SelectItem>
+                  <SelectItem value="festival">🎪 Festival</SelectItem>
+                  <SelectItem value="opera">🎭 Opera House</SelectItem>
+                  <SelectItem value="club">🎵 Club</SelectItem>
+                  <SelectItem value="amphitheater">🏟️ Amphitheater</SelectItem>
+                  <SelectItem value="rooftop">🌆 Rooftop</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {venueTheme === 'beach' && 'Palm trees, sand, and ocean'}
+                {venueTheme === 'festival' && 'Trees, grass, and festival tents'}
+                {venueTheme === 'opera' && 'Ornate architecture and balconies'}
+                {venueTheme === 'club' && 'Intimate club with neon signs and bar'}
+                {venueTheme === 'amphitheater' && 'Stone seating and natural rocks'}
+                {venueTheme === 'rooftop' && 'City skyline and urban fixtures'}
+                {venueTheme === 'default' && 'Basic stage without themed elements'}
+              </p>
+            </div>
           </Card>
 
           {/* Crowd Controls */}
@@ -493,6 +522,7 @@ export default function Admin3DGigDemo() {
             timeOfDay={timeOfDay}
             cameraMode={cameraMode}
             zoomLevel={zoomLevel}
+            venueTheme={venueTheme}
           />
         </div>
       </div>

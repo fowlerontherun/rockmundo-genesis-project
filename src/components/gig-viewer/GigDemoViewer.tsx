@@ -13,6 +13,7 @@ import { StageEquipment } from './StageEquipment';
 import { StageEffects } from "./StageEffects";
 import { LightCone } from "./LightCone";
 import { CrowdBarrier } from "./CrowdBarrier";
+import { VenueEnvironment, type VenueTheme } from './VenueEnvironment';
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
@@ -37,6 +38,7 @@ interface GigDemoViewerProps {
   timeOfDay?: 'day' | 'sunset' | 'night';
   cameraMode?: CameraMode;
   zoomLevel?: number;
+  venueTheme?: VenueTheme;
 }
 
 export const GigDemoViewer = ({
@@ -58,6 +60,7 @@ export const GigDemoViewer = ({
   timeOfDay = 'night',
   cameraMode = 'pov',
   zoomLevel = 13,
+  venueTheme = 'default',
 }: GigDemoViewerProps) => {
   const [fps, setFps] = useState(60);
 
@@ -161,6 +164,9 @@ export const GigDemoViewer = ({
 
           {/* Stage floor and backdrop */}
           <StageFloor floorType={floorType} backdropType={backdropType} />
+
+          {/* Venue-themed environment elements */}
+          <VenueEnvironment venueTheme={venueTheme} />
 
           {/* Stage Equipment */}
           <StageEquipment />
