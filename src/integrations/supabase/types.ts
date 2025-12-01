@@ -3240,6 +3240,89 @@ export type Database = {
         }
         Relationships: []
       }
+      festival_participants: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          event_id: string
+          id: string
+          payout_amount: number | null
+          performance_date: string | null
+          slot_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          event_id: string
+          id?: string
+          payout_amount?: number | null
+          performance_date?: string | null
+          slot_type: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          payout_amount?: number | null
+          performance_date?: string | null
+          slot_type?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_participants_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_revenue_streams: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          event_id: string
+          id: string
+          stream_type: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          event_id: string
+          id?: string
+          stream_type: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          stream_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_revenue_streams_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string

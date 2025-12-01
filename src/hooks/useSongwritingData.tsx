@@ -392,23 +392,31 @@ export const useSongwritingData = (userId?: string | null) => {
       
       const xpEarned = Math.floor((musicGain + lyricsGain) / 10);
       
-      // Update session
-      const { error: sessionUpdateError } = await supabase
+      // Update session - explicitly set both timestamp fields
+      const sessionUpdatePayload = {
+        session_end: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        music_progress_gained: musicGain,
+        lyrics_progress_gained: lyricsGain,
+        xp_earned: xpEarned,
+        notes: notes || null,
+      };
+      
+      console.log('[completeSession] Updating session with payload:', sessionUpdatePayload);
+      
+      const { data: updatedSession, error: sessionUpdateError } = await supabase
         .from('songwriting_sessions')
-        .update({
-          session_end: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-          music_progress_gained: musicGain,
-          lyrics_progress_gained: lyricsGain,
-          xp_earned: xpEarned,
-          notes: notes || null,
-        })
-        .eq('id', sessionId);
+        .update(sessionUpdatePayload)
+        .eq('id', sessionId)
+        .select()
+        .single();
       
       if (sessionUpdateError) {
-        console.error('Failed to update songwriting session:', sessionUpdateError);
+        console.error('[completeSession] Failed to update songwriting session:', sessionUpdateError);
         throw sessionUpdateError;
       }
+      
+      console.log('[completeSession] Session updated successfully:', updatedSession);
       
       // Update project progress
       const { data: project } = await supabase
