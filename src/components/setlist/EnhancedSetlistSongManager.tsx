@@ -83,7 +83,7 @@ export const EnhancedSetlistSongManager = ({
         throw new Error('Maximum 5 performance items per setlist');
       }
       
-      const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
+      const nextPosition = getNextPosition();
       
       console.log('[EnhancedSetlistSongManager] Adding performance item:', {
         itemId: item.id,
@@ -135,12 +135,14 @@ export const EnhancedSetlistSongManager = ({
         currentEncoreCount: encoreCount
       });
       
+      const nextPosition = getNextPosition();
+
       const { data, error } = await supabase
         .from("setlist_songs")
-        .update({ 
-          section: 'encore', 
-          position: encoreCount + 1,
-          is_encore: true 
+        .update({
+          section: 'encore',
+          position: nextPosition,
+          is_encore: true
         })
         .eq("id", setlistSongId)
         .select();
@@ -169,18 +171,20 @@ export const EnhancedSetlistSongManager = ({
   const moveToMainMutation = useMutation({
     mutationFn: async ({ setlistSongId }: { setlistSongId: string }) => {
       const mainCount = setlistSongs?.filter(s => s.section === 'main').length || 0;
-      
+
       console.log('[moveToMain] Moving item:', {
         setlistSongId,
         currentMainCount: mainCount
       });
-      
+
+      const nextPosition = getNextPosition();
+
       const { data, error } = await supabase
         .from("setlist_songs")
-        .update({ 
-          section: 'main', 
-          position: mainCount + 1,
-          is_encore: false 
+        .update({
+          section: 'main',
+          position: nextPosition,
+          is_encore: false
         })
         .eq("id", setlistSongId)
         .select();
@@ -262,10 +266,13 @@ export const EnhancedSetlistSongManager = ({
   );
   const unaddedSongs = availableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
+  const getNextPosition = () =>
+    Math.max(0, ...(setlistSongs?.map(song => song.position || 0) || [])) + 1;
+
   const handleAddSong = () => {
     if (!selectedSongId) return;
 
-    const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
+    const nextPosition = getNextPosition();
     
     addSongMutation.mutate({
       setlistId,
