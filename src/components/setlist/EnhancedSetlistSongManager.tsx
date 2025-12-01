@@ -213,10 +213,9 @@ export const EnhancedSetlistSongManager = ({
       
       const { data: bandSongs, error: bandError } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score, duration_seconds, duration_display")
+        .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id")
         .eq("band_id", bandId)
         .eq("archived", false)
-        .in("status", ["draft", "recorded"])
         .order("title");
 
       if (bandError) {
@@ -224,7 +223,7 @@ export const EnhancedSetlistSongManager = ({
         throw bandError;
       }
       
-      console.log('[EnhancedSetlistSongManager] Found band songs:', bandSongs?.length || 0);
+      console.log('[EnhancedSetlistSongManager] Found band songs:', bandSongs?.length || 0, bandSongs);
 
       const { data: bandMembers } = await supabase
         .from("band_members")
@@ -232,20 +231,19 @@ export const EnhancedSetlistSongManager = ({
         .eq("band_id", bandId);
 
       if (bandMembers && bandMembers.length > 0) {
-        const memberUserIds = bandMembers.map(m => m.user_id);
+        const memberUserIds = bandMembers.map(m => m.user_id).filter(Boolean);
         console.log('[EnhancedSetlistSongManager] Fetching member songs for users:', memberUserIds);
         
         const { data: memberSongs, error: memberError } = await supabase
           .from("songs")
-          .select("id, title, genre, quality_score, duration_seconds, duration_display")
+          .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id")
           .in("user_id", memberUserIds)
           .is("band_id", null)
           .eq("archived", false)
-          .in("status", ["draft", "recorded"])
           .order("title");
 
         if (!memberError && memberSongs) {
-          console.log('[EnhancedSetlistSongManager] Found member songs:', memberSongs.length);
+          console.log('[EnhancedSetlistSongManager] Found member songs:', memberSongs.length, memberSongs);
           const allSongs = [...(bandSongs || []), ...memberSongs];
           console.log('[EnhancedSetlistSongManager] Total available songs:', allSongs.length);
           return allSongs;
