@@ -16,7 +16,7 @@ interface ScheduleActivityDialogProps {
 const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: string; description: string }> = {
   songwriting: { path: '/songwriting', icon: Music, label: 'Songwriting', description: 'Write and compose new songs' },
   gig: { path: '/gigs', icon: Guitar, label: 'Gig Performance', description: 'Book and perform live gigs' },
-  rehearsal: { path: '/performance', icon: Users, label: 'Band Rehearsal', description: 'Practice with your band' },
+  rehearsal: { path: '/rehearsals', icon: Users, label: 'Band Rehearsal', description: 'Practice with your band' },
   busking: { path: '/performance', icon: Music, label: 'Busking', description: 'Perform on the streets for tips' },
   recording: { path: '/recording', icon: Headphones, label: 'Recording Session', description: 'Record tracks in the studio' },
   travel: { path: '/travel', icon: MapPin, label: 'Travel', description: 'Plan trips between cities' },

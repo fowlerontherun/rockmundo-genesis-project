@@ -393,7 +393,7 @@ export const useSongwritingData = (userId?: string | null) => {
       const xpEarned = Math.floor((musicGain + lyricsGain) / 10);
       
       // Update session
-      await supabase
+      const { error: sessionUpdateError } = await supabase
         .from('songwriting_sessions')
         .update({
           session_end: new Date().toISOString(),
@@ -404,6 +404,11 @@ export const useSongwritingData = (userId?: string | null) => {
           notes: notes || null,
         })
         .eq('id', sessionId);
+      
+      if (sessionUpdateError) {
+        console.error('Failed to update songwriting session:', sessionUpdateError);
+        throw sessionUpdateError;
+      }
       
       // Update project progress
       const { data: project } = await supabase

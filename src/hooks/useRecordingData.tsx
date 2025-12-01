@@ -299,7 +299,6 @@ export const useCreateRecordingSession = () => {
           quality_improvement: finalQuality - song.quality_score,
           status: 'in_progress',
           scheduled_end: scheduledEnd.toISOString(),
-          session_data: breakdown,
         })
         .select()
         .single() as any;

@@ -49,10 +49,12 @@ const Rehearsals = () => {
   const [selectedBand, setSelectedBand] = useState<any>(null);
 
   // Fetch all user's bands
-  const { data: userBands = [] } = useQuery({
+  const { data: userBands = [], isLoading: isLoadingBands, error: bandsError } = useQuery({
     queryKey: ["user-bands", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
+      
+      console.log('[Rehearsals] Fetching bands for user:', profile.id);
       
       const { data, error } = await supabase
         .from("band_members")
@@ -67,11 +69,21 @@ const Rehearsals = () => {
         `)
         .eq("user_id", profile.id);
       
-      if (error) throw error;
-      return data?.map(d => d.bands).filter(Boolean) || [];
+      if (error) {
+        console.error('[Rehearsals] Error fetching user bands:', error);
+        throw error;
+      }
+      
+      const bands = data?.map(d => d.bands).filter(Boolean) || [];
+      console.log('[Rehearsals] Found bands:', bands.length);
+      return bands;
     },
     enabled: !!profile?.id,
   });
+  
+  if (bandsError) {
+    console.error('[Rehearsals] Bands query error:', bandsError);
+  }
 
   const bandIds = userBands.map((b: any) => b.id);
 
@@ -261,9 +273,15 @@ const Rehearsals = () => {
           </p>
         </div>
         
-        {/* Prominent action card */}
-        {userBands.length > 0 && (
-          <Card className="bg-primary/5 border-primary/20">
+      {/* Prominent action card */}
+      {isLoadingBands ? (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4 text-center text-muted-foreground">
+            Loading your bands...
+          </CardContent>
+        </Card>
+      ) : userBands.length > 0 ? (
+        <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-4">
               <div className="flex flex-col gap-4">
                 <div>
@@ -293,6 +311,13 @@ const Rehearsals = () => {
                   ))}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-muted/50 border-muted">
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground mb-2">You're not in any bands yet.</p>
+              <p className="text-sm text-muted-foreground">Join or create a band to book rehearsals.</p>
             </CardContent>
           </Card>
         )}
