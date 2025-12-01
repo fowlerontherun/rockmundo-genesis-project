@@ -209,15 +209,22 @@ export const EnhancedSetlistSongManager = ({
   const { data: availableSongs } = useQuery({
     queryKey: ["band-songs", bandId],
     queryFn: async () => {
+      console.log('[EnhancedSetlistSongManager] Fetching available songs for bandId:', bandId);
+      
       const { data: bandSongs, error: bandError } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_seconds, duration_display")
         .eq("band_id", bandId)
-        .eq("archived", false) // Filter out archived songs
+        .eq("archived", false)
         .in("status", ["draft", "recorded"])
         .order("title");
 
-      if (bandError) throw bandError;
+      if (bandError) {
+        console.error('[EnhancedSetlistSongManager] Error fetching band songs:', bandError);
+        throw bandError;
+      }
+      
+      console.log('[EnhancedSetlistSongManager] Found band songs:', bandSongs?.length || 0);
 
       const { data: bandMembers } = await supabase
         .from("band_members")
@@ -226,20 +233,26 @@ export const EnhancedSetlistSongManager = ({
 
       if (bandMembers && bandMembers.length > 0) {
         const memberUserIds = bandMembers.map(m => m.user_id);
+        console.log('[EnhancedSetlistSongManager] Fetching member songs for users:', memberUserIds);
+        
         const { data: memberSongs, error: memberError } = await supabase
           .from("songs")
           .select("id, title, genre, quality_score, duration_seconds, duration_display")
           .in("user_id", memberUserIds)
           .is("band_id", null)
-          .eq("archived", false) // Filter out archived songs
+          .eq("archived", false)
           .in("status", ["draft", "recorded"])
           .order("title");
 
         if (!memberError && memberSongs) {
-          return [...(bandSongs || []), ...memberSongs];
+          console.log('[EnhancedSetlistSongManager] Found member songs:', memberSongs.length);
+          const allSongs = [...(bandSongs || []), ...memberSongs];
+          console.log('[EnhancedSetlistSongManager] Total available songs:', allSongs.length);
+          return allSongs;
         }
       }
 
+      console.log('[EnhancedSetlistSongManager] Returning only band songs:', bandSongs?.length || 0);
       return bandSongs || [];
     },
   });
