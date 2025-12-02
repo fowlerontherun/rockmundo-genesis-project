@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGameData } from "@/hooks/useGameData";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,7 @@ interface Rehearsal {
 
 const Rehearsals = () => {
   const { profile } = useGameData();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { bookRehearsal, isBooking } = useRehearsalBooking();
@@ -50,17 +52,20 @@ const Rehearsals = () => {
 
   // Fetch all user's bands using the same approach as RecordingStudio
   const { data: userBands = [], isLoading: isLoadingBands, error: bandsError } = useQuery({
-    queryKey: ["user-bands", profile?.id],
+    queryKey: ["user-bands", user?.id],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!user?.id) return [];
       
-      console.log('[Rehearsals] Fetching bands for user:', profile.id);
+      console.log('[Rehearsals] Auth user ID:', user.id);
+      console.log('[Rehearsals] Profile user_id:', profile?.user_id);
+      console.log('[Rehearsals] Profile id:', profile?.id);
+      console.log('[Rehearsals] Fetching bands for user:', user.id);
       
       // Use explicit FK relationship to avoid ambiguity
       const { data, error } = await supabase
         .from("band_members")
         .select('band_id, bands!band_members_band_id_fkey(id, name, band_balance, chemistry_level, status)')
-        .eq("user_id", profile.id)
+        .eq("user_id", user.id)
         .eq('is_touring_member', false);
       
       if (error) {
@@ -78,7 +83,7 @@ const Rehearsals = () => {
       console.log('[Rehearsals] Found bands:', bands.length, bands);
       return bands;
     },
-    enabled: !!profile?.id,
+    enabled: !!user?.id,
   });
   
   if (bandsError) {
