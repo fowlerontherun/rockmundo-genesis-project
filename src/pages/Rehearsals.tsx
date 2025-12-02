@@ -48,7 +48,7 @@ const Rehearsals = () => {
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [selectedBand, setSelectedBand] = useState<any>(null);
 
-  // Fetch all user's bands
+  // Fetch all user's bands using the same approach as RecordingStudio
   const { data: userBands = [], isLoading: isLoadingBands, error: bandsError } = useQuery({
     queryKey: ["user-bands", profile?.id],
     queryFn: async () => {
@@ -56,26 +56,26 @@ const Rehearsals = () => {
       
       console.log('[Rehearsals] Fetching bands for user:', profile.id);
       
+      // Use explicit FK relationship to avoid ambiguity
       const { data, error } = await supabase
         .from("band_members")
-        .select(`
-          band_id,
-          bands (
-            id,
-            name,
-            band_balance,
-            chemistry_level
-          )
-        `)
-        .eq("user_id", profile.id);
+        .select('band_id, bands!band_members_band_id_fkey(id, name, band_balance, chemistry_level, status)')
+        .eq("user_id", profile.id)
+        .eq('is_touring_member', false);
       
       if (error) {
         console.error('[Rehearsals] Error fetching user bands:', error);
         throw error;
       }
       
-      const bands = data?.map(d => d.bands).filter(Boolean) || [];
-      console.log('[Rehearsals] Found bands:', bands.length);
+      console.log('[Rehearsals] Raw band data:', data);
+      
+      // Extract bands objects and filter out null/undefined
+      const bands = data
+        ?.map((membership: any) => membership.bands)
+        .filter(Boolean) || [];
+      
+      console.log('[Rehearsals] Found bands:', bands.length, bands);
       return bands;
     },
     enabled: !!profile?.id,
