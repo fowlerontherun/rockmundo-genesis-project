@@ -342,9 +342,10 @@ export default function Festivals() {
 
   const { 
     festivals, 
-    festivalsLoading, 
+    festivalsLoading,
     participations,
     participationsLoading,
+    fetchFestivalLineup,
     applyToFestival,
     withdrawFromFestival,
     updateSetlist,
