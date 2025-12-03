@@ -14,6 +14,7 @@ import { CalendarIcon } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { getRehearsalLevel, formatRehearsalTime } from '@/utils/rehearsalLevels';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
 type Band = Database['public']['Tables']['bands']['Row'];
@@ -50,6 +51,7 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
   const [selectedTime, setSelectedTime] = useState<number>(14); // 2 PM default
   const [booking, setBooking] = useState(false);
   const [setlists, setSetlists] = useState<any[]>([]);
+  const [songFamiliarity, setSongFamiliarity] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const loadSetlists = async () => {
@@ -64,6 +66,28 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
     
     loadSetlists();
   }, [band.id]);
+
+  // Fetch familiarity data for all songs
+  useEffect(() => {
+    const loadFamiliarity = async () => {
+      if (!songs.length || !band.id) return;
+      
+      const songIds = songs.map(s => s.id);
+      const { data } = await supabase
+        .from('band_song_familiarity')
+        .select('song_id, familiarity_minutes')
+        .eq('band_id', band.id)
+        .in('song_id', songIds);
+      
+      const familiarityMap: Record<string, number> = {};
+      data?.forEach(item => {
+        familiarityMap[item.song_id] = item.familiarity_minutes;
+      });
+      setSongFamiliarity(familiarityMap);
+    };
+    
+    loadFamiliarity();
+  }, [songs, band.id]);
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
   const totalCost = selectedRoom ? selectedRoom.hourly_rate * selectedDuration : 0;
@@ -242,17 +266,29 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
                 <SelectTrigger id="song">
                   <SelectValue placeholder="Choose a song..." />
                 </SelectTrigger>
-                <SelectContent className="bg-background">
+                <SelectContent className="bg-background max-h-[300px]">
                   {songs.length === 0 ? (
                     <div className="p-2 text-sm text-muted-foreground">
                       No songs available - complete a song first!
                     </div>
                   ) : (
-                    songs.map((song) => (
-                      <SelectItem key={song.id} value={song.id}>
-                        {song.title}
-                      </SelectItem>
-                    ))
+                    songs.map((song) => {
+                      const minutes = songFamiliarity[song.id] || 0;
+                      const level = getRehearsalLevel(minutes);
+                      return (
+                        <SelectItem key={song.id} value={song.id} className="py-2">
+                          <div className="flex items-center justify-between gap-3 w-full">
+                            <span className="truncate">{song.title}</span>
+                            <Badge 
+                              variant={level.variant} 
+                              className="text-xs shrink-0 ml-auto"
+                            >
+                              {level.name}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })
                   )}
                 </SelectContent>
               </Select>
