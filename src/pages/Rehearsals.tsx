@@ -106,26 +106,59 @@ const Rehearsals = () => {
     },
   });
 
-  // Fetch songs for selected band
+  // Fetch songs for selected band - get songs from band members AND band-owned songs
   const { data: bandSongs = [] } = useQuery({
     queryKey: ["band-songs", selectedBand?.id],
     queryFn: async () => {
       if (!selectedBand?.id) return [];
       
+      console.log('[Rehearsals] Fetching songs for band:', selectedBand.id);
+      
+      // Get band member user IDs
       const { data: members } = await supabase
         .from("band_members")
         .select("user_id")
         .eq("band_id", selectedBand.id);
       
-      const userIds = members?.map(m => m.user_id) || [];
+      const userIds = (members?.map(m => m.user_id).filter(Boolean) || []) as string[];
+      console.log('[Rehearsals] Band member user IDs:', userIds);
       
-      const { data, error } = await supabase
+      // Fetch songs owned by band members
+      let allSongs: any[] = [];
+      
+      if (userIds.length > 0) {
+        const { data: memberSongs, error: memberError } = await supabase
+          .from("songs")
+          .select("*")
+          .in("user_id", userIds);
+        
+        if (memberError) {
+          console.error('[Rehearsals] Error fetching member songs:', memberError);
+        } else {
+          allSongs = memberSongs || [];
+        }
+      }
+      
+      // Also fetch songs with band_id matching (in case songs are band-owned)
+      const { data: bandOwnedSongs, error: bandError } = await supabase
         .from("songs")
         .select("*")
-        .in("user_id", userIds);
+        .eq("band_id", selectedBand.id);
       
-      if (error) throw error;
-      return data || [];
+      if (bandError) {
+        console.error('[Rehearsals] Error fetching band-owned songs:', bandError);
+      } else if (bandOwnedSongs) {
+        // Merge, avoiding duplicates
+        const existingIds = new Set(allSongs.map(s => s.id));
+        for (const song of bandOwnedSongs) {
+          if (!existingIds.has(song.id)) {
+            allSongs.push(song);
+          }
+        }
+      }
+      
+      console.log('[Rehearsals] Total songs found:', allSongs.length, allSongs);
+      return allSongs;
     },
     enabled: !!selectedBand?.id,
   });
