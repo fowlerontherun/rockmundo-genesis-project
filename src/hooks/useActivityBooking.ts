@@ -56,14 +56,6 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) throw new Error('Profile not found');
-
   // Check for conflicts
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
     user.id,
@@ -81,7 +73,6 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
     .from('player_scheduled_activities')
     .insert({
       user_id: user.id,
-      profile_id: profile.id,
       activity_type: params.activityType,
       scheduled_start: params.scheduledStart.toISOString(),
       scheduled_end: params.scheduledEnd.toISOString(),
