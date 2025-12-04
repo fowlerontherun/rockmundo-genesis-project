@@ -43,15 +43,7 @@ export const StageFloor = ({ floorType = 'wood', backdropType = 'curtain-black' 
         />
       </mesh>
 
-      {/* Side walls for venue depth */}
-      <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[15, 5]} />
-        <meshStandardMaterial color="#0a0a0a" roughness={0.95} />
-      </mesh>
-      <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[15, 5]} />
-        <meshStandardMaterial color="#0a0a0a" roughness={0.95} />
-      </mesh>
+      {/* Removed black side walls - themed environments handle their own walls */}
     </>
   );
 };

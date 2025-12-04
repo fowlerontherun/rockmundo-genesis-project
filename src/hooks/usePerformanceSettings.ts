@@ -57,10 +57,10 @@ export const usePerformanceSettings = (): PerformanceSettings => {
         frameCount = 0;
         lastTime = currentTime;
 
-        // Adjust tier based on FPS
-        if (fps < 25 && settings.tier !== 'low') {
+        // Adjust tier based on FPS - more aggressive downgrade
+        if (fps < 20 && settings.tier !== 'low') {
           setSettings(getSettingsForTier('low'));
-        } else if (fps < 45 && settings.tier === 'high') {
+        } else if (fps < 35 && settings.tier === 'high') {
           setSettings(getSettingsForTier('medium'));
         }
       }
@@ -96,23 +96,23 @@ const getSettingsForTier = (tier: PerformanceTier): PerformanceSettings => {
         crowdDensity: 0.3,
         shadows: false,
         postProcessing: false,
-        maxCrowdCount: 40,
+        maxCrowdCount: 25, // Reduced from 40
       };
     case 'medium':
       return {
         tier: 'medium',
-        crowdDensity: 0.6,
-        shadows: true,
+        crowdDensity: 0.5,
+        shadows: false, // Disabled shadows for medium too
         postProcessing: false,
-        maxCrowdCount: 100,
+        maxCrowdCount: 60, // Reduced from 100
       };
     case 'high':
       return {
         tier: 'high',
-        crowdDensity: 1.0,
+        crowdDensity: 0.8,
         shadows: true,
-        postProcessing: true,
-        maxCrowdCount: 250,
+        postProcessing: false, // Disabled post-processing by default
+        maxCrowdCount: 120, // Reduced from 250
       };
   }
 };
