@@ -8,6 +8,8 @@ export interface PerformanceFactors {
   venueCapacityUsed: number;  // 0-100 percentage
   productionNotesBonus?: number; // 0-0.30 (0-30% bonus from production notes)
   gearReliabilityBonus?: number; // 0-0.05 (reduces negative variance swings)
+  momentum?: number;          // -3 to +3 momentum from previous songs
+  songPosition?: number;      // Position in setlist (1-indexed)
 }
 
 export interface SongPerformanceResult {
@@ -68,18 +70,45 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
     capacityMultiplier = 0.85; // empty venue = bad energy
   }
   
-  // Add random variance (±5%) for realism with gear reliability dampening swings
+  // INCREASED variance (±15-20%) for more variable results
   const reliabilityBonus = Math.max(0, Math.min(0.05, factors.gearReliabilityBonus ?? 0));
-  const varianceFloor = 0.95 + reliabilityBonus;
-  const varianceRange = Math.max(0.02, 0.1 - reliabilityBonus * 1.5);
+  const varianceFloor = 0.85 + (reliabilityBonus * 2); // 0.85 to 0.95 base
+  const varianceRange = Math.max(0.10, 0.30 - reliabilityBonus * 3); // 0.10 to 0.30 range
   const variance = varianceFloor + Math.random() * varianceRange;
+  
+  // Momentum bonus/penalty from previous songs (-3 to +3 scale)
+  const momentum = factors.momentum || 0;
+  const momentumMultiplier = 1 + (momentum * 0.04); // ±12% at max momentum
+  
+  // Setlist position effects - opening songs harder, closing songs easier
+  const position = factors.songPosition || 1;
+  let positionMultiplier = 1.0;
+  if (position === 1) {
+    positionMultiplier = 0.95; // Opening jitters
+  } else if (position >= 8) {
+    positionMultiplier = 1.05; // Crowd is warmed up
+  }
+  
+  // Random event chance (20%) - can significantly swing the score
+  let eventMultiplier = 1.0;
+  const eventRoll = Math.random();
+  if (eventRoll < 0.08) {
+    // 8% chance of amazing moment (+15-25%)
+    eventMultiplier = 1.15 + Math.random() * 0.10;
+  } else if (eventRoll < 0.14) {
+    // 6% chance of minor issue (-10-20%)
+    eventMultiplier = 0.80 + Math.random() * 0.10;
+  } else if (eventRoll < 0.20) {
+    // 6% chance of crowd singalong/special moment (+8-15%)
+    eventMultiplier = 1.08 + Math.random() * 0.07;
+  }
   
   // Apply production notes bonus
   const productionMultiplier = 1 + (factors.productionNotesBonus || 0);
   
-  // Convert to 25-star scale
+  // Convert to 25-star scale with all multipliers
   const qualityDifficulty = 0.75 + (normalizedSongQuality / 100) * 0.25;
-  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier * qualityDifficulty;
+  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier * qualityDifficulty * momentumMultiplier * positionMultiplier * eventMultiplier;
   const clampedScore = Math.max(0, Math.min(25, finalScore));
   
   // Determine crowd response based on score
