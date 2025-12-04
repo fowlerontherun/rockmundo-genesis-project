@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
+import { TextGigViewer } from '@/components/gig/TextGigViewer';
+import { GigViewerModeSelector } from '@/components/gig/GigViewerModeSelector';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
@@ -44,6 +46,16 @@ export default function PerformGig() {
   const [finalizing, setFinalizing] = useState(false);
   const [timeUntilReport, setTimeUntilReport] = useState<string | null>(null);
   const [bandSetlists, setBandSetlists] = useState<any[]>([]);
+  const [viewerMode, setViewerMode] = useState<'3d' | 'text'>(() => {
+    // Load preference from localStorage
+    const saved = localStorage.getItem('gigViewerMode');
+    return (saved === '3d' || saved === 'text') ? saved : 'text';
+  });
+
+  // Save viewer mode preference
+  useEffect(() => {
+    localStorage.setItem('gigViewerMode', viewerMode);
+  }, [viewerMode]);
 
   const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
     enabled: !!gig?.band_id,
@@ -541,10 +553,29 @@ export default function PerformGig() {
 
       {/* Real-time Performance Viewer - shown when within 10 min of start, during gig, or up to 10 min after */}
       {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
-        <RealtimeGigViewer
-          gigId={gig.id}
-          onComplete={handleGigComplete}
-        />
+        <div className="space-y-4">
+          {/* Viewer Mode Selector */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Watch Performance</h3>
+            <GigViewerModeSelector 
+              mode={viewerMode} 
+              onModeChange={setViewerMode}
+            />
+          </div>
+          
+          {/* Conditional Viewer based on mode */}
+          {viewerMode === '3d' ? (
+            <GigViewer3D
+              gigId={gig.id}
+              onClose={() => setViewerMode('text')}
+            />
+          ) : (
+            <TextGigViewer
+              gigId={gig.id}
+              onComplete={handleGigComplete}
+            />
+          )}
+        </div>
       )}
 
       {/* Processing Message - shown when gig just completed but report not ready yet */}
@@ -592,34 +623,46 @@ export default function PerformGig() {
               Performance Completed
             </CardTitle>
             <CardDescription>
-              Review the detailed report to see how the crowd responded and how much you earned.
+              Review the detailed report or rewatch the performance.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
               Outcome recorded on {format(new Date(gig.updated_at || gig.scheduled_date), 'PPP p')}.
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate('/gig-booking')}>
-                Back to Schedule
-              </Button>
-              <Button variant="secondary" onClick={() => setShow3DViewer(true)}>
-                Watch 3D Gig
-              </Button>
-              <Button onClick={() => setShowOutcome(true)}>
-                View Performance Report
-              </Button>
+            
+            {/* Viewer Mode Selector for completed gigs */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <GigViewerModeSelector 
+                mode={viewerMode} 
+                onModeChange={setViewerMode}
+              />
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => navigate('/gig-booking')}>
+                  Back to Schedule
+                </Button>
+                <Button onClick={() => setShowOutcome(true)}>
+                  View Report
+                </Button>
+              </div>
             </div>
+            
+            {/* Show selected viewer for completed gigs */}
+            {viewerMode === '3d' ? (
+              <GigViewer3D
+                gigId={gig.id}
+                onClose={() => setViewerMode('text')}
+              />
+            ) : (
+              <TextGigViewer
+                gigId={gig.id}
+              />
+            )}
           </CardContent>
         </Card>
       )}
 
-      {show3DViewer && outcome && (
-        <GigViewer3D
-          gigId={gig.id}
-          onClose={() => setShow3DViewer(false)}
-        />
-      )}
+      {/* Legacy 3D viewer modal - kept for backward compatibility but now using inline viewers */}
 
       <GigOutcomeReport
         isOpen={!!outcome && showOutcome}

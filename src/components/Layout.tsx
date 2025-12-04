@@ -6,12 +6,16 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useAutoGigStart } from "@/hooks/useAutoGigStart";
 
 const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
+
+  // Global auto-start for gigs - runs regardless of which page user is on
+  useAutoGigStart();
 
   useEffect(() => {
     if (!authLoading && !user) {
