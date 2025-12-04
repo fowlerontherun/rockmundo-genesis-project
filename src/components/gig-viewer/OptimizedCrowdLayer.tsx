@@ -18,11 +18,16 @@ interface CrowdPerson {
   seed: number;
   colorVariant: number;
   showMerch: boolean;
-  animationType: 'idle' | 'bouncing' | 'jumping' | 'handsup' | 'headbang' | 'sway';
   scale: number;
   baseY: number;
   showDetails: boolean;
 }
+
+// Seeded random number generator for deterministic positions
+const seededRandom = (seed: number): number => {
+  const x = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
 
 export const OptimizedCrowdLayer = ({
   crowdMood,
@@ -45,64 +50,63 @@ export const OptimizedCrowdLayer = ({
     return 50;
   }, [bandFame]);
 
-  // Determine animation type based on mood
-  const getAnimationType = (mood: number, seed: number): CrowdPerson['animationType'] => {
-    const rand = seed * 100;
-    if (mood < 20) return 'idle';
-    if (mood < 40) return rand < 50 ? 'idle' : 'sway';
-    if (mood < 60) return rand < 30 ? 'sway' : rand < 70 ? 'bouncing' : 'handsup';
-    if (mood < 80) return rand < 40 ? 'bouncing' : rand < 70 ? 'handsup' : 'jumping';
-    return rand < 30 ? 'jumping' : rand < 60 ? 'handsup' : 'headbang';
-  };
-
-  // Generate crowd data
+  // Generate crowd data with deterministic positions (NOT dependent on crowdMood)
   const crowdData = useMemo(() => {
     const count = Math.floor(maxCrowdCount * densityMultiplier);
     const crowd: CrowdPerson[] = [];
 
     const zones = [
-      { x: [-8, 8], z: [2, 6], density: 1.0, minMood: 0 },
-      { x: [-10, 10], z: [6, 10], density: 0.8, minMood: 20 },
-      { x: [-12, 12], z: [10, 14], density: 0.6, minMood: 40 }
+      { x: [-8, 8], z: [2, 6], density: 1.0 },
+      { x: [-10, 10], z: [6, 10], density: 0.8 },
+      { x: [-12, 12], z: [10, 14], density: 0.6 }
     ];
 
     let currentId = 0;
 
     for (const zone of zones) {
-      if (crowdMood < zone.minMood) continue;
-
       const zoneCount = Math.floor((count / 3) * zone.density);
 
       for (let i = 0; i < zoneCount; i++) {
-        const seed = Math.random();
-        const x = zone.x[0] + Math.random() * (zone.x[1] - zone.x[0]);
-        const z = zone.z[0] + Math.random() * (zone.z[1] - zone.z[0]);
+        // Use deterministic seed based on ID, not Math.random()
+        const seed = seededRandom(currentId * 7.31 + 0.5);
+        const x = zone.x[0] + seededRandom(currentId * 3.14) * (zone.x[1] - zone.x[0]);
+        const z = zone.z[0] + seededRandom(currentId * 2.71) * (zone.z[1] - zone.z[0]);
         const baseY = 0;
         
         crowd.push({
-          id: currentId++,
+          id: currentId,
           position: [x, baseY, z],
           seed,
           colorVariant: Math.floor(seed * 10),
-          showMerch: Math.random() * 100 < merchPercentage,
-          animationType: getAnimationType(crowdMood, seed),
-          scale: 0.8 + Math.random() * 0.4,
+          showMerch: seededRandom(currentId * 5.67) * 100 < merchPercentage,
+          scale: 0.8 + seededRandom(currentId * 1.23) * 0.4,
           baseY,
-          showDetails: z < 7 // Only front row gets details
+          showDetails: z < 5 // Only very front row gets details
         });
 
-        // Initialize ref
-        crowdRefs.current.set(currentId - 1, {
+        // Initialize ref with fixed position
+        crowdRefs.current.set(currentId, {
           position: new THREE.Vector3(x, baseY, z),
           rotation: new THREE.Euler(0, 0, 0)
         });
+
+        currentId++;
       }
     }
 
     return crowd;
-  }, [maxCrowdCount, densityMultiplier, crowdMood, merchPercentage]);
+  }, [maxCrowdCount, densityMultiplier, merchPercentage]); // Removed crowdMood dependency
 
-  // Batched animation update
+  // Determine animation intensity based on mood (computed each frame, not stored)
+  const getAnimationIntensity = (mood: number): { bounce: number; sway: number; jump: number } => {
+    if (mood < 20) return { bounce: 0.02, sway: 0.05, jump: 0 };
+    if (mood < 40) return { bounce: 0.05, sway: 0.1, jump: 0 };
+    if (mood < 60) return { bounce: 0.1, sway: 0.15, jump: 0.1 };
+    if (mood < 80) return { bounce: 0.15, sway: 0.2, jump: 0.2 };
+    return { bounce: 0.2, sway: 0.25, jump: 0.3 };
+  };
+
+  // Batched animation update - crowd stays in place, only animates
   useFrame((state, delta) => {
     timeSinceLastUpdate.current += delta;
     
@@ -110,40 +114,49 @@ export const OptimizedCrowdLayer = ({
     timeSinceLastUpdate.current = 0;
 
     const time = state.clock.getElapsedTime();
+    const intensity = getAnimationIntensity(crowdMood);
 
     crowdData.forEach((person) => {
       const ref = crowdRefs.current.get(person.id);
       if (!ref) return;
 
       const phaseOffset = person.seed * 10;
+      const animType = Math.floor(person.seed * 5); // Deterministic animation type per person
 
-      switch (person.animationType) {
-        case 'idle':
-          ref.position.y = person.baseY + Math.sin(time * 0.5 + phaseOffset) * 0.02;
+      // Keep original X and Z position, only animate Y and rotation
+      const originalX = person.position[0];
+      const originalZ = person.position[2];
+
+      switch (animType) {
+        case 0: // Idle sway
+          ref.position.y = person.baseY + Math.sin(time * 0.5 + phaseOffset) * intensity.sway * 0.5;
+          ref.rotation.z = Math.sin(time * 0.3 + phaseOffset) * 0.05;
           break;
 
-        case 'sway':
-          ref.position.y = person.baseY + Math.sin(time + phaseOffset) * 0.03;
+        case 1: // Bouncing
+          ref.position.y = person.baseY + Math.abs(Math.sin(time * 2 + phaseOffset)) * intensity.bounce;
+          ref.rotation.z = 0;
+          break;
+
+        case 2: // Side sway
+          ref.position.y = person.baseY + Math.sin(time + phaseOffset) * intensity.sway * 0.3;
           ref.rotation.z = Math.sin(time * 0.8 + phaseOffset) * 0.1;
           break;
 
-        case 'bouncing':
-          ref.position.y = person.baseY + Math.abs(Math.sin(time * 2 + phaseOffset)) * 0.15;
+        case 3: // Jumping (only when mood is high)
+          ref.position.y = person.baseY + Math.max(0, Math.sin(time * 3 + phaseOffset)) * intensity.jump;
+          ref.rotation.x = Math.sin(time * 3 + phaseOffset) * 0.1;
           break;
 
-        case 'jumping':
-          ref.position.y = person.baseY + Math.max(0, Math.sin(time * 3 + phaseOffset)) * 0.3;
-          break;
-
-        case 'handsup':
-          ref.position.y = person.baseY + Math.sin(time * 1.5 + phaseOffset) * 0.1;
-          break;
-
-        case 'headbang':
-          ref.position.y = person.baseY + Math.abs(Math.sin(time * 4 + phaseOffset)) * 0.2;
-          ref.rotation.x = Math.sin(time * 4 + phaseOffset) * 0.3;
+        default: // Head bob
+          ref.position.y = person.baseY + Math.sin(time * 1.5 + phaseOffset) * intensity.bounce * 0.5;
+          ref.rotation.x = Math.sin(time * 2 + phaseOffset) * 0.15;
           break;
       }
+
+      // Ensure X and Z never change
+      ref.position.x = originalX;
+      ref.position.z = originalZ;
     });
   });
 

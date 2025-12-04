@@ -47,19 +47,19 @@ export const SimpleCrowdMember = ({
 
   return (
     <group position={position} rotation={rotation} scale={scale}>
-      {/* Body - simplified geometry */}
+      {/* Body - ultra simplified geometry, no shadows */}
       <mesh position={[0, 0.5, 0]}>
-        <capsuleGeometry args={[0.15, 0.5, 4, 8]} />
-        <meshStandardMaterial color={appearance.shirtColor} />
+        <capsuleGeometry args={[0.15, 0.5, 2, 4]} />
+        <meshBasicMaterial color={appearance.shirtColor} />
       </mesh>
 
-      {/* Head */}
+      {/* Head - minimal segments */}
       <mesh position={[0, 0.95, 0]}>
-        <sphereGeometry args={[0.12, 8, 8]} />
-        <meshStandardMaterial color={appearance.skinColor} />
+        <sphereGeometry args={[0.12, 6, 6]} />
+        <meshBasicMaterial color={appearance.skinColor} />
       </mesh>
 
-      {/* Face and Hair - only for detailed view */}
+      {/* Face and Hair - only for detailed view (front row only) */}
       {showDetails && (
         <>
           <FaceFeatures skinColor={appearance.skinColor} />
@@ -67,24 +67,24 @@ export const SimpleCrowdMember = ({
         </>
       )}
 
-      {/* Arms - simplified */}
+      {/* Arms - minimal geometry */}
       <mesh position={[-0.2, 0.6, 0]}>
-        <capsuleGeometry args={[0.04, 0.3, 3, 6]} />
-        <meshStandardMaterial color={appearance.skinColor} />
+        <capsuleGeometry args={[0.04, 0.3, 2, 4]} />
+        <meshBasicMaterial color={appearance.skinColor} />
       </mesh>
       <mesh position={[0.2, 0.6, 0]}>
-        <capsuleGeometry args={[0.04, 0.3, 3, 6]} />
-        <meshStandardMaterial color={appearance.skinColor} />
+        <capsuleGeometry args={[0.04, 0.3, 2, 4]} />
+        <meshBasicMaterial color={appearance.skinColor} />
       </mesh>
 
-      {/* Legs */}
+      {/* Legs - minimal geometry */}
       <mesh position={[-0.08, 0.15, 0]}>
-        <capsuleGeometry args={[0.06, 0.3, 4, 6]} />
-        <meshStandardMaterial color={appearance.pantsColor} />
+        <capsuleGeometry args={[0.06, 0.3, 2, 4]} />
+        <meshBasicMaterial color={appearance.pantsColor} />
       </mesh>
       <mesh position={[0.08, 0.15, 0]}>
-        <capsuleGeometry args={[0.06, 0.3, 4, 6]} />
-        <meshStandardMaterial color={appearance.pantsColor} />
+        <capsuleGeometry args={[0.06, 0.3, 2, 4]} />
+        <meshBasicMaterial color={appearance.pantsColor} />
       </mesh>
     </group>
   );
