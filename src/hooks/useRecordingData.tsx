@@ -344,6 +344,19 @@ export const useCompleteRecordingSession = () => {
       if (fetchError) throw fetchError;
       if (!session) throw new Error('Session not found');
 
+      // Get current song quality
+      const { data: song, error: songFetchError } = await supabase
+        .from('songs')
+        .select('quality_score')
+        .eq('id', session.song_id)
+        .single();
+
+      if (songFetchError) throw songFetchError;
+
+      const currentQuality = song?.quality_score || 0;
+      const qualityImprovement = session.quality_improvement || 0;
+      const newQuality = currentQuality + qualityImprovement;
+
       // Update session status
       const { error: updateError } = await supabase
         .from('recording_sessions')
@@ -356,18 +369,17 @@ export const useCompleteRecordingSession = () => {
       if (updateError) throw updateError;
 
       // Update song quality and status to 'recorded'
-      const qualityImprovement = session.quality_improvement || 0;
       const { error: songError } = await supabase
         .from('songs')
         .update({ 
-          quality_score: qualityImprovement,
+          quality_score: newQuality,
           status: 'recorded'
         })
         .eq('id', session.song_id);
 
       if (songError) throw songError;
 
-      return session;
+      return { ...session, qualityBefore: currentQuality, qualityAfter: newQuality };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });

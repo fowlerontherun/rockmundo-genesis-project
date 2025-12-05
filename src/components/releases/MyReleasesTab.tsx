@@ -14,7 +14,16 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const { data: releases, isLoading } = useQuery({
     queryKey: ["releases", userId],
     queryFn: async () => {
-      const { data } = await supabase
+      // First get user's band IDs
+      const { data: bandMemberships } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("user_id", userId);
+      
+      const bandIds = bandMemberships?.map(d => d.band_id) || [];
+      
+      // Build the query
+      let query = supabase
         .from("releases")
         .select(`
           *,
@@ -23,19 +32,20 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
           bands(fame, popularity, chemistry_level),
           profiles!releases_user_id_fkey(fame, popularity)
         `)
-        .or(`user_id.eq.${userId},band_id.in.(${await getBandIds(userId)})`)
         .order("created_at", { ascending: false });
+      
+      // Filter by user_id OR band membership
+      if (bandIds.length > 0) {
+        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+      } else {
+        query = query.eq("user_id", userId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     }
   });
-
-  async function getBandIds(userId: string) {
-    const { data } = await supabase
-      .from("band_members")
-      .select("band_id")
-      .eq("user_id", userId);
-    return data?.map(d => d.band_id).join(",") || "null";
-  }
 
   if (isLoading) {
     return <div>Loading releases...</div>;

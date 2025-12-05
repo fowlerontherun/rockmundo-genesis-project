@@ -164,14 +164,11 @@ export default function RecordingStudio() {
                             <div>Cost: ${session.total_cost.toLocaleString()}</div>
                           </div>
 
-                          {session.status === 'completed' && (
+                          {session.status === 'completed' && session.quality_improvement > 0 && (
                             <div className="mt-2 text-sm">
-                              <span className="text-muted-foreground">Quality: </span>
-                              <span className="font-semibold">{session.quality_before}</span>
-                              <span className="mx-2">→</span>
-                              <span className="font-semibold text-primary">{session.quality_after}</span>
-                              <span className="ml-2 text-green-600">
-                                +{session.quality_improvement} (+{Math.round((session.quality_improvement / session.quality_before) * 100)}%)
+                              <span className="text-muted-foreground">Quality Improvement: </span>
+                              <span className="font-semibold text-green-600">
+                                +{session.quality_improvement}
                               </span>
                             </div>
                           )}
