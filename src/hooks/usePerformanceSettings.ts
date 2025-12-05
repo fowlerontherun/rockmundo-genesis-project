@@ -96,23 +96,23 @@ const getSettingsForTier = (tier: PerformanceTier): PerformanceSettings => {
         crowdDensity: 0.3,
         shadows: false,
         postProcessing: false,
-        maxCrowdCount: 25, // Reduced from 40
+        maxCrowdCount: 15, // Further reduced for better FPS
       };
     case 'medium':
       return {
         tier: 'medium',
         crowdDensity: 0.5,
-        shadows: false, // Disabled shadows for medium too
+        shadows: false,
         postProcessing: false,
-        maxCrowdCount: 60, // Reduced from 100
+        maxCrowdCount: 40, // Further reduced
       };
     case 'high':
       return {
         tier: 'high',
         crowdDensity: 0.8,
-        shadows: true,
-        postProcessing: false, // Disabled post-processing by default
-        maxCrowdCount: 120, // Reduced from 250
+        shadows: false, // Disabled shadows even for high
+        postProcessing: false,
+        maxCrowdCount: 80, // Further reduced
       };
   }
 };

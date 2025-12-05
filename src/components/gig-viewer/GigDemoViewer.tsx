@@ -2,7 +2,7 @@ import { Suspense, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import { StageScene } from "./StageScene";
-import { Crowd3DLayer } from "./Crowd3DLayer";
+import { OptimizedCrowdLayer } from "./OptimizedCrowdLayer";
 import { BandMember3D } from "./BandMember3D";
 import { OutdoorEnvironment } from "./OutdoorEnvironment";
 import { LoadingScreen } from "./LoadingScreen";
@@ -178,7 +178,7 @@ export const GigDemoViewer = ({
           <CrowdBarrier />
           
           {/* 3D Procedural Crowd */}
-          <Crowd3DLayer 
+          <OptimizedCrowdLayer 
             crowdMood={crowdMood}
             bandFame={bandFame}
             bandMerchColor={merchColor}
