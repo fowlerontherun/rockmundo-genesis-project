@@ -44,6 +44,18 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     })
 
+    // First, transition scheduled rehearsals to in_progress if their start time has passed
+    const { error: transitionError } = await supabase
+      .from('band_rehearsals')
+      .update({ status: 'in_progress' })
+      .eq('status', 'scheduled')
+      .lt('scheduled_start', new Date().toISOString())
+
+    if (transitionError) {
+      console.error('Error transitioning scheduled rehearsals:', transitionError)
+    }
+
+    // Now fetch rehearsals that are in_progress and past their scheduled end
     const { data: rehearsals, error: rehearsalsError } = await supabase
       .from('band_rehearsals')
       .select('*')

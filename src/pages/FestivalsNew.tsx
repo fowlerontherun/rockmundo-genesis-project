@@ -478,7 +478,7 @@ export default function Festivals() {
             <div className="grid gap-4">
               {festivals.map((festival) => {
                 const isRegistered = participations.some(
-                  p => p.festival_id === festival.id && p.status !== "withdrawn"
+                  p => p.event_id === festival.id && p.status !== "withdrawn"
                 );
                 const capacity = calculateCapacity(
                   festival.current_participants || 0,
@@ -529,9 +529,8 @@ export default function Festivals() {
                           <CardDescription>
                             {format(new Date((participation as any).festivals?.start_date || new Date()), "MMM d, yyyy")}
                             {" • "}
-                            {performanceSlots.find(s => s.value === participation.performance_slot)?.label || participation.performance_slot}
-                            {" • "}
-                            {stages.find(s => s.value === participation.stage)?.label || participation.stage}
+                            {participation.slot_type || "TBA"}
+                            {participation.performance_date && ` • ${participation.performance_date}`}
                           </CardDescription>
                         </div>
                         {getStatusBadge(participation.status)}
@@ -541,11 +540,11 @@ export default function Festivals() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <div className="text-muted-foreground">Location</div>
-                          <div className="font-medium">{(participation as any).festivals?.location || "TBA"}</div>
+                          <div className="font-medium">{(participation as any).festivals?.requirements?.city_id || "TBA"}</div>
                         </div>
                         <div>
                           <div className="text-muted-foreground">Payment</div>
-                          <div className="font-medium text-success">${participation.payment_amount?.toLocaleString()}</div>
+                          <div className="font-medium text-success">${participation.payout_amount?.toLocaleString()}</div>
                         </div>
                       </div>
 
@@ -630,12 +629,12 @@ export default function Festivals() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center p-4 bg-muted rounded-lg">
                           <Star className="h-8 w-8 mx-auto mb-2 text-amber-500" />
-                          <div className="text-2xl font-bold">{participation.performance_score || 0}</div>
-                          <div className="text-sm text-muted-foreground">Performance Score</div>
+                          <div className="text-2xl font-bold">✓</div>
+                          <div className="text-sm text-muted-foreground">Completed</div>
                         </div>
                         <div className="text-center p-4 bg-muted rounded-lg">
                           <DollarSign className="h-8 w-8 mx-auto mb-2 text-success" />
-                          <div className="text-2xl font-bold">${participation.payment_amount?.toLocaleString()}</div>
+                          <div className="text-2xl font-bold">${participation.payout_amount?.toLocaleString()}</div>
                           <div className="text-sm text-muted-foreground">Earned</div>
                         </div>
                         <div className="text-center p-4 bg-muted rounded-lg">

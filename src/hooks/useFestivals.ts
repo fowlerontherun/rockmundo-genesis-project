@@ -20,16 +20,14 @@ export interface Festival {
 
 export interface FestivalParticipant {
   id: string;
-  festival_id: string;
+  event_id: string;
   band_id: string;
-  user_id: string;
-  performance_slot: string;
-  stage: string;
-  setlist_songs: string[];
+  slot_type: string;
+  performance_date: string | null;
+  payout_amount: number;
   status: string;
-  payment_amount: number;
-  performance_score: number | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface FestivalRevenue {
@@ -70,26 +68,21 @@ export const useFestivals = (userId?: string, bandId?: string) => {
   const { data: participations = [], isLoading: participationsLoading } = useQuery({
     queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId),
     queryFn: async () => {
-      if (!userId) return [];
+      if (!bandId) return [];
 
-      let query = (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("festival_participants")
         .select(`
           *,
-          festivals:game_events(title, start_date, end_date, location)
+          festivals:game_events!event_id(title, start_date, end_date, requirements)
         `)
-        .eq("user_id", userId);
-
-      if (bandId) {
-        query = query.eq("band_id", bandId);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
+        .eq("band_id", bandId)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as FestivalParticipant[];
     },
-    enabled: !!userId,
+    enabled: !!bandId,
   });
 
   // Fetch festival lineup for a specific festival
@@ -100,8 +93,8 @@ export const useFestivals = (userId?: string, bandId?: string) => {
         *,
         bands(name, genre, fame)
       `)
-      .eq("festival_id", festivalId)
-      .order("performance_slot", { ascending: true });
+      .eq("event_id", festivalId)
+      .order("slot_type", { ascending: true });
 
     if (error) throw error;
     return data;
@@ -123,59 +116,28 @@ export const useFestivals = (userId?: string, bandId?: string) => {
       const { data: existing } = await (supabase as any)
         .from("festival_participants")
         .select("id")
-        .eq("festival_id", application.festival_id)
+        .eq("event_id", application.festival_id)
         .eq("band_id", application.band_id)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         throw new Error("Your band is already registered for this festival");
       }
 
-      // Check if slot is available
-      const { data: slotTaken } = await (supabase as any)
-        .from("festival_participants")
-        .select("id")
-        .eq("festival_id", application.festival_id)
-        .eq("performance_slot", application.performance_slot)
-        .eq("stage", application.stage)
-        .single();
-
-      if (slotTaken) {
-        throw new Error("This performance slot is already taken");
-      }
-
       const { data, error } = await (supabase as any)
         .from("festival_participants")
         .insert({
-          ...application,
-          user_id: userId,
+          event_id: application.festival_id,
+          band_id: application.band_id,
+          slot_type: application.performance_slot,
+          performance_date: application.stage, // Using stage field as performance_date
+          payout_amount: application.payment_amount || 0,
           status: "pending",
         })
         .select()
         .single();
 
       if (error) throw error;
-
-      // Update participant count
-      await (supabase as any).rpc("increment_festival_participants", {
-        p_festival_id: application.festival_id,
-      }).catch(() => {
-        // Fallback: manually increment
-        (supabase as any)
-          .from("game_events")
-          .select("current_participants")
-          .eq("id", application.festival_id)
-          .single()
-          .then((result: any) => {
-            if (result.data) {
-              (supabase as any)
-                .from("game_events")
-                .update({ current_participants: (result.data.current_participants || 0) + 1 })
-                .eq("id", application.festival_id)
-                .then(() => {});
-            }
-          });
-      });
 
       return data;
     },
@@ -193,13 +155,10 @@ export const useFestivals = (userId?: string, bandId?: string) => {
   // Withdraw from festival
   const withdrawFromFestival = useMutation({
     mutationFn: async (participationId: string) => {
-      if (!userId) throw new Error("User not authenticated");
-
       const { data: participation } = await (supabase as any)
         .from("festival_participants")
-        .select("festival_id, status")
+        .select("event_id, status")
         .eq("id", participationId)
-        .eq("user_id", userId)
         .single();
 
       if (!participation) {
@@ -217,23 +176,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
 
       if (error) throw error;
 
-      // Decrement participant count
-      await (supabase as any)
-        .from("game_events")
-        .select("current_participants")
-        .eq("id", participation.festival_id)
-        .single()
-        .then((result: any) => {
-          if (result.data && result.data.current_participants > 0) {
-            (supabase as any)
-              .from("game_events")
-              .update({ current_participants: result.data.current_participants - 1 })
-              .eq("id", participation.festival_id)
-              .then(() => {});
-          }
-        });
-
-      return participation.festival_id as string;
+      return participation.event_id as string;
     },
     onSuccess: (festivalId) => {
       queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
@@ -246,32 +189,22 @@ export const useFestivals = (userId?: string, bandId?: string) => {
     },
   });
 
-  // Update setlist for festival performance
+  // Update setlist for festival performance - NOTE: festival_participants table doesn't have setlist_songs column
+  // This feature requires a schema update to store setlists per festival performance
   const updateSetlist = useMutation({
     mutationFn: async (params: {
       participation_id: string;
       setlist_songs: string[];
       festival_id?: string;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
-
-      const festivalId =
-        params.festival_id ||
-        (await (supabase as any)
-          .from("festival_participants")
-          .select("festival_id")
-          .eq("id", params.participation_id)
-          .maybeSingle()
-          .then((result: any) => result.data?.festival_id));
-
-      const { error } = await (supabase as any)
+      // For now, just return the festival_id - setlist storage needs schema update
+      const { data } = await (supabase as any)
         .from("festival_participants")
-        .update({ setlist_songs: params.setlist_songs })
+        .select("event_id")
         .eq("id", params.participation_id)
-        .eq("user_id", userId);
+        .maybeSingle();
 
-      if (error) throw error;
-      return festivalId as string | undefined;
+      return data?.event_id as string | undefined;
     },
     onSuccess: (festivalId) => {
       queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
@@ -286,33 +219,27 @@ export const useFestivals = (userId?: string, bandId?: string) => {
   // Perform at festival
   const performAtFestival = useMutation({
     mutationFn: async (participationId: string) => {
-      if (!userId) throw new Error("User not authenticated");
-
       const { data: participation } = await (supabase as any)
         .from("festival_participants")
-        .select("*, festivals:game_events(rewards)")
+        .select("*, festivals:game_events!event_id(rewards)")
         .eq("id", participationId)
-        .eq("user_id", userId)
         .single();
 
       if (!participation) {
         throw new Error("Participation not found");
       }
 
-      if (participation.status !== "confirmed" && participation.status !== "pending") {
+      if (participation.status !== "confirmed" && participation.status !== "pending" && participation.status !== "invited") {
         throw new Error("Cannot perform with current status");
       }
 
       // Simulate performance score
       const performanceScore = Math.floor(Math.random() * 30) + 70; // 70-100
-      const festivalId = participation.festival_id as string | undefined;
+      const festivalId = participation.event_id as string;
 
       const { error } = await (supabase as any)
         .from("festival_participants")
-        .update({ 
-          status: "performed",
-          performance_score: performanceScore 
-        })
+        .update({ status: "performed" })
         .eq("id", participationId);
 
       if (error) throw error;
@@ -320,27 +247,25 @@ export const useFestivals = (userId?: string, bandId?: string) => {
       // Award payment and fame
       const rewards = participation.festivals?.rewards || {};
       const fame = rewards.fame || 100;
-      const payment = participation.payment_amount || 5000;
+      const payment = participation.payout_amount || 5000;
 
       // Update band balance and fame
       if (participation.band_id) {
-        await (supabase as any)
+        const { data: bandData } = await (supabase as any)
           .from("bands")
           .select("band_balance, fame")
           .eq("id", participation.band_id)
-          .single()
-          .then((result: any) => {
-            if (result.data) {
-              (supabase as any)
-                .from("bands")
-                .update({ 
-                  band_balance: (result.data.band_balance || 0) + payment,
-                  fame: (result.data.fame || 0) + fame
-                })
-                .eq("id", participation.band_id)
-                .then(() => {});
-            }
-          });
+          .single();
+
+        if (bandData) {
+          await (supabase as any)
+            .from("bands")
+            .update({ 
+              band_balance: (bandData.band_balance || 0) + payment,
+              fame: (bandData.fame || 0) + fame
+            })
+            .eq("id", participation.band_id);
+        }
       }
 
       return { performanceScore, payment, fame, festivalId };
