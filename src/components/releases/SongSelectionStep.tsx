@@ -34,7 +34,7 @@ export function SongSelectionStep({
       let allSongs: any[] = [];
 
       if (bandId) {
-        // Get band songs
+        // Get band songs - any recorded song belonging to the band
         const { data: bandSongs } = await supabase
           .from("songs")
           .select("*")
@@ -44,28 +44,36 @@ export function SongSelectionStep({
         
         allSongs = bandSongs || [];
 
-        // Also get songs from band members
+        // Also get songs from band members that are not assigned to a band
         const { data: bandMembers } = await supabase
           .from("band_members")
           .select("user_id")
           .eq("band_id", bandId);
 
         if (bandMembers && bandMembers.length > 0) {
-          const memberUserIds = bandMembers.map(m => m.user_id);
-          const { data: memberSongs } = await supabase
-            .from("songs")
-            .select("*")
-            .in("user_id", memberUserIds)
-            .is("band_id", null)
-            .eq("status", "recorded")
-            .order("created_at", { ascending: false });
+          const memberUserIds = bandMembers.map(m => m.user_id).filter(Boolean);
+          if (memberUserIds.length > 0) {
+            const { data: memberSongs } = await supabase
+              .from("songs")
+              .select("*")
+              .in("user_id", memberUserIds)
+              .is("band_id", null)
+              .eq("status", "recorded")
+              .order("created_at", { ascending: false });
 
-          if (memberSongs) {
-            allSongs = [...allSongs, ...memberSongs];
+            if (memberSongs) {
+              // Merge avoiding duplicates
+              const existingIds = new Set(allSongs.map(s => s.id));
+              for (const song of memberSongs) {
+                if (!existingIds.has(song.id)) {
+                  allSongs.push(song);
+                }
+              }
+            }
           }
         }
       } else {
-        // Get user's solo songs
+        // Get user's solo songs (all recorded songs by this user)
         const { data: userSongs } = await supabase
           .from("songs")
           .select("*")
@@ -76,7 +84,12 @@ export function SongSelectionStep({
         allSongs = userSongs || [];
       }
 
-      return allSongs;
+      // Remove duplicates by ID just in case
+      const uniqueSongs = Array.from(
+        new Map(allSongs.map(s => [s.id, s])).values()
+      );
+
+      return uniqueSongs;
     }
   });
 
