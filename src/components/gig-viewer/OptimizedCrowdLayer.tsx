@@ -19,6 +19,9 @@ interface CrowdPerson {
   showMerch: boolean;
   scale: number;
   baseY: number;
+  hairType: number;
+  gender: number;
+  accessory: number;
 }
 
 // Seeded random number generator for deterministic positions
@@ -27,10 +30,33 @@ const seededRandom = (seed: number): number => {
   return x - Math.floor(x);
 };
 
-// Color palettes
-const shirtColors = ['#1a1a1a', '#2d2d2d', '#4a4a4a', '#333333', '#ff3333', '#3333ff', '#33ff33', '#ffff33'];
-const pantsColors = ['#1a1a1a', '#2d2d2d', '#0066cc', '#4a4a4a'];
-const skinTones = ['#8d5524', '#c68642', '#e0ac69', '#f1c27d', '#ffdbac'];
+// Enhanced color palettes with more variety
+const shirtColors = [
+  '#1a1a1a', '#2d2d2d', '#4a4a4a', '#333333', // Dark
+  '#ff3333', '#cc2222', '#990000', // Reds
+  '#3333ff', '#2222cc', '#000099', // Blues
+  '#33ff33', '#22cc22', // Greens
+  '#ff6600', '#cc5500', // Orange
+  '#9933ff', '#6600cc', // Purple
+  '#ffcc00', '#ff9900', // Yellow/Gold
+  '#00cccc', '#006666', // Teal
+  '#ff66cc', '#cc3399', // Pink
+];
+
+const pantsColors = ['#1a1a1a', '#2d2d2d', '#0066cc', '#4a4a4a', '#000044', '#1a0a0a', '#333344'];
+
+const skinTones = [
+  '#8d5524', '#a5673f', '#c68642', '#d4956a',
+  '#e0ac69', '#eac086', '#f1c27d', '#f5d7b2', '#ffdbac', '#ffe4c4'
+];
+
+const hairColors = [
+  '#1a1a1a', '#2d2314', '#3d2616', '#4a3728', 
+  '#8b4513', '#a0522d', '#b87333', '#cd853f',
+  '#daa520', '#e6be8a', '#f5deb3', '#ffebcd',
+  '#800000', '#a52a2a', '#b22222', // Red hair
+  '#4b0082', '#8b008b', // Dyed hair
+];
 
 export const OptimizedCrowdLayer = ({
   crowdMood,
@@ -41,6 +67,7 @@ export const OptimizedCrowdLayer = ({
   densityMultiplier
 }: OptimizedCrowdLayerProps) => {
   const groupRefs = useRef<Map<number, THREE.Group>>(new Map());
+  const armRefs = useRef<Map<string, THREE.Mesh>>(new Map());
   const timeSinceLastUpdate = useRef(0);
   const animationInterval = 1 / 15; // 15fps for crowd animations
 
@@ -79,10 +106,13 @@ export const OptimizedCrowdLayer = ({
           id: currentId,
           position: [x, baseY, z],
           seed,
-          colorVariant: Math.floor(seed * 10),
+          colorVariant: Math.floor(seededRandom(currentId * 4.56) * shirtColors.length),
           showMerch: seededRandom(currentId * 5.67) * 100 < merchPercentage,
           scale: 0.8 + seededRandom(currentId * 1.23) * 0.4,
-          baseY
+          baseY,
+          hairType: Math.floor(seededRandom(currentId * 8.91) * 5),
+          gender: seededRandom(currentId * 6.78) > 0.5 ? 1 : 0,
+          accessory: Math.floor(seededRandom(currentId * 9.12) * 4),
         });
 
         currentId++;
@@ -93,12 +123,12 @@ export const OptimizedCrowdLayer = ({
   }, [maxCrowdCount, densityMultiplier, merchPercentage]);
 
   // Determine animation intensity based on mood
-  const getAnimationIntensity = (mood: number): { bounce: number; sway: number; jump: number } => {
-    if (mood < 20) return { bounce: 0.02, sway: 0.05, jump: 0 };
-    if (mood < 40) return { bounce: 0.05, sway: 0.1, jump: 0 };
-    if (mood < 60) return { bounce: 0.1, sway: 0.15, jump: 0.1 };
-    if (mood < 80) return { bounce: 0.15, sway: 0.2, jump: 0.2 };
-    return { bounce: 0.2, sway: 0.25, jump: 0.3 };
+  const getAnimationIntensity = (mood: number): { bounce: number; sway: number; jump: number; arms: number } => {
+    if (mood < 20) return { bounce: 0.02, sway: 0.05, jump: 0, arms: 0 };
+    if (mood < 40) return { bounce: 0.05, sway: 0.1, jump: 0, arms: 0.1 };
+    if (mood < 60) return { bounce: 0.1, sway: 0.15, jump: 0.1, arms: 0.3 };
+    if (mood < 80) return { bounce: 0.15, sway: 0.2, jump: 0.2, arms: 0.5 };
+    return { bounce: 0.2, sway: 0.25, jump: 0.3, arms: 0.8 };
   };
 
   // Batched animation update - directly manipulate THREE.Group transforms
@@ -145,8 +175,99 @@ export const OptimizedCrowdLayer = ({
           group.rotation.x = Math.sin(time * 2 + phaseOffset) * 0.15;
           break;
       }
+
+      // Animate arms if mood is high enough
+      if (intensity.arms > 0.3) {
+        const leftArm = armRefs.current.get(`${person.id}-left`);
+        const rightArm = armRefs.current.get(`${person.id}-right`);
+        
+        if (leftArm && animType % 2 === 0) {
+          leftArm.rotation.z = 0.3 + Math.sin(time * 2 + phaseOffset) * intensity.arms * 1.5;
+        }
+        if (rightArm && animType % 2 === 1) {
+          rightArm.rotation.z = -0.3 - Math.sin(time * 2 + phaseOffset + 0.5) * intensity.arms * 1.5;
+        }
+      }
     });
   });
+
+  // Hair component based on type
+  const renderHair = (hairType: number, hairColor: string) => {
+    switch (hairType) {
+      case 0: // Short
+        return (
+          <mesh position={[0, 1.02, 0]}>
+            <sphereGeometry args={[0.13, 6, 6]} />
+            <meshBasicMaterial color={hairColor} />
+          </mesh>
+        );
+      case 1: // Long
+        return (
+          <group>
+            <mesh position={[0, 1.02, 0]}>
+              <sphereGeometry args={[0.13, 6, 6]} />
+              <meshBasicMaterial color={hairColor} />
+            </mesh>
+            <mesh position={[0, 0.85, -0.05]}>
+              <capsuleGeometry args={[0.08, 0.2, 2, 4]} />
+              <meshBasicMaterial color={hairColor} />
+            </mesh>
+          </group>
+        );
+      case 2: // Mohawk
+        return (
+          <mesh position={[0, 1.1, 0]}>
+            <boxGeometry args={[0.04, 0.15, 0.12]} />
+            <meshBasicMaterial color={hairColor} />
+          </mesh>
+        );
+      case 3: // Bald/Buzz
+        return null;
+      case 4: // Ponytail
+        return (
+          <group>
+            <mesh position={[0, 1.02, 0]}>
+              <sphereGeometry args={[0.12, 5, 5]} />
+              <meshBasicMaterial color={hairColor} />
+            </mesh>
+            <mesh position={[0, 0.9, -0.12]} rotation={[0.4, 0, 0]}>
+              <capsuleGeometry args={[0.03, 0.15, 2, 4]} />
+              <meshBasicMaterial color={hairColor} />
+            </mesh>
+          </group>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Accessory component
+  const renderAccessory = (accessory: number) => {
+    switch (accessory) {
+      case 0: // Glasses
+        return (
+          <group position={[0, 0.98, 0.12]}>
+            <mesh position={[-0.04, 0, 0]}>
+              <ringGeometry args={[0.02, 0.03, 6]} />
+              <meshBasicMaterial color="#333333" />
+            </mesh>
+            <mesh position={[0.04, 0, 0]}>
+              <ringGeometry args={[0.02, 0.03, 6]} />
+              <meshBasicMaterial color="#333333" />
+            </mesh>
+          </group>
+        );
+      case 1: // Hat/Cap
+        return (
+          <mesh position={[0, 1.08, 0.02]}>
+            <cylinderGeometry args={[0.12, 0.14, 0.06, 6]} />
+            <meshBasicMaterial color="#1a1a1a" />
+          </mesh>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <group>
@@ -155,6 +276,9 @@ export const OptimizedCrowdLayer = ({
         const shirtColor = person.showMerch ? bandMerchColor : shirtColors[person.colorVariant % shirtColors.length];
         const pantsColor = pantsColors[Math.floor(person.seed * 7) % pantsColors.length];
         const skinColor = skinTones[Math.floor(person.seed * 13) % skinTones.length];
+        const hairColor = hairColors[Math.floor(person.seed * 17) % hairColors.length];
+        const bodyWidth = person.gender === 1 ? 0.16 : 0.14;
+        const bodyHeight = person.gender === 1 ? 0.55 : 0.5;
 
         return (
           <group
@@ -165,36 +289,80 @@ export const OptimizedCrowdLayer = ({
             position={[person.position[0], person.position[1], person.position[2]]}
             scale={person.scale}
           >
-            {/* Body - ultra minimal geometry */}
+            {/* Body with better proportions */}
             <mesh position={[0, 0.5, 0]}>
-              <capsuleGeometry args={[0.15, 0.5, 2, 4]} />
-              <meshBasicMaterial color={shirtColor} />
+              <capsuleGeometry args={[bodyWidth, bodyHeight, 3, 6]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.8} />
             </mesh>
 
-            {/* Head - minimal segments */}
+            {/* Neck */}
+            <mesh position={[0, 0.85, 0]}>
+              <cylinderGeometry args={[0.05, 0.06, 0.1, 6]} />
+              <meshBasicMaterial color={skinColor} />
+            </mesh>
+
+            {/* Head with better shape */}
             <mesh position={[0, 0.95, 0]}>
-              <sphereGeometry args={[0.12, 4, 4]} />
+              <sphereGeometry args={[0.12, 8, 8]} />
+              <meshStandardMaterial color={skinColor} roughness={0.6} />
+            </mesh>
+
+            {/* Face features - simple eyes */}
+            <mesh position={[-0.035, 0.97, 0.1]}>
+              <sphereGeometry args={[0.015, 4, 4]} />
+              <meshBasicMaterial color="#1a1a1a" />
+            </mesh>
+            <mesh position={[0.035, 0.97, 0.1]}>
+              <sphereGeometry args={[0.015, 4, 4]} />
+              <meshBasicMaterial color="#1a1a1a" />
+            </mesh>
+
+            {/* Hair */}
+            {renderHair(person.hairType, hairColor)}
+
+            {/* Accessory (for some people) */}
+            {person.accessory < 2 && renderAccessory(person.accessory)}
+
+            {/* Arms with animation refs */}
+            <mesh 
+              position={[-0.22, 0.6, 0]} 
+              rotation={[0, 0, 0.3]}
+              ref={(mesh) => {
+                if (mesh) armRefs.current.set(`${person.id}-left`, mesh);
+              }}
+            >
+              <capsuleGeometry args={[0.04, 0.32, 2, 4]} />
+              <meshBasicMaterial color={skinColor} />
+            </mesh>
+            <mesh 
+              position={[0.22, 0.6, 0]} 
+              rotation={[0, 0, -0.3]}
+              ref={(mesh) => {
+                if (mesh) armRefs.current.set(`${person.id}-right`, mesh);
+              }}
+            >
+              <capsuleGeometry args={[0.04, 0.32, 2, 4]} />
               <meshBasicMaterial color={skinColor} />
             </mesh>
 
-            {/* Arms - minimal geometry */}
-            <mesh position={[-0.2, 0.6, 0]}>
-              <capsuleGeometry args={[0.04, 0.3, 2, 3]} />
-              <meshBasicMaterial color={skinColor} />
-            </mesh>
-            <mesh position={[0.2, 0.6, 0]}>
-              <capsuleGeometry args={[0.04, 0.3, 2, 3]} />
-              <meshBasicMaterial color={skinColor} />
-            </mesh>
-
-            {/* Legs - minimal geometry */}
+            {/* Legs with shoes */}
             <mesh position={[-0.08, 0.15, 0]}>
-              <capsuleGeometry args={[0.06, 0.3, 2, 3]} />
+              <capsuleGeometry args={[0.06, 0.32, 2, 4]} />
               <meshBasicMaterial color={pantsColor} />
             </mesh>
             <mesh position={[0.08, 0.15, 0]}>
-              <capsuleGeometry args={[0.06, 0.3, 2, 3]} />
+              <capsuleGeometry args={[0.06, 0.32, 2, 4]} />
               <meshBasicMaterial color={pantsColor} />
+            </mesh>
+
+            {/* Shoes */}
+            <mesh position={[-0.08, -0.02, 0.02]}>
+              <boxGeometry args={[0.08, 0.04, 0.12]} />
+              <meshBasicMaterial color="#1a1a1a" />
+            </mesh>
+            <mesh position={[0.08, -0.02, 0.02]}>
+              <boxGeometry args={[0.08, 0.04, 0.12]} />
+              <meshBasicMaterial color="#1a1a1a" />
             </mesh>
           </group>
         );
