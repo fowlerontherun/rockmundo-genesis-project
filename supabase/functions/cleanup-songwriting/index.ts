@@ -56,18 +56,22 @@ Deno.serve(async (req) => {
 
     console.log(`Auto-completed ${completedSessions} sessions, converted ${convertedProjects} projects`)
 
-    // Award XP for auto-completed sessions
+    // Award XP for auto-completed sessions that haven't been processed yet
     if (completedSessions > 0) {
+      // Get recently auto-completed sessions that have xp_earned but completed_at was just set
       const { data: sessions } = await supabase
         .from('songwriting_sessions')
         .select(`
           id, 
           xp_earned, 
           project_id,
-          user_id
+          user_id,
+          auto_completed
         `)
         .eq('auto_completed', true)
-        .is('xp_awarded', null)
+        .not('xp_earned', 'is', null)
+        .gt('xp_earned', 0)
+        .order('completed_at', { ascending: false })
         .limit(completedSessions)
 
       for (const session of sessions || []) {
@@ -86,11 +90,6 @@ Deno.serve(async (req) => {
                 },
               },
             })
-
-            await supabase
-              .from('songwriting_sessions')
-              .update({ xp_awarded: true })
-              .eq('id', session.id)
 
             xpAwardedCount += 1
           }
