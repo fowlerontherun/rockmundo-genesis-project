@@ -44,9 +44,10 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     })
 
+    // Find in_progress sessions that have passed their scheduled_end time
     const { data: sessions, error: sessionsError } = await supabase
       .from('recording_sessions')
-      .select('*')
+      .select('*, songs(quality_score)')
       .eq('status', 'in_progress')
       .lt('scheduled_end', new Date().toISOString())
 
@@ -65,69 +66,42 @@ Deno.serve(async (req) => {
         const endTime = new Date(session.scheduled_end)
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
 
-        // Get user/band skills for base quality calculation
-        let skillBasedQuality = 50
-        
-        if (session.user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('skill_levels, attributes')
-            .eq('user_id', session.user_id)
+        // Get current song quality
+        const currentQuality = session.songs?.quality_score || 50
+
+        // Calculate quality improvement based on duration and studio
+        let studioQualityBonus = 0
+        if (session.studio_id) {
+          const { data: studioData } = await supabase
+            .from('city_studios')
+            .select('quality_rating')
+            .eq('id', session.studio_id)
             .single()
-          
-          const skillLevels = (profileData?.skill_levels as Record<string, number>) || {}
-          const attributes = (profileData?.attributes as any) || { technical_mastery: 50 }
-          
-          // Calculate skill-based quality
-          const mixingSkill = Math.min(100,
-            (skillLevels['songwriting_basic_mixing'] || 0) * 0.6 +
-            (skillLevels['songwriting_professional_mixing'] || 0) * 0.8 +
-            (skillLevels['songwriting_mastery_mixing'] || 0) * 1.0
-          )
-          
-          const dawSkill = Math.min(100,
-            (skillLevels['songwriting_basic_daw'] || 0) * 0.6 +
-            (skillLevels['songwriting_professional_daw'] || 0) * 0.8 +
-            (skillLevels['songwriting_mastery_daw'] || 0) * 1.0
-          )
-          
-          const productionSkill = Math.min(100,
-            (skillLevels['songwriting_basic_record_production'] || 0) * 0.5 +
-            (skillLevels['songwriting_professional_record_production'] || 0) * 0.75 +
-            (skillLevels['songwriting_mastery_record_production'] || 0) * 1.0
-          )
-          
-          const techBonus = Math.min(20, attributes.technical_mastery * 0.2)
-          
-          skillBasedQuality = Math.round(
-            (mixingSkill * 0.35 + dawSkill * 0.35 + productionSkill * 0.30) + techBonus
-          )
+          studioQualityBonus = (studioData?.quality_rating || 5) * 2
         }
-        
-        // Add variance (±12%)
-        const variance = (Math.random() - 0.5) * 0.24
-        const baseQuality = Math.max(25, Math.min(95, Math.round(skillBasedQuality * (1 + variance))))
-        
-        const producerBonus = session.producer_bonus || 0
-        const equipmentBonus = session.equipment_bonus || 0
-        const finalQuality = Math.min(100, baseQuality + producerBonus + equipmentBonus)
 
+        // Base improvement scales with duration (2-8 per hour)
+        const baseImprovement = Math.floor(durationHours * (2 + Math.random() * 6))
+        
+        // Add studio bonus
+        const qualityImprovement = Math.min(30, baseImprovement + studioQualityBonus)
+        
+        // Calculate new quality (capped at 100)
+        const newQuality = Math.min(100, currentQuality + qualityImprovement)
+
+        // Calculate XP earned
         const baseXpPerHour = 15
-        const qualityMultiplier = finalQuality / 50
-        const xpEarned = Math.floor(baseXpPerHour * durationHours * qualityMultiplier)
+        const xpEarned = Math.floor(baseXpPerHour * durationHours * (1 + qualityImprovement / 50))
 
-        console.log(`Quality: ${finalQuality}, XP: ${xpEarned}`)
+        console.log(`Quality improvement: ${qualityImprovement}, New quality: ${newQuality}, XP: ${xpEarned}`)
 
+        // Update the recording session
         const { error: updateError } = await supabase
           .from('recording_sessions')
           .update({
             status: 'completed',
-            actual_end: new Date().toISOString(),
-            final_quality: finalQuality,
-            xp_earned: xpEarned,
-            notes: session.notes
-              ? `${session.notes}\n\nAuto-completed: Quality ${finalQuality}/100, earned ${xpEarned} XP`
-              : `Auto-completed: Quality ${finalQuality}/100, earned ${xpEarned} XP`,
+            completed_at: new Date().toISOString(),
+            quality_improvement: qualityImprovement,
             updated_at: new Date().toISOString(),
           })
           .eq('id', session.id)
@@ -136,64 +110,74 @@ Deno.serve(async (req) => {
           throw updateError
         }
 
+        // Update the song's quality score
         if (session.song_id) {
           await supabase
             .from('songs')
             .update({
-              quality_score: finalQuality,
+              quality_score: newQuality,
               updated_at: new Date().toISOString(),
             })
             .eq('id', session.song_id)
         }
 
+        // Award XP to band members or user
         if (session.band_id) {
           const { data: bandMembers } = await supabase
             .from('band_members')
-            .select('profile_id, profiles(user_id)')
+            .select('user_id')
             .eq('band_id', session.band_id)
-            .eq('status', 'active')
+            .in('member_status', ['active', null])
 
           for (const member of bandMembers || []) {
-            if (member.profiles?.user_id) {
-              await supabase.functions.invoke('progression', {
-                body: {
-                  action: 'award_action_xp',
-                  amount: xpEarned,
-                  category: 'performance',
-                  action_key: 'recording_session',
-                  metadata: {
-                    session_id: session.id,
-                    song_id: session.song_id,
-                    final_quality: finalQuality,
-                    duration_hours: durationHours,
-                    auto_completed: true,
+            if (member.user_id) {
+              try {
+                await supabase.functions.invoke('progression', {
+                  body: {
+                    action: 'award_action_xp',
+                    amount: xpEarned,
+                    category: 'performance',
+                    action_key: 'recording_session',
+                    metadata: {
+                      session_id: session.id,
+                      song_id: session.song_id,
+                      quality_improvement: qualityImprovement,
+                      duration_hours: durationHours,
+                      auto_completed: true,
+                    },
                   },
-                },
-              })
+                })
+              } catch (xpError) {
+                console.error(`Failed to award XP to member ${member.user_id}:`, xpError)
+              }
             }
           }
         } else if (session.user_id) {
-          await supabase.functions.invoke('progression', {
-            body: {
-              action: 'award_action_xp',
-              amount: xpEarned,
-              category: 'performance',
-              action_key: 'recording_session',
-              metadata: {
-                session_id: session.id,
-                song_id: session.song_id,
-                final_quality: finalQuality,
-                duration_hours: durationHours,
-                auto_completed: true,
+          try {
+            await supabase.functions.invoke('progression', {
+              body: {
+                action: 'award_action_xp',
+                amount: xpEarned,
+                category: 'performance',
+                action_key: 'recording_session',
+                metadata: {
+                  session_id: session.id,
+                  song_id: session.song_id,
+                  quality_improvement: qualityImprovement,
+                  duration_hours: durationHours,
+                  auto_completed: true,
+                },
               },
-            },
-          })
+            })
+          } catch (xpError) {
+            console.error(`Failed to award XP to user ${session.user_id}:`, xpError)
+          }
         }
 
         completedCount++
         totalXpAwarded += xpEarned
-        averageFinalQuality += finalQuality
-        console.log(`✓ Completed session ${session.id}: Quality ${finalQuality}, XP ${xpEarned}`)
+        averageFinalQuality += newQuality
+        console.log(`✓ Completed session ${session.id}: Quality +${qualityImprovement} (now ${newQuality}), XP ${xpEarned}`)
       } catch (error) {
         errorCount += 1
         console.error(`Error processing session ${session.id}:`, error)

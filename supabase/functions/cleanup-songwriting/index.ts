@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     })
 
+    // Call the database function to auto-complete sessions
     const { data: autoCompleteResult, error: autoCompleteError } = await supabase
       .rpc('auto_complete_songwriting_sessions')
 
@@ -55,17 +56,23 @@ Deno.serve(async (req) => {
 
     console.log(`Auto-completed ${completedSessions} sessions, converted ${convertedProjects} projects`)
 
+    // Award XP for auto-completed sessions
     if (completedSessions > 0) {
       const { data: sessions } = await supabase
         .from('songwriting_sessions')
-        .select('id, xp_earned, project_id, songwriting_projects(user_id, profiles(id))')
+        .select(`
+          id, 
+          xp_earned, 
+          project_id,
+          user_id
+        `)
         .eq('auto_completed', true)
-        .not('xp_awarded', 'eq', true)
+        .is('xp_awarded', null)
         .limit(completedSessions)
 
       for (const session of sessions || []) {
         try {
-          if (session.xp_earned && session.songwriting_projects?.profiles?.id) {
+          if (session.xp_earned && session.user_id) {
             await supabase.functions.invoke('progression', {
               body: {
                 action: 'award_action_xp',
