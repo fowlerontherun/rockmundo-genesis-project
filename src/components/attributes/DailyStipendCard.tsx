@@ -8,9 +8,10 @@ import { format } from "date-fns";
 
 interface DailyStipendCardProps {
   lastClaimDate?: string | null;
+  onClaimed?: () => void;
 }
 
-export const DailyStipendCard = ({ lastClaimDate }: DailyStipendCardProps) => {
+export const DailyStipendCard = ({ lastClaimDate, onClaimed }: DailyStipendCardProps) => {
   const queryClient = useQueryClient();
   
   // Check if user has claimed today by comparing dates (not timestamps)
@@ -23,6 +24,7 @@ export const DailyStipendCard = ({ lastClaimDate }: DailyStipendCardProps) => {
     onSuccess: () => {
       toast.success("Daily XP claimed successfully!");
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
+      onClaimed?.();
     },
     onError: (error: Error) => {
       // Don't show error toast if it's just the "already claimed" validation

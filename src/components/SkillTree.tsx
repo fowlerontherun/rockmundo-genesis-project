@@ -16,13 +16,10 @@ interface SkillCategory {
   skills: SkillDefinition[];
 }
 
-const getSkillIcon = (category: string) => {
-  if (category.includes('songwriting') || category.includes('production')) return <Music className="h-4 w-4" />;
-  if (category.includes('genre')) return <Star className="h-4 w-4" />;
-  if (category.includes('instrument') || category.includes('performance')) return <Mic className="h-4 w-4" />;
-  if (category.includes('stage') || category.includes('showmanship')) return <Users className="h-4 w-4" />;
-  return <Zap className="h-4 w-4" />;
-};
+interface SkillTreeProps {
+  xpBalance?: number;
+  onXpSpent?: () => void;
+}
 
 const getSkillTier = (slug: string): 'basic' | 'professional' | 'mastery' => {
   if (slug.startsWith('basic_')) return 'basic';
@@ -30,52 +27,50 @@ const getSkillTier = (slug: string): 'basic' | 'professional' | 'mastery' => {
   return 'mastery';
 };
 
-const getTierColor = (tier: 'basic' | 'professional' | 'mastery') => {
-  switch (tier) {
-    case 'basic': return 'bg-green-500/20 text-green-700 border-green-500/40';
-    case 'professional': return 'bg-blue-500/20 text-blue-700 border-blue-500/40';
-    case 'mastery': return 'bg-purple-500/20 text-purple-700 border-purple-500/40';
-  }
-};
-
-export const SkillTree: React.FC = () => {
+export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }) => {
   const { profile } = useGameData();
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
   const [progress, setProgress] = useState<SkillProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('songwriting');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchData = async () => {
+    try {
+      const { data: skillsData, error: skillsError } = await supabase
+        .from('skill_definitions')
+        .select('*')
+        .order('display_name');
+
+      if (skillsError) throw skillsError;
+
+      setSkills(skillsData ?? []);
+
+      if (profile) {
+        const { data: progressData, error: progressError } = await supabase
+          .from('skill_progress')
+          .select('*')
+          .eq('profile_id', profile.id);
+
+        if (progressError) throw progressError;
+        setProgress(progressData ?? []);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      toast.error('Failed to load skills');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const { data: skillsData, error: skillsError } = await supabase
-          .from('skill_definitions')
-          .select('*')
-          .order('display_name');
+    fetchData();
+  }, [profile, refreshKey]);
 
-        if (skillsError) throw skillsError;
-
-        setSkills(skillsData ?? []);
-
-        if (profile) {
-          const { data: progressData, error: progressError } = await supabase
-            .from('skill_progress')
-            .select('*')
-            .eq('profile_id', profile.id);
-
-          if (progressError) throw progressError;
-          setProgress(progressData ?? []);
-        }
-      } catch (error) {
-        console.error('Error fetching skills:', error);
-        toast.error('Failed to load skills');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSkills();
-  }, [profile]);
+  const handleSkillTrained = () => {
+    setRefreshKey(prev => prev + 1);
+    onXpSpent?.();
+  };
 
   const categorizeSkills = (): SkillCategory[] => {
     const categories: SkillCategory[] = [
@@ -247,6 +242,8 @@ export const SkillTree: React.FC = () => {
                     required_xp: skillProgress.required_xp || 100
                   } : null}
                   tier="basic"
+                  xpBalance={xpBalance}
+                  onTrain={handleSkillTrained}
                 >
                   {/* Professional skills that build on this basic skill */}
                   {professional
@@ -264,6 +261,8 @@ export const SkillTree: React.FC = () => {
                           } : null}
                           tier="professional"
                           isLocked={!skillProgress || (skillProgress.current_level || 0) < 5}
+                          xpBalance={xpBalance}
+                          onTrain={handleSkillTrained}
                         >
                           {/* Mastery skills that build on this professional skill */}
                           {mastery
@@ -281,6 +280,8 @@ export const SkillTree: React.FC = () => {
                                   } : null}
                                   tier="mastery"
                                   isLocked={!profProgress || (profProgress.current_level || 0) < 10}
+                                  xpBalance={xpBalance}
+                                  onTrain={handleSkillTrained}
                                 />
                               );
                             })}
@@ -311,6 +312,8 @@ export const SkillTree: React.FC = () => {
                       required_xp: skillProgress.required_xp || 100
                     } : null}
                     tier="professional"
+                    xpBalance={xpBalance}
+                    onTrain={handleSkillTrained}
                   />
                 );
               })}
@@ -341,6 +344,8 @@ export const SkillTree: React.FC = () => {
                       required_xp: skillProgress.required_xp || 100
                     } : null}
                     tier="mastery"
+                    xpBalance={xpBalance}
+                    onTrain={handleSkillTrained}
                   />
                 );
               })}

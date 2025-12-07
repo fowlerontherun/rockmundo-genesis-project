@@ -6,6 +6,7 @@ import { FULL_ATTRIBUTE_METADATA, type FullAttributeKey } from "@/utils/attribut
 interface AttributePanelProps {
   attributes: Tables<"player_attributes"> | null;
   xpBalance: number;
+  onXpSpent?: () => void;
 }
 
 const ATTRIBUTE_CATEGORIES = {
@@ -31,7 +32,7 @@ const ATTRIBUTE_CATEGORIES = {
   },
 };
 
-export const AttributePanel = ({ attributes, xpBalance }: AttributePanelProps) => {
+export const AttributePanel = ({ attributes, xpBalance, onXpSpent }: AttributePanelProps) => {
   return (
     <div className="space-y-6">
       {Object.entries(ATTRIBUTE_CATEGORIES).map(([categoryKey, category]) => (
@@ -51,6 +52,7 @@ export const AttributePanel = ({ attributes, xpBalance }: AttributePanelProps) =
                   currentValue={currentValue}
                   xpBalance={xpBalance}
                   affectedSystems={metadata.affectedSystems}
+                  onXpSpent={onXpSpent}
                 />
               );
             })}

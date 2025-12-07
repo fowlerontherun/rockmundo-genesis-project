@@ -1,9 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Lock, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Lock, ChevronRight, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { spendSkillXp } from "@/utils/progression";
+import { toast } from "sonner";
 
 interface SkillNodeProps {
   skill: {
@@ -20,6 +24,8 @@ interface SkillNodeProps {
   tier: 'basic' | 'professional' | 'mastery';
   children?: React.ReactNode;
   isLocked?: boolean;
+  xpBalance?: number;
+  onTrain?: () => void;
 }
 
 const getTierColor = (tier: 'basic' | 'professional' | 'mastery') => {
@@ -30,14 +36,51 @@ const getTierColor = (tier: 'basic' | 'professional' | 'mastery') => {
   }
 };
 
-export const HierarchicalSkillNode = ({ skill, progress, tier, children, isLocked }: SkillNodeProps) => {
+const getTrainingCost = (tier: 'basic' | 'professional' | 'mastery') => {
+  switch (tier) {
+    case 'basic': return 10;
+    case 'professional': return 25;
+    case 'mastery': return 50;
+  }
+};
+
+export const HierarchicalSkillNode = ({ 
+  skill, 
+  progress, 
+  tier, 
+  children, 
+  isLocked,
+  xpBalance = 0,
+  onTrain
+}: SkillNodeProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const queryClient = useQueryClient();
   const hasChildren = !!children;
   
   const level = progress?.current_level || 0;
   const xp = progress?.current_xp || 0;
   const requiredXp = progress?.required_xp || 100;
   const progressPercent = (xp / requiredXp) * 100;
+  
+  const cost = getTrainingCost(tier);
+  const canAfford = xpBalance >= cost;
+  const maxLevel = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
+  const isMaxed = level >= maxLevel;
+
+  const trainMutation = useMutation({
+    mutationFn: () => spendSkillXp({
+      skillSlug: skill.slug,
+      amount: cost
+    }),
+    onSuccess: () => {
+      toast.success(`${skill.display_name} trained!`);
+      queryClient.invalidateQueries({ queryKey: ["gameData"] });
+      onTrain?.();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to train skill");
+    }
+  });
 
   return (
     <div className="space-y-2">
@@ -93,6 +136,20 @@ export const HierarchicalSkillNode = ({ skill, progress, tier, children, isLocke
                   <span>{Math.round(progressPercent)}%</span>
                 </div>
                 <Progress value={progressPercent} className="h-1.5" />
+                
+                <Button
+                  onClick={() => trainMutation.mutate()}
+                  disabled={!canAfford || isMaxed || trainMutation.isPending || isLocked}
+                  className="w-full h-7 text-xs"
+                  size="sm"
+                >
+                  {isMaxed ? "Maxed" : (
+                    <>
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      Train - {cost} XP
+                    </>
+                  )}
+                </Button>
               </>
             )}
           </div>
