@@ -1192,6 +1192,95 @@ export type Database = {
           },
         ]
       }
+      band_rider_items: {
+        Row: {
+          catalog_item_id: string
+          created_at: string | null
+          custom_notes: string | null
+          id: string
+          priority: string
+          quantity: number
+          rider_id: string
+        }
+        Insert: {
+          catalog_item_id: string
+          created_at?: string | null
+          custom_notes?: string | null
+          id?: string
+          priority?: string
+          quantity?: number
+          rider_id: string
+        }
+        Update: {
+          catalog_item_id?: string
+          created_at?: string | null
+          custom_notes?: string | null
+          id?: string
+          priority?: string
+          quantity?: number
+          rider_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_rider_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "rider_item_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_rider_items_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "band_riders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_riders: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          tier: string
+          total_cost_estimate: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          tier?: string
+          total_cost_estimate?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          tier?: string
+          total_cost_estimate?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_riders_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_song_familiarity: {
         Row: {
           band_id: string
@@ -3682,6 +3771,78 @@ export type Database = {
         }
         Relationships: []
       }
+      gig_rider_fulfillment: {
+        Row: {
+          backstage_fulfillment: number | null
+          created_at: string | null
+          fulfillment_percentage: number | null
+          gig_id: string
+          hospitality_fulfillment: number | null
+          id: string
+          items_fulfilled: Json | null
+          items_missing: Json | null
+          items_substituted: Json | null
+          morale_modifier: number | null
+          negotiation_notes: string | null
+          performance_modifier: number | null
+          rider_id: string | null
+          technical_fulfillment: number | null
+          total_rider_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          backstage_fulfillment?: number | null
+          created_at?: string | null
+          fulfillment_percentage?: number | null
+          gig_id: string
+          hospitality_fulfillment?: number | null
+          id?: string
+          items_fulfilled?: Json | null
+          items_missing?: Json | null
+          items_substituted?: Json | null
+          morale_modifier?: number | null
+          negotiation_notes?: string | null
+          performance_modifier?: number | null
+          rider_id?: string | null
+          technical_fulfillment?: number | null
+          total_rider_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          backstage_fulfillment?: number | null
+          created_at?: string | null
+          fulfillment_percentage?: number | null
+          gig_id?: string
+          hospitality_fulfillment?: number | null
+          id?: string
+          items_fulfilled?: Json | null
+          items_missing?: Json | null
+          items_substituted?: Json | null
+          morale_modifier?: number | null
+          negotiation_notes?: string | null
+          performance_modifier?: number | null
+          rider_id?: string | null
+          technical_fulfillment?: number | null
+          total_rider_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_rider_fulfillment_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: true
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_rider_fulfillment_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "band_riders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_song_performances: {
         Row: {
           chemistry_contrib: number | null
@@ -3857,6 +4018,7 @@ export type Database = {
           pre_gig_forecast: Json | null
           predicted_tickets: number | null
           promoter_id: string | null
+          rider_id: string | null
           scheduled_date: string
           setlist_duration_minutes: number | null
           setlist_id: string | null
@@ -3892,6 +4054,7 @@ export type Database = {
           pre_gig_forecast?: Json | null
           predicted_tickets?: number | null
           promoter_id?: string | null
+          rider_id?: string | null
           scheduled_date: string
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
@@ -3927,6 +4090,7 @@ export type Database = {
           pre_gig_forecast?: Json | null
           predicted_tickets?: number | null
           promoter_id?: string | null
+          rider_id?: string | null
           scheduled_date?: string
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
@@ -3972,6 +4136,13 @@ export type Database = {
             columns: ["promoter_id"]
             isOneToOne: false
             referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gigs_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "band_riders"
             referencedColumns: ["id"]
           },
           {
@@ -8488,6 +8659,54 @@ export type Database = {
           },
         ]
       }
+      rider_item_catalog: {
+        Row: {
+          base_cost: number
+          category: string
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_premium: boolean | null
+          min_fame_required: number
+          morale_impact: number
+          name: string
+          performance_impact: number
+          priority: string
+          subcategory: string
+        }
+        Insert: {
+          base_cost?: number
+          category: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_premium?: boolean | null
+          min_fame_required?: number
+          morale_impact?: number
+          name: string
+          performance_impact?: number
+          priority?: string
+          subcategory: string
+        }
+        Update: {
+          base_cost?: number
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_premium?: boolean | null
+          min_fame_required?: number
+          morale_impact?: number
+          name?: string
+          performance_impact?: number
+          priority?: string
+          subcategory?: string
+        }
+        Relationships: []
+      }
       season_genre_modifiers: {
         Row: {
           created_at: string
@@ -11583,6 +11802,54 @@ export type Database = {
           },
           {
             foreignKeyName: "venue_relationships_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_rider_capabilities: {
+        Row: {
+          catalog_item_id: string
+          cost_modifier: number | null
+          created_at: string | null
+          id: string
+          is_available: boolean | null
+          notes: string | null
+          quality_level: number | null
+          venue_id: string
+        }
+        Insert: {
+          catalog_item_id: string
+          cost_modifier?: number | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          notes?: string | null
+          quality_level?: number | null
+          venue_id: string
+        }
+        Update: {
+          catalog_item_id?: string
+          cost_modifier?: number | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          notes?: string | null
+          quality_level?: number | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_rider_capabilities_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "rider_item_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_rider_capabilities_venue_id_fkey"
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
