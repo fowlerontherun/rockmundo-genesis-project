@@ -196,42 +196,92 @@ export async function executeGigPerformance(data: GigExecutionData) {
     .eq('id', (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id)
     .single();
 
-  // Insert gig outcome with venue info
-  const { data: outcome, error: outcomeError } = await supabase
+  // Check if outcome already exists (created by trigger)
+  const { data: existingOutcome } = await supabase
     .from('gig_outcomes')
-    .insert({
-      gig_id: gigId,
-      overall_rating: overallRating,
-      actual_attendance: actualAttendance,
-      attendance_percentage: (actualAttendance / venueCapacity) * 100,
-      ticket_revenue: ticketRevenue,
-      merch_revenue: merchSales.totalRevenue,
-      total_revenue: totalRevenue,
-      venue_cost: 0,
-      crew_cost: crewCosts,
-      equipment_cost: Math.round(equipmentWearCost),
-      total_costs: crewCosts + Math.round(equipmentWearCost),
-      net_profit: Math.round(netProfit),
-      performance_grade: gradeData.grade,
-      equipment_quality_avg: equipmentQuality,
-      crew_skill_avg: crewSkillLevel,
-      band_chemistry_level: bandChemistry,
-      member_skill_avg: memberSkillAverage,
-      fame_gained: fameGained,
-      chemistry_change: chemistryImpact,
-      merch_items_sold: merchSales.itemsSold,
-      venue_name: venueData?.name,
-      venue_capacity: venueData?.capacity,
-      band_synergy_modifier: Number(gearEffects.equipmentQualityBonus.toFixed(2)),
-      social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
-      audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
-      promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
-      venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
-    })
-    .select()
-    .single();
+    .select('id')
+    .eq('gig_id', gigId)
+    .maybeSingle();
 
-  if (outcomeError) throw outcomeError;
+  let outcome;
+  
+  if (existingOutcome) {
+    // Update existing outcome created by trigger
+    const { data: updatedOutcome, error: updateError } = await supabase
+      .from('gig_outcomes')
+      .update({
+        overall_rating: overallRating,
+        actual_attendance: actualAttendance,
+        attendance_percentage: (actualAttendance / venueCapacity) * 100,
+        ticket_revenue: ticketRevenue,
+        merch_revenue: merchSales.totalRevenue,
+        total_revenue: totalRevenue,
+        venue_cost: 0,
+        crew_cost: crewCosts,
+        equipment_cost: Math.round(equipmentWearCost),
+        total_costs: crewCosts + Math.round(equipmentWearCost),
+        net_profit: Math.round(netProfit),
+        performance_grade: gradeData.grade,
+        equipment_quality_avg: equipmentQuality,
+        crew_skill_avg: crewSkillLevel,
+        band_chemistry_level: bandChemistry,
+        member_skill_avg: memberSkillAverage,
+        fame_gained: fameGained,
+        chemistry_change: chemistryImpact,
+        merch_items_sold: merchSales.itemsSold,
+        venue_name: venueData?.name,
+        venue_capacity: venueData?.capacity,
+        band_synergy_modifier: Number(gearEffects.equipmentQualityBonus.toFixed(2)),
+        social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
+        audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
+        promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
+        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
+      })
+      .eq('id', existingOutcome.id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+    outcome = updatedOutcome;
+  } else {
+    // Insert new outcome if none exists
+    const { data: newOutcome, error: outcomeError } = await supabase
+      .from('gig_outcomes')
+      .insert({
+        gig_id: gigId,
+        overall_rating: overallRating,
+        actual_attendance: actualAttendance,
+        attendance_percentage: (actualAttendance / venueCapacity) * 100,
+        ticket_revenue: ticketRevenue,
+        merch_revenue: merchSales.totalRevenue,
+        total_revenue: totalRevenue,
+        venue_cost: 0,
+        crew_cost: crewCosts,
+        equipment_cost: Math.round(equipmentWearCost),
+        total_costs: crewCosts + Math.round(equipmentWearCost),
+        net_profit: Math.round(netProfit),
+        performance_grade: gradeData.grade,
+        equipment_quality_avg: equipmentQuality,
+        crew_skill_avg: crewSkillLevel,
+        band_chemistry_level: bandChemistry,
+        member_skill_avg: memberSkillAverage,
+        fame_gained: fameGained,
+        chemistry_change: chemistryImpact,
+        merch_items_sold: merchSales.itemsSold,
+        venue_name: venueData?.name,
+        venue_capacity: venueData?.capacity,
+        band_synergy_modifier: Number(gearEffects.equipmentQualityBonus.toFixed(2)),
+        social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
+        audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
+        promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
+        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
+      })
+      .select()
+      .single();
+
+    if (outcomeError) throw outcomeError;
+    outcome = newOutcome;
+  }
 
   // Insert song performances with song titles
   const songPerfsWithOutcome = songPerformances.map(sp => ({

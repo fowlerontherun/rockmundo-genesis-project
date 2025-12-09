@@ -19,6 +19,42 @@ interface BookRehearsalParams {
   roomLocation: string;
 }
 
+// Helper to manually complete rehearsal (since cron may not trigger)
+async function completeRehearsalDirectly(
+  rehearsalId: string,
+  bandId: string,
+  songId: string | null,
+  durationMinutes: number
+) {
+  if (!songId) return;
+  
+  // Fetch existing familiarity
+  const { data: existing } = await supabase
+    .from('band_song_familiarity')
+    .select('familiarity_minutes')
+    .eq('band_id', bandId)
+    .eq('song_id', songId)
+    .maybeSingle();
+  
+  const currentMinutes = existing?.familiarity_minutes || 0;
+  const newMinutes = currentMinutes + durationMinutes;
+  
+  // Upsert familiarity record
+  await supabase
+    .from('band_song_familiarity')
+    .upsert({
+      band_id: bandId,
+      song_id: songId,
+      familiarity_minutes: newMinutes,
+      last_rehearsed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'band_id,song_id',
+    });
+    
+  console.log(`Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} minutes`);
+}
+
 export function useRehearsalBooking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
