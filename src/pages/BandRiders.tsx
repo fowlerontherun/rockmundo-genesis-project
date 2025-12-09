@@ -27,7 +27,8 @@ const TIER_COLORS: Record<string, string> = {
 
 export default function BandRiders() {
   const { user } = useAuth();
-  const { band, isLoading: bandLoading } = usePrimaryBand();
+  const { data: primaryBandRecord, isLoading: bandLoading } = usePrimaryBand();
+  const band = primaryBandRecord?.bands;
   const { riders, ridersLoading, deleteRider, setDefaultRider, createRider } = useBandRiders(band?.id || null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -265,8 +266,8 @@ export default function BandRiders() {
           <ScrollArea className="max-h-[calc(90vh-120px)]">
             <div className="pr-4">
               <RiderBuilder
-                bandId={band.id}
-                bandFame={band.fame || 0}
+                bandId={band?.id || ''}
+                bandFame={band?.fame || 0}
                 riderId={editingRider || undefined}
                 onSave={() => setShowBuilder(false)}
                 onCancel={() => setShowBuilder(false)}
