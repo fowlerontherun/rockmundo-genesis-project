@@ -7,6 +7,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
+import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ const Layout = () => {
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
+  
+  // Global auto-complete for rehearsals
+  useAutoRehearsalCompletion(user?.id || null);
 
   useEffect(() => {
     if (!authLoading && !user) {
