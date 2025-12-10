@@ -1970,6 +1970,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "community_feed_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       community_mentorship_goals: {
@@ -2050,6 +2057,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "community_mentorship_matches_mentee_profile_id_fkey"
+            columns: ["mentee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "community_mentorship_matches_mentor_profile_id_fkey"
             columns: ["mentor_profile_id"]
             isOneToOne: false
@@ -2104,6 +2118,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentorship_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -4229,6 +4250,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jam_session_messages_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       jam_session_participants: {
@@ -4275,6 +4303,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -4337,6 +4372,13 @@ export type Database = {
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -6195,6 +6237,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "player_attributes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       player_avatar_config: {
@@ -6231,6 +6280,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -6312,6 +6368,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_book_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -6416,6 +6479,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "player_book_reading_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "player_book_reading_sessions_purchase_id_fkey"
             columns: ["purchase_id"]
             isOneToOne: false
@@ -6467,6 +6537,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_daily_cats_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -6527,6 +6604,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_employment_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -6793,6 +6877,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "player_owned_skins_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       player_personal_gear: {
@@ -6950,6 +7041,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_scheduled_activities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -7219,6 +7317,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "player_travel_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "player_travel_history_to_city_id_fkey"
             columns: ["to_city_id"]
             isOneToOne: false
@@ -7330,6 +7435,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "player_university_enrollments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "player_university_enrollments_university_id_fkey"
             columns: ["university_id"]
             isOneToOne: false
@@ -7372,6 +7484,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_xp_wallet_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -7567,6 +7686,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_activity_statuses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -9116,6 +9242,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shift_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       skill_books: {
@@ -9898,6 +10031,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
@@ -12064,6 +12204,39 @@ export type Database = {
         }
         Relationships: []
       }
+      public_player_cards: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          display_name: string | null
+          fame: number | null
+          id: string | null
+          level: number | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          fame?: number | null
+          id?: string | null
+          level?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          fame?: number | null
+          id?: string | null
+          level?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       released_songs: {
         Row: {
           ai_generated_lyrics: boolean | null
@@ -12130,6 +12303,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
