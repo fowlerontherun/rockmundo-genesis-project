@@ -16,55 +16,113 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { gigIds } = await req.json();
-
-    if (!gigIds || !Array.isArray(gigIds)) {
-      throw new Error('gigIds array is required');
+    // ============ AUTHENTICATION CHECK ============
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: No authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
+    // Verify the JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid token:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============ ADMIN ROLE CHECK ============
+    const { data: role, error: roleError } = await supabase.rpc('get_user_role', { _user_id: user.id });
+    
+    if (roleError || role !== 'admin') {
+      console.error('Admin access denied for user:', user.id, 'Role:', role);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Admin action authorized for user:', user.id);
+
+    // ============ INPUT VALIDATION ============
+    const { gigIds } = await req.json();
+
+    if (!Array.isArray(gigIds) || gigIds.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'gigIds must be a non-empty array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate UUID format for all IDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const id of gigIds) {
+      if (typeof id !== 'string' || !uuidRegex.test(id)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid UUID format: ${id}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Limit batch size to prevent abuse
+    if (gigIds.length > 50) {
+      return new Response(
+        JSON.stringify({ error: 'Maximum 50 gigs can be processed at once' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============ EXECUTE ADMIN ACTION ============
     const results = [];
 
     for (const gigId of gigIds) {
       try {
-        // Check if gig has a setlist
-        const { data: gig } = await supabase
+        // Get gig details
+        const { data: gig, error: gigError } = await supabase
           .from('gigs')
-          .select('setlist_id, band_id')
+          .select('id, setlist_id, band_id, status')
           .eq('id', gigId)
           .single();
 
-        if (!gig) {
-          results.push({ gigId, success: false, error: 'Gig not found' });
+        if (gigError || !gig) {
+          results.push({ gigId, success: false, error: gigError?.message || 'Gig not found' });
           continue;
         }
 
+        // Determine new status based on setlist existence
+        let newStatus = 'completed';
         if (!gig.setlist_id) {
-          // Gig has no setlist - mark as cancelled
-          await supabase
-            .from('gigs')
-            .update({ 
-              status: 'cancelled',
-              completed_at: new Date().toISOString()
-            })
-            .eq('id', gigId);
+          newStatus = 'cancelled';
+        }
 
-          results.push({ gigId, success: true, action: 'cancelled (no setlist)' });
+        // Update the gig
+        const { error: updateError } = await supabase
+          .from('gigs')
+          .update({ 
+            status: newStatus,
+            completed_at: newStatus === 'completed' ? new Date().toISOString() : null
+          })
+          .eq('id', gigId);
+
+        if (updateError) {
+          results.push({ gigId, success: false, error: updateError.message });
         } else {
-          // Force complete the stuck gig
-          await supabase
-            .from('gigs')
-            .update({ 
-              status: 'completed',
-              completed_at: new Date().toISOString()
-            })
-            .eq('id', gigId);
-
-          results.push({ gigId, success: true, action: 'completed' });
+          results.push({ gigId, success: true, newStatus });
         }
       } catch (error: any) {
         results.push({ gigId, success: false, error: error.message });
       }
     }
+
+    console.log('Fix stuck gigs completed by admin:', user.id, 'Results:', results.length);
 
     return new Response(
       JSON.stringify({ success: true, results }),

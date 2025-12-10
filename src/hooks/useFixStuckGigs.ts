@@ -7,11 +7,27 @@ export const useFixStuckGigs = () => {
 
   return useMutation({
     mutationFn: async (gigIds: string[]) => {
+      // Get current session for auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('You must be logged in to perform this action');
+      }
+
       const { data, error } = await supabase.functions.invoke('fix-stuck-gigs', {
-        body: { gigIds }
+        body: { gigIds },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
+      
+      // Check for API-level errors
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
       return data;
     },
     onSuccess: (data) => {
