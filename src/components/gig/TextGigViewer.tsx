@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -133,13 +133,19 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hasArrived, setHasArrived] = useState(false);
   const [momentum, setMomentum] = useState(0); // -3 to +3 momentum tracker
+  const [currentSongIndex, setCurrentSongIndex] = useState(-1);
 
   const addCommentary = useCallback((entry: Omit<CommentaryEntry, 'id' | 'timestamp'>) => {
-    setCommentary(prev => [...prev, {
-      ...entry,
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-    }]);
+    setCommentary(prev => {
+      // Avoid duplicate messages
+      const lastEntry = prev[prev.length - 1];
+      if (lastEntry?.message === entry.message) return prev;
+      return [...prev, {
+        ...entry,
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+      }];
+    });
   }, []);
 
   const getRandomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -164,7 +170,7 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
     return reaction;
   }, [momentum]);
 
-  // Load gig data
+  // Load gig data and poll for updates
   useEffect(() => {
     const loadGig = async () => {
       const { data: gigData } = await supabase
@@ -175,6 +181,7 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
 
       if (gigData) {
         setGig(gigData);
+        setCurrentSongIndex(gigData.current_song_position || 0);
 
         if (gigData.setlist_id) {
           const { data: songs } = await supabase
@@ -189,6 +196,10 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
     };
 
     loadGig();
+    
+    // Poll for updates every 5 seconds
+    const pollInterval = setInterval(loadGig, 5000);
+    return () => clearInterval(pollInterval);
   }, [gigId]);
 
   // Band arrival commentary
@@ -204,16 +215,84 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
     }
   }, [gig, hasArrived, addCommentary]);
 
-  // Subscribe to song performances
+  // Track processed performances to avoid duplicates
+  const processedPerformanceIds = useRef<Set<string>>(new Set());
+
+  // Process a new performance (generate commentary)
+  const processNewPerformance = useCallback((newPerf: any) => {
+    // Skip if already processed
+    if (processedPerformanceIds.current.has(newPerf.id)) return;
+    processedPerformanceIds.current.add(newPerf.id);
+
+    // Find song title
+    const songData = setlistSongs.find(s => s.song_id === newPerf.song_id);
+    const songTitle = songData?.songs?.title || newPerf.song_title || 'Unknown Song';
+    const isEncore = songData?.is_encore;
+    
+    // Calculate new momentum
+    const momentumChange = 
+      newPerf.crowd_response === 'ecstatic' ? 1.5 :
+      newPerf.crowd_response === 'enthusiastic' ? 0.5 :
+      newPerf.crowd_response === 'engaged' ? 0 :
+      newPerf.crowd_response === 'mixed' ? -0.5 : -1;
+    
+    setMomentum(prev => Math.max(-3, Math.min(3, prev + momentumChange)));
+
+    // Add song start commentary
+    if (isEncore) {
+      addCommentary({
+        type: 'encore',
+        message: getRandomItem(ENCORE_COMMENTS),
+        icon: '🌟',
+        variant: 'success',
+      });
+    }
+    
+    addCommentary({
+      type: 'song_start',
+      message: generateSongStartCommentary(songTitle, newPerf.performance_score || 15),
+      icon: '🎵',
+    });
+
+    // Add crowd reaction after a brief delay
+    setTimeout(() => {
+      addCommentary({
+        type: 'crowd_reaction',
+        message: generateCrowdReaction(newPerf.crowd_response, newPerf.performance_score || 15, songTitle),
+        variant: newPerf.crowd_response === 'ecstatic' || newPerf.crowd_response === 'enthusiastic' 
+          ? 'success' 
+          : newPerf.crowd_response === 'disappointed' 
+            ? 'destructive' 
+            : 'default',
+      });
+    }, 1500);
+
+    // Random chance for special moment (20%)
+    if (Math.random() < 0.2) {
+      setTimeout(() => {
+        const isPositivePerformance = newPerf.performance_score >= 15;
+        addCommentary({
+          type: isPositivePerformance ? 'special_moment' : 'event',
+          message: isPositivePerformance 
+            ? getRandomItem(SPECIAL_MOMENTS) 
+            : getRandomItem(NEGATIVE_EVENTS),
+          icon: isPositivePerformance ? '✨' : '⚠️',
+          variant: isPositivePerformance ? 'success' : 'warning',
+        });
+      }, 3000);
+    }
+  }, [setlistSongs, addCommentary, generateSongStartCommentary, generateCrowdReaction]);
+
+  // Load and poll for performances
   useEffect(() => {
     if (!gig?.id) return;
 
-    const loadExistingPerformances = async () => {
+    const loadPerformances = async () => {
       const { data: outcome } = await supabase
         .from('gig_outcomes')
         .select('id')
         .eq('gig_id', gig.id)
-        .single();
+        .maybeSingle();
 
       if (outcome) {
         const { data: perfs } = await supabase
@@ -223,13 +302,23 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
           .order('position');
 
         if (perfs) {
+          // Check for new performances
+          for (const perf of perfs) {
+            if (!processedPerformanceIds.current.has(perf.id)) {
+              processNewPerformance(perf);
+            }
+          }
           setPerformances(perfs);
         }
       }
     };
 
-    loadExistingPerformances();
+    loadPerformances();
+    
+    // Poll every 3 seconds for new performances
+    const pollInterval = setInterval(loadPerformances, 3000);
 
+    // Also subscribe to realtime for instant updates
     const channel = supabase
       .channel('text-viewer-performances')
       .on(
@@ -238,72 +327,16 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
         (payload) => {
           const newPerf = payload.new as any;
           setPerformances(prev => [...prev, newPerf]);
-          
-          // Find song title
-          const songData = setlistSongs.find(s => s.song_id === newPerf.song_id);
-          const songTitle = songData?.songs?.title || newPerf.song_title || 'Unknown Song';
-          const isEncore = songData?.is_encore;
-          
-          // Calculate new momentum
-          const momentumChange = 
-            newPerf.crowd_response === 'ecstatic' ? 1.5 :
-            newPerf.crowd_response === 'enthusiastic' ? 0.5 :
-            newPerf.crowd_response === 'engaged' ? 0 :
-            newPerf.crowd_response === 'mixed' ? -0.5 : -1;
-          
-          setMomentum(prev => Math.max(-3, Math.min(3, prev + momentumChange)));
-
-          // Add song start commentary
-          if (isEncore) {
-            addCommentary({
-              type: 'encore',
-              message: getRandomItem(ENCORE_COMMENTS),
-              icon: '🌟',
-              variant: 'success',
-            });
-          }
-          
-          addCommentary({
-            type: 'song_start',
-            message: generateSongStartCommentary(songTitle, newPerf.performance_score || 15),
-            icon: '🎵',
-          });
-
-          // Add crowd reaction after a brief delay
-          setTimeout(() => {
-            addCommentary({
-              type: 'crowd_reaction',
-              message: generateCrowdReaction(newPerf.crowd_response, newPerf.performance_score || 15, songTitle),
-              variant: newPerf.crowd_response === 'ecstatic' || newPerf.crowd_response === 'enthusiastic' 
-                ? 'success' 
-                : newPerf.crowd_response === 'disappointed' 
-                  ? 'destructive' 
-                  : 'default',
-            });
-          }, 1500);
-
-          // Random chance for special moment (20%)
-          if (Math.random() < 0.2) {
-            setTimeout(() => {
-              const isPositivePerformance = newPerf.performance_score >= 15;
-              addCommentary({
-                type: isPositivePerformance ? 'special_moment' : 'event',
-                message: isPositivePerformance 
-                  ? getRandomItem(SPECIAL_MOMENTS) 
-                  : getRandomItem(NEGATIVE_EVENTS),
-                icon: isPositivePerformance ? '✨' : '⚠️',
-                variant: isPositivePerformance ? 'success' : 'warning',
-              });
-            }, 3000);
-          }
+          processNewPerformance(newPerf);
         }
       )
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [gig, setlistSongs, addCommentary, generateSongStartCommentary, generateCrowdReaction]);
+  }, [gig?.id, processNewPerformance]);
 
   // Subscribe to gig status updates
   useEffect(() => {
@@ -410,6 +443,39 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Now Playing */}
+      {gig?.status === 'in_progress' && setlistSongs.length > 0 && (
+        <Card className="border-2 border-primary/50 bg-gradient-to-r from-primary/10 to-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Music className="h-8 w-8 text-primary" />
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                </span>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Now Playing</p>
+                <p className="text-lg font-bold">
+                  {currentSongIndex < setlistSongs.length 
+                    ? setlistSongs[currentSongIndex]?.songs?.title || 'Loading...'
+                    : 'Show Complete!'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Song {Math.min(currentSongIndex + 1, setlistSongs.length)} of {setlistSongs.length}
+                </p>
+              </div>
+              {currentSongIndex < setlistSongs.length && (
+                <Badge variant="default" className="text-sm">
+                  {Math.ceil((setlistSongs[currentSongIndex]?.songs?.duration_seconds || 180) / 60)}min
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Commentary Feed */}
       <Card>
