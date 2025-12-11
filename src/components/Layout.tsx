@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
 import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
+import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -20,6 +21,9 @@ const Layout = () => {
   
   // Global auto-complete for rehearsals
   useAutoRehearsalCompletion(user?.id || null);
+
+  // Global gig execution - processes active gigs
+  useGlobalGigExecution(user?.id || null);
 
   useEffect(() => {
     if (!authLoading && !user) {
