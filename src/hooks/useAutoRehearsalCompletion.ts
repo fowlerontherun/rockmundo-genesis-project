@@ -85,32 +85,55 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
 
           // Update song familiarity if a song was selected
           if (rehearsal.selected_song_id) {
-            const { data: existing } = await supabase
+            console.log(`[AutoRehearsal] Updating familiarity for song ${rehearsal.selected_song_id}, band ${rehearsal.band_id}`);
+            
+            const { data: existing, error: fetchError } = await supabase
               .from('band_song_familiarity')
-              .select('familiarity_minutes')
+              .select('id, familiarity_minutes')
               .eq('band_id', rehearsal.band_id)
               .eq('song_id', rehearsal.selected_song_id)
               .maybeSingle();
 
+            if (fetchError) {
+              console.error(`[AutoRehearsal] Error fetching existing familiarity:`, fetchError);
+            }
+
             const currentMinutes = existing?.familiarity_minutes || 0;
             const newMinutes = currentMinutes + Math.floor(durationMinutes);
+            console.log(`[AutoRehearsal] Familiarity: ${currentMinutes} -> ${newMinutes} mins`);
 
-            const { error: famError } = await supabase
-              .from('band_song_familiarity')
-              .upsert({
-                band_id: rehearsal.band_id,
-                song_id: rehearsal.selected_song_id,
-                familiarity_minutes: newMinutes,
-                last_rehearsed_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              }, {
-                onConflict: 'band_id,song_id',
-              });
+            if (existing?.id) {
+              // Update existing record
+              const { error: updateError } = await supabase
+                .from('band_song_familiarity')
+                .update({
+                  familiarity_minutes: newMinutes,
+                  last_rehearsed_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existing.id);
 
-            if (famError) {
-              console.error(`Error updating familiarity:`, famError);
+              if (updateError) {
+                console.error(`[AutoRehearsal] Error updating familiarity:`, updateError);
+              } else {
+                console.log(`[AutoRehearsal] Successfully updated familiarity for song ${rehearsal.selected_song_id}`);
+              }
             } else {
-              console.log(`[AutoRehearsal] Updated familiarity for song ${rehearsal.selected_song_id}: ${currentMinutes} -> ${newMinutes} mins`);
+              // Insert new record
+              const { error: insertError } = await supabase
+                .from('band_song_familiarity')
+                .insert({
+                  band_id: rehearsal.band_id,
+                  song_id: rehearsal.selected_song_id,
+                  familiarity_minutes: newMinutes,
+                  last_rehearsed_at: new Date().toISOString(),
+                });
+
+              if (insertError) {
+                console.error(`[AutoRehearsal] Error inserting familiarity:`, insertError);
+              } else {
+                console.log(`[AutoRehearsal] Successfully created familiarity for song ${rehearsal.selected_song_id}`);
+              }
             }
           }
 
