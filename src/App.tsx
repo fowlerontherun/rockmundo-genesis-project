@@ -170,6 +170,7 @@ const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
+const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
 const queryClient = new QueryClient();
 
 function App() {
