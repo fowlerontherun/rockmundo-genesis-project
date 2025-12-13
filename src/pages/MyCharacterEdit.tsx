@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes } from "@/hooks/useGameData";
@@ -72,6 +73,7 @@ const MyCharacterEdit = () => {
   const [usernameInput, setUsernameInput] = useState(profile?.username ?? "");
   const [displayNameInput, setDisplayNameInput] = useState(profile?.display_name ?? "");
   const [bioInput, setBioInput] = useState(profile?.bio ?? "");
+  const [genderInput, setGenderInput] = useState<string>((profile as any)?.gender ?? "unspecified");
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -130,6 +132,7 @@ const MyCharacterEdit = () => {
     setUsernameInput(profile?.username ?? "");
     setDisplayNameInput(profile?.display_name ?? "");
     setBioInput(profile?.bio ?? "");
+    setGenderInput((profile as any)?.gender ?? "unspecified");
     setProfileError(null);
   }, [profile]);
 
@@ -250,7 +253,8 @@ const MyCharacterEdit = () => {
         username: nextUsername,
         display_name: nextDisplayName,
         bio: nextBio.length > 0 ? nextBio : null,
-      });
+        gender: genderInput,
+      } as any);
       await refetch();
 
       setUsernameInput(nextUsername);
@@ -411,6 +415,29 @@ const MyCharacterEdit = () => {
                   />
                   <p className="text-xs text-muted-foreground">
                     This is the name shown throughout Rockmundo.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-gender">Gender</Label>
+                  <Select
+                    value={genderInput}
+                    onValueChange={setGenderInput}
+                    disabled={isSavingProfile}
+                  >
+                    <SelectTrigger id="profile-gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-binary</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="unspecified">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This affects how your character appears in the game world.
                   </p>
                 </div>
 

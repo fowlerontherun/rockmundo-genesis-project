@@ -9,6 +9,7 @@ import { AlertCircle } from "lucide-react";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
 import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
+import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -23,6 +24,9 @@ const Layout = () => {
 
   // Global gig execution - processes active gigs
   useGlobalGigExecution(user?.id || null);
+
+  // Track total hours played
+  usePlaytimeTracker(user?.id || null);
 
   useEffect(() => {
     if (!authLoading && !user) {
