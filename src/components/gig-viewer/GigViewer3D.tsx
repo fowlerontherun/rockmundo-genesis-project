@@ -12,6 +12,10 @@ import { StageFloor } from "./StageFloor";
 import { StageLighting } from "./StageLighting";
 import { CameraRig } from "./CameraRig";
 import { StageEffects } from "./StageEffects";
+import { LaserEffects } from "./LaserEffects";
+import { ConfettiSystem } from "./ConfettiSystem";
+import { CO2Jets } from "./CO2Jets";
+import { CrowdPhones } from "./CrowdPhones";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { usePerformanceSettings } from "@/hooks/usePerformanceSettings";
@@ -41,6 +45,8 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
   const [bandMerchColor, setBandMerchColor] = useState("#ff0000");
   const [songSection, setSongSection] = useState<'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro'>('intro');
   const [bandId, setBandId] = useState<string | null>(null);
+  const [confettiTrigger, setConfettiTrigger] = useState(false);
+  const [co2Trigger, setCo2Trigger] = useState(false);
 
   // Update preview mode values
   useEffect(() => {
@@ -124,23 +130,44 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
     fetchGigData();
   }, [gigId]);
 
-  // Calculate song section based on progress
+  // Calculate song section based on progress and trigger effects
   useEffect(() => {
     const interval = setInterval(() => {
       const progress = (Date.now() % 15000) / 15000; // 15 second cycle
       
       if (progress < 0.1) setSongSection('intro');
       else if (progress < 0.25) setSongSection('verse');
-      else if (progress < 0.4) setSongSection('chorus');
+      else if (progress < 0.4) {
+        setSongSection('chorus');
+        // Trigger CO2 at chorus start
+        if (crowdMood > 70) {
+          setCo2Trigger(true);
+          setTimeout(() => setCo2Trigger(false), 500);
+        }
+      }
       else if (progress < 0.55) setSongSection('verse');
-      else if (progress < 0.7) setSongSection('chorus');
+      else if (progress < 0.7) {
+        setSongSection('chorus');
+        // Trigger CO2 again at second chorus
+        if (crowdMood > 70) {
+          setCo2Trigger(true);
+          setTimeout(() => setCo2Trigger(false), 500);
+        }
+      }
       else if (progress < 0.8) setSongSection('bridge');
       else if (progress < 0.9) setSongSection('solo');
-      else setSongSection('outro');
+      else {
+        setSongSection('outro');
+        // Trigger confetti at song end for high mood
+        if (crowdMood > 80) {
+          setConfettiTrigger(true);
+          setTimeout(() => setConfettiTrigger(false), 500);
+        }
+      }
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [crowdMood]);
 
   // Simulate song progression
   useEffect(() => {
@@ -264,7 +291,36 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           />
 
           {/* Stage effects (haze, particles) */}
-          <StageEffects crowdMood={crowdMood} />
+          <StageEffects crowdMood={crowdMood} songSection={songSection} />
+
+          {/* Laser effects */}
+          <LaserEffects 
+            enabled={performanceSettings.tier !== 'low'}
+            intensity={songIntensity}
+            songSection={songSection}
+            crowdMood={crowdMood}
+          />
+
+          {/* CO2 jets */}
+          <CO2Jets 
+            enabled={performanceSettings.tier !== 'low'}
+            trigger={co2Trigger}
+          />
+
+          {/* Confetti system */}
+          <ConfettiSystem 
+            enabled={performanceSettings.tier !== 'low'}
+            intensity={songIntensity}
+            trigger={confettiTrigger}
+          />
+
+          {/* Crowd phones/lighters */}
+          <CrowdPhones 
+            enabled={true}
+            crowdMood={crowdMood}
+            songSection={songSection}
+            maxPhones={performanceSettings.tier === 'high' ? 50 : 25}
+          />
 
           {/* Environment */}
           <Environment preset="night" />

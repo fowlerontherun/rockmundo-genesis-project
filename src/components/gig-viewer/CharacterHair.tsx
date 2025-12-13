@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 
 interface CharacterHairProps {
-  hairType: 'short-spiky' | 'long-straight' | 'mohawk' | 'bald' | 'ponytail' | 'curly' | 'rocker' | 'messy';
+  hairType: 'short-spiky' | 'long-straight' | 'mohawk' | 'bald' | 'ponytail' | 'curly' | 'rocker' | 'messy' | 'undercut' | 'dreadlocks' | 'braids' | 'buzzcut' | 'afro' | 'slickedback' | 'topheavy';
   color: string;
-  seed?: number; // Optional seed for deterministic randomness
+  seed?: number;
 }
 
 // Seeded random for deterministic values
@@ -18,8 +18,15 @@ export const CharacterHair = ({ hairType, color, seed = 0.5 }: CharacterHairProp
       case 'bald':
         return null;
         
+      case 'buzzcut':
+        return (
+          <mesh position={[0, 0.12, 0]}>
+            <sphereGeometry args={[0.14, 8, 8]} />
+            <meshBasicMaterial color={color} />
+          </mesh>
+        );
+        
       case 'short-spiky':
-        // Reduced from 12 to 8 spikes
         return (
           <group>
             {Array.from({ length: 8 }).map((_, i) => {
@@ -43,16 +50,24 @@ export const CharacterHair = ({ hairType, color, seed = 0.5 }: CharacterHairProp
               <capsuleGeometry args={[0.1, 0.25, 3, 6]} />
               <meshBasicMaterial color={color} />
             </mesh>
+            {/* Side strands */}
+            <mesh position={[-0.1, -0.05, 0]} rotation={[0, 0, 0.2]}>
+              <capsuleGeometry args={[0.03, 0.2, 2, 4]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+            <mesh position={[0.1, -0.05, 0]} rotation={[0, 0, -0.2]}>
+              <capsuleGeometry args={[0.03, 0.2, 2, 4]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
           </group>
         );
         
       case 'mohawk':
-        // Reduced from 6 to 4 pieces
         return (
           <group>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <mesh key={i} position={[0, 0.15 + i * 0.04, -0.08 + i * 0.04]} rotation={[0.3, 0, 0]}>
-                <coneGeometry args={[0.03, 0.1, 3]} />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <mesh key={i} position={[0, 0.15 + i * 0.03, -0.08 + i * 0.04]} rotation={[0.3, 0, 0]}>
+                <coneGeometry args={[0.025, 0.12, 4]} />
                 <meshBasicMaterial color={color} />
               </mesh>
             ))}
@@ -67,25 +82,24 @@ export const CharacterHair = ({ hairType, color, seed = 0.5 }: CharacterHairProp
               <meshBasicMaterial color={color} />
             </mesh>
             <mesh position={[0, 0, -0.2]} rotation={[0.5, 0, 0]}>
-              <capsuleGeometry args={[0.04, 0.2, 2, 4]} />
+              <capsuleGeometry args={[0.04, 0.25, 2, 4]} />
               <meshBasicMaterial color={color} />
             </mesh>
           </group>
         );
         
       case 'curly':
-        // Reduced from 16 to 8 spheres, deterministic positions
         return (
           <group>
-            {Array.from({ length: 8 }).map((_, i) => {
-              const angle = (i / 8) * Math.PI * 2;
+            {Array.from({ length: 10 }).map((_, i) => {
+              const angle = (i / 10) * Math.PI * 2;
               const radius = 0.1;
               const x = Math.cos(angle) * radius;
               const z = Math.sin(angle) * radius;
               const y = 0.12 + (seededRandom(seed + i) - 0.5) * 0.06;
               return (
                 <mesh key={i} position={[x, y, z]}>
-                  <sphereGeometry args={[0.03, 4, 4]} />
+                  <sphereGeometry args={[0.035, 4, 4]} />
                   <meshBasicMaterial color={color} />
                 </mesh>
               );
@@ -93,13 +107,22 @@ export const CharacterHair = ({ hairType, color, seed = 0.5 }: CharacterHairProp
           </group>
         );
         
-      case 'rocker':
-        // Reduced from 5 to 3 strands
+      case 'afro':
         return (
           <group>
-            {[-0.04, 0, 0.04].map((x, i) => (
+            <mesh position={[0, 0.12, 0]}>
+              <sphereGeometry args={[0.18, 8, 8]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+          </group>
+        );
+        
+      case 'rocker':
+        return (
+          <group>
+            {[-0.06, -0.02, 0.02, 0.06].map((x, i) => (
               <mesh key={i} position={[x, 0, -0.1]} rotation={[0.6, 0, 0]}>
-                <capsuleGeometry args={[0.025, 0.3, 2, 4]} />
+                <capsuleGeometry args={[0.02, 0.35, 2, 4]} />
                 <meshBasicMaterial color={color} />
               </mesh>
             ))}
@@ -107,17 +130,16 @@ export const CharacterHair = ({ hairType, color, seed = 0.5 }: CharacterHairProp
         );
         
       case 'messy':
-        // Reduced from 10 to 6, deterministic rotations
         return (
           <group>
-            {Array.from({ length: 6 }).map((_, i) => {
-              const angle = (i / 6) * Math.PI * 2;
+            {Array.from({ length: 8 }).map((_, i) => {
+              const angle = (i / 8) * Math.PI * 2;
               const x = Math.cos(angle) * 0.09;
               const z = Math.sin(angle) * 0.09;
               const randomRot: [number, number, number] = [
-                seededRandom(seed + i * 3) * 0.5,
+                seededRandom(seed + i * 3) * 0.6,
                 seededRandom(seed + i * 5) * Math.PI * 2,
-                seededRandom(seed + i * 7) * 0.5
+                seededRandom(seed + i * 7) * 0.6
               ];
               return (
                 <mesh key={i} position={[x, 0.14, z]} rotation={randomRot}>
@@ -128,6 +150,78 @@ export const CharacterHair = ({ hairType, color, seed = 0.5 }: CharacterHairProp
             })}
           </group>
         );
+        
+      case 'undercut':
+        return (
+          <group>
+            {/* Short sides */}
+            <mesh position={[0, 0.08, 0]}>
+              <sphereGeometry args={[0.135, 6, 6]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+            {/* Longer top */}
+            <mesh position={[0, 0.16, 0.02]} rotation={[0.3, 0, 0]}>
+              <boxGeometry args={[0.1, 0.08, 0.12]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+          </group>
+        );
+        
+      case 'dreadlocks':
+        return (
+          <group>
+            {Array.from({ length: 12 }).map((_, i) => {
+              const angle = (i / 12) * Math.PI * 2;
+              const x = Math.cos(angle) * 0.08;
+              const z = Math.sin(angle) * 0.08;
+              return (
+                <mesh key={i} position={[x, 0.05, z]} rotation={[(seededRandom(seed + i) - 0.5) * 0.5, 0, (seededRandom(seed + i * 2) - 0.5) * 0.4]}>
+                  <capsuleGeometry args={[0.02, 0.2 + seededRandom(seed + i * 3) * 0.1, 2, 4]} />
+                  <meshBasicMaterial color={color} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+        
+      case 'braids':
+        return (
+          <group>
+            {[-0.06, 0, 0.06].map((x, i) => (
+              <mesh key={i} position={[x, 0.05, -0.08]} rotation={[0.4, 0, 0]}>
+                <capsuleGeometry args={[0.025, 0.25, 2, 4]} />
+                <meshBasicMaterial color={color} />
+              </mesh>
+            ))}
+            <mesh position={[0, 0.14, 0]}>
+              <sphereGeometry args={[0.1, 6, 6]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+          </group>
+        );
+        
+      case 'slickedback':
+        return (
+          <group>
+            <mesh position={[0, 0.1, -0.05]} rotation={[-0.3, 0, 0]}>
+              <capsuleGeometry args={[0.1, 0.15, 3, 6]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+          </group>
+        );
+        
+      case 'topheavy':
+        return (
+          <group>
+            <mesh position={[0, 0.18, 0]}>
+              <boxGeometry args={[0.14, 0.12, 0.12]} />
+              <meshBasicMaterial color={color} />
+            </mesh>
+          </group>
+        );
+        
+      default:
+        return null;
     }
   }, [hairType, color, seed]);
 
