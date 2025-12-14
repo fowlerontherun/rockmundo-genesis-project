@@ -14,63 +14,57 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
   const { data: recordedSongs, isLoading } = useQuery({
     queryKey: ["recorded-songs-list", userId, bandId],
     queryFn: async () => {
-      // Get all recording sessions with their songs
-      const { data: sessions, error } = await supabase
-        .from("recording_sessions")
-        .select(`
-          id,
-          song_id,
-          status,
-          quality_improvement,
-          completed_at,
-          created_at,
-          duration_hours,
-          total_cost,
-          recording_version,
-          songs!inner (
-            id,
-            title,
-            genre,
-            quality_score,
-            status,
-            created_at
-          ),
-          city_studios (name),
-          recording_producers (name)
-        `)
+      // Get all songs with status = 'recorded' for this user
+      const { data: songs, error: songsError } = await supabase
+        .from("songs")
+        .select("*")
         .eq("user_id", userId)
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false });
+        .eq("status", "recorded")
+        .order("updated_at", { ascending: false });
 
-      if (error) throw error;
+      if (songsError) throw songsError;
 
-      // Group by song to show recording history
-      const songMap = new Map<string, {
-        song: any;
-        recordings: any[];
-        totalQualityGained: number;
-        latestRecording: string;
-      }>();
+      // Get recording sessions for these songs
+      const songIds = songs?.map(s => s.id) || [];
+      let sessions: any[] = [];
 
-      for (const session of sessions || []) {
-        const songId = session.song_id;
-        if (!songMap.has(songId)) {
-          songMap.set(songId, {
-            song: session.songs,
-            recordings: [],
-            totalQualityGained: 0,
-            latestRecording: session.completed_at
-          });
-        }
-        const entry = songMap.get(songId)!;
-        entry.recordings.push(session);
-        entry.totalQualityGained += session.quality_improvement || 0;
-        if (new Date(session.completed_at) > new Date(entry.latestRecording)) {
-          entry.latestRecording = session.completed_at;
-        }
+      if (songIds.length > 0) {
+        const { data: sessionData, error: sessionsError } = await supabase
+          .from("recording_sessions")
+          .select(`
+            id,
+            song_id,
+            status,
+            quality_improvement,
+            completed_at,
+            created_at,
+            duration_hours,
+            total_cost,
+            recording_version,
+            city_studios (name),
+            recording_producers (name)
+          `)
+          .in("song_id", songIds)
+          .eq("status", "completed")
+          .order("completed_at", { ascending: false });
+
+        if (sessionsError) throw sessionsError;
+        sessions = sessionData || [];
       }
 
-      return Array.from(songMap.values());
+      // Build result combining songs with their recording history
+      return songs?.map(song => {
+        const songRecordings = sessions.filter(s => s.song_id === song.id);
+        const totalQualityGained = songRecordings.reduce((sum, r) => sum + (r.quality_improvement || 0), 0);
+        const latestRecording = songRecordings[0]?.completed_at || song.updated_at;
+
+        return {
+          song,
+          recordings: songRecordings,
+          totalQualityGained,
+          latestRecording
+        };
+      }) || [];
     },
     enabled: !!userId
   });
