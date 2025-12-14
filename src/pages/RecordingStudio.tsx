@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecordingWizard } from "@/components/recording/RecordingWizard";
 import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordingDialog";
+import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { Music, Plus, Clock, CheckCircle2, X, AlertCircle } from "lucide-react";
+import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,8 +30,6 @@ export default function RecordingStudio() {
     const loadUserBand = async () => {
       if (!session?.user?.id) return;
 
-      // Get user's active band (not on hiatus, not inactive)
-      // Specify the FK relationship to avoid ambiguity error
       const { data: bandMemberships, error } = await supabase
         .from('band_members')
         .select('band_id, bands!band_members_band_id_fkey(id, name, status, band_balance)')
@@ -39,13 +39,9 @@ export default function RecordingStudio() {
         .limit(1)
         .maybeSingle();
 
-      console.log('🎸 Loading user band:', { bandMemberships, error, userId: session.user.id });
-
       if (bandMemberships?.band_id) {
-        console.log('✅ Setting band ID:', bandMemberships.band_id);
         setUserBandId(bandMemberships.band_id);
       } else {
-        console.log('❌ No active band found');
         setUserBandId(null);
       }
     };
@@ -91,10 +87,7 @@ export default function RecordingStudio() {
             Record your songs with professional producers and studios
           </p>
         </div>
-        <Button onClick={() => {
-          console.log('🎬 Opening recording wizard with:', { userBandId, userId: session?.user?.id });
-          setWizardOpen(true);
-        }} size="lg">
+        <Button onClick={() => setWizardOpen(true)} size="lg">
           <Plus className="h-5 w-5 mr-2" />
           New Recording
         </Button>
@@ -115,97 +108,124 @@ export default function RecordingStudio() {
         </Card>
       )}
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recording Sessions</CardTitle>
-            <CardDescription>
-              Track your current and past recording sessions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading sessions...
-              </div>
-            ) : !sessions || sessions.length === 0 ? (
-              <div className="text-center py-12 space-y-4">
-                <Music className="h-12 w-12 text-muted-foreground mx-auto" />
-                <div>
-                  <p className="text-muted-foreground font-medium">No recording sessions yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Start by creating songs in the{" "}
-                    <Link to="/songwriting" className="text-primary underline font-medium">
-                      Songwriting
-                    </Link>{" "}
-                    section, then come back here to record them professionally.
-                  </p>
+      <Tabs defaultValue="sessions" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="sessions" className="gap-2">
+            <ListMusic className="h-4 w-4" />
+            <span className="hidden sm:inline">Sessions</span>
+          </TabsTrigger>
+          <TabsTrigger value="recorded" className="gap-2">
+            <Disc3 className="h-4 w-4" />
+            <span className="hidden sm:inline">Recorded Songs</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="sessions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recording Sessions</CardTitle>
+              <CardDescription>
+                Track your current and past recording sessions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading sessions...
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sessions.map((session: any) => (
-                  <Card key={session.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            {getStatusIcon(session.status)}
-                            <h3 className="font-semibold truncate">
-                              {session.songs?.title || 'Unknown Song'}
-                            </h3>
-                            {getStatusBadge(session.status)}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                            <div>Studio: {session.city_studios?.name || 'N/A'}</div>
-                            <div>Producer: {session.recording_producers?.name || 'N/A'}</div>
-                            <div>Duration: {session.duration_hours} hours</div>
-                            <div>Cost: ${session.total_cost.toLocaleString()}</div>
-                          </div>
-
-                          {session.status === 'completed' && session.quality_improvement > 0 && (
-                            <div className="mt-2 text-sm">
-                              <span className="text-muted-foreground">Quality Improvement: </span>
-                              <span className="font-semibold text-green-600">
-                                +{session.quality_improvement}
-                              </span>
+              ) : !sessions || sessions.length === 0 ? (
+                <div className="text-center py-12 space-y-4">
+                  <Music className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <div>
+                    <p className="text-muted-foreground font-medium">No recording sessions yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Start by creating songs in the{" "}
+                      <Link to="/songwriting" className="text-primary underline font-medium">
+                        Songwriting
+                      </Link>{" "}
+                      section, then come back here to record them professionally.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.map((session: any) => (
+                    <Card key={session.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              {getStatusIcon(session.status)}
+                              <h3 className="font-semibold truncate">
+                                {session.songs?.title || 'Unknown Song'}
+                              </h3>
+                              {getStatusBadge(session.status)}
                             </div>
-                          )}
-                        </div>
+                            
+                            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                              <div>Studio: {session.city_studios?.name || 'N/A'}</div>
+                              <div>Producer: {session.recording_producers?.name || 'N/A'}</div>
+                              <div>Duration: {session.duration_hours} hours</div>
+                              <div>Cost: ${session.total_cost.toLocaleString()}</div>
+                            </div>
 
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="text-sm text-muted-foreground">
-                            {session.completed_at ? (
-                              <div>Completed {formatDistanceToNow(new Date(session.completed_at))} ago</div>
-                            ) : session.status === 'in_progress' ? (
-                              <div>Ends {formatDistanceToNow(new Date(session.scheduled_end))}</div>
-                            ) : (
-                              <div>Created {formatDistanceToNow(new Date(session.created_at))} ago</div>
+                            {session.status === 'completed' && session.quality_improvement > 0 && (
+                              <div className="mt-2 text-sm">
+                                <span className="text-muted-foreground">Quality Improvement: </span>
+                                <span className="font-semibold text-green-600">
+                                  +{session.quality_improvement}
+                                </span>
+                              </div>
                             )}
                           </div>
-                          {session.status === 'in_progress' && new Date(session.scheduled_end) <= new Date() && (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedSession(session);
-                                setCompleteDialogOpen(true);
-                              }}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-1" />
-                              Complete
-                            </Button>
-                          )}
+
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="text-sm text-muted-foreground">
+                              {session.completed_at ? (
+                                <div>Completed {formatDistanceToNow(new Date(session.completed_at))} ago</div>
+                              ) : session.status === 'in_progress' ? (
+                                <div>Ends {formatDistanceToNow(new Date(session.scheduled_end))}</div>
+                              ) : (
+                                <div>Created {formatDistanceToNow(new Date(session.created_at))} ago</div>
+                              )}
+                            </div>
+                            {session.status === 'in_progress' && new Date(session.scheduled_end) <= new Date() && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedSession(session);
+                                  setCompleteDialogOpen(true);
+                                }}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                Complete
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="recorded">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recorded Songs</CardTitle>
+              <CardDescription>
+                View all your recorded songs and their versions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecordedSongsTab userId={session?.user?.id || ""} bandId={userBandId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <RecordingWizard
         open={wizardOpen}
