@@ -35,6 +35,7 @@ export function SongSelectionStep({
 
       if (bandId) {
         // Get band songs - any recorded song belonging to the band
+        // Include songs that have completed recording sessions (status = 'recorded')
         const { data: bandSongs } = await supabase
           .from("songs")
           .select("*")
@@ -88,6 +89,9 @@ export function SongSelectionStep({
       const uniqueSongs = Array.from(
         new Map(allSongs.map(s => [s.id, s])).values()
       );
+
+      // Log for debugging
+      console.log("Available songs for release:", uniqueSongs.length, uniqueSongs);
 
       return uniqueSongs;
     }
