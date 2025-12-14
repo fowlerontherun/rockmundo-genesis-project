@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Music2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Music2, Disc3 } from "lucide-react";
 
 interface SongSelectionStepProps {
   userId: string;
@@ -14,6 +15,16 @@ interface SongSelectionStepProps {
   bandId: string | null;
   onBack: () => void;
   onNext: () => void;
+}
+
+interface SongWithVersion {
+  id: string;
+  songId: string;
+  title: string;
+  genre: string;
+  version: string;
+  qualityScore: number;
+  recordedAt: string | null;
 }
 
 export function SongSelectionStep({
@@ -29,13 +40,12 @@ export function SongSelectionStep({
   const maxSongs = releaseType === "album" ? 20 : requiredSongs;
 
   const { data: songs } = useQuery({
-    queryKey: ["available-songs", userId, bandId],
+    queryKey: ["available-songs-versions", userId, bandId],
     queryFn: async () => {
       let allSongs: any[] = [];
 
       if (bandId) {
-        // Get band songs - any recorded song belonging to the band
-        // Include songs that have completed recording sessions (status = 'recorded')
+        // Get band songs
         const { data: bandSongs } = await supabase
           .from("songs")
           .select("*")
@@ -45,7 +55,7 @@ export function SongSelectionStep({
         
         allSongs = bandSongs || [];
 
-        // Also get songs from band members that are not assigned to a band
+        // Also get songs from band members
         const { data: bandMembers } = await supabase
           .from("band_members")
           .select("user_id")
@@ -63,7 +73,6 @@ export function SongSelectionStep({
               .order("created_at", { ascending: false });
 
             if (memberSongs) {
-              // Merge avoiding duplicates
               const existingIds = new Set(allSongs.map(s => s.id));
               for (const song of memberSongs) {
                 if (!existingIds.has(song.id)) {
@@ -74,7 +83,7 @@ export function SongSelectionStep({
           }
         }
       } else {
-        // Get user's solo songs (all recorded songs by this user)
+        // Get user's solo songs
         const { data: userSongs } = await supabase
           .from("songs")
           .select("*")
@@ -85,15 +94,73 @@ export function SongSelectionStep({
         allSongs = userSongs || [];
       }
 
-      // Remove duplicates by ID just in case
-      const uniqueSongs = Array.from(
-        new Map(allSongs.map(s => [s.id, s])).values()
-      );
+      // Get all recording sessions for these songs to find versions
+      const songIds = allSongs.map(s => s.id);
+      let recordingSessions: any[] = [];
 
-      // Log for debugging
-      console.log("Available songs for release:", uniqueSongs.length, uniqueSongs);
+      if (songIds.length > 0) {
+        const { data: sessions } = await supabase
+          .from("recording_sessions")
+          .select("id, song_id, recording_version, quality_improvement, completed_at")
+          .in("song_id", songIds)
+          .eq("status", "completed")
+          .order("completed_at", { ascending: false });
 
-      return uniqueSongs;
+        recordingSessions = sessions || [];
+      }
+
+      // Build list with versions - each recorded version is a separate entry
+      const songsWithVersions: SongWithVersion[] = [];
+      const processedVersions = new Set<string>();
+
+      for (const song of allSongs) {
+        const songSessions = recordingSessions.filter(s => s.song_id === song.id);
+        
+        if (songSessions.length > 0) {
+          // Group by version type
+          const versionMap = new Map<string, any>();
+          for (const session of songSessions) {
+            const version = session.recording_version || "Standard";
+            if (!versionMap.has(version)) {
+              versionMap.set(version, session);
+            }
+          }
+
+          // Create entry for each unique version
+          for (const [version, session] of versionMap) {
+            const key = `${song.id}-${version}`;
+            if (!processedVersions.has(key)) {
+              processedVersions.add(key);
+              songsWithVersions.push({
+                id: key, // Use composite key for selection
+                songId: song.id,
+                title: song.title,
+                genre: song.genre,
+                version,
+                qualityScore: song.quality_score || 0,
+                recordedAt: session.completed_at
+              });
+            }
+          }
+        } else {
+          // Song is recorded but no session records - add as Standard
+          const key = `${song.id}-Standard`;
+          if (!processedVersions.has(key)) {
+            processedVersions.add(key);
+            songsWithVersions.push({
+              id: key,
+              songId: song.id,
+              title: song.title,
+              genre: song.genre,
+              version: "Standard",
+              qualityScore: song.quality_score || 0,
+              recordedAt: song.updated_at
+            });
+          }
+        }
+      }
+
+      return songsWithVersions;
     }
   });
 
@@ -125,7 +192,7 @@ export function SongSelectionStep({
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {songs?.map((song, index) => (
+            {songs?.map((song) => (
             <Card key={song.id} className="p-4">
               <div className="flex items-center space-x-3">
                 <Checkbox
@@ -136,8 +203,21 @@ export function SongSelectionStep({
                   }
                 />
                 <div className="flex-1">
-                  <div className="font-medium">{song.title}</div>
-                  <div className="text-sm text-muted-foreground">{song.genre}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{song.title}</span>
+                    <Badge 
+                      variant={song.version === "Standard" ? "secondary" : "outline"}
+                      className="text-xs"
+                    >
+                      <Disc3 className="h-3 w-3 mr-1" />
+                      {song.version}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-2">
+                    <span>{song.genre}</span>
+                    <span>•</span>
+                    <span>Quality: {song.qualityScore}</span>
+                  </div>
                   {releaseType === "single" && selectedSongs[0] === song.id && (
                     <div className="text-xs text-primary">A-side</div>
                   )}
