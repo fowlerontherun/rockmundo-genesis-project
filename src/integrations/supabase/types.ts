@@ -4025,6 +4025,7 @@ export type Database = {
         Row: {
           attendance: number | null
           band_id: string
+          booking_fee: number | null
           completed_at: string | null
           created_at: string | null
           crowd_engagement: number | null
@@ -4061,6 +4062,7 @@ export type Database = {
         Insert: {
           attendance?: number | null
           band_id: string
+          booking_fee?: number | null
           completed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
@@ -4097,6 +4099,7 @@ export type Database = {
         Update: {
           attendance?: number | null
           band_id?: string
+          booking_fee?: number | null
           completed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
@@ -8618,6 +8621,7 @@ export type Database = {
           created_at: string
           id: string
           is_b_side: boolean | null
+          recording_version: string | null
           release_id: string
           song_id: string
           track_number: number
@@ -8626,6 +8630,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_b_side?: boolean | null
+          recording_version?: string | null
           release_id: string
           song_id: string
           track_number: number
@@ -8634,6 +8639,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_b_side?: boolean | null
+          recording_version?: string | null
           release_id?: string
           song_id?: string
           track_number?: number
@@ -12001,6 +12007,7 @@ export type Database = {
         Row: {
           amenities: Json | null
           audience_type: string | null
+          band_revenue_share: number | null
           base_payment: number | null
           capacity: number | null
           city_id: string | null
@@ -12024,6 +12031,7 @@ export type Database = {
         Insert: {
           amenities?: Json | null
           audience_type?: string | null
+          band_revenue_share?: number | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
@@ -12047,6 +12055,7 @@ export type Database = {
         Update: {
           amenities?: Json | null
           audience_type?: string | null
+          band_revenue_share?: number | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null

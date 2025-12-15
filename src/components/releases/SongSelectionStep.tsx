@@ -2,16 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Music2, Disc3 } from "lucide-react";
 
+export interface SongSelection {
+  songId: string;
+  version: string;
+  displayKey: string;
+}
+
 interface SongSelectionStepProps {
   userId: string;
   releaseType: "single" | "ep" | "album";
-  selectedSongs: string[];
-  onSongsChange: (songs: string[]) => void;
+  selectedSongs: SongSelection[];
+  onSongsChange: (songs: SongSelection[]) => void;
   bandId: string | null;
   onBack: () => void;
   onNext: () => void;
@@ -132,7 +137,7 @@ export function SongSelectionStep({
             if (!processedVersions.has(key)) {
               processedVersions.add(key);
               songsWithVersions.push({
-                id: key, // Use composite key for selection
+                id: key,
                 songId: song.id,
                 title: song.title,
                 genre: song.genre,
@@ -164,13 +169,20 @@ export function SongSelectionStep({
     }
   });
 
-  const toggleSong = (songId: string) => {
-    if (selectedSongs.includes(songId)) {
-      onSongsChange(selectedSongs.filter(id => id !== songId));
+  const toggleSong = (song: SongWithVersion) => {
+    const isSelected = selectedSongs.some(s => s.displayKey === song.id);
+    if (isSelected) {
+      onSongsChange(selectedSongs.filter(s => s.displayKey !== song.id));
     } else if (selectedSongs.length < maxSongs) {
-      onSongsChange([...selectedSongs, songId]);
+      onSongsChange([...selectedSongs, {
+        songId: song.songId,
+        version: song.version,
+        displayKey: song.id
+      }]);
     }
   };
+
+  const isSelected = (songId: string) => selectedSongs.some(s => s.displayKey === songId);
 
   return (
     <div className="space-y-4">
@@ -196,11 +208,9 @@ export function SongSelectionStep({
             <Card key={song.id} className="p-4">
               <div className="flex items-center space-x-3">
                 <Checkbox
-                  checked={selectedSongs.includes(song.id)}
-                  onCheckedChange={() => toggleSong(song.id)}
-                  disabled={
-                    !selectedSongs.includes(song.id) && selectedSongs.length >= maxSongs
-                  }
+                  checked={isSelected(song.id)}
+                  onCheckedChange={() => toggleSong(song)}
+                  disabled={!isSelected(song.id) && selectedSongs.length >= maxSongs}
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -218,10 +228,10 @@ export function SongSelectionStep({
                     <span>•</span>
                     <span>Quality: {song.qualityScore}</span>
                   </div>
-                  {releaseType === "single" && selectedSongs[0] === song.id && (
+                  {releaseType === "single" && selectedSongs[0]?.displayKey === song.id && (
                     <div className="text-xs text-primary">A-side</div>
                   )}
-                  {releaseType === "single" && selectedSongs[1] === song.id && (
+                  {releaseType === "single" && selectedSongs[1]?.displayKey === song.id && (
                     <div className="text-xs text-muted-foreground">B-side</div>
                   )}
                 </div>
