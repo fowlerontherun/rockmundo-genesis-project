@@ -263,7 +263,32 @@ const GigBooking = () => {
       // Calculate adjusted estimates with slot multiplier
       const venueCapacity = bookingVenue.capacity ?? attendanceForecast.realistic;
       const estimatedAttendance = Math.min(venueCapacity, attendanceForecast.realistic);
-      const adjustedPayment = Math.round((bookingVenue.base_payment || 0) * slot.paymentMultiplier);
+      
+      // Calculate booking fee (10% of estimated revenue, min $50)
+      const bookingFee = Math.max(50, Math.round(estimatedRevenue * 0.10));
+      
+      // Check if band can afford the booking fee
+      const { data: bandData } = await supabase
+        .from('bands')
+        .select('band_balance')
+        .eq('id', band.id)
+        .single();
+      
+      if (!bandData || (bandData.band_balance || 0) < bookingFee) {
+        toast({
+          title: 'Insufficient funds',
+          description: `You need $${bookingFee} to book this gig. Current balance: $${bandData?.band_balance || 0}`,
+          variant: 'destructive'
+        });
+        setIsBooking(false);
+        return;
+      }
+      
+      // Deduct booking fee from band balance
+      await supabase
+        .from('bands')
+        .update({ band_balance: (bandData.band_balance || 0) - bookingFee })
+        .eq('id', band.id);
 
       const { error } = await supabase.from('gigs').insert({
         band_id: band.id,
@@ -271,7 +296,8 @@ const GigBooking = () => {
         scheduled_date: scheduledDateTime.toISOString(),
         status: 'scheduled',
         show_type: bookingVenue.venue_type ?? 'concert',
-        payment: adjustedPayment,
+        payment: 0, // No upfront payment - bands earn from ticket sales
+        booking_fee: bookingFee,
         setlist_id: setlistId,
         ticket_price: ticketPrice,
         time_slot: selectedSlot,
@@ -295,8 +321,8 @@ const GigBooking = () => {
 
       await addActivity(
         'gig_booking',
-        `Booked ${slot.name} at ${bookingVenue.name} for ${band.name}`,
-        adjustedPayment ?? undefined,
+        `Booked ${slot.name} at ${bookingVenue.name} for ${band.name} (booking fee: $${bookingFee})`,
+        bookingFee,
         {
           venue_id: bookingVenue.id,
           scheduled_date: scheduledDateTime.toISOString(),

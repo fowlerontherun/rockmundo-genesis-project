@@ -7,7 +7,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ReleaseTypeSelector } from "./ReleaseTypeSelector";
-import { SongSelectionStep } from "./SongSelectionStep";
+import { SongSelectionStep, SongSelection } from "./SongSelectionStep";
 import { FormatSelectionStep } from "./FormatSelectionStep";
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 
@@ -22,7 +22,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [releaseType, setReleaseType] = useState<"single" | "ep" | "album">("single");
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
-  const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
+  const [selectedSongs, setSelectedSongs] = useState<SongSelection[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<any[]>([]);
   const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
@@ -115,12 +115,13 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
       if (releaseError) throw releaseError;
 
-      // Add songs
-      const songInserts = selectedSongs.map((songId, index) => ({
+      // Add songs with their recording versions - use actual song UUIDs
+      const songInserts = selectedSongs.map((song, index) => ({
         release_id: release.id,
-        song_id: songId,
+        song_id: song.songId, // Use the actual UUID, not the composite key
         track_number: index + 1,
-        is_b_side: releaseType === "single" && index === 1
+        is_b_side: releaseType === "single" && index === 1,
+        recording_version: song.version
       }));
 
       const { error: songsError } = await supabase

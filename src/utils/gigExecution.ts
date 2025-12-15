@@ -167,9 +167,11 @@ export async function executeGigPerformance(data: GigExecutionData) {
     return sum + (eq.purchase_cost || 0) * wearRate;
   }, 0);
 
-  // Calculate revenue and profit
-  const ticketRevenue = Math.round(actualAttendance * ticketPrice * gearEffects.revenueMultiplier);
-  const totalRevenue = ticketRevenue + merchSales.totalRevenue;
+  // Calculate revenue and profit - bands get 50% of ticket revenue
+  const grossTicketRevenue = Math.round(actualAttendance * ticketPrice * gearEffects.revenueMultiplier);
+  const bandTicketShare = Math.round(grossTicketRevenue * 0.5); // Band gets 50%
+  const venueTicketShare = grossTicketRevenue - bandTicketShare; // Venue gets 50%
+  const totalRevenue = bandTicketShare + merchSales.totalRevenue;
   const netProfit = totalRevenue - crewCosts - equipmentWearCost;
 
   // Calculate fame gained
@@ -213,7 +215,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         overall_rating: overallRating,
         actual_attendance: actualAttendance,
         attendance_percentage: (actualAttendance / venueCapacity) * 100,
-        ticket_revenue: ticketRevenue,
+        ticket_revenue: bandTicketShare, // Band's 50% share
         merch_revenue: merchSales.totalRevenue,
         total_revenue: totalRevenue,
         venue_cost: 0,
@@ -252,7 +254,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         overall_rating: overallRating,
         actual_attendance: actualAttendance,
         attendance_percentage: (actualAttendance / venueCapacity) * 100,
-        ticket_revenue: ticketRevenue,
+        ticket_revenue: bandTicketShare, // Band's 50% share
         merch_revenue: merchSales.totalRevenue,
         total_revenue: totalRevenue,
         venue_cost: 0,
@@ -349,7 +351,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
       description: `Gig performance (${actualAttendance} attendance, rating: ${overallRating.toFixed(1)})`,
       metadata: {
         gig_id: gigId,
-        ticket_revenue: ticketRevenue,
+        gross_ticket_revenue: grossTicketRevenue,
+        band_ticket_share: bandTicketShare,
+        venue_ticket_share: venueTicketShare,
         merch_sales: merchSales.totalRevenue,
         crew_costs: crewCosts,
         equipment_wear: Math.round(equipmentWearCost)
