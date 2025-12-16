@@ -14,6 +14,8 @@ import {
   Dumbbell,
   Smile,
   AlertTriangle,
+  Wind,
+  Salad,
 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
