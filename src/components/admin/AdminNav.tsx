@@ -28,6 +28,7 @@ export const adminCategories: AdminCategory[] = [
     icon: Users,
     items: [
       { path: "/admin/players", label: "Player Management", description: "Manage user accounts" },
+      { path: "/admin/vip", label: "VIP Management", description: "Grant and manage VIP subscriptions" },
       { path: "/admin/achievements", label: "Achievements", description: "Configure achievement system" },
       { path: "/admin/analytics", label: "Analytics", description: "View player statistics" },
       { path: "/admin/mentors", label: "Mentors", description: "Manage mentorship program" },
