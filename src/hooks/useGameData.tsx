@@ -577,9 +577,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       if (missingDurationColumn && activityFeedSupportsDurationRef.current) {
         activityFeedSupportsDurationRef.current = false;
-        console.warn(
-          "Activity feed duration_minutes column is unavailable; omitting duration metadata from future entries.",
-        );
+        // Silently handle missing duration_minutes column - this is expected
       }
 
       return { rows: normalized, missingProfileId };
