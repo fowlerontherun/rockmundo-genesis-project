@@ -16,9 +16,11 @@ import { FanGrowthCard } from "./FanGrowthCard";
 import { MomentHighlightsCard } from "./MomentHighlightsCard";
 import { CrowdAnalyticsCard } from "./CrowdAnalyticsCard";
 import { FinancialDeepDiveCard } from "./FinancialDeepDiveCard";
+import { VenueRelationshipCard } from "./VenueRelationshipCard";
 import type { GigXpSummary } from "@/utils/gigXpCalculator";
 import type { FanConversionResult } from "@/utils/fanConversionCalculator";
 import type { GigMoment } from "@/utils/momentHighlightsGenerator";
+import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculator";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -82,6 +84,7 @@ interface Props {
   xpSummary?: GigXpSummary | null;
   fanConversion?: FanConversionResult | null;
   momentHighlights?: GigMoment[] | null;
+  venueRelationship?: VenueRelationshipResult | null;
   merchItemsSold?: number;
   ticketPrice?: number;
 }
@@ -98,6 +101,7 @@ export const GigOutcomeReport = ({
   xpSummary,
   fanConversion,
   momentHighlights,
+  venueRelationship,
   merchItemsSold = 0,
   ticketPrice = 20,
 }: Props) => {
@@ -382,6 +386,11 @@ export const GigOutcomeReport = ({
 
           {/* Fan Growth */}
           <FanGrowthCard fanConversion={fanConversion || null} />
+
+          {/* Venue Relationship */}
+          {venueRelationship && (
+            <VenueRelationshipCard relationship={venueRelationship} venueName={venueName} />
+          )}
 
           {hasGearImpact && (
             <Card>
