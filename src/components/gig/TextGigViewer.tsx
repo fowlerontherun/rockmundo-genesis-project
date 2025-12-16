@@ -3,8 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Music, Mic2, Users, Sparkles, AlertTriangle, Star, Clock } from "lucide-react";
+import { Music, Mic2, Users, Sparkles, AlertTriangle, Star, Clock, Volume2, Flame, Heart } from "lucide-react";
 import { differenceInSeconds } from "date-fns";
+import {
+  generateEnhancedCommentary,
+  generateCrowdChant,
+  generateBetweenSongBanter,
+  generateTechnicalEvent,
+  generateMilestoneCommentary,
+  getVenueType,
+  getRandomItem,
+  VENUE_ARRIVALS,
+  GENRE_COMMENTARY,
+  type VenueContext,
+  type BandContext,
+  type SongContext,
+} from "@/utils/enhancedCommentaryGenerator";
 
 interface TextGigViewerProps {
   gigId: string;
@@ -14,13 +28,13 @@ interface TextGigViewerProps {
 interface CommentaryEntry {
   id: string;
   timestamp: Date;
-  type: 'arrival' | 'song_start' | 'crowd_reaction' | 'special_moment' | 'song_end' | 'encore' | 'event' | 'finale';
+  type: 'arrival' | 'song_start' | 'crowd_reaction' | 'special_moment' | 'song_end' | 'encore' | 'event' | 'finale' | 'chant' | 'banter' | 'technical' | 'milestone';
   message: string;
   icon?: string;
   variant?: 'default' | 'success' | 'warning' | 'destructive';
 }
 
-// Extensive commentary pools for variety
+// Extended commentary pools
 const ARRIVAL_COMMENTS = [
   "The lights dim as the band takes the stage to thunderous applause!",
   "A roar erupts from the crowd as the musicians walk out!",
@@ -36,22 +50,26 @@ const SONG_START_COMMENTS: Record<string, string[]> = {
     "'{title}' kicks off with a thunderous opening riff!",
     "The crowd recognizes '{title}' immediately and goes crazy!",
     "'{title}' begins - the bass is shaking the entire venue!",
+    "BOOM! '{title}' hits like a freight train!",
+    "The opening notes of '{title}' send chills down everyone's spine!",
   ],
   medium_energy: [
     "'{title}' begins with a smooth groove...",
     "The band transitions into '{title}' seamlessly",
     "'{title}' starts up, getting heads nodding throughout the crowd",
     "A familiar intro fills the air - it's '{title}'!",
+    "The band locks in as '{title}' begins...",
   ],
   low_energy: [
     "'{title}' begins with a mellow, atmospheric intro...",
     "The band slows things down with '{title}'",
     "A hush falls as '{title}' starts with delicate notes...",
     "'{title}' opens softly, the crowd swaying gently",
+    "Lighters come out as '{title}' begins its gentle journey...",
   ],
 };
 
-const CROWD_REACTIONS: Record<string, string[]> = {
+const CROWD_REACTIONS_LOCAL: Record<string, string[]> = {
   ecstatic: [
     "The crowd is going ABSOLUTELY WILD! 🔥 People are jumping, screaming, arms everywhere!",
     "PANDEMONIUM! The energy is OFF THE CHARTS! Everyone is on their feet!",
@@ -59,6 +77,8 @@ const CROWD_REACTIONS: Record<string, string[]> = {
     "LEGENDARY performance! The crowd can't contain themselves!",
     "Phones are UP, hands are UP, the roof is about to come off!",
     "The pit has ERUPTED! This is what live music is all about!",
+    "ABSOLUTE SCENES! The crowd is a sea of movement!",
+    "Goosebumps all around - this is a MOMENT!",
   ],
   enthusiastic: [
     "The crowd LOVES it! Hands in the air everywhere! 🎉",
@@ -66,6 +86,7 @@ const CROWD_REACTIONS: Record<string, string[]> = {
     "Fantastic energy! The audience is completely hooked!",
     "The venue is vibing HARD to this one!",
     "Crowd is eating this up! What a performance!",
+    "The energy is ELECTRIC! Everyone's feeling this!",
   ],
   engaged: [
     "The crowd is into it - heads bobbing, good vibes all around 👍",
@@ -73,6 +94,7 @@ const CROWD_REACTIONS: Record<string, string[]> = {
     "Nice energy building in the venue...",
     "The crowd seems to be warming up nicely",
     "Good reaction - people are getting into the groove",
+    "Appreciative applause from the crowd!",
   ],
   mixed: [
     "Mixed reactions from the crowd... some love it, others seem unsure 😐",
@@ -101,6 +123,11 @@ const SPECIAL_MOMENTS = [
   "A wall of death forms - this is getting INTENSE!",
   "The vocalist hits a note so perfect, goosebumps everywhere!",
   "Beach balls and inflatables appear in the crowd!",
+  "The whole venue is bouncing! The floor is SHAKING!",
+  "PYRO! Fire shoots up from the stage!",
+  "Confetti cannons EXPLODE over the crowd!",
+  "The bassist throws picks into the crowd!",
+  "A couple gets engaged in the front row! The band stops to congratulate them!",
 ];
 
 const NEGATIVE_EVENTS = [
@@ -109,6 +136,8 @@ const NEGATIVE_EVENTS = [
   "Guitar string snaps! The tech rushes in with a backup",
   "Brief technical hiccup - the band plays through it professionally",
   "Someone in the front row faints - medical team responds quickly",
+  "A fight almost breaks out but security handles it",
+  "The guitarist's pedal board glitches briefly",
 ];
 
 const ENCORE_COMMENTS = [
@@ -116,6 +145,7 @@ const ENCORE_COMMENTS = [
   "They're back! The lights come up for one more!",
   "The crowd's persistence pays off - ENCORE TIME!",
   "You didn't think they'd leave without playing this one, did you?",
+  "The roar is DEAFENING - they HAD to come back!",
 ];
 
 const FINALE_COMMENTS = [
@@ -123,6 +153,8 @@ const FINALE_COMMENTS = [
   "What a show! The band takes their final bow to deafening applause!",
   "The lights come up - but the crowd won't stop cheering!",
   "An unforgettable performance comes to an end!",
+  "INCREDIBLE! A night nobody here will ever forget!",
+  "The band waves goodbye... but this crowd won't leave!",
 ];
 
 export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
@@ -156,8 +188,8 @@ export const TextGigViewer = ({ gigId, onComplete }: TextGigViewerProps) => {
     return template.replace('{title}', songTitle);
   }, []);
 
-  const generateCrowdReaction = useCallback((crowdResponse: string, score: number, songTitle: string) => {
-    const reactions = CROWD_REACTIONS[crowdResponse] || CROWD_REACTIONS.mixed;
+  const generateCrowdReaction = useCallback((crowdResponse: string, score: number, songTitle: string): string => {
+    const reactions = CROWD_REACTIONS_LOCAL[crowdResponse] || CROWD_REACTIONS_LOCAL.mixed;
     let reaction = getRandomItem(reactions);
     
     // Add momentum-based modifiers
