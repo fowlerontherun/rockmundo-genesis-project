@@ -12,9 +12,11 @@ import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, TrendingUp, Eye, DollarSign, Video, Film, Tv, Plus, Calendar, Star, Users, Clock } from "lucide-react";
+import { Play, TrendingUp, Eye, DollarSign, Video, Film, Tv, Plus, Calendar, Star, Users, Clock, BarChart3, Music } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow, differenceInHours } from "date-fns";
+import { SongPlayer } from "@/components/audio/SongPlayer";
+import { VideoAnalytics } from "@/components/videos/VideoAnalytics";
 
 interface MusicVideo {
   id: string;
@@ -127,24 +129,35 @@ const MusicVideos = () => {
     enabled: !!profile?.id,
   });
 
-  // Fetch music videos
+  // Fetch music videos with song audio data
   const { data: videos = [], isLoading } = useQuery({
     queryKey: ["music-videos"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("music_videos")
-        .select(`
-          *,
-          songs (
-            title
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return (data || []) as MusicVideo[];
+      
+      // Fetch song data separately
+      const songIds = data?.map(v => v.song_id).filter(Boolean) || [];
+      if (songIds.length === 0) return (data || []) as MusicVideo[];
+      
+      const { data: songs } = await supabase
+        .from("songs")
+        .select("id, title, audio_url, audio_generation_status")
+        .in("id", songIds);
+      
+      return (data || []).map(video => ({
+        ...video,
+        songs: songs?.find(s => s.id === video.song_id) || null,
+      })) as (MusicVideo & { songs: { title: string; audio_url?: string; audio_generation_status?: string } | null })[];
     },
   });
+
+  // Selected video for analytics
+  const [selectedVideoForAnalytics, setSelectedVideoForAnalytics] = useState<MusicVideo | null>(null);
 
   // Fetch my videos
   const myVideos = videos.filter(v => 
