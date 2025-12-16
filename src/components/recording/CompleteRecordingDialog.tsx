@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Music } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useVipStatus } from "@/hooks/useVipStatus";
+import { useAuth } from "@/hooks/use-auth-context";
 
 interface CompleteRecordingDialogProps {
   open: boolean;
@@ -20,7 +22,38 @@ export const CompleteRecordingDialog = ({
   songTitle,
 }: CompleteRecordingDialogProps) => {
   const [completing, setCompleting] = useState(false);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
   const queryClient = useQueryClient();
+  const { data: vipStatus } = useVipStatus();
+  const { user } = useAuth();
+
+  const generateAudio = async (songId: string) => {
+    if (!vipStatus?.isVip || !user?.id) return;
+
+    setGeneratingAudio(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-song-audio', {
+        body: { songId, userId: user.id }
+      });
+
+      if (error) {
+        console.error('Audio generation error:', error);
+        toast.error("Audio generation started in background", {
+          description: "You'll be notified when it's ready."
+        });
+      } else if (data?.success) {
+        toast.success("AI audio generated!", {
+          description: "Your song now has playable audio.",
+          icon: <Music className="h-4 w-4" />
+        });
+        queryClient.invalidateQueries({ queryKey: ["songs"] });
+      }
+    } catch (err) {
+      console.error('Audio generation failed:', err);
+    } finally {
+      setGeneratingAudio(false);
+    }
+  };
 
   const handleComplete = async () => {
     setCompleting(true);
@@ -51,6 +84,11 @@ export const CompleteRecordingDialog = ({
           .from('songs')
           .update({ status: 'recorded' })
           .eq('id', session.song_id);
+
+        // Trigger AI audio generation for VIP users
+        if (vipStatus?.isVip) {
+          generateAudio(session.song_id);
+        }
       }
 
       toast.success("Recording completed!", {
@@ -79,13 +117,18 @@ export const CompleteRecordingDialog = ({
           </DialogTitle>
           <DialogDescription>
             Mark the recording session for "{songTitle}" as completed?
+            {vipStatus?.isVip && (
+              <span className="block mt-2 text-primary font-medium">
+                ✨ VIP: AI audio will be generated automatically!
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-3 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={completing}>
             Cancel
           </Button>
-          <Button onClick={handleComplete} disabled={completing}>
+          <Button onClick={handleComplete} disabled={completing || generatingAudio}>
             {completing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Complete Recording
           </Button>
