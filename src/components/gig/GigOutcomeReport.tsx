@@ -13,8 +13,12 @@ import { buildGearOutcomeNarrative, type GearOutcomeNarrative } from "@/utils/gi
 import { EnhancedGigMetrics } from "./EnhancedGigMetrics";
 import { GigXpRewardCard } from "./GigXpRewardCard";
 import { FanGrowthCard } from "./FanGrowthCard";
+import { MomentHighlightsCard } from "./MomentHighlightsCard";
+import { CrowdAnalyticsCard } from "./CrowdAnalyticsCard";
+import { FinancialDeepDiveCard } from "./FinancialDeepDiveCard";
 import type { GigXpSummary } from "@/utils/gigXpCalculator";
 import type { FanConversionResult } from "@/utils/fanConversionCalculator";
+import type { GigMoment } from "@/utils/momentHighlightsGenerator";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -77,6 +81,9 @@ interface Props {
   gearNarrative?: GearOutcomeNarrative | null;
   xpSummary?: GigXpSummary | null;
   fanConversion?: FanConversionResult | null;
+  momentHighlights?: GigMoment[] | null;
+  merchItemsSold?: number;
+  ticketPrice?: number;
 }
 
 export const GigOutcomeReport = ({
@@ -90,6 +97,9 @@ export const GigOutcomeReport = ({
   gearNarrative,
   xpSummary,
   fanConversion,
+  momentHighlights,
+  merchItemsSold = 0,
+  ticketPrice = 20,
 }: Props) => {
   if (!outcome) return null;
 
@@ -328,72 +338,44 @@ export const GigOutcomeReport = ({
                   ).song_id)?.title
                 : undefined,
               encoreWorthy: overallRating >= 20,
-              breakdowns: 0, // TODO: Add breakdown tracking
+              breakdowns: 0,
               perfectSongs: songPerformances.filter(p => p.performance_score >= 23).length,
               totalSongs: songPerformances.length
             }}
           />
 
-          {/* Financial Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Financial Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Ticket Sales</p>
-                  <p className="text-xl font-semibold">${formatCurrency(ticketRevenue)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Merchandise</p>
-                  <p className="text-xl font-semibold">${formatCurrency(merchSales)}</p>
-                </div>
-              </div>
-              <div className="border-t pt-3">
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${formatCurrency(totalRevenue)}</p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Crew Costs</span>
-                  <span className="text-destructive">-${formatCurrency(crewCosts)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Equipment Wear</span>
-                  <span className="text-destructive">-${formatCurrency(equipmentWearCost)}</span>
-                </div>
-              </div>
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center">
-                  <p className="text-lg font-semibold">Net Profit</p>
-                  <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${formatCurrency(netProfit)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Moment Highlights */}
+          <MomentHighlightsCard moments={momentHighlights || null} />
 
-          {/* Attendance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Attendance Analysis</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Capacity</span>
-                <span className="font-semibold">{actualAttendance} / {venueCapacity}</span>
-              </div>
-              <Progress value={attendancePercentage} className="h-3" />
-              <p className="text-sm text-muted-foreground text-center">
-                {attendancePercentage.toFixed(1)}% of venue capacity
-              </p>
-            </CardContent>
-          </Card>
+          {/* Two Column Layout for Analytics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Crowd Analytics */}
+            <CrowdAnalyticsCard
+              actualAttendance={actualAttendance}
+              venueCapacity={venueCapacity}
+              songPerformances={songPerformances.map(sp => ({
+                song_id: sp.song_id,
+                song_title: songs.find(s => s.id === sp.song_id)?.title,
+                position: sp.setlist_position,
+                performance_score: sp.performance_score,
+                crowd_response: sp.crowd_response,
+              }))}
+              overallRating={overallRating}
+            />
+
+            {/* Financial Deep Dive */}
+            <FinancialDeepDiveCard
+              ticketRevenue={ticketRevenue}
+              merchRevenue={merchSales}
+              totalRevenue={totalRevenue}
+              crewCosts={crewCosts}
+              equipmentWearCost={equipmentWearCost}
+              netProfit={netProfit}
+              actualAttendance={actualAttendance}
+              ticketPrice={ticketPrice}
+              merchItemsSold={merchItemsSold || breakdown.merch_items_sold}
+            />
+          </div>
 
           {/* XP Rewards */}
           <GigXpRewardCard xpSummary={xpSummary || null} performanceGrade={grade.grade} />
