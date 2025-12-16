@@ -673,6 +673,9 @@ export default function PerformGig() {
         songs={setlistSongs.map(s => ({ id: s.song_id, title: s.songs?.title || 'Unknown' }))}
         gearEffects={gearEffects}
         gearNarrative={gearOutcomeNarrative}
+        chemistryLevel={bandChemistry}
+        chemistryChange={outcome?.chemistry_impact || outcome?.chemistry_change || 0}
+        chemistryMoments={outcome?.chemistryMoments || []}
       />
     </div>
   );

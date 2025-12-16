@@ -299,6 +299,8 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             }))}
             gearEffects={selectedBandGearEffects ?? selectedOutcome.gear_effects}
             gearNarrative={gearNarrative}
+            chemistryLevel={selectedOutcome.band_chemistry_level || 50}
+            chemistryChange={selectedOutcome.chemistry_change || 0}
           />
         )}
       </>

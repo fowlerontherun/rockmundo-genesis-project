@@ -138,6 +138,8 @@ export const LastNightGigs = () => {
           outcome={selectedGig.gig_outcomes[0]}
           venueName={selectedGig.venues?.name || "Unknown Venue"}
           venueCapacity={selectedGig.venues?.capacity || 0}
+          chemistryLevel={selectedGig.gig_outcomes[0]?.band_chemistry_level || 50}
+          chemistryChange={selectedGig.gig_outcomes[0]?.chemistry_change || 0}
         />
       )}
     </>
