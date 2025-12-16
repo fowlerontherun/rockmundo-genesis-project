@@ -162,6 +162,7 @@ const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"))
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
+const MusicHub = lazyWithRetry(() => import("./pages/MusicHub"));
 const ReleaseDetail = lazyWithRetry(() => import("./pages/ReleaseDetail"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 // const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
@@ -268,6 +269,8 @@ function App() {
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
+                    <Route path="music-hub" element={<MusicHub />} />
+                    <Route path="music" element={<MusicHub />} />
                     <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/tag/:hashtag" element={<TwaaterHashtagView />} />
@@ -362,7 +365,6 @@ function App() {
                     <Route path="gear-shop" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
-                    <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
