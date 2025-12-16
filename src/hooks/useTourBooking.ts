@@ -74,15 +74,21 @@ export function useTourBooking() {
     mutationFn: async (tourData: TourBookingData) => {
       const costs = await calculateTourCosts(tourData);
 
-      // Create the tour (using generic insert)
+      // Get current user for tour ownership
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Create the tour with correct column names
       const { data: tour, error: tourError } = await supabase
         .from('tours')
         .insert({
-          artist_id: tourData.artistId,
+          user_id: user.id,
+          band_id: tourData.artistId,
+          name: tourData.name,
           start_date: tourData.startDate,
           end_date: tourData.endDate,
           status: 'active',
-        } as any)
+        })
         .select()
         .single();
 
@@ -97,7 +103,7 @@ export function useTourBooking() {
           time_slot: venue.timeSlot,
           setlist_id: tourData.setlistId,
           status: 'scheduled',
-        } as any);
+        });
 
         if (gigError) throw gigError;
       }
