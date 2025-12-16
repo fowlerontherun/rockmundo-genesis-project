@@ -18,12 +18,10 @@ const AvatarDesigner = () => {
     isLoading,
     hairStyles,
     clothingItems,
-    faceOptions,
     profile,
     saveConfig,
     isSaving,
     purchaseSkin,
-    isPurchasing,
     isItemOwned,
     getClothingColor,
   } = usePlayerAvatar();
@@ -79,7 +77,6 @@ const AvatarDesigner = () => {
     purchaseSkin({ itemId, itemType, price });
   };
 
-  // Handle hair style selection - store style_key not ID
   const handleHairStyleSelect = (styleId: string | null) => {
     if (!styleId) {
       setLocalConfig(prev => ({ ...prev, hair_style_key: 'bald' }));
@@ -91,7 +88,6 @@ const AvatarDesigner = () => {
     }
   };
 
-  // Get the hair style ID from the style_key for display
   const getSelectedHairStyleId = () => {
     if (!localConfig.hair_style_key || !hairStyles) return null;
     const style = hairStyles.find(s => s.style_key === localConfig.hair_style_key);
@@ -140,7 +136,7 @@ const AvatarDesigner = () => {
         {/* 3D Preview */}
         <Card className="lg:sticky lg:top-4 h-fit">
           <CardContent className="p-0">
-            <AvatarPreview3D config={localConfig} autoRotate={true} />
+            <AvatarPreview3D config={localConfig} autoRotate={false} />
           </CardContent>
         </Card>
 
@@ -177,10 +173,26 @@ const AvatarDesigner = () => {
                   height={localConfig.height || 1.0}
                   skinTone={localConfig.skin_tone || '#e0ac69'}
                   gender={localConfig.gender || 'male'}
+                  weight={localConfig.weight ?? 1.0}
+                  muscleDefinition={localConfig.muscle_definition ?? 0.5}
+                  shoulderWidth={localConfig.shoulder_width ?? 1.0}
+                  hipWidth={localConfig.hip_width ?? 1.0}
+                  torsoLength={localConfig.torso_length ?? 1.0}
+                  armLength={localConfig.arm_length ?? 1.0}
+                  legLength={localConfig.leg_length ?? 1.0}
+                  ageAppearance={(localConfig.age_appearance as 'young' | 'adult' | 'mature') || 'adult'}
                   onBodyTypeChange={(type) => setLocalConfig(prev => ({ ...prev, body_type: type }))}
                   onHeightChange={(height) => setLocalConfig(prev => ({ ...prev, height }))}
                   onSkinToneChange={(tone) => setLocalConfig(prev => ({ ...prev, skin_tone: tone }))}
                   onGenderChange={(gender) => setLocalConfig(prev => ({ ...prev, gender }))}
+                  onWeightChange={(weight) => setLocalConfig(prev => ({ ...prev, weight }))}
+                  onMuscleDefinitionChange={(muscle_definition) => setLocalConfig(prev => ({ ...prev, muscle_definition }))}
+                  onShoulderWidthChange={(shoulder_width) => setLocalConfig(prev => ({ ...prev, shoulder_width }))}
+                  onHipWidthChange={(hip_width) => setLocalConfig(prev => ({ ...prev, hip_width }))}
+                  onTorsoLengthChange={(torso_length) => setLocalConfig(prev => ({ ...prev, torso_length }))}
+                  onArmLengthChange={(arm_length) => setLocalConfig(prev => ({ ...prev, arm_length }))}
+                  onLegLengthChange={(leg_length) => setLocalConfig(prev => ({ ...prev, leg_length }))}
+                  onAgeAppearanceChange={(age_appearance) => setLocalConfig(prev => ({ ...prev, age_appearance }))}
                 />
               </TabsContent>
 
@@ -198,16 +210,62 @@ const AvatarDesigner = () => {
 
               <TabsContent value="face" className="mt-0">
                 <FaceSelector
-                  faceOptions={(faceOptions || []) as any}
+                  // Eyes
                   selectedEyeStyle={localConfig.eye_style || 'default'}
+                  eyeColor={localConfig.eye_color || '#2d1a0a'}
+                  eyeSize={localConfig.eye_size ?? 1.0}
+                  eyeSpacing={localConfig.eye_spacing ?? 1.0}
+                  eyeTilt={localConfig.eye_tilt ?? 0}
+                  onEyeStyleChange={(style) => setLocalConfig(prev => ({ ...prev, eye_style: style }))}
+                  onEyeColorChange={(eye_color) => setLocalConfig(prev => ({ ...prev, eye_color }))}
+                  onEyeSizeChange={(eye_size) => setLocalConfig(prev => ({ ...prev, eye_size }))}
+                  onEyeSpacingChange={(eye_spacing) => setLocalConfig(prev => ({ ...prev, eye_spacing }))}
+                  onEyeTiltChange={(eye_tilt) => setLocalConfig(prev => ({ ...prev, eye_tilt }))}
+                  // Eyebrows
+                  eyebrowStyle={localConfig.eyebrow_style || 'normal'}
+                  eyebrowColor={localConfig.eyebrow_color || '#1a1a1a'}
+                  eyebrowThickness={localConfig.eyebrow_thickness ?? 1.0}
+                  onEyebrowStyleChange={(eyebrow_style) => setLocalConfig(prev => ({ ...prev, eyebrow_style: eyebrow_style as any }))}
+                  onEyebrowColorChange={(eyebrow_color) => setLocalConfig(prev => ({ ...prev, eyebrow_color }))}
+                  onEyebrowThicknessChange={(eyebrow_thickness) => setLocalConfig(prev => ({ ...prev, eyebrow_thickness }))}
+                  // Nose
                   selectedNoseStyle={localConfig.nose_style || 'default'}
+                  noseWidth={localConfig.nose_width ?? 1.0}
+                  noseLength={localConfig.nose_length ?? 1.0}
+                  noseBridge={localConfig.nose_bridge ?? 0.5}
+                  onNoseStyleChange={(style) => setLocalConfig(prev => ({ ...prev, nose_style: style }))}
+                  onNoseWidthChange={(nose_width) => setLocalConfig(prev => ({ ...prev, nose_width }))}
+                  onNoseLengthChange={(nose_length) => setLocalConfig(prev => ({ ...prev, nose_length }))}
+                  onNoseBridgeChange={(nose_bridge) => setLocalConfig(prev => ({ ...prev, nose_bridge }))}
+                  // Mouth
                   selectedMouthStyle={localConfig.mouth_style || 'default'}
+                  lipFullness={localConfig.lip_fullness ?? 1.0}
+                  lipWidth={localConfig.lip_width ?? 1.0}
+                  lipColor={localConfig.lip_color || '#c4777f'}
+                  onMouthStyleChange={(style) => setLocalConfig(prev => ({ ...prev, mouth_style: style }))}
+                  onLipFullnessChange={(lip_fullness) => setLocalConfig(prev => ({ ...prev, lip_fullness }))}
+                  onLipWidthChange={(lip_width) => setLocalConfig(prev => ({ ...prev, lip_width }))}
+                  onLipColorChange={(lip_color) => setLocalConfig(prev => ({ ...prev, lip_color }))}
+                  // Face Structure
+                  faceWidth={localConfig.face_width ?? 1.0}
+                  faceLength={localConfig.face_length ?? 1.0}
+                  jawShape={localConfig.jaw_shape || 'round'}
+                  cheekbone={localConfig.cheekbone ?? 0.5}
+                  chinProminence={localConfig.chin_prominence ?? 0.5}
+                  onFaceWidthChange={(face_width) => setLocalConfig(prev => ({ ...prev, face_width }))}
+                  onFaceLengthChange={(face_length) => setLocalConfig(prev => ({ ...prev, face_length }))}
+                  onJawShapeChange={(jaw_shape) => setLocalConfig(prev => ({ ...prev, jaw_shape: jaw_shape as any }))}
+                  onCheekboneChange={(cheekbone) => setLocalConfig(prev => ({ ...prev, cheekbone }))}
+                  onChinProminenceChange={(chin_prominence) => setLocalConfig(prev => ({ ...prev, chin_prominence }))}
+                  // Ears
+                  earSize={localConfig.ear_size ?? 1.0}
+                  earAngle={localConfig.ear_angle ?? 0}
+                  onEarSizeChange={(ear_size) => setLocalConfig(prev => ({ ...prev, ear_size }))}
+                  onEarAngleChange={(ear_angle) => setLocalConfig(prev => ({ ...prev, ear_angle }))}
+                  // Extras
                   selectedBeardStyle={localConfig.beard_style || null}
                   selectedTattooStyle={localConfig.tattoo_style || null}
                   selectedScarStyle={localConfig.scar_style || null}
-                  onEyeStyleChange={(style) => setLocalConfig(prev => ({ ...prev, eye_style: style }))}
-                  onNoseStyleChange={(style) => setLocalConfig(prev => ({ ...prev, nose_style: style }))}
-                  onMouthStyleChange={(style) => setLocalConfig(prev => ({ ...prev, mouth_style: style }))}
                   onBeardStyleChange={(style) => setLocalConfig(prev => ({ ...prev, beard_style: style }))}
                   onTattooStyleChange={(style) => setLocalConfig(prev => ({ ...prev, tattoo_style: style }))}
                   onScarStyleChange={(style) => setLocalConfig(prev => ({ ...prev, scar_style: style }))}
