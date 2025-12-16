@@ -1,7 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Lock, Check, Sparkles, Eye, CircleDot } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FaceOption {
@@ -19,10 +16,14 @@ interface FaceSelectorProps {
   selectedNoseStyle: string;
   selectedMouthStyle: string;
   selectedBeardStyle: string | null;
+  selectedTattooStyle: string | null;
+  selectedScarStyle: string | null;
   onEyeStyleChange: (style: string) => void;
   onNoseStyleChange: (style: string) => void;
   onMouthStyleChange: (style: string) => void;
   onBeardStyleChange: (style: string | null) => void;
+  onTattooStyleChange: (style: string | null) => void;
+  onScarStyleChange: (style: string | null) => void;
   isItemOwned: (id: string) => boolean;
   onPurchase: (id: string, price: number) => void;
 }
@@ -60,15 +61,35 @@ const beardStyles = [
   { id: 'mutton', name: 'Mutton Chops', icon: '👨' },
 ];
 
+const tattooStyles = [
+  { id: null, name: 'None', icon: '✨' },
+  { id: 'Sleeve Tattoo', name: 'Sleeve', icon: '💪' },
+  { id: 'Neck Tattoo', name: 'Neck', icon: '🎵' },
+  { id: 'Face Tattoo', name: 'Face', icon: '🌟' },
+  { id: 'Back Piece', name: 'Back', icon: '🎨' },
+];
+
+const scarStyles = [
+  { id: null, name: 'None', icon: '✨' },
+  { id: 'Cheek Scar', name: 'Cheek', icon: '⚔️' },
+  { id: 'Eye Scar', name: 'Eye', icon: '👁️' },
+  { id: 'Lip Scar', name: 'Lip', icon: '💋' },
+  { id: 'Forehead Scar', name: 'Forehead', icon: '⚡' },
+];
+
 export const FaceSelector = ({
   selectedEyeStyle,
   selectedNoseStyle,
   selectedMouthStyle,
   selectedBeardStyle,
+  selectedTattooStyle,
+  selectedScarStyle,
   onEyeStyleChange,
   onNoseStyleChange,
   onMouthStyleChange,
   onBeardStyleChange,
+  onTattooStyleChange,
+  onScarStyleChange,
 }: FaceSelectorProps) => {
   const renderStyleGrid = (
     title: string,
@@ -108,6 +129,8 @@ export const FaceSelector = ({
       {renderStyleGrid('Nose Style', noseStyles, selectedNoseStyle, (id) => onNoseStyleChange(id || 'default'))}
       {renderStyleGrid('Mouth Style', mouthStyles, selectedMouthStyle, (id) => onMouthStyleChange(id || 'default'))}
       {renderStyleGrid('Facial Hair', beardStyles, selectedBeardStyle, onBeardStyleChange)}
+      {renderStyleGrid('Tattoos', tattooStyles, selectedTattooStyle, onTattooStyleChange)}
+      {renderStyleGrid('Scars', scarStyles, selectedScarStyle, onScarStyleChange)}
     </div>
   );
 };

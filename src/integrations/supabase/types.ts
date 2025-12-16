@@ -6326,30 +6326,87 @@ export type Database = {
       }
       player_avatar_config: {
         Row: {
+          accessory_1_id: string | null
+          accessory_2_id: string | null
+          beard_style: string | null
           body_type: string | null
           created_at: string | null
+          eye_style: string | null
+          gender: string | null
+          hair_color: string | null
+          hair_style_key: string | null
           height: number | null
           id: string
+          jacket_color: string | null
+          jacket_id: string | null
+          mouth_style: string | null
+          nose_style: string | null
+          pants_color: string | null
+          pants_id: string | null
           profile_id: string
+          scar_style: string | null
+          shirt_color: string | null
+          shirt_id: string | null
+          shoes_color: string | null
+          shoes_id: string | null
           skin_tone: string | null
+          tattoo_style: string | null
           updated_at: string | null
         }
         Insert: {
+          accessory_1_id?: string | null
+          accessory_2_id?: string | null
+          beard_style?: string | null
           body_type?: string | null
           created_at?: string | null
+          eye_style?: string | null
+          gender?: string | null
+          hair_color?: string | null
+          hair_style_key?: string | null
           height?: number | null
           id?: string
+          jacket_color?: string | null
+          jacket_id?: string | null
+          mouth_style?: string | null
+          nose_style?: string | null
+          pants_color?: string | null
+          pants_id?: string | null
           profile_id: string
+          scar_style?: string | null
+          shirt_color?: string | null
+          shirt_id?: string | null
+          shoes_color?: string | null
+          shoes_id?: string | null
           skin_tone?: string | null
+          tattoo_style?: string | null
           updated_at?: string | null
         }
         Update: {
+          accessory_1_id?: string | null
+          accessory_2_id?: string | null
+          beard_style?: string | null
           body_type?: string | null
           created_at?: string | null
+          eye_style?: string | null
+          gender?: string | null
+          hair_color?: string | null
+          hair_style_key?: string | null
           height?: number | null
           id?: string
+          jacket_color?: string | null
+          jacket_id?: string | null
+          mouth_style?: string | null
+          nose_style?: string | null
+          pants_color?: string | null
+          pants_id?: string | null
           profile_id?: string
+          scar_style?: string | null
+          shirt_color?: string | null
+          shirt_id?: string | null
+          shoes_color?: string | null
+          shoes_id?: string | null
           skin_tone?: string | null
+          tattoo_style?: string | null
           updated_at?: string | null
         }
         Relationships: [
