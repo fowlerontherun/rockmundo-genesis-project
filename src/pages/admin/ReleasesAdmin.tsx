@@ -1,5 +1,6 @@
 import { AdminRoute } from "@/components/AdminRoute";
 import { AdminReleaseTools } from "@/components/admin/AdminReleaseTools";
+import { AdminSongTools } from "@/components/admin/AdminSongTools";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -41,13 +42,16 @@ function ReleasesAdminContent() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Releases Admin</h1>
-          <p className="text-muted-foreground">Manage release manufacturing and distribution</p>
+          <h1 className="text-2xl font-bold">Releases & Songs Admin</h1>
+          <p className="text-muted-foreground">Manage release manufacturing, song status, and distribution</p>
         </div>
       </div>
 
-      {/* Admin Tools */}
-      <AdminReleaseTools />
+      {/* Admin Tools - Grid Layout */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <AdminReleaseTools />
+        <AdminSongTools />
+      </div>
 
       {/* Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
