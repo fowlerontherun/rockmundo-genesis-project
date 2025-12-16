@@ -248,49 +248,22 @@ export default function Radio() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Released songs - optimized query
+  // Recorded songs - fetch songs with status 'recorded' (simplified query)
   const { data: releasedSongs, isLoading: songsLoading } = useQuery<any[]>({
-    queryKey: ["released-songs", user?.id],
+    queryKey: ["recorded-songs-for-radio", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data: userReleases, error: releasesError } = await supabase
-        .from("releases")
-        .select("id, title")
-        .eq("user_id", user.id)
-        .eq("release_status", "released");
-      
-      if (releasesError) throw releasesError;
-      if (!userReleases || userReleases.length === 0) return [];
-
-      const releaseIds = userReleases.map((r: any) => r.id);
-
-      const { data: releaseSongs, error: rsError } = await supabase
-        .from("release_songs")
-        .select("song_id, release_id")
-        .in("release_id", releaseIds);
-
-      if (rsError) throw rsError;
-      if (!releaseSongs || releaseSongs.length === 0) return [];
-
-      const songIds = [...new Set(releaseSongs.map((rs: any) => rs.song_id))];
-      const releaseMap = new Map(userReleases.map((r: any) => [r.id, r.title]));
-
-      const { data: songs, error: songsError } = await supabase
+      // Get user's recorded songs directly - much simpler and faster
+      const { data: songs, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, band_id")
-        .in("id", songIds);
+        .eq("user_id", user.id)
+        .eq("status", "recorded")
+        .order("updated_at", { ascending: false });
 
-      if (songsError) throw songsError;
-
-      return songs?.map((song: any) => {
-        const rs = releaseSongs.find((rs: any) => rs.song_id === song.id);
-        return {
-          ...song,
-          release_id: rs?.release_id,
-          release_title: rs ? releaseMap.get(rs.release_id) : null,
-        };
-      }) || [];
+      if (error) throw error;
+      return songs || [];
     },
     enabled: !!user?.id && activeTab === "submit",
     staleTime: 5 * 60 * 1000,
