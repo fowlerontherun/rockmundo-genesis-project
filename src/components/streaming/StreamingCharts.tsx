@@ -12,56 +12,55 @@ export function StreamingCharts({ releaseId, userId }: StreamingChartsProps) {
   const { data: analyticsData } = useQuery({
     queryKey: ["streaming-analytics-charts", releaseId, userId],
     queryFn: async () => {
-      // Get streaming analytics
+      // Get streaming analytics from streaming_analytics_daily table
       const { data: analytics } = await supabase
-        .from("streaming_analytics")
+        .from("streaming_analytics_daily")
         .select(`
           *,
           song_release:song_releases(
             song:songs(title),
-            release:releases(id, title),
             platform:streaming_platforms(platform_name)
           )
         `)
         .order("analytics_date", { ascending: true })
-        .limit(30);
+        .limit(90);
 
       return analytics || [];
     }
   });
 
-  // Aggregate data by date
+  // Aggregate data by date using correct column names
   const dailyData = analyticsData?.reduce((acc, item) => {
-    const date = new Date(item.date).toLocaleDateString();
+    const date = new Date(item.analytics_date).toLocaleDateString();
     const existing = acc.find(d => d.date === date);
     
     if (existing) {
-      existing.streams += item.streams || 0;
-      existing.revenue += item.revenue || 0;
+      existing.streams += item.daily_streams || 0;
+      existing.revenue += item.daily_revenue || 0;
     } else {
       acc.push({
         date,
-        streams: item.streams || 0,
-        revenue: item.revenue || 0
+        streams: item.daily_streams || 0,
+        revenue: item.daily_revenue || 0
       });
     }
     
     return acc;
   }, [] as Array<{ date: string; streams: number; revenue: number }>);
 
-  // Platform breakdown
+  // Platform breakdown using platform_name column
   const platformData = analyticsData?.reduce((acc, item) => {
-    const platformName = item.song_release?.platform?.platform_name || "Unknown";
+    const platformName = item.platform_name || item.song_release?.platform?.platform_name || "Unknown";
     const existing = acc.find(p => p.platform === platformName);
     
     if (existing) {
-      existing.streams += item.streams || 0;
-      existing.revenue += item.revenue || 0;
+      existing.streams += item.daily_streams || 0;
+      existing.revenue += item.daily_revenue || 0;
     } else {
       acc.push({
         platform: platformName,
-        streams: item.streams || 0,
-        revenue: item.revenue || 0
+        streams: item.daily_streams || 0,
+        revenue: item.daily_revenue || 0
       });
     }
     
@@ -74,13 +73,13 @@ export function StreamingCharts({ releaseId, userId }: StreamingChartsProps) {
     const existing = acc.find(s => s.song === songTitle);
     
     if (existing) {
-      existing.streams += item.streams || 0;
-      existing.revenue += item.revenue || 0;
+      existing.streams += item.daily_streams || 0;
+      existing.revenue += item.daily_revenue || 0;
     } else {
       acc.push({
         song: songTitle,
-        streams: item.streams || 0,
-        revenue: item.revenue || 0
+        streams: item.daily_streams || 0,
+        revenue: item.daily_revenue || 0
       });
     }
     

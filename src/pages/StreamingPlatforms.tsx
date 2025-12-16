@@ -1,9 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Disc, ArrowLeft } from "lucide-react";
+import { Disc, ArrowLeft, Music, Radio, BarChart3, ListMusic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
-import { MyReleasesTab } from "@/components/streaming/MyReleasesTab";
+import { StreamingMyReleasesTab } from "@/components/streaming/StreamingMyReleasesTab";
 import { ReleaseSongTab } from "@/components/streaming/ReleaseSongTab";
 import { AnalyticsTab } from "@/components/streaming/AnalyticsTab";
 import { DetailedAnalyticsTab } from "@/components/streaming/DetailedAnalyticsTab";
@@ -56,15 +56,30 @@ const StreamingPlatforms = () => {
 
       <Tabs defaultValue="releases" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="releases">My Releases</TabsTrigger>
-          <TabsTrigger value="new-release">Release Song</TabsTrigger>
-          <TabsTrigger value="analytics">Overview</TabsTrigger>
-          <TabsTrigger value="detailed-analytics">Detailed Analytics</TabsTrigger>
-          <TabsTrigger value="playlists">Playlists</TabsTrigger>
+          <TabsTrigger value="releases" className="flex items-center gap-1">
+            <Music className="h-4 w-4" />
+            <span className="hidden sm:inline">My Releases</span>
+          </TabsTrigger>
+          <TabsTrigger value="new-release" className="flex items-center gap-1">
+            <Radio className="h-4 w-4" />
+            <span className="hidden sm:inline">Release Song</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-1">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="detailed-analytics" className="flex items-center gap-1">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="playlists" className="flex items-center gap-1">
+            <ListMusic className="h-4 w-4" />
+            <span className="hidden sm:inline">Playlists</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="releases">
-          <MyReleasesTab userId={userId} />
+          <StreamingMyReleasesTab userId={userId} />
         </TabsContent>
 
         <TabsContent value="new-release">
