@@ -49,6 +49,8 @@ import {
   Headphones,
   MapPin,
 } from "lucide-react";
+import { SongPlayer } from "@/components/audio/SongPlayer";
+import { SongVoting } from "@/components/audio/SongVoting";
 
 import type { Database } from "@/lib/supabase-types";
 
@@ -72,6 +74,8 @@ type NowPlayingRecord = {
     id: string;
     title: string | null;
     genre: string | null;
+    audio_url: string | null;
+    audio_generation_status: string | null;
     bands?: { id: string; name: string | null } | null;
   } | null;
   radio_shows?: { id: string; show_name: string | null } | null;
@@ -251,7 +255,7 @@ export default function Radio() {
         .from("radio_plays")
         .select(
           `id, played_at, listeners, hype_gained, streams_boost,
-          songs(id, title, genre, bands(id, name)),
+          songs(id, title, genre, audio_url, audio_generation_status, bands(id, name)),
           radio_shows(id, show_name)`
         )
         .eq("station_id", selectedStation)
@@ -380,7 +384,7 @@ export default function Radio() {
           listeners, 
           hype_gained, 
           streams_boost,
-          songs(id, title, genre, quality_score, bands(name)),
+          songs(id, title, genre, quality_score, audio_url, audio_generation_status, bands(name)),
           radio_shows(show_name, host_name)
         `)
         .eq("station_id", selectedStation)
@@ -769,7 +773,7 @@ export default function Radio() {
                     <Skeleton className="h-4 w-24" />
                   </div>
                 ) : nowPlaying ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <PlayCircle className="h-6 w-6 text-primary" />
                       <div>
@@ -779,6 +783,23 @@ export default function Radio() {
                         </p>
                       </div>
                     </div>
+                    
+                    {/* Audio Player */}
+                    {(nowPlaying.songs?.audio_url || nowPlaying.songs?.audio_generation_status) && (
+                      <div className="pt-2">
+                        <SongPlayer
+                          audioUrl={nowPlaying.songs.audio_url}
+                          generationStatus={nowPlaying.songs.audio_generation_status}
+                          compact
+                        />
+                        {nowPlaying.songs.id && (
+                          <div className="mt-2">
+                            <SongVoting songId={nowPlaying.songs.id} compact />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
                       <div className="rounded-md border bg-background/60 p-3">
                         <p className="text-muted-foreground">Listeners</p>
@@ -1074,6 +1095,23 @@ export default function Radio() {
                             by {nowPlaying.songs?.bands?.name || 'Unknown Artist'}
                           </p>
                         </div>
+                        
+                        {/* Audio Player */}
+                        {(nowPlaying.songs?.audio_url || nowPlaying.songs?.audio_generation_status) && (
+                          <div>
+                            <SongPlayer
+                              audioUrl={nowPlaying.songs.audio_url}
+                              generationStatus={nowPlaying.songs.audio_generation_status}
+                              compact
+                            />
+                            {nowPlaying.songs.id && (
+                              <div className="mt-2">
+                                <SongVoting songId={nowPlaying.songs.id} compact />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-3 gap-4 text-center">
                           <div>
                             <p className="text-2xl font-bold text-emerald-500">{(nowPlaying.listeners || 0).toLocaleString()}</p>

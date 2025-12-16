@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SongFilters } from "@/components/songs/SongFilters";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
-import { Music, ArrowLeft, Star, Calendar, Music2, Archive } from "lucide-react";
+import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { SongArchiveButton } from "@/components/song/SongArchiveButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SongPlayer } from "@/components/audio/SongPlayer";
 
 const SongManager = () => {
   const navigate = useNavigate();
@@ -307,6 +308,21 @@ const SongManager = () => {
                           Last: {format(new Date(rehearsal.last_rehearsed_at), "MMM d")}
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  {/* Audio Player Preview */}
+                  {(song.audio_url || song.audio_generation_status) && (
+                    <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Headphones className="h-3 w-3 text-primary" />
+                        <span className="text-xs text-muted-foreground">Audio Available</span>
+                      </div>
+                      <SongPlayer
+                        audioUrl={song.audio_url}
+                        generationStatus={song.audio_generation_status}
+                        compact
+                      />
                     </div>
                   )}
 
