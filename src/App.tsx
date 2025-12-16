@@ -44,6 +44,7 @@ const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
+const StreamingPlatformDetail = lazyWithRetry(() => import("./pages/StreamingPlatformDetail"));
 const AdvisorPage = lazyWithRetry(() => import("./pages/advisor"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
@@ -227,6 +228,7 @@ function App() {
                     
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
+                    <Route path="streaming/:platformId" element={<StreamingPlatformDetail />} />
                     <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
