@@ -12,6 +12,7 @@ import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
+import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -32,6 +33,9 @@ const Layout = () => {
 
   // Global auto-complete for release manufacturing
   useAutoManufacturingCompletion(user?.id || null);
+
+  // Global game event notifications (gig results, offers, completions, etc.)
+  useGameEventNotifications();
 
   useEffect(() => {
     if (!authLoading && !user) {
