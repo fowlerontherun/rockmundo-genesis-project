@@ -50,7 +50,6 @@ serve(async (req) => {
         id,
         song_id,
         show_id,
-        submission_id,
         radio_shows!inner(
           id,
           station_id,
