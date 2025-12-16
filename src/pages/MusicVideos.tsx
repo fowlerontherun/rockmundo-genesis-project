@@ -12,9 +12,9 @@ import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, TrendingUp, Eye, DollarSign, Video, Film, Tv, Plus, Calendar, Star, Users } from "lucide-react";
+import { Play, TrendingUp, Eye, DollarSign, Video, Film, Tv, Plus, Calendar, Star, Users, Clock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInHours } from "date-fns";
 
 interface MusicVideo {
   id: string;
@@ -34,6 +34,38 @@ interface MusicVideo {
     title: string;
   };
 }
+
+// Production progress component
+const ProductionProgress = ({ video }: { video: MusicVideo }) => {
+  const createdAt = new Date(video.created_at);
+  const now = new Date();
+  const hoursElapsed = differenceInHours(now, createdAt);
+  
+  // Production time based on budget
+  let requiredHours = 48;
+  if (video.budget >= 50000) requiredHours = 6;
+  else if (video.budget >= 25000) requiredHours = 12;
+  else if (video.budget >= 10000) requiredHours = 24;
+  else if (video.budget >= 5000) requiredHours = 36;
+  
+  const progress = Math.min(100, (hoursElapsed / requiredHours) * 100);
+  const hoursRemaining = Math.max(0, requiredHours - hoursElapsed);
+  
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Production Progress</span>
+        <span className="font-medium">{Math.round(progress)}%</span>
+      </div>
+      <Progress value={progress} className="h-2" />
+      <div className="text-xs text-muted-foreground">
+        {hoursRemaining > 0 
+          ? `~${hoursRemaining}h remaining`
+          : "Ready for release!"}
+      </div>
+    </div>
+  );
+};
 
 const MusicVideos = () => {
   const { profile } = useGameData();
@@ -502,15 +534,20 @@ const MusicVideos = () => {
                       </>
                     )}
 
-                    {video.status === "production" && releasedSongs.some((s: any) => s.id === video.song_id) && (
-                      <Button 
-                        className="w-full"
-                        onClick={() => releaseVideoMutation.mutate(video.id)}
-                        disabled={releaseVideoMutation.isPending}
-                      >
-                        <Tv className="mr-2 h-4 w-4" />
-                        Release to PooTube
-                      </Button>
+                    {video.status === "production" && (
+                      <div className="space-y-3">
+                        <ProductionProgress video={video} />
+                        {releasedSongs.some((s: any) => s.id === video.song_id) && (
+                          <Button 
+                            className="w-full"
+                            variant="secondary"
+                            disabled
+                          >
+                            <Clock className="mr-2 h-4 w-4 animate-spin" />
+                            In Production...
+                          </Button>
+                        )}
+                      </div>
                     )}
 
                     {video.status === "released" && (

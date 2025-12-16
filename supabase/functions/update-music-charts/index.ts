@@ -262,7 +262,93 @@ serve(async (req) => {
       chartsUpdated += recordEntries.length;
     }
 
-    console.log(`Updated ${chartsUpdated} chart entries`);
+    // === RADIO AIRPLAY CHARTS ===
+    const { data: radioPlays } = await supabaseClient
+      .from("radio_plays")
+      .select(`
+        song_id,
+        listeners,
+        songs!inner(
+          id,
+          title,
+          genre,
+          user_id,
+          band_id
+        )
+      `)
+      .gte("played_at", sevenDaysAgo.toISOString());
+
+    // Aggregate by song
+    const radioAggregated = new Map<string, any>();
+    for (const play of radioPlays || []) {
+      const existing = radioAggregated.get(play.song_id);
+      if (existing) {
+        existing.total_listeners += play.listeners || 0;
+        existing.play_count += 1;
+      } else {
+        radioAggregated.set(play.song_id, {
+          song_id: play.song_id,
+          total_listeners: play.listeners || 0,
+          play_count: 1,
+          song: play.songs,
+        });
+      }
+    }
+
+    const radioEntries = Array.from(radioAggregated.values())
+      .sort((a, b) => b.total_listeners - a.total_listeners)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.song_id,
+        chart_type: "radio_airplay",
+        rank: index + 1,
+        plays_count: entry.total_listeners,
+        chart_date: chartDate,
+        genre: entry.song?.genre,
+        country: "all",
+      }));
+
+    if (radioEntries.length > 0) {
+      await supabaseClient.from("chart_entries").insert(radioEntries);
+      chartsUpdated += radioEntries.length;
+    }
+
+    // === VIDEO VIEWS CHARTS ===
+    const { data: videoData } = await supabaseClient
+      .from("music_videos")
+      .select(`
+        id,
+        song_id,
+        views_count,
+        songs!inner(
+          id,
+          title,
+          genre,
+          user_id,
+          band_id
+        )
+      `)
+      .eq("status", "released")
+      .gte("views_count", 100)
+      .order("views_count", { ascending: false })
+      .limit(100);
+
+    const videoEntries = (videoData || []).map((video, index) => ({
+      song_id: video.song_id,
+      chart_type: "video_views",
+      rank: index + 1,
+      plays_count: video.views_count,
+      chart_date: chartDate,
+      genre: (video.songs as any)?.genre,
+      country: "all",
+    }));
+
+    if (videoEntries.length > 0) {
+      await supabaseClient.from("chart_entries").insert(videoEntries);
+      chartsUpdated += videoEntries.length;
+    }
+
+    console.log(`Updated ${chartsUpdated} chart entries (streaming, sales, radio, video)`);
 
     // Calculate trends based on yesterday's chart
     await supabaseClient.rpc("calculate_chart_trends");
