@@ -140,6 +140,9 @@ const TwaaterAdmin = lazyWithRetry(() => import("./pages/admin/TwaaterAdmin"));
 const LabelsAdmin = lazyWithRetry(() => import("./pages/admin/LabelsAdmin"));
 const BandAdmin = lazyWithRetry(() => import("./pages/admin/BandAdmin"));
 const ReleasesAdmin = lazyWithRetry(() => import("./pages/admin/ReleasesAdmin"));
+const AdminDashboard = lazyWithRetry(() => import("./pages/admin/AdminDashboard"));
+const GameBalanceAdmin = lazyWithRetry(() => import("./pages/admin/GameBalanceAdmin"));
+const TutorialsAdmin = lazyWithRetry(() => import("./pages/admin/TutorialsAdmin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
@@ -328,6 +331,9 @@ function App() {
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="admin/releases" element={<ReleasesAdmin />} />
+                    <Route path="admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="admin/game-balance" element={<GameBalanceAdmin />} />
+                    <Route path="admin/tutorials" element={<TutorialsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
