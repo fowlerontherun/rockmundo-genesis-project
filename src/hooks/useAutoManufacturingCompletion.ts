@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { logGameActivity } from "./useGameActivityLog";
 
 /**
  * Client-side hook to auto-complete manufacturing for releases.
@@ -34,6 +35,15 @@ export const useAutoManufacturingCompletion = (userId: string | null) => {
 
         if (completedCount && completedCount > 0) {
           console.log(`[AutoManufacturing] Completed ${completedCount} release(s)`);
+          
+          // Log activity for manufacturing completion
+          logGameActivity({
+            userId,
+            activityType: 'manufacturing_completed',
+            activityCategory: 'release',
+            description: `${completedCount} release(s) completed manufacturing and are now available`,
+            metadata: { completedCount }
+          });
           
           queryClient.invalidateQueries({ queryKey: ["releases"] });
           

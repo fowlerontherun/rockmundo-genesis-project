@@ -10,6 +10,7 @@ import { ReleaseTypeSelector } from "./ReleaseTypeSelector";
 import { SongSelectionStep, SongSelection } from "./SongSelectionStep";
 import { FormatSelectionStep } from "./FormatSelectionStep";
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
+import { logGameActivity } from "@/hooks/useGameActivityLog";
 
 interface CreateReleaseDialogProps {
   open: boolean;
@@ -141,6 +142,26 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         .insert(formatInserts);
 
       if (formatsError) throw formatsError;
+
+      // Log release creation activity
+      logGameActivity({
+        userId,
+        bandId: userBand?.id,
+        activityType: 'release_created',
+        activityCategory: 'release',
+        description: `Created ${releaseType} release "${title}" - Manufacturing in progress`,
+        amount: -totalCost,
+        metadata: {
+          releaseId: release.id,
+          releaseType,
+          title,
+          artistName,
+          formats: selectedFormats.map(f => f.format_type),
+          songCount: selectedSongs.length,
+          manufacturingDays,
+          streamingPlatforms: selectedStreamingPlatforms
+        }
+      });
 
       return release;
     },

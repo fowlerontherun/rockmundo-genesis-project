@@ -13,6 +13,7 @@ import {
   type GearModifierEffects,
   type PlayerEquipmentRow,
 } from "./gearModifiers";
+import { logGameActivity } from "@/hooks/useGameActivityLog";
 
 interface GigExecutionData {
   gigId: string;
@@ -359,6 +360,33 @@ export async function executeGigPerformance(data: GigExecutionData) {
         equipment_wear: Math.round(equipmentWearCost)
       }
     });
+
+  // Log gig completion activity
+  const memberUserIds = members.map(m => m.user_id).filter(Boolean);
+  for (const memberId of memberUserIds) {
+    if (memberId) {
+      logGameActivity({
+        userId: memberId,
+        bandId,
+        activityType: 'gig_completed',
+        activityCategory: 'gig',
+        description: `Completed gig at ${venueData?.name || 'venue'} - Grade: ${gradeData.grade}, ${actualAttendance} attendance`,
+        amount: Math.round(netProfit / Math.max(1, members.length)),
+        metadata: {
+          gigId,
+          venueId: (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id,
+          venueName: venueData?.name,
+          attendance: actualAttendance,
+          overallRating,
+          performanceGrade: gradeData.grade,
+          fameGained: famePerMember,
+          merchSold: merchSales.itemsSold,
+          grossTicketRevenue,
+          bandTicketShare
+        }
+      });
+    }
+  }
 
   return {
     outcome,
