@@ -253,7 +253,7 @@ const Dashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Profile Information</CardTitle>
-                <Link to="/my-character">
+                <Link to="/my-character/edit">
                   <Button variant="outline" size="sm">Edit Profile</Button>
                 </Link>
               </CardHeader>

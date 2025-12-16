@@ -25,7 +25,7 @@ const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: st
   reading: { path: '/education', icon: BookOpen, label: 'Reading', description: 'Read books to gain knowledge' },
   mentorship: { path: '/education', icon: Users, label: 'Mentorship Session', description: 'Learn from experienced mentors' },
   youtube_video: { path: '/education', icon: Video, label: 'YouTube Learning', description: 'Watch educational videos' },
-  health: { path: '/my-character', icon: Heart, label: 'Health Activity', description: 'Rest and recover health' },
+  health: { path: '/my-character/edit', icon: Heart, label: 'Health Activity', description: 'Rest and recover health' },
   skill_practice: { path: '/skills', icon: Target, label: 'Skill Practice', description: 'Practice individual skills' },
   other: { path: '/schedule', icon: Calendar, label: 'Other Activity', description: 'Schedule a custom activity' },
 };
