@@ -9,35 +9,46 @@ interface PlatformComparisonChartProps {
 }
 
 export function PlatformComparisonChart({ userId }: PlatformComparisonChartProps) {
-  const { data: platformData } = useQuery({
-    queryKey: ['streaming-platform-comparison', userId],
+  // First fetch band IDs
+  const { data: userBandIds } = useQuery({
+    queryKey: ['user-band-ids-platform-chart', userId],
     queryFn: async () => {
-      // Get user's song releases
-      const { data: releases } = await supabase
+      const { data } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', userId);
+      return data?.map(b => b.band_id) || [];
+    }
+  });
+
+  const { data: platformData } = useQuery({
+    queryKey: ['streaming-platform-comparison', userId, userBandIds],
+    queryFn: async () => {
+      // Build proper filter for user's releases
+      let query = supabase
         .from('song_releases')
-        .select('id, songs(user_id, band_id)')
-        .or(`songs.user_id.eq.${userId},songs.band_id.in.(select band_id from band_members where user_id = ${userId})`);
+        .select('id, platform_name, total_streams, total_revenue')
+        .eq('is_active', true);
+
+      if (userBandIds && userBandIds.length > 0) {
+        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`);
+      } else {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data: releases } = await query;
 
       if (!releases || releases.length === 0) return [];
 
-      const releaseIds = releases.map(r => r.id);
-
-      // Get analytics by platform
-      const { data: analytics } = await supabase
-        .from('streaming_analytics_daily')
-        .select('platform_name, daily_streams, daily_revenue')
-        .in('song_release_id', releaseIds)
-        .not('platform_name', 'is', null);
-
-      // Aggregate by platform
+      // Aggregate by platform name directly from song_releases
       const platformMap = new Map<string, { streams: number; revenue: number }>();
       
-      analytics?.forEach(record => {
-        const platform = record.platform_name || 'Unknown';
+      releases.forEach(release => {
+        const platform = release.platform_name || 'Unknown';
         const existing = platformMap.get(platform) || { streams: 0, revenue: 0 };
         platformMap.set(platform, {
-          streams: existing.streams + (record.daily_streams || 0),
-          revenue: existing.revenue + (record.daily_revenue || 0),
+          streams: existing.streams + Number(release.total_streams || 0),
+          revenue: existing.revenue + Number(release.total_revenue || 0),
         });
       });
 
@@ -47,6 +58,7 @@ export function PlatformComparisonChart({ userId }: PlatformComparisonChartProps
         revenue: data.revenue,
       }));
     },
+    enabled: userBandIds !== undefined
   });
 
   if (!platformData || platformData.length === 0) {

@@ -33,7 +33,8 @@ export const useStreaming = (userId: string) => {
       const { data, error } = await supabase
         .from("streaming_platforms")
         .select("*")
-        .order("name");
+        .eq("is_active", true)
+        .order("platform_name");
 
       if (error) throw error;
       return data;

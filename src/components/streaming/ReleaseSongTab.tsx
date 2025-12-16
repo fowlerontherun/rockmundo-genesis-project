@@ -76,13 +76,24 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
         }
       }
 
-      // Create releases
-      const releases = selectedPlatforms.map((platformId) => ({
-        song_id: selectedSong,
-        platform_id: platformId,
-        user_id: userId,
-        release_type: releaseType,
-      }));
+      // Get platform names for each selected platform
+      const platformDetails = platforms?.filter(p => selectedPlatforms.includes(p.id)) || [];
+
+      // Create releases with all required fields
+      const releases = selectedPlatforms.map((platformId) => {
+        const platform = platformDetails.find(p => p.id === platformId);
+        return {
+          song_id: selectedSong,
+          platform_id: platformId,
+          platform_name: platform?.platform_name,
+          user_id: userId,
+          release_type: releaseType,
+          release_date: new Date().toISOString(),
+          is_active: true,
+          total_streams: 0,
+          total_revenue: 0
+        };
+      });
 
       const { error } = await supabase.from("song_releases").insert(releases);
       if (error) throw error;
