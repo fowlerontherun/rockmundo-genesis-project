@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Flag, MapPin, Music, PlayCircle, Star, Users } from 'lucide-react';
+import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Flag, MapPin, Music, PlayCircle, Star, Ticket, Users } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,9 @@ import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInDays } from 'date-fns';
+import { predictTotalTicketSales } from '@/utils/ticketSalesSimulation';
+import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -324,6 +326,19 @@ const GigBooking = () => {
         .update({ band_balance: (bandData.band_balance || 0) - bookingFee })
         .eq('id', band.id);
 
+      // Calculate days booked in advance
+      const daysBooked = differenceInDays(scheduledDateTime, new Date());
+      
+      // Calculate predicted ticket sales
+      const predictedTickets = predictTotalTicketSales({
+        bandFame: band.fame || 0,
+        bandTotalFans: band.total_fans || 0,
+        venueCapacity: venueCapacity,
+        daysUntilGig: daysBooked,
+        daysBooked: daysBooked,
+        ticketPrice: ticketPrice
+      });
+
       const { error } = await supabase.from('gigs').insert({
         band_id: band.id,
         venue_id: bookingVenue.id,
@@ -342,6 +357,9 @@ const GigBooking = () => {
         estimated_revenue: estimatedRevenue,
         attendance: 0,
         fan_gain: 0,
+        predicted_tickets: predictedTickets,
+        tickets_sold: 0,
+        last_ticket_update: new Date().toISOString(),
       });
 
       if (error) {
@@ -561,10 +579,13 @@ const GigBooking = () => {
                               {venue.location}
                             </div>
                           ) : null}
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <DollarSign className="h-4 w-4" />
-                            {gig.payment ? `$${gig.payment.toLocaleString()}` : 'Payment TBD'}
-                          </div>
+                          {gig.status === 'scheduled' && gig.predicted_tickets && gig.venues?.capacity && (
+                            <TicketSalesDisplay
+                              ticketsSold={gig.tickets_sold || 0}
+                              predictedTickets={gig.predicted_tickets}
+                              venueCapacity={gig.venues.capacity}
+                            />
+                          )}
                         </div>
                         <div className="flex flex-col gap-2">
                           <Badge variant={statusConfig.badgeVariant} className="flex items-center gap-1 capitalize">
