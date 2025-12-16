@@ -50,6 +50,7 @@ const Dashboard = () => {
   } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [activeTab, setActiveTab] = useState("profile");
 
   // Advisor state
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
@@ -58,6 +59,7 @@ const Dashboard = () => {
   const [advisorError, setAdvisorError] = useState<string | null>(null);
   const [insights, setInsights] = useState<AdvisorInsights | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [insightsLoaded, setInsightsLoaded] = useState(false);
   const weekStart = startOfWeek(currentDate, {
     weekStartsOn: 1
   });
@@ -112,6 +114,7 @@ const Dashboard = () => {
     try {
       const result = await generateAdvisorInsights(user.id);
       setInsights(result);
+      setInsightsLoaded(true);
       setMessages(previous => {
         const retainedMessages = previous.filter(message => message.kind !== "insights");
         const advisoryCopy = result.suggestions.length > 0 ? "Here's what I'm seeing in your numbers right now." : "No red alerts in the data—stay consistent and check back after your next update.";
@@ -131,6 +134,13 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  // Auto-load insights when advisor tab is first visited
+  useEffect(() => {
+    if (activeTab === "advisor" && !insightsLoaded && user && !loading) {
+      loadInsights();
+    }
+  }, [activeTab, insightsLoaded, user, loading]);
   const handleAdvisorSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!inputValue.trim() || isStreaming) return;
@@ -209,7 +219,7 @@ const Dashboard = () => {
         
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 sm:mr-2" />
