@@ -42,7 +42,8 @@ const Dashboard = () => {
   const {
     profile,
     skillProgress,
-    attributes
+    attributes,
+    currentCity
   } = useGameData();
   const {
     toast
@@ -240,8 +241,11 @@ const Dashboard = () => {
         <TabsContent value="profile" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Profile Information</CardTitle>
+                <Link to="/my-character">
+                  <Button variant="outline" size="sm">Edit Profile</Button>
+                </Link>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
@@ -284,14 +288,14 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Total Hours</p>
-                    <p className="text-sm font-medium">{(profile as any)?.total_hours_played || 0}h</p>
+                    <p className="text-sm font-medium">{((profile as any)?.total_hours_played || 0).toFixed(1)}h</p>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t space-y-2">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{(profile as any)?.current_city || "No location"}</span>
+                    <span className="text-sm">{currentCity?.name || "No location"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />

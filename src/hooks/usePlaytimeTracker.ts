@@ -35,12 +35,13 @@ export const usePlaytimeTracker = (userId: string | null) => {
 
         const currentHours = (profile?.total_hours_played || 0);
         const hoursToAdd = elapsedMinutes / 60;
+        const newTotalHours = currentHours + hoursToAdd;
 
-        // Update with new total
+        // Update with new total (INTEGER column, round to nearest hour)
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
-            total_hours_played: Math.round((currentHours + hoursToAdd) * 100) / 100,
+            total_hours_played: Math.round(newTotalHours),
             updated_at: new Date().toISOString()
           })
           .eq('user_id', userId);
