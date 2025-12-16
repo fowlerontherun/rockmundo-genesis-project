@@ -1,9 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";
+import { VipBadge } from "@/components/VipBadge";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
-  const version = "1.0.69";
+  const version = "1.0.71";
   
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card/50">
@@ -13,6 +14,7 @@ export const VersionHeader = () => {
       <span className="text-xs text-muted-foreground">
         {t('version')}: {version}
       </span>
+      <VipBadge size="sm" />
     </div>
   );
 };
