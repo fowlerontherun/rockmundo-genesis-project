@@ -200,7 +200,7 @@ const Navigation = () => {
   const mobileShortcuts = [
     { icon: Home, label: t('home'), path: "/dashboard" },
     { icon: Calendar, label: t('gigs'), path: "/gigs" },
-    { icon: Music, label: t('music'), path: "/music" },
+    { icon: Music, label: t('music'), path: "/music-hub" },
   ];
 
   const handleLogout = async () => {
