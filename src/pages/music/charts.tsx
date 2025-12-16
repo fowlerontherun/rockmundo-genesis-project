@@ -31,6 +31,8 @@ const chartTypeLabels: Record<string, string> = {
   cd_sales: "CD Sales",
   vinyl_sales: "Vinyl Sales",
   record_sales: "Record Store",
+  radio_airplay: "Radio Airplay",
+  video_views: "Music Video Views",
 };
 
 const timeframeOptions = [
@@ -47,6 +49,8 @@ const chartTypeOptions = [
   { value: "cd_sales", label: "CD Sales" },
   { value: "vinyl_sales", label: "Vinyl Sales" },
   { value: "record_sales", label: "Record Store" },
+  { value: "radio_airplay", label: "Radio Airplay" },
+  { value: "video_views", label: "Music Video Views" },
 ];
 
 const countryOptions = [
