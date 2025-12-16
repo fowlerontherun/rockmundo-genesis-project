@@ -12,7 +12,9 @@ import {
 import { buildGearOutcomeNarrative, type GearOutcomeNarrative } from "@/utils/gigNarrative";
 import { EnhancedGigMetrics } from "./EnhancedGigMetrics";
 import { GigXpRewardCard } from "./GigXpRewardCard";
+import { FanGrowthCard } from "./FanGrowthCard";
 import type { GigXpSummary } from "@/utils/gigXpCalculator";
+import type { FanConversionResult } from "@/utils/fanConversionCalculator";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -74,6 +76,7 @@ interface Props {
   gearEffects?: GearModifierEffects | null;
   gearNarrative?: GearOutcomeNarrative | null;
   xpSummary?: GigXpSummary | null;
+  fanConversion?: FanConversionResult | null;
 }
 
 export const GigOutcomeReport = ({
@@ -86,6 +89,7 @@ export const GigOutcomeReport = ({
   gearEffects,
   gearNarrative,
   xpSummary,
+  fanConversion,
 }: Props) => {
   if (!outcome) return null;
 
@@ -393,6 +397,9 @@ export const GigOutcomeReport = ({
 
           {/* XP Rewards */}
           <GigXpRewardCard xpSummary={xpSummary || null} performanceGrade={grade.grade} />
+
+          {/* Fan Growth */}
+          <FanGrowthCard fanConversion={fanConversion || null} />
 
           {hasGearImpact && (
             <Card>
