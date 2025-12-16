@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { RecordingStage, RecordingStatus } from "@/lib/workflows/recording";
+import { logGameActivity } from "./useGameActivityLog";
 
 export interface RecordingProducer {
   id: string;
@@ -378,6 +379,20 @@ export const useCompleteRecordingSession = () => {
         .eq('id', session.song_id);
 
       if (songError) throw songError;
+
+      // Log the activity
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.id) {
+        await logGameActivity({
+          userId: userData.user.id,
+          activityType: 'recording_complete',
+          activityCategory: 'recording',
+          description: `Completed recording session, song quality improved from ${currentQuality} to ${newQuality}`,
+          metadata: { sessionId, songId: session.song_id, qualityBefore: currentQuality, qualityAfter: newQuality },
+          beforeState: { quality_score: currentQuality },
+          afterState: { quality_score: newQuality },
+        });
+      }
 
       return { ...session, qualityBefore: currentQuality, qualityAfter: newQuality };
     },
