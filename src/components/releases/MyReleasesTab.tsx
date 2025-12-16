@@ -72,10 +72,10 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
           release_formats(
             id,
             format_type,
-            units_ordered,
-            unit_cost,
+            quantity,
+            manufacturing_cost,
             release_date,
-            distribution_status
+            manufacturing_status
           ),
           bands(id, name, fame, popularity, chemistry_level, total_fans)
         `)
@@ -271,7 +271,7 @@ function ReleaseCard({ release, onEdit, onViewDetails }: ReleaseCardProps) {
     ["digital", "streaming"].includes(f.format_type)
   ) || [];
   
-  const totalUnitsOrdered = physicalFormats.reduce((sum: number, f: any) => sum + (f.units_ordered || 0), 0);
+  const totalUnitsOrdered = physicalFormats.reduce((sum: number, f: any) => sum + (f.quantity || 0), 0);
   
   return (
     <Card className="overflow-hidden">
@@ -393,9 +393,9 @@ function ReleaseCard({ release, onEdit, onViewDetails }: ReleaseCardProps) {
                     {fmt.format_type === "cassette" && <Music className="h-4 w-4" />}
                     <span className="capitalize font-medium">{fmt.format_type}</span>
                   </div>
-                  {fmt.units_ordered && (
+                  {fmt.quantity && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {fmt.units_ordered} units @ ${fmt.unit_cost}/unit
+                      {fmt.quantity} units @ ${fmt.manufacturing_cost}/unit
                     </p>
                   )}
                   {fmt.release_date && (
@@ -403,9 +403,9 @@ function ReleaseCard({ release, onEdit, onViewDetails }: ReleaseCardProps) {
                       Release: {formatDate(new Date(fmt.release_date), "MMM d, yyyy")}
                     </p>
                   )}
-                  {fmt.distribution_status && (
+                  {fmt.manufacturing_status && (
                     <Badge variant="outline" className="mt-1 text-xs">
-                      {fmt.distribution_status}
+                      {fmt.manufacturing_status}
                     </Badge>
                   )}
                 </div>
