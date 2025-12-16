@@ -6328,19 +6328,44 @@ export type Database = {
         Row: {
           accessory_1_id: string | null
           accessory_2_id: string | null
+          age_appearance: string | null
+          arm_length: number | null
           beard_style: string | null
           body_type: string | null
+          cheekbone: number | null
+          chin_prominence: number | null
           created_at: string | null
+          ear_angle: number | null
+          ear_size: number | null
+          eye_color: string | null
+          eye_size: number | null
+          eye_spacing: number | null
           eye_style: string | null
+          eye_tilt: number | null
+          eyebrow_color: string | null
+          eyebrow_style: string | null
+          eyebrow_thickness: number | null
+          face_length: number | null
+          face_width: number | null
           gender: string | null
           hair_color: string | null
           hair_style_key: string | null
           height: number | null
+          hip_width: number | null
           id: string
           jacket_color: string | null
           jacket_id: string | null
+          jaw_shape: string | null
+          leg_length: number | null
+          lip_color: string | null
+          lip_fullness: number | null
+          lip_width: number | null
           mouth_style: string | null
+          muscle_definition: number | null
+          nose_bridge: number | null
+          nose_length: number | null
           nose_style: string | null
+          nose_width: number | null
           pants_color: string | null
           pants_id: string | null
           profile_id: string
@@ -6349,26 +6374,54 @@ export type Database = {
           shirt_id: string | null
           shoes_color: string | null
           shoes_id: string | null
+          shoulder_width: number | null
           skin_tone: string | null
           tattoo_style: string | null
+          torso_length: number | null
           updated_at: string | null
+          weight: number | null
         }
         Insert: {
           accessory_1_id?: string | null
           accessory_2_id?: string | null
+          age_appearance?: string | null
+          arm_length?: number | null
           beard_style?: string | null
           body_type?: string | null
+          cheekbone?: number | null
+          chin_prominence?: number | null
           created_at?: string | null
+          ear_angle?: number | null
+          ear_size?: number | null
+          eye_color?: string | null
+          eye_size?: number | null
+          eye_spacing?: number | null
           eye_style?: string | null
+          eye_tilt?: number | null
+          eyebrow_color?: string | null
+          eyebrow_style?: string | null
+          eyebrow_thickness?: number | null
+          face_length?: number | null
+          face_width?: number | null
           gender?: string | null
           hair_color?: string | null
           hair_style_key?: string | null
           height?: number | null
+          hip_width?: number | null
           id?: string
           jacket_color?: string | null
           jacket_id?: string | null
+          jaw_shape?: string | null
+          leg_length?: number | null
+          lip_color?: string | null
+          lip_fullness?: number | null
+          lip_width?: number | null
           mouth_style?: string | null
+          muscle_definition?: number | null
+          nose_bridge?: number | null
+          nose_length?: number | null
           nose_style?: string | null
+          nose_width?: number | null
           pants_color?: string | null
           pants_id?: string | null
           profile_id: string
@@ -6377,26 +6430,54 @@ export type Database = {
           shirt_id?: string | null
           shoes_color?: string | null
           shoes_id?: string | null
+          shoulder_width?: number | null
           skin_tone?: string | null
           tattoo_style?: string | null
+          torso_length?: number | null
           updated_at?: string | null
+          weight?: number | null
         }
         Update: {
           accessory_1_id?: string | null
           accessory_2_id?: string | null
+          age_appearance?: string | null
+          arm_length?: number | null
           beard_style?: string | null
           body_type?: string | null
+          cheekbone?: number | null
+          chin_prominence?: number | null
           created_at?: string | null
+          ear_angle?: number | null
+          ear_size?: number | null
+          eye_color?: string | null
+          eye_size?: number | null
+          eye_spacing?: number | null
           eye_style?: string | null
+          eye_tilt?: number | null
+          eyebrow_color?: string | null
+          eyebrow_style?: string | null
+          eyebrow_thickness?: number | null
+          face_length?: number | null
+          face_width?: number | null
           gender?: string | null
           hair_color?: string | null
           hair_style_key?: string | null
           height?: number | null
+          hip_width?: number | null
           id?: string
           jacket_color?: string | null
           jacket_id?: string | null
+          jaw_shape?: string | null
+          leg_length?: number | null
+          lip_color?: string | null
+          lip_fullness?: number | null
+          lip_width?: number | null
           mouth_style?: string | null
+          muscle_definition?: number | null
+          nose_bridge?: number | null
+          nose_length?: number | null
           nose_style?: string | null
+          nose_width?: number | null
           pants_color?: string | null
           pants_id?: string | null
           profile_id?: string
@@ -6405,9 +6486,12 @@ export type Database = {
           shirt_id?: string | null
           shoes_color?: string | null
           shoes_id?: string | null
+          shoulder_width?: number | null
           skin_tone?: string | null
           tattoo_style?: string | null
+          torso_length?: number | null
           updated_at?: string | null
+          weight?: number | null
         }
         Relationships: [
           {
