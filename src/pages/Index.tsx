@@ -48,7 +48,7 @@ const Index = () => {
             <AlertTitle>We couldn&apos;t load your profile</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button onClick={() => navigate("/my-character")}>Open character</Button>
+          <Button onClick={() => navigate("/my-character/edit")}>Open character</Button>
         </div>
       </div>
     );
