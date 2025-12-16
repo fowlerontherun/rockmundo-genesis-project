@@ -285,6 +285,7 @@ function App() {
                     <Route path="bands/browse" element={<BandBrowser />} />
                     <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
+                    <Route path="avatar-designer" element={<AvatarDesigner />} />
                     <Route path="labels" element={<RecordLabel />} />
                     
                     {/* Redirects */}
