@@ -11,6 +11,7 @@ import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
+import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -71,6 +72,7 @@ const Layout = () => {
           <CharacterGate>
             <Outlet />
           </CharacterGate>
+          <TutorialTooltip />
         </div>
       </main>
     </div>

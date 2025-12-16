@@ -145,11 +145,14 @@ export const adminCategories: AdminCategory[] = [
     description: "System settings and automation",
     icon: Settings,
     items: [
+      { path: "/admin/dashboard", label: "Admin Dashboard", description: "Overview & quick actions" },
+      { path: "/admin/game-balance", label: "Game Balance", description: "Tune XP, economy, fame" },
+      { path: "/admin/tutorials", label: "Tutorials", description: "Onboarding steps" },
       { path: "/admin/game-calendar", label: "Game Calendar", description: "Time system" },
       { path: "/admin/cron-monitor", label: "Cron Monitor", description: "Scheduled jobs" },
       { path: "/admin/offer-automation", label: "Offer Automation", description: "Automated offers" },
       { path: "/admin/page-graphics", label: "Page Graphics", description: "UI images" },
-      { path: "/admin/underworld", label: "Underworld", description: "Special features" },
+      { path: "/admin/releases", label: "Releases Admin", description: "Fix stuck releases" },
     ],
   },
 ];

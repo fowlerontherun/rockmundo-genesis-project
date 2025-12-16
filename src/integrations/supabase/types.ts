@@ -3513,6 +3513,45 @@ export type Database = {
           },
         ]
       }
+      game_balance_config: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          max_value: number | null
+          min_value: number | null
+          unit: string | null
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          max_value?: number | null
+          min_value?: number | null
+          unit?: string | null
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          max_value?: number | null
+          min_value?: number | null
+          unit?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       game_calendar_config: {
         Row: {
           created_at: string
@@ -7385,6 +7424,27 @@ export type Database = {
           },
         ]
       }
+      player_tutorial_progress: {
+        Row: {
+          completed_at: string
+          id: string
+          step_key: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          step_key: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          step_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_university_attendance: {
         Row: {
           attendance_date: string
@@ -10950,6 +11010,45 @@ export type Database = {
           },
         ]
       }
+      tutorial_steps: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          order_index: number
+          step_key: string
+          target_element: string | null
+          target_route: string | null
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          step_key: string
+          target_element?: string | null
+          target_route?: string | null
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          step_key?: string
+          target_element?: string | null
+          target_route?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       twaat_metrics: {
         Row: {
           clicks: number | null
@@ -12204,6 +12303,20 @@ export type Database = {
           schedule: string | null
           success_runs: number | null
           total_runs: number | null
+        }
+        Relationships: []
+      }
+      admin_game_stats: {
+        Row: {
+          active_today: number | null
+          active_week: number | null
+          activities_today: number | null
+          completed_gigs: number | null
+          total_bands: number | null
+          total_economy: number | null
+          total_players: number | null
+          total_releases: number | null
+          total_songs: number | null
         }
         Relationships: []
       }
