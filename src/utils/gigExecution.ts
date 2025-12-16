@@ -17,6 +17,7 @@ import { logGameActivity } from "@/hooks/useGameActivityLog";
 import { calculateGigXp, type GigXpSummary } from "./gigXpCalculator";
 import { calculateFanConversion, type FanConversionResult } from "./fanConversionCalculator";
 import { generateMomentHighlights, saveMomentHighlights, type GigMoment } from "./momentHighlightsGenerator";
+import { calculateVenueRelationship, type VenueRelationshipResult } from "./venueRelationshipCalculator";
 
 interface GigExecutionData {
   gigId: string;
@@ -466,6 +467,17 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error generating moment highlights:', momentError);
   }
 
+  // Calculate venue relationship progress
+  let venueRelationship: VenueRelationshipResult | null = null;
+  try {
+    const venueId = (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id;
+    if (venueId) {
+      venueRelationship = await calculateVenueRelationship(bandId, venueId, overallRating);
+    }
+  } catch (venueRelError) {
+    console.error('Error calculating venue relationship:', venueRelError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -476,6 +488,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     xpSummary,
     fanConversion,
     momentHighlights,
+    venueRelationship,
     merchItemsSold: merchSales.itemsSold,
     ticketPrice,
   };
