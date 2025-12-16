@@ -6,39 +6,56 @@ import { toast } from "sonner";
 export interface AvatarConfig {
   id?: string;
   profile_id?: string;
-  hair_style_id: string | null;
-  hair_color: string;
+  // Body
   skin_tone: string;
-  face_type_id: string | null;
+  body_type: 'slim' | 'average' | 'muscular' | 'heavy';
+  height: number;
+  gender: string;
+  // Hair
+  hair_style_key: string;
+  hair_color: string;
+  // Face
   eye_style: string;
   nose_style: string;
   mouth_style: string;
   beard_style: string | null;
-  body_type: 'slim' | 'average' | 'muscular' | 'heavy';
-  height: number;
+  tattoo_style: string | null;
+  scar_style: string | null;
+  // Clothing
   shirt_id: string | null;
+  shirt_color: string;
   pants_id: string | null;
+  pants_color: string;
   jacket_id: string | null;
+  jacket_color: string | null;
   shoes_id: string | null;
+  shoes_color: string;
+  // Accessories
   accessory_1_id: string | null;
   accessory_2_id: string | null;
 }
 
-const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
-  hair_style_id: null,
-  hair_color: '#2d1a0a',
+export const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
   skin_tone: '#e0ac69',
-  face_type_id: null,
+  body_type: 'average',
+  height: 1.0,
+  gender: 'male',
+  hair_style_key: 'messy',
+  hair_color: '#2d1a0a',
   eye_style: 'default',
   nose_style: 'default',
   mouth_style: 'default',
   beard_style: null,
-  body_type: 'average',
-  height: 1.0,
+  tattoo_style: null,
+  scar_style: null,
   shirt_id: null,
+  shirt_color: '#2d0a0a',
   pants_id: null,
+  pants_color: '#1a1a1a',
   jacket_id: null,
+  jacket_color: null,
   shoes_id: null,
+  shoes_color: '#1a1a1a',
   accessory_1_id: null,
   accessory_2_id: null,
 };
@@ -53,7 +70,7 @@ export const usePlayerAvatar = () => {
       if (!user?.id) return null;
       const { data } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, cash')
         .eq('user_id', user.id)
         .single();
       return data;
@@ -78,26 +95,32 @@ export const usePlayerAvatar = () => {
         return { ...defaultConfig, profile_id: profile.id } as AvatarConfig;
       }
 
-      // Map DB fields to our interface
+      // Map all DB fields to our interface
       return {
         id: data.id,
         profile_id: data.profile_id,
-        skin_tone: data.skin_tone || '#e0ac69',
-        body_type: (data.body_type as AvatarConfig['body_type']) || 'average',
-        height: data.height || 1.0,
-        hair_style_id: null,
-        hair_color: '#2d1a0a',
-        face_type_id: null,
-        eye_style: 'default',
-        nose_style: 'default',
-        mouth_style: 'default',
-        beard_style: null,
-        shirt_id: null,
-        pants_id: null,
-        jacket_id: null,
-        shoes_id: null,
-        accessory_1_id: null,
-        accessory_2_id: null,
+        skin_tone: data.skin_tone || defaultConfig.skin_tone,
+        body_type: (data.body_type as AvatarConfig['body_type']) || defaultConfig.body_type,
+        height: data.height || defaultConfig.height,
+        gender: data.gender || defaultConfig.gender,
+        hair_style_key: data.hair_style_key || defaultConfig.hair_style_key,
+        hair_color: data.hair_color || defaultConfig.hair_color,
+        eye_style: data.eye_style || defaultConfig.eye_style,
+        nose_style: data.nose_style || defaultConfig.nose_style,
+        mouth_style: data.mouth_style || defaultConfig.mouth_style,
+        beard_style: data.beard_style || null,
+        tattoo_style: data.tattoo_style || null,
+        scar_style: data.scar_style || null,
+        shirt_id: data.shirt_id || null,
+        shirt_color: data.shirt_color || defaultConfig.shirt_color,
+        pants_id: data.pants_id || null,
+        pants_color: data.pants_color || defaultConfig.pants_color,
+        jacket_id: data.jacket_id || null,
+        jacket_color: data.jacket_color || null,
+        shoes_id: data.shoes_id || null,
+        shoes_color: data.shoes_color || defaultConfig.shoes_color,
+        accessory_1_id: data.accessory_1_id || null,
+        accessory_2_id: data.accessory_2_id || null,
       } as AvatarConfig;
     },
     enabled: !!profile?.id,
@@ -157,10 +180,30 @@ export const usePlayerAvatar = () => {
     mutationFn: async (config: Partial<AvatarConfig>) => {
       if (!profile?.id) throw new Error('Not authenticated');
 
+      // Save ALL config fields to database
       const dbConfig = {
         skin_tone: config.skin_tone,
         body_type: config.body_type,
         height: config.height,
+        gender: config.gender,
+        hair_style_key: config.hair_style_key,
+        hair_color: config.hair_color,
+        eye_style: config.eye_style,
+        nose_style: config.nose_style,
+        mouth_style: config.mouth_style,
+        beard_style: config.beard_style,
+        tattoo_style: config.tattoo_style,
+        scar_style: config.scar_style,
+        shirt_id: config.shirt_id,
+        shirt_color: config.shirt_color,
+        pants_id: config.pants_id,
+        pants_color: config.pants_color,
+        jacket_id: config.jacket_id,
+        jacket_color: config.jacket_color,
+        shoes_id: config.shoes_id,
+        shoes_color: config.shoes_color,
+        accessory_1_id: config.accessory_1_id,
+        accessory_2_id: config.accessory_2_id,
       };
 
       const { data: existing } = await supabase
@@ -235,6 +278,15 @@ export const usePlayerAvatar = () => {
     return ownedSkins?.some(skin => skin.item_id === itemId) || false;
   };
 
+  // Helper to get clothing item color
+  const getClothingColor = (itemId: string | null, fallback: string): string => {
+    if (!itemId || !clothingItems) return fallback;
+    const item = clothingItems.find(c => c.id === itemId);
+    if (!item?.color_variants) return fallback;
+    const colors = item.color_variants as string[];
+    return colors[0] || fallback;
+  };
+
   return {
     avatarConfig,
     isLoading,
@@ -242,11 +294,13 @@ export const usePlayerAvatar = () => {
     clothingItems,
     faceOptions,
     ownedSkins,
+    profile,
     saveConfig: saveConfigMutation.mutate,
     isSaving: saveConfigMutation.isPending,
     purchaseSkin: purchaseSkinMutation.mutate,
     isPurchasing: purchaseSkinMutation.isPending,
     isItemOwned,
+    getClothingColor,
     defaultConfig,
   };
 };

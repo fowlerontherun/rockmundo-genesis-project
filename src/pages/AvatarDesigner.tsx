@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, RotateCcw, User, Scissors, Shirt, Sparkles } from "lucide-react";
-import { usePlayerAvatar, AvatarConfig } from "@/hooks/usePlayerAvatar";
+import { usePlayerAvatar, AvatarConfig, defaultConfig } from "@/hooks/usePlayerAvatar";
 import { AvatarPreview3D } from "@/components/avatar-designer/AvatarPreview3D";
 import { HairSelector } from "@/components/avatar-designer/HairSelector";
 import { BodySelector } from "@/components/avatar-designer/BodySelector";
@@ -19,12 +19,13 @@ const AvatarDesigner = () => {
     hairStyles,
     clothingItems,
     faceOptions,
+    profile,
     saveConfig,
     isSaving,
     purchaseSkin,
     isPurchasing,
     isItemOwned,
-    defaultConfig,
+    getClothingColor,
   } = usePlayerAvatar();
 
   const [localConfig, setLocalConfig] = useState<Partial<AvatarConfig>>(defaultConfig);
@@ -34,6 +35,37 @@ const AvatarDesigner = () => {
       setLocalConfig(avatarConfig);
     }
   }, [avatarConfig]);
+
+  // Update clothing colors when items change
+  useEffect(() => {
+    if (clothingItems && localConfig) {
+      const shirtColor = localConfig.shirt_id 
+        ? getClothingColor(localConfig.shirt_id, localConfig.shirt_color || '#2d0a0a')
+        : localConfig.shirt_color;
+      const pantsColor = localConfig.pants_id 
+        ? getClothingColor(localConfig.pants_id, localConfig.pants_color || '#1a1a1a')
+        : localConfig.pants_color;
+      const shoesColor = localConfig.shoes_id 
+        ? getClothingColor(localConfig.shoes_id, localConfig.shoes_color || '#1a1a1a')
+        : localConfig.shoes_color;
+      const jacketColor = localConfig.jacket_id 
+        ? getClothingColor(localConfig.jacket_id, localConfig.jacket_color || '#1a1a1a')
+        : localConfig.jacket_color;
+
+      if (shirtColor !== localConfig.shirt_color || 
+          pantsColor !== localConfig.pants_color ||
+          shoesColor !== localConfig.shoes_color ||
+          jacketColor !== localConfig.jacket_color) {
+        setLocalConfig(prev => ({
+          ...prev,
+          shirt_color: shirtColor,
+          pants_color: pantsColor,
+          shoes_color: shoesColor,
+          jacket_color: jacketColor,
+        }));
+      }
+    }
+  }, [localConfig.shirt_id, localConfig.pants_id, localConfig.shoes_id, localConfig.jacket_id, clothingItems]);
 
   const handleSave = () => {
     saveConfig(localConfig);
@@ -45,6 +77,25 @@ const AvatarDesigner = () => {
 
   const handlePurchase = (itemId: string, itemType: string, price: number) => {
     purchaseSkin({ itemId, itemType, price });
+  };
+
+  // Handle hair style selection - store style_key not ID
+  const handleHairStyleSelect = (styleId: string | null) => {
+    if (!styleId) {
+      setLocalConfig(prev => ({ ...prev, hair_style_key: 'bald' }));
+      return;
+    }
+    const style = hairStyles?.find(s => s.id === styleId);
+    if (style) {
+      setLocalConfig(prev => ({ ...prev, hair_style_key: style.style_key }));
+    }
+  };
+
+  // Get the hair style ID from the style_key for display
+  const getSelectedHairStyleId = () => {
+    if (!localConfig.hair_style_key || !hairStyles) return null;
+    const style = hairStyles.find(s => s.style_key === localConfig.hair_style_key);
+    return style?.id || null;
   };
 
   const accessories = clothingItems?.filter(item => 
@@ -65,7 +116,12 @@ const AvatarDesigner = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-oswald">Avatar Designer</h1>
-          <p className="text-sm text-muted-foreground">Customize your character's appearance</p>
+          <p className="text-sm text-muted-foreground">
+            Customize your character's appearance
+            {profile?.cash !== undefined && (
+              <span className="ml-2 text-primary font-medium">${profile.cash.toLocaleString()} available</span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleReset}>
@@ -120,18 +176,20 @@ const AvatarDesigner = () => {
                   bodyType={localConfig.body_type || 'average'}
                   height={localConfig.height || 1.0}
                   skinTone={localConfig.skin_tone || '#e0ac69'}
+                  gender={localConfig.gender || 'male'}
                   onBodyTypeChange={(type) => setLocalConfig(prev => ({ ...prev, body_type: type }))}
                   onHeightChange={(height) => setLocalConfig(prev => ({ ...prev, height }))}
                   onSkinToneChange={(tone) => setLocalConfig(prev => ({ ...prev, skin_tone: tone }))}
+                  onGenderChange={(gender) => setLocalConfig(prev => ({ ...prev, gender }))}
                 />
               </TabsContent>
 
               <TabsContent value="hair" className="mt-0">
                 <HairSelector
                   hairStyles={hairStyles || []}
-                  selectedStyleId={localConfig.hair_style_id || null}
+                  selectedStyleId={getSelectedHairStyleId()}
                   selectedColor={localConfig.hair_color || '#2d1a0a'}
-                  onStyleSelect={(styleId) => setLocalConfig(prev => ({ ...prev, hair_style_id: styleId }))}
+                  onStyleSelect={handleHairStyleSelect}
                   onColorSelect={(color) => setLocalConfig(prev => ({ ...prev, hair_color: color }))}
                   isItemOwned={isItemOwned}
                   onPurchase={(id, price) => handlePurchase(id, 'hair_style', price)}
@@ -145,10 +203,14 @@ const AvatarDesigner = () => {
                   selectedNoseStyle={localConfig.nose_style || 'default'}
                   selectedMouthStyle={localConfig.mouth_style || 'default'}
                   selectedBeardStyle={localConfig.beard_style || null}
+                  selectedTattooStyle={localConfig.tattoo_style || null}
+                  selectedScarStyle={localConfig.scar_style || null}
                   onEyeStyleChange={(style) => setLocalConfig(prev => ({ ...prev, eye_style: style }))}
                   onNoseStyleChange={(style) => setLocalConfig(prev => ({ ...prev, nose_style: style }))}
                   onMouthStyleChange={(style) => setLocalConfig(prev => ({ ...prev, mouth_style: style }))}
                   onBeardStyleChange={(style) => setLocalConfig(prev => ({ ...prev, beard_style: style }))}
+                  onTattooStyleChange={(style) => setLocalConfig(prev => ({ ...prev, tattoo_style: style }))}
+                  onScarStyleChange={(style) => setLocalConfig(prev => ({ ...prev, scar_style: style }))}
                   isItemOwned={isItemOwned}
                   onPurchase={(id, price) => handlePurchase(id, 'face_option', price)}
                 />

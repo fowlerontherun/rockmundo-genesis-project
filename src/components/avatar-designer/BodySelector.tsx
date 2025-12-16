@@ -6,9 +6,11 @@ interface BodySelectorProps {
   bodyType: 'slim' | 'average' | 'muscular' | 'heavy';
   height: number;
   skinTone: string;
+  gender: string;
   onBodyTypeChange: (type: 'slim' | 'average' | 'muscular' | 'heavy') => void;
   onHeightChange: (height: number) => void;
   onSkinToneChange: (tone: string) => void;
+  onGenderChange: (gender: string) => void;
 }
 
 const bodyTypes = [
@@ -17,6 +19,13 @@ const bodyTypes = [
   { id: 'muscular', name: 'Muscular', icon: '💪' },
   { id: 'heavy', name: 'Heavy', icon: '🏋️' },
 ] as const;
+
+const genderOptions = [
+  { id: 'male', name: 'Male', icon: '♂️' },
+  { id: 'female', name: 'Female', icon: '♀️' },
+  { id: 'non-binary', name: 'Non-binary', icon: '⚧️' },
+  { id: 'other', name: 'Other', icon: '🌟' },
+];
 
 const skinTones = [
   { name: 'Pale', value: '#ffdbac' },
@@ -35,12 +44,40 @@ export const BodySelector = ({
   bodyType,
   height,
   skinTone,
+  gender,
   onBodyTypeChange,
   onHeightChange,
   onSkinToneChange,
+  onGenderChange,
 }: BodySelectorProps) => {
   return (
     <div className="space-y-6">
+      {/* Gender */}
+      <Card>
+        <CardHeader className="py-3">
+          <CardTitle className="text-sm">Gender</CardTitle>
+        </CardHeader>
+        <CardContent className="py-2">
+          <div className="grid grid-cols-4 gap-3">
+            {genderOptions.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => onGenderChange(option.id)}
+                className={cn(
+                  "flex flex-col items-center p-3 rounded-lg border-2 transition-all",
+                  gender === option.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-muted-foreground/50"
+                )}
+              >
+                <span className="text-2xl mb-1">{option.icon}</span>
+                <span className="text-xs font-medium">{option.name}</span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Skin Tone */}
       <Card>
         <CardHeader className="py-3">
