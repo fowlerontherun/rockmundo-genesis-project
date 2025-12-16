@@ -3674,6 +3674,39 @@ export type Database = {
           },
         ]
       }
+      gig_milestones: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          milestone_type: string
+          name: string
+          threshold_value: number
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          milestone_type: string
+          name: string
+          threshold_value: number
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          milestone_type?: string
+          name?: string
+          threshold_value?: number
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       gig_offers: {
         Row: {
           band_id: string | null
@@ -3756,15 +3789,19 @@ export type Database = {
           created_at: string | null
           crew_cost: number
           crew_skill_avg: number | null
+          crowd_energy_peak: number | null
           equipment_cost: number
           equipment_quality_avg: number | null
           fame_gained: number | null
+          fan_conversions: number | null
           gig_id: string
+          highlight_moments: Json | null
           id: string
           member_skill_avg: number | null
           merch_items_sold: number | null
           merch_revenue: number
           net_profit: number
+          new_followers: number | null
           overall_rating: number
           performance_grade: string | null
           promoter_modifier: number | null
@@ -3773,10 +3810,12 @@ export type Database = {
           ticket_revenue: number
           total_costs: number
           total_revenue: number
+          total_xp_awarded: number | null
           venue_capacity: number | null
           venue_cost: number
           venue_loyalty_bonus: number | null
           venue_name: string | null
+          xp_breakdown: Json | null
         }
         Insert: {
           actual_attendance: number
@@ -3789,15 +3828,19 @@ export type Database = {
           created_at?: string | null
           crew_cost?: number
           crew_skill_avg?: number | null
+          crowd_energy_peak?: number | null
           equipment_cost?: number
           equipment_quality_avg?: number | null
           fame_gained?: number | null
+          fan_conversions?: number | null
           gig_id: string
+          highlight_moments?: Json | null
           id?: string
           member_skill_avg?: number | null
           merch_items_sold?: number | null
           merch_revenue?: number
           net_profit?: number
+          new_followers?: number | null
           overall_rating: number
           performance_grade?: string | null
           promoter_modifier?: number | null
@@ -3806,10 +3849,12 @@ export type Database = {
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
+          total_xp_awarded?: number | null
           venue_capacity?: number | null
           venue_cost?: number
           venue_loyalty_bonus?: number | null
           venue_name?: string | null
+          xp_breakdown?: Json | null
         }
         Update: {
           actual_attendance?: number
@@ -3822,15 +3867,19 @@ export type Database = {
           created_at?: string | null
           crew_cost?: number
           crew_skill_avg?: number | null
+          crowd_energy_peak?: number | null
           equipment_cost?: number
           equipment_quality_avg?: number | null
           fame_gained?: number | null
+          fan_conversions?: number | null
           gig_id?: string
+          highlight_moments?: Json | null
           id?: string
           member_skill_avg?: number | null
           merch_items_sold?: number | null
           merch_revenue?: number
           net_profit?: number
+          new_followers?: number | null
           overall_rating?: number
           performance_grade?: string | null
           promoter_modifier?: number | null
@@ -3839,10 +3888,12 @@ export type Database = {
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
+          total_xp_awarded?: number | null
           venue_capacity?: number | null
           venue_cost?: number
           venue_loyalty_bonus?: number | null
           venue_name?: string | null
+          xp_breakdown?: Json | null
         }
         Relationships: [
           {
@@ -6925,6 +6976,131 @@ export type Database = {
             columns: ["equipment_id"]
             isOneToOne: false
             referencedRelation: "equipment_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_gig_milestones: {
+        Row: {
+          achieved_at: string
+          gig_id: string | null
+          id: string
+          milestone_id: string
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          gig_id?: string | null
+          id?: string
+          milestone_id: string
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          gig_id?: string | null
+          id?: string
+          milestone_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_gig_milestones_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_gig_milestones_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "gig_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_gig_xp: {
+        Row: {
+          attendance_count: number | null
+          band_id: string
+          base_xp: number
+          created_at: string
+          crowd_bonus_xp: number
+          gig_id: string
+          id: string
+          milestone_bonus_xp: number
+          performance_bonus_xp: number
+          performance_rating: number | null
+          profile_id: string | null
+          skill_improvement_amount: number | null
+          skill_type_improved: string | null
+          total_xp: number
+          user_id: string
+          xp_multiplier: number
+        }
+        Insert: {
+          attendance_count?: number | null
+          band_id: string
+          base_xp?: number
+          created_at?: string
+          crowd_bonus_xp?: number
+          gig_id: string
+          id?: string
+          milestone_bonus_xp?: number
+          performance_bonus_xp?: number
+          performance_rating?: number | null
+          profile_id?: string | null
+          skill_improvement_amount?: number | null
+          skill_type_improved?: string | null
+          total_xp?: number
+          user_id: string
+          xp_multiplier?: number
+        }
+        Update: {
+          attendance_count?: number | null
+          band_id?: string
+          base_xp?: number
+          created_at?: string
+          crowd_bonus_xp?: number
+          gig_id?: string
+          id?: string
+          milestone_bonus_xp?: number
+          performance_bonus_xp?: number
+          performance_rating?: number | null
+          profile_id?: string | null
+          skill_improvement_amount?: number | null
+          skill_type_improved?: string | null
+          total_xp?: number
+          user_id?: string
+          xp_multiplier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_gig_xp_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_gig_xp_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_gig_xp_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_gig_xp_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]

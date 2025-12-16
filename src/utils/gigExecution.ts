@@ -14,6 +14,7 @@ import {
   type PlayerEquipmentRow,
 } from "./gearModifiers";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
+import { calculateGigXp, type GigXpSummary } from "./gigXpCalculator";
 
 interface GigExecutionData {
   gigId: string;
@@ -388,12 +389,41 @@ export async function executeGigPerformance(data: GigExecutionData) {
     }
   }
 
+  // Calculate and award XP to band members
+  let xpSummary: GigXpSummary | null = null;
+  try {
+    xpSummary = await calculateGigXp({
+      gigId,
+      bandId,
+      overallRating,
+      actualAttendance,
+      venueCapacity,
+      netProfit,
+      performanceGrade: gradeData.grade,
+      songCount: setlistSongs.length,
+    });
+
+    // Update gig outcome with XP data
+    if (xpSummary && outcome) {
+      await supabase
+        .from('gig_outcomes')
+        .update({
+          total_xp_awarded: xpSummary.totalXpAwarded,
+          xp_breakdown: xpSummary.xpBreakdown,
+        })
+        .eq('id', outcome.id);
+    }
+  } catch (xpError) {
+    console.error('Error calculating gig XP:', xpError);
+  }
+
   return {
     outcome,
     songPerformances,
     actualAttendance,
     overallRating,
     netProfit,
-    fameGained
+    fameGained,
+    xpSummary,
   };
 }
