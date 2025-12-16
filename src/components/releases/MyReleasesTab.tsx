@@ -77,8 +77,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             release_date,
             distribution_status
           ),
-          bands(id, name, fame, popularity, chemistry_level, total_fans),
-          profiles!releases_user_id_fkey(id, username, fame, popularity)
+          bands(id, name, fame, popularity, chemistry_level, total_fans)
         `)
         .order("created_at", { ascending: false });
       
@@ -100,14 +99,17 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
     }
   });
 
-  const filteredReleases = releases?.filter(r => 
-    statusFilter === "all" || r.release_status === statusFilter
-  ) || [];
+  const filteredReleases = releases?.filter(r => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "released") return r.release_status === "released";
+    if (statusFilter === "upcoming") return ["manufacturing", "planned", "draft"].includes(r.release_status);
+    return true;
+  }) || [];
 
   const stats = {
     total: releases?.length || 0,
     released: releases?.filter(r => r.release_status === "released").length || 0,
-    manufacturing: releases?.filter(r => r.release_status === "manufacturing").length || 0,
+    upcoming: releases?.filter(r => ["manufacturing", "planned", "draft"].includes(r.release_status)).length || 0,
     totalRevenue: releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
   };
 
@@ -187,10 +189,10 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Package className="h-4 w-4" />
-              <span>Manufacturing</span>
+              <Clock className="h-4 w-4" />
+              <span>Upcoming</span>
             </div>
-            <p className="text-2xl font-bold">{stats.manufacturing}</p>
+            <p className="text-2xl font-bold">{stats.upcoming}</p>
           </CardContent>
         </Card>
         <Card>
@@ -209,13 +211,10 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         <TabsList>
           <TabsTrigger value="all">All ({releases.length})</TabsTrigger>
           <TabsTrigger value="released">
-            Released ({releases.filter(r => r.release_status === "released").length})
+            Released ({stats.released})
           </TabsTrigger>
-          <TabsTrigger value="manufacturing">
-            Manufacturing ({releases.filter(r => r.release_status === "manufacturing").length})
-          </TabsTrigger>
-          <TabsTrigger value="planned">
-            Planned ({releases.filter(r => r.release_status === "planned").length})
+          <TabsTrigger value="upcoming">
+            Upcoming ({stats.upcoming})
           </TabsTrigger>
         </TabsList>
       </Tabs>
