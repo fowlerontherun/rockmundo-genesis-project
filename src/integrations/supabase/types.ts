@@ -4716,13 +4716,6 @@ export type Database = {
             foreignKeyName: "label_releases_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
-            referencedRelation: "released_songs"
-            referencedColumns: ["release_id"]
-          },
-          {
-            foreignKeyName: "label_releases_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
             referencedRelation: "releases"
             referencedColumns: ["id"]
           },
@@ -5984,13 +5977,6 @@ export type Database = {
             columns: ["release_id"]
             isOneToOne: false
             referencedRelation: "chart_albums"
-            referencedColumns: ["release_id"]
-          },
-          {
-            foreignKeyName: "music_videos_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "released_songs"
             referencedColumns: ["release_id"]
           },
           {
@@ -8315,13 +8301,6 @@ export type Database = {
             foreignKeyName: "radio_submissions_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
-            referencedRelation: "released_songs"
-            referencedColumns: ["release_id"]
-          },
-          {
-            foreignKeyName: "radio_submissions_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
             referencedRelation: "releases"
             referencedColumns: ["id"]
           },
@@ -8673,13 +8652,6 @@ export type Database = {
             foreignKeyName: "release_formats_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
-            referencedRelation: "released_songs"
-            referencedColumns: ["release_id"]
-          },
-          {
-            foreignKeyName: "release_formats_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
             referencedRelation: "releases"
             referencedColumns: ["id"]
           },
@@ -8760,13 +8732,6 @@ export type Database = {
             columns: ["release_id"]
             isOneToOne: false
             referencedRelation: "chart_albums"
-            referencedColumns: ["release_id"]
-          },
-          {
-            foreignKeyName: "release_songs_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "released_songs"
             referencedColumns: ["release_id"]
           },
           {
@@ -9871,13 +9836,6 @@ export type Database = {
             columns: ["release_id"]
             isOneToOne: false
             referencedRelation: "chart_albums"
-            referencedColumns: ["release_id"]
-          },
-          {
-            foreignKeyName: "song_releases_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "released_songs"
             referencedColumns: ["release_id"]
           },
           {
@@ -12379,81 +12337,66 @@ export type Database = {
       public_player_cards: {
         Row: {
           avatar_url: string | null
-          created_at: string | null
           display_name: string | null
           fame: number | null
           id: string | null
           level: number | null
-          user_id: string | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
-          created_at?: string | null
           display_name?: string | null
           fame?: number | null
           id?: string | null
           level?: number | null
-          user_id?: string | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
-          created_at?: string | null
           display_name?: string | null
           fame?: number | null
           id?: string | null
           level?: number | null
-          user_id?: string | null
           username?: string | null
         }
         Relationships: []
       }
       released_songs: {
         Row: {
-          ai_generated_lyrics: boolean | null
-          archived: boolean | null
-          arrangement_strength: number | null
           band_id: string | null
-          catalog_status: string | null
-          chart_position: number | null
-          chord_progression_id: string | null
-          completed_at: string | null
           created_at: string | null
-          duration_display: string | null
-          duration_seconds: number | null
           genre: string | null
-          hype: number | null
           id: string | null
-          last_radio_play: string | null
-          lyrics: string | null
-          lyrics_progress: number | null
-          lyrics_strength: number | null
-          market_listing_id: string | null
-          melody_strength: number | null
-          music_progress: number | null
-          original_writer_id: string | null
-          ownership_type: string | null
-          production_potential: number | null
-          profile_id: string | null
           quality_score: number | null
-          rating_revealed_at: string | null
-          release_date: string | null
-          release_id: string | null
-          release_status: string | null
-          release_title: string | null
-          revenue: number | null
-          rhythm_strength: number | null
           song_rating: number | null
-          songwriting_project_id: string | null
           status: string | null
-          streams: number | null
-          theme_id: string | null
           title: string | null
-          total_radio_plays: number | null
-          total_sessions: number | null
           updated_at: string | null
           user_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          genre?: string | null
+          id?: string | null
+          quality_score?: number | null
+          song_rating?: number | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          genre?: string | null
+          id?: string | null
+          quality_score?: number | null
+          song_rating?: number | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -12461,41 +12404,6 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_chord_progression_id_fkey"
-            columns: ["chord_progression_id"]
-            isOneToOne: false
-            referencedRelation: "chord_progressions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "public_player_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_songwriting_project_id_fkey"
-            columns: ["songwriting_project_id"]
-            isOneToOne: false
-            referencedRelation: "songwriting_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_theme_id_fkey"
-            columns: ["theme_id"]
-            isOneToOne: false
-            referencedRelation: "song_themes"
             referencedColumns: ["id"]
           },
         ]
