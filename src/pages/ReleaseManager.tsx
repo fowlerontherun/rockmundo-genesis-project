@@ -8,7 +8,6 @@ import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
 import { ReleaseSalesTab } from "@/components/releases/ReleaseSalesTab";
 import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing";
-import { ReleaseTestTools } from "@/components/releases/ReleaseTestTools";
 
 export default function ReleaseManager() {
   const navigate = useNavigate();
@@ -68,8 +67,6 @@ export default function ReleaseManager() {
           Create and manage Singles, EPs, and Albums across Digital, CD, Vinyl, and Streaming formats
         </p>
       </div>
-
-      <ReleaseTestTools />
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
