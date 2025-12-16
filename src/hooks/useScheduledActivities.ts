@@ -76,7 +76,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Fetch rehearsals
       const { data: rehearsals } = await supabase
         .from('band_rehearsals')
-        .select('*, rehearsal_rooms(name, studio_name), bands:band_id(name)')
+        .select('*, rehearsal_rooms(name, location), bands:band_id(name)')
         .gte('scheduled_start', dayStart.toISOString())
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
