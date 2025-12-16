@@ -10,6 +10,7 @@ import { useAutoGigStart } from "@/hooks/useAutoGigStart";
 import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
+import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -27,6 +28,9 @@ const Layout = () => {
 
   // Track total hours played
   usePlaytimeTracker(user?.id || null);
+
+  // Global auto-complete for release manufacturing
+  useAutoManufacturingCompletion(user?.id || null);
 
   useEffect(() => {
     if (!authLoading && !user) {

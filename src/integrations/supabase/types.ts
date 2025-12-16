@@ -3463,6 +3463,56 @@ export type Database = {
         }
         Relationships: []
       }
+      game_activity_logs: {
+        Row: {
+          activity_category: string
+          activity_type: string
+          after_state: Json | null
+          amount: number | null
+          band_id: string | null
+          before_state: Json | null
+          created_at: string | null
+          description: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_category: string
+          activity_type: string
+          after_state?: Json | null
+          amount?: number | null
+          band_id?: string | null
+          before_state?: Json | null
+          created_at?: string | null
+          description: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_category?: string
+          activity_type?: string
+          after_state?: Json | null
+          amount?: number | null
+          band_id?: string | null
+          before_state?: Json | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_activity_logs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_calendar_config: {
         Row: {
           created_at: string
@@ -12339,6 +12389,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_force_complete_release: {
+        Args: { p_release_id: string }
+        Returns: boolean
+      }
       admin_get_cron_job_runs: {
         Args: { _limit?: number }
         Returns: {
@@ -12388,12 +12442,7 @@ export type Database = {
         }
       }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
-      auto_complete_manufacturing: {
-        Args: never
-        Returns: {
-          completed_releases: number
-        }[]
-      }
+      auto_complete_manufacturing: { Args: never; Returns: number }
       auto_complete_songwriting_sessions: {
         Args: never
         Returns: {
@@ -12447,6 +12496,7 @@ export type Database = {
         Returns: boolean
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
+      fix_null_manufacturing_dates: { Args: never; Returns: number }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
