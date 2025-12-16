@@ -8424,6 +8424,79 @@ export type Database = {
         }
         Relationships: []
       }
+      promotional_campaigns: {
+        Row: {
+          band_id: string | null
+          budget: number
+          campaign_name: string
+          campaign_type: string
+          created_at: string
+          effects: Json | null
+          end_date: string
+          id: string
+          release_id: string | null
+          results: Json | null
+          spent: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          band_id?: string | null
+          budget?: number
+          campaign_name: string
+          campaign_type: string
+          created_at?: string
+          effects?: Json | null
+          end_date: string
+          id?: string
+          release_id?: string | null
+          results?: Json | null
+          spent?: number
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string | null
+          budget?: number
+          campaign_name?: string
+          campaign_type?: string
+          created_at?: string
+          effects?: Json | null
+          end_date?: string
+          id?: string
+          release_id?: string | null
+          results?: Json | null
+          spent?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotional_campaigns_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotional_campaigns_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "promotional_campaigns_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_playlists: {
         Row: {
           added_at: string | null
