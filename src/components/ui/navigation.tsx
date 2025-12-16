@@ -13,6 +13,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { VersionHeader } from "@/components/VersionHeader";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   Home,
   Users,
@@ -361,6 +362,7 @@ const Navigation = () => {
           
           <div className="flex items-center gap-1">
             <ActivityStatusIndicator />
+            <NotificationBell />
             <ThemeSwitcher />
             <LanguageSwitcher />
             <HowToPlayDialog />
@@ -383,6 +385,7 @@ const Navigation = () => {
           </Button>
           {!isDesktopCollapsed && (
             <div className="flex items-center gap-1">
+              <NotificationBell />
               <ThemeSwitcher />
               <LanguageSwitcher />
               <HowToPlayDialog />

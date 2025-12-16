@@ -8,6 +8,8 @@ import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
 import { BandCrewCatalogProvider } from "./features/band-crew/catalog-context";
+import { NotificationProvider } from "./contexts/NotificationContext";
+import { TutorialProvider } from "./contexts/TutorialContext";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 
@@ -184,12 +186,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GameDataProvider>
-          <StageEquipmentCatalogProvider>
-            <BandCrewCatalogProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
+          <NotificationProvider>
+            <TutorialProvider>
+              <StageEquipmentCatalogProvider>
+                <BandCrewCatalogProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
               <Suspense
                 fallback={
                   <div className="flex h-screen w-full items-center justify-center">
@@ -366,9 +370,11 @@ function App() {
                 </Routes>
               </Suspense>
                 </BrowserRouter>
-              </TooltipProvider>
-            </BandCrewCatalogProvider>
-          </StageEquipmentCatalogProvider>
+                  </TooltipProvider>
+                </BandCrewCatalogProvider>
+              </StageEquipmentCatalogProvider>
+            </TutorialProvider>
+          </NotificationProvider>
         </GameDataProvider>
       </AuthProvider>
     </QueryClientProvider>
