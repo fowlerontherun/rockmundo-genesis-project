@@ -11,7 +11,8 @@ import {
 } from "@/utils/gearModifiers";
 import { buildGearOutcomeNarrative, type GearOutcomeNarrative } from "@/utils/gigNarrative";
 import { EnhancedGigMetrics } from "./EnhancedGigMetrics";
-
+import { GigXpRewardCard } from "./GigXpRewardCard";
+import type { GigXpSummary } from "@/utils/gigXpCalculator";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -72,6 +73,7 @@ interface Props {
   songs?: Array<{ id: string; title: string }>;
   gearEffects?: GearModifierEffects | null;
   gearNarrative?: GearOutcomeNarrative | null;
+  xpSummary?: GigXpSummary | null;
 }
 
 export const GigOutcomeReport = ({
@@ -83,6 +85,7 @@ export const GigOutcomeReport = ({
   songs = [],
   gearEffects,
   gearNarrative,
+  xpSummary,
 }: Props) => {
   if (!outcome) return null;
 
@@ -387,6 +390,9 @@ export const GigOutcomeReport = ({
               </p>
             </CardContent>
           </Card>
+
+          {/* XP Rewards */}
+          <GigXpRewardCard xpSummary={xpSummary || null} performanceGrade={grade.grade} />
 
           {hasGearImpact && (
             <Card>
