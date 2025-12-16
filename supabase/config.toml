@@ -74,3 +74,15 @@ verify_jwt = false
 
 [functions.generate-song-audio]
 verify_jwt = true
+
+[functions.process-radio-submissions]
+verify_jwt = false
+
+[functions.simulate-radio-plays]
+verify_jwt = false
+
+[functions.complete-video-production]
+verify_jwt = false
+
+[functions.simulate-video-views]
+verify_jwt = false
