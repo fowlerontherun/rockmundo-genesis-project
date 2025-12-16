@@ -16,6 +16,7 @@ import {
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import { calculateGigXp, type GigXpSummary } from "./gigXpCalculator";
 import { calculateFanConversion, type FanConversionResult } from "./fanConversionCalculator";
+import { generateMomentHighlights, saveMomentHighlights, type GigMoment } from "./momentHighlightsGenerator";
 
 interface GigExecutionData {
   gigId: string;
@@ -437,6 +438,34 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error calculating fan conversion:', fanError);
   }
 
+  // Generate moment highlights
+  let momentHighlights: GigMoment[] = [];
+  try {
+    // Check if this is the band's first gig
+    const isFirstGig = (band.performance_count || 0) === 0;
+    const isSoldOut = actualAttendance >= venueCapacity * 0.95;
+
+    momentHighlights = generateMomentHighlights({
+      gigId,
+      bandId,
+      overallRating,
+      actualAttendance,
+      venueCapacity,
+      netProfit,
+      performanceGrade: gradeData.grade,
+      fameGained,
+      songPerformances,
+      merchItemsSold: merchSales.itemsSold,
+      isFirstGig,
+      isSoldOut,
+    });
+
+    // Save highlights to database
+    await saveMomentHighlights(gigId, momentHighlights);
+  } catch (momentError) {
+    console.error('Error generating moment highlights:', momentError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -446,5 +475,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
     fameGained,
     xpSummary,
     fanConversion,
+    momentHighlights,
+    merchItemsSold: merchSales.itemsSold,
+    ticketPrice,
   };
 }
