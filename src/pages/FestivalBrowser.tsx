@@ -11,9 +11,10 @@ import { useFestivals, Festival, FestivalParticipant } from "@/hooks/useFestival
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useSetlists } from "@/hooks/useSetlists";
+import { FestivalSlotOffers } from "@/components/festivals/FestivalSlotOffers";
 import { 
   Calendar, MapPin, Users, Music, Star, Clock, 
-  DollarSign, Trophy, CheckCircle, XCircle, Loader2 
+  DollarSign, Trophy, CheckCircle, XCircle, Loader2, Mail 
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns";
 
@@ -45,7 +46,7 @@ export default function FestivalBrowser() {
   
   const { data: setlists } = useSetlists(band?.id);
 
-  const [activeTab, setActiveTab] = useState<"browse" | "my-festivals">("browse");
+  const [activeTab, setActiveTab] = useState<"browse" | "my-festivals" | "offers">("browse");
   const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -153,9 +154,13 @@ export default function FestivalBrowser() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="browse">Browse Festivals</TabsTrigger>
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsTrigger value="browse">Browse</TabsTrigger>
           <TabsTrigger value="my-festivals">My Festivals</TabsTrigger>
+          <TabsTrigger value="offers" className="flex items-center gap-1">
+            <Mail className="h-4 w-4" />
+            <span className="hidden sm:inline">Offers</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Browse Tab */}
@@ -341,6 +346,27 @@ export default function FestivalBrowser() {
                 </Card>
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        {/* Offers Tab */}
+        <TabsContent value="offers" className="mt-6">
+          {band ? (
+            <FestivalSlotOffers bandId={band.id} />
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Join a band to receive festival offers</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => navigate("/band")}
+                >
+                  Find a Band
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>
