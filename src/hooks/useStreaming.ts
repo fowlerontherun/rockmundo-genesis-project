@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
+import { logGameActivity } from "./useGameActivityLog";
 
 export const useStreaming = (userId: string) => {
   const { toast } = useToast();
@@ -67,6 +68,8 @@ export const useStreaming = (userId: string) => {
       userId: string;
       releaseId: string;
       bandId?: string;
+      songTitle?: string;
+      platformName?: string;
     }) => {
       const { data, error } = await supabase
         .from("song_releases")
@@ -84,6 +87,22 @@ export const useStreaming = (userId: string) => {
         .single();
 
       if (error) throw error;
+
+      // Log streaming distribution
+      await logGameActivity({
+        userId: params.userId,
+        bandId: params.bandId,
+        activityType: 'streaming_distribution',
+        activityCategory: 'release',
+        description: `Distributed "${params.songTitle || 'song'}" to ${params.platformName || 'streaming platform'}`,
+        metadata: {
+          song_id: params.songId,
+          platform_id: params.platformId,
+          release_id: params.releaseId,
+          song_release_id: data.id,
+        },
+      });
+
       return data;
     },
     onSuccess: () => {
