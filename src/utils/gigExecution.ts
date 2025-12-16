@@ -15,6 +15,7 @@ import {
 } from "./gearModifiers";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import { calculateGigXp, type GigXpSummary } from "./gigXpCalculator";
+import { calculateFanConversion, type FanConversionResult } from "./fanConversionCalculator";
 
 interface GigExecutionData {
   gigId: string;
@@ -417,6 +418,25 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error calculating gig XP:', xpError);
   }
 
+  // Calculate fan conversions
+  let fanConversion: FanConversionResult | null = null;
+  try {
+    const venueId = (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id;
+    if (venueId) {
+      fanConversion = await calculateFanConversion({
+        gigId,
+        bandId,
+        venueId,
+        actualAttendance,
+        overallRating,
+        performanceGrade: gradeData.grade,
+        bandFame: band.fame || 0,
+      });
+    }
+  } catch (fanError) {
+    console.error('Error calculating fan conversion:', fanError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -425,5 +445,6 @@ export async function executeGigPerformance(data: GigExecutionData) {
     netProfit,
     fameGained,
     xpSummary,
+    fanConversion,
   };
 }

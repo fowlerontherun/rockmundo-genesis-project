@@ -687,6 +687,69 @@ export type Database = {
           },
         ]
       }
+      band_city_fans: {
+        Row: {
+          avg_satisfaction: number | null
+          band_id: string
+          casual_fans: number
+          city_id: string | null
+          city_name: string
+          created_at: string
+          dedicated_fans: number
+          gigs_in_city: number
+          id: string
+          last_gig_date: string | null
+          superfans: number
+          total_fans: number
+          updated_at: string
+        }
+        Insert: {
+          avg_satisfaction?: number | null
+          band_id: string
+          casual_fans?: number
+          city_id?: string | null
+          city_name: string
+          created_at?: string
+          dedicated_fans?: number
+          gigs_in_city?: number
+          id?: string
+          last_gig_date?: string | null
+          superfans?: number
+          total_fans?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_satisfaction?: number | null
+          band_id?: string
+          casual_fans?: number
+          city_id?: string | null
+          city_name?: string
+          created_at?: string
+          dedicated_fans?: number
+          gigs_in_city?: number
+          id?: string
+          last_gig_date?: string | null
+          superfans?: number
+          total_fans?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_city_fans_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_city_fans_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_conflicts: {
         Row: {
           band_id: string | null
@@ -1420,11 +1483,13 @@ export type Database = {
           allow_applications: boolean | null
           artist_name: string | null
           band_balance: number | null
+          casual_fans: number | null
           chemistry_level: number | null
           cohesion_score: number | null
           collective_fame_earned: number | null
           created_at: string | null
           days_together: number | null
+          dedicated_fans: number | null
           description: string | null
           fame: number | null
           fame_multiplier: number | null
@@ -1448,6 +1513,8 @@ export type Database = {
           performance_count: number | null
           popularity: number | null
           status: Database["public"]["Enums"]["band_status"]
+          superfans: number | null
+          total_fans: number | null
           updated_at: string | null
           weekly_fans: number | null
         }
@@ -1455,11 +1522,13 @@ export type Database = {
           allow_applications?: boolean | null
           artist_name?: string | null
           band_balance?: number | null
+          casual_fans?: number | null
           chemistry_level?: number | null
           cohesion_score?: number | null
           collective_fame_earned?: number | null
           created_at?: string | null
           days_together?: number | null
+          dedicated_fans?: number | null
           description?: string | null
           fame?: number | null
           fame_multiplier?: number | null
@@ -1483,6 +1552,8 @@ export type Database = {
           performance_count?: number | null
           popularity?: number | null
           status?: Database["public"]["Enums"]["band_status"]
+          superfans?: number | null
+          total_fans?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
         }
@@ -1490,11 +1561,13 @@ export type Database = {
           allow_applications?: boolean | null
           artist_name?: string | null
           band_balance?: number | null
+          casual_fans?: number | null
           chemistry_level?: number | null
           cohesion_score?: number | null
           collective_fame_earned?: number | null
           created_at?: string | null
           days_together?: number | null
+          dedicated_fans?: number | null
           description?: string | null
           fame?: number | null
           fame_multiplier?: number | null
@@ -1518,6 +1591,8 @@ export type Database = {
           performance_count?: number | null
           popularity?: number | null
           status?: Database["public"]["Enums"]["band_status"]
+          superfans?: number | null
+          total_fans?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
         }
@@ -3674,6 +3749,60 @@ export type Database = {
           },
         ]
       }
+      gig_fan_conversions: {
+        Row: {
+          attendance_count: number
+          band_id: string
+          conversion_rate: number | null
+          created_at: string
+          fan_demographics: Json | null
+          gig_id: string
+          id: string
+          new_fans_gained: number
+          repeat_fans: number
+          superfans_converted: number
+        }
+        Insert: {
+          attendance_count?: number
+          band_id: string
+          conversion_rate?: number | null
+          created_at?: string
+          fan_demographics?: Json | null
+          gig_id: string
+          id?: string
+          new_fans_gained?: number
+          repeat_fans?: number
+          superfans_converted?: number
+        }
+        Update: {
+          attendance_count?: number
+          band_id?: string
+          conversion_rate?: number | null
+          created_at?: string
+          fan_demographics?: Json | null
+          gig_id?: string
+          id?: string
+          new_fans_gained?: number
+          repeat_fans?: number
+          superfans_converted?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_fan_conversions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_fan_conversions_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: true
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_milestones: {
         Row: {
           created_at: string
@@ -3784,12 +3913,14 @@ export type Database = {
           audience_memory_impact: number | null
           band_chemistry_level: number | null
           band_synergy_modifier: number | null
+          casual_fans_gained: number | null
           chemistry_change: number | null
           completed_at: string | null
           created_at: string | null
           crew_cost: number
           crew_skill_avg: number | null
           crowd_energy_peak: number | null
+          dedicated_fans_gained: number | null
           equipment_cost: number
           equipment_quality_avg: number | null
           fame_gained: number | null
@@ -3805,8 +3936,10 @@ export type Database = {
           overall_rating: number
           performance_grade: string | null
           promoter_modifier: number | null
+          repeat_attendees: number | null
           skill_performance_avg: number | null
           social_buzz_impact: number | null
+          superfans_gained: number | null
           ticket_revenue: number
           total_costs: number
           total_revenue: number
@@ -3823,12 +3956,14 @@ export type Database = {
           audience_memory_impact?: number | null
           band_chemistry_level?: number | null
           band_synergy_modifier?: number | null
+          casual_fans_gained?: number | null
           chemistry_change?: number | null
           completed_at?: string | null
           created_at?: string | null
           crew_cost?: number
           crew_skill_avg?: number | null
           crowd_energy_peak?: number | null
+          dedicated_fans_gained?: number | null
           equipment_cost?: number
           equipment_quality_avg?: number | null
           fame_gained?: number | null
@@ -3844,8 +3979,10 @@ export type Database = {
           overall_rating: number
           performance_grade?: string | null
           promoter_modifier?: number | null
+          repeat_attendees?: number | null
           skill_performance_avg?: number | null
           social_buzz_impact?: number | null
+          superfans_gained?: number | null
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
@@ -3862,12 +3999,14 @@ export type Database = {
           audience_memory_impact?: number | null
           band_chemistry_level?: number | null
           band_synergy_modifier?: number | null
+          casual_fans_gained?: number | null
           chemistry_change?: number | null
           completed_at?: string | null
           created_at?: string | null
           crew_cost?: number
           crew_skill_avg?: number | null
           crowd_energy_peak?: number | null
+          dedicated_fans_gained?: number | null
           equipment_cost?: number
           equipment_quality_avg?: number | null
           fame_gained?: number | null
@@ -3883,8 +4022,10 @@ export type Database = {
           overall_rating?: number
           performance_grade?: string | null
           promoter_modifier?: number | null
+          repeat_attendees?: number | null
           skill_performance_avg?: number | null
           social_buzz_impact?: number | null
+          superfans_gained?: number | null
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
