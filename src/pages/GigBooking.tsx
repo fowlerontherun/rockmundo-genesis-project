@@ -19,6 +19,7 @@ import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
 import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
+import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
 import { formatDistanceToNow } from 'date-fns';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
@@ -42,6 +43,7 @@ const GigBooking = () => {
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
   const [isBooking, setIsBooking] = useState(false);
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
+  const [venueCooldowns, setVenueCooldowns] = useState<Map<string, VenueCooldownResult>>(new Map());
 
   const { data: setlists } = useSetlists(band?.id || null);
   const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
@@ -156,6 +158,12 @@ const GigBooking = () => {
     setBandLockout(lockout);
   }, []);
 
+  const updateVenueCooldowns = useCallback(async (bandId: string, venueList: VenueRow[]) => {
+    const venueIds = venueList.map(v => v.id);
+    const cooldowns = await getVenueCooldowns(bandId, venueIds);
+    setVenueCooldowns(cooldowns);
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
 
@@ -172,6 +180,7 @@ const GigBooking = () => {
       } else {
         setUpcomingGigs([]);
         setBandLockout({ isLocked: false });
+        setVenueCooldowns(new Map());
       }
     } finally {
       setLoading(false);
@@ -192,6 +201,12 @@ const GigBooking = () => {
     return () => clearInterval(interval);
   }, [loadData, band?.id, loadUpcomingGigs, updateBandLockout]);
 
+  // Load venue cooldowns when band and venues are available
+  useEffect(() => {
+    if (band?.id && venues.length > 0) {
+      updateVenueCooldowns(band.id, venues);
+    }
+  }, [band?.id, venues, updateVenueCooldowns]);
   const getNextAvailableDateForVenue = useCallback((venueId: string) => {
     const now = new Date();
     const candidateTimes: number[] = [now.getTime()];
@@ -217,10 +232,16 @@ const GigBooking = () => {
       candidateTimes.push(bandLockout.lockedUntil.getTime());
     }
 
+    // Check venue-specific cooldown
+    const venueCooldown = venueCooldowns.get(venueId);
+    if (venueCooldown?.isOnCooldown && venueCooldown.cooldownEndsAt) {
+      candidateTimes.push(venueCooldown.cooldownEndsAt.getTime());
+    }
+
     const target = new Date(Math.max(...candidateTimes));
     target.setHours(20, 0, 0, 0);
     return target;
-  }, [upcomingGigs, bandLockout.lockedUntil]);
+  }, [upcomingGigs, bandLockout.lockedUntil, venueCooldowns]);
 
   const handleBookingDialogConfirm = useCallback(async ({
     setlistId,
@@ -237,6 +258,7 @@ const GigBooking = () => {
     try {
       const { getSlotById } = await import('@/utils/gigSlots');
       const { checkBandLockout } = await import('@/utils/bandLockout');
+      const { checkVenueCooldown } = await import('@/utils/venueCooldown');
       
       // Check band lockout
       const lockout = await checkBandLockout(band.id);
@@ -244,6 +266,18 @@ const GigBooking = () => {
         toast({
           title: 'Band is busy',
           description: lockout.reason,
+          variant: 'destructive'
+        });
+        setIsBooking(false);
+        return;
+      }
+
+      // Check venue cooldown
+      const venueCooldown = await checkVenueCooldown(band.id, bookingVenue.id);
+      if (venueCooldown.isOnCooldown) {
+        toast({
+          title: 'Venue on cooldown',
+          description: `You played here recently. You can book again in ${venueCooldown.daysRemaining} day${venueCooldown.daysRemaining !== 1 ? 's' : ''}.`,
           variant: 'destructive'
         });
         setIsBooking(false);
@@ -600,9 +634,11 @@ const GigBooking = () => {
                     const cooldownLabel = bandLockout.isLocked && bandLockout.lockedUntil
                       ? formatDistanceToNow(bandLockout.lockedUntil, { addSuffix: true })
                       : null;
+                    const venueCooldown = venueCooldowns.get(venue.id);
+                    const isVenueOnCooldown = venueCooldown?.isOnCooldown ?? false;
 
                     return (
-                      <Card key={venue.id} className="border-border">
+                      <Card key={venue.id} className={`border-border ${isVenueOnCooldown ? 'opacity-75' : ''}`}>
                         <CardHeader className="space-y-2">
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -634,10 +670,16 @@ const GigBooking = () => {
                               Next slot {nextSlotDate.toLocaleDateString()}
                             </div>
                           </div>
-                          {bandLockout.isLocked && (
+                          {isVenueOnCooldown && venueCooldown && (
+                            <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-500/10 p-2 rounded">
+                              <Clock className="h-3 w-3" />
+                              Venue cooldown: {venueCooldown.daysRemaining} day{venueCooldown.daysRemaining !== 1 ? 's' : ''} remaining ({VENUE_COOLDOWN_DAYS_EXPORT} day minimum between gigs)
+                            </div>
+                          )}
+                          {bandLockout.isLocked && !isVenueOnCooldown && (
                             <div className="flex items-center gap-1 text-xs text-amber-600">
                               <Clock className="h-3 w-3" />
-                              Cooldown ends {cooldownLabel ?? 'soon'}
+                              Band cooldown ends {cooldownLabel ?? 'soon'}
                             </div>
                           )}
                           {renderRequirements(venue.requirements)}
@@ -647,9 +689,9 @@ const GigBooking = () => {
                             className="w-full"
                             size="sm"
                             onClick={() => setBookingVenue(venue)}
-                            disabled={!band || isBooking || bandLockout.isLocked || !hasEligibleSetlists}
+                            disabled={!band || isBooking || bandLockout.isLocked || isVenueOnCooldown || !hasEligibleSetlists}
                           >
-                            Book Gig
+                            {isVenueOnCooldown ? 'On Cooldown' : 'Book Gig'}
                           </Button>
                         </CardContent>
                       </Card>

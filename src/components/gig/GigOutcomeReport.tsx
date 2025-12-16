@@ -17,10 +17,12 @@ import { MomentHighlightsCard } from "./MomentHighlightsCard";
 import { CrowdAnalyticsCard } from "./CrowdAnalyticsCard";
 import { FinancialDeepDiveCard } from "./FinancialDeepDiveCard";
 import { VenueRelationshipCard } from "./VenueRelationshipCard";
+import { BandChemistryCard } from "./BandChemistryCard";
 import type { GigXpSummary } from "@/utils/gigXpCalculator";
 import type { FanConversionResult } from "@/utils/fanConversionCalculator";
 import type { GigMoment } from "@/utils/momentHighlightsGenerator";
 import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculator";
+import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
