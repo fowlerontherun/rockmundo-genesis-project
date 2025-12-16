@@ -16,11 +16,11 @@ import {
   Calendar,
   Clock,
   TrendingUp,
-  Users,
-  Mic,
-  Building,
   Sparkles,
+  Headphones,
 } from "lucide-react";
+import { SongPlayer } from "@/components/audio/SongPlayer";
+import { SongVoting } from "@/components/audio/SongVoting";
 
 interface SongDetailDialogProps {
   songId: string | null;
@@ -73,6 +73,27 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
             </div>
           ) : song ? (
             <div className="space-y-6">
+              {/* Audio Player */}
+              {(song.audio_url || song.audio_generation_status) && (
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Headphones className="h-4 w-4" />
+                    Listen
+                  </h3>
+                  <SongPlayer
+                    audioUrl={song.audio_url}
+                    title={song.title}
+                    artist={song.bands?.name || "Solo Artist"}
+                    generationStatus={song.audio_generation_status}
+                  />
+                  <div className="mt-3">
+                    <SongVoting songId={song.id} />
+                  </div>
+                </div>
+              )}
+
+              {(song.audio_url || song.audio_generation_status) && <Separator />}
+
               {/* Quality Overview */}
               <div>
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
