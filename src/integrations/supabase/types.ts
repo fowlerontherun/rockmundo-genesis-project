@@ -7246,6 +7246,71 @@ export type Database = {
           },
         ]
       }
+      player_habit_completions: {
+        Row: {
+          completed_date: string
+          created_at: string | null
+          habit_id: string
+          id: string
+        }
+        Insert: {
+          completed_date: string
+          created_at?: string | null
+          habit_id: string
+          id?: string
+        }
+        Update: {
+          completed_date?: string
+          created_at?: string | null
+          habit_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "player_habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_habits: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          target_per_week: number | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          target_per_week?: number | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          target_per_week?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_instruments: {
         Row: {
           created_at: string
@@ -8006,6 +8071,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_wellness_conditions: {
+        Row: {
+          condition_type: string
+          id: string
+          notes: string | null
+          recovery_activity: string | null
+          resolved_at: string | null
+          severity: string | null
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          condition_type: string
+          id?: string
+          notes?: string | null
+          recovery_activity?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          condition_type?: string
+          id?: string
+          notes?: string | null
+          recovery_activity?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      player_wellness_goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_value: number | null
+          deadline: string | null
+          goal_type: string
+          id: string
+          status: string | null
+          target_value: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_value?: number | null
+          deadline?: string | null
+          goal_type: string
+          id?: string
+          status?: string | null
+          target_value: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_value?: number | null
+          deadline?: string | null
+          goal_type?: string
+          id?: string
+          status?: string | null
+          target_value?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       player_xp_wallet: {
         Row: {
@@ -13153,6 +13287,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
+      }
+      create_default_habits_for_user: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }

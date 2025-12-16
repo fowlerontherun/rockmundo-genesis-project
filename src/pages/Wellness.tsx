@@ -10,22 +10,19 @@ import {
   Heart,
   Activity,
   Brain,
-  Coffee,
   Bed,
-  Salad,
   Dumbbell,
   Smile,
-  Moon,
-  Sun,
   AlertTriangle,
-  TrendingUp,
-  Wind,
 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getHealthStatus, calculateTimeToFullRecovery } from "@/utils/healthSystem";
 import { format, subDays } from "date-fns";
+import { HabitTracker } from "@/components/wellness/HabitTracker";
+import { WellnessGoals } from "@/components/wellness/WellnessGoals";
+import { WellnessTrends } from "@/components/wellness/WellnessTrends";
 
 export default function WellnessPage() {
   const { profile, attributes, loading } = useGameData();
