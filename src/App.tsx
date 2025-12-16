@@ -73,6 +73,7 @@ const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
+const FestivalBrowser = lazyWithRetry(() => import("./pages/FestivalBrowser"));
 // const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
@@ -246,7 +247,8 @@ function App() {
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
-                    <Route path="festivals" element={<FestivalsNew />} />
+                    <Route path="festivals" element={<FestivalBrowser />} />
+                    <Route path="festivals/simulation" element={<FestivalsNew />} />
                     {/* <Route path="awards" element={<Awards />} /> */}
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
