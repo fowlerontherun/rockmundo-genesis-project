@@ -22,16 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   CheckCircle,
   Clock,
@@ -48,6 +41,10 @@ import {
   Star,
   Headphones,
   MapPin,
+  Send,
+  ListMusic,
+  History,
+  Flame,
 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
@@ -58,7 +55,6 @@ type RadioStationRow = Database["public"]["Tables"]["radio_stations"]["Row"];
 type RadioShowRow = Database["public"]["Tables"]["radio_shows"]["Row"];
 type RadioSubmissionRow = Database["public"]["Tables"]["radio_submissions"]["Row"];
 type SongRow = Database["public"]["Tables"]["songs"]["Row"];
-type ProcessRadioSubmissionSummary = any; // RPC function return type
 
 type RadioStationRecord = RadioStationRow & {
   cities?: { name: string | null; country: string | null } | null;
@@ -81,8 +77,6 @@ type NowPlayingRecord = {
   radio_shows?: { id: string; show_name: string | null } | null;
 };
 
-type RecordedSong = Pick<SongRow, "id" | "title" | "genre" | "quality_score" | "band_id">;
-
 type ProfileWithBand = {
   id: string;
   display_name: string | null;
@@ -99,13 +93,12 @@ const FILTERS = [
 ];
 
 type StationFilter = (typeof FILTERS)[number]["value"];
+type TabValue = "submit" | "submissions" | "analytics" | "history" | "trending";
 
 const formatDateTime = (value: string | null) => {
   if (!value) return "–";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "–";
-  }
+  if (Number.isNaN(date.getTime())) return "–";
   return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
@@ -139,41 +132,26 @@ export default function Radio() {
   const [filter, setFilter] = useState<StationFilter>("all");
   const [selectedStation, setSelectedStation] = useState<string>("");
   const [selectedSong, setSelectedSong] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"submit" | "submissions" | "trending">("submit");
+  const [activeTab, setActiveTab] = useState<TabValue>("submit");
 
   useEffect(() => {
     let isMounted = true;
-
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
-        if (isMounted) {
-          setUser(data.user ?? null);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setLoadingUser(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    supabase.auth.getUser().then(({ data }) => {
+      if (isMounted) setUser(data.user ?? null);
+    }).finally(() => {
+      if (isMounted) setLoadingUser(false);
+    });
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
-    if (!loadingUser && !user) {
-      navigate("/auth");
-    }
+    if (!loadingUser && !user) navigate("/auth");
   }, [loadingUser, user, navigate]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem("radio-selected-station");
-    if (stored) {
-      setSelectedStation(stored);
-    }
+    if (stored) setSelectedStation(stored);
   }, []);
 
   useEffect(() => {
@@ -185,6 +163,7 @@ export default function Radio() {
     }
   }, [selectedStation]);
 
+  // Profile query with staleTime
   const { data: profile, isLoading: profileLoading } = useQuery<ProfileWithBand | null>({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
@@ -198,8 +177,10 @@ export default function Radio() {
       return data as ProfileWithBand | null;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
+  // Stations query with staleTime
   const { data: stations, isLoading: stationsLoading } = useQuery<RadioStationRecord[]>({
     queryKey: ["radio-stations", filter],
     queryFn: async () => {
@@ -208,29 +189,27 @@ export default function Radio() {
         .select("*, cities(name, country)")
         .eq("is_active", true)
         .order("quality_level", { ascending: false });
-
-      if (filter !== "all") {
-        query = query.eq("station_type", filter);
-      }
-
+      if (filter !== "all") query = query.eq("station_type", filter);
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as RadioStationRecord[];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
     if (!stations || stations.length === 0) return;
-    if (!selectedStation || !stations.some((station) => station.id === selectedStation)) {
+    if (!selectedStation || !stations.some((s) => s.id === selectedStation)) {
       setSelectedStation(stations[0].id);
     }
   }, [stations, selectedStation]);
 
   const activeStation = useMemo(
-    () => stations?.find((station) => station.id === selectedStation) ?? null,
+    () => stations?.find((s) => s.id === selectedStation) ?? null,
     [stations, selectedStation],
   );
 
+  // Shows query - only fetch when needed
   const { data: shows, isLoading: showsLoading } = useQuery<RadioShowRow[]>({
     queryKey: ["radio-shows", selectedStation],
     queryFn: async () => {
@@ -245,19 +224,19 @@ export default function Radio() {
       return (data ?? []) as RadioShowRow[];
     },
     enabled: !!selectedStation,
+    staleTime: 10 * 60 * 1000,
   });
 
+  // Now playing - only on submit/analytics tabs
   const { data: nowPlaying, isLoading: nowPlayingLoading } = useQuery<NowPlayingRecord | null>({
     queryKey: ["now-playing", selectedStation],
     queryFn: async () => {
       if (!selectedStation) return null;
       const { data, error } = await supabase
         .from("radio_plays")
-        .select(
-          `id, played_at, listeners, hype_gained, streams_boost,
+        .select(`id, played_at, listeners, hype_gained, streams_boost,
           songs(id, title, genre, audio_url, audio_generation_status, bands(id, name)),
-          radio_shows(id, show_name)`
-        )
+          radio_shows(id, show_name)`)
         .eq("station_id", selectedStation)
         .order("played_at", { ascending: false })
         .limit(1)
@@ -265,9 +244,11 @@ export default function Radio() {
       if (error) throw error;
       return (data as NowPlayingRecord | null) ?? null;
     },
-    enabled: !!selectedStation,
+    enabled: !!selectedStation && (activeTab === "submit" || activeTab === "analytics"),
+    staleTime: 2 * 60 * 1000,
   });
 
+  // Released songs - optimized query
   const { data: releasedSongs, isLoading: songsLoading } = useQuery<any[]>({
     queryKey: ["released-songs", user?.id],
     queryFn: async () => {
@@ -275,7 +256,7 @@ export default function Radio() {
       
       const { data: userReleases, error: releasesError } = await supabase
         .from("releases")
-        .select("id")
+        .select("id, title")
         .eq("user_id", user.id)
         .eq("release_status", "released");
       
@@ -286,13 +267,14 @@ export default function Radio() {
 
       const { data: releaseSongs, error: rsError } = await supabase
         .from("release_songs")
-        .select("song_id, release_id, release:releases(title)")
+        .select("song_id, release_id")
         .in("release_id", releaseIds);
 
       if (rsError) throw rsError;
       if (!releaseSongs || releaseSongs.length === 0) return [];
 
       const songIds = [...new Set(releaseSongs.map((rs: any) => rs.song_id))];
+      const releaseMap = new Map(userReleases.map((r: any) => [r.id, r.title]));
 
       const { data: songs, error: songsError } = await supabase
         .from("songs")
@@ -306,11 +288,12 @@ export default function Radio() {
         return {
           ...song,
           release_id: rs?.release_id,
-          release_title: rs?.release?.title,
+          release_title: rs ? releaseMap.get(rs.release_id) : null,
         };
       }) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && activeTab === "submit",
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -318,9 +301,7 @@ export default function Radio() {
       setSelectedSong("");
       return;
     }
-    if (selectedSong && releasedSongs.some((song: any) => song.id === selectedSong)) {
-      return;
-    }
+    if (selectedSong && releasedSongs.some((song: any) => song.id === selectedSong)) return;
     setSelectedSong(releasedSongs[0].id);
   }, [releasedSongs, selectedSong]);
 
@@ -330,7 +311,7 @@ export default function Radio() {
   );
 
   const acceptedGenres = useMemo(
-    () => (activeStation?.accepted_genres ?? []).map((genre) => genre.toLowerCase()),
+    () => (activeStation?.accepted_genres ?? []).map((g) => g.toLowerCase()),
     [activeStation?.accepted_genres],
   );
 
@@ -341,62 +322,60 @@ export default function Radio() {
     return songGenre ? acceptedGenres.includes(songGenre) : false;
   }, [acceptedGenres, selectedSongData]);
 
+  // Submissions - lazy load
   const { data: submissions, isLoading: submissionsLoading } = useQuery<RadioSubmissionRow[]>({
     queryKey: ["my-radio-submissions", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
-        .select(
-          "id, status, submitted_at, reviewed_at, rejection_reason, station_id, song_id, songs(title), radio_stations(name)"
-        )
+        .select("id, status, submitted_at, reviewed_at, rejection_reason, station_id, song_id, songs(title), radio_stations(name)")
         .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as any[];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && activeTab === "submissions",
+    staleTime: 2 * 60 * 1000,
   });
 
+  // Top songs - lazy load with audio fields
   const { data: topSongs, isLoading: topSongsLoading } = useQuery({
     queryKey: ["radio-top-songs"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, genre, hype, profiles(display_name)")
+        .select("id, title, genre, hype, audio_url, audio_generation_status, profiles(display_name), bands(name)")
         .order("hype", { ascending: false })
         .limit(10);
       if (error) throw error;
       return data ?? [];
     },
+    enabled: activeTab === "trending",
+    staleTime: 5 * 60 * 1000,
   });
 
-  // New: Fetch station's recent plays history
+  // Recent plays - lazy load with audio
   const { data: recentPlays, isLoading: recentPlaysLoading } = useQuery({
     queryKey: ["radio-recent-plays", selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
       const { data, error } = await supabase
         .from("radio_plays")
-        .select(`
-          id, 
-          played_at, 
-          listeners, 
-          hype_gained, 
-          streams_boost,
+        .select(`id, played_at, listeners, hype_gained, streams_boost,
           songs(id, title, genre, quality_score, audio_url, audio_generation_status, bands(name)),
-          radio_shows(show_name, host_name)
-        `)
+          radio_shows(show_name, host_name)`)
         .eq("station_id", selectedStation)
         .order("played_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!selectedStation,
+    enabled: !!selectedStation && activeTab === "history",
+    staleTime: 2 * 60 * 1000,
   });
 
-  // New: Fetch station analytics
+  // Station stats - lazy load
   const { data: stationStats, isLoading: statsLoading } = useQuery({
     queryKey: ["station-stats", selectedStation],
     queryFn: async () => {
@@ -410,49 +389,37 @@ export default function Radio() {
       if (error) throw error;
       if (!data || data.length === 0) return null;
 
-      const totalListeners = data.reduce((sum, play) => sum + (play.listeners || 0), 0);
-      const totalHype = data.reduce((sum, play) => sum + (play.hype_gained || 0), 0);
-      const totalStreams = data.reduce((sum, play) => sum + (play.streams_boost || 0), 0);
-      const avgListeners = Math.round(totalListeners / data.length);
+      const totalListeners = data.reduce((sum, p) => sum + (p.listeners || 0), 0);
+      const totalHype = data.reduce((sum, p) => sum + (p.hype_gained || 0), 0);
+      const totalStreams = data.reduce((sum, p) => sum + (p.streams_boost || 0), 0);
 
       return {
         totalPlays: data.length,
-        avgListeners,
+        avgListeners: Math.round(totalListeners / data.length),
         totalHype,
         totalStreams,
         last7Days: data.length,
       };
     },
-    enabled: !!selectedStation,
+    enabled: !!selectedStation && activeTab === "analytics",
+    staleTime: 5 * 60 * 1000,
   });
 
   const submitSong = useMutation({
-    mutationFn: async (): Promise<ProcessRadioSubmissionSummary> => {
-      if (!user) {
-        throw new Error("You must be signed in to submit a song.");
-      }
-      if (!selectedStation) {
-        throw new Error("Choose a radio station before submitting.");
-      }
-      if (!selectedSongData) {
-        throw new Error("Select one of your recorded songs to submit.");
-      }
-      if (!genreMatches) {
-        throw new Error("This station is not accepting the selected song's genre right now.");
-      }
+    mutationFn: async () => {
+      if (!user) throw new Error("You must be signed in to submit a song.");
+      if (!selectedStation) throw new Error("Choose a radio station before submitting.");
+      if (!selectedSongData) throw new Error("Select one of your recorded songs to submit.");
+      if (!genreMatches) throw new Error("This station is not accepting the selected song's genre right now.");
 
       const weekStart = getUtcWeekStart(new Date());
 
-      const { data: existing, error: existingError } = await supabase
+      const { data: existing } = await supabase
         .from("radio_submissions")
         .select("id")
         .eq("user_id", user.id)
         .eq("station_id", selectedStation)
         .eq("week_submitted", weekStart);
-
-      if (existingError) {
-        throw new Error(existingError.message);
-      }
 
       if (existing && existing.length > 0) {
         throw new Error("You've already submitted a song to this station this week.");
@@ -465,7 +432,7 @@ export default function Radio() {
           station_id: selectedStation,
           user_id: user.id,
           band_id: selectedSongData.band_id ?? null,
-          release_id: (selectedSongData as any).release_id ?? null,
+          release_id: selectedSongData.release_id ?? null,
           status: "pending",
           submitted_at: new Date().toISOString(),
           week_submitted: weekStart,
@@ -473,28 +440,16 @@ export default function Radio() {
         .select("id")
         .single();
 
-      if (insertError) {
-        throw new Error(insertError.message);
-      }
-
-      if (!inserted) {
-        throw new Error("Submission could not be created.");
-      }
+      if (insertError) throw new Error(insertError.message);
+      if (!inserted) throw new Error("Submission could not be created.");
 
       const { data: summary, error: rpcError } = await (supabase.rpc as any)(
         "process_radio_submission",
         { p_submission_id: inserted.id }
       );
 
-      if (rpcError) {
-        throw new Error(rpcError.message);
-      }
-
-      if (!summary) {
-        throw new Error("The radio spin summary was not returned.");
-      }
-
-      return summary as ProcessRadioSubmissionSummary;
+      if (rpcError) throw new Error(rpcError.message);
+      return summary;
     },
     onSuccess: (summary) => {
       if (summary && typeof summary === 'object' && 'listeners' in summary) {
@@ -506,7 +461,6 @@ export default function Radio() {
       }
       queryClient.invalidateQueries({ queryKey: ["my-radio-submissions", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["now-playing", selectedStation] });
-      queryClient.invalidateQueries({ queryKey: ["radio-stations", filter] });
       queryClient.invalidateQueries({ queryKey: ["radio-recent-plays", selectedStation] });
       queryClient.invalidateQueries({ queryKey: ["station-stats", selectedStation] });
     },
@@ -522,89 +476,6 @@ export default function Radio() {
     return Array.isArray(bands) ? bands[0] ?? null : bands;
   }, [profile?.bands]);
 
-  const renderStations = () => {
-    if (stationsLoading) {
-      return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={`station-skeleton-${index}`} className="border-dashed">
-              <CardHeader>
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="mt-2 h-4 w-1/3" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-3 w-32" />
-                <Skeleton className="h-3 w-16" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      );
-    }
-
-    if (!stations?.length) {
-      return (
-        <Alert>
-          <AlertTitle>No stations available</AlertTitle>
-          <AlertDescription>
-            Check back soon—radio programmers are lining up new stations.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {stations.map((station) => (
-          <Card
-            key={station.id}
-            className={`cursor-pointer transition-colors ${selectedStation === station.id ? "border-primary" : ""}`}
-            onClick={() => setSelectedStation(station.id)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{station.name}</CardTitle>
-                  <CardDescription>{station.frequency || "Unlisted frequency"}</CardDescription>
-                </div>
-                <Badge variant="secondary" className="uppercase">
-                  {station.station_type}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Listeners</span>
-                <span className="font-semibold">{station.listener_base.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Location</span>
-                <span>
-                  {station.station_type === "national"
-                    ? station.country || "International"
-                    : `${station.cities?.name ?? "Unknown"}${station.cities?.country ? `, ${station.cities.country}` : ""}`}
-                </span>
-              </div>
-              {!!station.accepted_genres?.length && (
-                <div>
-                  <span className="text-muted-foreground">Accepting</span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {station.accepted_genres.map((genre) => (
-                      <Badge key={`${station.id}-${genre}`} variant="outline">
-                        {genre}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
   if (loadingUser || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
@@ -616,87 +487,176 @@ export default function Radio() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-stage">
-      <div className="container mx-auto space-y-6 px-6 py-8">
+      <div className="container mx-auto space-y-4 px-4 py-6 sm:px-6 sm:py-8">
+        {/* Header */}
         <div className="flex flex-wrap items-center gap-3">
-          <RadioIcon className="h-9 w-9" />
+          <RadioIcon className="h-8 w-8 sm:h-9 sm:w-9" />
           <div>
-            <h1 className="font-oswald text-4xl">Radio Airplay</h1>
-            <p className="text-muted-foreground">
-              Pitch your recorded tracks to curated stations and trigger real-time spins.
+            <h1 className="font-oswald text-2xl sm:text-4xl">Radio Airplay</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">
+              Pitch your tracks to curated stations and trigger real-time spins.
             </p>
           </div>
         </div>
 
-        <Alert>
+        <Alert className="py-2">
           <Music className="h-4 w-4" />
-          <AlertDescription>
-            Submit one recorded song per station each week. Accepted submissions immediately generate a radio play, boosting your
-            streams, sales, and band fame.
+          <AlertDescription className="text-sm">
+            Submit one recorded song per station each week. Accepted submissions immediately boost streams, sales, and band fame.
           </AlertDescription>
         </Alert>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="submit">Submit Song</TabsTrigger>
-            <TabsTrigger value="submissions">My Submissions</TabsTrigger>
-            <TabsTrigger value="analytics">Station Analytics</TabsTrigger>
-            <TabsTrigger value="history">Play History</TabsTrigger>
-            <TabsTrigger value="trending">Trending</TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
+          {/* Mobile-optimized tabs with horizontal scroll */}
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-max min-w-full gap-1 sm:grid sm:w-full sm:grid-cols-5">
+              <TabsTrigger value="submit" className="flex items-center gap-1.5 px-3 sm:px-4">
+                <Send className="h-4 w-4" />
+                <span className="hidden sm:inline">Submit</span>
+              </TabsTrigger>
+              <TabsTrigger value="submissions" className="flex items-center gap-1.5 px-3 sm:px-4">
+                <ListMusic className="h-4 w-4" />
+                <span className="hidden sm:inline">Submissions</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-3 sm:px-4">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-1.5 px-3 sm:px-4">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">History</span>
+              </TabsTrigger>
+              <TabsTrigger value="trending" className="flex items-center gap-1.5 px-3 sm:px-4">
+                <Flame className="h-4 w-4" />
+                <span className="hidden sm:inline">Trending</span>
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" className="sm:hidden" />
+          </ScrollArea>
 
-          <TabsContent value="submit" className="space-y-6">
+          {/* Submit Tab */}
+          <TabsContent value="submit" className="mt-4 space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Choose a Station</CardTitle>
-                <CardDescription>Find the right slot for your track and review the requirements.</CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Choose a Station</CardTitle>
+                <CardDescription className="text-sm">Find the right slot for your track.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {FILTERS.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={filter === option.value ? "default" : "outline"}
-                      onClick={() => setFilter(option.value)}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-                {renderStations()}
+                {/* Filter buttons - horizontal scroll on mobile */}
+                <ScrollArea className="w-full">
+                  <div className="flex gap-2">
+                    {FILTERS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        size="sm"
+                        variant={filter === opt.value ? "default" : "outline"}
+                        onClick={() => setFilter(opt.value)}
+                        className="whitespace-nowrap"
+                      >
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+
+                {/* Station grid */}
+                {stationsLoading ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Card key={i} className="border-dashed">
+                        <CardHeader className="pb-2">
+                          <Skeleton className="h-5 w-2/3" />
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-3 w-32" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : !stations?.length ? (
+                  <Alert>
+                    <AlertTitle>No stations available</AlertTitle>
+                    <AlertDescription>Check back soon for new stations.</AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {stations.map((station) => (
+                      <Card
+                        key={station.id}
+                        className={`cursor-pointer transition-all hover:border-primary/50 ${
+                          selectedStation === station.id ? "border-primary ring-1 ring-primary/20" : ""
+                        }`}
+                        onClick={() => setSelectedStation(station.id)}
+                      >
+                        <CardHeader className="pb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="truncate text-base">{station.name}</CardTitle>
+                              <CardDescription className="text-xs">{station.frequency || "Unlisted"}</CardDescription>
+                            </div>
+                            <Badge variant="secondary" className="shrink-0 text-xs uppercase">
+                              {station.station_type}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-1.5 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Listeners</span>
+                            <span className="font-medium">{station.listener_base.toLocaleString()}</span>
+                          </div>
+                          {station.accepted_genres?.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {station.accepted_genres.slice(0, 3).map((g) => (
+                                <Badge key={g} variant="outline" className="text-xs">
+                                  {g}
+                                </Badge>
+                              ))}
+                              {station.accepted_genres.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{station.accepted_genres.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Submit Your Track</CardTitle>
-                <CardDescription>Stations only accept recorded songs that match their current rotation.</CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Submit Your Track</CardTitle>
+                <CardDescription className="text-sm">Select a recorded song that matches the station's genre.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {!releasedSongs?.length ? (
                   <Alert>
                     <AlertTitle>No recorded songs yet</AlertTitle>
                     <AlertDescription>
-                      Finish recording a song in the studio before pitching it to radio programmers.
+                      Finish recording a song in the studio before pitching it to radio.
                     </AlertDescription>
                   </Alert>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Recorded Song</label>
                       <Select value={selectedSong} onValueChange={setSelectedSong} disabled={submitSong.isPending}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a recorded song" />
+                          <SelectValue placeholder="Select a song" />
                         </SelectTrigger>
                         <SelectContent>
-                          {releasedSongs.map((song) => (
-                            <SelectItem key={song.id} value={song.id}>
-                              {song.title}
+                          {releasedSongs.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -709,20 +669,20 @@ export default function Radio() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Active Shows</label>
-                      <div className="rounded-md border bg-background/60 p-3 text-sm">
+                      <div className="rounded-md border bg-background/60 p-2 text-sm">
                         {showsLoading ? (
                           <Skeleton className="h-4 w-32" />
                         ) : shows?.length ? (
                           <ul className="space-y-1">
-                            {shows.map((show) => (
-                              <li key={show.id} className="flex items-center justify-between">
-                                <span className="font-medium">{show.show_name}</span>
+                            {shows.slice(0, 3).map((show) => (
+                              <li key={show.id} className="flex justify-between text-xs">
+                                <span>{show.show_name}</span>
                                 <span className="text-muted-foreground">{show.time_slot?.replace(/_/g, " ")}</span>
                               </li>
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-muted-foreground">No active shows—submissions will queue for rotation.</p>
+                          <p className="text-xs text-muted-foreground">No active shows</p>
                         )}
                       </div>
                     </div>
@@ -730,27 +690,24 @@ export default function Radio() {
                 )}
 
                 {activeStation && !!activeStation.accepted_genres?.length && (
-                  <Alert variant={genreMatches ? "default" : "destructive"}>
+                  <Alert variant={genreMatches ? "default" : "destructive"} className="py-2">
                     {genreMatches ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                    <AlertDescription>
+                    <AlertDescription className="text-sm">
                       {genreMatches
-                        ? `This station is actively accepting ${activeStation.accepted_genres.join(", ")} submissions.`
-                        : `This station is currently focused on ${activeStation.accepted_genres.join(", ")} rotations.`}
+                        ? `Accepting: ${activeStation.accepted_genres.join(", ")}`
+                        : `Currently focused on: ${activeStation.accepted_genres.join(", ")}`}
                     </AlertDescription>
                   </Alert>
                 )}
 
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    {primaryBand ? (
-                      <>Submitting as {primaryBand.name ?? "your band"}. Fame: {Math.round((primaryBand.fame ?? 0) * 10) / 10}</>
-                    ) : (
-                      <>Radio spins grant band fame. Create a band to maximise your exposure.</>
-                    )}
-                  </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground sm:text-sm">
+                    {primaryBand ? `Submitting as ${primaryBand.name ?? "your band"}` : "Create a band to maximise exposure"}
+                  </p>
                   <Button
                     onClick={() => submitSong.mutate()}
                     disabled={!selectedStation || !selectedSongData || submitSong.isPending || !genreMatches}
+                    className="w-full sm:w-auto"
                   >
                     {submitSong.isPending ? "Submitting..." : "Submit to Radio"}
                   </Button>
@@ -758,384 +715,311 @@ export default function Radio() {
               </CardContent>
             </Card>
 
+            {/* Now Playing Card */}
             <Card>
-              <CardHeader>
-                <CardTitle>Now Playing</CardTitle>
-                <CardDescription>
-                  Accepted submissions spin instantly. Track the latest play from this station.
-                </CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <PlayCircle className="h-5 w-5 text-primary" />
+                  Now Playing
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent>
                 {nowPlayingLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-5 w-40" />
                     <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-24" />
                   </div>
                 ) : nowPlaying ? (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <PlayCircle className="h-6 w-6 text-primary" />
-                      <div>
-                        <p className="text-lg font-semibold">{nowPlaying.songs?.title ?? "Untitled"}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {nowPlaying.songs?.genre ?? "Unknown"} • {nowPlaying.songs?.bands?.name ?? "Independent Artist"}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="font-semibold">{nowPlaying.songs?.title ?? "Untitled"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {nowPlaying.songs?.genre ?? "Unknown"} • {nowPlaying.songs?.bands?.name ?? "Independent"}
+                      </p>
                     </div>
                     
-                    {/* Audio Player */}
                     {(nowPlaying.songs?.audio_url || nowPlaying.songs?.audio_generation_status) && (
-                      <div className="pt-2">
+                      <div className="space-y-2">
                         <SongPlayer
                           audioUrl={nowPlaying.songs.audio_url}
                           generationStatus={nowPlaying.songs.audio_generation_status}
                           compact
                         />
-                        {nowPlaying.songs.id && (
-                          <div className="mt-2">
-                            <SongVoting songId={nowPlaying.songs.id} compact />
-                          </div>
-                        )}
+                        {nowPlaying.songs.id && <SongVoting songId={nowPlaying.songs.id} compact />}
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
-                      <div className="rounded-md border bg-background/60 p-3">
-                        <p className="text-muted-foreground">Listeners</p>
-                        <p className="text-lg font-semibold">{nowPlaying.listeners?.toLocaleString() ?? "–"}</p>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-md border bg-background/60 p-2">
+                        <p className="text-lg font-bold text-emerald-500">{(nowPlaying.listeners ?? 0).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Listeners</p>
                       </div>
-                      <div className="rounded-md border bg-background/60 p-3">
-                        <p className="text-muted-foreground">Streams Boost</p>
-                        <p className="text-lg font-semibold">{nowPlaying.streams_boost?.toLocaleString() ?? "–"}</p>
+                      <div className="rounded-md border bg-background/60 p-2">
+                        <p className="text-lg font-bold text-amber-500">{nowPlaying.streams_boost ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Streams</p>
                       </div>
-                      <div className="rounded-md border bg-background/60 p-3">
-                        <p className="text-muted-foreground">Hype Gained</p>
-                        <p className="text-lg font-semibold">{nowPlaying.hype_gained ?? "–"}</p>
+                      <div className="rounded-md border bg-background/60 p-2">
+                        <p className="text-lg font-bold text-blue-500">{nowPlaying.hype_gained ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Hype</p>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Last spin {formatDateTime(nowPlaying.played_at)} on {nowPlaying.radio_shows?.show_name ?? "rotation"}.
-                    </p>
                   </div>
                 ) : (
-                  <Alert>
-                    <AlertTitle>No spins yet</AlertTitle>
-                    <AlertDescription>
-                      Submit a track to trigger the first spin for this station today.
-                    </AlertDescription>
-                  </Alert>
+                  <p className="text-sm text-muted-foreground">No spins yet. Submit a track to start!</p>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="submissions" className="space-y-4">
+          {/* Submissions Tab - Card-based for mobile */}
+          <TabsContent value="submissions" className="mt-4 space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Submission History</CardTitle>
-                <CardDescription>Track review outcomes and rotation stats for your pitches.</CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Submission History</CardTitle>
+                <CardDescription className="text-sm">Track your radio pitches and outcomes.</CardDescription>
               </CardHeader>
               <CardContent>
                 {submissionsLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-6 w-1/3" />
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <Skeleton key={`submission-${index}`} className="h-10 w-full" />
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
                     ))}
                   </div>
                 ) : !submissions?.length ? (
                   <Alert>
                     <AlertTitle>No submissions yet</AlertTitle>
-                    <AlertDescription>Submit a song to see it appear in your history.</AlertDescription>
+                    <AlertDescription>Submit a song to see it here.</AlertDescription>
                   </Alert>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Song</TableHead>
-                        <TableHead>Station</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead>Reviewed</TableHead>
-                        <TableHead>Notes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {submissions.map((submission) => (
-                        <TableRow key={submission.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(submission.status)}
-                              <span className="capitalize">{submission.status ?? "pending"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{(submission as any).songs?.title ?? "–"}</TableCell>
-                          <TableCell>{(submission as any).radio_stations?.name ?? "–"}</TableCell>
-                          <TableCell>{formatDateTime(submission.submitted_at)}</TableCell>
-                          <TableCell>{formatDateTime(submission.reviewed_at)}</TableCell>
-                          <TableCell className="max-w-xs text-sm text-muted-foreground">
-                            {submission.rejection_reason ?? ""}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="space-y-3">
+                    {submissions.map((sub: any) => (
+                      <div
+                        key={sub.id}
+                        className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5">{getStatusIcon(sub.status)}</div>
+                          <div>
+                            <p className="font-medium">{sub.songs?.title ?? "Unknown"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {sub.radio_stations?.name ?? "Unknown Station"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDateTime(sub.submitted_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={sub.status === "accepted" ? "default" : sub.status === "rejected" ? "destructive" : "secondary"}
+                          >
+                            {sub.status ?? "pending"}
+                          </Badge>
+                        </div>
+                        {sub.rejection_reason && (
+                          <p className="text-xs text-muted-foreground sm:hidden">{sub.rejection_reason}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-4">
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="mt-4 space-y-4">
             {!activeStation ? (
               <Alert>
                 <AlertTitle>Select a Station</AlertTitle>
-                <AlertDescription>Choose a radio station to view detailed analytics and performance metrics.</AlertDescription>
+                <AlertDescription>Choose a station to view analytics.</AlertDescription>
               </Alert>
             ) : (
               <>
                 <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-lg">
                           <BarChart3 className="h-5 w-5" />
-                          {activeStation.name} - Station Analytics
+                          {activeStation.name}
                         </CardTitle>
-                        <CardDescription>
-                          {activeStation.frequency} FM • {activeStation.station_type === 'national' ? 'National Coverage' : 'Local Coverage'}
+                        <CardDescription className="text-sm">
+                          {activeStation.frequency} FM • {activeStation.station_type === 'national' ? 'National' : 'Local'}
                         </CardDescription>
                       </div>
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        <Signal className="h-3 w-3" />
-                        Quality Level {activeStation.quality_level}
+                      <Badge variant="outline" className="w-fit">
+                        <Signal className="mr-1 h-3 w-3" />
+                        Level {activeStation.quality_level}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    {activeStation.description && (
-                      <p className="mb-6 text-sm text-muted-foreground">{activeStation.description}</p>
-                    )}
-                    
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <CardContent className="space-y-4">
+                    {/* Stats grid - responsive */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Listener Base</CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-3">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-primary" />
-                            <span className="text-2xl font-bold">{activeStation.listener_base.toLocaleString()}</span>
+                            <span className="text-lg font-bold">{activeStation.listener_base.toLocaleString()}</span>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">Total potential reach</p>
+                          <p className="text-xs text-muted-foreground">Listener Base</p>
                         </CardContent>
                       </Card>
-
                       {statsLoading ? (
                         <>
-                          <Skeleton className="h-32" />
-                          <Skeleton className="h-32" />
-                          <Skeleton className="h-32" />
+                          <Skeleton className="h-20" />
+                          <Skeleton className="h-20" />
+                          <Skeleton className="h-20" />
                         </>
                       ) : stationStats ? (
                         <>
                           <Card>
-                            <CardHeader className="pb-2">
-                              <CardDescription>Avg. Listeners / Play</CardDescription>
-                            </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-3">
                               <div className="flex items-center gap-2">
                                 <Headphones className="h-4 w-4 text-emerald-500" />
-                                <span className="text-2xl font-bold">{stationStats.avgListeners.toLocaleString()}</span>
+                                <span className="text-lg font-bold">{stationStats.avgListeners.toLocaleString()}</span>
                               </div>
-                              <p className="mt-1 text-xs text-muted-foreground">Last 7 days average</p>
+                              <p className="text-xs text-muted-foreground">Avg Listeners</p>
                             </CardContent>
                           </Card>
-
                           <Card>
-                            <CardHeader className="pb-2">
-                              <CardDescription>Total Hype Generated</CardDescription>
-                            </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-3">
                               <div className="flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4 text-amber-500" />
-                                <span className="text-2xl font-bold">{stationStats.totalHype.toLocaleString()}</span>
+                                <span className="text-lg font-bold">{stationStats.totalHype.toLocaleString()}</span>
                               </div>
-                              <p className="mt-1 text-xs text-muted-foreground">Past week total</p>
+                              <p className="text-xs text-muted-foreground">Total Hype</p>
                             </CardContent>
                           </Card>
-
                           <Card>
-                            <CardHeader className="pb-2">
-                              <CardDescription>Plays This Week</CardDescription>
-                            </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-3">
                               <div className="flex items-center gap-2">
                                 <PlayCircle className="h-4 w-4 text-blue-500" />
-                                <span className="text-2xl font-bold">{stationStats.last7Days}</span>
+                                <span className="text-lg font-bold">{stationStats.last7Days}</span>
                               </div>
-                              <p className="mt-1 text-xs text-muted-foreground">Total spins (7 days)</p>
+                              <p className="text-xs text-muted-foreground">Plays (7d)</p>
                             </CardContent>
                           </Card>
                         </>
                       ) : (
                         <Card className="col-span-3">
-                          <CardContent className="flex items-center justify-center p-6">
-                            <p className="text-sm text-muted-foreground">No play data available for the past week</p>
+                          <CardContent className="flex items-center justify-center p-4">
+                            <p className="text-sm text-muted-foreground">No data for the past week</p>
                           </CardContent>
                         </Card>
                       )}
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {/* Station details */}
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Station Details</CardTitle>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Station Details</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
+                        <CardContent className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Type</span>
                             <Badge variant="secondary" className="uppercase">{activeStation.station_type}</Badge>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Location</span>
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 text-xs">
                               <MapPin className="h-3 w-3" />
                               {activeStation.station_type === 'national' 
                                 ? activeStation.country || 'International'
-                                : `${activeStation.cities?.name ?? 'Unknown'}${activeStation.cities?.country ? `, ${activeStation.cities.country}` : ''}`
+                                : `${activeStation.cities?.name ?? 'Unknown'}`
                               }
                             </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Frequency</span>
-                            <span className="font-mono">{activeStation.frequency || 'N/A'} FM</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Quality Tier</span>
-                            <div className="flex items-center gap-1">
-                              <Award className="h-3 w-3 text-amber-500" />
-                              <span>Level {activeStation.quality_level}</span>
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Active Shows</CardTitle>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Active Shows</CardTitle>
                         </CardHeader>
                         <CardContent>
                           {showsLoading ? (
-                            <div className="space-y-2">
-                              <Skeleton className="h-4 w-full" />
-                              <Skeleton className="h-4 w-3/4" />
-                              <Skeleton className="h-4 w-5/6" />
-                            </div>
+                            <Skeleton className="h-12 w-full" />
                           ) : shows && shows.length > 0 ? (
-                            <div className="space-y-3">
-                              {shows.map((show) => (
-                                <div key={show.id} className="border-l-2 border-primary/50 pl-3">
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <p className="font-medium">{show.show_name}</p>
-                                      <p className="text-xs text-muted-foreground">Host: {show.host_name || 'Various'}</p>
-                                    </div>
-                                    <Badge variant="outline" className="text-xs">
-                                      {show.time_slot?.replace(/_/g, ' ')}
-                                    </Badge>
-                                  </div>
-                                  {show.description && (
-                                    <p className="mt-1 text-xs text-muted-foreground">{show.description}</p>
-                                  )}
+                            <div className="space-y-2">
+                              {shows.slice(0, 3).map((show) => (
+                                <div key={show.id} className="flex justify-between text-sm">
+                                  <span className="font-medium">{show.show_name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {show.time_slot?.replace(/_/g, ' ')}
+                                  </Badge>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground">No active shows currently scheduled</p>
+                            <p className="text-sm text-muted-foreground">No active shows</p>
                           )}
                         </CardContent>
                       </Card>
                     </div>
 
-                    {activeStation.accepted_genres && activeStation.accepted_genres.length > 0 && (
-                      <Card className="mt-4">
-                        <CardHeader>
-                          <CardTitle className="text-base">Accepted Genres</CardTitle>
-                          <CardDescription>This station currently accepts the following genres for submissions</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex flex-wrap gap-2">
-                            {activeStation.accepted_genres.map((genre) => (
-                              <Badge key={genre} variant="secondary" className="px-3 py-1">
-                                <Music className="mr-1 h-3 w-3" />
-                                {genre}
-                              </Badge>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
+                    {/* Accepted genres */}
+                    {activeStation.accepted_genres?.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-sm font-medium">Accepted Genres</p>
+                        <div className="flex flex-wrap gap-2">
+                          {activeStation.accepted_genres.map((g) => (
+                            <Badge key={g} variant="secondary" className="px-2 py-1">
+                              <Music className="mr-1 h-3 w-3" />
+                              {g}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
 
+                {/* Now playing in analytics */}
                 {nowPlaying && (
                   <Card className="border-primary/50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg">
                         <PlayCircle className="h-5 w-5 text-primary" />
                         Now Playing
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         <div>
-                          <h3 className="text-lg font-semibold">{nowPlaying.songs?.title || 'Unknown Track'}</h3>
+                          <h3 className="font-semibold">{nowPlaying.songs?.title || 'Unknown'}</h3>
                           <p className="text-sm text-muted-foreground">
                             by {nowPlaying.songs?.bands?.name || 'Unknown Artist'}
                           </p>
                         </div>
                         
-                        {/* Audio Player */}
                         {(nowPlaying.songs?.audio_url || nowPlaying.songs?.audio_generation_status) && (
-                          <div>
+                          <div className="space-y-2">
                             <SongPlayer
                               audioUrl={nowPlaying.songs.audio_url}
                               generationStatus={nowPlaying.songs.audio_generation_status}
                               compact
                             />
-                            {nowPlaying.songs.id && (
-                              <div className="mt-2">
-                                <SongVoting songId={nowPlaying.songs.id} compact />
-                              </div>
-                            )}
+                            {nowPlaying.songs.id && <SongVoting songId={nowPlaying.songs.id} compact />}
                           </div>
                         )}
 
-                        <div className="grid grid-cols-3 gap-4 text-center">
+                        <div className="grid grid-cols-3 gap-2 text-center">
                           <div>
-                            <p className="text-2xl font-bold text-emerald-500">{(nowPlaying.listeners || 0).toLocaleString()}</p>
+                            <p className="text-xl font-bold text-emerald-500">{(nowPlaying.listeners || 0).toLocaleString()}</p>
                             <p className="text-xs text-muted-foreground">Listeners</p>
                           </div>
                           <div>
-                            <p className="text-2xl font-bold text-amber-500">{(nowPlaying.hype_gained || 0).toLocaleString()}</p>
+                            <p className="text-xl font-bold text-amber-500">{nowPlaying.hype_gained || 0}</p>
                             <p className="text-xs text-muted-foreground">Hype</p>
                           </div>
                           <div>
-                            <p className="text-2xl font-bold text-blue-500">{(nowPlaying.streams_boost || 0).toLocaleString()}</p>
+                            <p className="text-xl font-bold text-blue-500">{nowPlaying.streams_boost || 0}</p>
                             <p className="text-xs text-muted-foreground">Streams</p>
                           </div>
                         </div>
-                        {nowPlaying.radio_shows?.show_name && (
-                          <p className="text-xs text-muted-foreground">
-                            Playing on: {nowPlaying.radio_shows.show_name}
-                          </p>
-                        )}
-                        {nowPlaying.played_at && (
-                          <p className="text-xs text-muted-foreground">
-                            Played: {formatDateTime(nowPlaying.played_at)}
-                          </p>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1144,85 +1028,89 @@ export default function Radio() {
             )}
           </TabsContent>
 
-          <TabsContent value="history" className="space-y-4">
+          {/* History Tab with Audio */}
+          <TabsContent value="history" className="mt-4 space-y-4">
             {!activeStation ? (
               <Alert>
                 <AlertTitle>Select a Station</AlertTitle>
-                <AlertDescription>Choose a radio station to view its recent play history.</AlertDescription>
+                <AlertDescription>Choose a station to view play history.</AlertDescription>
               </Alert>
             ) : (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Calendar className="h-5 w-5" />
                     Recent Plays - {activeStation.name}
                   </CardTitle>
-                  <CardDescription>Last 20 songs that aired on this station</CardDescription>
+                  <CardDescription className="text-sm">Last 20 songs played</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {recentPlaysLoading ? (
-                    <div className="space-y-2">
-                      {Array.from({ length: 5 }).map((_, idx) => (
-                        <Skeleton key={idx} className="h-16 w-full" />
+                    <div className="space-y-3">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Skeleton key={i} className="h-24 w-full" />
                       ))}
                     </div>
                   ) : recentPlays && recentPlays.length > 0 ? (
                     <div className="space-y-3">
-                      {recentPlays.map((play: any, idx) => (
-                        <div 
-                          key={play.id} 
-                          className="flex items-start justify-between rounded-lg border p-4 transition-colors hover:bg-accent/50"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="w-8 justify-center">
+                      {recentPlays.map((play: any, idx: number) => (
+                        <div key={play.id} className="rounded-lg border p-3 transition-colors hover:bg-accent/50">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start gap-3">
+                              <Badge variant="outline" className="mt-0.5 shrink-0">
                                 #{idx + 1}
                               </Badge>
-                              <div>
+                              <div className="min-w-0 flex-1">
                                 <h4 className="font-semibold">{play.songs?.title || 'Unknown'}</h4>
                                 <p className="text-sm text-muted-foreground">
                                   {play.songs?.bands?.name || 'Unknown Artist'}
                                   {play.songs?.genre && ` • ${play.songs.genre}`}
                                 </p>
+                                {play.radio_shows?.show_name && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Show: {play.radio_shows.show_name}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">{formatDateTime(play.played_at)}</p>
                               </div>
                             </div>
-                            {play.radio_shows?.show_name && (
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Show: {play.radio_shows.show_name}
-                                {play.radio_shows.host_name && ` (Host: ${play.radio_shows.host_name})`}
-                              </p>
-                            )}
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {formatDateTime(play.played_at)}
-                            </p>
-                          </div>
-                          <div className="ml-4 flex flex-col items-end gap-1 text-right">
-                            <div className="flex items-center gap-1 text-sm">
-                              <Users className="h-3 w-3 text-emerald-500" />
-                              <span className="font-medium">{(play.listeners || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <TrendingUp className="h-3 w-3" />
-                              +{play.hype_gained || 0} hype
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <PlayCircle className="h-3 w-3" />
-                              +{play.streams_boost || 0} streams
-                            </div>
-                            {play.songs?.quality_score && (
-                              <div className="mt-1 flex items-center gap-1">
-                                <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                                <span className="text-xs">{play.songs.quality_score}/100</span>
+                            
+                            <div className="flex flex-wrap items-center gap-2 text-sm">
+                              <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3 text-emerald-500" />
+                                <span>{(play.listeners || 0).toLocaleString()}</span>
                               </div>
-                            )}
+                              <div className="flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3 text-amber-500" />
+                                <span>+{play.hype_gained || 0}</span>
+                              </div>
+                              {play.songs?.quality_score && (
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                                  <span>{play.songs.quality_score}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Audio player for history items */}
+                          {(play.songs?.audio_url || play.songs?.audio_generation_status) && (
+                            <div className="mt-3 space-y-2 border-t pt-3">
+                              <SongPlayer
+                                audioUrl={play.songs.audio_url}
+                                generationStatus={play.songs.audio_generation_status}
+                                compact
+                              />
+                              {play.songs?.id && <SongVoting songId={play.songs.id} compact />}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12">
                       <Music className="h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-4 text-sm text-muted-foreground">No plays recorded yet for this station</p>
+                      <p className="mt-4 text-sm text-muted-foreground">No plays recorded yet</p>
                     </div>
                   )}
                 </CardContent>
@@ -1230,42 +1118,77 @@ export default function Radio() {
             )}
           </TabsContent>
 
-          <TabsContent value="trending" className="space-y-4">
+          {/* Trending Tab with Audio */}
+          <TabsContent value="trending" className="mt-4 space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Trending Songs</CardTitle>
-                <CardDescription>These tracks are dominating the airwaves this week.</CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Flame className="h-5 w-5 text-orange-500" />
+                  Trending Songs
+                </CardTitle>
+                <CardDescription className="text-sm">Top tracks dominating the airwaves this week.</CardDescription>
               </CardHeader>
               <CardContent>
                 {topSongsLoading ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <Skeleton key={`top-song-${index}`} className="h-6 w-3/4" />
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <Skeleton key={i} className="h-24 w-full" />
                     ))}
                   </div>
                 ) : !topSongs?.length ? (
                   <Alert>
                     <AlertTitle>No trending data</AlertTitle>
-                    <AlertDescription>
-                      Come back after the first wave of spins to see which songs are breaking through.
-                    </AlertDescription>
+                    <AlertDescription>Check back after the first wave of spins.</AlertDescription>
                   </Alert>
                 ) : (
-                  <ul className="space-y-3">
+                  <div className="space-y-3">
                     {topSongs.map((song: any, index: number) => (
-                      <li key={song.id} className="flex items-center justify-between rounded-md border bg-background/60 p-3">
-                        <div>
-                          <p className="font-semibold">
-                            {index + 1}. {song.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {song.genre ?? "Unknown genre"} • {song.profiles?.display_name ?? "Unsigned artist"}
-                          </p>
+                      <div
+                        key={song.id}
+                        className="rounded-lg border bg-background/60 p-3 transition-colors hover:bg-accent/50"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-bold ${
+                              index < 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold">{song.title}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {song.bands?.name || song.profiles?.display_name || "Unknown Artist"}
+                              </p>
+                              {song.genre && (
+                                <Badge variant="outline" className="mt-1 text-xs">
+                                  {song.genre}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Flame className="h-3 w-3 text-orange-500" />
+                              {song.hype ?? 0} Hype
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge variant="secondary">Hype {song.hype ?? 0}</Badge>
-                      </li>
+
+                        {/* Audio player and voting for trending songs */}
+                        {(song.audio_url || song.audio_generation_status) && (
+                          <div className="mt-3 space-y-2 border-t pt-3">
+                            <SongPlayer
+                              audioUrl={song.audio_url}
+                              generationStatus={song.audio_generation_status}
+                              compact
+                            />
+                            <SongVoting songId={song.id} compact />
+                          </div>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1275,4 +1198,3 @@ export default function Radio() {
     </div>
   );
 }
-
