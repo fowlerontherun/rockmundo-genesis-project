@@ -87,6 +87,9 @@ interface Props {
   fanConversion?: FanConversionResult | null;
   momentHighlights?: GigMoment[] | null;
   venueRelationship?: VenueRelationshipResult | null;
+  chemistryMoments?: ChemistryMoment[] | null;
+  chemistryLevel?: number;
+  chemistryChange?: number;
   merchItemsSold?: number;
   ticketPrice?: number;
 }
@@ -104,6 +107,9 @@ export const GigOutcomeReport = ({
   fanConversion,
   momentHighlights,
   venueRelationship,
+  chemistryMoments,
+  chemistryLevel = 50,
+  chemistryChange = 0,
   merchItemsSold = 0,
   ticketPrice = 20,
 }: Props) => {
@@ -393,6 +399,13 @@ export const GigOutcomeReport = ({
           {venueRelationship && (
             <VenueRelationshipCard relationship={venueRelationship} venueName={venueName} />
           )}
+
+          {/* Band Chemistry */}
+          <BandChemistryCard 
+            chemistryLevel={chemistryLevel}
+            chemistryChange={chemistryChange}
+            chemistryMoments={chemistryMoments || []}
+          />
 
           {hasGearImpact && (
             <Card>

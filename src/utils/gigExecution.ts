@@ -18,6 +18,13 @@ import { calculateGigXp, type GigXpSummary } from "./gigXpCalculator";
 import { calculateFanConversion, type FanConversionResult } from "./fanConversionCalculator";
 import { generateMomentHighlights, saveMomentHighlights, type GigMoment } from "./momentHighlightsGenerator";
 import { calculateVenueRelationship, type VenueRelationshipResult } from "./venueRelationshipCalculator";
+import { 
+  calculateChemistryEffects, 
+  generateChemistryMoments, 
+  applyChemistryToPerformance,
+  type ChemistryMoment,
+  type ChemistryEffects 
+} from "./bandChemistryEffects";
 
 interface GigExecutionData {
   gigId: string;
@@ -103,6 +110,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
     ? members.reduce((sum, m) => sum + (m.skill_contribution || 50), 0) / members.length
     : 50;
 
+  // Calculate chemistry effects for this performance
+  const chemistryEffects = calculateChemistryEffects(bandChemistry);
+
   // Calculate actual attendance (with variance adjusted by gear reliability and hype)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
   const riskVarianceExpansion = gearEffects.breakdownRiskPercent / 150;
@@ -133,12 +143,15 @@ export async function executeGigPerformance(data: GigExecutionData) {
     };
 
     const result = calculateSongPerformance(factors);
+    
+    // Apply chemistry bonus to performance score
+    const chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
 
     return {
       song_id: song.song_id,
       song_title: song.songs?.title || 'Unknown',
       position: index + 1,
-      performance_score: result.score,
+      performance_score: chemistryBoostedScore,
       crowd_response: result.crowdResponse,
       song_quality_contrib: result.breakdown.songQuality,
       rehearsal_contrib: result.breakdown.rehearsal,
@@ -478,6 +491,33 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error calculating venue relationship:', venueRelError);
   }
 
+  // Generate chemistry moments based on performance
+  let chemistryMoments: ChemistryMoment[] = [];
+  try {
+    chemistryMoments = generateChemistryMoments(
+      bandChemistry,
+      overallRating,
+      setlistSongs.length
+    );
+    
+    // Calculate additional chemistry impact from moments
+    const momentChemistryChange = chemistryMoments.reduce(
+      (sum, moment) => sum + moment.chemistryImpact, 
+      0
+    );
+    
+    // Update band chemistry if moments had impact
+    if (momentChemistryChange !== 0) {
+      const newChemistry = Math.max(0, Math.min(100, bandChemistry + chemistryImpact + momentChemistryChange));
+      await supabase
+        .from('bands')
+        .update({ chemistry_level: newChemistry })
+        .eq('id', bandId);
+    }
+  } catch (chemError) {
+    console.error('Error generating chemistry moments:', chemError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -491,5 +531,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
     venueRelationship,
     merchItemsSold: merchSales.itemsSold,
     ticketPrice,
+    chemistryMoments,
+    chemistryEffects,
+    chemistryLevel: bandChemistry,
+    chemistryChange: chemistryImpact,
   };
 }
