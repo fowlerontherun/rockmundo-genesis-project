@@ -16,6 +16,7 @@ import { LaserEffects } from "./LaserEffects";
 import { ConfettiSystem } from "./ConfettiSystem";
 import { CO2Jets } from "./CO2Jets";
 import { CrowdPhones } from "./CrowdPhones";
+import { GigAudioPlayer } from "./GigAudioPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { usePerformanceSettings } from "@/hooks/usePerformanceSettings";
@@ -29,7 +30,9 @@ interface GigViewer3DProps {
 }
 
 type GigOutcome = Database['public']['Tables']['gig_outcomes']['Row'];
-type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'];
+type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'] & {
+  song_audio_url?: string | null;
+};
 
 export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdMood, previewIntensity }: GigViewer3DProps) => {
   const performanceSettings = usePerformanceSettings();
@@ -47,6 +50,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
   const [bandId, setBandId] = useState<string | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(false);
   const [co2Trigger, setCo2Trigger] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(true);
 
   // Update preview mode values
   useEffect(() => {
@@ -71,7 +75,25 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
 
         setGigOutcome(outcome);
         const performances = (outcome.gig_song_performances || []) as SongPerformance[];
-        setSongPerformances(performances.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedPerformances = performances.sort((a, b) => (a.position || 0) - (b.position || 0));
+        
+        // Fetch audio URLs for each song
+        const songIds = sortedPerformances.map(p => p.song_id).filter(Boolean);
+        if (songIds.length > 0) {
+          const { data: songsWithAudio } = await supabase
+            .from('songs')
+            .select('id, audio_url')
+            .in('id', songIds);
+          
+          const audioMap = new Map(songsWithAudio?.map(s => [s.id, s.audio_url]) || []);
+          sortedPerformances.forEach(p => {
+            if (p.song_id) {
+              p.song_audio_url = audioMap.get(p.song_id) || null;
+            }
+          });
+        }
+        
+        setSongPerformances(sortedPerformances);
         
         // Set initial crowd mood based on first song or overall rating
         if (performances.length > 0) {
@@ -191,6 +213,13 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
     return () => clearInterval(interval);
   }, [songPerformances]);
 
+  // Handle song audio ending - advance to next song
+  const handleSongAudioEnded = () => {
+    if (currentSongIndex < songPerformances.length - 1) {
+      setCurrentSongIndex(prev => prev + 1);
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -248,6 +277,15 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
             <div className="text-xs text-white/40">
               Attendance: {Math.round(attendancePercentage)}% capacity
             </div>
+            
+            {/* Audio Player for VIP songs */}
+            {currentSong?.song_audio_url && (
+              <GigAudioPlayer
+                audioUrl={currentSong.song_audio_url}
+                isPlaying={isAudioPlaying}
+                onEnded={handleSongAudioEnded}
+              />
+            )}
           </div>
         </Card>
 

@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Minus, Trophy, Music } from "lucide-react";
+import { SongPlayer, SongVoting } from "@/components/audio";
+import { useVoteWeightedScore } from "@/hooks/useVoteWeightedScore";
 
 const CompetitiveCharts = () => {
   const [country, setCountry] = useState("all");
@@ -20,10 +22,13 @@ const CompetitiveCharts = () => {
         .select(`
           *,
           songs (
+            id,
             title,
             genre,
             user_id,
             band_id,
+            audio_url,
+            audio_generation_status,
             bands (name),
             profiles:user_id (stage_name)
           )
@@ -45,6 +50,9 @@ const CompetitiveCharts = () => {
     },
   });
 
+  // Get vote-weighted scores for chart songs
+  const songIds = chartEntries?.map(e => e.song_id).filter(Boolean) || [];
+  const { data: voteScores } = useVoteWeightedScore(songIds);
 
   const getTrendIcon = (trend: string) => {
     if (trend === "up") return <TrendingUp className="h-4 w-4 text-green-500" />;
@@ -76,6 +84,7 @@ const CompetitiveCharts = () => {
         {data.map((entry, index) => {
           const song = entry.songs;
           const artistName = song?.bands?.name || song?.profiles?.stage_name || "Unknown Artist";
+          const voteScore = voteScores?.[entry.song_id];
           
           return (
             <Card key={entry.id || entry.song_id} className="hover:bg-secondary/50 transition-colors">
@@ -87,13 +96,13 @@ const CompetitiveCharts = () => {
                     </span>
                   </div>
                   
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{song?.title || "Unknown Song"}</h3>
-                      {entry.rank === 1 && <Trophy className="h-4 w-4 text-yellow-500" />}
+                      <h3 className="font-semibold truncate">{song?.title || "Unknown Song"}</h3>
+                      {entry.rank === 1 && <Trophy className="h-4 w-4 text-yellow-500 shrink-0" />}
                     </div>
-                    <p className="text-sm text-muted-foreground">{artistName}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <p className="text-sm text-muted-foreground truncate">{artistName}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant="outline" className="text-xs">
                         {song?.genre || "Unknown"}
                       </Badge>
@@ -102,10 +111,27 @@ const CompetitiveCharts = () => {
                           {entry.weeks_on_chart} week{entry.weeks_on_chart !== 1 ? "s" : ""} on chart
                         </span>
                       )}
+                      {voteScore && voteScore.weightedScore !== 0 && (
+                        <Badge variant={voteScore.weightedScore > 0 ? "default" : "destructive"} className="text-xs">
+                          {voteScore.weightedScore > 0 ? "+" : ""}{voteScore.weightedScore} votes
+                        </Badge>
+                      )}
                     </div>
+                    
+                    {/* Audio Player */}
+                    {song?.audio_url && (
+                      <div className="mt-2">
+                        <SongPlayer
+                          audioUrl={song.audio_url}
+                          generationStatus={song.audio_generation_status}
+                          title={song.title}
+                          compact
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right shrink-0 space-y-2">
                     {type === "streams" ? (
                       <div className="text-lg font-bold text-primary">
                         {entry.total_streams?.toLocaleString() || "0"} streams
@@ -120,6 +146,11 @@ const CompetitiveCharts = () => {
                         {getTrendIcon(entry.trend)}
                         {entry.trend_change && Math.abs(entry.trend_change)}
                       </div>
+                    )}
+                    
+                    {/* Voting */}
+                    {song?.id && (
+                      <SongVoting songId={song.id} compact showCounts />
                     )}
                   </div>
                 </div>
