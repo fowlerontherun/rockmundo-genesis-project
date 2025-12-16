@@ -5,21 +5,41 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, Calendar, DollarSign, Image } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Music, Calendar, DollarSign, Image, Disc, Radio, 
+  TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
+  Play, Users, BarChart3
+} from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { ManufacturingProgress } from "./ManufacturingProgress";
 import { EditReleaseDialog } from "./EditReleaseDialog";
 import { ReleaseTracklistWithAudio } from "./ReleaseTracklistWithAudio";
+import { format as formatDate, formatDistanceToNow } from "date-fns";
 
 interface MyReleasesTabProps {
   userId: string;
 }
 
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; icon: typeof Music }> = {
+  draft: { label: "Draft", variant: "outline", icon: AlertCircle },
+  planned: { label: "Planned", variant: "secondary", icon: Clock },
+  manufacturing: { label: "Manufacturing", variant: "secondary", icon: Package },
+  released: { label: "Released", variant: "default", icon: CheckCircle2 },
+};
+
+const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }> = {
+  single: { label: "Single", trackRange: "1-2 tracks" },
+  ep: { label: "EP", trackRange: "3-6 tracks" },
+  album: { label: "Album", trackRange: "7+ tracks" },
+};
+
 export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const navigate = useNavigate();
   const [editingRelease, setEditingRelease] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const { data: releases, isLoading } = useQuery({
+  const { data: releases, isLoading, error } = useQuery({
     queryKey: ["releases", userId],
     queryFn: async () => {
       // First get user's band IDs
@@ -30,15 +50,35 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
       
       const bandIds = bandMemberships?.map(d => d.band_id) || [];
       
-      // Build the query
+      // Build the query with comprehensive data
       let query = supabase
         .from("releases")
         .select(`
           *,
-          release_songs(song:songs(id, title, quality_score, audio_url, audio_generation_status, genre), is_b_side),
-          release_formats(*),
-          bands(fame, popularity, chemistry_level),
-          profiles!releases_user_id_fkey(fame, popularity)
+          release_songs(
+            song_id,
+            is_b_side,
+            track_number,
+            song:songs(
+              id, 
+              title, 
+              quality_score, 
+              audio_url, 
+              audio_generation_status, 
+              genre,
+              duration_seconds
+            )
+          ),
+          release_formats(
+            id,
+            format_type,
+            units_ordered,
+            unit_cost,
+            release_date,
+            distribution_status
+          ),
+          bands(id, name, fame, popularity, chemistry_level, total_fans),
+          profiles!releases_user_id_fkey(id, username, fame, popularity)
         `)
         .order("created_at", { ascending: false });
       
@@ -50,169 +90,413 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
       }
       
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error("[MyReleasesTab] Query error:", error);
+        throw error;
+      }
+      
+      console.log("[MyReleasesTab] Fetched releases:", data?.length);
       return data || [];
     }
   });
 
+  const filteredReleases = releases?.filter(r => 
+    statusFilter === "all" || r.release_status === statusFilter
+  ) || [];
+
+  const stats = {
+    total: releases?.length || 0,
+    released: releases?.filter(r => r.release_status === "released").length || 0,
+    manufacturing: releases?.filter(r => r.release_status === "manufacturing").length || 0,
+    totalRevenue: releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
+  };
+
   if (isLoading) {
-    return <div>Loading releases...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-4">
+                <div className="h-4 bg-muted rounded w-1/2 mb-2" />
+                <div className="h-6 bg-muted rounded w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card className="animate-pulse">
+          <CardContent className="p-8">
+            <div className="h-20 bg-muted rounded" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="p-8 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+          <h3 className="text-lg font-semibold mb-2">Error Loading Releases</h3>
+          <p className="text-muted-foreground">{(error as Error).message}</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!releases || releases.length === 0) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <Music className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <Disc className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">No Releases Yet</h3>
-          <p className="text-muted-foreground">
-            Create your first release to get started!
+          <p className="text-muted-foreground mb-4">
+            Create your first release to start distributing your music!
           </p>
+          <Button onClick={() => navigate("/release-manager")}>
+            Create Release
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Disc className="h-4 w-4" />
+              <span>Total Releases</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Released</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.released}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Package className="h-4 w-4" />
+              <span>Manufacturing</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.manufacturing}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <DollarSign className="h-4 w-4" />
+              <span>Total Revenue</span>
+            </div>
+            <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter Tabs */}
+      <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+        <TabsList>
+          <TabsTrigger value="all">All ({releases.length})</TabsTrigger>
+          <TabsTrigger value="released">
+            Released ({releases.filter(r => r.release_status === "released").length})
+          </TabsTrigger>
+          <TabsTrigger value="manufacturing">
+            Manufacturing ({releases.filter(r => r.release_status === "manufacturing").length})
+          </TabsTrigger>
+          <TabsTrigger value="planned">
+            Planned ({releases.filter(r => r.release_status === "planned").length})
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Releases Grid */}
       <div className="grid gap-4">
-        {releases.map((release: any) => (
-          <Card key={release.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex gap-4">
-                  {release.artwork_url ? (
-                    <img
-                      src={release.artwork_url}
-                      alt={release.title}
-                      className="w-16 h-16 object-cover rounded-md"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                      <Image className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <CardTitle>{release.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{release.artist_name}</p>
-                  </div>
-                </div>
-                <Badge variant={
-                  release.release_status === "released" ? "default" :
-                  release.release_status === "manufacturing" ? "secondary" :
-                  "outline"
-                }>
-                  {release.release_status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Manufacturing Progress */}
-              {release.release_status === "manufacturing" && (
-                <ManufacturingProgress
-                  createdAt={release.created_at}
-                  manufacturingCompleteAt={release.manufacturing_complete_at}
-                  status={release.release_status}
-                />
-              )}
-
-              <div className="flex gap-4 text-sm flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Music className="h-4 w-4" />
-                  <span className="capitalize">{release.release_type}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  <span>Cost: ${release.total_cost}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  <span>Revenue: ${release.total_revenue || 0}</span>
-                </div>
-                {release.scheduled_release_date && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span className="text-xs">
-                      Release: {new Date(release.scheduled_release_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-sm mb-2">Tracks</h4>
-                <ReleaseTracklistWithAudio 
-                  tracks={release.release_songs || []}
-                  showAudio={release.release_status === "released"}
-                />
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-sm mb-2">Formats</h4>
-                <div className="flex flex-wrap gap-2">
-                  {release.release_formats?.map((format: any) => (
-                    <Badge key={format.id} variant="secondary">
-                      <div className="flex items-center gap-2">
-                        <span className="capitalize">{format.format_type}</span>
-                        {format.release_date && (
-                          <>
-                            <Calendar className="h-3 w-3" />
-                            <span className="text-xs">
-                              {new Date(format.release_date).toLocaleDateString()}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Show predictions for planned/manufacturing releases */}
-              {(release.release_status === "planned" || release.release_status === "manufacturing") && (
-                <ReleasePredictions
-                  artistFame={release.bands?.[0]?.fame || release.profiles?.fame || 0}
-                  artistPopularity={release.bands?.[0]?.popularity || release.profiles?.popularity || 0}
-                  songQuality={
-                    release.release_songs?.reduce((sum: number, rs: any) => 
-                      sum + (rs.song?.quality_score || 0), 0
-                    ) / (release.release_songs?.length || 1)
-                  }
-                  bandChemistry={release.bands?.[0]?.chemistry_level}
-                  releaseType={release.release_type}
-                  formatTypes={release.release_formats?.map((f: any) => f.format_type) || []}
-                  trackCount={release.release_songs?.length || 1}
-                />
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate(`/release/${release.id}`)}
-                >
-                  View Details
-                </Button>
-                {release.release_status !== "released" && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setEditingRelease(release)}
-                  >
-                    Edit
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {filteredReleases.map((release: any) => (
+          <ReleaseCard 
+            key={release.id} 
+            release={release} 
+            onEdit={() => setEditingRelease(release)}
+            onViewDetails={() => navigate(`/release/${release.id}`)}
+          />
         ))}
       </div>
+
+      {filteredReleases.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">No releases match this filter.</p>
+          </CardContent>
+        </Card>
+      )}
 
       <EditReleaseDialog
         open={!!editingRelease}
         onOpenChange={(open) => !open && setEditingRelease(null)}
         release={editingRelease}
       />
-    </>
+    </div>
+  );
+}
+
+interface ReleaseCardProps {
+  release: any;
+  onEdit: () => void;
+  onViewDetails: () => void;
+}
+
+function ReleaseCard({ release, onEdit, onViewDetails }: ReleaseCardProps) {
+  const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
+  const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
+  const StatusIcon = statusConfig.icon;
+  
+  const totalTracks = release.release_songs?.length || 0;
+  const avgQuality = totalTracks > 0 
+    ? Math.round(release.release_songs.reduce((sum: number, rs: any) => sum + (rs.song?.quality_score || 0), 0) / totalTracks)
+    : 0;
+  
+  const physicalFormats = release.release_formats?.filter((f: any) => 
+    ["cd", "vinyl", "cassette"].includes(f.format_type)
+  ) || [];
+  const digitalFormats = release.release_formats?.filter((f: any) => 
+    ["digital", "streaming"].includes(f.format_type)
+  ) || [];
+  
+  const totalUnitsOrdered = physicalFormats.reduce((sum: number, f: any) => sum + (f.units_ordered || 0), 0);
+  
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex gap-4">
+            {release.artwork_url ? (
+              <img
+                src={release.artwork_url}
+                alt={release.title}
+                className="w-20 h-20 object-cover rounded-md shadow-md"
+              />
+            ) : (
+              <div className="w-20 h-20 bg-gradient-to-br from-muted to-muted/50 rounded-md flex items-center justify-center shadow-inner">
+                <Disc className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="truncate">{release.title}</CardTitle>
+                <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+                  <StatusIcon className="h-3 w-3" />
+                  {statusConfig.label}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{release.artist_name}</p>
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span className="capitalize font-medium">{typeConfig.label}</span>
+                <span>•</span>
+                <span>{totalTracks} track{totalTracks !== 1 ? "s" : ""}</span>
+                {avgQuality > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>Avg Quality: {avgQuality}</span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Created {formatDistanceToNow(new Date(release.created_at), { addSuffix: true })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Manufacturing Progress */}
+        {release.release_status === "manufacturing" && (
+          <ManufacturingProgress
+            createdAt={release.created_at}
+            manufacturingCompleteAt={release.manufacturing_complete_at}
+            status={release.release_status}
+          />
+        )}
+
+        {/* Key Metrics Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-muted/30 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Production Cost</span>
+            </div>
+            <p className="font-semibold">${(release.total_cost || 0).toLocaleString()}</p>
+          </div>
+          <div className="bg-muted/30 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>Revenue</span>
+            </div>
+            <p className="font-semibold text-green-600">${(release.total_revenue || 0).toLocaleString()}</p>
+          </div>
+          {totalUnitsOrdered > 0 && (
+            <div className="bg-muted/30 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                <Package className="h-3.5 w-3.5" />
+                <span>Units Ordered</span>
+              </div>
+              <p className="font-semibold">{totalUnitsOrdered.toLocaleString()}</p>
+            </div>
+          )}
+          {release.total_streams && (
+            <div className="bg-muted/30 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                <Play className="h-3.5 w-3.5" />
+                <span>Streams</span>
+              </div>
+              <p className="font-semibold">{release.total_streams.toLocaleString()}</p>
+            </div>
+          )}
+          {release.units_sold && (
+            <div className="bg-muted/30 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span>Units Sold</span>
+              </div>
+              <p className="font-semibold">{release.units_sold.toLocaleString()}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Formats Section */}
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm flex items-center gap-2">
+            <Disc className="h-4 w-4" />
+            Formats
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {release.release_formats?.length > 0 ? (
+              release.release_formats.map((fmt: any) => (
+                <div 
+                  key={fmt.id} 
+                  className="bg-muted/50 rounded-lg px-3 py-2 text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    {fmt.format_type === "vinyl" && <Disc className="h-4 w-4" />}
+                    {fmt.format_type === "cd" && <Disc className="h-4 w-4" />}
+                    {fmt.format_type === "digital" && <Music className="h-4 w-4" />}
+                    {fmt.format_type === "streaming" && <Radio className="h-4 w-4" />}
+                    {fmt.format_type === "cassette" && <Music className="h-4 w-4" />}
+                    <span className="capitalize font-medium">{fmt.format_type}</span>
+                  </div>
+                  {fmt.units_ordered && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {fmt.units_ordered} units @ ${fmt.unit_cost}/unit
+                    </p>
+                  )}
+                  {fmt.release_date && (
+                    <p className="text-xs text-muted-foreground">
+                      Release: {formatDate(new Date(fmt.release_date), "MMM d, yyyy")}
+                    </p>
+                  )}
+                  {fmt.distribution_status && (
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {fmt.distribution_status}
+                    </Badge>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No formats selected</p>
+            )}
+          </div>
+        </div>
+
+        {/* Tracklist */}
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm flex items-center gap-2">
+            <Music className="h-4 w-4" />
+            Tracklist
+          </h4>
+          <ReleaseTracklistWithAudio 
+            tracks={release.release_songs || []}
+            showAudio={release.release_status === "released"}
+          />
+        </div>
+
+        {/* Scheduled Release Date */}
+        {release.scheduled_release_date && (
+          <div className="flex items-center gap-2 text-sm bg-primary/10 rounded-lg p-3">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span>Scheduled Release:</span>
+            <span className="font-medium">
+              {formatDate(new Date(release.scheduled_release_date), "MMMM d, yyyy")}
+            </span>
+          </div>
+        )}
+
+        {/* Band/Artist Info */}
+        {release.bands && (
+          <div className="flex items-center gap-4 text-sm bg-muted/30 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{release.bands.name}</span>
+            </div>
+            <Badge variant="outline">Fame: {release.bands.fame || 0}</Badge>
+            {release.bands.total_fans > 0 && (
+              <Badge variant="outline">{release.bands.total_fans.toLocaleString()} fans</Badge>
+            )}
+          </div>
+        )}
+
+        {/* Predictions for unreleased */}
+        {(release.release_status === "planned" || release.release_status === "manufacturing") && (
+          <ReleasePredictions
+            artistFame={release.bands?.fame || release.profiles?.fame || 0}
+            artistPopularity={release.bands?.popularity || release.profiles?.popularity || 0}
+            songQuality={avgQuality}
+            bandChemistry={release.bands?.chemistry_level}
+            releaseType={release.release_type}
+            formatTypes={release.release_formats?.map((f: any) => f.format_type) || []}
+            trackCount={totalTracks}
+          />
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-2 border-t">
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={onViewDetails}
+          >
+            View Details
+          </Button>
+          {release.release_status !== "released" && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onEdit}
+            >
+              Edit Release
+            </Button>
+          )}
+          {release.release_status === "released" && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {}}
+            >
+              <BarChart3 className="h-4 w-4 mr-1" />
+              Analytics
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
