@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { createScheduledActivity } from '@/hooks/useActivityBooking';
 import { useQueryClient } from '@tanstack/react-query';
+import { logGameActivity } from '@/hooks/useGameActivityLog';
 
 interface BookRehearsalParams {
   bandId: string;
@@ -118,6 +119,28 @@ export function useRehearsalBooking() {
           setlistId: params.setlistId,
         },
       });
+
+      // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        logGameActivity({
+          userId: user.id,
+          bandId: params.bandId,
+          activityType: 'rehearsal_booked',
+          activityCategory: 'rehearsal',
+          description: `Booked ${params.duration}-hour rehearsal at ${params.roomName}`,
+          amount: -params.totalCost,
+          metadata: {
+            rehearsalId: rehearsalData.id,
+            roomId: params.roomId,
+            songId: params.songId,
+            setlistId: params.setlistId,
+            duration: params.duration,
+            chemistryGain: params.chemistryGain,
+            xpEarned: params.xpEarned
+          }
+        });
+      }
 
       toast({
         title: 'Rehearsal Booked!',

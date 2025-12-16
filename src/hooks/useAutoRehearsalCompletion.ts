@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { logGameActivity } from "./useGameActivityLog";
 
 /**
  * Hook to automatically complete rehearsals that have passed their scheduled end time.
@@ -153,6 +154,23 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
                 .eq('id', rehearsal.band_id);
             }
           }
+
+          // Log activity
+          logGameActivity({
+            userId,
+            bandId: rehearsal.band_id,
+            activityType: 'rehearsal_completed',
+            activityCategory: 'rehearsal',
+            description: `Rehearsal completed (${durationHours.toFixed(1)} hours) - +${xpEarned} XP, +${chemistryGain} chemistry`,
+            amount: xpEarned,
+            metadata: {
+              rehearsalId: rehearsal.id,
+              durationMinutes,
+              xpEarned,
+              chemistryGain,
+              songId: rehearsal.selected_song_id
+            }
+          });
 
           completedCount++;
         } catch (err) {

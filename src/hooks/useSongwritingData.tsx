@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateSongDuration } from "@/utils/setlistDuration";
+import { logGameActivity } from "@/hooks/useGameActivityLog";
 
 export interface SongTheme {
   id: string;
@@ -337,6 +338,16 @@ export const useSongwritingData = (userId?: string | null) => {
         .single();
       
       if (error) throw error;
+      
+      // Log activity
+      logGameActivity({
+        userId,
+        activityType: 'songwriting_session_started',
+        activityCategory: 'songwriting',
+        description: `Started 3-hour songwriting session for project`,
+        metadata: { projectId, sessionId: data.id, lockedUntil }
+      });
+      
       return data;
     },
     onSuccess: () => {
@@ -447,6 +458,16 @@ export const useSongwritingData = (userId?: string | null) => {
         if (updateError) throw updateError;
       }
       
+      // Log activity
+      logGameActivity({
+        userId: userId!,
+        activityType: 'songwriting_session_completed',
+        activityCategory: 'songwriting',
+        description: `Completed songwriting session with +${musicGain} music, +${lyricsGain} lyrics progress`,
+        metadata: { sessionId, musicGain, lyricsGain, xpEarned },
+        amount: xpEarned
+      });
+      
       return { sessionId, musicGain, lyricsGain, xpEarned };
     },
     onSuccess: () => {
@@ -517,6 +538,23 @@ export const useSongwritingData = (userId?: string | null) => {
         .from('songwriting_projects')
         .update({ song_id: song.id, status: 'converted' })
         .eq('id', projectId);
+      
+      // Log activity
+      logGameActivity({
+        userId: userId!,
+        bandId,
+        activityType: 'song_created',
+        activityCategory: 'songwriting',
+        description: `Created new song "${project.title}" (Quality: ${quality.totalQuality})`,
+        metadata: {
+          songId: song.id,
+          projectId,
+          title: project.title,
+          qualityScore: quality.totalQuality,
+          duration: durationDisplay,
+          catalogStatus
+        }
+      });
       
       return song;
     },
