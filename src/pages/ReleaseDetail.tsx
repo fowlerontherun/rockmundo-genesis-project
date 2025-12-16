@@ -55,9 +55,9 @@ export default function ReleaseDetail() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <Button variant="ghost" onClick={() => navigate("/releases")}>
+      <Button variant="ghost" onClick={() => navigate("/release-manager")}>
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Releases
+        Back to Release Manager
       </Button>
 
       <div className="flex items-start justify-between">

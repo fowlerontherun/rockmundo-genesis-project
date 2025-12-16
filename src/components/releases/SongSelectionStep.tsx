@@ -41,8 +41,9 @@ export function SongSelectionStep({
   onBack,
   onNext
 }: SongSelectionStepProps) {
-  const requiredSongs = releaseType === "single" ? 2 : releaseType === "ep" ? 4 : 10;
-  const maxSongs = releaseType === "album" ? 20 : requiredSongs;
+  // Singles allow 1-2 songs, EPs 3-6, Albums 7-20
+  const minSongs = releaseType === "single" ? 1 : releaseType === "ep" ? 3 : 7;
+  const maxSongs = releaseType === "single" ? 2 : releaseType === "ep" ? 6 : 20;
 
   const { data: songs } = useQuery({
     queryKey: ["available-songs-versions", userId, bandId],
@@ -191,9 +192,9 @@ export function SongSelectionStep({
           Select Songs ({selectedSongs.length}/{maxSongs})
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          {releaseType === "single" && "Select 1 A-side and 1 B-side (must be recorded)"}
-          {releaseType === "ep" && "Select exactly 4 recorded songs"}
-          {releaseType === "album" && "Select 10-20 recorded songs"}
+          {releaseType === "single" && "Select 1-2 recorded songs (A-side, optional B-side)"}
+          {releaseType === "ep" && "Select 3-6 recorded songs"}
+          {releaseType === "album" && "Select 7-20 recorded songs"}
         </p>
 
         {!songs || songs.length === 0 ? (
@@ -248,7 +249,7 @@ export function SongSelectionStep({
         </Button>
         <Button
           onClick={onNext}
-          disabled={selectedSongs.length < requiredSongs}
+          disabled={selectedSongs.length < minSongs}
           className="flex-1"
         >
           Next: Select Formats
