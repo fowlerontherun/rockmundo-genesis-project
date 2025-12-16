@@ -176,6 +176,7 @@ const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
+const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -232,6 +233,7 @@ function App() {
                     <Route path="gig-booking" element={<GigBooking />} />
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
+                    <Route path="band-riders" element={<BandRiders />} />
                     <Route path="radio" element={<Radio />} />
                     <Route path="radio-stations" element={<RadioStations />} />
                     <Route path="radio/:stationId" element={<RadioStationDetail />} />
