@@ -10099,11 +10099,68 @@ export type Database = {
         }
         Relationships: []
       }
+      song_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          song_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          song_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          song_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_votes_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_votes_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_votes_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_votes_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       songs: {
         Row: {
           ai_generated_lyrics: boolean | null
           archived: boolean | null
           arrangement_strength: number | null
+          audio_generated_at: string | null
+          audio_generation_status: string | null
+          audio_prompt: string | null
+          audio_url: string | null
           band_id: string | null
           catalog_status: string | null
           chart_position: number | null
@@ -10146,6 +10203,10 @@ export type Database = {
           ai_generated_lyrics?: boolean | null
           archived?: boolean | null
           arrangement_strength?: number | null
+          audio_generated_at?: string | null
+          audio_generation_status?: string | null
+          audio_prompt?: string | null
+          audio_url?: string | null
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
@@ -10188,6 +10249,10 @@ export type Database = {
           ai_generated_lyrics?: boolean | null
           archived?: boolean | null
           arrangement_strength?: number | null
+          audio_generated_at?: string | null
+          audio_generation_status?: string | null
+          audio_prompt?: string | null
+          audio_url?: string | null
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
@@ -12340,6 +12405,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vip_subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          gift_message: string | null
+          gifted_by_admin_id: string | null
+          id: string
+          starts_at: string
+          status: string
+          stripe_subscription_id: string | null
+          subscription_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          gift_message?: string | null
+          gifted_by_admin_id?: string | null
+          id?: string
+          starts_at?: string
+          status?: string
+          stripe_subscription_id?: string | null
+          subscription_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          gift_message?: string | null
+          gifted_by_admin_id?: string | null
+          id?: string
+          starts_at?: string
+          status?: string
+          stripe_subscription_id?: string | null
+          subscription_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

@@ -365,3 +365,31 @@
     box-shadow: 0 0 28px hsl(197 88% 60% / 0.65);
   }
 }
+
+/* VIP Badge Shimmer Animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* VIP Badge Glow Effect */
+@keyframes vip-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px hsl(43 96% 50% / 0.5),
+                0 0 10px hsl(43 96% 50% / 0.3),
+                0 0 15px hsl(43 96% 50% / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 10px hsl(43 96% 50% / 0.8),
+                0 0 20px hsl(43 96% 50% / 0.5),
+                0 0 30px hsl(43 96% 50% / 0.3);
+  }
+}
+
+.vip-badge-glow {
+  animation: vip-glow 2s ease-in-out infinite;
+}
