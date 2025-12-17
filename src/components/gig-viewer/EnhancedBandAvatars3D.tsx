@@ -57,13 +57,14 @@ export const EnhancedBandAvatars3D = ({
   const intensity = crowdMood / 100;
 
   // Stage positions for band members (x, y, z)
-  // Y=0 places them at floor level, Z negative is toward stage
+  // IMPORTANT: StageScene's stage surface is around y≈1, so band needs to stand on it.
+  const stageY = 1.05;
   const positions: Record<string, [number, number, number]> = {
-    vocalist: [0, 0, -4],           // Center front
-    guitarist: [-2.5, 0, -5.5],     // Stage left
-    bassist: [2.5, 0, -5.5],        // Stage right
-    drummer: [0, 0.3, -7.5],        // Center back (elevated)
-    keyboardist: [-4, 0, -6],       // Far left
+    vocalist: [0, stageY, -4],          // Center front
+    guitarist: [-2.5, stageY, -5.5],    // Stage left
+    bassist: [2.5, stageY, -5.5],       // Stage right
+    drummer: [0, stageY + 0.3, -7.5],   // Center back (slightly elevated)
+    keyboardist: [-4, stageY, -6],      // Far left
   };
 
   return (
@@ -123,12 +124,12 @@ export const EnhancedBandAvatars3D = ({
       {/* Stage floor markers for band positions */}
       {Object.entries(positions).map(([key, pos]) => {
         if (key === 'keyboardist' && !bandMemberConfigs.keyboardist) return null;
-        return (
-          <mesh key={key} position={[pos[0], 0.01, pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.3, 0.35, 32]} />
-            <meshBasicMaterial color="#3a3a5a" transparent opacity={0.3} />
-          </mesh>
-        );
+          return (
+            <mesh key={key} position={[pos[0], pos[1] + 0.01, pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.3, 0.35, 32]} />
+              <meshBasicMaterial color="#3a3a5a" transparent opacity={0.3} />
+            </mesh>
+          );
       })}
     </group>
   );
