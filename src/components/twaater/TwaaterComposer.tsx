@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTwaats } from "@/hooks/useTwaats";
-import { Send, Music, Calendar, MapPin, X, BarChart3, Clock } from "lucide-react";
+import { Send, Music, Calendar, MapPin, X, Disc, Clock, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TwaatMediaUpload } from "./TwaatMediaUpload";
 import { QuotedTwaat } from "./QuotedTwaat";
+import { LinkSongDialog } from "./LinkSongDialog";
+import { LinkReleaseDialog } from "./LinkReleaseDialog";
+import { LinkGigDialog } from "./LinkGigDialog";
+import { LinkTourDialog } from "./LinkTourDialog";
 import {
   Dialog,
   DialogContent,
@@ -24,16 +27,20 @@ interface TwaaterComposerProps {
 export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [body, setBody] = useState("");
   const [linkedType, setLinkedType] = useState<"single" | "album" | "gig" | "tour" | "busking" | null>(null);
+  const [linkedId, setLinkedId] = useState<string | null>(null);
+  const [linkedTitle, setLinkedTitle] = useState<string | null>(null);
   const [mediaUrl, setMediaUrl] = useState<string>("");
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [quotedTwaat, setQuotedTwaat] = useState<any>(null);
-  const [showPollDialog, setShowPollDialog] = useState(false);
-  const [pollQuestion, setPollQuestion] = useState("");
-  const [pollOptions, setPollOptions] = useState(["", ""]);
-  const [pollDuration, setPollDuration] = useState(24);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
   const { createTwaat, isPosting } = useTwaats();
+
+  // Link dialogs
+  const [showSongDialog, setShowSongDialog] = useState(false);
+  const [showReleaseDialog, setShowReleaseDialog] = useState(false);
+  const [showGigDialog, setShowGigDialog] = useState(false);
+  const [showTourDialog, setShowTourDialog] = useState(false);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('quoteTwaat');
@@ -46,11 +53,11 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const handlePost = async () => {
     if (!body.trim()) return;
 
-    // Rate limit check happens in backend
     createTwaat({
       account_id: accountId,
       body: body.trim(),
       linked_type: linkedType || undefined,
+      linked_id: linkedId || undefined,
       visibility: "public",
       media_url: mediaUrl || undefined,
       media_type: mediaType || undefined,
@@ -60,10 +67,18 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
 
     setBody("");
     setLinkedType(null);
+    setLinkedId(null);
+    setLinkedTitle(null);
     setMediaUrl("");
     setMediaType(null);
     setQuotedTwaat(null);
     setScheduledFor("");
+  };
+
+  const handleClearLink = () => {
+    setLinkedType(null);
+    setLinkedId(null);
+    setLinkedTitle(null);
   };
 
   const charCount = body.length;
@@ -111,7 +126,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLinkedType(linkedType === "single" ? null : "single")}
+            onClick={() => setShowSongDialog(true)}
             className={`h-8 ${linkedType === "single" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
           >
             <Music className="h-4 w-4" />
@@ -120,16 +135,16 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLinkedType(linkedType === "album" ? null : "album")}
+            onClick={() => setShowReleaseDialog(true)}
             className={`h-8 ${linkedType === "album" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
           >
-            <Music className="h-4 w-4" />
+            <Disc className="h-4 w-4" />
             <span className="hidden sm:inline ml-1">Album</span>
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLinkedType(linkedType === "gig" ? null : "gig")}
+            onClick={() => setShowGigDialog(true)}
             className={`h-8 ${linkedType === "gig" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
           >
             <Calendar className="h-4 w-4" />
@@ -138,10 +153,10 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLinkedType(linkedType === "tour" ? null : "tour")}
+            onClick={() => setShowTourDialog(true)}
             className={`h-8 ${linkedType === "tour" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
           >
-            <MapPin className="h-4 w-4" />
+            <Route className="h-4 w-4" />
             <span className="hidden sm:inline ml-1">Tour</span>
           </Button>
           
@@ -189,15 +204,59 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         </div>
       </div>
 
-      {linkedType && (
-        <Badge variant="secondary" className="gap-1 text-xs" style={{ backgroundColor: 'hsl(var(--twaater-purple) / 0.2)', color: 'hsl(var(--twaater-purple))' }}>
+      {linkedType && linkedTitle && (
+        <Badge 
+          variant="secondary" 
+          className="gap-1 text-xs cursor-pointer" 
+          style={{ backgroundColor: 'hsl(var(--twaater-purple) / 0.2)', color: 'hsl(var(--twaater-purple))' }}
+          onClick={handleClearLink}
+        >
           {linkedType === "single" && <Music className="h-3 w-3" />}
-          {linkedType === "album" && <Music className="h-3 w-3" />}
+          {linkedType === "album" && <Disc className="h-3 w-3" />}
           {linkedType === "gig" && <Calendar className="h-3 w-3" />}
-          {linkedType === "tour" && <MapPin className="h-3 w-3" />}
-          Linked: {linkedType} (+2 XP)
+          {linkedType === "tour" && <Route className="h-3 w-3" />}
+          {linkedTitle}
+          <X className="h-3 w-3 ml-1" />
         </Badge>
       )}
+
+      {/* Link Dialogs */}
+      <LinkSongDialog
+        open={showSongDialog}
+        onOpenChange={setShowSongDialog}
+        onSelect={(id, title) => {
+          setLinkedType("single");
+          setLinkedId(id);
+          setLinkedTitle(title);
+        }}
+      />
+      <LinkReleaseDialog
+        open={showReleaseDialog}
+        onOpenChange={setShowReleaseDialog}
+        onSelect={(id, title) => {
+          setLinkedType("album");
+          setLinkedId(id);
+          setLinkedTitle(title);
+        }}
+      />
+      <LinkGigDialog
+        open={showGigDialog}
+        onOpenChange={setShowGigDialog}
+        onSelect={(id, title) => {
+          setLinkedType("gig");
+          setLinkedId(id);
+          setLinkedTitle(title);
+        }}
+      />
+      <LinkTourDialog
+        open={showTourDialog}
+        onOpenChange={setShowTourDialog}
+        onSelect={(id, title) => {
+          setLinkedType("tour");
+          setLinkedId(id);
+          setLinkedTitle(title);
+        }}
+      />
     </div>
   );
 };
