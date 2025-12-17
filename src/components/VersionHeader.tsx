@@ -4,7 +4,7 @@ import { VipBadge } from "@/components/VipBadge";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
-  const version = "1.0.112";
+  const version = "1.0.113";
   
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card/50">
