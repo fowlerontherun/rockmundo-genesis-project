@@ -315,8 +315,8 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           {/* Camera with dynamic movement */}
           <CameraRig crowdMood={crowdMood} stageTemplateId={stageTemplateId} />
           
-          {/* Base ambient light */}
-          <ambientLight intensity={0.15} />
+          {/* Base ambient light - increased for better visibility */}
+          <ambientLight intensity={0.25} />
           
           {/* Fog for atmosphere */}
           <fog attach="fog" args={["#000000", 5, 25]} />

@@ -3,9 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, RotateCcw, User, Scissors, Shirt, Sparkles, Crown, CheckCircle, Lock } from "lucide-react";
+import { Save, RotateCcw, User, Scissors, Shirt, Sparkles, Crown, CheckCircle } from "lucide-react";
 import { usePlayerAvatar, AvatarConfig, defaultConfig } from "@/hooks/usePlayerAvatar";
-import { useVipStatus } from "@/hooks/useVipStatus";
 import { AvatarPreview3D } from "@/components/avatar-designer/AvatarPreview3D";
 import { HairSelector } from "@/components/avatar-designer/HairSelector";
 import { BodySelector } from "@/components/avatar-designer/BodySelector";
@@ -15,11 +14,8 @@ import { AccessorySelector } from "@/components/avatar-designer/AccessorySelecto
 import { ReadyPlayerMeCreator } from "@/components/avatar-designer/ReadyPlayerMeCreator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 const AvatarDesigner = () => {
-  const navigate = useNavigate();
-  const { data: vipStatus } = useVipStatus();
   const {
     avatarConfig,
     isLoading,
@@ -35,7 +31,6 @@ const AvatarDesigner = () => {
 
   const [localConfig, setLocalConfig] = useState<Partial<AvatarConfig>>(defaultConfig);
   const [showRpmCreator, setShowRpmCreator] = useState(false);
-  const isVip = vipStatus?.isVip || false;
 
   useEffect(() => {
     if (avatarConfig) {
@@ -94,7 +89,7 @@ const AvatarDesigner = () => {
       use_rpm_avatar: true,
     }));
     setShowRpmCreator(false);
-    toast.success('Premium avatar created! Click Save to apply.');
+    toast.success('Avatar created! Click Save to apply.');
   };
 
   const handleToggleRpmAvatar = (useRpm: boolean) => {
@@ -169,11 +164,11 @@ const AvatarDesigner = () => {
 
         {/* Customization Panel */}
         <div>
-          <Tabs defaultValue="body" className="w-full">
+          <Tabs defaultValue="premium" className="w-full">
             <TabsList className="w-full grid grid-cols-6 mb-4">
               <TabsTrigger value="premium" className="text-xs sm:text-sm">
                 <Crown className="h-4 w-4 sm:mr-1 text-yellow-500" />
-                <span className="hidden sm:inline">Premium</span>
+                <span className="hidden sm:inline">3D Avatar</span>
               </TabsTrigger>
               <TabsTrigger value="body" className="text-xs sm:text-sm">
                 <User className="h-4 w-4 sm:mr-1" />
@@ -200,116 +195,87 @@ const AvatarDesigner = () => {
             <ScrollArea className="h-[500px] pr-4">
               <TabsContent value="premium" className="mt-0">
                 <div className="space-y-4">
-                  {!isVip ? (
-                    <div className="p-6 border border-yellow-500/30 rounded-lg bg-yellow-500/5 text-center">
-                      <Lock className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-                      <h3 className="font-semibold text-lg mb-2">VIP Feature</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Ready Player Me premium avatars are exclusive to VIP members. Upgrade to unlock high-quality 3D avatars with hundreds of customization options.
-                      </p>
+                  <div className="p-4 border border-primary/30 rounded-lg bg-primary/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Crown className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">Ready Player Me Avatar</h3>
+                      <Badge variant="secondary" className="bg-primary/20 text-primary">Recommended</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Create a high-quality 3D avatar with hundreds of customization options. Your avatar will appear on stage during gigs!
+                    </p>
+                    
+                    {localConfig.rpm_avatar_url ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-green-500">
+                          <CheckCircle className="h-4 w-4" />
+                          <span className="text-sm font-medium">3D avatar configured</span>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            variant={localConfig.use_rpm_avatar ? "default" : "outline"}
+                            onClick={() => handleToggleRpmAvatar(true)}
+                            className="flex-1"
+                          >
+                            Use 3D Avatar
+                          </Button>
+                          <Button
+                            variant={!localConfig.use_rpm_avatar ? "default" : "outline"}
+                            onClick={() => handleToggleRpmAvatar(false)}
+                            className="flex-1"
+                          >
+                            Use Basic Avatar
+                          </Button>
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowRpmCreator(true)}
+                          className="w-full"
+                        >
+                          Create New Avatar
+                        </Button>
+                      </div>
+                    ) : (
                       <Button
-                        onClick={() => navigate('/vip')}
-                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                        onClick={() => setShowRpmCreator(true)}
+                        className="w-full"
                       >
                         <Crown className="h-4 w-4 mr-2" />
-                        Become a VIP
+                        Create Your 3D Avatar
                       </Button>
-                      
-                      <div className="mt-6 p-3 border border-border rounded-lg bg-muted/30 text-left">
-                        <h4 className="font-medium mb-2">Premium Avatar Features</h4>
-                        <ul className="text-sm text-muted-foreground space-y-1">
-                          <li>• Professional quality 3D model</li>
-                          <li>• Hundreds of clothing & accessory options</li>
-                          <li>• Realistic facial expressions</li>
-                          <li>• Smooth animations on stage</li>
-                          <li>• Regular new content updates</li>
-                        </ul>
+                    )}
+                  </div>
+                  
+                  {showRpmCreator && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Avatar Creator</h4>
+                        <Button variant="ghost" size="sm" onClick={() => setShowRpmCreator(false)}>
+                          Cancel
+                        </Button>
                       </div>
+                      <ReadyPlayerMeCreator
+                        onAvatarCreated={handleRpmAvatarCreated}
+                        onClose={() => setShowRpmCreator(false)}
+                      />
                     </div>
-                  ) : (
-                    <>
-                      <div className="p-4 border border-yellow-500/30 rounded-lg bg-yellow-500/5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Crown className="h-5 w-5 text-yellow-500" />
-                          <h3 className="font-semibold">Ready Player Me Avatar</h3>
-                          <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500">VIP</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Create a high-quality 3D avatar with hundreds of customization options using Ready Player Me's professional avatar creator.
-                        </p>
-                        
-                        {localConfig.rpm_avatar_url ? (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-green-500">
-                              <CheckCircle className="h-4 w-4" />
-                              <span className="text-sm font-medium">Premium avatar configured</span>
-                            </div>
-                            
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <Button
-                                variant={localConfig.use_rpm_avatar ? "default" : "outline"}
-                                onClick={() => handleToggleRpmAvatar(true)}
-                                className="flex-1"
-                              >
-                                Use Premium Avatar
-                              </Button>
-                              <Button
-                                variant={!localConfig.use_rpm_avatar ? "default" : "outline"}
-                                onClick={() => handleToggleRpmAvatar(false)}
-                                className="flex-1"
-                              >
-                                Use Basic Avatar
-                              </Button>
-                            </div>
-                            
-                            <Button
-                              variant="outline"
-                              onClick={() => setShowRpmCreator(true)}
-                              className="w-full"
-                            >
-                              Create New Premium Avatar
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            onClick={() => setShowRpmCreator(true)}
-                            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                          >
-                            <Crown className="h-4 w-4 mr-2" />
-                            Create Premium Avatar
-                          </Button>
-                        )}
-                      </div>
-                      
-                      {showRpmCreator && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium">Avatar Creator</h4>
-                            <Button variant="ghost" size="sm" onClick={() => setShowRpmCreator(false)}>
-                              Cancel
-                            </Button>
-                          </div>
-                          <ReadyPlayerMeCreator
-                            onAvatarCreated={handleRpmAvatarCreated}
-                            onClose={() => setShowRpmCreator(false)}
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="p-3 border border-border rounded-lg bg-muted/30">
-                        <h4 className="font-medium mb-2">Premium Avatar Features</h4>
-                        <ul className="text-sm text-muted-foreground space-y-1">
-                          <li>• Professional quality 3D model</li>
-                          <li>• Hundreds of clothing & accessory options</li>
-                          <li>• Realistic facial expressions</li>
-                          <li>• Smooth animations on stage</li>
-                          <li>• Regular new content updates</li>
-                        </ul>
-                      </div>
-                    </>
                   )}
+                  
+                  <div className="p-3 border border-border rounded-lg bg-muted/30">
+                    <h4 className="font-medium mb-2">3D Avatar Features</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Professional quality 3D model</li>
+                      <li>• Hundreds of clothing & accessory options</li>
+                      <li>• Appears on stage during your gigs</li>
+                      <li>• Smooth animations</li>
+                      <li>• Regular new content updates</li>
+                    </ul>
+                  </div>
                 </div>
               </TabsContent>
+              
               <TabsContent value="body" className="mt-0">
                 <BodySelector
                   bodyType={localConfig.body_type || 'average'}
@@ -368,43 +334,43 @@ const AvatarDesigner = () => {
                   eyebrowStyle={localConfig.eyebrow_style || 'normal'}
                   eyebrowColor={localConfig.eyebrow_color || '#1a1a1a'}
                   eyebrowThickness={localConfig.eyebrow_thickness ?? 1.0}
-                  onEyebrowStyleChange={(eyebrow_style) => setLocalConfig(prev => ({ ...prev, eyebrow_style: eyebrow_style as any }))}
-                  onEyebrowColorChange={(eyebrow_color) => setLocalConfig(prev => ({ ...prev, eyebrow_color }))}
-                  onEyebrowThicknessChange={(eyebrow_thickness) => setLocalConfig(prev => ({ ...prev, eyebrow_thickness }))}
+                  onEyebrowStyleChange={(style) => setLocalConfig(prev => ({ ...prev, eyebrow_style: style as any }))}
+                  onEyebrowColorChange={(color) => setLocalConfig(prev => ({ ...prev, eyebrow_color: color }))}
+                  onEyebrowThicknessChange={(thickness) => setLocalConfig(prev => ({ ...prev, eyebrow_thickness: thickness }))}
                   // Nose
                   selectedNoseStyle={localConfig.nose_style || 'default'}
                   noseWidth={localConfig.nose_width ?? 1.0}
                   noseLength={localConfig.nose_length ?? 1.0}
                   noseBridge={localConfig.nose_bridge ?? 0.5}
                   onNoseStyleChange={(style) => setLocalConfig(prev => ({ ...prev, nose_style: style }))}
-                  onNoseWidthChange={(nose_width) => setLocalConfig(prev => ({ ...prev, nose_width }))}
-                  onNoseLengthChange={(nose_length) => setLocalConfig(prev => ({ ...prev, nose_length }))}
-                  onNoseBridgeChange={(nose_bridge) => setLocalConfig(prev => ({ ...prev, nose_bridge }))}
+                  onNoseWidthChange={(width) => setLocalConfig(prev => ({ ...prev, nose_width: width }))}
+                  onNoseLengthChange={(length) => setLocalConfig(prev => ({ ...prev, nose_length: length }))}
+                  onNoseBridgeChange={(bridge) => setLocalConfig(prev => ({ ...prev, nose_bridge: bridge }))}
                   // Mouth
                   selectedMouthStyle={localConfig.mouth_style || 'default'}
                   lipFullness={localConfig.lip_fullness ?? 1.0}
                   lipWidth={localConfig.lip_width ?? 1.0}
-                  lipColor={localConfig.lip_color || '#c4777f'}
+                  lipColor={localConfig.lip_color || '#c8746a'}
                   onMouthStyleChange={(style) => setLocalConfig(prev => ({ ...prev, mouth_style: style }))}
-                  onLipFullnessChange={(lip_fullness) => setLocalConfig(prev => ({ ...prev, lip_fullness }))}
-                  onLipWidthChange={(lip_width) => setLocalConfig(prev => ({ ...prev, lip_width }))}
-                  onLipColorChange={(lip_color) => setLocalConfig(prev => ({ ...prev, lip_color }))}
-                  // Face Structure
+                  onLipFullnessChange={(fullness) => setLocalConfig(prev => ({ ...prev, lip_fullness: fullness }))}
+                  onLipWidthChange={(width) => setLocalConfig(prev => ({ ...prev, lip_width: width }))}
+                  onLipColorChange={(color) => setLocalConfig(prev => ({ ...prev, lip_color: color }))}
+                  // Face structure
                   faceWidth={localConfig.face_width ?? 1.0}
                   faceLength={localConfig.face_length ?? 1.0}
-                  jawShape={localConfig.jaw_shape || 'round'}
+                  jawShape={localConfig.jaw_shape || 'default'}
                   cheekbone={localConfig.cheekbone ?? 0.5}
                   chinProminence={localConfig.chin_prominence ?? 0.5}
-                  onFaceWidthChange={(face_width) => setLocalConfig(prev => ({ ...prev, face_width }))}
-                  onFaceLengthChange={(face_length) => setLocalConfig(prev => ({ ...prev, face_length }))}
-                  onJawShapeChange={(jaw_shape) => setLocalConfig(prev => ({ ...prev, jaw_shape: jaw_shape as any }))}
+                  onFaceWidthChange={(width) => setLocalConfig(prev => ({ ...prev, face_width: width }))}
+                  onFaceLengthChange={(length) => setLocalConfig(prev => ({ ...prev, face_length: length }))}
+                  onJawShapeChange={(shape) => setLocalConfig(prev => ({ ...prev, jaw_shape: shape as any }))}
                   onCheekboneChange={(cheekbone) => setLocalConfig(prev => ({ ...prev, cheekbone }))}
-                  onChinProminenceChange={(chin_prominence) => setLocalConfig(prev => ({ ...prev, chin_prominence }))}
+                  onChinProminenceChange={(chin) => setLocalConfig(prev => ({ ...prev, chin_prominence: chin }))}
                   // Ears
                   earSize={localConfig.ear_size ?? 1.0}
                   earAngle={localConfig.ear_angle ?? 0}
-                  onEarSizeChange={(ear_size) => setLocalConfig(prev => ({ ...prev, ear_size }))}
-                  onEarAngleChange={(ear_angle) => setLocalConfig(prev => ({ ...prev, ear_angle }))}
+                  onEarSizeChange={(size) => setLocalConfig(prev => ({ ...prev, ear_size: size }))}
+                  onEarAngleChange={(angle) => setLocalConfig(prev => ({ ...prev, ear_angle: angle }))}
                   // Extras
                   selectedBeardStyle={localConfig.beard_style || null}
                   selectedTattooStyle={localConfig.tattoo_style || null}
@@ -412,6 +378,7 @@ const AvatarDesigner = () => {
                   onBeardStyleChange={(style) => setLocalConfig(prev => ({ ...prev, beard_style: style }))}
                   onTattooStyleChange={(style) => setLocalConfig(prev => ({ ...prev, tattoo_style: style }))}
                   onScarStyleChange={(style) => setLocalConfig(prev => ({ ...prev, scar_style: style }))}
+                  // Purchase
                   isItemOwned={isItemOwned}
                   onPurchase={(id, price) => handlePurchase(id, 'face_option', price)}
                 />
@@ -419,15 +386,23 @@ const AvatarDesigner = () => {
 
               <TabsContent value="clothing" className="mt-0">
                 <ClothingSelector
-                  clothingItems={(clothingItems || []) as any}
+                  clothingItems={clothingItems || []}
                   selectedShirtId={localConfig.shirt_id || null}
                   selectedPantsId={localConfig.pants_id || null}
-                  selectedJacketId={localConfig.jacket_id || null}
                   selectedShoesId={localConfig.shoes_id || null}
+                  selectedJacketId={localConfig.jacket_id || null}
+                  shirtColor={localConfig.shirt_color || '#2d0a0a'}
+                  pantsColor={localConfig.pants_color || '#1a1a1a'}
+                  shoesColor={localConfig.shoes_color || '#1a1a1a'}
+                  jacketColor={localConfig.jacket_color || '#1a1a1a'}
                   onShirtSelect={(id) => setLocalConfig(prev => ({ ...prev, shirt_id: id }))}
                   onPantsSelect={(id) => setLocalConfig(prev => ({ ...prev, pants_id: id }))}
-                  onJacketSelect={(id) => setLocalConfig(prev => ({ ...prev, jacket_id: id }))}
                   onShoesSelect={(id) => setLocalConfig(prev => ({ ...prev, shoes_id: id }))}
+                  onJacketSelect={(id) => setLocalConfig(prev => ({ ...prev, jacket_id: id }))}
+                  onShirtColorChange={(color) => setLocalConfig(prev => ({ ...prev, shirt_color: color }))}
+                  onPantsColorChange={(color) => setLocalConfig(prev => ({ ...prev, pants_color: color }))}
+                  onShoesColorChange={(color) => setLocalConfig(prev => ({ ...prev, shoes_color: color }))}
+                  onJacketColorChange={(color) => setLocalConfig(prev => ({ ...prev, jacket_color: color }))}
                   isItemOwned={isItemOwned}
                   onPurchase={(id, price) => handlePurchase(id, 'clothing', price)}
                 />
@@ -435,7 +410,7 @@ const AvatarDesigner = () => {
 
               <TabsContent value="accessories" className="mt-0">
                 <AccessorySelector
-                  accessories={accessories}
+                  accessories={accessories as any}
                   selectedAccessory1={localConfig.accessory_1_id || null}
                   selectedAccessory2={localConfig.accessory_2_id || null}
                   onAccessory1Select={(id) => setLocalConfig(prev => ({ ...prev, accessory_1_id: id }))}

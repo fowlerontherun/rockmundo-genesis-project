@@ -22,6 +22,7 @@ interface CrowdPerson {
   hairType: number;
   gender: number;
   accessory: number;
+  rotationY: number; // Rotation to face stage
 }
 
 // Seeded random number generator for deterministic positions
@@ -85,6 +86,7 @@ export const OptimizedCrowdLayer = ({
     const count = Math.floor(maxCrowdCount * densityMultiplier);
     const crowd: CrowdPerson[] = [];
 
+    // Stage is at z < 0, crowd is at z > 0
     const zones = [
       { x: [-8, 8], z: [2, 6], density: 1.0 },
       { x: [-10, 10], z: [6, 10], density: 0.8 },
@@ -102,6 +104,10 @@ export const OptimizedCrowdLayer = ({
         const z = zone.z[0] + seededRandom(currentId * 2.71) * (zone.z[1] - zone.z[0]);
         const baseY = 0;
         
+        // Calculate rotation to face the stage (stage is at z = -5 approximately)
+        const stageZ = -5;
+        const rotationY = Math.atan2(x, z - stageZ);
+        
         crowd.push({
           id: currentId,
           position: [x, baseY, z],
@@ -113,6 +119,7 @@ export const OptimizedCrowdLayer = ({
           hairType: Math.floor(seededRandom(currentId * 8.91) * 5),
           gender: seededRandom(currentId * 6.78) > 0.5 ? 1 : 0,
           accessory: Math.floor(seededRandom(currentId * 9.12) * 4),
+          rotationY,
         });
 
         currentId++;
@@ -152,27 +159,27 @@ export const OptimizedCrowdLayer = ({
       switch (animType) {
         case 0: // Idle sway
           group.position.y = person.baseY + Math.sin(time * 0.5 + phaseOffset) * intensity.sway * 0.5;
-          group.rotation.z = Math.sin(time * 0.3 + phaseOffset) * 0.05;
+          group.rotation.y = person.rotationY + Math.sin(time * 0.3 + phaseOffset) * 0.1;
           break;
 
         case 1: // Bouncing
           group.position.y = person.baseY + Math.abs(Math.sin(time * 2 + phaseOffset)) * intensity.bounce;
-          group.rotation.z = 0;
+          group.rotation.y = person.rotationY;
           break;
 
         case 2: // Side sway
           group.position.y = person.baseY + Math.sin(time + phaseOffset) * intensity.sway * 0.3;
-          group.rotation.z = Math.sin(time * 0.8 + phaseOffset) * 0.1;
+          group.rotation.y = person.rotationY + Math.sin(time * 0.8 + phaseOffset) * 0.15;
           break;
 
         case 3: // Jumping (only when mood is high)
           group.position.y = person.baseY + Math.max(0, Math.sin(time * 3 + phaseOffset)) * intensity.jump;
-          group.rotation.x = Math.sin(time * 3 + phaseOffset) * 0.1;
+          group.rotation.y = person.rotationY;
           break;
 
         default: // Head bob
           group.position.y = person.baseY + Math.sin(time * 1.5 + phaseOffset) * intensity.bounce * 0.5;
-          group.rotation.x = Math.sin(time * 2 + phaseOffset) * 0.15;
+          group.rotation.y = person.rotationY + Math.sin(time * 2 + phaseOffset) * 0.08;
           break;
       }
 
@@ -287,6 +294,7 @@ export const OptimizedCrowdLayer = ({
               if (group) groupRefs.current.set(person.id, group);
             }}
             position={[person.position[0], person.position[1], person.position[2]]}
+            rotation={[0, person.rotationY, 0]}
             scale={person.scale}
           >
             {/* Body with better proportions */}
