@@ -73,7 +73,7 @@ serve(async (req) => {
 
     addLog(`Starting MiniMax Music-1.5 generation for song ${songId} by admin ${user.id}`)
 
-    // Get comprehensive song details with all metadata (matching player function)
+    // Get comprehensive song details with all metadata
     addLog('Fetching comprehensive song details from database...')
     
     // First get the song
@@ -120,16 +120,19 @@ serve(async (req) => {
       project = projectData
     }
 
-    if (songError || !song) {
-      addLog(`ERROR: Song fetch failed - ${songError?.message || 'Song not found'}`)
-      console.error('[admin-generate-song-audio] Song fetch error:', songError)
-      return new Response(
-        JSON.stringify({ error: 'Song not found', logs }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      )
-    }
-
     addLog(`Found song: "${song.title}" (Genre: ${song.genre || 'not set'}, Quality: ${song.quality_score || 'not set'})`)
+
+    // Get creator's gender for vocal style
+    let creatorGender: string | null = null
+    if (song.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('gender')
+        .eq('user_id', song.user_id)
+        .single()
+      creatorGender = profile?.gender || null
+      addLog(`Creator gender: ${creatorGender || 'not set'}`)
+    }
 
     // Update status to generating
     addLog('Setting status to "generating"...')
@@ -141,7 +144,7 @@ serve(async (req) => {
       })
       .eq('id', songId)
 
-    // Extract creative brief from project (project is already fetched separately above)
+    // Extract creative brief from project
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
     
     // Build comprehensive prompt for MiniMax Music-1.5
@@ -159,7 +162,6 @@ serve(async (req) => {
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
     const moodPalette = creativeBrief?.moodPalette || creativeBrief?.mood_palette || []
-    const targetAudience = creativeBrief?.targetAudience || creativeBrief?.target_audience || null
 
     addLog(`Song metadata extracted:`)
     addLog(`  - Title: ${songTitle}`)
@@ -172,7 +174,7 @@ serve(async (req) => {
     addLog(`  - Quality Score: ${quality}`)
     addLog(`  - Duration: ${durationSeconds}s`)
 
-    // Build the style prompt for MiniMax (matching player function)
+    // Build the style prompt for MiniMax
     let styleParts: string[] = []
 
     // Use custom prompt if provided, otherwise build from metadata
@@ -182,6 +184,13 @@ serve(async (req) => {
     } else {
       // Primary genre and style
       styleParts.push(`${primaryGenre}`)
+
+      // Add gender-based vocal style first
+      const genderVocalStyle = getGenderVocalStyle(creatorGender)
+      if (genderVocalStyle) {
+        styleParts.push(genderVocalStyle)
+        addLog(`Gender vocal style: ${genderVocalStyle}`)
+      }
 
       // Add chord progression context
       if (chordProgression) {
@@ -195,32 +204,24 @@ serve(async (req) => {
       if (themeMood) {
         styleParts.push(`${themeMood} mood`)
       }
-      if (themeDescription) {
-        styleParts.push(themeDescription)
-      }
 
-      // Add mood palette
+      // Add mood palette (limit to first 2)
       if (Array.isArray(moodPalette) && moodPalette.length > 0) {
-        styleParts.push(moodPalette.join(', '))
-      }
-
-      // Add inspiration anchor
-      if (inspirationAnchor) {
-        styleParts.push(`inspired by ${inspirationAnchor}`)
+        styleParts.push(moodPalette.slice(0, 2).join(', '))
       }
 
       // Add quality descriptors
       if (quality >= 80) {
-        styleParts.push('professional studio quality, polished production')
+        styleParts.push('polished production')
         addLog('Quality tier: Professional (80+)')
       } else if (quality >= 60) {
-        styleParts.push('good quality, clean mix')
+        styleParts.push('clean mix')
         addLog('Quality tier: Good (60-79)')
       } else if (quality >= 40) {
         styleParts.push('demo quality')
         addLog('Quality tier: Decent (40-59)')
       } else {
-        styleParts.push('lo-fi, raw')
+        styleParts.push('lo-fi')
         addLog('Quality tier: Lo-fi (<40)')
       }
 
@@ -229,20 +230,11 @@ serve(async (req) => {
       const lowEnergyGenres = ['ambient', 'classical', 'jazz', 'folk', 'acoustic', 'ballad']
       
       if (highEnergyGenres.some(g => primaryGenre.toLowerCase().includes(g))) {
-        styleParts.push('high energy, driving beat')
+        styleParts.push('high energy')
         addLog('Energy level: High')
       } else if (lowEnergyGenres.some(g => primaryGenre.toLowerCase().includes(g))) {
-        styleParts.push('mellow, relaxed tempo')
+        styleParts.push('mellow')
         addLog('Energy level: Low')
-      } else {
-        addLog('Energy level: Medium')
-      }
-
-      // Add vocal style based on genre
-      const vocalStyle = getVocalStyleForGenre(primaryGenre)
-      if (vocalStyle) {
-        styleParts.push(vocalStyle)
-        addLog(`Vocal style: ${vocalStyle}`)
       }
     }
 
@@ -257,10 +249,10 @@ serve(async (req) => {
     }
     addLog(`Style prompt (${stylePrompt.length} chars): "${stylePrompt}"`)
 
-    // Format lyrics with section markers for MiniMax
-    addLog('Formatting lyrics for MiniMax Music-1.5...')
+    // Format lyrics with section markers for MiniMax - ONLY essential sections
+    addLog('Formatting lyrics for MiniMax Music-1.5 (essential sections only)...')
     const formattedLyrics = formatLyricsForMiniMax(rawLyrics, songTitle, primaryGenre)
-    addLog(`Formatted lyrics preview: "${formattedLyrics.substring(0, 150)}..."`)
+    addLog(`Formatted lyrics (${formattedLyrics.length} chars): "${formattedLyrics.substring(0, 100)}..."`)
 
     // Combine for full prompt reference
     const fullPrompt = `Style: ${stylePrompt}\n\nLyrics:\n${formattedLyrics}`
@@ -376,137 +368,115 @@ serve(async (req) => {
   }
 })
 
-// Get vocal style based on genre
-function getVocalStyleForGenre(genre: string): string {
-  const genreLower = genre.toLowerCase()
+// Get vocal style based on player gender
+function getGenderVocalStyle(gender: string | null): string {
+  if (!gender) return 'clear vocals'
   
-  if (genreLower.includes('rock') || genreLower.includes('metal')) {
-    return 'powerful vocals, raw energy'
-  } else if (genreLower.includes('pop')) {
-    return 'catchy vocals, clear and bright'
-  } else if (genreLower.includes('hip-hop') || genreLower.includes('rap')) {
-    return 'rhythmic vocals, flow and delivery'
-  } else if (genreLower.includes('r&b') || genreLower.includes('soul')) {
-    return 'soulful vocals, smooth and emotive'
-  } else if (genreLower.includes('country')) {
-    return 'country vocals, storytelling tone'
-  } else if (genreLower.includes('jazz')) {
-    return 'jazz vocals, smooth and improvisational'
-  } else if (genreLower.includes('folk') || genreLower.includes('acoustic')) {
-    return 'folk vocals, warm and intimate'
-  } else if (genreLower.includes('electronic') || genreLower.includes('edm')) {
-    return 'processed vocals, synth-enhanced'
-  } else if (genreLower.includes('punk')) {
-    return 'punk vocals, raw and energetic'
-  } else if (genreLower.includes('indie')) {
-    return 'indie vocals, unique and expressive'
-  } else if (genreLower.includes('blues')) {
-    return 'blues vocals, soulful and gritty'
-  } else if (genreLower.includes('reggae')) {
-    return 'reggae vocals, laid-back and rhythmic'
+  const genderLower = gender.toLowerCase()
+  
+  if (genderLower === 'male') {
+    return 'male vocals, male singer'
+  } else if (genderLower === 'female') {
+    return 'female vocals, female singer'
+  } else if (genderLower === 'non-binary' || genderLower === 'other' || genderLower === 'prefer not to say') {
+    return 'gender-neutral vocals'
   }
   
   return 'clear vocals'
 }
 
 // Format lyrics with section markers for MiniMax Music-1.5
+// ONLY includes essential sections: Intro (if exists), first Verse, Chorus, Bridge
 function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
   // If no lyrics, generate placeholder structure
   if (!rawLyrics || rawLyrics.trim().length === 0) {
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
-  // Check if lyrics already have section markers
-  if (rawLyrics.includes('[Verse]') || rawLyrics.includes('[Chorus]') || 
-      rawLyrics.includes('[verse]') || rawLyrics.includes('[chorus]')) {
-    // Normalize markers to proper format
-    return normalizeLyricMarkers(rawLyrics)
-  }
-
-  // Parse and add section markers to unmarked lyrics
-  return addSectionMarkers(rawLyrics, genre)
+  // Extract only essential sections to stay under character limit
+  return extractEssentialSections(rawLyrics, songTitle, genre)
 }
 
-// Normalize existing markers to MiniMax format
-function normalizeLyricMarkers(lyrics: string): string {
-  return lyrics
+// Extract only Intro (optional), first Verse, first Chorus, and Bridge
+function extractEssentialSections(lyrics: string, songTitle: string, genre: string): string {
+  const normalizedLyrics = lyrics
     .replace(/\[verse\s*\d*\]/gi, '[Verse]')
-    .replace(/\[chorus\]/gi, '[Chorus]')
-    .replace(/\[bridge\]/gi, '[Bridge]')
-    .replace(/\[pre-?chorus\]/gi, '[Pre-Chorus]')
+    .replace(/\[chorus\s*\d*\]/gi, '[Chorus]')
+    .replace(/\[bridge\s*\d*\]/gi, '[Bridge]')
+    .replace(/\[pre-?chorus\s*\d*\]/gi, '[Pre-Chorus]')
     .replace(/\[outro\]/gi, '[Outro]')
     .replace(/\[intro\]/gi, '[Intro]')
     .replace(/\[hook\]/gi, '[Hook]')
-}
 
-// Add section markers to lyrics that don't have them
-function addSectionMarkers(lyrics: string, genre: string): string {
-  const lines = lyrics.split('\n').filter(line => line.trim().length > 0)
+  // Check if lyrics have section markers
+  const hasMarkers = /\[(Verse|Chorus|Bridge|Intro|Hook)\]/i.test(normalizedLyrics)
   
-  if (lines.length === 0) return '[Verse]\nLa la la'
-  
+  if (!hasMarkers) {
+    // No markers - take first ~400 chars and add basic structure
+    const lines = lyrics.split('\n').filter(l => l.trim()).slice(0, 8)
+    if (lines.length === 0) return generatePlaceholderLyrics(songTitle, genre)
+    
+    const verse = lines.slice(0, 4).join('\n')
+    const chorus = lines.slice(4, 8).join('\n') || lines.slice(0, 2).join('\n')
+    
+    return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
+  }
+
+  // Extract sections
+  const sections: { type: string; content: string }[] = []
+  const sectionRegex = /\[(Intro|Verse|Chorus|Bridge|Pre-Chorus|Hook)\]([\s\S]*?)(?=\[|$)/gi
+  let match
+
+  while ((match = sectionRegex.exec(normalizedLyrics)) !== null) {
+    const type = match[1]
+    const content = match[2].trim()
+    if (content) {
+      sections.push({ type, content })
+    }
+  }
+
+  // Build essential output: Intro (if exists) + first Verse + first Chorus + first Bridge
   const result: string[] = []
-  let currentSection = 'verse'
-  let lineCount = 0
-  let verseCount = 1
+  let hasIntro = false
+  let hasVerse = false
   let hasChorus = false
-  
-  // Try to identify chorus by repeated lines
-  const lineCounts: Record<string, number> = {}
-  lines.forEach(line => {
-    const normalized = line.toLowerCase().trim()
-    lineCounts[normalized] = (lineCounts[normalized] || 0) + 1
-  })
-  const repeatedLines = new Set(
-    Object.entries(lineCounts)
-      .filter(([_, count]) => count >= 2)
-      .map(([line, _]) => line)
-  )
+  let hasBridge = false
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const normalizedLine = line.toLowerCase().trim()
+  for (const section of sections) {
+    const typeLower = section.type.toLowerCase()
     
-    // Start with verse
-    if (i === 0) {
-      result.push('[Verse]')
+    if (typeLower === 'intro' && !hasIntro) {
+      // Take only first 2 lines of intro
+      const introLines = section.content.split('\n').slice(0, 2).join('\n')
+      result.push(`[Intro]\n${introLines}`)
+      hasIntro = true
+    } else if (typeLower === 'verse' && !hasVerse) {
+      // Take only first 4 lines of verse
+      const verseLines = section.content.split('\n').slice(0, 4).join('\n')
+      result.push(`[Verse]\n${verseLines}`)
+      hasVerse = true
+    } else if (typeLower === 'chorus' && !hasChorus) {
+      // Take only first 4 lines of chorus
+      const chorusLines = section.content.split('\n').slice(0, 4).join('\n')
+      result.push(`[Chorus]\n${chorusLines}`)
+      hasChorus = true
+    } else if (typeLower === 'bridge' && !hasBridge) {
+      // Take only first 2 lines of bridge
+      const bridgeLines = section.content.split('\n').slice(0, 2).join('\n')
+      result.push(`[Bridge]\n${bridgeLines}`)
+      hasBridge = true
     }
-    
-    // Check if this looks like a chorus (repeated line or starts with typical chorus words)
-    const isRepeated = repeatedLines.has(normalizedLine)
-    const chorusIndicators = ['oh', 'yeah', 'hey', 'come on', 'let\'s go', 'whoa']
-    const looksLikeChorus = isRepeated || chorusIndicators.some(ind => normalizedLine.startsWith(ind))
-    
-    // Switch sections based on line count and content
-    if (lineCount >= 4 && currentSection === 'verse') {
-      if (looksLikeChorus && !hasChorus) {
-        result.push('\n[Chorus]')
-        currentSection = 'chorus'
-        hasChorus = true
-        lineCount = 0
-      } else if (lineCount >= 8) {
-        verseCount++
-        result.push(`\n[Verse]`)
-        currentSection = 'verse'
-        lineCount = 0
-      }
-    } else if (lineCount >= 4 && currentSection === 'chorus') {
-      verseCount++
-      result.push(`\n[Verse]`)
-      currentSection = 'verse'
-      lineCount = 0
-    }
-    
-    result.push(line)
-    lineCount++
+
+    // Stop if we have all essential sections
+    if (hasVerse && hasChorus) break
   }
-  
-  // Add outro if we have enough content
-  if (lines.length > 12) {
-    result.push('\n[Outro]')
+
+  // Fallback if no sections found
+  if (result.length === 0) {
+    return generatePlaceholderLyrics(songTitle, genre)
   }
-  
-  return result.join('\n')
+
+  return result.join('\n\n')
 }
 
 // Generate placeholder lyrics when none exist
@@ -514,29 +484,12 @@ function generatePlaceholderLyrics(songTitle: string, genre: string): string {
   const titleWords = songTitle.split(' ').slice(0, 3).join(' ')
   
   return `[Verse]
-${titleWords}, yeah
-Feel the rhythm in my soul
-${titleWords}, oh
-Let the music take control
+${titleWords}
+Feel the rhythm tonight
+${titleWords}
+Everything feels right
 
 [Chorus]
 ${titleWords}
-${titleWords}
-Feel it in your heart tonight
-${titleWords}
-
-[Verse]
-Moving through the night
-Everything feels so right
-${titleWords}, yeah
-Dancing in the light
-
-[Chorus]
-${titleWords}
-${titleWords}
-Feel it in your heart tonight
-${titleWords}
-
-[Outro]
-${titleWords}...`
+${titleWords}`
 }

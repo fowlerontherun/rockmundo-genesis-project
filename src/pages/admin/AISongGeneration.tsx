@@ -21,7 +21,8 @@ import {
   Search,
   RefreshCw,
   Wand2,
-  Volume2
+  Volume2,
+  RotateCcw
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 
@@ -106,6 +107,28 @@ export default function AISongGeneration() {
     onError: (error: Error) => {
       setGenerationLogs(prev => [...prev, `ERROR: ${error.message}`]);
       toast.error(`Generation failed: ${error.message}`);
+    },
+  });
+
+  const resetStatusMutation = useMutation({
+    mutationFn: async (songId: string) => {
+      const { error } = await supabase
+        .from("songs")
+        .update({ 
+          audio_generation_status: null,
+          audio_generation_started_at: null
+        })
+        .eq("id", songId);
+      
+      if (error) throw error;
+      return songId;
+    },
+    onSuccess: () => {
+      toast.success("Song status reset - you can now regenerate");
+      queryClient.invalidateQueries({ queryKey: ["admin-songs-for-generation"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to reset: ${error.message}`);
     },
   });
 
@@ -287,6 +310,17 @@ export default function AISongGeneration() {
                                 onClick={() => window.open(song.audio_url!, "_blank")}
                               >
                                 <Volume2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {(song.audio_generation_status === "generating" || song.audio_generation_status === "failed") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => resetStatusMutation.mutate(song.id)}
+                                disabled={resetStatusMutation.isPending}
+                                title="Reset status to allow regeneration"
+                              >
+                                <RotateCcw className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
