@@ -1,4 +1,4 @@
-import { useRef, useEffect, Suspense } from 'react';
+import React, { useRef, useEffect, Suspense, useState } from 'react';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import { Group } from 'three';
 import * as THREE from 'three';
@@ -11,6 +11,48 @@ interface ReadyPlayerMeAvatarProps {
   animation?: 'idle' | 'playing' | 'singing' | 'drumming';
 }
 
+// Procedural fallback avatar when RPM fails to load
+const ProceduralFallback = () => (
+  <group>
+    {/* Body */}
+    <mesh position={[0, 1, 0]}>
+      <capsuleGeometry args={[0.17, 0.42, 8, 16]} />
+      <meshStandardMaterial color="#4a4a4a" roughness={0.7} />
+    </mesh>
+    {/* Head */}
+    <mesh position={[0, 1.5, 0]}>
+      <sphereGeometry args={[0.15, 16, 16]} />
+      <meshStandardMaterial color="#e0ac69" roughness={0.5} />
+    </mesh>
+    {/* Arms */}
+    <mesh position={[-0.25, 1, 0]} rotation={[0, 0, 0.3]}>
+      <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
+      <meshStandardMaterial color="#e0ac69" roughness={0.5} />
+    </mesh>
+    <mesh position={[0.25, 1, 0]} rotation={[0, 0, -0.3]}>
+      <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
+      <meshStandardMaterial color="#e0ac69" roughness={0.5} />
+    </mesh>
+    {/* Legs */}
+    <mesh position={[-0.08, 0.35, 0]}>
+      <capsuleGeometry args={[0.06, 0.35, 4, 8]} />
+      <meshStandardMaterial color="#1a1a1a" roughness={0.6} />
+    </mesh>
+    <mesh position={[0.08, 0.35, 0]}>
+      <capsuleGeometry args={[0.06, 0.35, 4, 8]} />
+      <meshStandardMaterial color="#1a1a1a" roughness={0.6} />
+    </mesh>
+  </group>
+);
+
+// Loading placeholder while avatar loads
+const LoadingFallback = () => (
+  <mesh>
+    <capsuleGeometry args={[0.17, 0.42, 8, 16]} />
+    <meshStandardMaterial color="#666666" transparent opacity={0.5} />
+  </mesh>
+);
+
 const AvatarModel = ({ 
   avatarUrl, 
   scale = 1, 
@@ -19,11 +61,15 @@ const AvatarModel = ({
   animation = 'idle' 
 }: ReadyPlayerMeAvatarProps) => {
   const group = useRef<Group>(null);
+  
+  // useGLTF will throw if it fails - caught by error boundary
   const { scene, animations } = useGLTF(avatarUrl);
-  const { actions, mixer } = useAnimations(animations, group);
+  const { actions } = useAnimations(animations, group);
 
   useEffect(() => {
     if (!scene) return;
+    
+    console.log('[RPM Avatar] Successfully loaded:', avatarUrl);
     
     // Set up materials for better rendering
     scene.traverse((child) => {
@@ -35,7 +81,7 @@ const AvatarModel = ({
         }
       }
     });
-  }, [scene]);
+  }, [scene, avatarUrl]);
 
   useEffect(() => {
     // Play default animation if available
@@ -53,6 +99,10 @@ const AvatarModel = ({
     };
   }, [actions, animation]);
 
+  if (!scene) {
+    return <ProceduralFallback />;
+  }
+
   return (
     <group ref={group} position={position} rotation={rotation} scale={scale}>
       <primitive object={scene} />
@@ -60,19 +110,41 @@ const AvatarModel = ({
   );
 };
 
-// Fallback component while loading
-const LoadingFallback = () => (
-  <mesh>
-    <capsuleGeometry args={[0.3, 1, 8, 16]} />
-    <meshStandardMaterial color="hsl(var(--muted))" />
-  </mesh>
-);
+// Error boundary for avatar loading
+class AvatarErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('[RPM Avatar Error Boundary]', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 export const ReadyPlayerMeAvatar = (props: ReadyPlayerMeAvatarProps) => {
+  console.log('[RPM Avatar] Rendering with URL:', props.avatarUrl);
+  
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <AvatarModel {...props} />
-    </Suspense>
+    <AvatarErrorBoundary fallback={<ProceduralFallback />}>
+      <Suspense fallback={<LoadingFallback />}>
+        <AvatarModel {...props} />
+      </Suspense>
+    </AvatarErrorBoundary>
   );
 };
 
