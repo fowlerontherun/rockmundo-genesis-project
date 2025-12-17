@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, Volume2, VolumeX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SongShareButtons } from "./SongShareButtons";
 
 interface SongPlayerProps {
   audioUrl: string | null;
@@ -11,6 +12,7 @@ interface SongPlayerProps {
   className?: string;
   compact?: boolean;
   generationStatus?: string | null;
+  showShare?: boolean;
 }
 
 export const SongPlayer = ({
@@ -20,6 +22,7 @@ export const SongPlayer = ({
   className,
   compact = false,
   generationStatus,
+  showShare = true,
 }: SongPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -151,6 +154,9 @@ export const SongPlayer = ({
         <span className="text-xs text-muted-foreground whitespace-nowrap">
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
+        {showShare && audioUrl && (
+          <SongShareButtons songTitle={title || "Song"} artistName={artist} compact />
+        )}
       </div>
     );
   }
@@ -202,8 +208,13 @@ export const SongPlayer = ({
           )}
         </Button>
 
-        {/* Volume Control */}
         <div className="flex items-center gap-2">
+          {/* Share Button */}
+          {showShare && audioUrl && (
+            <SongShareButtons songTitle={title || "Song"} artistName={artist} compact />
+          )}
+
+          {/* Volume Control */}
           <Button
             size="icon"
             variant="ghost"
