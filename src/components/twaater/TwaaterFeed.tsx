@@ -2,10 +2,11 @@ import { useTwaaterFeed } from "@/hooks/useTwaats";
 import { useTwaaterAIFeed } from "@/hooks/useTwaaterAIFeed";
 import { useTwaaterMentions } from "@/hooks/useTwaaterMentions";
 import TwaaterTimeline from "./TwaaterTimeline";
-import { Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, ArrowUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TwaaterFeedProps {
   viewerAccountId?: string;
@@ -14,6 +15,7 @@ interface TwaaterFeedProps {
 
 export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedProps) => {
   const [useAI, setUseAI] = useState(true);
+  const [newTwaatsCount, setNewTwaatsCount] = useState(0);
   
   const { feed: regularFeed, isLoading: feedLoading, refetch: refetchRegular } = useTwaaterFeed(feedType === "feed" ? viewerAccountId : undefined);
   const { data: aiFeed, isLoading: aiLoading, refetch: refetchAI } = useTwaaterAIFeed(useAI && feedType === "feed" ? viewerAccountId : undefined);
@@ -22,12 +24,45 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
   const isLoading = feedType === "feed" ? (useAI ? aiLoading : feedLoading) : mentionsLoading;
   const items = feedType === "feed" ? (useAI ? aiFeed : regularFeed) : mentions?.map(m => m.twaat).filter(Boolean);
 
+  // Real-time subscription for new twaats
+  useEffect(() => {
+    if (feedType !== "feed") return;
+
+    const channel = supabase
+      .channel('twaater-feed-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'twaats'
+        },
+        (payload) => {
+          // Don't count own twaats
+          if (payload.new.account_id !== viewerAccountId) {
+            setNewTwaatsCount(prev => prev + 1);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [feedType, viewerAccountId]);
+
   const handleRefresh = () => {
+    setNewTwaatsCount(0);
     if (useAI) {
       refetchAI();
     } else {
       refetchRegular();
     }
+  };
+
+  const handleLoadNew = () => {
+    setNewTwaatsCount(0);
+    handleRefresh();
   };
 
   if (isLoading) return <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-[hsl(var(--twaater-purple))]" /></CardContent></Card>;
@@ -81,6 +116,18 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
           </div>
         </div>
       )}
+      
+      {/* New twaats notification */}
+      {newTwaatsCount > 0 && (
+        <Button
+          onClick={handleLoadNew}
+          className="w-full rounded-none bg-[hsl(var(--twaater-purple))] hover:bg-[hsl(var(--twaater-purple)_/_0.9)] text-white"
+        >
+          <ArrowUp className="h-4 w-4 mr-2" />
+          {newTwaatsCount} new {newTwaatsCount === 1 ? 'twaat' : 'twaats'}
+        </Button>
+      )}
+      
       <div className="p-2">
         <TwaaterTimeline 
           twaats={timelineTwaats} 
