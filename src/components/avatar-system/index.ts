@@ -9,3 +9,4 @@ export { EnhancedHair } from './EnhancedHair';
 export { StudioLighting } from './StudioLighting';
 export { StudioBackground } from './StudioBackground';
 export { EnhancedViewControls } from './EnhancedViewControls';
+export { ReadyPlayerMeAvatar, preloadAvatar } from './ReadyPlayerMeAvatar';

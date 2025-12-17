@@ -80,6 +80,11 @@ export interface AvatarConfig {
   // Accessories
   accessory_1_id: string | null;
   accessory_2_id: string | null;
+  
+  // Ready Player Me
+  rpm_avatar_url: string | null;
+  rpm_avatar_id: string | null;
+  use_rpm_avatar: boolean;
 }
 
 export const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
@@ -156,6 +161,11 @@ export const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
   // Accessories
   accessory_1_id: null,
   accessory_2_id: null,
+  
+  // Ready Player Me
+  rpm_avatar_url: null,
+  rpm_avatar_id: null,
+  use_rpm_avatar: false,
 };
 
 export const usePlayerAvatar = () => {
@@ -258,6 +268,10 @@ export const usePlayerAvatar = () => {
         shoes_color: data.shoes_color || defaultConfig.shoes_color,
         accessory_1_id: data.accessory_1_id || null,
         accessory_2_id: data.accessory_2_id || null,
+        // Ready Player Me
+        rpm_avatar_url: data.rpm_avatar_url || null,
+        rpm_avatar_id: data.rpm_avatar_id || null,
+        use_rpm_avatar: data.use_rpm_avatar || false,
       } as AvatarConfig;
     },
     enabled: !!profile?.id,
@@ -380,6 +394,10 @@ export const usePlayerAvatar = () => {
         shoes_color: config.shoes_color,
         accessory_1_id: config.accessory_1_id,
         accessory_2_id: config.accessory_2_id,
+        // Ready Player Me
+        rpm_avatar_url: config.rpm_avatar_url,
+        rpm_avatar_id: config.rpm_avatar_id,
+        use_rpm_avatar: config.use_rpm_avatar,
       };
 
       const { data: existing } = await supabase
