@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.cleanup-song-generation]
 verify_jwt = false
+
+[functions.admin-generate-extended-audio]
+verify_jwt = true

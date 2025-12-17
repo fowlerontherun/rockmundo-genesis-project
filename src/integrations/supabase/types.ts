@@ -1704,6 +1704,87 @@ export type Database = {
           },
         ]
       }
+      chart_featured_songs: {
+        Row: {
+          band_id: string | null
+          chart_position: number
+          chart_type: string
+          created_at: string
+          extended_generated: boolean | null
+          featured_week: string
+          id: string
+          notes: string | null
+          released_to_streaming: boolean | null
+          song_id: string | null
+          streaming_release_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          band_id?: string | null
+          chart_position: number
+          chart_type: string
+          created_at?: string
+          extended_generated?: boolean | null
+          featured_week: string
+          id?: string
+          notes?: string | null
+          released_to_streaming?: boolean | null
+          song_id?: string | null
+          streaming_release_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string | null
+          chart_position?: number
+          chart_type?: string
+          created_at?: string
+          extended_generated?: boolean | null
+          featured_week?: string
+          id?: string
+          notes?: string | null
+          released_to_streaming?: boolean | null
+          song_id?: string | null
+          streaming_release_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_featured_songs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_featured_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_featured_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_featured_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_featured_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           channel: string
@@ -10863,9 +10944,12 @@ export type Database = {
           created_at: string
           duration_display: string | null
           duration_seconds: number | null
+          extended_audio_generated_at: string | null
+          extended_audio_url: string | null
           genre: string
           hype: number | null
           id: string
+          is_extended_featured: boolean | null
           last_radio_play: string | null
           lyrics: string | null
           lyrics_progress: number | null
@@ -10910,9 +10994,12 @@ export type Database = {
           created_at?: string
           duration_display?: string | null
           duration_seconds?: number | null
+          extended_audio_generated_at?: string | null
+          extended_audio_url?: string | null
           genre: string
           hype?: number | null
           id?: string
+          is_extended_featured?: boolean | null
           last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
@@ -10957,9 +11044,12 @@ export type Database = {
           created_at?: string
           duration_display?: string | null
           duration_seconds?: number | null
+          extended_audio_generated_at?: string | null
+          extended_audio_url?: string | null
           genre?: string
           hype?: number | null
           id?: string
+          is_extended_featured?: boolean | null
           last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
