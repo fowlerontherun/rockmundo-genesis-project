@@ -61,6 +61,8 @@ const AvatarModel = ({
   animation = 'idle' 
 }: ReadyPlayerMeAvatarProps) => {
   const group = useRef<Group>(null);
+  const [groundOffsetY, setGroundOffsetY] = useState(0);
+  const [autoScale, setAutoScale] = useState(1);
   
   // useGLTF will throw if it fails - caught by error boundary
   const { scene, animations } = useGLTF(avatarUrl);
@@ -68,8 +70,31 @@ const AvatarModel = ({
 
   useEffect(() => {
     if (!scene) return;
-    
+
     console.log('[RPM Avatar] Successfully loaded:', avatarUrl);
+
+    // Normalize model so it sits on the floor and has a consistent height.
+    try {
+      const bbox = new THREE.Box3().setFromObject(scene);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
+
+      const minY = bbox.min.y;
+      const height = size.y;
+
+      // Lift model so its lowest point is at y=0
+      const offset = Number.isFinite(minY) ? -minY : 0;
+      setGroundOffsetY(offset);
+
+      // Scale model to ~1.75 units tall (roughly human-sized in our scene)
+      const targetHeight = 1.75;
+      const s = height && Number.isFinite(height) && height > 0 ? targetHeight / height : 1;
+      setAutoScale(s);
+    } catch (e) {
+      console.warn('[RPM Avatar] Failed to normalize avatar scale/offset', e);
+      setGroundOffsetY(0);
+      setAutoScale(1);
+    }
     
     // Set up materials for better rendering
     scene.traverse((child) => {
@@ -105,7 +130,10 @@ const AvatarModel = ({
 
   return (
     <group ref={group} position={position} rotation={rotation} scale={scale}>
-      <primitive object={scene} />
+      {/* Lift + scale the model so it reliably shows up in the scene */}
+      <group position={[0, groundOffsetY, 0]} scale={autoScale}>
+        <primitive object={scene} />
+      </group>
     </group>
   );
 };
