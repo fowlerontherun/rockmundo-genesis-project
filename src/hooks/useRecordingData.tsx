@@ -195,7 +195,9 @@ export const useCreateRecordingSession = () => {
       const [songResult, studioResult, producerResult] = await Promise.all([
         supabase.from('songs').select('quality_score').eq('id', input.song_id).single(),
         supabase.from('city_studios').select('quality_rating, hourly_rate').eq('id', input.studio_id).single(),
-        supabase.from('recording_producers').select('quality_bonus, cost_per_hour').eq('id', input.producer_id).single(),
+        input.producer_id === 'self-produce'
+          ? Promise.resolve({ data: { quality_bonus: -10, cost_per_hour: 0 }, error: null } as any)
+          : supabase.from('recording_producers').select('quality_bonus, cost_per_hour').eq('id', input.producer_id).single(),
       ]);
 
       if (songResult.error || !songResult.data) {
@@ -204,12 +206,9 @@ export const useCreateRecordingSession = () => {
       if (studioResult.error || !studioResult.data) {
         throw new Error('Failed to fetch studio data');
       }
-      if (producerResult.error) {
+      if (producerResult.error || !producerResult.data) {
         console.error('Producer fetch error:', producerResult.error);
         throw new Error('Failed to fetch producer data');
-      }
-      if (!producerResult.data) {
-        throw new Error('Producer not found. Please select a valid producer.');
       }
 
       const song = songResult.data;

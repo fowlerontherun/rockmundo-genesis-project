@@ -85,26 +85,33 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
   }, [bandId, userId, song.id]);
 
   const orchestraOption = orchestraSize ? ORCHESTRA_OPTIONS.find(o => o.size === orchestraSize) : undefined;
+
+  // Normalize numeric fields (defensive against null/undefined from DB)
+  const studioQualityRating = Number(studio?.quality_rating ?? 0);
+  const studioHourlyRate = Number(studio?.hourly_rate ?? 0);
+  const songQualityScore = Number(song?.quality_score ?? 0);
+  const producerQualityBonus = Number((producer as any)?.quality_bonus ?? 0);
+  const producerCostPerHour = Number((producer as any)?.cost_per_hour ?? 0);
   
   // Calculate quality with rehearsal penalty/bonus
   const rehearsalBonus = bandId && rehearsalData ? rehearsalData.penalty : 0;
   
   const { finalQuality, breakdown } = calculateRecordingQuality(
-    song.quality_score || 0,
-    studio.quality_rating,
-    producer.quality_bonus,
+    songQualityScore,
+    studioQualityRating,
+    producerQualityBonus,
     durationHours,
     orchestraOption?.bonus,
     rehearsalBonus
   );
 
-  const studioCost = studio.hourly_rate * durationHours;
-  const producerCost = producer.cost_per_hour * durationHours;
+  const studioCost = studioHourlyRate * durationHours;
+  const producerCost = producerCostPerHour * durationHours;
   const orchestraCost = orchestraOption?.cost || 0;
   const totalCost = studioCost + producerCost + orchestraCost;
 
-  const qualityImprovement = finalQuality - (song.quality_score || 0);
-  const qualityImprovementPercent = Math.round((qualityImprovement / (song.quality_score || 1)) * 100);
+  const qualityImprovement = finalQuality - songQualityScore;
+  const qualityImprovementPercent = Math.round((qualityImprovement / (songQualityScore || 1)) * 100);
 
   const availableBalance = bandId ? bandBalance : personalCash;
   const canAfford = availableBalance >= totalCost;
@@ -238,11 +245,11 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Studio ({durationHours} hrs × ${studio.hourly_rate.toLocaleString()})</span>
+            <span className="text-muted-foreground">Studio ({durationHours} hrs × ${studioHourlyRate.toLocaleString()})</span>
             <span className="font-semibold">${studioCost.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Producer ({durationHours} hrs × ${producer.cost_per_hour.toLocaleString()})</span>
+            <span className="text-muted-foreground">Producer ({durationHours} hrs × ${producerCostPerHour.toLocaleString()})</span>
             <span className="font-semibold">${producerCost.toLocaleString()}</span>
           </div>
           {orchestraOption && (
@@ -310,7 +317,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-muted-foreground">Current Quality</div>
-              <div className="text-2xl font-bold">{song.quality_score || 0}</div>
+              <div className="text-2xl font-bold">{songQualityScore}</div>
             </div>
             <Music2 className="h-8 w-8 text-muted-foreground" />
             <div className="text-right">
