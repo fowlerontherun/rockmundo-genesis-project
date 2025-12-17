@@ -189,6 +189,7 @@ const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
 const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
+const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -213,6 +214,7 @@ function App() {
               >
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/song/:songId" element={<PublicSong />} />
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
                     <Route path="todays-news" element={<TodaysNewsPage />} />

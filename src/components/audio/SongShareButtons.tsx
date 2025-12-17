@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SongShareButtonsProps {
+  songId: string;
   songTitle: string;
   artistName?: string;
   audioUrl?: string | null;
@@ -17,15 +18,8 @@ interface SongShareButtonsProps {
   className?: string;
 }
 
-// Platform brand colors
-const platformColors = {
-  tiktok: "#000000",
-  x: "#000000", 
-  facebook: "#1877F2",
-  instagram: "#E4405F",
-};
-
 export function SongShareButtons({
+  songId,
   songTitle,
   artistName,
   audioUrl,
@@ -39,7 +33,11 @@ export function SongShareButtons({
     ? `🎵 Check out "${songTitle}" by ${artistName} on Rockmundo!`
     : `🎵 Check out "${songTitle}" on Rockmundo!`;
 
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  // Generate public song URL
+  const baseUrl = typeof window !== "undefined" 
+    ? `${window.location.protocol}//${window.location.host}` 
+    : "";
+  const shareUrl = `${baseUrl}/song/${songId}`;
 
   const handleShare = (platform: string) => {
     const encodedText = encodeURIComponent(shareText);

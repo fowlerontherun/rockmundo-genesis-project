@@ -7,6 +7,7 @@ import { SongShareButtons } from "./SongShareButtons";
 
 interface SongPlayerProps {
   audioUrl: string | null;
+  songId?: string;
   title?: string;
   artist?: string;
   className?: string;
@@ -18,6 +19,7 @@ interface SongPlayerProps {
 
 export const SongPlayer = ({
   audioUrl,
+  songId,
   title,
   artist,
   className,
@@ -158,8 +160,8 @@ export const SongPlayer = ({
         <span className="text-xs text-muted-foreground whitespace-nowrap">
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
-        {showShare && audioUrl && (
-          <SongShareButtons songTitle={title || "Song"} artistName={artist} compact />
+        {showShare && audioUrl && songId && (
+          <SongShareButtons songId={songId} songTitle={title || "Song"} artistName={artist} compact />
         )}
       </div>
     );
@@ -214,8 +216,8 @@ export const SongPlayer = ({
 
         <div className="flex items-center gap-2">
           {/* Share Button */}
-          {showShare && audioUrl && (
-            <SongShareButtons songTitle={title || "Song"} artistName={artist} compact />
+          {showShare && audioUrl && songId && (
+            <SongShareButtons songId={songId} songTitle={title || "Song"} artistName={artist} compact />
           )}
 
           {/* Volume Control */}
