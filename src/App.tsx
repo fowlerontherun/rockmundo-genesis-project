@@ -148,6 +148,7 @@ const AdminDashboard = lazyWithRetry(() => import("./pages/admin/AdminDashboard"
 const GameBalanceAdmin = lazyWithRetry(() => import("./pages/admin/GameBalanceAdmin"));
 const TutorialsAdmin = lazyWithRetry(() => import("./pages/admin/TutorialsAdmin"));
 const VipManagement = lazyWithRetry(() => import("./pages/admin/VipManagement"));
+const SkinCollectionsAdmin = lazyWithRetry(() => import("./pages/admin/SkinCollectionsAdmin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
@@ -352,6 +353,7 @@ function App() {
                     <Route path="admin/game-balance" element={<GameBalanceAdmin />} />
                     <Route path="admin/tutorials" element={<TutorialsAdmin />} />
                     <Route path="admin/vip" element={<VipManagement />} />
+                    <Route path="admin/skin-collections" element={<SkinCollectionsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />

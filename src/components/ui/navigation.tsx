@@ -120,6 +120,7 @@ const Navigation = () => {
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "Avatar Designer", path: "/avatar-designer" },
+        { icon: ShoppingCart, label: "Skin Store", path: "/skin-store" },
         { icon: Newspaper, label: "Today's News", path: "/todays-news" },
         { icon: Guitar, label: "Gear", path: "/gear" },
         { icon: HeartPulse, label: "Wellness", path: "/wellness" },

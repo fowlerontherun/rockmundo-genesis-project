@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Users, Music, Mic2, BarChart3, DollarSign, Activity, 
-  AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench
+  AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,6 +70,7 @@ const AdminDashboard = () => {
     { label: "Release Admin", path: "/admin/releases", icon: Music },
     { label: "Cron Monitor", path: "/admin/cron-monitor", icon: Clock },
     { label: "Tutorials", path: "/admin/tutorials", icon: Wrench },
+    { label: "Skin Collections", path: "/admin/skin-collections", icon: Sparkles },
   ];
 
   const statCards = [
