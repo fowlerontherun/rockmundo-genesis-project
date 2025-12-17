@@ -1,16 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, RotateCcw, User, Scissors, Shirt, Sparkles, Crown, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Save, RotateCcw, Crown, CheckCircle, User } from "lucide-react";
 import { usePlayerAvatar, AvatarConfig, defaultConfig } from "@/hooks/usePlayerAvatar";
 import { AvatarPreview3D } from "@/components/avatar-designer/AvatarPreview3D";
-import { HairSelector } from "@/components/avatar-designer/HairSelector";
-import { BodySelector } from "@/components/avatar-designer/BodySelector";
-import { FaceSelector } from "@/components/avatar-designer/FaceSelector";
-import { ClothingSelector } from "@/components/avatar-designer/ClothingSelector";
-import { AccessorySelector } from "@/components/avatar-designer/AccessorySelector";
 import { ReadyPlayerMeCreator } from "@/components/avatar-designer/ReadyPlayerMeCreator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -19,14 +12,9 @@ const AvatarDesigner = () => {
   const {
     avatarConfig,
     isLoading,
-    hairStyles,
-    clothingItems,
     profile,
     saveConfig,
     isSaving,
-    purchaseSkin,
-    isItemOwned,
-    getClothingColor,
   } = usePlayerAvatar();
 
   const [localConfig, setLocalConfig] = useState<Partial<AvatarConfig>>(defaultConfig);
@@ -38,47 +26,17 @@ const AvatarDesigner = () => {
     }
   }, [avatarConfig]);
 
-  // Update clothing colors when items change
-  useEffect(() => {
-    if (clothingItems && localConfig) {
-      const shirtColor = localConfig.shirt_id 
-        ? getClothingColor(localConfig.shirt_id, localConfig.shirt_color || '#2d0a0a')
-        : localConfig.shirt_color;
-      const pantsColor = localConfig.pants_id 
-        ? getClothingColor(localConfig.pants_id, localConfig.pants_color || '#1a1a1a')
-        : localConfig.pants_color;
-      const shoesColor = localConfig.shoes_id 
-        ? getClothingColor(localConfig.shoes_id, localConfig.shoes_color || '#1a1a1a')
-        : localConfig.shoes_color;
-      const jacketColor = localConfig.jacket_id 
-        ? getClothingColor(localConfig.jacket_id, localConfig.jacket_color || '#1a1a1a')
-        : localConfig.jacket_color;
-
-      if (shirtColor !== localConfig.shirt_color || 
-          pantsColor !== localConfig.pants_color ||
-          shoesColor !== localConfig.shoes_color ||
-          jacketColor !== localConfig.jacket_color) {
-        setLocalConfig(prev => ({
-          ...prev,
-          shirt_color: shirtColor,
-          pants_color: pantsColor,
-          shoes_color: shoesColor,
-          jacket_color: jacketColor,
-        }));
-      }
-    }
-  }, [localConfig.shirt_id, localConfig.pants_id, localConfig.shoes_id, localConfig.jacket_id, clothingItems]);
-
   const handleSave = () => {
     saveConfig(localConfig);
   };
 
   const handleReset = () => {
-    setLocalConfig(defaultConfig);
-  };
-
-  const handlePurchase = (itemId: string, itemType: string, price: number) => {
-    purchaseSkin({ itemId, itemType, price });
+    setLocalConfig(prev => ({
+      ...prev,
+      rpm_avatar_url: null,
+      rpm_avatar_id: null,
+      use_rpm_avatar: false,
+    }));
   };
 
   const handleRpmAvatarCreated = (avatarUrl: string, avatarId: string) => {
@@ -92,34 +50,6 @@ const AvatarDesigner = () => {
     toast.success('Avatar created! Click Save to apply.');
   };
 
-  const handleToggleRpmAvatar = (useRpm: boolean) => {
-    setLocalConfig(prev => ({
-      ...prev,
-      use_rpm_avatar: useRpm,
-    }));
-  };
-
-  const handleHairStyleSelect = (styleId: string | null) => {
-    if (!styleId) {
-      setLocalConfig(prev => ({ ...prev, hair_style_key: 'bald' }));
-      return;
-    }
-    const style = hairStyles?.find(s => s.id === styleId);
-    if (style) {
-      setLocalConfig(prev => ({ ...prev, hair_style_key: style.style_key }));
-    }
-  };
-
-  const getSelectedHairStyleId = () => {
-    if (!localConfig.hair_style_key || !hairStyles) return null;
-    const style = hairStyles.find(s => s.style_key === localConfig.hair_style_key);
-    return style?.id || null;
-  };
-
-  const accessories = clothingItems?.filter(item => 
-    ['sunglasses', 'glasses', 'headphones', 'cap', 'beanie', 'bandana', 'chain', 'necklace', 'earring', 'watch', 'bracelet', 'ring'].includes(item.category)
-  ) || [];
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -128,24 +58,25 @@ const AvatarDesigner = () => {
     );
   }
 
+  const hasAvatar = !!localConfig.rpm_avatar_url;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-oswald">Avatar Designer</h1>
           <p className="text-sm text-muted-foreground">
-            Customize your character's appearance
-            {profile?.cash !== undefined && (
-              <span className="ml-2 text-primary font-medium">${profile.cash.toLocaleString()} available</span>
-            )}
+            Create your unique 3D avatar for performances
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
+          {hasAvatar && (
+            <Button variant="outline" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Remove Avatar
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save'}
@@ -157,270 +88,124 @@ const AvatarDesigner = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 3D Preview */}
         <Card className="lg:sticky lg:top-4 h-fit">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Preview
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
-            <AvatarPreview3D config={localConfig} autoRotate={false} />
+            <AvatarPreview3D config={localConfig} autoRotate={!hasAvatar} />
           </CardContent>
         </Card>
 
-        {/* Customization Panel */}
-        <div>
-          <Tabs defaultValue="premium" className="w-full">
-            <TabsList className="w-full grid grid-cols-6 mb-4">
-              <TabsTrigger value="premium" className="text-xs sm:text-sm">
-                <Crown className="h-4 w-4 sm:mr-1 text-yellow-500" />
-                <span className="hidden sm:inline">3D Avatar</span>
-              </TabsTrigger>
-              <TabsTrigger value="body" className="text-xs sm:text-sm">
-                <User className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Body</span>
-              </TabsTrigger>
-              <TabsTrigger value="hair" className="text-xs sm:text-sm">
-                <Scissors className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Hair</span>
-              </TabsTrigger>
-              <TabsTrigger value="face" className="text-xs sm:text-sm">
-                <span className="text-lg sm:mr-1">😊</span>
-                <span className="hidden sm:inline">Face</span>
-              </TabsTrigger>
-              <TabsTrigger value="clothing" className="text-xs sm:text-sm">
-                <Shirt className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Clothes</span>
-              </TabsTrigger>
-              <TabsTrigger value="accessories" className="text-xs sm:text-sm">
-                <Sparkles className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Extra</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <ScrollArea className="h-[500px] pr-4">
-              <TabsContent value="premium" className="mt-0">
-                <div className="space-y-4">
-                  <div className="p-4 border border-primary/30 rounded-lg bg-primary/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Crown className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold">Ready Player Me Avatar</h3>
-                      <Badge variant="secondary" className="bg-primary/20 text-primary">Recommended</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Create a high-quality 3D avatar with hundreds of customization options. Your avatar will appear on stage during gigs!
-                    </p>
-                    
-                    {localConfig.rpm_avatar_url ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-green-500">
-                          <CheckCircle className="h-4 w-4" />
-                          <span className="text-sm font-medium">3D avatar configured</span>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button
-                            variant={localConfig.use_rpm_avatar ? "default" : "outline"}
-                            onClick={() => handleToggleRpmAvatar(true)}
-                            className="flex-1"
-                          >
-                            Use 3D Avatar
-                          </Button>
-                          <Button
-                            variant={!localConfig.use_rpm_avatar ? "default" : "outline"}
-                            onClick={() => handleToggleRpmAvatar(false)}
-                            className="flex-1"
-                          >
-                            Use Basic Avatar
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowRpmCreator(true)}
-                          className="w-full"
-                        >
-                          Create New Avatar
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={() => setShowRpmCreator(true)}
-                        className="w-full"
-                      >
-                        <Crown className="h-4 w-4 mr-2" />
-                        Create Your 3D Avatar
-                      </Button>
-                    )}
-                  </div>
-                  
-                  {showRpmCreator && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Avatar Creator</h4>
-                        <Button variant="ghost" size="sm" onClick={() => setShowRpmCreator(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                      <ReadyPlayerMeCreator
-                        onAvatarCreated={handleRpmAvatarCreated}
-                        onClose={() => setShowRpmCreator(false)}
-                      />
-                    </div>
+        {/* Avatar Creator Panel */}
+        <div className="space-y-4">
+          {/* Status Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`p-3 rounded-full ${hasAvatar ? 'bg-green-500/20' : 'bg-primary/20'}`}>
+                  {hasAvatar ? (
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                  ) : (
+                    <Crown className="h-6 w-6 text-primary" />
                   )}
-                  
-                  <div className="p-3 border border-border rounded-lg bg-muted/30">
-                    <h4 className="font-medium mb-2">3D Avatar Features</h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Professional quality 3D model</li>
-                      <li>• Hundreds of clothing & accessory options</li>
-                      <li>• Appears on stage during your gigs</li>
-                      <li>• Smooth animations</li>
-                      <li>• Regular new content updates</li>
-                    </ul>
-                  </div>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="body" className="mt-0">
-                <BodySelector
-                  bodyType={localConfig.body_type || 'average'}
-                  height={localConfig.height || 1.0}
-                  skinTone={localConfig.skin_tone || '#e0ac69'}
-                  gender={localConfig.gender || 'male'}
-                  weight={localConfig.weight ?? 1.0}
-                  muscleDefinition={localConfig.muscle_definition ?? 0.5}
-                  shoulderWidth={localConfig.shoulder_width ?? 1.0}
-                  hipWidth={localConfig.hip_width ?? 1.0}
-                  torsoLength={localConfig.torso_length ?? 1.0}
-                  armLength={localConfig.arm_length ?? 1.0}
-                  legLength={localConfig.leg_length ?? 1.0}
-                  ageAppearance={(localConfig.age_appearance as 'young' | 'adult' | 'mature') || 'adult'}
-                  onBodyTypeChange={(type) => setLocalConfig(prev => ({ ...prev, body_type: type }))}
-                  onHeightChange={(height) => setLocalConfig(prev => ({ ...prev, height }))}
-                  onSkinToneChange={(tone) => setLocalConfig(prev => ({ ...prev, skin_tone: tone }))}
-                  onGenderChange={(gender) => setLocalConfig(prev => ({ ...prev, gender }))}
-                  onWeightChange={(weight) => setLocalConfig(prev => ({ ...prev, weight }))}
-                  onMuscleDefinitionChange={(muscle_definition) => setLocalConfig(prev => ({ ...prev, muscle_definition }))}
-                  onShoulderWidthChange={(shoulder_width) => setLocalConfig(prev => ({ ...prev, shoulder_width }))}
-                  onHipWidthChange={(hip_width) => setLocalConfig(prev => ({ ...prev, hip_width }))}
-                  onTorsoLengthChange={(torso_length) => setLocalConfig(prev => ({ ...prev, torso_length }))}
-                  onArmLengthChange={(arm_length) => setLocalConfig(prev => ({ ...prev, arm_length }))}
-                  onLegLengthChange={(leg_length) => setLocalConfig(prev => ({ ...prev, leg_length }))}
-                  onAgeAppearanceChange={(age_appearance) => setLocalConfig(prev => ({ ...prev, age_appearance }))}
-                />
-              </TabsContent>
+                <div>
+                  <h3 className="font-semibold">
+                    {hasAvatar ? 'Avatar Ready!' : 'Create Your Avatar'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {hasAvatar 
+                      ? 'Your 3D avatar is configured and ready for performances'
+                      : 'Design a unique 3D character that represents you on stage'
+                    }
+                  </p>
+                </div>
+              </div>
 
-              <TabsContent value="hair" className="mt-0">
-                <HairSelector
-                  hairStyles={hairStyles || []}
-                  selectedStyleId={getSelectedHairStyleId()}
-                  selectedColor={localConfig.hair_color || '#2d1a0a'}
-                  onStyleSelect={handleHairStyleSelect}
-                  onColorSelect={(color) => setLocalConfig(prev => ({ ...prev, hair_color: color }))}
-                  isItemOwned={isItemOwned}
-                  onPurchase={(id, price) => handlePurchase(id, 'hair_style', price)}
-                />
-              </TabsContent>
+              {hasAvatar ? (
+                <div className="space-y-3">
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Avatar ID</p>
+                    <p className="text-sm font-mono truncate">{localConfig.rpm_avatar_id}</p>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRpmCreator(true)}
+                    className="w-full"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Create New Avatar
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setShowRpmCreator(true)}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Crown className="h-5 w-5 mr-2" />
+                  Create Your 3D Avatar
+                </Button>
+              )}
+            </CardContent>
+          </Card>
 
-              <TabsContent value="face" className="mt-0">
-                <FaceSelector
-                  // Eyes
-                  selectedEyeStyle={localConfig.eye_style || 'default'}
-                  eyeColor={localConfig.eye_color || '#2d1a0a'}
-                  eyeSize={localConfig.eye_size ?? 1.0}
-                  eyeSpacing={localConfig.eye_spacing ?? 1.0}
-                  eyeTilt={localConfig.eye_tilt ?? 0}
-                  onEyeStyleChange={(style) => setLocalConfig(prev => ({ ...prev, eye_style: style }))}
-                  onEyeColorChange={(eye_color) => setLocalConfig(prev => ({ ...prev, eye_color }))}
-                  onEyeSizeChange={(eye_size) => setLocalConfig(prev => ({ ...prev, eye_size }))}
-                  onEyeSpacingChange={(eye_spacing) => setLocalConfig(prev => ({ ...prev, eye_spacing }))}
-                  onEyeTiltChange={(eye_tilt) => setLocalConfig(prev => ({ ...prev, eye_tilt }))}
-                  // Eyebrows
-                  eyebrowStyle={localConfig.eyebrow_style || 'normal'}
-                  eyebrowColor={localConfig.eyebrow_color || '#1a1a1a'}
-                  eyebrowThickness={localConfig.eyebrow_thickness ?? 1.0}
-                  onEyebrowStyleChange={(style) => setLocalConfig(prev => ({ ...prev, eyebrow_style: style as any }))}
-                  onEyebrowColorChange={(color) => setLocalConfig(prev => ({ ...prev, eyebrow_color: color }))}
-                  onEyebrowThicknessChange={(thickness) => setLocalConfig(prev => ({ ...prev, eyebrow_thickness: thickness }))}
-                  // Nose
-                  selectedNoseStyle={localConfig.nose_style || 'default'}
-                  noseWidth={localConfig.nose_width ?? 1.0}
-                  noseLength={localConfig.nose_length ?? 1.0}
-                  noseBridge={localConfig.nose_bridge ?? 0.5}
-                  onNoseStyleChange={(style) => setLocalConfig(prev => ({ ...prev, nose_style: style }))}
-                  onNoseWidthChange={(width) => setLocalConfig(prev => ({ ...prev, nose_width: width }))}
-                  onNoseLengthChange={(length) => setLocalConfig(prev => ({ ...prev, nose_length: length }))}
-                  onNoseBridgeChange={(bridge) => setLocalConfig(prev => ({ ...prev, nose_bridge: bridge }))}
-                  // Mouth
-                  selectedMouthStyle={localConfig.mouth_style || 'default'}
-                  lipFullness={localConfig.lip_fullness ?? 1.0}
-                  lipWidth={localConfig.lip_width ?? 1.0}
-                  lipColor={localConfig.lip_color || '#c8746a'}
-                  onMouthStyleChange={(style) => setLocalConfig(prev => ({ ...prev, mouth_style: style }))}
-                  onLipFullnessChange={(fullness) => setLocalConfig(prev => ({ ...prev, lip_fullness: fullness }))}
-                  onLipWidthChange={(width) => setLocalConfig(prev => ({ ...prev, lip_width: width }))}
-                  onLipColorChange={(color) => setLocalConfig(prev => ({ ...prev, lip_color: color }))}
-                  // Face structure
-                  faceWidth={localConfig.face_width ?? 1.0}
-                  faceLength={localConfig.face_length ?? 1.0}
-                  jawShape={localConfig.jaw_shape || 'default'}
-                  cheekbone={localConfig.cheekbone ?? 0.5}
-                  chinProminence={localConfig.chin_prominence ?? 0.5}
-                  onFaceWidthChange={(width) => setLocalConfig(prev => ({ ...prev, face_width: width }))}
-                  onFaceLengthChange={(length) => setLocalConfig(prev => ({ ...prev, face_length: length }))}
-                  onJawShapeChange={(shape) => setLocalConfig(prev => ({ ...prev, jaw_shape: shape as any }))}
-                  onCheekboneChange={(cheekbone) => setLocalConfig(prev => ({ ...prev, cheekbone }))}
-                  onChinProminenceChange={(chin) => setLocalConfig(prev => ({ ...prev, chin_prominence: chin }))}
-                  // Ears
-                  earSize={localConfig.ear_size ?? 1.0}
-                  earAngle={localConfig.ear_angle ?? 0}
-                  onEarSizeChange={(size) => setLocalConfig(prev => ({ ...prev, ear_size: size }))}
-                  onEarAngleChange={(angle) => setLocalConfig(prev => ({ ...prev, ear_angle: angle }))}
-                  // Extras
-                  selectedBeardStyle={localConfig.beard_style || null}
-                  selectedTattooStyle={localConfig.tattoo_style || null}
-                  selectedScarStyle={localConfig.scar_style || null}
-                  onBeardStyleChange={(style) => setLocalConfig(prev => ({ ...prev, beard_style: style }))}
-                  onTattooStyleChange={(style) => setLocalConfig(prev => ({ ...prev, tattoo_style: style }))}
-                  onScarStyleChange={(style) => setLocalConfig(prev => ({ ...prev, scar_style: style }))}
-                  // Purchase
-                  isItemOwned={isItemOwned}
-                  onPurchase={(id, price) => handlePurchase(id, 'face_option', price)}
+          {/* RPM Creator */}
+          {showRpmCreator && (
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Avatar Creator</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setShowRpmCreator(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ReadyPlayerMeCreator
+                  onAvatarCreated={handleRpmAvatarCreated}
+                  onClose={() => setShowRpmCreator(false)}
                 />
-              </TabsContent>
+              </CardContent>
+            </Card>
+          )}
 
-              <TabsContent value="clothing" className="mt-0">
-                <ClothingSelector
-                  clothingItems={clothingItems || []}
-                  selectedShirtId={localConfig.shirt_id || null}
-                  selectedPantsId={localConfig.pants_id || null}
-                  selectedShoesId={localConfig.shoes_id || null}
-                  selectedJacketId={localConfig.jacket_id || null}
-                  shirtColor={localConfig.shirt_color || '#2d0a0a'}
-                  pantsColor={localConfig.pants_color || '#1a1a1a'}
-                  shoesColor={localConfig.shoes_color || '#1a1a1a'}
-                  jacketColor={localConfig.jacket_color || '#1a1a1a'}
-                  onShirtSelect={(id) => setLocalConfig(prev => ({ ...prev, shirt_id: id }))}
-                  onPantsSelect={(id) => setLocalConfig(prev => ({ ...prev, pants_id: id }))}
-                  onShoesSelect={(id) => setLocalConfig(prev => ({ ...prev, shoes_id: id }))}
-                  onJacketSelect={(id) => setLocalConfig(prev => ({ ...prev, jacket_id: id }))}
-                  onShirtColorChange={(color) => setLocalConfig(prev => ({ ...prev, shirt_color: color }))}
-                  onPantsColorChange={(color) => setLocalConfig(prev => ({ ...prev, pants_color: color }))}
-                  onShoesColorChange={(color) => setLocalConfig(prev => ({ ...prev, shoes_color: color }))}
-                  onJacketColorChange={(color) => setLocalConfig(prev => ({ ...prev, jacket_color: color }))}
-                  isItemOwned={isItemOwned}
-                  onPurchase={(id, price) => handlePurchase(id, 'clothing', price)}
-                />
-              </TabsContent>
-
-              <TabsContent value="accessories" className="mt-0">
-                <AccessorySelector
-                  accessories={accessories as any}
-                  selectedAccessory1={localConfig.accessory_1_id || null}
-                  selectedAccessory2={localConfig.accessory_2_id || null}
-                  onAccessory1Select={(id) => setLocalConfig(prev => ({ ...prev, accessory_1_id: id }))}
-                  onAccessory2Select={(id) => setLocalConfig(prev => ({ ...prev, accessory_2_id: id }))}
-                  isItemOwned={isItemOwned}
-                  onPurchase={(id, price) => handlePurchase(id, 'accessory', price)}
-                />
-              </TabsContent>
-            </ScrollArea>
-          </Tabs>
+          {/* Features Card */}
+          {!showRpmCreator && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Avatar Features</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
+                    Professional quality 3D character model
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
+                    Hundreds of clothing & accessory options
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
+                    Appears on stage during gig performances
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
+                    Smooth performance animations
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
+                    Regular new content updates
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
