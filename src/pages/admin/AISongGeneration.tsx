@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Music, 
@@ -22,9 +23,11 @@ import {
   RefreshCw,
   Wand2,
   Volume2,
-  RotateCcw
+  RotateCcw,
+  Trophy
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
+import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 
 type Song = {
   id: string;
@@ -244,26 +247,40 @@ export default function AISongGeneration() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search songs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        {/* Tabs for All Songs and Chart Top 10 */}
+        <Tabs defaultValue="all-songs" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="all-songs" className="flex items-center gap-2">
+              <Music className="h-4 w-4" />
+              All Songs
+            </TabsTrigger>
+            <TabsTrigger value="chart-toppers" className="flex items-center gap-2">
+              <Trophy className="h-4 w-4" />
+              Chart Top 10
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Songs Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recorded Songs</CardTitle>
-            <CardDescription>
-              Select a song to generate AI audio. Only recorded or released songs are shown.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          <TabsContent value="all-songs" className="space-y-4">
+            {/* Search */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search songs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Songs Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recorded Songs</CardTitle>
+                <CardDescription>
+                  Select a song to generate AI audio. Only recorded or released songs are shown.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -353,8 +370,14 @@ export default function AISongGeneration() {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          </TabsContent>
+
+          <TabsContent value="chart-toppers">
+            <ChartTopSongsSection />
+          </TabsContent>
+        </Tabs>
 
         {/* Generate Dialog */}
         <Dialog open={dialogOpen} onOpenChange={closeDialog}>
