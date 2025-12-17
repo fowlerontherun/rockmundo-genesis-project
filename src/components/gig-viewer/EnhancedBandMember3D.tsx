@@ -1,9 +1,10 @@
-import { useRef } from "react";
+import { useRef, Suspense } from "react";
 import { Mesh, Group } from "three";
 import { useFrame } from "@react-three/fiber";
 import { EnhancedFace } from "@/components/avatar-system/EnhancedFace";
 import { EnhancedHair } from "@/components/avatar-system/EnhancedHair";
 import { Instruments3D } from "./Instruments3D";
+import { ReadyPlayerMeAvatar } from "@/components/avatar-system/ReadyPlayerMeAvatar";
 
 interface AvatarConfig {
   skin_tone?: string;
@@ -23,6 +24,9 @@ interface AvatarConfig {
   eye_color?: string;
   eyebrow_color?: string;
   lip_color?: string;
+  // Ready Player Me
+  rpm_avatar_url?: string | null;
+  use_rpm_avatar?: boolean;
 }
 
 interface EnhancedBandMember3DProps {
@@ -67,6 +71,9 @@ export const EnhancedBandMember3D = ({
   const rightArmRef = useRef<Group>(null);
   const leftLegRef = useRef<Mesh>(null);
   const rightLegRef = useRef<Mesh>(null);
+
+  // Check if using RPM avatar
+  const useRpmAvatar = avatarConfig?.use_rpm_avatar && avatarConfig?.rpm_avatar_url;
 
   // Default values based on seed
   const hairTypes = ['rocker', 'messy', 'mohawk', 'long-straight', 'short-spiky', 'curly', 'ponytail', 'bald'];
@@ -189,6 +196,54 @@ export const EnhancedBandMember3D = ({
     ? (instrument === 'vocalist' ? 'singing' : 'intense')
     : 'neutral';
 
+  // Render Ready Player Me avatar if configured
+  if (useRpmAvatar && avatarConfig?.rpm_avatar_url) {
+    return (
+      <group ref={groupRef} position={position}>
+        <Suspense fallback={
+          <mesh position={[0, 1, 0]}>
+            <capsuleGeometry args={[0.17, 0.42, 12, 24]} />
+            <meshStandardMaterial color="#888" />
+          </mesh>
+        }>
+          <ReadyPlayerMeAvatar
+            avatarUrl={avatarConfig.rpm_avatar_url}
+            scale={1}
+            position={[0, 0, 0]}
+          />
+        </Suspense>
+        
+        {/* Instruments for RPM avatar */}
+        {instrument === 'guitarist' && (
+          <Instruments3D
+            type="electric-guitar"
+            color={instrumentColor}
+            position={[0.15, 0.85, 0.12]}
+            rotation={[0, 0, -0.35]}
+          />
+        )}
+        {instrument === 'bassist' && (
+          <Instruments3D
+            type="bass-guitar"
+            color={instrumentColor}
+            position={[0.15, 0.85, 0.12]}
+            rotation={[0, 0, -0.35]}
+          />
+        )}
+        {instrument === 'drummer' && (
+          <Instruments3D type="drum-kit" position={[0, 0, 1]} />
+        )}
+        {instrument === 'vocalist' && (
+          <Instruments3D type="microphone" position={[0, 0, 0.3]} />
+        )}
+        {instrument === 'keyboardist' && (
+          <Instruments3D type="keyboard" position={[0, 0.85, 0.4]} rotation={[0, 0, 0]} />
+        )}
+      </group>
+    );
+  }
+
+  // Fallback to procedural avatar
   return (
     <group ref={groupRef} position={position} scale={heightScale}>
       {/* Enhanced Torso */}

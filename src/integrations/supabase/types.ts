@@ -6561,6 +6561,8 @@ export type Database = {
           pants_color: string | null
           pants_id: string | null
           profile_id: string
+          rpm_avatar_id: string | null
+          rpm_avatar_url: string | null
           scar_style: string | null
           shirt_color: string | null
           shirt_id: string | null
@@ -6571,6 +6573,7 @@ export type Database = {
           tattoo_style: string | null
           torso_length: number | null
           updated_at: string | null
+          use_rpm_avatar: boolean | null
           weight: number | null
         }
         Insert: {
@@ -6617,6 +6620,8 @@ export type Database = {
           pants_color?: string | null
           pants_id?: string | null
           profile_id: string
+          rpm_avatar_id?: string | null
+          rpm_avatar_url?: string | null
           scar_style?: string | null
           shirt_color?: string | null
           shirt_id?: string | null
@@ -6627,6 +6632,7 @@ export type Database = {
           tattoo_style?: string | null
           torso_length?: number | null
           updated_at?: string | null
+          use_rpm_avatar?: boolean | null
           weight?: number | null
         }
         Update: {
@@ -6673,6 +6679,8 @@ export type Database = {
           pants_color?: string | null
           pants_id?: string | null
           profile_id?: string
+          rpm_avatar_id?: string | null
+          rpm_avatar_url?: string | null
           scar_style?: string | null
           shirt_color?: string | null
           shirt_id?: string | null
@@ -6683,6 +6691,7 @@ export type Database = {
           tattoo_style?: string | null
           torso_length?: number | null
           updated_at?: string | null
+          use_rpm_avatar?: boolean | null
           weight?: number | null
         }
         Relationships: [
