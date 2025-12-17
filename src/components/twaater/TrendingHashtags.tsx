@@ -59,7 +59,7 @@ export const TrendingHashtags = () => {
             key={hashtag.tag}
             variant="ghost"
             className="w-full justify-start h-auto py-2 px-2"
-            onClick={() => navigate(`/twaater/hashtag/${hashtag.tag}`)}
+            onClick={() => navigate(`/twaater/tag/${hashtag.tag}`)}
           >
             <div className="flex items-center gap-2 w-full">
               <span className="text-muted-foreground text-xs w-4">{index + 1}</span>

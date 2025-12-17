@@ -15,6 +15,7 @@ import { TwaaterLogo } from "@/components/twaater/TwaaterLogo";
 import { useTwaaterBookmarks } from "@/hooks/useTwaaterBookmarks";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
 import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
+import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { Home, TrendingUp, AtSign, Bookmark } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,6 +113,7 @@ export default function Twaater() {
         {/* Sidebar - Desktop Only */}
         <div className="hidden lg:block w-80 space-y-4 sticky top-0 h-fit pt-4">
           <TrendingHashtags />
+          {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
         </div>
       </div>
     </div>
