@@ -57,13 +57,16 @@ export const EnhancedBandAvatars3D = ({
   const intensity = crowdMood / 100;
 
   // Stage positions for band members (x, y, z)
-  // IMPORTANT: StageScene's stage surface is around y≈1, so band needs to stand on it.
-  const stageY = 1.05;
+  // IMPORTANT: StageScene's stage floor surface is at y=1 (boxGeometry at y=1 with height 0.1)
+  // RPM avatars have feet at local y=0 after SharedRpmAvatar processing
+  // So we position them at y=1.0 to stand on the floor
+  // Adding extra height (1.8) to ensure full body visible above stage surface
+  const stageY = 1.8; // Raised significantly to ensure full body is visible
   const positions: Record<string, [number, number, number]> = {
     vocalist: [0, stageY, -4],          // Center front
     guitarist: [-2.5, stageY, -5.5],    // Stage left
     bassist: [2.5, stageY, -5.5],       // Stage right
-    drummer: [0, stageY + 0.3, -7.5],   // Center back (slightly elevated)
+    drummer: [0, stageY + 0.3, -7.5],   // Center back (slightly elevated for drum riser)
     keyboardist: [-4, stageY, -6],      // Far left
   };
 
