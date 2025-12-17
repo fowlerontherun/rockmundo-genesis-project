@@ -299,18 +299,66 @@ serve(async (req) => {
       throw new Error('No audio generated')
     }
 
-    const audioUrl = typeof output === 'string' ? output : (output as any)?.audio || (output as any)?.[0]
+    const replicateAudioUrl = typeof output === 'string' ? output : (output as any)?.audio || (output as any)?.[0]
 
-    if (!audioUrl) {
+    if (!replicateAudioUrl) {
       addLog('ERROR: No audio URL found in Replicate response')
       console.error('[admin-generate-song-audio] Unexpected output format:', JSON.stringify(output))
       throw new Error('No audio URL in response')
     }
 
-    addLog(`Audio URL received: ${audioUrl.substring(0, 50)}...`)
+    addLog(`Replicate URL received: ${replicateAudioUrl.substring(0, 50)}...`)
 
-    // Update song with audio URL
-    addLog('Saving audio URL to database...')
+    // Download audio from Replicate and upload to Supabase Storage
+    addLog('Downloading audio from Replicate...')
+    const audioResponse = await fetch(replicateAudioUrl)
+    
+    if (!audioResponse.ok) {
+      addLog(`ERROR: Failed to download audio - HTTP ${audioResponse.status}`)
+      throw new Error(`Failed to download audio: ${audioResponse.status}`)
+    }
+    
+    const audioBlob = await audioResponse.blob()
+    const audioBuffer = await audioBlob.arrayBuffer()
+    const audioBytes = new Uint8Array(audioBuffer)
+    
+    addLog(`Audio downloaded: ${(audioBytes.length / 1024 / 1024).toFixed(2)} MB`)
+    
+    // Generate unique filename
+    const timestamp = Date.now()
+    const sanitizedTitle = (song.title || 'song').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
+    const filename = `${songId}/${sanitizedTitle}_${timestamp}.mp3`
+    
+    addLog(`Uploading to Supabase Storage: music/${filename}`)
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
+      .from('music')
+      .upload(filename, audioBytes, {
+        contentType: 'audio/mpeg',
+        upsert: true
+      })
+    
+    if (uploadError) {
+      addLog(`ERROR: Storage upload failed - ${uploadError.message}`)
+      console.error('[admin-generate-song-audio] Storage upload error:', uploadError)
+      throw new Error(`Failed to upload to storage: ${uploadError.message}`)
+    }
+    
+    addLog(`Upload successful: ${JSON.stringify(uploadData)}`)
+    
+    // Get public URL
+    const { data: publicUrlData } = supabase
+      .storage
+      .from('music')
+      .getPublicUrl(filename)
+    
+    const audioUrl = publicUrlData.publicUrl
+    addLog(`Supabase Storage URL: ${audioUrl}`)
+
+    // Update song with Supabase storage URL
+    addLog('Saving Supabase storage URL to database...')
     const { error: updateError } = await supabase
       .from('songs')
       .update({
