@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
+import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
 
 type Song = {
   id: string;
@@ -247,7 +248,7 @@ export default function AISongGeneration() {
           </Card>
         </div>
 
-        {/* Tabs for All Songs and Chart Top 10 */}
+        {/* Tabs for All Songs, Chart Top 10, and Most Played */}
         <Tabs defaultValue="all-songs" className="space-y-4">
           <TabsList>
             <TabsTrigger value="all-songs" className="flex items-center gap-2">
@@ -257,6 +258,10 @@ export default function AISongGeneration() {
             <TabsTrigger value="chart-toppers" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
               Chart Top 10
+            </TabsTrigger>
+            <TabsTrigger value="most-played" className="flex items-center gap-2">
+              <Play className="h-4 w-4" />
+              Most Played
             </TabsTrigger>
           </TabsList>
 
@@ -376,6 +381,10 @@ export default function AISongGeneration() {
 
           <TabsContent value="chart-toppers">
             <ChartTopSongsSection />
+          </TabsContent>
+
+          <TabsContent value="most-played">
+            <TopPlayedSongsSection />
           </TabsContent>
         </Tabs>
 

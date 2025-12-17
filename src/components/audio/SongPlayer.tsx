@@ -13,6 +13,7 @@ interface SongPlayerProps {
   compact?: boolean;
   generationStatus?: string | null;
   showShare?: boolean;
+  onPlay?: () => void;
 }
 
 export const SongPlayer = ({
@@ -23,6 +24,7 @@ export const SongPlayer = ({
   compact = false,
   generationStatus,
   showShare = true,
+  onPlay,
 }: SongPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -74,6 +76,8 @@ export const SongPlayer = ({
       try {
         await audioRef.current.play();
         setIsPlaying(true);
+        // Track play when user starts playing
+        onPlay?.();
       } catch (error) {
         console.error("Error playing audio:", error);
       } finally {
