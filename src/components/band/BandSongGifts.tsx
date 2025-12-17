@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Music } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -25,42 +25,46 @@ export const BandSongGifts = ({ bandId }: BandSongGiftsProps) => {
     },
     enabled: !!bandId
   });
+
   if (!gifts || gifts.length === 0) return null;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Gift className="h-5 w-5 text-primary" />
-          Gifted Songs
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Gift className="h-4 w-4 text-primary" />
+          Gifted Songs ({gifts.length})
         </CardTitle>
-        <CardDescription>
-          Songs that have been gifted to your band
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {gifts.map((gift) => (
-          <div key={gift.id} className="flex items-start justify-between border rounded-lg p-4">
-            <div className="flex gap-3">
-              <Music className="h-5 w-5 mt-1 text-muted-foreground" />
-              <div className="space-y-1">
-                <h4 className="font-semibold">{gift.song_title}</h4>
-                <div className="flex gap-2">
-                  <Badge variant="secondary">{gift.genre}</Badge>
+      <CardContent className="pt-0">
+        <div className="divide-y divide-border">
+          {gifts.map((gift) => (
+            <div key={gift.id} className="py-2 first:pt-0 last:pb-0 flex items-center gap-2">
+              <Music className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-sm truncate">{gift.song_title}</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                    {gift.genre}
+                  </Badge>
                   {gift.song_rating && (
-                    <Badge variant="outline">Rating: {gift.song_rating}/100</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                      {gift.song_rating}/100
+                    </Badge>
                   )}
                 </div>
                 {gift.gift_message && (
-                  <p className="text-sm text-muted-foreground mt-2">{gift.gift_message}</p>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    "{gift.gift_message}"
+                  </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Received {formatDistanceToNow(new Date(gift.created_at))} ago
-                </p>
               </div>
+              <span className="text-[10px] text-muted-foreground shrink-0">
+                {formatDistanceToNow(new Date(gift.created_at), { addSuffix: true })}
+              </span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

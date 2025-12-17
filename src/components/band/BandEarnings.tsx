@@ -135,13 +135,18 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
           setEarnings(earningsData as Earning[]);
         }
 
-        // Calculate stats
+        // Calculate stats - match actual source values from database
+        const gigSources = ['gig', 'gig_performance', 'gig_revenue', 'ticket_sales'];
+        const streamingSources = ['streaming', 'stream', 'radio'];
+        const merchSources = ['merchandise', 'merch', 'merch_sales'];
+        const allKnownSources = [...gigSources, ...streamingSources, ...merchSources];
+        
         const statsCalc = {
           total: earningsData.reduce((sum, e) => sum + e.amount, 0),
-          gigs: earningsData.filter(e => e.source === 'gig').reduce((sum, e) => sum + e.amount, 0),
-          streaming: earningsData.filter(e => e.source === 'streaming').reduce((sum, e) => sum + e.amount, 0),
-          merchandise: earningsData.filter(e => e.source === 'merchandise').reduce((sum, e) => sum + e.amount, 0),
-          other: earningsData.filter(e => !['gig', 'streaming', 'merchandise'].includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          gigs: earningsData.filter(e => gigSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          streaming: earningsData.filter(e => streamingSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          merchandise: earningsData.filter(e => merchSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          other: earningsData.filter(e => !allKnownSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
         };
         setStats(statsCalc);
       } else {
