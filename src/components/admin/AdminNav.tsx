@@ -40,6 +40,7 @@ export const adminCategories: AdminCategory[] = [
     description: "Manage songs, production, and music systems",
     icon: Music,
     items: [
+      { path: "/admin/ai-song-generation", label: "AI Song Generation", description: "Test AI audio generation" },
       { path: "/admin/songwriting", label: "Songwriting", description: "Songwriting configuration" },
       { path: "/admin/production-notes", label: "Production Notes", description: "Setlist elements" },
       { path: "/admin/song-gifts", label: "Song Gifts", description: "Gift songs to bands" },
