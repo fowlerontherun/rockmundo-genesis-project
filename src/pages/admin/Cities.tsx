@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CulturalEventsManager } from "@/components/admin/CulturalEventsManager";
 
 const createNumberField = ({
   field,
@@ -606,9 +606,11 @@ const CitiesAdmin = () => {
                     name="cultural_events"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cultural events (JSON array)</FormLabel>
                         <FormControl>
-                          <Textarea rows={3} placeholder='["Jazz Festival", "Indie Week"]' {...field} />
+                          <CulturalEventsManager 
+                            value={parseStringArray(field.value)} 
+                            onChange={(events) => field.onChange(formatStringArray(events))} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

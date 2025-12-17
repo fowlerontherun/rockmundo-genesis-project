@@ -20,6 +20,7 @@ export default function FestivalsAdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingFestival, setEditingFestival] = useState<any>(null);
 
   // Fetch festivals
@@ -97,6 +98,45 @@ export default function FestivalsAdminPage() {
     },
   });
 
+  // Update festival
+  const updateMutation = useMutation({
+    mutationFn: async (festivalData: any) => {
+      if (!festivalData.city_id) {
+        throw new Error("Please select a city for the festival");
+      }
+      
+      const { error } = await supabase
+        .from("game_events")
+        .update({
+          title: festivalData.title,
+          start_date: `${festivalData.start_date}T00:00:00Z`,
+          end_date: `${festivalData.end_date}T23:59:59Z`,
+          description: festivalData.description,
+          requirements: {
+            city_id: festivalData.city_id,
+            capacity: parseInt(festivalData.capacity),
+            ticket_price: parseInt(festivalData.ticket_price),
+            genres: festivalData.genres || [],
+          },
+        })
+        .eq("id", editingFestival?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-festivals"] });
+      toast({ title: "Festival updated successfully" });
+      setIsEditOpen(false);
+      setEditingFestival(null);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to update festival", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Delete festival
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -166,7 +206,10 @@ export default function FestivalsAdminPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setEditingFestival(festival)}>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setEditingFestival(festival);
+                      setIsEditOpen(true);
+                    }}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
@@ -265,6 +308,24 @@ export default function FestivalsAdminPage() {
           ))}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => {
+        setIsEditOpen(open);
+        if (!open) setEditingFestival(null);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Festival</DialogTitle>
+          </DialogHeader>
+          {editingFestival && (
+            <FestivalForm 
+              onSubmit={(data) => updateMutation.mutate(data)} 
+              initialData={editingFestival}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
