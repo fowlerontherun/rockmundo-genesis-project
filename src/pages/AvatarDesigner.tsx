@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, RotateCcw, User, Scissors, Shirt, Sparkles, Crown, CheckCircle } from "lucide-react";
+import { Save, RotateCcw, User, Scissors, Shirt, Sparkles, Crown, CheckCircle, Lock } from "lucide-react";
 import { usePlayerAvatar, AvatarConfig, defaultConfig } from "@/hooks/usePlayerAvatar";
+import { useVipStatus } from "@/hooks/useVipStatus";
 import { AvatarPreview3D } from "@/components/avatar-designer/AvatarPreview3D";
 import { HairSelector } from "@/components/avatar-designer/HairSelector";
 import { BodySelector } from "@/components/avatar-designer/BodySelector";
@@ -14,8 +15,11 @@ import { AccessorySelector } from "@/components/avatar-designer/AccessorySelecto
 import { ReadyPlayerMeCreator } from "@/components/avatar-designer/ReadyPlayerMeCreator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const AvatarDesigner = () => {
+  const navigate = useNavigate();
+  const { data: vipStatus } = useVipStatus();
   const {
     avatarConfig,
     isLoading,
@@ -31,6 +35,7 @@ const AvatarDesigner = () => {
 
   const [localConfig, setLocalConfig] = useState<Partial<AvatarConfig>>(defaultConfig);
   const [showRpmCreator, setShowRpmCreator] = useState(false);
+  const isVip = vipStatus?.isVip || false;
 
   useEffect(() => {
     if (avatarConfig) {
@@ -195,84 +200,114 @@ const AvatarDesigner = () => {
             <ScrollArea className="h-[500px] pr-4">
               <TabsContent value="premium" className="mt-0">
                 <div className="space-y-4">
-                  <div className="p-4 border border-yellow-500/30 rounded-lg bg-yellow-500/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Crown className="h-5 w-5 text-yellow-500" />
-                      <h3 className="font-semibold">Ready Player Me Avatar</h3>
-                      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500">Premium</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Create a high-quality 3D avatar with hundreds of customization options using Ready Player Me's professional avatar creator.
-                    </p>
-                    
-                    {localConfig.rpm_avatar_url ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-green-500">
-                          <CheckCircle className="h-4 w-4" />
-                          <span className="text-sm font-medium">Premium avatar configured</span>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button
-                            variant={localConfig.use_rpm_avatar ? "default" : "outline"}
-                            onClick={() => handleToggleRpmAvatar(true)}
-                            className="flex-1"
-                          >
-                            Use Premium Avatar
-                          </Button>
-                          <Button
-                            variant={!localConfig.use_rpm_avatar ? "default" : "outline"}
-                            onClick={() => handleToggleRpmAvatar(false)}
-                            className="flex-1"
-                          >
-                            Use Basic Avatar
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowRpmCreator(true)}
-                          className="w-full"
-                        >
-                          Create New Premium Avatar
-                        </Button>
-                      </div>
-                    ) : (
+                  {!isVip ? (
+                    <div className="p-6 border border-yellow-500/30 rounded-lg bg-yellow-500/5 text-center">
+                      <Lock className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                      <h3 className="font-semibold text-lg mb-2">VIP Feature</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Ready Player Me premium avatars are exclusive to VIP members. Upgrade to unlock high-quality 3D avatars with hundreds of customization options.
+                      </p>
                       <Button
-                        onClick={() => setShowRpmCreator(true)}
-                        className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                        onClick={() => navigate('/vip')}
+                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                       >
                         <Crown className="h-4 w-4 mr-2" />
-                        Create Premium Avatar
+                        Become a VIP
                       </Button>
-                    )}
-                  </div>
-                  
-                  {showRpmCreator && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Avatar Creator</h4>
-                        <Button variant="ghost" size="sm" onClick={() => setShowRpmCreator(false)}>
-                          Cancel
-                        </Button>
+                      
+                      <div className="mt-6 p-3 border border-border rounded-lg bg-muted/30 text-left">
+                        <h4 className="font-medium mb-2">Premium Avatar Features</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          <li>• Professional quality 3D model</li>
+                          <li>• Hundreds of clothing & accessory options</li>
+                          <li>• Realistic facial expressions</li>
+                          <li>• Smooth animations on stage</li>
+                          <li>• Regular new content updates</li>
+                        </ul>
                       </div>
-                      <ReadyPlayerMeCreator
-                        onAvatarCreated={handleRpmAvatarCreated}
-                        onClose={() => setShowRpmCreator(false)}
-                      />
                     </div>
+                  ) : (
+                    <>
+                      <div className="p-4 border border-yellow-500/30 rounded-lg bg-yellow-500/5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Crown className="h-5 w-5 text-yellow-500" />
+                          <h3 className="font-semibold">Ready Player Me Avatar</h3>
+                          <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500">VIP</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Create a high-quality 3D avatar with hundreds of customization options using Ready Player Me's professional avatar creator.
+                        </p>
+                        
+                        {localConfig.rpm_avatar_url ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-green-500">
+                              <CheckCircle className="h-4 w-4" />
+                              <span className="text-sm font-medium">Premium avatar configured</span>
+                            </div>
+                            
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button
+                                variant={localConfig.use_rpm_avatar ? "default" : "outline"}
+                                onClick={() => handleToggleRpmAvatar(true)}
+                                className="flex-1"
+                              >
+                                Use Premium Avatar
+                              </Button>
+                              <Button
+                                variant={!localConfig.use_rpm_avatar ? "default" : "outline"}
+                                onClick={() => handleToggleRpmAvatar(false)}
+                                className="flex-1"
+                              >
+                                Use Basic Avatar
+                              </Button>
+                            </div>
+                            
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowRpmCreator(true)}
+                              className="w-full"
+                            >
+                              Create New Premium Avatar
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => setShowRpmCreator(true)}
+                            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                          >
+                            <Crown className="h-4 w-4 mr-2" />
+                            Create Premium Avatar
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {showRpmCreator && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium">Avatar Creator</h4>
+                            <Button variant="ghost" size="sm" onClick={() => setShowRpmCreator(false)}>
+                              Cancel
+                            </Button>
+                          </div>
+                          <ReadyPlayerMeCreator
+                            onAvatarCreated={handleRpmAvatarCreated}
+                            onClose={() => setShowRpmCreator(false)}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="p-3 border border-border rounded-lg bg-muted/30">
+                        <h4 className="font-medium mb-2">Premium Avatar Features</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          <li>• Professional quality 3D model</li>
+                          <li>• Hundreds of clothing & accessory options</li>
+                          <li>• Realistic facial expressions</li>
+                          <li>• Smooth animations on stage</li>
+                          <li>• Regular new content updates</li>
+                        </ul>
+                      </div>
+                    </>
                   )}
-                  
-                  <div className="p-3 border border-border rounded-lg bg-muted/30">
-                    <h4 className="font-medium mb-2">Premium Avatar Features</h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Professional quality 3D model</li>
-                      <li>• Hundreds of clothing & accessory options</li>
-                      <li>• Realistic facial expressions</li>
-                      <li>• Smooth animations on stage</li>
-                      <li>• Regular new content updates</li>
-                    </ul>
-                  </div>
                 </div>
               </TabsContent>
               <TabsContent value="body" className="mt-0">
