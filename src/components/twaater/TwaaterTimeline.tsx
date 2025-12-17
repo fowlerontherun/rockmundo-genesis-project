@@ -120,18 +120,8 @@ export default function TwaaterTimeline({
       )}
       
       <TwaatCard
-        id={twaat.id}
-        body={twaat.body}
-        createdAt={twaat.created_at}
-        account={twaat.account}
-        metrics={twaat.metrics}
-        linkedType={twaat.linked_type}
-        linkedId={twaat.linked_id}
-        currentAccountId={currentAccountId}
-        isReply={!!twaat.parent_twaat_id}
-        isQuote={!!twaat.quoted_twaat_id}
-        onToggleThread={() => toggleThread(twaat.id)}
-        isThreadExpanded={expandedThreads.has(twaat.id)}
+        twaat={twaat}
+        viewerAccountId={currentAccountId}
       />
     </div>
   );
