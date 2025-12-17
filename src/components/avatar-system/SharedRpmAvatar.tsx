@@ -72,25 +72,30 @@ const SharedAvatarModel = ({
     // SkeletonUtils.clone properly handles skinned meshes and shared materials
     const clone = SkeletonUtils.clone(originalScene) as THREE.Group;
     
-    // Normalize the model position and scale
+    // 1. Calculate bounding box on UNSCALED clone first
     const bbox = new THREE.Box3().setFromObject(clone);
     const size = new THREE.Vector3();
     bbox.getSize(size);
     
-    const minY = bbox.min.y;
-    const height = size.y;
+    const originalHeight = size.y;
+    const originalMinY = bbox.min.y;
     
-    // Lift model so its lowest point is at y=0
-    if (Number.isFinite(minY)) {
-      clone.position.y = -minY;
-    }
+    console.log('[SharedRpmAvatar] Original height:', originalHeight, 'Original minY:', originalMinY);
     
-    // Scale to ~1.75 units tall
+    // 2. Calculate scale factor to reach target height (~1.75 units for human)
     const targetHeight = 1.75;
-    if (height && Number.isFinite(height) && height > 0) {
-      const s = targetHeight / height;
-      clone.scale.setScalar(s);
-    }
+    const scaleFactor = (originalHeight && originalHeight > 0) ? targetHeight / originalHeight : 1;
+    
+    console.log('[SharedRpmAvatar] Scale factor:', scaleFactor);
+    
+    // 3. Apply scale FIRST
+    clone.scale.setScalar(scaleFactor);
+    
+    // 4. Calculate Y offset AFTER scaling - scaled minY = originalMinY * scaleFactor
+    const scaledMinY = originalMinY * scaleFactor;
+    clone.position.y = -scaledMinY; // Feet on floor (y=0)
+    
+    console.log('[SharedRpmAvatar] Scaled minY:', scaledMinY, 'Final position.y:', clone.position.y);
     
     // Configure materials for rendering
     clone.traverse((child: Object3D) => {
