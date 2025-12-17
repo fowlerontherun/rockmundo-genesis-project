@@ -246,8 +246,16 @@ serve(async (req) => {
       }
     }
 
-    const stylePrompt = styleParts.join(', ')
-    addLog(`Style prompt: "${stylePrompt}"`)
+    // MiniMax requires prompt between 10-300 characters
+    let stylePrompt = styleParts.join(', ')
+    if (stylePrompt.length > 300) {
+      stylePrompt = stylePrompt.substring(0, 297) + '...'
+      addLog(`Style prompt truncated to 300 chars (was ${styleParts.join(', ').length})`)
+    } else if (stylePrompt.length < 10) {
+      stylePrompt = `${primaryGenre} song with vocals`
+      addLog(`Style prompt expanded to minimum 10 chars`)
+    }
+    addLog(`Style prompt (${stylePrompt.length} chars): "${stylePrompt}"`)
 
     // Format lyrics with section markers for MiniMax
     addLog('Formatting lyrics for MiniMax Music-1.5...')
