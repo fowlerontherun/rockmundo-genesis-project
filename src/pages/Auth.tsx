@@ -13,6 +13,8 @@ import logo from "@/assets/rockmundo-new-logo.png";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
 type AuthTab = "login" | "signup" | "forgot";
 interface StatusMessage {
   message: string;
@@ -58,6 +60,7 @@ const Auth = () => {
     email: "",
     password: ""
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const getBrowserOrigin = () => {
     if (typeof window === "undefined") {
       return null;
@@ -608,7 +611,18 @@ const Auth = () => {
                         </p>
                       </div>
 
-                      <Button type="submit" className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200 mt-4" disabled={loading}>
+                      <div className="flex items-start gap-2 pt-2">
+                        <Checkbox 
+                          id="terms" 
+                          checked={termsAccepted} 
+                          onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                        />
+                        <Label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                          I agree to the <TermsDialog triggerText="Terms of Service" /> including that all AI-generated music is owned by Rockmundo and cannot be distributed externally.
+                        </Label>
+                      </div>
+
+                      <Button type="submit" className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200 mt-4" disabled={loading || !termsAccepted}>
                         {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
                       </Button>
                     </form>
