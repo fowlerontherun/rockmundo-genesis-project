@@ -87,6 +87,7 @@ const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentS
 const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagement"));
 const BandManagementPage = lazyWithRetry(() => import("./pages/bands/[bandId]/management"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
+const CountryCharts = lazyWithRetry(() => import("./pages/CountryCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
@@ -235,6 +236,7 @@ function App() {
                     <Route path="streaming/:platformId" element={<StreamingPlatformDetail />} />
                     <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
+                    <Route path="country-charts" element={<CountryCharts />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="booking/education" element={<EducationBooking />} />
                     <Route path="booking/performance" element={<PerformanceBooking />} />
