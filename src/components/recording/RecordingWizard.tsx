@@ -116,6 +116,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
             <TabsContent value="song" className="mt-0">
               <SongSelector
                 userId={userId}
+                bandId={bandId || undefined}
                 selectedSong={selectedSong}
                 onSelect={handleSongSelect}
               />
@@ -140,15 +141,17 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
             </TabsContent>
 
             <TabsContent value="config" className="mt-0">
-              <SessionConfigurator
-                userId={userId}
-                bandId={bandId}
-                studio={selectedStudio}
-                song={selectedSong}
-                producer={selectedProducer!}
-                recordingVersion={recordingVersion || undefined}
-                onComplete={handleSessionComplete}
-              />
+              {selectedStudio && selectedSong && selectedProducer && (
+                <SessionConfigurator
+                  userId={userId}
+                  bandId={bandId}
+                  studio={selectedStudio}
+                  song={selectedSong}
+                  producer={selectedProducer}
+                  recordingVersion={recordingVersion || undefined}
+                  onComplete={handleSessionComplete}
+                />
+              )}
             </TabsContent>
           </div>
         </Tabs>
