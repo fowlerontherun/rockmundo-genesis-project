@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
-import { Star, TrendingUp, Activity, BarChart3, PiggyBank } from 'lucide-react';
+import { Star, TrendingUp, Activity, Users, PiggyBank, BarChart3, Music, Calendar } from 'lucide-react';
 import { getBandFameTitle } from '@/utils/bandFame';
 import { getChemistryLabel, getChemistryColor } from '@/utils/bandChemistry';
 import {
@@ -73,28 +73,16 @@ export function BandOverview({ bandId }: BandOverviewProps) {
   );
 
   const trendConfig = {
-    fans: {
-      label: 'Weekly Fans',
-      color: 'hsl(var(--chart-1))',
-    },
-    fame: {
-      label: 'Total Fame',
-      color: 'hsl(var(--chart-2))',
-    },
+    fans: { label: 'Weekly Fans', color: 'hsl(var(--chart-1))' },
+    fame: { label: 'Total Fame', color: 'hsl(var(--chart-2))' },
   } as const;
 
   const activityConfig = {
-    value: {
-      label: 'Activity Volume',
-      color: 'hsl(var(--chart-3))',
-    },
+    value: { label: 'Activity Volume', color: 'hsl(var(--chart-3))' },
   } as const;
 
   const profileConfig = {
-    value: {
-      label: 'Band Profile Score',
-      color: 'hsl(var(--chart-4))',
-    },
+    value: { label: 'Band Profile Score', color: 'hsl(var(--chart-4))' },
   } as const;
 
   const weeklyFans = band?.weekly_fans ?? 0;
@@ -118,27 +106,9 @@ export function BandOverview({ bandId }: BandOverviewProps) {
       .join(' ');
   };
 
-  const formatDate = (value?: string | null) => {
-    if (!value) return null;
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return null;
-    }
-    return parsed.toLocaleDateString();
-  };
-
-  const formatSentence = (value: string) => {
-    const normalized = value?.trim();
-    if (!normalized) {
-      return normalized;
-    }
-    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-  };
-
   const engagementTrend = useMemo(() => {
     const baseValue = Math.max(weeklyFans * 0.4, lifetimeFame ? lifetimeFame / 20 : weeklyFans * 0.3);
     const checkpoints = [0.35, 0.55, 0.7, 0.85, 1];
-
     return checkpoints.map((ratio, index) => ({
       label: `Week ${index === checkpoints.length - 1 ? 'Now' : `-${checkpoints.length - index - 1}`}`,
       fans: Math.round(weeklyFans * ratio + baseValue * (1 - ratio)),
@@ -165,276 +135,247 @@ export function BandOverview({ bandId }: BandOverviewProps) {
     [popularity, hiddenSkillRating, chemistryLevel, cohesionScore],
   );
 
-  const tooltipLabelFormatter = (value: string | number) => String(value);
-  const formatTooltipLabel = (value: unknown) => {
-    if (typeof value === 'string' || typeof value === 'number') {
-      return tooltipLabelFormatter(value);
-    }
-    return '';
-  };
-
-  const areaTooltipFormatter = (value: number | string, name: string) => [
-    numberFormatter.format(typeof value === 'number' ? value : Number(value)),
-    name === 'fans' ? 'Weekly Fans' : 'Total Fame',
-  ];
-
-  const barTooltipFormatter = (
-    value: number | string,
-    _name: string,
-    _item: unknown,
-    _index: number,
-    payload: { name?: string },
-  ) => [numberFormatter.format(typeof value === 'number' ? value : Number(value)), payload?.name ?? 'Activity'];
-
   const activityPalette = ['hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
 
   if (loading || !band) {
-    return <div>Loading...</div>;
+    return <div className="flex items-center justify-center py-8">Loading...</div>;
   }
 
   const fameProgress = (((band.fame ?? 0) % 1000) / 1000) * 100;
   const chemistryLabel = getChemistryLabel(band.chemistry_level);
   const chemistryColor = getChemistryColor(band.chemistry_level);
 
-  const operationalDetails = (() => {
-    const nextVote = formatDate(band.next_leadership_vote);
-    const hiatusEnd = formatDate(band.hiatus_ends_at);
-    const lastChemistryUpdate = formatDate(band.last_chemistry_update);
-
-    return [
-      {
-        label: 'Status',
-        value: formatStatus(band.status),
-      },
-      {
-        label: 'Next Leadership Vote',
-        value: nextVote ?? 'Not scheduled',
-      },
-      {
-        label: 'Hiatus',
-        value: band.hiatus_reason
-          ? `${formatSentence(band.hiatus_reason)}${hiatusEnd ? ` (until ${hiatusEnd})` : ''}`
-          : 'No active hiatus',
-      },
-      {
-        label: 'Last Chemistry Update',
-        value: lastChemistryUpdate ?? 'Unknown',
-      },
-    ];
-  })();
-
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5" />
-            Band Fame
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-2xl font-bold">{numberFormatter.format(totalFame)}</span>
-            <Badge>{getBandFameTitle(totalFame)}</Badge>
-          </div>
-          <Progress value={fameProgress} className="h-2" />
-          <div className="text-sm text-muted-foreground space-y-1">
-            <div>Collective Fame: {numberFormatter.format(lifetimeFame)}</div>
-            <div>Fame Multiplier: {fameMultiplier.toFixed(2)}x</div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      {/* Top Row - Key Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Band Fame */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Star className="h-4 w-4 text-yellow-500" />
+              Band Fame
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl font-bold">{numberFormatter.format(totalFame)}</span>
+              <Badge>{getBandFameTitle(totalFame)}</Badge>
+            </div>
+            <Progress value={fameProgress} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {fameMultiplier.toFixed(2)}x multiplier
+            </p>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Band Chemistry
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-2xl font-bold">{chemistryLevel}</span>
-            <Badge className={chemistryColor}>{chemistryLabel}</Badge>
-          </div>
-          <Progress value={chemistryLevel} className="h-2" />
-          <div className="text-sm text-muted-foreground space-y-1">
-            <div>Performances: {numberFormatter.format(performanceCount)}</div>
-            <div>Jam Sessions: {numberFormatter.format(jamCount)}</div>
-            <div>Days Together: {numberFormatter.format(daysTogether)}</div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Band Stats
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Members</p>
-              <p className="mt-2 text-2xl font-semibold">
+        {/* Members & Balance */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Users className="h-4 w-4" />
+              Members
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-2xl font-bold">
                 {memberCount}
-                <span className="text-sm font-normal text-muted-foreground"> / {band.max_members ?? '∞'}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">Active musicians contributing to the project</p>
+                <span className="text-sm font-normal text-muted-foreground">/{band.max_members ?? '∞'}</span>
+              </span>
             </div>
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                Skill Rating
-                <Badge variant="outline" className="text-[0.65rem]">
-                  Performance Ready
-                </Badge>
-              </p>
-              <p className="mt-2 text-2xl font-semibold">{numberFormatter.format(hiddenSkillRating)}</p>
-              <p className="text-xs text-muted-foreground">Composite average of instrumental and stage ability</p>
+            <div className="flex items-center gap-2 text-sm">
+              <PiggyBank className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{currencyFormatter.format(bandBalance)}</span>
             </div>
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <PiggyBank className="h-4 w-4" /> Band Balance
-              </p>
-              <p className="mt-2 text-2xl font-semibold">{currencyFormatter.format(bandBalance)}</p>
-              <p className="text-xs text-muted-foreground">Available funds for rehearsals, shows, and studio time</p>
-            </div>
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Weekly Fans</p>
-              <p className="mt-2 text-2xl font-semibold">{numberFormatter.format(weeklyFans)}</p>
-              <p className="text-xs text-muted-foreground">Net new fans attracted over the last week</p>
-            </div>
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Lifetime Fame Earned</p>
-              <p className="mt-2 text-2xl font-semibold">{numberFormatter.format(lifetimeFame)}</p>
-              <p className="text-xs text-muted-foreground">Accumulated recognition across all band eras</p>
-            </div>
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <BarChart3 className="h-4 w-4" /> Popularity
-              </p>
-              <p className="mt-2 text-2xl font-semibold">{numberFormatter.format(popularity)}</p>
-              <p className="text-xs text-muted-foreground">Overall momentum across streaming, radio, and press</p>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-lg border border-muted/40 bg-background/60 p-4 lg:col-span-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Engagement Momentum</p>
-                  <p className="text-sm font-medium">Weekly fans compared to total fame</p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground">
-                  <div>Weekly Fans: {numberFormatter.format(weeklyFans)}</div>
-                  <div>Total Fame: {numberFormatter.format(totalFame)}</div>
-                </div>
-              </div>
-              <div className="mt-4 h-52">
-                <ChartContainer config={trendConfig} className="h-full w-full">
-                  <AreaChart data={engagementTrend} margin={{ left: 12, right: 12 }}>
-                    <defs>
-                      <linearGradient id="band-fans" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-fans)" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="var(--color-fans)" stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={8} width={70} />
-                    <ChartTooltip
-                      cursor={{ strokeDasharray: '4 4' }}
-                      content={
-                        <ChartTooltipContent
-                          labelFormatter={formatTooltipLabel}
-                          formatter={areaTooltipFormatter}
-                        />
-                      }
-                    />
-                    <Area type="monotone" dataKey="fans" stroke="var(--color-fans)" fill="url(#band-fans)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="fame" stroke="var(--color-fame)" fill="transparent" strokeWidth={2} />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
+        {/* Chemistry */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Activity className="h-4 w-4" />
+              Chemistry
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl font-bold">{chemistryLevel}</span>
+              <Badge className={chemistryColor}>{chemistryLabel}</Badge>
             </div>
+            <Progress value={chemistryLevel} className="h-2" />
+          </CardContent>
+        </Card>
 
-            <div className="rounded-lg border border-muted/40 bg-background/60 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Activity Mix</p>
-              <p className="text-sm font-medium">Where the band spends its time</p>
-              <div className="mt-4 h-52">
-                <ChartContainer config={activityConfig} className="h-full w-full">
-                  <BarChart data={activityBreakdown} layout="vertical" margin={{ left: 12, right: 12 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis type="number" tickLine={false} axisLine={false} />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} width={100} />
-                    <ChartTooltip
-                      cursor={{ fill: 'hsl(var(--muted) / 0.25)' }}
-                      content={
-                        <ChartTooltipContent
-                          labelFormatter={formatTooltipLabel}
-                          formatter={barTooltipFormatter as any}
-                          nameKey="name"
-                        />
-                      }
-                    />
-                    <Bar dataKey="value" radius={[6, 6, 6, 6]}>
-                      {activityBreakdown.map((entry, index) => (
-                        <Cell key={entry.name} fill={activityPalette[index % activityPalette.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-              </div>
+        {/* Weekly Fans */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <TrendingUp className="h-4 w-4" />
+              Weekly Fans
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-2xl font-bold">{numberFormatter.format(weeklyFans)}</span>
+            <p className="text-xs text-muted-foreground mt-2">
+              Lifetime: {numberFormatter.format(lifetimeFame)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second Row - Performance Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Music className="h-4 w-4" />
+              Performances
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-2xl font-bold">{numberFormatter.format(performanceCount)}</span>
+            <p className="text-xs text-muted-foreground mt-1">Total gigs played</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <BarChart3 className="h-4 w-4" />
+              Skill Rating
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-2xl font-bold">{numberFormatter.format(hiddenSkillRating)}</span>
+            <p className="text-xs text-muted-foreground mt-1">Composite ability score</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Calendar className="h-4 w-4" />
+              Days Together
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-2xl font-bold">{numberFormatter.format(daysTogether)}</span>
+            <p className="text-xs text-muted-foreground mt-1">Since formation</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Third Row - Charts */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Engagement Trend */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Engagement Momentum</CardTitle>
+            <CardDescription>Weekly fans vs total fame trend</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48">
+              <ChartContainer config={trendConfig} className="h-full w-full">
+                <AreaChart data={engagementTrend} margin={{ left: 0, right: 0 }}>
+                  <defs>
+                    <linearGradient id="band-fans-gradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-fans)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--color-fans)" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={8} width={50} fontSize={12} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="fans" stroke="var(--color-fans)" fill="url(#band-fans-gradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="fame" stroke="var(--color-fame)" fill="transparent" strokeWidth={2} />
+                </AreaChart>
+              </ChartContainer>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-muted/40 bg-background/60 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Band Profile Balance</p>
-              <p className="text-sm font-medium">How the group scores across core dimensions</p>
-              <div className="mt-4 h-60">
-                <ChartContainer config={profileConfig} className="h-full w-full">
-                  <RadarChart data={profileMetrics}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)' }} />
-                    <Radar
-                      name="Band profile"
-                      dataKey="value"
-                      stroke="var(--color-value)"
-                      fill="var(--color-value)"
-                      fillOpacity={0.2}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  </RadarChart>
-                </ChartContainer>
-              </div>
+        {/* Band Profile Radar */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Band Profile</CardTitle>
+            <CardDescription>Performance across core dimensions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48">
+              <ChartContainer config={profileConfig} className="h-full w-full">
+                <RadarChart data={profileMetrics}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }} />
+                  <Radar
+                    name="Band profile"
+                    dataKey="value"
+                    stroke="var(--color-value)"
+                    fill="var(--color-value)"
+                    fillOpacity={0.2}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                </RadarChart>
+              </ChartContainer>
             </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Operational Snapshot</p>
-              <div className="mt-4 grid gap-3 text-sm">
-                {operationalDetails.map((detail) => (
-                  <div key={detail.label} className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">{detail.label}</span>
-                    <span className="text-right font-medium text-foreground">{detail.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="md:col-span-2 lg:col-span-3">
-        <CardHeader>
-          <CardTitle>{band.is_solo_artist ? band.artist_name || band.name : band.name}</CardTitle>
-          <CardDescription>
-            {band.genre} {band.is_solo_artist ? '• Solo Artist' : '• Band'}
-          </CardDescription>
+      {/* Activity Mix */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Activity Mix</CardTitle>
+          <CardDescription>Where the band spends its time</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">{band.description || 'No description yet.'}</p>
+          <div className="h-36">
+            <ChartContainer config={activityConfig} className="h-full w-full">
+              <BarChart data={activityBreakdown} layout="vertical" margin={{ left: 0, right: 12 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis type="number" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} width={100} fontSize={12} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="value" radius={[4, 4, 4, 4]}>
+                  {activityBreakdown.map((entry, index) => (
+                    <Cell key={entry.name} fill={activityPalette[index % activityPalette.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Status Card */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Band Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <span className="text-muted-foreground">Status:</span>{' '}
+              <span className="font-medium">{formatStatus(band.status)}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Popularity:</span>{' '}
+              <span className="font-medium">{numberFormatter.format(popularity)}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Cohesion:</span>{' '}
+              <span className="font-medium">{cohesionScore}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Jam Sessions:</span>{' '}
+              <span className="font-medium">{numberFormatter.format(jamCount)}</span>
+            </div>
+          </div>
+          {band.description && (
+            <p className="text-muted-foreground mt-4 pt-4 border-t">{band.description}</p>
+          )}
         </CardContent>
       </Card>
     </div>

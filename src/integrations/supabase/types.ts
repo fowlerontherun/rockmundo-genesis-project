@@ -10607,6 +10607,62 @@ export type Database = {
           },
         ]
       }
+      song_plays: {
+        Row: {
+          created_at: string | null
+          id: string
+          played_at: string | null
+          song_id: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          played_at?: string | null
+          song_id: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          played_at?: string | null
+          song_id?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       song_rehearsals: {
         Row: {
           band_id: string
@@ -13566,6 +13622,19 @@ export type Database = {
         Returns: number
       }
       get_song_vote_score: { Args: { p_song_id: string }; Returns: number }
+      get_top_played_songs: {
+        Args: { p_limit?: number }
+        Returns: {
+          audio_url: string
+          band_id: string
+          band_name: string
+          genre: string
+          quality_score: number
+          song_id: string
+          title: string
+          unique_plays: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

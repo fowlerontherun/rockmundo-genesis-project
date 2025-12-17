@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Pause, Music, Video, Calendar, Mic2 } from "lucide-react";
+import { Users, Music, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { LastNightGigs } from "@/components/news/LastNightGigs";
 import { BandInvitations } from "@/components/band/BandInvitations";
@@ -11,6 +11,7 @@ import { ChartMoversSection } from "@/components/news/ChartMoversSection";
 import { MilestoneNews } from "@/components/news/MilestoneNews";
 import { DealAnnouncements } from "@/components/news/DealAnnouncements";
 import { PersonalUpdates } from "@/components/news/PersonalUpdates";
+import { TopTracksNews } from "@/components/news/TopTracksNews";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split('T')[0];
@@ -68,6 +69,9 @@ export default function TodaysNewsPage() {
 
       {/* Personal Updates - highlighted */}
       <PersonalUpdates />
+
+      {/* Top Tracks - playable songs */}
+      <TopTracksNews />
 
       {/* Last Night's Gigs - full width */}
       <LastNightGigs />
