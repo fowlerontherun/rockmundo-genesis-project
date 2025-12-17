@@ -3,7 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import { StageScene } from "./StageScene";
 import { OptimizedCrowdLayer } from "./OptimizedCrowdLayer";
-import { BandMember3D } from "./BandMember3D";
+import { EnhancedBandAvatars3D } from "./EnhancedBandAvatars3D";
 import { OutdoorEnvironment } from "./OutdoorEnvironment";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageLighting } from "./StageLighting";
@@ -14,6 +14,7 @@ import { StageEffects } from "./StageEffects";
 import { LightCone } from "./LightCone";
 import { CrowdBarrier } from "./CrowdBarrier";
 import { VenueEnvironment, type VenueTheme } from './VenueEnvironment';
+import { RPM_DEMO_AVATAR } from "@/data/rpmAvatarPool";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
@@ -86,13 +87,28 @@ export const GigDemoViewer = ({
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  // Mock band member skills for demo
-  const mockBandMemberSkills = {
-    guitarist1: 75,
-    guitarist2: 70,
-    bassist: 80,
-    drummer: 85,
-    vocalist: 90,
+  // Demo band member configs with RPM avatars
+  const demoBandConfigs = {
+    vocalist: {
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
+    },
+    guitarist: {
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
+    },
+    bassist: {
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
+    },
+    drummer: {
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
+    },
+    keyboardist: {
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
+    },
   };
 
   return (
@@ -187,41 +203,12 @@ export const GigDemoViewer = ({
             densityMultiplier={crowdDensity}
           />
           
-          {/* 3D Band Members - using procedural avatars for demo */}
-          <BandMember3D 
-            position={[-2, 1, -5]}
-            instrument="guitarist"
-            animationState={songSection === 'intro' ? 'intro' : songSection === 'solo' ? 'solo' : 'playing'}
-            intensity={songIntensity}
-            seed={0.1}
-          />
-          <BandMember3D 
-            position={[2, 1, -5]}
-            instrument="bassist"
-            animationState={songSection === 'intro' ? 'intro' : 'playing'}
-            intensity={songIntensity}
-            seed={0.3}
-          />
-          <BandMember3D 
-            position={[0, 1.6, -7]}
-            instrument="drummer"
-            animationState={songSection === 'intro' ? 'intro' : 'playing'}
-            intensity={songIntensity}
-            seed={0.5}
-          />
-          <BandMember3D 
-            position={[0, 1, -4]}
-            instrument="vocalist"
-            animationState={songSection === 'intro' ? 'intro' : songSection === 'outro' ? 'outro' : 'playing'}
-            intensity={songIntensity}
-            seed={0.7}
-          />
-          <BandMember3D 
-            position={[-4, 1, -5]}
-            instrument="keyboardist"
-            animationState={songSection === 'intro' ? 'intro' : 'playing'}
-            intensity={songIntensity}
-            seed={0.9}
+          {/* 3D Band Members with RPM avatars */}
+          <EnhancedBandAvatars3D
+            songProgress={0.5}
+            songSection={songSection}
+            crowdMood={crowdMood}
+            bandMemberConfigs={demoBandConfigs}
           />
         </Suspense>
       </Canvas>
