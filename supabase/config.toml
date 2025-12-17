@@ -95,3 +95,12 @@ verify_jwt = true
 
 [functions.generate-bot-twaats]
 verify_jwt = false
+
+[functions.trigger-random-events]
+verify_jwt = false
+
+[functions.process-event-outcomes]
+verify_jwt = false
+
+[functions.choose-event-option]
+verify_jwt = true
