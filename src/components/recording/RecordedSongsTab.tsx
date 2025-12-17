@@ -159,6 +159,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-muted-foreground">Listen & Share:</p>
                           <SongShareButtons 
+                            songId={item.song.id}
                             songTitle={item.song.title}
                             artistName={artistName}
                             audioUrl={item.song.audio_url}
