@@ -80,6 +80,7 @@ const Layout = () => {
           <TutorialTooltip />
         </div>
       </main>
+      <EventNotificationModal />
     </div>
   );
 };
