@@ -7,6 +7,7 @@ import { Music, Play, Headphones, ExternalLink } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { Link } from "react-router-dom";
 import { useTrackSongPlay } from "@/hooks/useTrackSongPlay";
+import { useTranslation } from "@/hooks/useTranslation";
 
 type TopTrack = {
   song_id: string;
@@ -21,6 +22,7 @@ type TopTrack = {
 
 export function TopTracksNews() {
   const { trackPlay } = useTrackSongPlay();
+  const { t } = useTranslation();
 
   const { data: topTracks, isLoading } = useQuery({
     queryKey: ["news-top-tracks"],
@@ -45,12 +47,12 @@ export function TopTracksNews() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Headphones className="h-5 w-5" />
-            Top Tracks
+            {t('todaysNews.topTracks')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-6">
-            <div className="animate-pulse text-muted-foreground">Loading top tracks...</div>
+            <div className="animate-pulse text-muted-foreground">{t('common.loading')}</div>
           </div>
         </CardContent>
       </Card>
@@ -63,11 +65,11 @@ export function TopTracksNews() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Headphones className="h-5 w-5 text-primary" />
-            Top Tracks Right Now
+            {t('todaysNews.topTracks')}
           </CardTitle>
           <Link to="/admin/ai-song-generation">
             <Button variant="ghost" size="sm" className="gap-1">
-              View All
+              {t('common.viewAll')}
               <ExternalLink className="h-3 w-3" />
             </Button>
           </Link>
@@ -108,7 +110,7 @@ export function TopTracksNews() {
                 ) : (
                   <div className="flex items-center justify-center py-2 text-xs text-muted-foreground">
                     <Music className="h-4 w-4 mr-1 opacity-50" />
-                    No audio yet
+                    {t('todaysNews.noAudioYet')}
                   </div>
                 )}
                 
@@ -123,8 +125,8 @@ export function TopTracksNews() {
         ) : (
           <div className="text-center py-6 text-muted-foreground">
             <Music className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            <p>No tracks with plays yet</p>
-            <p className="text-sm">Be the first to listen to some songs!</p>
+            <p>{t('todaysNews.noTracksYet')}</p>
+            <p className="text-sm">{t('todaysNews.beFirstToListen')}</p>
           </div>
         )}
       </CardContent>
