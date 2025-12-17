@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
+import { ConfirmDeleteDialog } from '@/components/admin/ConfirmDeleteDialog';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type VenueInsert = Database['public']['Tables']['venues']['Insert'];
@@ -67,6 +68,12 @@ export default function VenuesAdmin() {
   const [editingVenue, setEditingVenue] = useState<VenueRow | null>(null);
   const [formData, setFormData] = useState<VenueFormData>(defaultFormData);
   const [filterCity, setFilterCity] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; venue: VenueRow | null }>({
+    open: false,
+    venue: null,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Requirements fields
   const [minFans, setMinFans] = useState('0');
@@ -236,8 +243,7 @@ export default function VenuesAdmin() {
   };
 
   const handleDelete = async (venue: VenueRow) => {
-    if (!confirm(`Are you sure you want to delete ${venue.name}?`)) return;
-
+    setIsDeleting(true);
     try {
       const { error } = await supabase.from('venues').delete().eq('id', venue.id);
 
@@ -255,12 +261,20 @@ export default function VenuesAdmin() {
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm({ open: false, venue: null });
     }
   };
 
-  const filteredVenues = venues.filter(venue =>
-    filterCity === "all" || venue.city_id === filterCity
-  );
+  const filteredVenues = venues.filter(venue => {
+    const matchesCity = filterCity === "all" || venue.city_id === filterCity;
+    const matchesSearch = !searchQuery || 
+      venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      venue.venue_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      venue.location?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCity && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -531,9 +545,18 @@ export default function VenuesAdmin() {
         </Dialog>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search venues..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Select value={filterCity} onValueChange={setFilterCity}>
-          <SelectTrigger className="w-[250px]">
+          <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Filter by city" />
           </SelectTrigger>
           <SelectContent>
@@ -573,7 +596,7 @@ export default function VenuesAdmin() {
                     <Button variant="ghost" size="sm" onClick={() => openDialog(venue)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(venue)}>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm({ open: true, venue })}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -614,6 +637,14 @@ export default function VenuesAdmin() {
           );
         })}
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, venue: open ? deleteConfirm.venue : null })}
+        onConfirm={() => deleteConfirm.venue && handleDelete(deleteConfirm.venue)}
+        itemName={deleteConfirm.venue?.name}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
