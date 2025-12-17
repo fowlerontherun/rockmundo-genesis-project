@@ -13395,6 +13395,10 @@ export type Database = {
         Returns: undefined
       }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      process_radio_submission: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       validate_setlist_for_slot: {
