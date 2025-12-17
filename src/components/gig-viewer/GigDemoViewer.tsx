@@ -87,28 +87,30 @@ export const GigDemoViewer = ({
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  // Demo band member configs - using SharedRpmAvatar with SkeletonUtils.clone()
-  // This shares textures across all band members, staying within GPU limits
+  // Demo band member configs - using procedural avatars for demo
+  // RPM avatars disabled because demo URL is half-body/bust only (missing legs/torso)
+  // Players' custom RPM avatars should be full-body to display correctly
+  // Procedural avatars also avoid GPU texture exhaustion (16 texture unit limit)
   const demoBandConfigs = {
     vocalist: {
       rpm_avatar_url: RPM_DEMO_AVATAR,
-      use_rpm_avatar: true,
+      use_rpm_avatar: false,
     },
     guitarist: {
       rpm_avatar_url: RPM_DEMO_AVATAR,
-      use_rpm_avatar: true,
+      use_rpm_avatar: false,
     },
     bassist: {
       rpm_avatar_url: RPM_DEMO_AVATAR,
-      use_rpm_avatar: true,
+      use_rpm_avatar: false,
     },
     drummer: {
       rpm_avatar_url: RPM_DEMO_AVATAR,
-      use_rpm_avatar: true,
+      use_rpm_avatar: false,
     },
     keyboardist: {
       rpm_avatar_url: RPM_DEMO_AVATAR,
-      use_rpm_avatar: true,
+      use_rpm_avatar: false,
     },
   };
 
