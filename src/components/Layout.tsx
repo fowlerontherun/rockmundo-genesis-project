@@ -13,6 +13,7 @@ import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
+import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 
 const Layout = () => {
   const navigate = useNavigate();

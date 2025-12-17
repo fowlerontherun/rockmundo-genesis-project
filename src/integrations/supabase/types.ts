@@ -7296,6 +7296,88 @@ export type Database = {
           },
         ]
       }
+      player_event_history: {
+        Row: {
+          event_id: string
+          first_seen_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          first_seen_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          first_seen_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_event_history_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "random_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_events: {
+        Row: {
+          choice_made: string | null
+          choice_made_at: string | null
+          created_at: string
+          event_id: string
+          id: string
+          outcome_applied: boolean
+          outcome_applied_at: string | null
+          outcome_effects: Json | null
+          outcome_message: string | null
+          status: string
+          triggered_at: string
+          user_id: string
+        }
+        Insert: {
+          choice_made?: string | null
+          choice_made_at?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          outcome_applied?: boolean
+          outcome_applied_at?: string | null
+          outcome_effects?: Json | null
+          outcome_message?: string | null
+          status?: string
+          triggered_at?: string
+          user_id: string
+        }
+        Update: {
+          choice_made?: string | null
+          choice_made_at?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          outcome_applied?: boolean
+          outcome_applied_at?: string | null
+          outcome_effects?: Json | null
+          outcome_message?: string | null
+          status?: string
+          triggered_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "random_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_gig_milestones: {
         Row: {
           achieved_at: string
@@ -9236,6 +9318,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      random_events: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          health_max: number | null
+          health_min: number | null
+          id: string
+          is_active: boolean
+          is_common: boolean
+          option_a_effects: Json
+          option_a_outcome_text: string
+          option_a_text: string
+          option_b_effects: Json
+          option_b_outcome_text: string
+          option_b_text: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          health_max?: number | null
+          health_min?: number | null
+          id?: string
+          is_active?: boolean
+          is_common?: boolean
+          option_a_effects?: Json
+          option_a_outcome_text: string
+          option_a_text: string
+          option_b_effects?: Json
+          option_b_outcome_text: string
+          option_b_text: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          health_max?: number | null
+          health_min?: number | null
+          id?: string
+          is_active?: boolean
+          is_common?: boolean
+          option_a_effects?: Json
+          option_a_outcome_text?: string
+          option_a_text?: string
+          option_b_effects?: Json
+          option_b_outcome_text?: string
+          option_b_text?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       recording_producers: {
         Row: {
