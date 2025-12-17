@@ -120,7 +120,7 @@ export const useTwaats = (accountId?: string) => {
 };
 
 export const useTwaaterFeed = (viewerAccountId?: string) => {
-  const { data: feed, isLoading } = useQuery({
+  const { data: feed, isLoading, refetch } = useQuery({
     queryKey: ["twaater-feed", viewerAccountId],
     queryFn: async () => {
       if (!viewerAccountId) {
@@ -168,5 +168,5 @@ export const useTwaaterFeed = (viewerAccountId?: string) => {
     enabled: true,
   });
 
-  return { feed, isLoading };
+  return { feed, isLoading, refetch };
 };
