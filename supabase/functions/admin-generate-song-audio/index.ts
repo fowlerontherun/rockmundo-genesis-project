@@ -75,11 +75,29 @@ serve(async (req) => {
 
     // Get comprehensive song details with all metadata (matching player function)
     addLog('Fetching comprehensive song details from database...')
+    
+    // First get the song
     const { data: song, error: songError } = await supabase
       .from('songs')
-      .select(`
-        *,
-        songwriting_projects!songs_id_fkey (
+      .select('*')
+      .eq('id', songId)
+      .single()
+    
+    if (songError || !song) {
+      addLog(`ERROR: Song fetch failed - ${songError?.message || 'Song not found'}`)
+      console.error('[admin-generate-song-audio] Song fetch error:', songError)
+      return new Response(
+        JSON.stringify({ error: 'Song not found', logs }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
+    }
+    
+    // Then get the songwriting project if it exists
+    let project: any = null
+    if (song.songwriting_project_id) {
+      const { data: projectData } = await supabase
+        .from('songwriting_projects')
+        .select(`
           title,
           lyrics,
           creative_brief,
@@ -96,10 +114,11 @@ serve(async (req) => {
             mood,
             description
           )
-        )
-      `)
-      .eq('id', songId)
-      .single()
+        `)
+        .eq('id', song.songwriting_project_id)
+        .single()
+      project = projectData
+    }
 
     if (songError || !song) {
       addLog(`ERROR: Song fetch failed - ${songError?.message || 'Song not found'}`)
@@ -122,8 +141,7 @@ serve(async (req) => {
       })
       .eq('id', songId)
 
-    // Extract metadata from songwriting project (matching player function logic)
-    const project = song.songwriting_projects?.[0] || song.songwriting_projects
+    // Extract creative brief from project (project is already fetched separately above)
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
     
     // Build comprehensive prompt for MiniMax Music-1.5
