@@ -12,8 +12,10 @@ import { MilestoneNews } from "@/components/news/MilestoneNews";
 import { DealAnnouncements } from "@/components/news/DealAnnouncements";
 import { PersonalUpdates } from "@/components/news/PersonalUpdates";
 import { TopTracksNews } from "@/components/news/TopTracksNews";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function TodaysNewsPage() {
+  const { t } = useTranslation();
   const today = new Date().toISOString().split('T')[0];
 
   const { data: newBands } = useQuery({
@@ -63,7 +65,7 @@ export default function TodaysNewsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-oswald">Today's News</h1>
+        <h1 className="text-3xl font-oswald">{t('todaysNews.title')}</h1>
         <p className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
       </div>
 
@@ -90,7 +92,7 @@ export default function TodaysNewsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users className="h-5 w-5" />
-              New Bands Formed
+              {t('todaysNews.newBandsFormed')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -105,7 +107,7 @@ export default function TodaysNewsPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground py-2">No new bands today</p>
+              <p className="text-sm text-muted-foreground py-2">{t('todaysNews.noNewBands')}</p>
             )}
           </CardContent>
         </Card>
@@ -115,7 +117,7 @@ export default function TodaysNewsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Music className="h-5 w-5" />
-              Songs Released
+              {t('todaysNews.songsReleased')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -127,7 +129,7 @@ export default function TodaysNewsPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground py-2">No songs released today</p>
+              <p className="text-sm text-muted-foreground py-2">{t('todaysNews.noSongsReleased')}</p>
             )}
           </CardContent>
         </Card>
@@ -137,7 +139,7 @@ export default function TodaysNewsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Calendar className="h-5 w-5" />
-              Festivals Starting
+              {t('todaysNews.festivalsStarting')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -149,7 +151,7 @@ export default function TodaysNewsPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground py-2">No festivals starting today</p>
+              <p className="text-sm text-muted-foreground py-2">{t('todaysNews.noFestivals')}</p>
             )}
           </CardContent>
         </Card>
