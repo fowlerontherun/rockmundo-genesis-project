@@ -4619,6 +4619,50 @@ export type Database = {
         }
         Relationships: []
       }
+      hospitals: {
+        Row: {
+          city_id: string
+          cost_per_day: number
+          created_at: string
+          description: string | null
+          effectiveness_rating: number
+          id: string
+          is_free: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          city_id: string
+          cost_per_day?: number
+          created_at?: string
+          description?: string | null
+          effectiveness_rating?: number
+          id?: string
+          is_free?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string
+          cost_per_day?: number
+          created_at?: string
+          description?: string | null
+          effectiveness_rating?: number
+          id?: string
+          is_free?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospitals_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: true
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_session_messages: {
         Row: {
           created_at: string | null
@@ -7441,6 +7485,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      player_hospitalizations: {
+        Row: {
+          admitted_at: string
+          created_at: string
+          discharged_at: string | null
+          expected_discharge_at: string
+          health_on_admission: number
+          hospital_id: string
+          id: string
+          status: string
+          total_cost: number
+          user_id: string
+        }
+        Insert: {
+          admitted_at?: string
+          created_at?: string
+          discharged_at?: string | null
+          expected_discharge_at: string
+          health_on_admission: number
+          hospital_id: string
+          id?: string
+          status?: string
+          total_cost?: number
+          user_id: string
+        }
+        Update: {
+          admitted_at?: string
+          created_at?: string
+          discharged_at?: string | null
+          expected_discharge_at?: string
+          health_on_admission?: number
+          hospital_id?: string
+          id?: string
+          status?: string
+          total_cost?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_hospitalizations_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_instruments: {
         Row: {
