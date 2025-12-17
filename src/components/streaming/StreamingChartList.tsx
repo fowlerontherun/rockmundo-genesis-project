@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, TrendingDown, Minus, Trophy, Music } from "lucide-react";
 import { useState } from "react";
-import { SongPlayer } from "@/components/audio/SongPlayer";
+import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
 interface StreamingChartListProps {
   platformId: string;
@@ -209,10 +209,14 @@ export function StreamingChartList({ platformId, brandColor = "#6366f1" }: Strea
 
                 {(entry.audio_url || entry.audio_status) && (
                   <div className="mt-3 pt-3 border-t">
-                    <SongPlayer
+                    <TrackableSongPlayer
+                      songId={entry.song_id}
                       audioUrl={entry.audio_url}
                       generationStatus={entry.audio_status}
+                      title={entry.song_title}
+                      artist={entry.artist_name}
                       compact
+                      source="streaming_chart"
                     />
                   </div>
                 )}
