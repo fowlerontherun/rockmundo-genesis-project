@@ -51,6 +51,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
   const [confettiTrigger, setConfettiTrigger] = useState(false);
   const [co2Trigger, setCo2Trigger] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(true);
+  const [bandMemberConfigs, setBandMemberConfigs] = useState<Record<string, any>>({});
 
   // Update preview mode values
   useEffect(() => {
@@ -104,18 +105,55 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
           setCrowdMood(initialMood);
         }
 
-        // Fetch gig to get venue and stage template
+        // Fetch gig to get venue, band, and stage template
         const { data: gigData } = await supabase
           .from('gigs')
-          .select('venue_id, bands(fame)')
+          .select('venue_id, band_id, bands(fame)')
           .eq('id', gigId)
           .single();
 
         if (gigData) {
+          setBandId(gigData.band_id);
+          
           // Get band fame
           const bandData = gigData.bands as any;
           if (bandData) {
             setBandFame(bandData.fame || 0);
+          }
+
+          // Fetch band members with their avatar URLs
+          if (gigData.band_id) {
+            const { data: members } = await supabase
+              .from('band_members')
+              .select('instrument_role, user_id, profiles!band_members_user_id_fkey(rpm_avatar_url)')
+              .eq('band_id', gigData.band_id);
+
+            if (members) {
+              const configs: Record<string, any> = {};
+              const roleMap: Record<string, string> = {
+                'lead_vocals': 'vocalist',
+                'vocals': 'vocalist',
+                'lead_guitar': 'guitarist',
+                'rhythm_guitar': 'guitarist',
+                'guitar': 'guitarist',
+                'bass': 'bassist',
+                'drums': 'drummer',
+                'keyboard': 'keyboardist',
+                'keys': 'keyboardist',
+              };
+
+              members.forEach((member: any) => {
+                const role = roleMap[member.instrument_role] || member.instrument_role;
+                const profile = member.profiles;
+                if (profile?.rpm_avatar_url) {
+                  configs[role] = {
+                    rpm_avatar_url: profile.rpm_avatar_url,
+                    use_rpm_avatar: true,
+                  };
+                }
+              });
+              setBandMemberConfigs(configs);
+            }
           }
 
           // Get venue's default stage template by capacity
@@ -377,6 +415,7 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
             songProgress={currentSongIndex / Math.max(songPerformances.length, 1)}
             songSection={songSection}
             crowdMood={crowdMood}
+            bandMemberConfigs={bandMemberConfigs}
           />
         </Suspense>
       </Canvas>

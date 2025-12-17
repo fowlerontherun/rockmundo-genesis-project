@@ -11,6 +11,9 @@ interface AvatarConfig {
   body_type?: 'slim' | 'average' | 'muscular' | 'heavy';
   height?: number;
   gender?: string;
+  // Ready Player Me
+  rpm_avatar_url?: string | null;
+  use_rpm_avatar?: boolean;
 }
 
 interface EnhancedBandAvatars3DProps {
