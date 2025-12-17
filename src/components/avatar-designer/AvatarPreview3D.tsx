@@ -100,7 +100,7 @@ export const AvatarPreview3D = ({ config, autoRotate = false }: AvatarPreview3DP
   const avatarUrl = config.rpm_avatar_url || null;
 
   return (
-    <div className="w-full h-[450px] bg-gradient-to-b from-background to-muted/30 rounded-lg overflow-hidden relative">
+    <div className="w-full max-w-md mx-auto aspect-[3/4] bg-gradient-to-b from-background to-muted/30 rounded-lg overflow-hidden relative">
       <Canvas
         camera={{ position: [0, 0.5, 3], fov: 45 }}
         shadows
