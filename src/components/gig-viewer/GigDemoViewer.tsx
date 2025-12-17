@@ -193,7 +193,7 @@ export const GigDemoViewer = ({
           {/* Crowd barrier */}
           <CrowdBarrier />
           
-          {/* 3D Procedural Crowd */}
+          {/* 3D Crowd */}
           <OptimizedCrowdLayer 
             crowdMood={crowdMood}
             bandFame={bandFame}
@@ -201,6 +201,7 @@ export const GigDemoViewer = ({
             bandName={bandName}
             maxCrowdCount={maxCrowdCount}
             densityMultiplier={crowdDensity}
+            useRpmCrowd
           />
           
           {/* 3D Band Members with RPM avatars */}

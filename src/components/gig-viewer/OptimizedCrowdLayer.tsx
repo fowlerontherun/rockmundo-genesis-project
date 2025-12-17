@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { RpmCrowdMember } from "./RpmCrowdMember";
 import { RPM_DEMO_AVATAR } from "@/data/rpmAvatarPool";
+
 interface OptimizedCrowdLayerProps {
   crowdMood: number;
   bandFame: number;
@@ -10,6 +11,8 @@ interface OptimizedCrowdLayerProps {
   bandName?: string;
   maxCrowdCount: number;
   densityMultiplier: number;
+  /** Demo helper: render the entire crowd as RPM avatars (heavier). */
+  useRpmCrowd?: boolean;
 }
 
 interface CrowdPerson {
@@ -66,7 +69,8 @@ export const OptimizedCrowdLayer = ({
   bandMerchColor,
   bandName = "BAND",
   maxCrowdCount,
-  densityMultiplier
+  densityMultiplier,
+  useRpmCrowd = false,
 }: OptimizedCrowdLayerProps) => {
   const groupRefs = useRef<Map<number, THREE.Group>>(new Map());
   const armRefs = useRef<Map<string, THREE.Mesh>>(new Map());
@@ -286,6 +290,23 @@ export const OptimizedCrowdLayer = ({
 
   const frontRowIds = useMemo(() => new Set(frontRowMembers.map(p => p.id)), [frontRowMembers]);
 
+  // Demo option: render ALL crowd members as RPM avatars (no procedural back rows)
+  if (useRpmCrowd) {
+    return (
+      <group>
+        {crowdData.map((person) => (
+          <RpmCrowdMember
+            key={`rpm-${person.id}`}
+            position={person.position}
+            avatarUrl={RPM_DEMO_AVATAR}
+            scale={person.scale}
+            stageZ={-5}
+          />
+        ))}
+      </group>
+    );
+  }
+
   return (
     <group>
       {/* RPM avatars for front row */}
@@ -354,8 +375,8 @@ export const OptimizedCrowdLayer = ({
             {person.accessory < 2 && renderAccessory(person.accessory)}
 
             {/* Arms with animation refs */}
-            <mesh 
-              position={[-0.22, 0.6, 0]} 
+            <mesh
+              position={[-0.22, 0.6, 0]}
               rotation={[0, 0, 0.3]}
               ref={(mesh) => {
                 if (mesh) armRefs.current.set(`${person.id}-left`, mesh);
@@ -364,8 +385,8 @@ export const OptimizedCrowdLayer = ({
               <capsuleGeometry args={[0.04, 0.32, 2, 4]} />
               <meshBasicMaterial color={skinColor} />
             </mesh>
-            <mesh 
-              position={[0.22, 0.6, 0]} 
+            <mesh
+              position={[0.22, 0.6, 0]}
               rotation={[0, 0, -0.3]}
               ref={(mesh) => {
                 if (mesh) armRefs.current.set(`${person.id}-right`, mesh);
