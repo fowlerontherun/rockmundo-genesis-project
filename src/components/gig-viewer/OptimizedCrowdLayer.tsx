@@ -1,7 +1,8 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-
+import { RpmCrowdMember } from "./RpmCrowdMember";
+import { RPM_DEMO_AVATAR } from "@/data/rpmAvatarPool";
 interface OptimizedCrowdLayerProps {
   crowdMood: number;
   bandFame: number;
@@ -276,10 +277,30 @@ export const OptimizedCrowdLayer = ({
     }
   };
 
+  // Identify front-row crowd members for RPM avatars (first 6 closest to stage)
+  const frontRowMembers = useMemo(() => {
+    return [...crowdData]
+      .sort((a, b) => a.position[2] - b.position[2])
+      .slice(0, 6);
+  }, [crowdData]);
+
+  const frontRowIds = useMemo(() => new Set(frontRowMembers.map(p => p.id)), [frontRowMembers]);
+
   return (
     <group>
-      {/* All procedural avatars - RPM crowd avatars require user-configured URLs */}
-      {crowdData.map((person) => {
+      {/* RPM avatars for front row */}
+      {frontRowMembers.map((person) => (
+        <RpmCrowdMember
+          key={`rpm-${person.id}`}
+          position={person.position}
+          avatarUrl={RPM_DEMO_AVATAR}
+          scale={person.scale}
+          stageZ={-5}
+        />
+      ))}
+
+      {/* Procedural avatars for back rows */}
+      {crowdData.filter(person => !frontRowIds.has(person.id)).map((person) => {
         // Deterministic appearance based on seed
         const shirtColor = person.showMerch ? bandMerchColor : shirtColors[person.colorVariant % shirtColors.length];
         const pantsColor = pantsColors[Math.floor(person.seed * 7) % pantsColors.length];
