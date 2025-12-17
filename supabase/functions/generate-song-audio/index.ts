@@ -148,6 +148,20 @@ serve(async (req) => {
     creatorGender = profile?.gender || null
     console.log(`[generate-song-audio] Creator gender: ${creatorGender || 'not set'}`)
 
+    // Get band's sound description if song belongs to a band
+    let bandSoundDescription: string | null = null
+    if (song.band_id) {
+      const { data: bandData } = await supabase
+        .from('bands')
+        .select('sound_description')
+        .eq('id', song.band_id)
+        .single()
+      bandSoundDescription = bandData?.sound_description || null
+      if (bandSoundDescription) {
+        console.log(`[generate-song-audio] Band sound description found: ${bandSoundDescription.substring(0, 50)}...`)
+      }
+    }
+
     // Create generation attempt record
     const { data: attempt, error: attemptError } = await supabase
       .from('song_generation_attempts')
@@ -209,6 +223,12 @@ serve(async (req) => {
     // Add chord progression context
     if (chordProgression) {
       styleParts.push(`${chordName || chordProgression} progression`)
+    }
+
+    // Add band sound description (first 100 chars for relevance)
+    if (bandSoundDescription) {
+      const truncatedDesc = bandSoundDescription.substring(0, 100).trim()
+      styleParts.push(truncatedDesc)
     }
 
     // Add theme and mood

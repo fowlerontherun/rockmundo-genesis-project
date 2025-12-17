@@ -19,7 +19,8 @@ import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { BandSongGifts } from '@/components/band/BandSongGifts';
 import { BandSongsTab } from '@/components/band/BandSongsTab';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
-import { Users, Music } from 'lucide-react';
+import { BandProfileEdit } from '@/components/band/BandProfileEdit';
+import { Users, Music, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
@@ -266,6 +267,7 @@ export default function BandManager() {
       <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="songs">Songs</TabsTrigger>
             <TabsTrigger value="history">Gig History</TabsTrigger>
@@ -278,6 +280,17 @@ export default function BandManager() {
         <TabsContent value="overview" className="space-y-4">
           <BandSongGifts bandId={selectedBand.id} />
           <BandOverview bandId={selectedBand.id} />
+        </TabsContent>
+
+        <TabsContent value="profile" className="space-y-4">
+          <BandProfileEdit
+            bandId={selectedBand.id}
+            bandName={selectedBand.name}
+            logoUrl={selectedBand.logo_url}
+            soundDescription={selectedBand.sound_description}
+            isLeader={isLeader}
+            onUpdate={() => loadBandDetails(selectedBand.id)}
+          />
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">

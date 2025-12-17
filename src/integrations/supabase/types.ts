@@ -1538,6 +1538,7 @@ export type Database = {
           next_leadership_vote: string | null
           performance_count: number | null
           popularity: number | null
+          sound_description: string | null
           status: Database["public"]["Enums"]["band_status"]
           superfans: number | null
           total_fans: number | null
@@ -1577,6 +1578,7 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
           superfans?: number | null
           total_fans?: number | null
@@ -1616,6 +1618,7 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
           superfans?: number | null
           total_fans?: number | null
@@ -13472,6 +13475,7 @@ export type Database = {
         Args: { p_setlist_id: string }
         Returns: number
       }
+      get_song_vote_score: { Args: { p_song_id: string }; Returns: number }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

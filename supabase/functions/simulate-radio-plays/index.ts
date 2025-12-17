@@ -83,9 +83,17 @@ serve(async (req) => {
       const variance = 0.7 + Math.random() * 0.6; // 70%-130%
       const listeners = Math.round(baseListeners * timeMult * variance * 0.01); // 1% of station audience
 
-      // Calculate hype and streams boost
+      // Get song's vote score to influence hype/fame
+      const { data: voteScore } = await supabaseClient
+        .rpc('get_song_vote_score', { p_song_id: song.id });
+      
+      const netVoteScore = voteScore || 0;
+      // +2% hype/fame per net upvote (capped at +50%)
+      const voteMultiplier = 1 + Math.min(0.5, Math.max(0, netVoteScore * 0.02));
+
+      // Calculate hype and streams boost with vote multiplier
       const qualityMult = (song.quality_score || 50) / 100;
-      const hypeGained = Math.round(listeners * 0.05 * qualityMult); // 5% of listeners become fans
+      const hypeGained = Math.round(listeners * 0.05 * qualityMult * voteMultiplier); // 5% of listeners become fans
       const streamsBoost = Math.round(listeners * 0.1); // 10% go stream the song
 
       // Create play record
@@ -113,7 +121,7 @@ serve(async (req) => {
         .update({ hype: (song.hype || 0) + hypeGained })
         .eq("id", song.id);
 
-      // Update band fame if applicable
+      // Update band fame if applicable (with vote multiplier)
       if (song.band_id) {
         const { data: band } = await supabaseClient
           .from("bands")
@@ -122,9 +130,10 @@ serve(async (req) => {
           .single();
 
         if (band) {
+          const fameGain = Math.round(hypeGained * 0.5 * voteMultiplier);
           await supabaseClient
             .from("bands")
-            .update({ fame: (band.fame || 0) + Math.round(hypeGained * 0.5) })
+            .update({ fame: (band.fame || 0) + fameGain })
             .eq("id", song.band_id);
         }
       }
