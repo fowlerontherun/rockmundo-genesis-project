@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Music, Calendar, Star } from 'lucide-react';
+import { Music, Calendar, Search, Filter } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface BandSongsTabProps {
@@ -16,6 +18,7 @@ interface BandSong {
   genre: string;
   quality_score: number;
   catalog_status: string;
+  status?: string;
   created_at: string;
   user_id: string;
   familiarity_percentage: number | null;
@@ -26,6 +29,9 @@ interface BandSong {
 export function BandSongsTab({ bandId }: BandSongsTabProps) {
   const [songs, setSongs] = useState<BandSong[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [genreFilter, setGenreFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     loadBandSongs();
@@ -33,7 +39,6 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
 
   const loadBandSongs = async () => {
     try {
-      // Get all songs owned by band members
       const { data: members } = await supabase
         .from('band_members')
         .select('user_id')
@@ -44,19 +49,15 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
         return;
       }
 
-      // Filter out null user_ids from touring members
       const memberIds = members.map(m => m.user_id).filter(id => id !== null);
 
-      // Get familiarity data (includes all songs in band repertoire, including gifted ones)
       const { data: familiarityData } = await supabase
         .from('band_song_familiarity')
         .select('song_id, familiarity_percentage, familiarity_minutes, last_rehearsed_at')
         .eq('band_id', bandId);
 
-      // Get all song IDs from familiarity data
       const familiaritySongIds = familiarityData?.map(f => f.song_id) || [];
 
-      // Get songs from setlists as fallback
       const { data: setlistSongs } = await supabase
         .from('setlist_songs')
         .select('song_id')
@@ -70,7 +71,6 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
       const setlistSongIds = setlistSongs?.map(s => s.song_id) || [];
       const allSongIds = [...new Set([...familiaritySongIds, ...setlistSongIds])];
 
-      // Build query for songs
       let songsQuery = supabase.from('songs').select('*');
       
       if (memberIds.length > 0 && allSongIds.length > 0) {
@@ -88,7 +88,6 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
         return;
       }
 
-      // Merge song data with familiarity
       const songsWithFamiliarity = songsData.map(song => {
         const familiarity = familiarityData?.find(f => f.song_id === song.id);
         return {
@@ -107,126 +106,147 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
     }
   };
 
-  const getQualityColor = (quality: number) => {
-    if (quality >= 80) return 'bg-green-500';
-    if (quality >= 60) return 'bg-blue-500';
-    if (quality >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
+  // Get unique genres for filter
+  const genres = useMemo(() => {
+    const uniqueGenres = [...new Set(songs.map(s => s.genre).filter(Boolean))];
+    return uniqueGenres.sort();
+  }, [songs]);
 
-  const getFamiliarityLabel = (percentage: number | null) => {
-    if (percentage === null || percentage === 0) return 'Not Rehearsed';
-    if (percentage >= 80) return 'Well Rehearsed';
-    if (percentage >= 50) return 'Familiar';
-    if (percentage >= 20) return 'Learning';
-    return 'Just Started';
+  // Filtered songs
+  const filteredSongs = useMemo(() => {
+    return songs.filter(song => {
+      const matchesSearch = !searchQuery || 
+        song.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesGenre = genreFilter === 'all' || song.genre === genreFilter;
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'recorded' && song.status === 'recorded') ||
+        (statusFilter === 'published' && song.catalog_status === 'published') ||
+        (statusFilter === 'rehearsed' && (song.familiarity_percentage || 0) >= 50);
+      return matchesSearch && matchesGenre && matchesStatus;
+    });
+  }, [songs, searchQuery, genreFilter, statusFilter]);
+
+  const getQualityColor = (quality: number) => {
+    if (quality >= 80) return 'bg-green-500/80';
+    if (quality >= 60) return 'bg-blue-500/80';
+    if (quality >= 40) return 'bg-yellow-500/80';
+    return 'bg-red-500/80';
   };
 
   const getFamiliarityColor = (percentage: number | null) => {
     if (percentage === null || percentage === 0) return 'bg-muted text-muted-foreground';
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 50) return 'bg-blue-500';
-    if (percentage >= 20) return 'bg-yellow-500';
-    return 'bg-orange-500';
+    if (percentage >= 80) return 'bg-green-500/80';
+    if (percentage >= 50) return 'bg-blue-500/80';
+    return 'bg-yellow-500/80';
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading songs...</div>;
+    return <div className="text-center py-8 text-sm text-muted-foreground">Loading songs...</div>;
   }
 
   if (songs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center">
-          <Music className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">No songs found for this band</p>
+        <CardContent className="py-8 text-center">
+          <Music className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No songs found for this band</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Music className="h-5 w-5" />
-            Band Song Repertoire ({songs.length} songs)
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Music className="h-4 w-4" />
+            Songs ({filteredSongs.length}/{songs.length})
           </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {songs.map((song) => (
-              <Card key={song.id} className="border-2">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{song.title}</h3>
-                        <div className="flex gap-2 mt-1 flex-wrap">
-                          <Badge variant="outline">{song.genre}</Badge>
-                          {(song as any).status && (
-                            <Badge variant={(song as any).status === 'recorded' ? 'default' : 'secondary'}>
-                              {(song as any).status === 'recorded' ? 'Recorded' : (song as any).status}
-                            </Badge>
-                          )}
-                          {song.catalog_status === 'published' && (
-                            <Badge variant="secondary">In Catalog</Badge>
-                          )}
-                          <Badge className={getQualityColor(song.quality_score)}>
-                            Quality: {song.quality_score}%
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className={getFamiliarityColor(song.familiarity_percentage)}>
-                          {getFamiliarityLabel(song.familiarity_percentage)}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Familiarity Progress */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Rehearsal Familiarity</span>
-                        <span className="font-medium">
-                          {song.familiarity_percentage || 0}%
-                        </span>
-                      </div>
-                      <Progress value={song.familiarity_percentage || 0} className="h-2" />
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                          {song.familiarity_minutes || 0} minutes rehearsed
-                        </span>
-                        {song.last_rehearsed_at && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Last rehearsed {formatDistanceToNow(new Date(song.last_rehearsed_at), { addSuffix: true })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Song Stats */}
-                    <div className="grid grid-cols-2 gap-4 pt-2 border-t text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Created: </span>
-                        <span>{new Date(song.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-muted-foreground">Status: </span>
-                        <span className="font-medium">
-                          {song.catalog_status === 'published' ? 'Published' : 'Unpublished'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-7 h-8 w-32 sm:w-40 text-xs"
+              />
+            </div>
+            <Select value={genreFilter} onValueChange={setGenreFilter}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <Filter className="h-3 w-3 mr-1" />
+                <SelectValue placeholder="Genre" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genres</SelectItem>
+                {genres.map(g => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="recorded">Recorded</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="rehearsed">Rehearsed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="divide-y divide-border">
+          {filteredSongs.map((song) => (
+            <div key={song.id} className="py-2.5 first:pt-0 last:pb-0">
+              <div className="flex items-center gap-3">
+                {/* Song Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm truncate">{song.title}</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                      {song.genre}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                    {song.status === 'recorded' && (
+                      <span className="text-green-600">● Recorded</span>
+                    )}
+                    {song.last_rehearsed_at && (
+                      <span className="flex items-center gap-0.5">
+                        <Calendar className="h-2.5 w-2.5" />
+                        {formatDistanceToNow(new Date(song.last_rehearsed_at), { addSuffix: true })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quality & Familiarity Badges */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge className={`${getQualityColor(song.quality_score)} text-[10px] px-1.5 py-0 h-5`}>
+                    Q:{song.quality_score}
+                  </Badge>
+                  <Badge className={`${getFamiliarityColor(song.familiarity_percentage)} text-[10px] px-1.5 py-0 h-5`}>
+                    R:{song.familiarity_percentage || 0}%
+                  </Badge>
+                </div>
+
+                {/* Familiarity Progress - compact */}
+                <div className="w-16 shrink-0 hidden sm:block">
+                  <Progress value={song.familiarity_percentage || 0} className="h-1.5" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {filteredSongs.length === 0 && songs.length > 0 && (
+          <p className="text-center text-sm text-muted-foreground py-4">No songs match your filters</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
