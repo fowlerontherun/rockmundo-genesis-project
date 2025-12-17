@@ -283,7 +283,7 @@ serve(async (req) => {
           lyrics: formattedLyrics,
           prompt: stylePrompt,
           song_duration: songDuration,
-          bitrate: 192,
+          bitrate: 128000,
           sample_rate: 44100
         }
       }
