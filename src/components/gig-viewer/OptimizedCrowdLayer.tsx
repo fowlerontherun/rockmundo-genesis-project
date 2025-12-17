@@ -309,19 +309,8 @@ export const OptimizedCrowdLayer = ({
 
   return (
     <group>
-      {/* RPM avatars for front row */}
-      {frontRowMembers.map((person) => (
-        <RpmCrowdMember
-          key={`rpm-${person.id}`}
-          position={person.position}
-          avatarUrl={RPM_DEMO_AVATAR}
-          scale={person.scale}
-          stageZ={-5}
-        />
-      ))}
-
-      {/* Procedural avatars for back rows */}
-      {crowdData.filter(person => !frontRowIds.has(person.id)).map((person) => {
+      {/* All procedural avatars - RPM disabled for performance and consistency */}
+      {crowdData.map((person) => {
         // Deterministic appearance based on seed
         const shirtColor = person.showMerch ? bandMerchColor : shirtColors[person.colorVariant % shirtColors.length];
         const pantsColor = pantsColors[Math.floor(person.seed * 7) % pantsColors.length];
