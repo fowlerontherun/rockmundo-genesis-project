@@ -12,12 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Trophy } from "lucide-react";
+import { RequirementsBuilder } from "@/components/admin/RequirementsBuilder";
+import { RewardsBuilder } from "@/components/admin/RewardsBuilder";
 
 export default function AchievementsAdmin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingAchievement, setEditingAchievement] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [requirements, setRequirements] = useState<Record<string, any>>({});
+  const [rewards, setRewards] = useState<Record<string, any>>({});
 
   const { data: achievements = [], isLoading } = useQuery({
     queryKey: ["admin-achievements"],
@@ -78,8 +82,8 @@ export default function AchievementsAdmin() {
       category: formData.get("category") as string,
       rarity: formData.get("rarity") as string,
       icon: formData.get("icon") as string,
-      requirements: JSON.parse(formData.get("requirements") as string || "{}"),
-      rewards: JSON.parse(formData.get("rewards") as string || "{}"),
+      requirements,
+      rewards,
     };
 
     if (editingAchievement) {
@@ -87,6 +91,19 @@ export default function AchievementsAdmin() {
     } else {
       createMutation.mutate(achievementData);
     }
+  };
+
+  const handleOpenDialog = (achievement?: any) => {
+    if (achievement) {
+      setEditingAchievement(achievement);
+      setRequirements(achievement.requirements || {});
+      setRewards(achievement.rewards || {});
+    } else {
+      setEditingAchievement(null);
+      setRequirements({});
+      setRewards({});
+    }
+    setIsDialogOpen(true);
   };
 
   return (
@@ -102,12 +119,12 @@ export default function AchievementsAdmin() {
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingAchievement(null)}>
+            <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
               New Achievement
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingAchievement ? "Edit" : "Create"} Achievement</DialogTitle>
               <DialogDescription>
@@ -183,27 +200,9 @@ export default function AchievementsAdmin() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="requirements">Requirements (JSON)</Label>
-                <Textarea
-                  id="requirements"
-                  name="requirements"
-                  defaultValue={JSON.stringify(editingAchievement?.requirements || {}, null, 2)}
-                  placeholder='{"type": "gigs_completed", "count": 10}'
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="rewards">Rewards (JSON)</Label>
-                <Textarea
-                  id="rewards"
-                  name="rewards"
-                  defaultValue={JSON.stringify(editingAchievement?.rewards || {}, null, 2)}
-                  placeholder='{"xp": 100, "cash": 500, "fame": 10}'
-                  rows={4}
-                />
-              </div>
+              <RequirementsBuilder value={requirements} onChange={setRequirements} />
+              
+              <RewardsBuilder value={rewards} onChange={setRewards} />
 
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -273,10 +272,7 @@ export default function AchievementsAdmin() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setEditingAchievement(achievement);
-                          setIsDialogOpen(true);
-                        }}
+                        onClick={() => handleOpenDialog(achievement)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>

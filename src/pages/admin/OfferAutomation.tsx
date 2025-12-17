@@ -1,14 +1,16 @@
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Activity,
   AlertTriangle,
-  BarChart2,
   CheckCircle2,
   Clock,
+  Loader2,
   PauseCircle,
   PlayCircle,
-  Radar,
+  Save,
   Settings,
   Sparkles,
   Timer,
@@ -21,37 +23,13 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
 interface FameTier {
   name: string;
   min: number;
   max: number;
   offerMultiplier: number;
-}
-
-interface BrandControl {
-  name: string;
-  paused: boolean;
-  dailyOfferTarget: number;
-  lastRunMinutesAgo: number;
-  queueLatencyMs: number;
-}
-
-interface JobMetric {
-  label: string;
-  value: number;
-  target: number;
-  description: string;
-}
-
-interface OfferLog {
-  id: string;
-  timestamp: string;
-  message: string;
-  type: "success" | "error" | "info";
-  offersGenerated?: number;
-  failures?: number;
-  cooldownsApplied?: number;
 }
 
 interface OfferStats {
@@ -61,48 +39,117 @@ interface OfferStats {
   icon: React.ReactNode;
 }
 
-export default function OfferAutomation() {
-  const [globalPause, setGlobalPause] = useState(false);
-  const [offerFrequencyMinutes, setOfferFrequencyMinutes] = useState(45);
-  const [cooldownHours, setCooldownHours] = useState(24);
-  const [brandCooldownDays, setBrandCooldownDays] = useState(3);
-  const [payoutVariance, setPayoutVariance] = useState(15);
-  const [fameTiers, setFameTiers] = useState<FameTier[]>([
+const DEFAULT_CONFIG = {
+  globalPause: false,
+  offerFrequencyMinutes: 45,
+  cooldownHours: 24,
+  brandCooldownDays: 3,
+  payoutVariance: 15,
+  fameTiers: [
     { name: "Street", min: 0, max: 499, offerMultiplier: 0.8 },
     { name: "Rising", min: 500, max: 1999, offerMultiplier: 1 },
     { name: "Regional", min: 2000, max: 4999, offerMultiplier: 1.25 },
     { name: "National", min: 5000, max: 9999, offerMultiplier: 1.5 },
     { name: "Global", min: 10000, max: 25000, offerMultiplier: 2 },
-  ]);
-  const [brands, setBrands] = useState<BrandControl[]>([
-    { name: "Neon Nights", paused: false, dailyOfferTarget: 120, lastRunMinutesAgo: 12, queueLatencyMs: 420 },
-    { name: "Starlight Syndicate", paused: false, dailyOfferTarget: 90, lastRunMinutesAgo: 28, queueLatencyMs: 980 },
-    { name: "Indie Forge", paused: true, dailyOfferTarget: 60, lastRunMinutesAgo: 75, queueLatencyMs: 1640 },
-  ]);
+  ],
+};
+
+export default function OfferAutomation() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [globalPause, setGlobalPause] = useState(DEFAULT_CONFIG.globalPause);
+  const [offerFrequencyMinutes, setOfferFrequencyMinutes] = useState(DEFAULT_CONFIG.offerFrequencyMinutes);
+  const [cooldownHours, setCooldownHours] = useState(DEFAULT_CONFIG.cooldownHours);
+  const [brandCooldownDays, setBrandCooldownDays] = useState(DEFAULT_CONFIG.brandCooldownDays);
+  const [payoutVariance, setPayoutVariance] = useState(DEFAULT_CONFIG.payoutVariance);
+  const [fameTiers, setFameTiers] = useState<FameTier[]>(DEFAULT_CONFIG.fameTiers);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Fetch config from database
+  const { data: configData, isLoading } = useQuery({
+    queryKey: ["offer-automation-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("game_balance_config")
+        .select("*")
+        .eq("category", "offer_automation");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Load config into state
+  useEffect(() => {
+    if (configData && configData.length > 0) {
+      const getConfig = (key: string, defaultValue: any) => {
+        const item = configData.find((c) => c.key === key);
+        return item ? item.value : defaultValue;
+      };
+
+      setGlobalPause(getConfig("global_pause", DEFAULT_CONFIG.globalPause) === 1);
+      setOfferFrequencyMinutes(getConfig("offer_frequency_minutes", DEFAULT_CONFIG.offerFrequencyMinutes));
+      setCooldownHours(getConfig("cooldown_hours", DEFAULT_CONFIG.cooldownHours));
+      setBrandCooldownDays(getConfig("brand_cooldown_days", DEFAULT_CONFIG.brandCooldownDays));
+      setPayoutVariance(getConfig("payout_variance", DEFAULT_CONFIG.payoutVariance));
+      setHasUnsavedChanges(false);
+    }
+  }, [configData]);
+
+  // Save config mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const configs = [
+        { category: "offer_automation", key: "global_pause", value: globalPause ? 1 : 0, description: "Global Pause" },
+        { category: "offer_automation", key: "offer_frequency_minutes", value: offerFrequencyMinutes, description: "Offer Frequency (minutes)" },
+        { category: "offer_automation", key: "cooldown_hours", value: cooldownHours, description: "Cooldown Duration (hours)" },
+        { category: "offer_automation", key: "brand_cooldown_days", value: brandCooldownDays, description: "Brand Cooldown (days)" },
+        { category: "offer_automation", key: "payout_variance", value: payoutVariance, description: "Payout Variance (%)" },
+      ];
+
+      for (const config of configs) {
+        const { error } = await supabase
+          .from("game_balance_config")
+          .upsert(config, { onConflict: "category,key" });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["offer-automation-config"] });
+      toast({ title: "Configuration saved successfully" });
+      setHasUnsavedChanges(false);
+    },
+    onError: (error) => {
+      toast({ title: "Failed to save configuration", description: String(error), variant: "destructive" });
+    },
+  });
+
+  const handleChange = () => {
+    setHasUnsavedChanges(true);
+  };
 
   const offerStats: OfferStats[] = useMemo(
     () => [
       {
         label: "Offers Generated (24h)",
-        value: "162",
+        value: "—",
         helper: "Includes all bands and brands with cooldown applied",
         icon: <Activity className="h-4 w-4" />,
       },
       {
         label: "Average Queue Latency",
-        value: "840 ms",
+        value: "—",
         helper: "Time between cron start and first insert",
         icon: <Clock className="h-4 w-4" />,
       },
       {
         label: "Error Rate",
-        value: "1.3%",
+        value: "—",
         helper: "Failures recorded by job logger in the last day",
         icon: <AlertTriangle className="h-4 w-4 text-amber-600" />,
       },
       {
         label: "Cooldown Skips Prevented",
-        value: "42",
+        value: "—",
         helper: "Bands skipped because cooldowns are still active",
         icon: <Timer className="h-4 w-4" />,
       },
@@ -110,87 +157,27 @@ export default function OfferAutomation() {
     [],
   );
 
-  const jobMetrics: JobMetric[] = useMemo(
-    () => [
-      {
-        label: "Success Rate",
-        value: 97,
-        target: 99,
-        description: "Completed offer jobs without runtime errors",
-      },
-      {
-        label: "Queue Latency (ms)",
-        value: 820,
-        target: 1000,
-        description: "Average time waiting in queue before execution",
-      },
-      {
-        label: "Cooldown Compliance",
-        value: 93,
-        target: 95,
-        description: "Runs skipping bands still on cooldown",
-      },
-    ],
-    [],
-  );
-
-  const successRate = jobMetrics.find((metric) => metric.label === "Success Rate")?.value ?? 0;
-
-  const offerLogs: OfferLog[] = useMemo(
-    () => [
-      {
-        id: "log-1",
-        timestamp: "2m ago",
-        message: "Generated 42 offers across 3 brands",
-        type: "success",
-        offersGenerated: 42,
-        cooldownsApplied: 7,
-      },
-      {
-        id: "log-2",
-        timestamp: "18m ago",
-        message: "Queue latency spike detected for Indie Forge",
-        type: "error",
-        failures: 2,
-        cooldownsApplied: 3,
-      },
-      {
-        id: "log-3",
-        timestamp: "42m ago",
-        message: "Applied fame tier recalibration (Regional → National)",
-        type: "info",
-        offersGenerated: 18,
-      },
-    ],
-    [],
-  );
-
-  const errorLogs = offerLogs.filter((log) => log.type === "error");
-  const averageQueueLatency = Math.round(
-    brands.reduce((sum, brand) => sum + brand.queueLatencyMs, 0) / brands.length,
-  );
-  const pausedBrands = brands.filter((brand) => brand.paused).length;
-
   const handleFameTierChange = (index: number, field: keyof FameTier, value: number) => {
     setFameTiers((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value } as FameTier;
       return updated;
     });
+    handleChange();
   };
 
-  const toggleBrandPause = (brandName: string) => {
-    setBrands((prev) =>
-      prev.map((brand) =>
-        brand.name === brandName ? { ...brand, paused: !brand.paused } : brand,
-      ),
-    );
-  };
-
-  const toggleAllBrands = (paused: boolean) => {
+  const toggleGlobalPause = (paused: boolean) => {
     setGlobalPause(paused);
-    setBrands((prev) => prev.map((brand) => ({ ...brand, paused })));
+    handleChange();
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -198,33 +185,39 @@ export default function OfferAutomation() {
         <div>
           <h1 className="text-3xl font-bold">Offer Automation Controls</h1>
           <p className="text-muted-foreground">
-            Tune generation frequency, cooldown policies, payout variance, and fame tier thresholds while
-            monitoring operational health.
+            Tune generation frequency, cooldown policies, payout variance, and fame tier thresholds.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Switch id="global-pause" checked={globalPause} onCheckedChange={toggleAllBrands} />
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold">Global Auto-Offers</p>
+          <Button 
+            onClick={() => saveMutation.mutate()} 
+            disabled={!hasUnsavedChanges || saveMutation.isPending}
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Save Changes
+          </Button>
+          <div className="flex items-center gap-2">
+            <Switch id="global-pause" checked={globalPause} onCheckedChange={toggleGlobalPause} />
+            <Label htmlFor="global-pause" className="flex items-center gap-2">
+              Global Auto-Offers
               <Badge variant={globalPause ? "destructive" : "secondary"}>
                 {globalPause ? "Paused" : "Active"}
               </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {globalPause ? "Paused for all brands" : "Running across all brands"}
-            </p>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => toggleAllBrands(false)}>
-                <PlayCircle className="mr-1 h-4 w-4" /> Resume all
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => toggleAllBrands(true)}>
-                <PauseCircle className="mr-1 h-4 w-4" /> Pause all
-              </Button>
-            </div>
+            </Label>
           </div>
         </div>
       </div>
+
+      {hasUnsavedChanges && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-2 text-sm text-amber-600 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          You have unsaved changes
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {offerStats.map((stat) => (
@@ -243,8 +236,8 @@ export default function OfferAutomation() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Offer Generation Configuration</CardTitle>
@@ -262,7 +255,10 @@ export default function OfferAutomation() {
                 type="number"
                 min={5}
                 value={offerFrequencyMinutes}
-                onChange={(e) => setOfferFrequencyMinutes(Number(e.target.value))}
+                onChange={(e) => {
+                  setOfferFrequencyMinutes(Number(e.target.value));
+                  handleChange();
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 Controls how often the engine schedules new offers per brand.
@@ -275,7 +271,10 @@ export default function OfferAutomation() {
                 type="number"
                 min={1}
                 value={cooldownHours}
-                onChange={(e) => setCooldownHours(Number(e.target.value))}
+                onChange={(e) => {
+                  setCooldownHours(Number(e.target.value));
+                  handleChange();
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 Prevents duplicate outreach to bands that recently received offers.
@@ -288,7 +287,10 @@ export default function OfferAutomation() {
                 type="number"
                 min={1}
                 value={brandCooldownDays}
-                onChange={(e) => setBrandCooldownDays(Number(e.target.value))}
+                onChange={(e) => {
+                  setBrandCooldownDays(Number(e.target.value));
+                  handleChange();
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 Controls how often a brand can send repeat offers to the same band.
@@ -302,141 +304,70 @@ export default function OfferAutomation() {
                 min={0}
                 max={50}
                 value={payoutVariance}
-                onChange={(e) => setPayoutVariance(Number(e.target.value))}
+                onChange={(e) => {
+                  setPayoutVariance(Number(e.target.value));
+                  handleChange();
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 Adds controlled randomness to base payouts to avoid monotony.
               </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Offer Reason Variants</Label>
-              <div className="rounded-lg border p-3 text-sm text-muted-foreground bg-muted/30">
-                Using {Math.max(4, Math.floor(offerFrequencyMinutes / 10))} reason templates rotated per brand
-                with cooldown-aware throttling.
-              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Offer Generation Health</CardTitle>
-            <CardDescription>Job success rates, latency, and cooldown compliance</CardDescription>
+            <CardTitle>System Status</CardTitle>
+            <CardDescription>Current automation status and quick actions</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {jobMetrics.map((metric) => {
-              const progress = Math.min((metric.value / metric.target) * 100, 120);
-              const isLatency = metric.label.includes("Latency");
-              const isHealthy = isLatency ? metric.value <= metric.target : metric.value >= metric.target;
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Automation Status</p>
+                <p className="text-xs text-muted-foreground">Controls whether offers are generated automatically</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {globalPause ? (
+                  <PauseCircle className="h-4 w-4 text-destructive" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                )}
+                <span className="text-lg font-semibold">{globalPause ? "Paused" : "Active"}</span>
+              </div>
+            </div>
 
-              return (
-                <div key={metric.label} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      {isLatency ? <Clock className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
-                      <span className="font-medium">{metric.label}</span>
-                    </div>
-                    <Badge variant={isHealthy ? "secondary" : "destructive"}>{metric.value}{isLatency ? " ms" : "%"}</Badge>
-                  </div>
-                  <Progress value={Math.min(progress, 100)} />
-                  <p className="text-xs text-muted-foreground">{metric.description}</p>
-                </div>
-              );
-            })}
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={() => toggleGlobalPause(false)}
+                disabled={!globalPause}
+              >
+                <PlayCircle className="mr-1 h-4 w-4" /> Resume
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={() => toggleGlobalPause(true)}
+                disabled={globalPause}
+              >
+                <PauseCircle className="mr-1 h-4 w-4" /> Pause
+              </Button>
+            </div>
+
+            <div className="rounded-lg border p-3 bg-muted/30">
+              <p className="text-sm font-medium mb-2">Quick Reference</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Offers generated every {offerFrequencyMinutes} minutes</li>
+                <li>• Band cooldown: {cooldownHours} hours between offers</li>
+                <li>• Brand cooldown: {brandCooldownDays} days for same band</li>
+                <li>• Payout variance: ±{payoutVariance}%</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Monitoring & Diagnostics</CardTitle>
-            <CardDescription>Job success rates, queue latency, and recent failures</CardDescription>
-          </div>
-          <Badge variant={pausedBrands > 0 ? "destructive" : "secondary"}>
-            {pausedBrands > 0 ? `${pausedBrands} brand(s) paused` : "All brands active"}
-          </Badge>
-        </CardHeader>
-        <CardContent className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">Job success rate</p>
-                <p className="text-xs text-muted-foreground">Based on the last 50 cron executions</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span className="text-lg font-semibold">{successRate}%</span>
-              </div>
-            </div>
-
-            <div className="rounded-lg border">
-              <div className="flex items-center justify-between border-b px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Queue latency by brand</p>
-                  <p className="text-xs text-muted-foreground">Average {averageQueueLatency} ms</p>
-                </div>
-                <Badge variant="outline">Targets: &lt; 1000 ms</Badge>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Brand</TableHead>
-                    <TableHead>Latency</TableHead>
-                    <TableHead>Last Run</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {brands.map((brand) => (
-                    <TableRow key={brand.name}>
-                      <TableCell className="font-medium">{brand.name}</TableCell>
-                      <TableCell className="text-sm">{brand.queueLatencyMs} ms</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {brand.lastRunMinutesAgo} minutes ago
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Offer generation logs</p>
-                <p className="text-xs text-muted-foreground">Success and error snapshots from the last hour</p>
-              </div>
-              <Badge variant={errorLogs.length ? "destructive" : "secondary"}>
-                {errorLogs.length ? `${errorLogs.length} error(s)` : "Healthy"}
-              </Badge>
-            </div>
-            <div className="space-y-3">
-              {offerLogs.map((log) => (
-                <div key={log.id} className="flex items-start gap-3 rounded-lg border p-3">
-                  <div className="mt-1">
-                    {log.type === "success" && <Activity className="h-4 w-4 text-green-600" />}
-                    {log.type === "error" && <AlertTriangle className="h-4 w-4 text-red-600" />}
-                    {log.type === "info" && <Timer className="h-4 w-4 text-blue-600" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{log.message}</p>
-                      <span className="text-xs text-muted-foreground">{log.timestamp}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 pt-2 text-xs text-muted-foreground">
-                      {typeof log.offersGenerated === "number" && <Badge variant="outline">{log.offersGenerated} offers</Badge>}
-                      {typeof log.cooldownsApplied === "number" && <Badge variant="outline">{log.cooldownsApplied} cooldowns</Badge>}
-                      {typeof log.failures === "number" && <Badge variant="destructive">{log.failures} failures</Badge>}
-                      <Badge variant={log.type === "error" ? "destructive" : "secondary"}>{log.type}</Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -463,119 +394,35 @@ export default function OfferAutomation() {
                   <TableCell>
                     <Input
                       type="number"
+                      min={0}
                       value={tier.min}
                       onChange={(e) => handleFameTierChange(index, "min", Number(e.target.value))}
+                      className="w-24"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
+                      min={0}
                       value={tier.max}
                       onChange={(e) => handleFameTierChange(index, "max", Number(e.target.value))}
+                      className="w-24"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
-                      step="0.05"
+                      min={0}
+                      step={0.1}
                       value={tier.offerMultiplier}
                       onChange={(e) => handleFameTierChange(index, "offerMultiplier", Number(e.target.value))}
+                      className="w-24"
                     />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Brand-Level Controls</CardTitle>
-            <CardDescription>Pause/resume auto-offers per brand and inspect queue latency.</CardDescription>
-          </div>
-          <Radar className="h-5 w-5 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {brands.map((brand) => (
-            <div
-              key={brand.name}
-              className="flex flex-col gap-2 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold">{brand.name}</p>
-                  {brand.paused ? (
-                    <Badge variant="destructive" className="flex items-center gap-1">
-                      <PauseCircle className="h-3 w-3" /> Paused
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <PlayCircle className="h-3 w-3" /> Active
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Targeting {brand.dailyOfferTarget} offers/day · Last run {brand.lastRunMinutesAgo}m ago
-                </p>
-                <div className="flex items-center gap-2 text-xs">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
-                  <span>Queue latency: {brand.queueLatencyMs} ms</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={!brand.paused}
-                  disabled={globalPause}
-                  onCheckedChange={() => toggleBrandPause(brand.name)}
-                />
-                <Button variant="outline" size="sm" disabled={brand.paused || globalPause}>
-                  Run now
-                </Button>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Offer Generation Logs</CardTitle>
-            <CardDescription>Track offer counts, cooldown enforcement, and error spikes.</CardDescription>
-          </div>
-          <BarChart2 className="h-5 w-5 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {errorLogs.length === 0 ? (
-            <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
-              <CheckCircle2 className="h-5 w-5" />
-              <div>
-                <p className="font-semibold">No errors detected</p>
-                <p className="text-xs text-green-800">Offer pipeline has not reported new failures in the last hour.</p>
-              </div>
-            </div>
-          ) : (
-            errorLogs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 rounded-lg border p-3">
-                <div className="mt-1">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">{log.message}</p>
-                    <span className="text-xs text-muted-foreground">{log.timestamp}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-2 text-xs text-muted-foreground">
-                    {typeof log.failures === "number" && <Badge variant="destructive">{log.failures} failures</Badge>}
-                    {typeof log.cooldownsApplied === "number" && <Badge variant="outline">{log.cooldownsApplied} cooldowns</Badge>}
-                    <Badge variant="destructive">Error</Badge>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
         </CardContent>
       </Card>
     </div>
