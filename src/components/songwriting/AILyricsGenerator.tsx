@@ -1,16 +1,35 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface Theme {
+  name?: string;
+  mood?: string;
+  description?: string;
+}
+
+interface ChordProgression {
+  name?: string;
+  progression?: string;
+}
+
+interface CreativeBrief {
+  inspirationModifiers?: string[];
+  moodModifiers?: string[];
+  writingMode?: string;
+  coWriters?: string[];
+}
+
 interface AILyricsGeneratorProps {
   title: string;
-  theme: string;
+  theme: string | Theme;
   genre: string;
-  chordProgression: string;
+  chordProgression: string | ChordProgression;
+  creativeBrief?: CreativeBrief;
+  existingLyrics?: string;
   onLyricsGenerated: (lyrics: string) => void;
 }
 
@@ -19,6 +38,8 @@ export const AILyricsGenerator = ({
   theme,
   genre,
   chordProgression,
+  creativeBrief,
+  existingLyrics,
   onLyricsGenerated
 }: AILyricsGeneratorProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -41,7 +62,9 @@ export const AILyricsGenerator = ({
           title,
           theme,
           genre,
-          chordProgression
+          chordProgression,
+          creativeBrief,
+          existingLyrics
         }
       });
 
@@ -49,9 +72,16 @@ export const AILyricsGenerator = ({
 
       if (data?.lyrics) {
         onLyricsGenerated(data.lyrics);
+        
+        // Show metadata about the generated lyrics if available
+        const metadata = data.metadata;
+        const description = metadata 
+          ? `${metadata.structure} structure with ${metadata.tone} tone`
+          : "AI-assisted lyrics ready for editing";
+        
         toast({
           title: "Lyrics Generated!",
-          description: "AI-assisted lyrics ready for editing"
+          description
         });
       }
     } catch (error) {
@@ -83,7 +113,7 @@ export const AILyricsGenerator = ({
         {isGenerating ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Generating Lyrics...
+            Generating Unique Lyrics...
           </>
         ) : (
           <>
