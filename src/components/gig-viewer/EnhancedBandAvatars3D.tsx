@@ -35,6 +35,16 @@ export const EnhancedBandAvatars3D = ({
   crowdMood = 50,
   bandMemberConfigs = {},
 }: EnhancedBandAvatars3DProps) => {
+  // Debug logging
+  console.log('[EnhancedBandAvatars3D] Rendering with configs:', {
+    hasVocalist: !!bandMemberConfigs.vocalist,
+    hasGuitarist: !!bandMemberConfigs.guitarist,
+    hasBassist: !!bandMemberConfigs.bassist,
+    hasDrummer: !!bandMemberConfigs.drummer,
+    hasKeyboardist: !!bandMemberConfigs.keyboardist,
+    vocalistUrl: bandMemberConfigs.vocalist?.rpm_avatar_url,
+  });
+
   // Determine animation state based on song progress
   const getAnimationState = () => {
     if (songProgress < 0.05) return 'intro';
@@ -47,6 +57,7 @@ export const EnhancedBandAvatars3D = ({
   const intensity = crowdMood / 100;
 
   // Stage positions for band members (x, y, z)
+  // Y=0 places them at floor level, Z negative is toward stage
   const positions: Record<string, [number, number, number]> = {
     vocalist: [0, 0, -4],           // Center front
     guitarist: [-2.5, 0, -5.5],     // Stage left

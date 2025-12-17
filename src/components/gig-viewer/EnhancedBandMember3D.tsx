@@ -206,19 +206,22 @@ export const EnhancedBandMember3D = ({
             <meshStandardMaterial color="#888" />
           </mesh>
         }>
-          <ReadyPlayerMeAvatar
-            avatarUrl={avatarConfig.rpm_avatar_url}
-            scale={1}
-            position={[0, 0, 0]}
-          />
+          {/* RPM avatars need scale adjustment and Y offset to match scene */}
+          <group position={[0, 0, 0]} scale={0.9}>
+            <ReadyPlayerMeAvatar
+              avatarUrl={avatarConfig.rpm_avatar_url}
+              scale={1}
+              position={[0, 0, 0]}
+            />
+          </group>
         </Suspense>
         
-        {/* Instruments for RPM avatar */}
+        {/* Instruments for RPM avatar - adjusted positions */}
         {instrument === 'guitarist' && (
           <Instruments3D
             type="electric-guitar"
             color={instrumentColor}
-            position={[0.15, 0.85, 0.12]}
+            position={[0.15, 0.75, 0.12]}
             rotation={[0, 0, -0.35]}
           />
         )}
@@ -226,7 +229,7 @@ export const EnhancedBandMember3D = ({
           <Instruments3D
             type="bass-guitar"
             color={instrumentColor}
-            position={[0.15, 0.85, 0.12]}
+            position={[0.15, 0.75, 0.12]}
             rotation={[0, 0, -0.35]}
           />
         )}
@@ -237,7 +240,7 @@ export const EnhancedBandMember3D = ({
           <Instruments3D type="microphone" position={[0, 0, 0.3]} />
         )}
         {instrument === 'keyboardist' && (
-          <Instruments3D type="keyboard" position={[0, 0.85, 0.4]} rotation={[0, 0, 0]} />
+          <Instruments3D type="keyboard" position={[0, 0.75, 0.4]} rotation={[0, 0, 0]} />
         )}
       </group>
     );
