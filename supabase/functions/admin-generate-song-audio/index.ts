@@ -131,7 +131,7 @@ serve(async (req) => {
 
     // Generate audio using MusicGen
     const output = await replicate.run(
-      "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055f2e4c1c6647f95ae8a805c",
+      "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
       {
         input: {
           prompt: prompt,
