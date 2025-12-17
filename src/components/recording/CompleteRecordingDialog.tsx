@@ -12,6 +12,7 @@ import { useSongGenerationStatus } from "@/hooks/useSongGenerationStatus";
 import { GenerationLimitBadge } from "./GenerationLimitBadge";
 import { SongGenerationStatus } from "./SongGenerationStatus";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MusicOwnershipReminder } from "@/components/legal/MusicOwnershipReminder";
 
 interface CompleteRecordingDialogProps {
   open: boolean;
@@ -168,6 +169,8 @@ export const CompleteRecordingDialog = ({
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Music Ownership Reminder */}
+          <MusicOwnershipReminder compact />
           {/* VIP Status and Generation Info */}
           {vipStatus?.isVip ? (
             <div className="space-y-3">

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
+import { MusicOwnershipReminder } from "@/components/legal/MusicOwnershipReminder";
 import { formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -1252,6 +1253,11 @@ const Songwriting = () => {
                   : "Define the creative direction and we'll forecast the focus sprints you'll need."}
               </DialogDescription>
             </DialogHeader>
+            
+            {/* Music Ownership Reminder */}
+            {!selectedProject && (
+              <MusicOwnershipReminder />
+            )}
             <form onSubmit={handleSubmit}>
               <Tabs defaultValue="basics" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-6">
