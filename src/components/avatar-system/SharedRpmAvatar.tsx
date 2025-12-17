@@ -79,8 +79,9 @@ const SharedAvatarModel = ({
     
     const originalHeight = size.y;
     const originalMinY = bbox.min.y;
+    const originalMaxY = bbox.max.y;
     
-    console.log('[SharedRpmAvatar] Original height:', originalHeight, 'Original minY:', originalMinY);
+    console.log('[SharedRpmAvatar] Bounding box - height:', originalHeight, 'minY:', originalMinY, 'maxY:', originalMaxY);
     
     // 2. Validate model - only reject if completely invalid
     if (!originalHeight || originalHeight <= 0) {
@@ -92,19 +93,29 @@ const SharedAvatarModel = ({
     const targetHeight = 1.75;
     let scaleFactor = targetHeight / originalHeight;
     
-    // Clamp scale factor to reasonable range (0.3x to 5x) - allows small models to scale up
+    // Clamp scale factor to reasonable range (0.3x to 5x)
     scaleFactor = Math.min(5.0, Math.max(0.3, scaleFactor));
     
-    console.log('[SharedRpmAvatar] Scale factor:', scaleFactor, 'from height:', originalHeight);
+    console.log('[SharedRpmAvatar] Scale factor:', scaleFactor);
     
-    // 4. Apply scale FIRST
+    // 4. Apply scale
     clone.scale.setScalar(scaleFactor);
     
-    // 5. Calculate Y offset AFTER scaling - scaled minY = originalMinY * scaleFactor
+    // 5. CRITICAL FIX: RPM avatars typically have feet at y=0 in their local space
+    // Only adjust Y if the original model feet are NOT at y=0
+    // If minY is significantly non-zero (not just floating point noise), adjust
     const scaledMinY = originalMinY * scaleFactor;
-    clone.position.y = -scaledMinY; // Feet on floor (y=0)
     
-    console.log('[SharedRpmAvatar] Final: scaledMinY:', scaledMinY, 'position.y:', clone.position.y);
+    // Only apply offset if feet are significantly off from y=0 (threshold: 0.1 units)
+    if (Math.abs(scaledMinY) > 0.1) {
+      clone.position.y = -scaledMinY;
+      console.log('[SharedRpmAvatar] Applied Y offset:', -scaledMinY);
+    } else {
+      clone.position.y = 0;
+      console.log('[SharedRpmAvatar] Feet already near ground, no Y offset needed');
+    }
+    
+    console.log('[SharedRpmAvatar] Final position.y:', clone.position.y, 'Final scaled height:', originalHeight * scaleFactor);
     
     // Configure materials for rendering
     clone.traverse((child: Object3D) => {
