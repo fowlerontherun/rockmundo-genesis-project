@@ -40,6 +40,9 @@ export const StageLighting = ({
   // Strobe light
   const strobeRef = useRef<PointLight>(null);
   
+  // Front band spotlight
+  const frontSpotRef = useRef<SpotLight>(null);
+  
   const [spotlights, setSpotlights] = useState<SpotlightConfigData[]>([
     { position: [-4, 8, -3], color: "#ff00ff", intensity: 2 },
     { position: [4, 8, -3], color: "#00ffff", intensity: 2 },
@@ -120,7 +123,7 @@ export const StageLighting = ({
 
     // Moving head spotlights with sweeping beams
     if (movingHead1Ref.current) {
-      movingHead1Ref.current.intensity = 3 + Math.sin(time * 2) * intensity * 2;
+      movingHead1Ref.current.intensity = 4 + Math.sin(time * 2) * intensity * 2.5;
       movingHead1Ref.current.angle = 0.4 + Math.sin(time * 1.5) * 0.15;
       movingHead1Ref.current.target.position.set(
         Math.sin(time * 0.8) * 4,
@@ -131,7 +134,7 @@ export const StageLighting = ({
     }
 
     if (movingHead2Ref.current) {
-      movingHead2Ref.current.intensity = 3 + Math.cos(time * 2.5) * intensity * 2;
+      movingHead2Ref.current.intensity = 4 + Math.cos(time * 2.5) * intensity * 2.5;
       movingHead2Ref.current.angle = 0.4 + Math.cos(time * 1.2) * 0.15;
       movingHead2Ref.current.target.position.set(
         Math.cos(time * 0.7) * 4,
@@ -142,7 +145,7 @@ export const StageLighting = ({
     }
 
     if (movingHead3Ref.current) {
-      movingHead3Ref.current.intensity = 3.5 + Math.sin(time * 3) * intensity * 2;
+      movingHead3Ref.current.intensity = 4.5 + Math.sin(time * 3) * intensity * 2.5;
       movingHead3Ref.current.angle = 0.3 + Math.sin(time * 2) * 0.1;
       movingHead3Ref.current.target.position.set(
         Math.sin(time * 1.2) * 3,
@@ -153,7 +156,7 @@ export const StageLighting = ({
     }
 
     if (movingHead4Ref.current) {
-      movingHead4Ref.current.intensity = 3 + Math.cos(time * 2.8) * intensity * 2;
+      movingHead4Ref.current.intensity = 4 + Math.cos(time * 2.8) * intensity * 2.5;
       movingHead4Ref.current.angle = 0.35 + Math.cos(time * 1.8) * 0.12;
       movingHead4Ref.current.target.position.set(
         Math.cos(time * 1.1) * 3,
@@ -165,23 +168,28 @@ export const StageLighting = ({
 
     // Wash lights - color banks that flood the stage
     if (washLight1Ref.current) {
-      washLight1Ref.current.intensity = 2 + Math.sin(time * 1.5) * intensity * 1.5;
+      washLight1Ref.current.intensity = 3 + Math.sin(time * 1.5) * intensity * 2;
       washLight1Ref.current.color.set(palette.primary);
     }
 
     if (washLight2Ref.current) {
-      washLight2Ref.current.intensity = 2 + Math.cos(time * 1.3) * intensity * 1.5;
+      washLight2Ref.current.intensity = 3 + Math.cos(time * 1.3) * intensity * 2;
       washLight2Ref.current.color.set(palette.secondary);
     }
 
     if (washLight3Ref.current) {
-      washLight3Ref.current.intensity = 2 + Math.sin(time * 1.7) * intensity * 1.5;
+      washLight3Ref.current.intensity = 3 + Math.sin(time * 1.7) * intensity * 2;
       washLight3Ref.current.color.set(palette.accent);
     }
 
     if (washLight4Ref.current) {
-      washLight4Ref.current.intensity = 2 + Math.cos(time * 1.4) * intensity * 1.5;
+      washLight4Ref.current.intensity = 3 + Math.cos(time * 1.4) * intensity * 2;
       washLight4Ref.current.color.set(palette.wash);
+    }
+
+    // Front spotlight on band - keep consistently bright
+    if (frontSpotRef.current) {
+      frontSpotRef.current.intensity = 5 + Math.sin(time * 0.5) * 0.5;
     }
 
     // Strobe effect for high-energy moments
@@ -198,14 +206,50 @@ export const StageLighting = ({
 
   return (
     <group>
-      {/* Base ambient lighting */}
-      <ambientLight intensity={baseIntensity * 0.2} />
+      {/* Increased base ambient lighting */}
+      <ambientLight intensity={baseIntensity * 0.35} />
       
-      {/* Key light */}
+      {/* Key light - increased intensity */}
       <directionalLight
         position={[10, 10, 5]}
-        intensity={baseIntensity * 0.4}
+        intensity={baseIntensity * 0.6}
         castShadow={enableShadows}
+      />
+      
+      {/* Front spotlight on band area - new dedicated light */}
+      <spotLight
+        ref={frontSpotRef}
+        position={[0, 8, 2]}
+        angle={0.6}
+        penumbra={0.5}
+        intensity={5}
+        distance={25}
+        color="#ffffff"
+        target-position={[0, 0, -5]}
+        castShadow={enableShadows}
+      />
+      
+      {/* Uplight from floor to illuminate band from below */}
+      <pointLight
+        position={[0, 0.5, -5]}
+        intensity={2}
+        distance={8}
+        color="#ff6600"
+        decay={2}
+      />
+      <pointLight
+        position={[-2, 0.5, -5]}
+        intensity={1.5}
+        distance={6}
+        color="#ff00ff"
+        decay={2}
+      />
+      <pointLight
+        position={[2, 0.5, -5]}
+        intensity={1.5}
+        distance={6}
+        color="#00ffff"
+        decay={2}
       />
       
       {/* Moving head spotlights */}
@@ -214,7 +258,7 @@ export const StageLighting = ({
         position={[-5, 8, -3]}
         angle={0.4}
         penumbra={0.3}
-        intensity={3}
+        intensity={4}
         distance={20}
         castShadow={enableShadows}
       />
@@ -224,7 +268,7 @@ export const StageLighting = ({
         position={[5, 8, -3]}
         angle={0.4}
         penumbra={0.3}
-        intensity={3}
+        intensity={4}
         distance={20}
         castShadow={enableShadows}
       />
@@ -234,7 +278,7 @@ export const StageLighting = ({
         position={[-3, 9, -1]}
         angle={0.3}
         penumbra={0.4}
-        intensity={3.5}
+        intensity={4.5}
         distance={18}
         castShadow={enableShadows}
       />
@@ -244,7 +288,7 @@ export const StageLighting = ({
         position={[3, 9, -1]}
         angle={0.35}
         penumbra={0.4}
-        intensity={3}
+        intensity={4}
         distance={18}
         castShadow={enableShadows}
       />
@@ -256,7 +300,7 @@ export const StageLighting = ({
           position={spotlight.position as [number, number, number]}
           angle={0.5}
           penumbra={0.5}
-          intensity={spotlight.intensity * songIntensity}
+          intensity={spotlight.intensity * songIntensity * 1.5}
           color={spotlight.color}
           castShadow={enableShadows}
         />
@@ -266,7 +310,7 @@ export const StageLighting = ({
       <pointLight
         ref={washLight1Ref}
         position={[-6, 7, -4]}
-        intensity={2}
+        intensity={3}
         distance={15}
         decay={2}
       />
@@ -274,7 +318,7 @@ export const StageLighting = ({
       <pointLight
         ref={washLight2Ref}
         position={[6, 7, -4]}
-        intensity={2}
+        intensity={3}
         distance={15}
         decay={2}
       />
@@ -282,7 +326,7 @@ export const StageLighting = ({
       <pointLight
         ref={washLight3Ref}
         position={[-4, 7, -6]}
-        intensity={2}
+        intensity={3}
         distance={15}
         decay={2}
       />
@@ -290,7 +334,7 @@ export const StageLighting = ({
       <pointLight
         ref={washLight4Ref}
         position={[4, 7, -6]}
-        intensity={2}
+        intensity={3}
         distance={15}
         decay={2}
       />
@@ -309,7 +353,7 @@ export const StageLighting = ({
         position={[0, 3, -2]}
         angle={1.2}
         penumbra={0.8}
-        intensity={0.5 * songIntensity}
+        intensity={0.8 * songIntensity}
         color="#ffffff"
         target-position={[0, 0, 5]}
       />
