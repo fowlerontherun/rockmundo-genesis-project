@@ -162,27 +162,27 @@ export default function AISongGeneration() {
 
   const boostPlaysMutation = useMutation({
     mutationFn: async ({ songId, amount }: { songId: string; amount: number }) => {
-      // Generate random UUIDs for fake users to create unique plays
-      const plays = [];
-      for (let i = 0; i < amount; i++) {
-        const fakeUserId = crypto.randomUUID();
-        plays.push({
-          song_id: songId,
-          user_id: fakeUserId,
-          source: "admin_boost",
-          played_at: new Date().toISOString(),
-        });
-      }
-      
-      const { error } = await supabase
-        .from("song_plays")
-        .insert(plays);
-      
-      if (error) throw error;
-      return { amount };
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-boost-plays`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ songId, amount }),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to boost plays");
+      return result;
     },
     onSuccess: (data) => {
-      toast.success(`Added ${data.amount} plays to song`);
+      toast.success(`Added ${data.added} plays to song`);
       setBoostingSongId(null);
       queryClient.invalidateQueries({ queryKey: ["admin-songs-for-generation"] });
       queryClient.invalidateQueries({ queryKey: ["top-played-songs"] });
