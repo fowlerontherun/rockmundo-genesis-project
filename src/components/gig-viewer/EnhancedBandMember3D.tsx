@@ -201,19 +201,17 @@ export const EnhancedBandMember3D = ({
     return (
       <group ref={groupRef} position={position}>
         <Suspense fallback={
-          <mesh position={[0, 1, 0]}>
+          <mesh position={[0, 0.875, 0]}>
             <capsuleGeometry args={[0.17, 0.42, 12, 24]} />
             <meshStandardMaterial color="#888" />
           </mesh>
         }>
-          {/* SharedRpmAvatar uses SkeletonUtils.clone() to share textures */}
-          <group position={[0, 0, 0]} scale={0.9}>
-            <SharedRpmAvatar
-              avatarUrl={avatarConfig.rpm_avatar_url}
-              scale={1}
-              position={[0, 0, 0]}
-            />
-          </group>
+          {/* SharedRpmAvatar handles its own scaling internally - no wrapper needed */}
+          <SharedRpmAvatar
+            avatarUrl={avatarConfig.rpm_avatar_url}
+            scale={1}
+            position={[0, 0, 0]}
+          />
         </Suspense>
         
         {/* Instruments for RPM avatar - adjusted positions */}
