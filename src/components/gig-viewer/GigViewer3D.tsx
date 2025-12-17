@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { X, Maximize2, Minimize2, Music, Users } from "lucide-react";
 import { StageScene } from "./StageScene";
 import { OptimizedCrowdLayer } from "./OptimizedCrowdLayer";
-import { BandAvatars } from "./BandAvatars";
+import { EnhancedBandAvatars3D } from "./EnhancedBandAvatars3D";
 import { LoadingScreen } from "./LoadingScreen";
 import { StageFloor } from "./StageFloor";
 import { StageLighting } from "./StageLighting";
@@ -373,11 +373,10 @@ export const GigViewer3D = ({ gigId, onClose, previewMode = false, previewCrowdM
             maxCrowdCount={performanceSettings.maxCrowdCount}
             densityMultiplier={performanceSettings.crowdDensity}
           />
-          <BandAvatars 
-            gigId={gigId}
-            bandId={bandId}
+          <EnhancedBandAvatars3D 
             songProgress={currentSongIndex / Math.max(songPerformances.length, 1)}
             songSection={songSection}
+            crowdMood={crowdMood}
           />
         </Suspense>
       </Canvas>
