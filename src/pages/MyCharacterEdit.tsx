@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Upload, User } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
+import { RpmAvatarCreator } from "@/components/avatar-system/RpmAvatarCreator";
+import { usePlayerRpmAvatar } from "@/hooks/usePlayerRpmAvatar";
 
 type AttributeKey = keyof PlayerAttributes;
 
@@ -61,6 +63,8 @@ const MyCharacterEdit = () => {
   const { toast } = useToast();
   const { profile, attributes, xpWallet, loading, updateProfile, updateAttributes, updateXpWallet, refetch } =
     useGameData();
+  const { rpmAvatarUrl, isLoading: rpmLoading } = usePlayerRpmAvatar();
+  const [showRpmCreator, setShowRpmCreator] = useState(false);
 
   const [allocationInputs, setAllocationInputs] = useState<Record<AttributeKey, string>>(createEmptyAllocation);
   const [allocationError, setAllocationError] = useState<string | null>(null);
@@ -631,8 +635,57 @@ const MyCharacterEdit = () => {
               ) : null}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                3D Avatar
+              </CardTitle>
+              <CardDescription>Create a full-body 3D avatar for gigs and performances.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {rpmAvatarUrl ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>3D Avatar configured</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground break-all">
+                    {rpmAvatarUrl.split('?')[0].split('/').pop()}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowRpmCreator(true)}
+                    className="w-full"
+                  >
+                    Update 3D Avatar
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Create your personalized 3D avatar to appear in gig performances.
+                  </p>
+                  <Button 
+                    onClick={() => setShowRpmCreator(true)}
+                    className="w-full"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Create 3D Avatar
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <RpmAvatarCreator
+        open={showRpmCreator}
+        onOpenChange={setShowRpmCreator}
+        onAvatarCreated={() => refetch()}
+      />
     </div>
   );
 };
