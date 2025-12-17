@@ -14,6 +14,7 @@ import { StageEffects } from "./StageEffects";
 import { LightCone } from "./LightCone";
 import { CrowdBarrier } from "./CrowdBarrier";
 import { VenueEnvironment, type VenueTheme } from './VenueEnvironment';
+import { RPM_DEMO_AVATAR } from "@/data/rpmAvatarPool";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 type PerformanceTier = 'low' | 'medium' | 'high';
@@ -86,43 +87,28 @@ export const GigDemoViewer = ({
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  // Demo band member configs - using procedural avatars to avoid texture overflow
-  // RPM avatars use multiple textures each and exceed GPU limits (16 texture units)
+  // Demo band member configs - using SharedRpmAvatar with SkeletonUtils.clone()
+  // This shares textures across all band members, staying within GPU limits
   const demoBandConfigs = {
     vocalist: {
-      skin_tone: '#f1c27d',
-      hair_style_key: 'rocker',
-      hair_color: '#1a1a1a',
-      shirt_color: '#1a0a1a',
-      use_rpm_avatar: false,
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
     },
     guitarist: {
-      skin_tone: '#e0ac69',
-      hair_style_key: 'long-straight',
-      hair_color: '#3d2616',
-      shirt_color: '#2d0a0a',
-      use_rpm_avatar: false,
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
     },
     bassist: {
-      skin_tone: '#c68642',
-      hair_style_key: 'mohawk',
-      hair_color: '#8b4513',
-      shirt_color: '#0a0a2d',
-      use_rpm_avatar: false,
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
     },
     drummer: {
-      skin_tone: '#8d5524',
-      hair_style_key: 'short-spiky',
-      hair_color: '#1a1a1a',
-      shirt_color: '#1a1a1a',
-      use_rpm_avatar: false,
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
     },
     keyboardist: {
-      skin_tone: '#ffdbac',
-      hair_style_key: 'ponytail',
-      hair_color: '#daa520',
-      shirt_color: '#0a1a0a',
-      use_rpm_avatar: false,
+      rpm_avatar_url: RPM_DEMO_AVATAR,
+      use_rpm_avatar: true,
     },
   };
 
