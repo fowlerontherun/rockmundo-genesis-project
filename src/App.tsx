@@ -95,6 +95,7 @@ const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
 const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
 const TwaaterMessagesPage = lazyWithRetry(() => import("./pages/TwaaterMessagesPage"));
+const TwaaterNotifications = lazyWithRetry(() => import("./pages/TwaaterNotifications"));
 const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
@@ -282,6 +283,7 @@ function App() {
                     <Route path="music" element={<MusicHub />} />
                     <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
+                    <Route path="twaater/notifications" element={<TwaaterNotifications />} />
                     <Route path="twaater/tag/:hashtag" element={<TwaaterHashtagView />} />
                     <Route path="twaater/messages" element={<TwaaterMessagesPage />} />
                     <Route path="twaater/:handle" element={<TwaaterProfileView />} />
