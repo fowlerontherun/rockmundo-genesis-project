@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.simulate-video-views]
 verify_jwt = false
+
+[functions.cleanup-song-generation]
+verify_jwt = false
