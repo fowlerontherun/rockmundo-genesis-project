@@ -12269,7 +12269,7 @@ export type Database = {
           {
             foreignKeyName: "twaater_bot_accounts_account_id_fkey"
             columns: ["account_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "twaater_accounts"
             referencedColumns: ["id"]
           },
