@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lock, Check, Sparkles, Shirt, CircleDashed } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import type { Json } from "@/integrations/supabase/types";
+
 interface ClothingItem {
   id: string;
   name: string;
@@ -12,7 +14,7 @@ interface ClothingItem {
   price: number | null;
   is_premium: boolean | null;
   rarity: string | null;
-  color_variants: Record<string, unknown> | null;
+  color_variants: Json | null;
 }
 
 interface ClothingSelectorProps {
@@ -21,10 +23,18 @@ interface ClothingSelectorProps {
   selectedPantsId: string | null;
   selectedJacketId: string | null;
   selectedShoesId: string | null;
+  shirtColor?: string;
+  pantsColor?: string;
+  shoesColor?: string;
+  jacketColor?: string;
   onShirtSelect: (id: string | null) => void;
   onPantsSelect: (id: string | null) => void;
   onJacketSelect: (id: string | null) => void;
   onShoesSelect: (id: string | null) => void;
+  onShirtColorChange?: (color: string) => void;
+  onPantsColorChange?: (color: string) => void;
+  onShoesColorChange?: (color: string) => void;
+  onJacketColorChange?: (color: string) => void;
   isItemOwned: (id: string) => boolean;
   onPurchase: (id: string, price: number) => void;
 }
@@ -46,10 +56,18 @@ export const ClothingSelector = ({
   selectedPantsId,
   selectedJacketId,
   selectedShoesId,
+  shirtColor: _shirtColor,
+  pantsColor: _pantsColor,
+  shoesColor: _shoesColor,
+  jacketColor: _jacketColor,
   onShirtSelect,
   onPantsSelect,
   onJacketSelect,
   onShoesSelect,
+  onShirtColorChange: _onShirtColorChange,
+  onPantsColorChange: _onPantsColorChange,
+  onShoesColorChange: _onShoesColorChange,
+  onJacketColorChange: _onJacketColorChange,
   isItemOwned,
   onPurchase,
 }: ClothingSelectorProps) => {
