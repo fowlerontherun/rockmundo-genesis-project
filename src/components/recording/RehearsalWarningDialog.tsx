@@ -6,13 +6,14 @@ interface RehearsalWarningDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   songTitle: string;
-  rehearsalStage: 'unrehearsed' | 'tight' | 'perfect';
+  rehearsalStage: string;
   familiarityMinutes: number;
   qualityPenalty: number;
   onConfirm: () => void;
 }
 
 const STAGE_CONFIG = {
+  // Low rehearsal stages (penalty)
   unrehearsed: {
     icon: AlertTriangle,
     color: 'text-destructive',
@@ -20,6 +21,21 @@ const STAGE_CONFIG = {
     title: '⚠️ Unrehearsed Song Warning',
     description: 'This song has minimal rehearsal time. Recording quality will be significantly reduced.',
   },
+  unlearned: {
+    icon: AlertTriangle,
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+    title: '⚠️ Unlearned Song Warning',
+    description: 'This song has minimal rehearsal time. Recording quality will be significantly reduced.',
+  },
+  learning: {
+    icon: AlertTriangle,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50 dark:bg-orange-950',
+    title: '📚 Still Learning',
+    description: 'This song is still being learned. Recording quality may suffer.',
+  },
+  // Medium rehearsal stages (neutral)
   tight: {
     icon: Zap,
     color: 'text-yellow-600',
@@ -27,6 +43,21 @@ const STAGE_CONFIG = {
     title: '⚡ Adequately Rehearsed',
     description: 'This song has been rehearsed enough for standard recording quality.',
   },
+  familiar: {
+    icon: Zap,
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-950',
+    title: '⚡ Familiar',
+    description: 'This song is familiar to the band. Standard recording quality expected.',
+  },
+  well_rehearsed: {
+    icon: Zap,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50 dark:bg-green-950',
+    title: '✓ Well Rehearsed',
+    description: 'This song is well rehearsed. Good recording quality expected.',
+  },
+  // High rehearsal stages (bonus)
   perfect: {
     icon: Sparkles,
     color: 'text-primary',
@@ -34,6 +65,22 @@ const STAGE_CONFIG = {
     title: '✨ Perfectly Rehearsed!',
     description: 'This song is perfectly rehearsed! Recording quality will receive a bonus.',
   },
+  perfected: {
+    icon: Sparkles,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+    title: '✨ Perfected!',
+    description: 'This song is perfected! Recording quality will receive a bonus.',
+  },
+};
+
+// Default config for unknown stages
+const DEFAULT_CONFIG = {
+  icon: AlertTriangle,
+  color: 'text-muted-foreground',
+  bgColor: 'bg-muted/10',
+  title: 'Rehearsal Status',
+  description: 'Check your rehearsal progress before recording.',
 };
 
 export function RehearsalWarningDialog({
@@ -45,9 +92,9 @@ export function RehearsalWarningDialog({
   qualityPenalty,
   onConfirm,
 }: RehearsalWarningDialogProps) {
-  const config = STAGE_CONFIG[rehearsalStage];
+  const config = STAGE_CONFIG[rehearsalStage as keyof typeof STAGE_CONFIG] || DEFAULT_CONFIG;
   const Icon = config.icon;
-  const shouldWarn = rehearsalStage === 'unrehearsed';
+  const shouldWarn = ['unrehearsed', 'unlearned', 'learning'].includes(rehearsalStage);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
