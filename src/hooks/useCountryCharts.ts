@@ -16,6 +16,8 @@ export interface ChartEntry {
   trend_change: number;
   weeks_on_chart: number;
   is_fake: boolean;
+  audio_url?: string | null;
+  audio_generation_status?: string | null;
 }
 
 const GENRES = [
@@ -107,6 +109,8 @@ export const useCountryCharts = (
           songs(
             title,
             genre,
+            audio_url,
+            audio_generation_status,
             bands(name)
           )
         `)
@@ -142,6 +146,8 @@ export const useCountryCharts = (
         trend_change: entry.trend_change || 0,
         weeks_on_chart: entry.weeks_on_chart || 1,
         is_fake: false,
+        audio_url: entry.songs?.audio_url || null,
+        audio_generation_status: entry.songs?.audio_generation_status || null,
       }));
 
       // Fill remaining spots with fake data up to 50

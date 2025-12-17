@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, TrendingUp } from "lucide-react";
+import { Search, Users, TrendingUp, Music } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface Band {
@@ -49,13 +49,27 @@ export default function BandBrowser() {
       const { data, error } = await query;
 
       if (error) throw error;
+
+      // Get song counts for each band
+      const bandIds = (data || []).map(b => b.id);
+      const { data: songCounts } = await supabase
+        .from("songs")
+        .select("band_id")
+        .in("band_id", bandIds)
+        .in("status", ["recorded", "released"]);
+
+      const songCountMap = new Map<string, number>();
+      songCounts?.forEach(s => {
+        songCountMap.set(s.band_id, (songCountMap.get(s.band_id) || 0) + 1);
+      });
       
       return (data || []).map(band => ({
         ...band,
         _count: {
           band_members: band.band_members?.length || 0
-        }
-      })) as Band[];
+        },
+        song_count: songCountMap.get(band.id) || 0,
+      })) as (Band & { song_count: number })[];
     },
   });
 
@@ -141,10 +155,13 @@ export default function BandBrowser() {
                       <span>{band._count.band_members} members</span>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Music className="h-4 w-4" />
+                      <span>{band.song_count} songs</span>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <TrendingUp className="h-4 w-4" />
                       <span>{band.fame || 0} fame</span>
                     </div>
-                    <span>Chemistry: {band.chemistry_level || 0}</span>
                   </div>
                 </div>
 

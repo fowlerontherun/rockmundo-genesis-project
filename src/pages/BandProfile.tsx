@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, TrendingUp, Music, User } from "lucide-react";
 import { format } from "date-fns";
+import { BandSongsSection } from "@/components/band/BandSongsSection";
 
 export default function BandProfile() {
   const { bandId } = useParams();
@@ -173,6 +174,9 @@ export default function BandProfile() {
           )}
         </CardContent>
       </Card>
+
+      {/* Songs Section */}
+      <BandSongsSection bandId={band.id} bandName={band.name} />
     </div>
   );
 }

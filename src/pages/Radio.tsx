@@ -47,6 +47,7 @@ import {
   Flame,
 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
+import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
 
 import type { Database } from "@/lib/supabase-types";
@@ -1066,13 +1067,17 @@ export default function Radio() {
                             </div>
                           </div>
 
-                          {/* Audio player for history items */}
+                          {/* Audio player for history items with tracking */}
                           {(play.songs?.audio_url || play.songs?.audio_generation_status) && (
                             <div className="mt-3 space-y-2 border-t pt-3">
-                              <SongPlayer
+                              <TrackableSongPlayer
+                                songId={play.songs.id}
                                 audioUrl={play.songs.audio_url}
                                 generationStatus={play.songs.audio_generation_status}
+                                title={play.songs.title}
+                                artist={play.songs?.bands?.name}
                                 compact
+                                source="radio_history"
                               />
                               {play.songs?.id && <SongVoting songId={play.songs.id} compact />}
                             </div>
@@ -1148,13 +1153,17 @@ export default function Radio() {
                           </div>
                         </div>
 
-                        {/* Audio player and voting for trending songs */}
+                        {/* Audio player and voting for trending songs with tracking */}
                         {(song.audio_url || song.audio_generation_status) && (
                           <div className="mt-3 space-y-2 border-t pt-3">
-                            <SongPlayer
+                            <TrackableSongPlayer
+                              songId={song.id}
                               audioUrl={song.audio_url}
                               generationStatus={song.audio_generation_status}
+                              title={song.title}
+                              artist={song.bands?.name || song.profiles?.display_name}
                               compact
+                              source="radio_trending"
                             />
                             <SongVoting songId={song.id} compact />
                           </div>

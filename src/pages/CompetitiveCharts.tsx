@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Minus, Trophy, Music } from "lucide-react";
-import { SongPlayer, SongVoting } from "@/components/audio";
+import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
+import { SongVoting } from "@/components/audio/SongVoting";
 import { useVoteWeightedScore } from "@/hooks/useVoteWeightedScore";
 
 const CompetitiveCharts = () => {
@@ -118,14 +119,17 @@ const CompetitiveCharts = () => {
                       )}
                     </div>
                     
-                    {/* Audio Player */}
+                    {/* Audio Player with tracking */}
                     {song?.audio_url && (
                       <div className="mt-2">
-                        <SongPlayer
+                        <TrackableSongPlayer
+                          songId={song.id}
                           audioUrl={song.audio_url}
                           generationStatus={song.audio_generation_status}
                           title={song.title}
+                          artist={artistName}
                           compact
+                          source="competitive_charts"
                         />
                       </div>
                     )}

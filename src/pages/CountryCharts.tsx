@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter } from "lucide-react";
 import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES } from "@/hooks/useCountryCharts";
 import { cn } from "@/lib/utils";
+import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
 const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode }[] = [
   { value: "combined", label: "Combined", icon: <BarChart3 className="h-4 w-4" /> },
@@ -68,7 +69,7 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
         <div
           key={entry.id}
           className={cn(
-            "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-center",
+            "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-start",
             entry.rank <= 3 && "bg-accent/30",
             entry.is_fake && "opacity-70"
           )}
@@ -100,6 +101,20 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
                 </Badge>
               )}
             </div>
+            {/* Audio Player for real songs */}
+            {!entry.is_fake && entry.audio_url && (
+              <div className="mt-2">
+                <TrackableSongPlayer
+                  songId={entry.song_id}
+                  audioUrl={entry.audio_url}
+                  title={entry.title}
+                  artist={entry.artist}
+                  generationStatus={entry.audio_generation_status}
+                  compact
+                  source="country_charts"
+                />
+              </div>
+            )}
           </div>
 
           {/* Genre */}
