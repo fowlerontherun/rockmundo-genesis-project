@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,6 +16,7 @@ import {
 import { CollectionCard } from "@/components/skin-store/CollectionCard";
 import { StoreItemCard } from "@/components/skin-store/StoreItemCard";
 import { FeaturedCarousel } from "@/components/skin-store/FeaturedCarousel";
+import { ItemPreviewDialog } from "@/components/skin-store/ItemPreviewDialog";
 import {
   useSkinCollections,
   useClothingItems,
@@ -30,7 +31,7 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 const SkinStore = () => {
   const [activeTab, setActiveTab] = useState("featured");
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
-
+  const [previewItem, setPreviewItem] = useState<ClothingItem | null>(null);
   const { data: collections = [], isLoading: collectionsLoading } = useSkinCollections();
   const { data: featuredItems = [] } = useFeaturedItems();
   const { data: newArrivals = [] } = useNewArrivals();
@@ -48,6 +49,11 @@ const SkinStore = () => {
       itemType: item.category,
       price: item.price || 0,
     });
+    setPreviewItem(null);
+  };
+
+  const handlePreview = (item: ClothingItem) => {
+    setPreviewItem(item);
   };
 
   const handleViewCollection = (collectionId: string) => {
@@ -132,6 +138,7 @@ const SkinStore = () => {
                     items={featuredItems}
                     ownedItemIds={ownedItemIds}
                     onPurchase={handlePurchase}
+                    onPreview={handlePreview}
                   />
                 </CardContent>
               </Card>
@@ -185,6 +192,7 @@ const SkinStore = () => {
                   item={item}
                   isOwned={ownedItemIds.includes(item.id)}
                   onPurchase={handlePurchase}
+                  onPreview={handlePreview}
                 />
               ))}
             </div>
@@ -255,6 +263,7 @@ const SkinStore = () => {
                       item={item}
                       isOwned={ownedItemIds.includes(item.id)}
                       onPurchase={handlePurchase}
+                      onPreview={handlePreview}
                     />
                   ))}
                 </div>
@@ -283,14 +292,15 @@ const SkinStore = () => {
                   <h3 className="text-lg font-semibold capitalize mb-4">
                     {category}s
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                    {categoryItems.map((item) => (
-                      <StoreItemCard
-                        key={item.id}
-                        item={item}
-                        isOwned={ownedItemIds.includes(item.id)}
-                        onPurchase={handlePurchase}
-                      />
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                      {categoryItems.map((item) => (
+                        <StoreItemCard
+                          key={item.id}
+                          item={item}
+                          isOwned={ownedItemIds.includes(item.id)}
+                          onPurchase={handlePurchase}
+                          onPreview={handlePreview}
+                        />
                     ))}
                   </div>
                 </div>
@@ -311,6 +321,7 @@ const SkinStore = () => {
                     item={item}
                     isOwned={true}
                     onPurchase={handlePurchase}
+                    onPreview={handlePreview}
                   />
                 ))}
             </div>
@@ -333,6 +344,14 @@ const SkinStore = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Item Preview Dialog */}
+      <ItemPreviewDialog
+        item={previewItem}
+        isOwned={previewItem ? ownedItemIds.includes(previewItem.id) : false}
+        onClose={() => setPreviewItem(null)}
+        onPurchase={handlePurchase}
+      />
     </div>
   );
 };

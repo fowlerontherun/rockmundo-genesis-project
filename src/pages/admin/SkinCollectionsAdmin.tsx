@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Sparkles, Calendar, Package } from "lucide-react";
+import { Plus, Edit, Trash2, Sparkles, Calendar, Package, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
 interface SkinCollection {
@@ -57,6 +58,7 @@ const THEMES = [
 ];
 
 const SkinCollectionsAdmin = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<SkinCollection | null>(null);
@@ -381,7 +383,10 @@ const SkinCollectionsAdmin = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/skin-collections/${collection.id}/items`)}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(collection)}>
                           <Edit className="h-4 w-4" />
                         </Button>
