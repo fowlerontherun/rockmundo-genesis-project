@@ -1787,10 +1787,14 @@ export type Database = {
           cultural_events: string[] | null
           dominant_genre: string | null
           id: string
+          latitude: number | null
           local_bonus: number | null
+          longitude: number | null
           music_scene: number | null
           name: string
           population: number | null
+          region: string | null
+          timezone: string | null
           updated_at: string | null
           venues: number | null
         }
@@ -1801,10 +1805,14 @@ export type Database = {
           cultural_events?: string[] | null
           dominant_genre?: string | null
           id?: string
+          latitude?: number | null
           local_bonus?: number | null
+          longitude?: number | null
           music_scene?: number | null
           name: string
           population?: number | null
+          region?: string | null
+          timezone?: string | null
           updated_at?: string | null
           venues?: number | null
         }
@@ -1815,10 +1823,14 @@ export type Database = {
           cultural_events?: string[] | null
           dominant_genre?: string | null
           id?: string
+          latitude?: number | null
           local_bonus?: number | null
+          longitude?: number | null
           music_scene?: number | null
           name?: string
           population?: number | null
+          region?: string | null
+          timezone?: string | null
           updated_at?: string | null
           venues?: number | null
         }
