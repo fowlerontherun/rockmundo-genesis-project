@@ -43,6 +43,7 @@ type Song = {
   created_at: string | null;
   band_id: string | null;
   bands?: { name: string } | null;
+  play_count?: number;
 };
 
 export default function AISongGeneration() {
@@ -58,15 +59,34 @@ export default function AISongGeneration() {
   const { data: songs, isLoading, refetch } = useQuery({
     queryKey: ["admin-songs-for-generation"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get songs
+      const { data: songsData, error: songsError } = await supabase
         .from("songs")
         .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, created_at, band_id, bands(name)")
         .in("status", ["recorded", "released"])
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (error) throw error;
-      return data as Song[];
+      if (songsError) throw songsError;
+
+      // Get play counts
+      const { data: playCounts, error: playError } = await supabase
+        .from("song_plays")
+        .select("song_id");
+      
+      // Count plays per song
+      const playCountMap: Record<string, number> = {};
+      if (playCounts && !playError) {
+        playCounts.forEach((play: any) => {
+          playCountMap[play.song_id] = (playCountMap[play.song_id] || 0) + 1;
+        });
+      }
+
+      // Merge play counts into songs
+      return (songsData as Song[]).map(song => ({
+        ...song,
+        play_count: playCountMap[song.id] || 0
+      }));
     },
   });
 
@@ -299,6 +319,7 @@ export default function AISongGeneration() {
                       <TableHead>Band</TableHead>
                       <TableHead>Genre</TableHead>
                       <TableHead>Quality</TableHead>
+                      <TableHead>Plays</TableHead>
                       <TableHead>Audio Status</TableHead>
                       <TableHead>Generated At</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -316,6 +337,11 @@ export default function AISongGeneration() {
                         <TableCell>{song.bands?.name || "—"}</TableCell>
                         <TableCell>{song.genre || "—"}</TableCell>
                         <TableCell>{song.quality_score || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
+                            {song.play_count || 0}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{getStatusBadge(song.audio_generation_status)}</TableCell>
                         <TableCell>
                           {song.audio_generated_at 
@@ -366,7 +392,7 @@ export default function AISongGeneration() {
                     ))}
                     {filteredSongs?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No songs found matching your search
                         </TableCell>
                       </TableRow>
