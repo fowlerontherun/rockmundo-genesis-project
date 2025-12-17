@@ -34,14 +34,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseUser
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+    // Check if user is admin using the RPC function
+    const { data: role, error: roleError } = await supabaseUser.rpc("get_user_role", {
+      _user_id: user.id,
+    });
 
-    if (profile?.role !== "admin") {
+    if (roleError || role !== "admin") {
+      console.log("Role check:", role, roleError);
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -83,6 +82,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log(`Admin ${user.id} boosted song ${songId} with ${amount} plays`);
     return new Response(JSON.stringify({ success: true, added: amount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
