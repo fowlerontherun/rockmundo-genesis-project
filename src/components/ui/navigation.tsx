@@ -137,6 +137,7 @@ const Navigation = () => {
         { icon: Radio, label: "Streaming", path: "/streaming" },
         { icon: Video, label: "Music Videos", path: "/music-videos" },
         { icon: Radio, label: "Radio", path: "/radio" },
+        { icon: TrendingUp, label: "Country Charts", path: "/country-charts" },
       ],
     },
     {
