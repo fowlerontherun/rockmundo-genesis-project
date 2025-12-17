@@ -110,8 +110,9 @@ export const OptimizedCrowdLayer = ({
         const baseY = 0;
         
         // Calculate rotation to face the stage (stage is at z = -5 approximately)
+        // Crowd is at positive z, stage at negative z, so add PI to face toward stage
         const stageZ = -5;
-        const rotationY = Math.atan2(x, z - stageZ);
+        const rotationY = Math.atan2(x, z - stageZ) + Math.PI;
         
         crowd.push({
           id: currentId,
