@@ -82,16 +82,28 @@ const SharedAvatarModel = ({
     
     console.log('[SharedRpmAvatar] Original height:', originalHeight, 'Original minY:', originalMinY);
     
-    // 2. Calculate scale factor to reach target height (~1.75 units for human)
+    // 2. Validate model height - reject half-body or malformed models
+    const minAcceptableHeight = 0.5; // Half-body avatars are typically < 0.5m
+    const maxAcceptableHeight = 3.0; // Sanity check for oversized models
+    
+    if (!originalHeight || originalHeight < minAcceptableHeight || originalHeight > maxAcceptableHeight) {
+      console.warn('[SharedRpmAvatar] Unusual model height:', originalHeight, '- using procedural fallback');
+      return null; // Will trigger ProceduralFallback
+    }
+    
+    // 3. Calculate scale factor with clamping to prevent extreme sizes
     const targetHeight = 1.75;
-    const scaleFactor = (originalHeight && originalHeight > 0) ? targetHeight / originalHeight : 1;
+    let scaleFactor = targetHeight / originalHeight;
+    
+    // Clamp scale factor to reasonable range (0.5x to 2.5x)
+    scaleFactor = Math.min(2.5, Math.max(0.5, scaleFactor));
     
     console.log('[SharedRpmAvatar] Scale factor:', scaleFactor);
     
-    // 3. Apply scale FIRST
+    // 4. Apply scale FIRST
     clone.scale.setScalar(scaleFactor);
     
-    // 4. Calculate Y offset AFTER scaling - scaled minY = originalMinY * scaleFactor
+    // 5. Calculate Y offset AFTER scaling - scaled minY = originalMinY * scaleFactor
     const scaledMinY = originalMinY * scaleFactor;
     clone.position.y = -scaledMinY; // Feet on floor (y=0)
     
