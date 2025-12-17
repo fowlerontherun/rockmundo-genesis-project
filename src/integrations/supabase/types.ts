@@ -426,41 +426,67 @@ export type Database = {
       avatar_clothing_items: {
         Row: {
           category: string
+          collection_id: string | null
           color_variants: Json | null
           created_at: string | null
           description: string | null
+          expiry_date: string | null
+          featured: boolean | null
           id: string
+          is_limited_edition: boolean | null
           is_premium: boolean | null
           name: string
           price: number | null
           rarity: string | null
+          release_date: string | null
+          rpm_asset_id: string | null
           shape_config: Json | null
         }
         Insert: {
           category: string
+          collection_id?: string | null
           color_variants?: Json | null
           created_at?: string | null
           description?: string | null
+          expiry_date?: string | null
+          featured?: boolean | null
           id?: string
+          is_limited_edition?: boolean | null
           is_premium?: boolean | null
           name: string
           price?: number | null
           rarity?: string | null
+          release_date?: string | null
+          rpm_asset_id?: string | null
           shape_config?: Json | null
         }
         Update: {
           category?: string
+          collection_id?: string | null
           color_variants?: Json | null
           created_at?: string | null
           description?: string | null
+          expiry_date?: string | null
+          featured?: boolean | null
           id?: string
+          is_limited_edition?: boolean | null
           is_premium?: boolean | null
           name?: string
           price?: number | null
           rarity?: string | null
+          release_date?: string | null
+          rpm_asset_id?: string | null
           shape_config?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "avatar_clothing_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       avatar_face_options: {
         Row: {
@@ -10208,6 +10234,48 @@ export type Database = {
           profile_id?: string
           required_xp?: number | null
           skill_slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      skin_collections: {
+        Row: {
+          banner_image_url: string | null
+          created_at: string | null
+          description: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          starts_at: string
+          theme: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          banner_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          starts_at?: string
+          theme?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          banner_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          starts_at?: string
+          theme?: string | null
           updated_at?: string | null
         }
         Relationships: []

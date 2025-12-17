@@ -182,6 +182,7 @@ const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
 const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
+const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -289,6 +290,7 @@ function App() {
                     <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="avatar-designer" element={<AvatarDesigner />} />
+                    <Route path="skin-store" element={<SkinStore />} />
                     <Route path="labels" element={<RecordLabel />} />
                     
                     {/* Redirects */}

@@ -5,10 +5,14 @@ interface ReadyPlayerMeCreatorProps {
   onClose?: () => void;
 }
 
+// Configured for consistent art style across all players
+// Replace 'rockmundo' with your custom subdomain from studio.readyplayer.me
+const SUBDOMAIN = 'demo'; // TODO: Replace with your custom subdomain for production
+
 const config: AvatarCreatorConfig = {
   clearCache: true,
-  bodyType: 'fullbody',
-  quickStart: false,
+  bodyType: 'fullbody',      // Force fullbody avatars only
+  quickStart: false,         // Show full customization
   language: 'en',
 };
 
