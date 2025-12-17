@@ -65,10 +65,10 @@ serve(async (req) => {
 
     console.log(`[admin-generate-song-audio] Starting generation for song ${songId} by admin ${user.id}`)
 
-    // Get song details
+    // Get song details - use explicit FK hint to resolve ambiguous relationship
     const { data: song, error: songError } = await supabase
       .from('songs')
-      .select('*, songwriting_projects(*)')
+      .select('*, songwriting_projects!songs_songwriting_project_id_fkey(*)')
       .eq('id', songId)
       .single()
 
