@@ -82,23 +82,20 @@ const SharedAvatarModel = ({
     
     console.log('[SharedRpmAvatar] Original height:', originalHeight, 'Original minY:', originalMinY);
     
-    // 2. Validate model height - reject half-body or malformed models
-    const minAcceptableHeight = 0.5; // Half-body avatars are typically < 0.5m
-    const maxAcceptableHeight = 3.0; // Sanity check for oversized models
-    
-    if (!originalHeight || originalHeight < minAcceptableHeight || originalHeight > maxAcceptableHeight) {
-      console.warn('[SharedRpmAvatar] Unusual model height:', originalHeight, '- using procedural fallback');
+    // 2. Validate model - only reject if completely invalid
+    if (!originalHeight || originalHeight <= 0) {
+      console.warn('[SharedRpmAvatar] Invalid model height:', originalHeight, '- using procedural fallback');
       return null; // Will trigger ProceduralFallback
     }
     
-    // 3. Calculate scale factor with clamping to prevent extreme sizes
+    // 3. Calculate scale factor to reach target height (~1.75 units for human)
     const targetHeight = 1.75;
     let scaleFactor = targetHeight / originalHeight;
     
-    // Clamp scale factor to reasonable range (0.5x to 2.5x)
-    scaleFactor = Math.min(2.5, Math.max(0.5, scaleFactor));
+    // Clamp scale factor to reasonable range (0.3x to 5x) - allows small models to scale up
+    scaleFactor = Math.min(5.0, Math.max(0.3, scaleFactor));
     
-    console.log('[SharedRpmAvatar] Scale factor:', scaleFactor);
+    console.log('[SharedRpmAvatar] Scale factor:', scaleFactor, 'from height:', originalHeight);
     
     // 4. Apply scale FIRST
     clone.scale.setScalar(scaleFactor);
@@ -107,7 +104,7 @@ const SharedAvatarModel = ({
     const scaledMinY = originalMinY * scaleFactor;
     clone.position.y = -scaledMinY; // Feet on floor (y=0)
     
-    console.log('[SharedRpmAvatar] Scaled minY:', scaledMinY, 'Final position.y:', clone.position.y);
+    console.log('[SharedRpmAvatar] Final: scaledMinY:', scaledMinY, 'position.y:', clone.position.y);
     
     // Configure materials for rendering
     clone.traverse((child: Object3D) => {
