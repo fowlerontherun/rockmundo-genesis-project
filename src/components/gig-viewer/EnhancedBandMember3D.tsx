@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { EnhancedFace } from "@/components/avatar-system/EnhancedFace";
 import { EnhancedHair } from "@/components/avatar-system/EnhancedHair";
 import { Instruments3D } from "./Instruments3D";
-import { ReadyPlayerMeAvatar } from "@/components/avatar-system/ReadyPlayerMeAvatar";
+import { SharedRpmAvatar } from "@/components/avatar-system/SharedRpmAvatar";
 
 interface AvatarConfig {
   skin_tone?: string;
@@ -206,9 +206,9 @@ export const EnhancedBandMember3D = ({
             <meshStandardMaterial color="#888" />
           </mesh>
         }>
-          {/* RPM avatars need scale adjustment and Y offset to match scene */}
+          {/* SharedRpmAvatar uses SkeletonUtils.clone() to share textures */}
           <group position={[0, 0, 0]} scale={0.9}>
-            <ReadyPlayerMeAvatar
+            <SharedRpmAvatar
               avatarUrl={avatarConfig.rpm_avatar_url}
               scale={1}
               position={[0, 0, 0]}
