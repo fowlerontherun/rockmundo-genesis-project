@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { 
   Music, 
@@ -24,7 +25,8 @@ import {
   Wand2,
   Volume2,
   RotateCcw,
-  Trophy
+  Trophy,
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
@@ -55,6 +57,8 @@ export default function AISongGeneration() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generationLogs, setGenerationLogs] = useState<string[]>([]);
   const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
+  const [boostAmount, setBoostAmount] = useState<number>(10);
+  const [boostingSongId, setBoostingSongId] = useState<string | null>(null);
 
   const { data: songs, isLoading, refetch } = useQuery({
     queryKey: ["admin-songs-for-generation"],
@@ -153,6 +157,38 @@ export default function AISongGeneration() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to reset: ${error.message}`);
+    },
+  });
+
+  const boostPlaysMutation = useMutation({
+    mutationFn: async ({ songId, amount }: { songId: string; amount: number }) => {
+      // Generate random UUIDs for fake users to create unique plays
+      const plays = [];
+      for (let i = 0; i < amount; i++) {
+        const fakeUserId = crypto.randomUUID();
+        plays.push({
+          song_id: songId,
+          user_id: fakeUserId,
+          source: "admin_boost",
+          played_at: new Date().toISOString(),
+        });
+      }
+      
+      const { error } = await supabase
+        .from("song_plays")
+        .insert(plays);
+      
+      if (error) throw error;
+      return { amount };
+    },
+    onSuccess: (data) => {
+      toast.success(`Added ${data.amount} plays to song`);
+      setBoostingSongId(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-songs-for-generation"] });
+      queryClient.invalidateQueries({ queryKey: ["top-played-songs"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to boost plays: ${error.message}`);
     },
   });
 
@@ -338,9 +374,39 @@ export default function AISongGeneration() {
                         <TableCell>{song.genre || "—"}</TableCell>
                         <TableCell>{song.quality_score || "—"}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="font-mono">
-                            {song.play_count || 0}
-                          </Badge>
+                          <Popover open={boostingSongId === song.id} onOpenChange={(open) => setBoostingSongId(open ? song.id : null)}>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm" className="gap-1 font-mono">
+                                {song.play_count || 0}
+                                <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48" align="start">
+                              <div className="space-y-2">
+                                <Label className="text-xs">Boost plays</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={1000}
+                                  value={boostAmount}
+                                  onChange={(e) => setBoostAmount(parseInt(e.target.value) || 10)}
+                                  className="h-8"
+                                />
+                                <Button 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => boostPlaysMutation.mutate({ songId: song.id, amount: boostAmount })}
+                                  disabled={boostPlaysMutation.isPending}
+                                >
+                                  {boostPlaysMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <>Add {boostAmount} plays</>
+                                  )}
+                                </Button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </TableCell>
                         <TableCell>{getStatusBadge(song.audio_generation_status)}</TableCell>
                         <TableCell>
