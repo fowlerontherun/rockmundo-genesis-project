@@ -1,11 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, RotateCcw, Crown, CheckCircle } from "lucide-react";
 import { usePlayerAvatar, AvatarConfig, defaultConfig } from "@/hooks/usePlayerAvatar";
 import { ReadyPlayerMeCreator } from "@/components/avatar-designer/ReadyPlayerMeCreator";
+import { ReadyPlayerMeAvatar } from "@/components/avatar-system/ReadyPlayerMeAvatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
+const AvatarPreviewScene = ({ avatarUrl }: { avatarUrl: string }) => (
+  <>
+    <ambientLight intensity={0.7} />
+    <directionalLight position={[5, 5, 5]} intensity={0.9} castShadow />
+    <directionalLight position={[-5, 3, -5]} intensity={0.4} />
+    <pointLight position={[0, 3, 2]} intensity={0.5} color="#ffeedd" />
+    
+    <Suspense fallback={
+      <mesh position={[0, 0, 0]}>
+        <capsuleGeometry args={[0.4, 1.2, 8, 16]} />
+        <meshStandardMaterial color="#404040" transparent opacity={0.5} />
+      </mesh>
+    }>
+      <ReadyPlayerMeAvatar
+        avatarUrl={avatarUrl}
+        scale={1.8}
+        position={[0, -1.5, 0]}
+        rotation={[0, 0, 0]}
+      />
+    </Suspense>
+    
+    <ContactShadows position={[0, -1.5, 0]} opacity={0.4} scale={4} blur={2} far={4} />
+    <Environment preset="studio" />
+    
+    <OrbitControls
+      enablePan={false}
+      enableZoom={true}
+      minPolarAngle={Math.PI / 6}
+      maxPolarAngle={Math.PI * 0.75}
+      minDistance={1.5}
+      maxDistance={5}
+      autoRotate
+      autoRotateSpeed={0.5}
+      target={[0, 0, 0]}
+    />
+  </>
+);
 
 const AvatarDesigner = () => {
   const {
@@ -59,13 +100,13 @@ const AvatarDesigner = () => {
   const hasAvatar = !!localConfig.rpm_avatar_url;
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-oswald">Avatar Designer</h1>
+          <h1 className="text-2xl font-bold font-oswald">Avatar</h1>
           <p className="text-sm text-muted-foreground">
-            Create your unique 3D avatar for performances
+            {hasAvatar ? 'Your 3D avatar for performances' : 'Create your unique 3D avatar'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -82,7 +123,24 @@ const AvatarDesigner = () => {
         </div>
       </div>
 
-      {/* Status Card */}
+      {/* Avatar Preview (when avatar exists) */}
+      {hasAvatar && !showRpmCreator && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="w-full h-[400px] bg-gradient-to-b from-background to-muted/30 rounded-lg overflow-hidden">
+              <Canvas
+                camera={{ position: [0, 0.5, 3], fov: 45 }}
+                shadows
+                gl={{ antialias: true, preserveDrawingBuffer: true }}
+              >
+                <AvatarPreviewScene avatarUrl={localConfig.rpm_avatar_url!} />
+              </Canvas>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Status/Action Card */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
@@ -99,7 +157,7 @@ const AvatarDesigner = () => {
               </h3>
               <p className="text-sm text-muted-foreground">
                 {hasAvatar 
-                  ? 'Your 3D avatar is configured and ready for performances'
+                  ? 'Your avatar will appear on stage during gig performances'
                   : 'Design a unique 3D character that represents you on stage'
                 }
               </p>
@@ -107,21 +165,14 @@ const AvatarDesigner = () => {
           </div>
 
           {hasAvatar ? (
-            <div className="space-y-3">
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">Avatar ID</p>
-                <p className="text-sm font-mono truncate">{localConfig.rpm_avatar_id}</p>
-              </div>
-              
-              <Button
-                variant="outline"
-                onClick={() => setShowRpmCreator(true)}
-                className="w-full"
-              >
-                <Crown className="h-4 w-4 mr-2" />
-                Create New Avatar
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowRpmCreator(true)}
+              className="w-full"
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Create New Avatar
+            </Button>
           ) : (
             <Button
               onClick={() => setShowRpmCreator(true)}
@@ -151,35 +202,6 @@ const AvatarDesigner = () => {
               onAvatarCreated={handleRpmAvatarCreated}
               onClose={() => setShowRpmCreator(false)}
             />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Features Card */}
-      {!showRpmCreator && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Avatar Features</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
-                Professional quality 3D character model
-              </li>
-              <li className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
-                Hundreds of clothing & accessory options
-              </li>
-              <li className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
-                Appears on stage during gig performances
-              </li>
-              <li className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-2 w-2 p-0 rounded-full bg-green-500" />
-                Smooth performance animations
-              </li>
-            </ul>
           </CardContent>
         </Card>
       )}
