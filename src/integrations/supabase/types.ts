@@ -8477,6 +8477,7 @@ export type Database = {
           last_weekly_bonus_at: string | null
           level: number | null
           rest_required_until: string | null
+          rpm_avatar_url: string | null
           total_hours_played: number | null
           updated_at: string | null
           user_id: string
@@ -8507,6 +8508,7 @@ export type Database = {
           last_weekly_bonus_at?: string | null
           level?: number | null
           rest_required_until?: string | null
+          rpm_avatar_url?: string | null
           total_hours_played?: number | null
           updated_at?: string | null
           user_id: string
@@ -8537,6 +8539,7 @@ export type Database = {
           last_weekly_bonus_at?: string | null
           level?: number | null
           rest_required_until?: string | null
+          rpm_avatar_url?: string | null
           total_hours_played?: number | null
           updated_at?: string | null
           user_id?: string

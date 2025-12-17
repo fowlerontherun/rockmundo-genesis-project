@@ -10,3 +10,5 @@ export { StudioLighting } from './StudioLighting';
 export { StudioBackground } from './StudioBackground';
 export { EnhancedViewControls } from './EnhancedViewControls';
 export { ReadyPlayerMeAvatar, preloadAvatar } from './ReadyPlayerMeAvatar';
+export { SharedRpmAvatar, preloadSharedAvatar } from './SharedRpmAvatar';
+export { RpmAvatarCreator, optimizeAvatarUrl } from './RpmAvatarCreator';
