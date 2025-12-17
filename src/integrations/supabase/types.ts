@@ -10319,6 +10319,74 @@ export type Database = {
         }
         Relationships: []
       }
+      song_generation_attempts: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          prompt_used: string | null
+          song_id: string
+          started_at: string
+          status: string
+          timeout_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          prompt_used?: string | null
+          song_id: string
+          started_at?: string
+          status?: string
+          timeout_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          prompt_used?: string | null
+          song_id?: string
+          started_at?: string
+          status?: string
+          timeout_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_generation_attempts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_generation_attempts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_generation_attempts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_generation_attempts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       song_market_bids: {
         Row: {
           bid_amount: number
@@ -10762,6 +10830,7 @@ export type Database = {
           archived: boolean | null
           arrangement_strength: number | null
           audio_generated_at: string | null
+          audio_generation_started_at: string | null
           audio_generation_status: string | null
           audio_prompt: string | null
           audio_url: string | null
@@ -10808,6 +10877,7 @@ export type Database = {
           archived?: boolean | null
           arrangement_strength?: number | null
           audio_generated_at?: string | null
+          audio_generation_started_at?: string | null
           audio_generation_status?: string | null
           audio_prompt?: string | null
           audio_url?: string | null
@@ -10854,6 +10924,7 @@ export type Database = {
           archived?: boolean | null
           arrangement_strength?: number | null
           audio_generated_at?: string | null
+          audio_generation_started_at?: string | null
           audio_generation_status?: string | null
           audio_prompt?: string | null
           audio_url?: string | null
@@ -13368,6 +13439,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_song_generation_limit: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      cleanup_timed_out_generations: { Args: never; Returns: number }
       create_default_habits_for_user: {
         Args: { p_user_id: string }
         Returns: undefined
