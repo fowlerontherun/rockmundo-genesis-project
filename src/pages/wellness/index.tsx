@@ -24,6 +24,7 @@ import {
   type WellnessAppointment,
   type WellnessOverviewData,
 } from "@/lib/api/wellness";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const statIcons: Record<string, JSX.Element> = {
   "resting-heart-rate": <HeartPulse className="h-5 w-5 text-rose-500" />,
@@ -47,24 +48,25 @@ const formatAppointmentDate = (date: string) => {
   }).format(parsed);
 };
 
-const formatAppointmentStatus = (status: WellnessAppointment["status"]) => {
-  switch (status) {
-    case "confirmed":
-      return { label: "Confirmed", variant: "default" as const };
-    case "completed":
-      return { label: "Completed", variant: "secondary" as const };
-    case "cancelled":
-      return { label: "Cancelled", variant: "destructive" as const };
-    default:
-      return { label: "Pending", variant: "outline" as const };
-  }
-};
-
 const WellnessPage = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<WellnessOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const todayKey = useMemo(() => getDateKey(new Date()), []);
+
+  const formatAppointmentStatus = (status: WellnessAppointment["status"]) => {
+    switch (status) {
+      case "confirmed":
+        return { label: t("wellness.confirmed"), variant: "default" as const };
+      case "completed":
+        return { label: t("wellness.completed"), variant: "secondary" as const };
+      case "cancelled":
+        return { label: t("wellness.cancelled"), variant: "destructive" as const };
+      default:
+        return { label: t("wellness.pending"), variant: "outline" as const };
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -74,11 +76,11 @@ const WellnessPage = () => {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("We couldn't load your wellness data. Please try again later.");
+      setError(t("wellness.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadData();
@@ -92,10 +94,10 @@ const WellnessPage = () => {
         setError(null);
       } catch (err) {
         console.error(err);
-        setError("We couldn't update your habit. Please try again.");
+        setError(t("wellness.updateError"));
       }
     },
-    [todayKey]
+    [todayKey, t]
   );
 
   const habitsWithStatus: HabitWithStatus[] = useMemo(() => {
@@ -177,7 +179,7 @@ const WellnessPage = () => {
     return (
       <div className="space-y-6 p-6">
         <Alert variant="destructive">
-          <AlertTitle>Wellness overview unavailable</AlertTitle>
+          <AlertTitle>{t("wellness.unavailable")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
@@ -193,19 +195,19 @@ const WellnessPage = () => {
       <header className="space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Wellness Overview</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t("wellness.title")}</h1>
             <p className="text-muted-foreground">
-              Monitor your health stats, upcoming appointments, and daily habits in one place.
+              {t("wellness.subtitle")}
             </p>
           </div>
-          <Badge variant="outline">Last updated {formatAppointmentDate(data.lastUpdated)}</Badge>
+          <Badge variant="outline">{t("wellness.lastUpdated")} {formatAppointmentDate(data.lastUpdated)}</Badge>
         </div>
       </header>
 
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <HeartPulse className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Health stats</h2>
+          <h2 className="text-xl font-semibold">{t("wellness.healthStats")}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {data.healthStats.map(stat => {
@@ -234,7 +236,7 @@ const WellnessPage = () => {
                     <div className={`flex items-center gap-1 text-xs font-medium ${changeColor}`}>
                       <Icon className="h-3.5 w-3.5" />
                       <span>
-                        {direction === "down" ? "Improved" : "Changed"} {Math.abs(stat.change)}
+                        {direction === "down" ? t("wellness.improved") : t("wellness.changed")} {Math.abs(stat.change)}
                         {stat.unit ? stat.unit : ""}
                       </span>
                     </div>
@@ -252,7 +254,7 @@ const WellnessPage = () => {
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <CalendarClock className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Upcoming appointments</h2>
+          <h2 className="text-xl font-semibold">{t("wellness.upcomingAppointments")}</h2>
         </div>
         <Card>
           <CardContent className="divide-y px-0">
@@ -280,7 +282,7 @@ const WellnessPage = () => {
               })
             ) : (
               <div className="px-6 py-8 text-center text-sm text-muted-foreground">
-                No appointments scheduled. Add one to stay ahead of your recovery needs.
+                {t("wellness.noAppointments")}
               </div>
             )}
           </CardContent>
@@ -290,7 +292,7 @@ const WellnessPage = () => {
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Stethoscope className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Habit tracking</h2>
+          <h2 className="text-xl font-semibold">{t("wellness.habitTracking")}</h2>
         </div>
         <HabitSummary {...summaryMetrics} />
         <HabitList habits={habitsWithStatus} onToggleHabit={handleToggleHabit} />
