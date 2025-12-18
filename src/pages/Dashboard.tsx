@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useLocationTheme } from "@/hooks/useLocationTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
 import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
@@ -16,6 +17,8 @@ import { RecentActivitySection } from "@/components/dashboard/RecentActivitySect
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
 import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
+import { LocationHeader } from "@/components/location/LocationHeader";
+import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 
 // Advisor imports
 import { Link } from "react-router-dom";
@@ -252,6 +255,16 @@ const Dashboard = () => {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
+          {/* Location Header - Shows country flag, city name, and local flavor */}
+          {currentCity && (
+            <LocationHeader 
+              cityName={currentCity.name}
+              country={currentCity.country}
+              musicScene={currentCity.music_scene}
+              timezone={currentCity.timezone}
+            />
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">

@@ -393,3 +393,28 @@
 .vip-badge-glow {
   animation: vip-glow 2s ease-in-out infinite;
 }
+
+/* Location Accent Utilities */
+.border-location-primary {
+  border-color: hsl(var(--location-primary, 220 80% 45%));
+}
+
+.bg-location-primary {
+  background-color: hsl(var(--location-primary, 220 80% 45%));
+}
+
+.bg-location-gradient {
+  background: var(--location-gradient, linear-gradient(135deg, hsl(220 80% 45%), hsl(0 80% 50%)));
+}
+
+.text-location-accent {
+  color: hsl(var(--location-primary, 220 80% 45%));
+}
+
+.shadow-location {
+  box-shadow: var(--location-glow, 0 0 20px hsl(220 80% 45% / 0.3));
+}
+
+.ring-location {
+  --tw-ring-color: hsl(var(--location-primary, 220 80% 45%));
+}
