@@ -48,7 +48,8 @@ export function BandProfileEdit({
       onUpdate?.();
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const details = [error?.message, error?.details, error?.hint, error?.code].filter(Boolean).join(" • ");
+      toast({ title: "Error", description: details || "Unknown error", variant: "destructive" });
     },
   });
 
@@ -68,9 +69,20 @@ export function BandProfileEdit({
 
     setUploading(true);
     try {
-      // Get current user for storage policy compliance
+      // Get current user for storage + permission checks
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Helpful pre-check: verify this user is actually the band leader
+      const { data: bandRow, error: bandFetchError } = await supabase
+        .from("bands")
+        .select("id, leader_id")
+        .eq("id", bandId)
+        .single();
+      if (bandFetchError) throw bandFetchError;
+      if (bandRow?.leader_id !== user.id) {
+        throw new Error("Only the band leader can update the band logo.");
+      }
 
       const fileExt = file.name.split(".").pop();
       // Use user's auth.uid as folder prefix to comply with storage policy
