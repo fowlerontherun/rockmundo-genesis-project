@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, Calendar } from "lucide-react";
+import { format, addDays, isBefore } from "date-fns";
 
 interface EditReleaseDialogProps {
   open: boolean;
@@ -18,21 +20,54 @@ interface EditReleaseDialogProps {
     release_type: string;
     release_status: string;
     artwork_url?: string | null;
+    scheduled_release_date?: string | null;
+    manufacturing_complete_at?: string | null;
+    release_formats?: Array<{ format_type: string }>;
   } | null;
 }
+
+// Manufacturing days by format type
+const MANUFACTURING_DAYS: Record<string, number> = {
+  vinyl: 14,
+  cd: 7,
+  cassette: 5,
+  digital: 2,
+  streaming: 2,
+};
 
 export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDialogProps) {
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
   const [artworkUrl, setArtworkUrl] = useState("");
+  const [scheduledDate, setScheduledDate] = useState("");
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
+
+  // Calculate minimum release date based on formats
+  const getMinReleaseDate = () => {
+    if (!release?.release_formats || release.release_formats.length === 0) {
+      return addDays(new Date(), 2);
+    }
+    const maxDays = Math.max(
+      ...release.release_formats.map(f => MANUFACTURING_DAYS[f.format_type] || 2)
+    );
+    return addDays(new Date(), maxDays);
+  };
+
+  const minReleaseDate = getMinReleaseDate();
+  const manufacturingCompleteDate = release?.manufacturing_complete_at 
+    ? new Date(release.manufacturing_complete_at) 
+    : minReleaseDate;
+
+  // Check if selected date is before manufacturing completion
+  const isDateTooEarly = scheduledDate && isBefore(new Date(scheduledDate), manufacturingCompleteDate);
 
   useEffect(() => {
     if (release) {
       setTitle(release.title);
       setArtistName(release.artist_name);
       setArtworkUrl(release.artwork_url || "");
+      setScheduledDate(release.scheduled_release_date || "");
     }
   }, [release]);
 
@@ -46,6 +81,7 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
           title,
           artist_name: artistName,
           artwork_url: artworkUrl || null,
+          scheduled_release_date: scheduledDate || null,
         })
         .eq("id", release.id);
 
@@ -101,6 +137,8 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
 
   if (!release) return null;
 
+  const canEditDate = release.release_status !== "released";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -126,6 +164,33 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
               placeholder="Enter artist name"
             />
           </div>
+
+          {canEditDate && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Scheduled Release Date
+              </Label>
+              <Input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                min={format(minReleaseDate, "yyyy-MM-dd")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Manufacturing completes: {format(manufacturingCompleteDate, "MMM d, yyyy")}
+              </p>
+              
+              {isDateTooEarly && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Selected date is before manufacturing completes. Your release date should be after {format(manufacturingCompleteDate, "MMM d, yyyy")}.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Artwork</Label>

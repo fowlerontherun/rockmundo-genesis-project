@@ -91,7 +91,7 @@ const MusicVideos = () => {
       
       const { data: userReleases, error: releasesError } = await supabase
         .from("releases")
-        .select("id")
+        .select("id, title")
         .eq("user_id", profile.id)
         .eq("release_status", "released");
       
@@ -102,7 +102,7 @@ const MusicVideos = () => {
 
       const { data: releaseSongs, error: rsError } = await supabase
         .from("release_songs")
-        .select("song_id, release_id, release:releases(title)")
+        .select("song_id, release_id")
         .in("release_id", releaseIds);
 
       if (rsError) throw rsError;
@@ -119,10 +119,11 @@ const MusicVideos = () => {
 
       return songs?.map((song: any) => {
         const rs = releaseSongs.find(rs => rs.song_id === song.id);
+        const release = userReleases.find(r => r.id === rs?.release_id);
         return {
           ...song,
           release_id: rs?.release_id,
-          release_title: rs?.release?.title,
+          release_title: release?.title,
         };
       }) || [];
     },
