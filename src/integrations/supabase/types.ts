@@ -6600,6 +6600,45 @@ export type Database = {
           },
         ]
       }
+      merch_item_requirements: {
+        Row: {
+          base_cost: number | null
+          base_quality_tier: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          item_type: string
+          min_fame: number | null
+          min_fans: number | null
+          min_level: number | null
+        }
+        Insert: {
+          base_cost?: number | null
+          base_quality_tier?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          item_type: string
+          min_fame?: number | null
+          min_fans?: number | null
+          min_level?: number | null
+        }
+        Update: {
+          base_cost?: number | null
+          base_quality_tier?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          item_type?: string
+          min_fame?: number | null
+          min_fans?: number | null
+          min_level?: number | null
+        }
+        Relationships: []
+      }
       multiplayer_events: {
         Row: {
           created_at: string | null
@@ -8302,42 +8341,57 @@ export type Database = {
       }
       player_merchandise: {
         Row: {
+          available_until: string | null
           band_id: string
           cost_to_produce: number
           created_at: string
           custom_design_id: string | null
           design_name: string
           id: string
+          is_limited_edition: boolean | null
           item_type: string
+          limited_quantity: number | null
+          quality_tier: string | null
           sales_boost_pct: number | null
           selling_price: number
           stock_quantity: number
+          tour_exclusive_tour_id: string | null
           updated_at: string
         }
         Insert: {
+          available_until?: string | null
           band_id: string
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
           design_name: string
           id?: string
+          is_limited_edition?: boolean | null
           item_type: string
+          limited_quantity?: number | null
+          quality_tier?: string | null
           sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
+          tour_exclusive_tour_id?: string | null
           updated_at?: string
         }
         Update: {
+          available_until?: string | null
           band_id?: string
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
           design_name?: string
           id?: string
+          is_limited_edition?: boolean | null
           item_type?: string
+          limited_quantity?: number | null
+          quality_tier?: string | null
           sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
+          tour_exclusive_tour_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -8353,6 +8407,13 @@ export type Database = {
             columns: ["custom_design_id"]
             isOneToOne: false
             referencedRelation: "tshirt_designs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_merchandise_tour_exclusive_tour_id_fkey"
+            columns: ["tour_exclusive_tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
             referencedColumns: ["id"]
           },
         ]

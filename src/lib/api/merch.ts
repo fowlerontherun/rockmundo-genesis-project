@@ -103,6 +103,11 @@ const defaultInventoryStub: MerchInventoryItem = {
   updated_at: new Date().toISOString(),
   custom_design_id: null,
   sales_boost_pct: 0,
+  quality_tier: "basic",
+  is_limited_edition: false,
+  limited_quantity: null,
+  available_until: null,
+  tour_exclusive_tour_id: null,
 };
 
 const generateOrderId = (bandId: string, index: number) => `${bandId}-${index}`;
