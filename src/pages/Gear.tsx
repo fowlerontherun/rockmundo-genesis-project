@@ -262,7 +262,7 @@ export default function Gear() {
             </CardContent>
           </Card>
 
-          {/* Equipment Grid - Grouped by Category */}
+          {/* Equipment Grid - Grouped by Category then Subcategory */}
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Loading equipment...</div>
           ) : filteredCatalog.length === 0 ? (
@@ -272,107 +272,136 @@ export default function Gear() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-8">
-              {/* Group items by category */}
+            <div className="space-y-10">
+              {/* Group items by category, then subcategory */}
               {Object.entries(
                 filteredCatalog.reduce((acc, item) => {
                   const cat = item.category || 'other';
-                  if (!acc[cat]) acc[cat] = [];
-                  acc[cat].push(item);
+                  if (!acc[cat]) acc[cat] = {};
+                  const subcat = item.subcategory || 'general';
+                  if (!acc[cat][subcat]) acc[cat][subcat] = [];
+                  acc[cat][subcat].push(item);
                   return acc;
-                }, {} as Record<string, typeof filteredCatalog>)
-              ).sort(([a], [b]) => a.localeCompare(b)).map(([category, items]) => (
-                <div key={category} className="space-y-4">
-                  <div className="flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur py-2 z-10">
-                    <h2 className="text-2xl font-bold capitalize">{category}</h2>
-                    <Badge variant="secondary">{items.length} items</Badge>
+                }, {} as Record<string, Record<string, typeof filteredCatalog>>)
+              ).sort(([a], [b]) => a.localeCompare(b)).map(([category, subcategories]) => {
+                const categoryLabels: Record<string, string> = {
+                  instrument: "🎸 Instruments",
+                  amplifier: "🔊 Amplifiers",
+                  effects: "🎛️ Effects & Pedals",
+                  recording: "🎙️ Recording & Microphones",
+                  stage: "🎪 Stage & Live Equipment",
+                  transport: "🚐 Transport"
+                };
+                const totalItems = Object.values(subcategories).flat().length;
+                
+                return (
+                  <div key={category} className="space-y-6">
+                    {/* Category Header */}
+                    <div className="flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur py-3 z-20 border-b border-border">
+                      <h2 className="text-2xl font-bold">
+                        {categoryLabels[category] || category.charAt(0).toUpperCase() + category.slice(1)}
+                      </h2>
+                      <Badge variant="secondary">{totalItems} items</Badge>
+                    </div>
+                    
+                    {/* Subcategories */}
+                    <div className="space-y-6 pl-4 border-l-2 border-primary/20">
+                      {Object.entries(subcategories).sort(([a], [b]) => a.localeCompare(b)).map(([subcategory, items]) => {
+                        const formatSubcategory = (sub: string) => 
+                          sub.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                        
+                        return (
+                          <div key={subcategory} className="space-y-3">
+                            {/* Subcategory Header */}
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-semibold text-muted-foreground">
+                                {formatSubcategory(subcategory)}
+                              </h3>
+                              <Badge variant="outline" className="text-xs">{items.length}</Badge>
+                            </div>
+                            
+                            {/* Items Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                              {items.map((item) => {
+                                const isOwned = inventory.some(inv => inv.equipment_id === item.id);
+                                const canAfford = (profile?.cash || 0) >= item.base_price;
+                                
+                                return (
+                                  <Card key={item.id} className="relative overflow-hidden">
+                                    <div className={cn(
+                                      "absolute top-0 right-0 w-20 h-20 opacity-10",
+                                      rarityColors[item.rarity?.toLowerCase() || "common"]
+                                    )} style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
+                                    
+                                    <CardHeader className="pb-2 pt-3">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                          <CardTitle className="text-sm truncate">{item.name}</CardTitle>
+                                          {item.brand && (
+                                            <CardDescription className="text-xs font-medium">
+                                              {item.brand}
+                                            </CardDescription>
+                                          )}
+                                        </div>
+                                        <Badge className={cn("text-[10px] px-1.5", rarityColors[item.rarity?.toLowerCase() || "common"])}>
+                                          {item.rarity}
+                                        </Badge>
+                                      </div>
+                                    </CardHeader>
+                                    
+                                    <CardContent className="space-y-2 pt-0 pb-3">
+                                      <p className="text-[11px] text-muted-foreground line-clamp-2">
+                                        {item.description}
+                                      </p>
+
+                                      <div className="flex gap-3 text-[11px]">
+                                        <span>
+                                          <span className="text-muted-foreground">Q:</span>
+                                          <span className="font-semibold ml-0.5">{item.quality_rating}/10</span>
+                                        </span>
+                                        <span>
+                                          <span className="text-muted-foreground">D:</span>
+                                          <span className="font-semibold ml-0.5">{item.durability}</span>
+                                        </span>
+                                      </div>
+
+                                      {item.stat_boosts && Object.keys(item.stat_boosts).length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {Object.entries(item.stat_boosts).slice(0, 3).map(([stat, value]) => (
+                                            <Badge key={stat} variant="outline" className="text-[10px] py-0 px-1">
+                                              {stat.slice(0, 3)}: +{String(value)}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      <Separator />
+
+                                      <div className="flex items-center justify-between">
+                                        <div className="text-base font-bold">
+                                          {formatCurrency(item.base_price)}
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          className="h-6 text-xs"
+                                          onClick={() => handlePurchase(item.id)}
+                                          disabled={!canAfford || isOwned || isPurchasing}
+                                        >
+                                          {isOwned ? "Owned" : canAfford ? "Buy" : "$$$"}
+                                        </Button>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {items.map((item) => {
-                      const isOwned = inventory.some(inv => inv.equipment_id === item.id);
-                      const canAfford = (profile?.cash || 0) >= item.base_price;
-                      
-                      return (
-                        <Card key={item.id} className="relative overflow-hidden">
-                          <div className={cn(
-                            "absolute top-0 right-0 w-24 h-24 opacity-10",
-                            rarityColors[item.rarity?.toLowerCase() || "common"]
-                          )} style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
-                          
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-base truncate">{item.name}</CardTitle>
-                                <CardDescription className="text-xs">
-                                  {item.brand && <span className="font-medium">{item.brand}</span>}
-                                  {item.subcategory && <span> • {item.subcategory}</span>}
-                                </CardDescription>
-                              </div>
-                              <Badge className={cn("text-xs", rarityColors[item.rarity?.toLowerCase() || "common"])}>
-                                {item.rarity}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          
-                          <CardContent className="space-y-2 pt-0">
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {item.description}
-                            </p>
-
-                            <div className="flex gap-4 text-xs">
-                              <div>
-                                <span className="text-muted-foreground">Quality:</span>
-                                <span className="font-semibold ml-1">{item.quality_rating}/10</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Durability:</span>
-                                <span className="font-semibold ml-1">{item.durability}</span>
-                              </div>
-                            </div>
-
-                            {item.stat_boosts && Object.keys(item.stat_boosts).length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(item.stat_boosts).map(([stat, value]) => (
-                                  <Badge key={stat} variant="outline" className="text-xs py-0">
-                                    {stat}: +{String(value)}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-
-                            <Separator />
-
-                            <div className="flex items-center justify-between">
-                              <div className="text-lg font-bold">
-                                {formatCurrency(item.base_price)}
-                              </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2"
-                                  onClick={() => toggleCompare(item.id)}
-                                  disabled={compareItems.length >= 3 && !compareItems.includes(item.id)}
-                                >
-                                  {compareItems.includes(item.id) ? "✓" : "⇄"}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="h-7"
-                                  onClick={() => handlePurchase(item.id)}
-                                  disabled={!canAfford || isOwned || isPurchasing}
-                                >
-                                  {isOwned ? "Owned" : canAfford ? "Buy" : "$$$"}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
