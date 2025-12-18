@@ -14,6 +14,7 @@ import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import {
   Home,
   Users,
@@ -363,6 +364,7 @@ const Navigation = () => {
           />
           
           <div className="flex items-center gap-1">
+            <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
             <ThemeSwitcher />
@@ -387,6 +389,7 @@ const Navigation = () => {
           </Button>
           {!isDesktopCollapsed && (
             <div className="flex items-center gap-1">
+              <PrisonStatusIndicator />
               <NotificationBell />
               <ThemeSwitcher />
               <LanguageSwitcher />
