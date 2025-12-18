@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
 
-const APP_VERSION = "1.0.220";
+const APP_VERSION = "1.0.221";
 
 export default function TourManagerNew() {
   const navigate = useNavigate();
@@ -25,18 +25,20 @@ export default function TourManagerNew() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
 
-  // Fetch user's bands
-  const { data: userBands } = useQuery({
+  // Fetch user's bands where they are the leader
+  const { data: userBands, isLoading: bandsLoading } = useQuery({
     queryKey: ['user-bands-for-tour', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('band_members')
-        .select('band_id, bands!band_members_band_id_fkey(id, name, fame, total_fans, band_balance)')
-        .eq('user_id', user.id)
-        .eq('role', 'leader');
+      
+      // Get bands where this user is the leader
+      const { data: bands, error } = await supabase
+        .from('bands')
+        .select('id, name, fame, total_fans, band_balance')
+        .eq('leader_id', user.id);
+      
       if (error) throw error;
-      return data?.map(d => d.bands).filter(Boolean) || [];
+      return bands || [];
     },
     enabled: !!user?.id,
   });
@@ -47,9 +49,14 @@ export default function TourManagerNew() {
   const handleOpenWizard = () => {
     if (userBands && userBands.length === 1) {
       setSelectedBandId(userBands[0]?.id || null);
+    } else if (userBands && userBands.length > 1) {
+      // Multiple bands - let them select
+      setSelectedBandId(null);
     }
     setCreateDialogOpen(true);
   };
+
+  const canCreateTour = !bandsLoading && userBands && userBands.length > 0;
 
   const handleWizardComplete = () => {
     setCreateDialogOpen(false);
@@ -70,9 +77,9 @@ export default function TourManagerNew() {
           </div>
         </div>
         
-        <Button size="lg" onClick={handleOpenWizard} disabled={!userBands || userBands.length === 0}>
+        <Button size="lg" onClick={handleOpenWizard} disabled={!canCreateTour}>
           <Plus className="h-4 w-4 mr-2" />
-          Plan New Tour
+          {bandsLoading ? 'Loading...' : 'Plan New Tour'}
         </Button>
       </div>
 
