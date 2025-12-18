@@ -1082,6 +1082,7 @@ export type Database = {
           band_id: string
           can_be_leader: boolean | null
           chemistry_contribution: number | null
+          current_city_id: string | null
           id: string
           instrument_role: string
           is_touring_member: boolean | null
@@ -1100,6 +1101,7 @@ export type Database = {
           band_id: string
           can_be_leader?: boolean | null
           chemistry_contribution?: number | null
+          current_city_id?: string | null
           id?: string
           instrument_role?: string
           is_touring_member?: boolean | null
@@ -1118,6 +1120,7 @@ export type Database = {
           band_id?: string
           can_be_leader?: boolean | null
           chemistry_contribution?: number | null
+          current_city_id?: string | null
           id?: string
           instrument_role?: string
           is_touring_member?: boolean | null
@@ -1138,6 +1141,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_members_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
           {
@@ -1500,6 +1510,96 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_vehicles: {
+        Row: {
+          band_id: string
+          breakdown_risk: number | null
+          capacity_units: number | null
+          comfort_rating: number | null
+          condition_percent: number | null
+          created_at: string | null
+          id: string
+          is_leased: boolean | null
+          is_owned: boolean | null
+          last_maintenance_km: number | null
+          lease_payments_made: number | null
+          lease_payments_total: number | null
+          name: string
+          purchase_date: string | null
+          rental_daily_cost: number | null
+          rental_end_date: string | null
+          rental_start_date: string | null
+          speed_modifier: number | null
+          total_km_traveled: number | null
+          updated_at: string | null
+          vehicle_catalog_id: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          band_id: string
+          breakdown_risk?: number | null
+          capacity_units?: number | null
+          comfort_rating?: number | null
+          condition_percent?: number | null
+          created_at?: string | null
+          id?: string
+          is_leased?: boolean | null
+          is_owned?: boolean | null
+          last_maintenance_km?: number | null
+          lease_payments_made?: number | null
+          lease_payments_total?: number | null
+          name: string
+          purchase_date?: string | null
+          rental_daily_cost?: number | null
+          rental_end_date?: string | null
+          rental_start_date?: string | null
+          speed_modifier?: number | null
+          total_km_traveled?: number | null
+          updated_at?: string | null
+          vehicle_catalog_id?: string | null
+          vehicle_type?: string
+        }
+        Update: {
+          band_id?: string
+          breakdown_risk?: number | null
+          capacity_units?: number | null
+          comfort_rating?: number | null
+          condition_percent?: number | null
+          created_at?: string | null
+          id?: string
+          is_leased?: boolean | null
+          is_owned?: boolean | null
+          last_maintenance_km?: number | null
+          lease_payments_made?: number | null
+          lease_payments_total?: number | null
+          name?: string
+          purchase_date?: string | null
+          rental_daily_cost?: number | null
+          rental_end_date?: string | null
+          rental_start_date?: string | null
+          speed_modifier?: number | null
+          total_km_traveled?: number | null
+          updated_at?: string | null
+          vehicle_catalog_id?: string | null
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_vehicles_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_vehicles_vehicle_catalog_id_fkey"
+            columns: ["vehicle_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_catalog"
             referencedColumns: ["id"]
           },
         ]
@@ -9043,6 +9143,7 @@ export type Database = {
           health: number
           id: string
           is_imprisoned: boolean
+          is_traveling: boolean | null
           is_vip: boolean | null
           is_wanted: boolean
           last_health_update: string | null
@@ -9054,6 +9155,9 @@ export type Database = {
           terms_version: string | null
           total_hours_played: number | null
           total_imprisonments: number
+          travel_arrives_at: string | null
+          travel_manager_enabled: boolean | null
+          travel_manager_expires_at: string | null
           updated_at: string | null
           user_id: string
           username: string
@@ -9080,6 +9184,7 @@ export type Database = {
           health?: number
           id?: string
           is_imprisoned?: boolean
+          is_traveling?: boolean | null
           is_vip?: boolean | null
           is_wanted?: boolean
           last_health_update?: string | null
@@ -9091,6 +9196,9 @@ export type Database = {
           terms_version?: string | null
           total_hours_played?: number | null
           total_imprisonments?: number
+          travel_arrives_at?: string | null
+          travel_manager_enabled?: boolean | null
+          travel_manager_expires_at?: string | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -9117,6 +9225,7 @@ export type Database = {
           health?: number
           id?: string
           is_imprisoned?: boolean
+          is_traveling?: boolean | null
           is_vip?: boolean | null
           is_wanted?: boolean
           last_health_update?: string | null
@@ -9128,6 +9237,9 @@ export type Database = {
           terms_version?: string | null
           total_hours_played?: number | null
           total_imprisonments?: number
+          travel_arrives_at?: string | null
+          travel_manager_enabled?: boolean | null
+          travel_manager_expires_at?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string
@@ -12451,6 +12563,7 @@ export type Database = {
       }
       tours: {
         Row: {
+          auto_pilot_enabled: boolean | null
           band_id: string | null
           created_at: string | null
           description: string | null
@@ -12459,10 +12572,15 @@ export type Database = {
           name: string
           start_date: string
           status: string | null
+          total_accommodation_cost: number | null
           total_revenue: number | null
+          total_travel_cost: number | null
+          travel_manager_booked: boolean | null
           user_id: string
+          vehicle_id: string | null
         }
         Insert: {
+          auto_pilot_enabled?: boolean | null
           band_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -12471,10 +12589,15 @@ export type Database = {
           name: string
           start_date: string
           status?: string | null
+          total_accommodation_cost?: number | null
           total_revenue?: number | null
+          total_travel_cost?: number | null
+          travel_manager_booked?: boolean | null
           user_id: string
+          vehicle_id?: string | null
         }
         Update: {
+          auto_pilot_enabled?: boolean | null
           band_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -12483,8 +12606,12 @@ export type Database = {
           name?: string
           start_date?: string
           status?: string | null
+          total_accommodation_cost?: number | null
           total_revenue?: number | null
+          total_travel_cost?: number | null
+          travel_manager_booked?: boolean | null
           user_id?: string
+          vehicle_id?: string | null
         }
         Relationships: [
           {
@@ -12492,6 +12619,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tours_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "band_vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -13630,6 +13764,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_catalog: {
+        Row: {
+          capacity_units: number
+          comfort_rating: number | null
+          created_at: string | null
+          description: string | null
+          fuel_cost_per_km: number | null
+          id: string
+          image_url: string | null
+          lease_monthly_cost: number | null
+          maintenance_interval_km: number | null
+          name: string
+          purchase_cost: number
+          rental_daily_cost: number
+          speed_modifier: number | null
+          vehicle_type: string
+        }
+        Insert: {
+          capacity_units?: number
+          comfort_rating?: number | null
+          created_at?: string | null
+          description?: string | null
+          fuel_cost_per_km?: number | null
+          id?: string
+          image_url?: string | null
+          lease_monthly_cost?: number | null
+          maintenance_interval_km?: number | null
+          name: string
+          purchase_cost?: number
+          rental_daily_cost?: number
+          speed_modifier?: number | null
+          vehicle_type: string
+        }
+        Update: {
+          capacity_units?: number
+          comfort_rating?: number | null
+          created_at?: string | null
+          description?: string | null
+          fuel_cost_per_km?: number | null
+          id?: string
+          image_url?: string | null
+          lease_monthly_cost?: number | null
+          maintenance_interval_km?: number | null
+          name?: string
+          purchase_cost?: number
+          rental_daily_cost?: number
+          speed_modifier?: number | null
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       venue_relationships: {
         Row: {
           band_id: string | null
@@ -14127,6 +14312,10 @@ export type Database = {
         }
       }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
+      apply_missed_gig_consequences: {
+        Args: { p_gig_id: string; p_reason?: string }
+        Returns: Json
+      }
       auto_complete_manufacturing: { Args: never; Returns: number }
       auto_complete_songwriting_sessions: {
         Args: never
@@ -14181,6 +14370,10 @@ export type Database = {
       }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
+        Returns: Json
+      }
+      check_player_in_gig_city: {
+        Args: { p_gig_id: string; p_user_id: string }
         Returns: Json
       }
       check_scheduling_conflict: {
