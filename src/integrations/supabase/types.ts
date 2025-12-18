@@ -1727,6 +1727,44 @@ export type Database = {
         }
         Relationships: []
       }
+      character_generations: {
+        Row: {
+          created_at: string | null
+          generation_number: number | null
+          id: string
+          inherited_cash: number | null
+          inherited_skills: Json | null
+          parent_character_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          generation_number?: number | null
+          id?: string
+          inherited_cash?: number | null
+          inherited_skills?: Json | null
+          parent_character_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          generation_number?: number | null
+          id?: string
+          inherited_cash?: number | null
+          inherited_skills?: Json | null
+          parent_character_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_generations_parent_character_id_fkey"
+            columns: ["parent_character_id"]
+            isOneToOne: false
+            referencedRelation: "hall_of_fame"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
@@ -4755,6 +4793,69 @@ export type Database = {
           id?: string
           message?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      hall_of_fame: {
+        Row: {
+          avatar_url: string | null
+          character_name: string
+          final_age: number
+          final_attributes: Json | null
+          final_skills: Json | null
+          generation_number: number | null
+          id: string
+          notable_achievements: Json | null
+          peak_chart_position: number | null
+          retired_at: string | null
+          retirement_type: string | null
+          total_albums: number | null
+          total_cash_earned: number | null
+          total_fame: number | null
+          total_gigs: number | null
+          total_songs: number | null
+          user_id: string | null
+          years_active: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          character_name: string
+          final_age: number
+          final_attributes?: Json | null
+          final_skills?: Json | null
+          generation_number?: number | null
+          id?: string
+          notable_achievements?: Json | null
+          peak_chart_position?: number | null
+          retired_at?: string | null
+          retirement_type?: string | null
+          total_albums?: number | null
+          total_cash_earned?: number | null
+          total_fame?: number | null
+          total_gigs?: number | null
+          total_songs?: number | null
+          user_id?: string | null
+          years_active: number
+        }
+        Update: {
+          avatar_url?: string | null
+          character_name?: string
+          final_age?: number
+          final_attributes?: Json | null
+          final_skills?: Json | null
+          generation_number?: number | null
+          id?: string
+          notable_achievements?: Json | null
+          peak_chart_position?: number | null
+          retired_at?: string | null
+          retirement_type?: string | null
+          total_albums?: number | null
+          total_cash_earned?: number | null
+          total_fame?: number | null
+          total_gigs?: number | null
+          total_songs?: number | null
+          user_id?: string | null
+          years_active?: number
         }
         Relationships: []
       }
@@ -8304,6 +8405,48 @@ export type Database = {
         }
         Relationships: []
       }
+      player_skill_snapshots: {
+        Row: {
+          attributes_snapshot: Json | null
+          created_at: string | null
+          id: string
+          profile_id: string | null
+          skills_snapshot: Json
+          snapshot_at_age: number
+        }
+        Insert: {
+          attributes_snapshot?: Json | null
+          created_at?: string | null
+          id?: string
+          profile_id?: string | null
+          skills_snapshot: Json
+          snapshot_at_age?: number
+        }
+        Update: {
+          attributes_snapshot?: Json | null
+          created_at?: string | null
+          id?: string
+          profile_id?: string | null
+          skills_snapshot?: Json
+          snapshot_at_age?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_skill_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_skill_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_skills: {
         Row: {
           bass: number
@@ -9153,6 +9296,7 @@ export type Database = {
           is_vip: boolean | null
           is_wanted: boolean
           last_health_update: string | null
+          last_retirement_prompt_age: number | null
           last_weekly_bonus_at: string | null
           level: number | null
           rest_required_until: string | null
@@ -9194,6 +9338,7 @@ export type Database = {
           is_vip?: boolean | null
           is_wanted?: boolean
           last_health_update?: string | null
+          last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
           level?: number | null
           rest_required_until?: string | null
@@ -9235,6 +9380,7 @@ export type Database = {
           is_vip?: boolean | null
           is_wanted?: boolean
           last_health_update?: string | null
+          last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
           level?: number | null
           rest_required_until?: string | null

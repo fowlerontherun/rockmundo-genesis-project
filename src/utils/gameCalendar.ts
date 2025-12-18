@@ -115,17 +115,15 @@ export function isCharacterBirthday(
 
 /**
  * Calculate character's current in-game age
+ * Uses initial age stored in profile + game years elapsed
  */
 export function calculateInGameAge(
-  characterBirthDate: Date | null,
-  characterCreatedAt: Date,
+  initialAge: number,
   currentGameDate: InGameDate
 ): number {
-  if (!characterBirthDate) return 18; // Default age
-
-  const initialAge = characterBirthDate.getFullYear();
-  const yearsElapsed = currentGameDate.gameYear - 1; // -1 because year 1 is birth year
+  if (!initialAge || initialAge < 16) return 16; // Default starting age
   
+  const yearsElapsed = currentGameDate.gameYear - 1; // -1 because year 1 is first year
   return initialAge + yearsElapsed;
 }
 
