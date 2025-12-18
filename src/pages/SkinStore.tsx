@@ -27,8 +27,10 @@ import {
   ClothingItem,
 } from "@/hooks/useSkinStore";
 import { useVipStatus } from "@/hooks/useVipStatus";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const SkinStore = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("featured");
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<ClothingItem | null>(null);

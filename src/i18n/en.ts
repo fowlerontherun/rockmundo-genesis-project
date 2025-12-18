@@ -575,6 +575,36 @@ export const en = {
     bandBalance: "but your band only has",
   },
   
+  // Travel
+  travel: {
+    title: "Travel",
+    destination: "Explore the world and travel to new cities for gigs, recording, and more.",
+    currentLocation: "Current Location",
+    noLocationSet: "No Location Set",
+    inTransit: "You haven't set your current location yet.",
+    bookTravel: "Book Travel",
+    travelTo: "Travel to",
+    distance: "Distance",
+    duration: "Duration",
+    cost: "Cost",
+    arriveIn: "Arrive in",
+    travelHistory: "Travel History",
+    recentJourneys: "Your recent journeys",
+    route: "Route",
+    transport: "Transport",
+    date: "Date",
+    plane: "Plane",
+    train: "Train",
+    bus: "Bus",
+    ship: "Ship",
+    booking: "Booking...",
+    cancel: "Cancel",
+    musicScene: "Music Scene",
+    coastal: "Coastal",
+    railHub: "Rail Hub",
+    exploreCity: "Explore City",
+  },
+  
   // Streaming
   streaming: {
     title: "Streaming",
@@ -714,25 +744,6 @@ export const en = {
     viewCount: "Views",
     likeCount: "Likes",
     shareCount: "Shares",
-  },
-  
-  // Travel
-  travel: {
-    title: "Travel",
-    currentLocation: "Current Location",
-    destination: "Destination",
-    departure: "Departure",
-    arrival: "Arrival",
-    duration: "Duration",
-    cost: "Cost",
-    transport: "Transport",
-    bus: "Bus",
-    train: "Train",
-    plane: "Plane",
-    ship: "Ship",
-    book: "Book Trip",
-    cancel: "Cancel Trip",
-    inTransit: "In Transit",
   },
   
   // Schedule
