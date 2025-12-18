@@ -3,14 +3,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ReleaseTypeSelector } from "./ReleaseTypeSelector";
+import { ReleaseTypeSelector, ReleaseType } from "./ReleaseTypeSelector";
 import { SongSelectionStep, SongSelection } from "./SongSelectionStep";
 import { FormatSelectionStep } from "./FormatSelectionStep";
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { addDays, isBefore } from "date-fns";
 
 interface CreateReleaseDialogProps {
   open: boolean;
@@ -18,15 +21,25 @@ interface CreateReleaseDialogProps {
   userId: string;
 }
 
+// Manufacturing days by format type
+const MANUFACTURING_DAYS: Record<string, number> = {
+  vinyl: 14,
+  cd: 7,
+  cassette: 5,
+  digital: 2,
+  streaming: 2,
+};
+
 export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleaseDialogProps) {
   const [step, setStep] = useState(1);
-  const [releaseType, setReleaseType] = useState<"single" | "ep" | "album">("single");
+  const [releaseType, setReleaseType] = useState<ReleaseType>("single");
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState<SongSelection[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<any[]>([]);
   const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
+  const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -44,6 +57,23 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     }
   });
 
+  // Check greatest hits eligibility
+  const { data: greatestHitsEligibility } = useQuery({
+    queryKey: ["greatest-hits-eligibility", userId, userBand?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("check_greatest_hits_eligibility", {
+        p_band_id: userBand?.id || null,
+        p_user_id: userBand ? null : userId
+      });
+      if (error) {
+        console.error("Error checking greatest hits eligibility:", error);
+        return { eligible: false, reason: "Error checking eligibility" };
+      }
+      return data as { eligible: boolean; released_song_count: number; reason: string | null };
+    },
+    enabled: !!userId
+  });
+
   // Auto-set artist name when band is detected
   useEffect(() => {
     if (userBand && !artistName) {
@@ -51,15 +81,25 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     }
   }, [userBand, artistName]);
 
+  // Calculate manufacturing completion date
+  const getManufacturingCompleteDate = () => {
+    if (selectedFormats.length === 0) return addDays(new Date(), 2);
+    const maxDays = Math.max(
+      ...selectedFormats.map(f => MANUFACTURING_DAYS[f.format_type] || 2)
+    );
+    return addDays(new Date(), maxDays);
+  };
+
+  const manufacturingCompleteDate = getManufacturingCompleteDate();
+  const isScheduledTooEarly = scheduledReleaseDate && isBefore(scheduledReleaseDate, manufacturingCompleteDate);
+
   const createRelease = useMutation({
     mutationFn: async () => {
       // Calculate total cost and manufacturing time (2-14 days based on format complexity)
       const totalCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
       
       const manufacturingDays = selectedFormats.reduce((max, format) => {
-        const days = format.format_type === 'vinyl' ? 14 : 
-                     format.format_type === 'cd' ? 7 : 
-                     format.format_type === 'cassette' ? 5 : 2;
+        const days = MANUFACTURING_DAYS[format.format_type] || 2;
         return Math.max(max, days);
       }, 2);
       
@@ -102,27 +142,41 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         .insert({
           user_id: userBand ? null : userId,
           band_id: userBand?.id || null,
-          release_type: releaseType,
+          release_type: releaseType === "greatest_hits" ? "album" : releaseType,
           title,
           artist_name: artistName,
           release_status: "manufacturing",
           total_cost: totalCost,
           manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
           scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null,
-          streaming_platforms: selectedStreamingPlatforms.length > 0 ? selectedStreamingPlatforms : null
+          streaming_platforms: selectedStreamingPlatforms.length > 0 ? selectedStreamingPlatforms : null,
+          is_greatest_hits: releaseType === "greatest_hits",
+          revenue_share_enabled: revenueShareEnabled,
+          revenue_share_percentage: revenueShareEnabled ? 10 : null,
+          manufacturing_discount_percentage: revenueShareEnabled ? 50 : null,
         })
         .select()
         .single();
 
       if (releaseError) throw releaseError;
 
+      // Update last_greatest_hits_date if this is a greatest hits album
+      if (releaseType === "greatest_hits" && userBand?.id) {
+        await supabase
+          .from("releases")
+          .update({ last_greatest_hits_date: new Date().toISOString() })
+          .eq("id", release.id);
+      }
+
       // Add songs with their recording versions - use actual song UUIDs
       const songInserts = selectedSongs.map((song, index) => ({
         release_id: release.id,
-        song_id: song.songId, // Use the actual UUID, not the composite key
+        song_id: song.songId,
         track_number: index + 1,
         is_b_side: releaseType === "single" && index === 1,
-        recording_version: song.version
+        recording_version: song.version,
+        // Track album exclusivity - only for regular albums, not greatest hits
+        album_release_id: releaseType === "album" ? release.id : null
       }));
 
       const { error: songsError } = await supabase
@@ -149,7 +203,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         bandId: userBand?.id,
         activityType: 'release_created',
         activityCategory: 'release',
-        description: `Created ${releaseType} release "${title}" - Manufacturing in progress`,
+        description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}" - Manufacturing in progress`,
         amount: -totalCost,
         metadata: {
           releaseId: release.id,
@@ -159,7 +213,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           formats: selectedFormats.map(f => f.format_type),
           songCount: selectedSongs.length,
           manufacturingDays,
-          streamingPlatforms: selectedStreamingPlatforms
+          streamingPlatforms: selectedStreamingPlatforms,
+          revenueShareEnabled
         }
       });
 
@@ -204,6 +259,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setSelectedSongs([]);
     setSelectedFormats([]);
     setSelectedStreamingPlatforms([]);
+    setScheduledReleaseDate(null);
+    setRevenueShareEnabled(false);
   };
 
   const handleNext = () => {
@@ -233,7 +290,12 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
         {step === 1 && (
           <div className="space-y-4">
-            <ReleaseTypeSelector value={releaseType} onChange={setReleaseType} />
+            <ReleaseTypeSelector 
+              value={releaseType} 
+              onChange={setReleaseType}
+              greatestHitsEligible={greatestHitsEligibility?.eligible || false}
+              greatestHitsReason={greatestHitsEligibility?.reason}
+            />
             
             <div className="space-y-2">
               <Label>Release Title</Label>
@@ -282,17 +344,31 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             onBack={() => setStep(2)}
             onSubmit={handleNext}
             isLoading={false}
+            revenueShareEnabled={revenueShareEnabled}
+            onRevenueShareChange={setRevenueShareEnabled}
+            scheduledReleaseDate={scheduledReleaseDate}
           />
         )}
 
         {step === 4 && (
-          <StreamingDistributionStep
-            selectedPlatforms={selectedStreamingPlatforms}
-            onPlatformsChange={setSelectedStreamingPlatforms}
-            onBack={() => setStep(3)}
-            onSubmit={() => createRelease.mutate()}
-            isLoading={createRelease.isPending}
-          />
+          <div className="space-y-4">
+            {isScheduledTooEarly && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Warning: Your release may be delayed because manufacturing won't complete until the scheduled date.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <StreamingDistributionStep
+              selectedPlatforms={selectedStreamingPlatforms}
+              onPlatformsChange={setSelectedStreamingPlatforms}
+              onBack={() => setStep(3)}
+              onSubmit={() => createRelease.mutate()}
+              isLoading={createRelease.isPending}
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>
