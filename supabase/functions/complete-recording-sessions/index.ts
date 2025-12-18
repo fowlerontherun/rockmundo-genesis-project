@@ -110,15 +110,29 @@ Deno.serve(async (req) => {
           throw updateError
         }
 
-        // Update the song's quality score
+        // Update the song's quality score, status, and band_id
         if (session.song_id) {
-          await supabase
+          const songUpdate: Record<string, unknown> = {
+            quality_score: newQuality,
+            status: 'recorded',
+            updated_at: new Date().toISOString(),
+          }
+          
+          // Also link song to band if recording session has band_id
+          if (session.band_id) {
+            songUpdate.band_id = session.band_id
+          }
+          
+          const { error: songUpdateError } = await supabase
             .from('songs')
-            .update({
-              quality_score: newQuality,
-              updated_at: new Date().toISOString(),
-            })
+            .update(songUpdate)
             .eq('id', session.song_id)
+            
+          if (songUpdateError) {
+            console.error(`Failed to update song ${session.song_id}:`, songUpdateError)
+          } else {
+            console.log(`Updated song ${session.song_id}: status=recorded, quality=${newQuality}, band_id=${session.band_id || 'unchanged'}`)
+          }
         }
 
         // Award XP to band members or user
