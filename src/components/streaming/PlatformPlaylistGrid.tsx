@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ListMusic, Users, Star, DollarSign } from "lucide-react";
 import { useState } from "react";
+import { GENRE_SELECT_OPTIONS } from "@/data/genres";
 
 interface PlatformPlaylistGridProps {
   platformId: string;
@@ -16,14 +17,7 @@ interface PlatformPlaylistGridProps {
 
 const genres = [
   { value: "all", label: "All Genres" },
-  { value: "Pop", label: "Pop" },
-  { value: "Rock", label: "Rock" },
-  { value: "Hip-Hop", label: "Hip-Hop" },
-  { value: "Electronic", label: "Electronic" },
-  { value: "R&B", label: "R&B" },
-  { value: "Country", label: "Country" },
-  { value: "Jazz", label: "Jazz" },
-  { value: "Classical", label: "Classical" },
+  ...GENRE_SELECT_OPTIONS,
 ];
 
 export function PlatformPlaylistGrid({ platformId, brandColor = "#6366f1", onSubmit }: PlatformPlaylistGridProps) {

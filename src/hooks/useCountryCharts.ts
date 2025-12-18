@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { MUSIC_GENRES } from "@/data/genres";
 
 export type ChartType = "streaming" | "cd_sales" | "vinyl_sales" | "digital_sales" | "cassette_sales" | "combined";
 
@@ -20,10 +21,7 @@ export interface ChartEntry {
   audio_generation_status?: string | null;
 }
 
-const GENRES = [
-  "Rock", "Pop", "Hip-Hop", "R&B", "Country", "Electronic", 
-  "Jazz", "Classical", "Metal", "Indie", "Folk", "Blues"
-];
+const GENRES = [...MUSIC_GENRES];
 
 const COUNTRIES = [
   "Global", "United States", "United Kingdom", "Germany", "France", 

@@ -146,6 +146,36 @@ export type Database = {
           },
         ]
       }
+      age_demographics: {
+        Row: {
+          age_max: number
+          age_min: number
+          created_at: string | null
+          description: string | null
+          genre_preferences: Json | null
+          id: string
+          name: string
+        }
+        Insert: {
+          age_max: number
+          age_min: number
+          created_at?: string | null
+          description?: string | null
+          genre_preferences?: Json | null
+          id?: string
+          name: string
+        }
+        Update: {
+          age_max?: number
+          age_min?: number
+          created_at?: string | null
+          description?: string | null
+          genre_preferences?: Json | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       animation_sets: {
         Row: {
           clip_big_chorus: string | null
@@ -718,8 +748,10 @@ export type Database = {
           avg_satisfaction: number | null
           band_id: string
           casual_fans: number
+          city_fame: number | null
           city_id: string | null
           city_name: string
+          country: string | null
           created_at: string
           dedicated_fans: number
           gigs_in_city: number
@@ -733,8 +765,10 @@ export type Database = {
           avg_satisfaction?: number | null
           band_id: string
           casual_fans?: number
+          city_fame?: number | null
           city_id?: string | null
           city_name: string
+          country?: string | null
           created_at?: string
           dedicated_fans?: number
           gigs_in_city?: number
@@ -748,8 +782,10 @@ export type Database = {
           avg_satisfaction?: number | null
           band_id?: string
           casual_fans?: number
+          city_fame?: number | null
           city_id?: string | null
           city_name?: string
+          country?: string | null
           created_at?: string
           dedicated_fans?: number
           gigs_in_city?: number
@@ -831,6 +867,56 @@ export type Database = {
           },
         ]
       }
+      band_country_fans: {
+        Row: {
+          band_id: string
+          casual_fans: number | null
+          country: string
+          created_at: string | null
+          dedicated_fans: number | null
+          fame: number | null
+          id: string
+          last_activity_date: string | null
+          superfans: number | null
+          total_fans: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          band_id: string
+          casual_fans?: number | null
+          country: string
+          created_at?: string | null
+          dedicated_fans?: number | null
+          fame?: number | null
+          id?: string
+          last_activity_date?: string | null
+          superfans?: number | null
+          total_fans?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          casual_fans?: number | null
+          country?: string
+          created_at?: string | null
+          dedicated_fans?: number | null
+          fame?: number | null
+          id?: string
+          last_activity_date?: string | null
+          superfans?: number | null
+          total_fans?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_country_fans_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_crew_members: {
         Row: {
           band_id: string
@@ -877,6 +963,64 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_demographic_fans: {
+        Row: {
+          band_id: string
+          city_id: string | null
+          country: string | null
+          created_at: string | null
+          demographic_id: string
+          engagement_rate: number | null
+          fan_count: number | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          band_id: string
+          city_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          demographic_id: string
+          engagement_rate?: number | null
+          fan_count?: number | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          city_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          demographic_id?: string
+          engagement_rate?: number | null
+          fan_count?: number | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_demographic_fans_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_demographic_fans_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_demographic_fans_demographic_id_fkey"
+            columns: ["demographic_id"]
+            isOneToOne: false
+            referencedRelation: "age_demographics"
             referencedColumns: ["id"]
           },
         ]
@@ -953,6 +1097,57 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_fame_history: {
+        Row: {
+          band_id: string
+          city_id: string | null
+          country: string | null
+          event_type: string | null
+          fame_change: number | null
+          fame_value: number
+          id: string
+          recorded_at: string | null
+          scope: string | null
+        }
+        Insert: {
+          band_id: string
+          city_id?: string | null
+          country?: string | null
+          event_type?: string | null
+          fame_change?: number | null
+          fame_value: number
+          id?: string
+          recorded_at?: string | null
+          scope?: string | null
+        }
+        Update: {
+          band_id?: string
+          city_id?: string | null
+          country?: string | null
+          event_type?: string | null
+          fame_change?: number | null
+          fame_value?: number
+          id?: string
+          recorded_at?: string | null
+          scope?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_fame_history_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_fame_history_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]
@@ -1620,6 +1815,7 @@ export type Database = {
           fame: number | null
           fame_multiplier: number | null
           genre: string | null
+          global_fame: number | null
           hiatus_ends_at: string | null
           hiatus_notification_sent: boolean | null
           hiatus_reason: string | null
@@ -1638,6 +1834,7 @@ export type Database = {
           next_leadership_vote: string | null
           performance_count: number | null
           popularity: number | null
+          regional_fame: Json | null
           sound_description: string | null
           status: Database["public"]["Enums"]["band_status"]
           superfans: number | null
@@ -1660,6 +1857,7 @@ export type Database = {
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
+          global_fame?: number | null
           hiatus_ends_at?: string | null
           hiatus_notification_sent?: boolean | null
           hiatus_reason?: string | null
@@ -1678,6 +1876,7 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          regional_fame?: Json | null
           sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
           superfans?: number | null
@@ -1700,6 +1899,7 @@ export type Database = {
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
+          global_fame?: number | null
           hiatus_ends_at?: string | null
           hiatus_notification_sent?: boolean | null
           hiatus_reason?: string | null
@@ -1718,6 +1918,7 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          regional_fame?: Json | null
           sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
           superfans?: number | null
@@ -9740,6 +9941,7 @@ export type Database = {
       radio_stations: {
         Row: {
           accepted_genres: string[] | null
+          auto_accept_threshold: number | null
           city_id: string | null
           country: string | null
           created_at: string | null
@@ -9748,13 +9950,17 @@ export type Database = {
           id: string
           is_active: boolean | null
           listener_base: number
+          min_fame_required: number | null
+          min_fans_required: number | null
           name: string
           quality_level: number
+          requires_local_presence: boolean | null
           station_type: string
           updated_at: string | null
         }
         Insert: {
           accepted_genres?: string[] | null
+          auto_accept_threshold?: number | null
           city_id?: string | null
           country?: string | null
           created_at?: string | null
@@ -9763,13 +9969,17 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           listener_base?: number
+          min_fame_required?: number | null
+          min_fans_required?: number | null
           name: string
           quality_level?: number
+          requires_local_presence?: boolean | null
           station_type: string
           updated_at?: string | null
         }
         Update: {
           accepted_genres?: string[] | null
+          auto_accept_threshold?: number | null
           city_id?: string | null
           country?: string | null
           created_at?: string | null
@@ -9778,8 +9988,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           listener_base?: number
+          min_fame_required?: number | null
+          min_fans_required?: number | null
           name?: string
           quality_level?: number
+          requires_local_presence?: boolean | null
           station_type?: string
           updated_at?: string | null
         }
