@@ -197,10 +197,27 @@ const StageEquipmentSystem = () => {
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
 
-  const { catalog, setCatalog } = useStageEquipmentCatalog();
-  const [selectedType, setSelectedType] = useState<StageEquipmentType | "all">("all");
+  const { catalog: localCatalog, setCatalog } = useStageEquipmentCatalog();
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<EquipmentCatalogItem | null>(null);
+  const [selectedDbItem, setSelectedDbItem] = useState<any | null>(null);
+
+  // Fetch stage equipment from database
+  const { data: dbCatalog = [], isLoading: catalogLoading } = useQuery({
+    queryKey: ["stage-equipment-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("equipment_catalog")
+        .select("*")
+        .eq("category", "stage")
+        .eq("is_available", true)
+        .order("subcategory", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: equipment, isLoading: loadingEquipment } = useQuery<StageEquipmentRecord[]>({
     queryKey: ["band-stage-equipment", bandId],
@@ -365,12 +382,29 @@ const StageEquipmentSystem = () => {
   };
 
   const filteredCatalog = useMemo(() => {
-    if (selectedType === "all") return catalog;
-    return catalog.filter((item) => item.type === selectedType);
-  }, [catalog, selectedType]);
+    if (selectedType === "all") return localCatalog;
+    return localCatalog.filter((item) => item.type === selectedType);
+  }, [localCatalog, selectedType]);
+
+  // Filter DB catalog by subcategory
+  const filteredDbCatalog = useMemo(() => {
+    if (selectedType === "all") return dbCatalog;
+    return dbCatalog.filter((item) => item.subcategory === selectedType);
+  }, [dbCatalog, selectedType]);
+
+  // Get unique subcategories from DB catalog
+  const subcategories = useMemo(() => {
+    const subs = new Set(dbCatalog.map(item => item.subcategory).filter(Boolean));
+    return Array.from(subs).sort();
+  }, [dbCatalog]);
 
   const openPurchaseDialog = (item: EquipmentCatalogItem) => {
     setSelectedCatalogItem(item);
+    setPurchaseDialogOpen(true);
+  };
+
+  const openDbPurchaseDialog = (item: any) => {
+    setSelectedDbItem(item);
     setPurchaseDialogOpen(true);
   };
 
@@ -611,20 +645,20 @@ const StageEquipmentSystem = () => {
                 <div>
                   <CardTitle>Buy Stage Equipment</CardTitle>
                   <CardDescription>
-                    Filter by stage equipment type and pick the upgrades that elevate your next run of shows.
+                    Browse real equipment from top brands - PA systems, lighting, effects, and more.
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Label className="text-sm text-muted-foreground">Filter type</Label>
-                  <Select value={selectedType} onValueChange={(value) => setSelectedType(value as StageEquipmentType | "all") }>
+                  <Label className="text-sm text-muted-foreground">Filter</Label>
+                  <Select value={selectedType} onValueChange={setSelectedType}>
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder="All equipment" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All types</SelectItem>
-                      {EQUIPMENT_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                      <SelectItem value="all">All equipment</SelectItem>
+                      {subcategories.map((sub) => (
+                        <SelectItem key={sub} value={sub} className="capitalize">
+                          {sub?.replace(/_/g, ' ')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -632,45 +666,120 @@ const StageEquipmentSystem = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {filteredCatalog.map((item) => (
-                    <Card key={item.id} className="flex h-full flex-col justify-between">
-                      <CardHeader className="space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <CardTitle className="text-lg">{item.name}</CardTitle>
-                          <Badge variant="secondary">{item.type}</Badge>
+                {catalogLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredDbCatalog.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center">
+                    <CircleDashed className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No equipment found.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Group by subcategory */}
+                    {Object.entries(
+                      filteredDbCatalog.reduce((acc, item) => {
+                        const sub = item.subcategory || 'other';
+                        if (!acc[sub]) acc[sub] = [];
+                        acc[sub].push(item);
+                        return acc;
+                      }, {} as Record<string, typeof filteredDbCatalog>)
+                    ).sort(([a], [b]) => a.localeCompare(b)).map(([subcategory, items]) => {
+                      const subcategoryLabels: Record<string, string> = {
+                        pa_speaker: "🔊 PA Speakers",
+                        subwoofer: "🔉 Subwoofers",
+                        line_array: "📢 Line Arrays",
+                        mixer: "🎛️ Digital Mixers",
+                        monitor: "🎧 Stage Monitors",
+                        moving_head: "💡 Moving Head Lights",
+                        par_light: "🔦 Par Lights",
+                        strobe: "⚡ Strobe Lights",
+                        fog: "🌫️ Fog Machines",
+                        hazer: "💨 Hazers",
+                        iem: "🎧 In-Ear Monitors",
+                        wireless_mic: "🎤 Wireless Microphones",
+                        wireless_guitar: "🎸 Wireless Guitar Systems",
+                        di_box: "📦 DI Boxes",
+                        cable: "🔌 Cables",
+                        effects: "✨ Stage Effects",
+                      };
+
+                      const rarityColors: Record<string, string> = {
+                        common: "bg-slate-500",
+                        uncommon: "bg-emerald-500",
+                        rare: "bg-blue-500",
+                        epic: "bg-purple-500",
+                        legendary: "bg-amber-500",
+                      };
+
+                      return (
+                        <div key={subcategory} className="space-y-4">
+                          <div className="flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur py-2 z-10 border-b border-border">
+                            <h3 className="text-xl font-bold">
+                              {subcategoryLabels[subcategory] || subcategory.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                            </h3>
+                            <Badge variant="secondary">{items.length}</Badge>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {items.map((item) => (
+                              <Card key={item.id} className="relative overflow-hidden">
+                                <div 
+                                  className={`absolute top-0 right-0 w-16 h-16 opacity-10 ${rarityColors[item.rarity?.toLowerCase() || 'common']}`}
+                                  style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} 
+                                />
+                                <CardHeader className="pb-2 pt-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <CardTitle className="text-sm truncate">{item.name}</CardTitle>
+                                      {item.brand && (
+                                        <CardDescription className="text-xs font-medium">{item.brand}</CardDescription>
+                                      )}
+                                    </div>
+                                    <Badge className={`text-[10px] px-1.5 ${rarityColors[item.rarity?.toLowerCase() || 'common']}`}>
+                                      {item.rarity}
+                                    </Badge>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="space-y-2 pt-0 pb-3">
+                                  <p className="text-[11px] text-muted-foreground line-clamp-2">{item.description}</p>
+                                  <div className="flex gap-3 text-[11px]">
+                                    <span>
+                                      <span className="text-muted-foreground">Q:</span>
+                                      <span className="font-semibold ml-0.5">{item.quality_rating}/100</span>
+                                    </span>
+                                  </div>
+                                  {item.stat_boosts && Object.keys(item.stat_boosts).length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {Object.entries(item.stat_boosts as Record<string, number>).slice(0, 2).map(([stat, value]) => (
+                                        <Badge key={stat} variant="outline" className="text-[10px] py-0 px-1">
+                                          {stat}: +{value}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between pt-2 border-t">
+                                    <div className="text-base font-bold">
+                                      ${item.base_price?.toLocaleString()}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      className="h-6 text-xs"
+                                      onClick={() => openDbPurchaseDialog(item)}
+                                      disabled={purchaseMutation.isPending}
+                                    >
+                                      <ShoppingCart className="h-3 w-3 mr-1" /> Buy
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
                         </div>
-                        <CardDescription>{item.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex flex-col gap-3">
-                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          <Badge variant="outline">{labelMap[item.weight]} weight</Badge>
-                          <Badge variant="outline">{labelMap[item.size]} size</Badge>
-                          <Badge variant="outline">{labelMap[item.baseCondition]}</Badge>
-                          <Badge variant="outline">{labelMap[item.rarity]}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="font-semibold text-foreground">{formatCurrency(item.cost)}</div>
-                          <div className="text-muted-foreground">{item.amountAvailable} available</div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{item.liveImpact}</p>
-                        <Button
-                          className="mt-2"
-                          onClick={() => openPurchaseDialog(item)}
-                          disabled={item.amountAvailable === 0 || purchaseMutation.isPending}
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" /> Buy equipment
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  {filteredCatalog.length === 0 && (
-                    <div className="col-span-2 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center">
-                      <CircleDashed className="h-8 w-8 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">No equipment in this category yet. Ask your admin to add more options.</p>
-                    </div>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -704,13 +813,76 @@ const StageEquipmentSystem = () => {
               <div className="text-lg font-semibold text-foreground">{formatCurrency(selectedCatalogItem.cost)}</div>
             </div>
           )}
+          {selectedDbItem && !selectedCatalogItem && (
+            <div className="space-y-3">
+              <div>
+                <div className="text-lg font-semibold text-foreground">{selectedDbItem.name}</div>
+                <div className="text-sm text-muted-foreground">{selectedDbItem.brand} • {selectedDbItem.subcategory?.replace(/_/g, ' ')}</div>
+              </div>
+              <p className="text-sm text-muted-foreground">{selectedDbItem.description}</p>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <Badge variant="secondary" className="capitalize">{selectedDbItem.rarity}</Badge>
+                <Badge variant="outline">Quality: {selectedDbItem.quality_rating}/100</Badge>
+              </div>
+              {selectedDbItem.stat_boosts && Object.keys(selectedDbItem.stat_boosts).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(selectedDbItem.stat_boosts as Record<string, number>).map(([stat, value]) => (
+                    <Badge key={stat} variant="outline" className="text-xs">
+                      {stat}: +{value}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="text-lg font-semibold text-foreground">${selectedDbItem.base_price?.toLocaleString()}</div>
+            </div>
+          )}
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-            <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)}>
+            <Button variant="outline" onClick={() => { setPurchaseDialogOpen(false); setSelectedDbItem(null); setSelectedCatalogItem(null); }}>
               <Minus className="mr-2 h-4 w-4" /> Cancel
             </Button>
             <Button
-              onClick={() => selectedCatalogItem && purchaseMutation.mutate(selectedCatalogItem)}
-              disabled={!selectedCatalogItem || purchaseMutation.isPending}
+              onClick={() => {
+                if (selectedDbItem) {
+                  // Purchase from DB catalog
+                  const metadata: EquipmentMetadata = {
+                    weight: "medium",
+                    size: "medium",
+                    baseCondition: "brand_new",
+                    showsPerformed: 0,
+                    liveImpact: selectedDbItem.description || "Professional stage equipment",
+                    rarity: selectedDbItem.rarity || "normal",
+                    liveSelected: false,
+                    value: selectedDbItem.base_price,
+                    lastConditionTier: "brand_new",
+                    lastConditionPoints: 100,
+                  };
+                  const condition = calculateConditionState(metadata);
+                  
+                  supabase.from("band_stage_equipment").insert({
+                    band_id: bandId!,
+                    equipment_name: selectedDbItem.name,
+                    equipment_type: selectedDbItem.subcategory || "general",
+                    quality_rating: selectedDbItem.quality_rating || 80,
+                    condition_rating: 100,
+                    purchase_cost: selectedDbItem.base_price,
+                    purchase_date: new Date().toISOString(),
+                    size_units: 3,
+                    notes: JSON.stringify(buildMetadataPayload(metadata, condition)),
+                  }).then(({ error }) => {
+                    if (error) {
+                      toast.error(error.message);
+                    } else {
+                      toast.success(`${selectedDbItem.name} added to your inventory`);
+                      queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
+                    }
+                    setPurchaseDialogOpen(false);
+                    setSelectedDbItem(null);
+                  });
+                } else if (selectedCatalogItem) {
+                  purchaseMutation.mutate(selectedCatalogItem);
+                }
+              }}
+              disabled={(!selectedCatalogItem && !selectedDbItem) || purchaseMutation.isPending}
             >
               {purchaseMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
