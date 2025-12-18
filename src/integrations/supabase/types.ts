@@ -1970,7 +1970,9 @@ export type Database = {
           created_at: string | null
           cultural_events: string[] | null
           dominant_genre: string | null
+          has_train_network: boolean | null
           id: string
+          is_coastal: boolean | null
           latitude: number | null
           local_bonus: number | null
           longitude: number | null
@@ -1988,7 +1990,9 @@ export type Database = {
           created_at?: string | null
           cultural_events?: string[] | null
           dominant_genre?: string | null
+          has_train_network?: boolean | null
           id?: string
+          is_coastal?: boolean | null
           latitude?: number | null
           local_bonus?: number | null
           longitude?: number | null
@@ -2006,7 +2010,9 @@ export type Database = {
           created_at?: string | null
           cultural_events?: string[] | null
           dominant_genre?: string | null
+          has_train_network?: boolean | null
           id?: string
+          is_coastal?: boolean | null
           latitude?: number | null
           local_bonus?: number | null
           longitude?: number | null

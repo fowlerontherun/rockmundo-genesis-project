@@ -1,15 +1,20 @@
 import { useState, useEffect, useContext } from "react";
-import { MapPin, Clock, DollarSign, History, Plane, Train, Bus, Ship } from "lucide-react";
+import { MapPin, Clock, DollarSign, History, Plane, Train, Bus, Ship, Globe, ArrowRight, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/use-auth-context";
-import { TravelBookingDialog } from "@/components/travel/TravelBookingDialog";
-import { getAvailableRoutes } from "@/utils/travelSystem";
+import { TravelDestinationBrowser } from "@/components/travel/TravelDestinationBrowser";
+import { TransportComparison } from "@/components/travel/TransportComparison";
+import { bookTravel } from "@/utils/travelSystem";
+import { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TravelHistoryEntry {
   id: string;
@@ -23,6 +28,14 @@ interface TravelHistoryEntry {
   created_at: string;
 }
 
+interface SelectedDestination {
+  city: CityWithCoords;
+  distanceKm: number;
+  options: TravelOption[];
+  cheapestOption: TravelOption | null;
+  fastestOption: TravelOption | null;
+}
+
 const TRANSPORT_ICONS = {
   train: Train,
   plane: Plane,
@@ -32,26 +45,32 @@ const TRANSPORT_ICONS = {
 
 const Travel = () => {
   const { user } = useContext(AuthContext);
+  const queryClient = useQueryClient();
   const [currentCity, setCurrentCity] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [travelHistory, setTravelHistory] = useState<TravelHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
-  const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
+  const [selectedDestination, setSelectedDestination] = useState<SelectedDestination | null>(null);
+  const [selectedMode, setSelectedMode] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
     const loadTravelData = async () => {
       if (!user) return;
 
       try {
-        // Load current city
-        const { data: profile } = await supabase
+        // Load profile and current city
+        const { data: profileData } = await supabase
           .from("profiles")
-          .select("current_city_id, cities:current_city_id(*)")
+          .select("*, cities:current_city_id(*)")
           .eq("user_id", user.id)
           .single();
 
-        if (profile?.cities) {
-          setCurrentCity(profile.cities);
+        if (profileData) {
+          setProfile(profileData);
+          if (profileData.cities) {
+            setCurrentCity(profileData.cities);
+          }
         }
 
         // Load travel history
@@ -79,16 +98,49 @@ const Travel = () => {
     loadTravelData();
   }, [user]);
 
-  useEffect(() => {
-    if (currentCity?.id) {
-      loadAvailableRoutes();
+  const handleSelectDestination = (destination: SelectedDestination) => {
+    setSelectedDestination(destination);
+    // Auto-select cheapest option
+    if (destination.cheapestOption) {
+      setSelectedMode(destination.cheapestOption.mode);
     }
-  }, [currentCity]);
+  };
 
-  const loadAvailableRoutes = async () => {
-    if (!currentCity?.id) return;
-    const routes = await getAvailableRoutes(currentCity.id);
-    setAvailableRoutes(routes);
+  const handleBookTravel = async () => {
+    if (!user || !selectedDestination || !selectedMode || !currentCity) return;
+
+    const selectedOption = selectedDestination.options.find(o => o.mode === selectedMode);
+    if (!selectedOption) return;
+
+    setIsBooking(true);
+    try {
+      await bookTravel({
+        userId: user.id,
+        fromCityId: currentCity.id,
+        toCityId: selectedDestination.city.id,
+        routeId: `dynamic-${currentCity.id}-${selectedDestination.city.id}`,
+        transportType: selectedMode,
+        cost: selectedOption.cost,
+        durationHours: selectedOption.durationHours,
+        comfortRating: selectedOption.comfort,
+      });
+
+      toast.success(`Travel booked! Arriving in ${selectedDestination.city.name} in ${formatDuration(selectedOption.durationHours)}`);
+      
+      // Refresh profile data
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      
+      // Close dialog
+      setSelectedDestination(null);
+      setSelectedMode(null);
+
+      // Reload page data
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to book travel");
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   const getTransportIcon = (type: string) => {
@@ -125,127 +177,67 @@ const Travel = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Travel Hub</h1>
-          <p className="text-muted-foreground">
-            Manage your location and plan your journey across the music world.
-          </p>
-        </div>
-        <Button onClick={() => setBookingDialogOpen(true)} size="lg">
-          <Plane className="h-4 w-4 mr-2" />
-          Book Travel
-        </Button>
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Globe className="h-8 w-8 text-primary" />
+          Travel Hub
+        </h1>
+        <p className="text-muted-foreground">
+          Explore the world and travel to new cities for gigs, recording, and more.
+        </p>
       </header>
 
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      {/* Current Location Card */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <MapPin className="h-5 w-5 text-primary" />
-            Current Location
+            Your Location
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           {currentCity ? (
-            <>
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="text-2xl font-bold">{currentCity.name}</h2>
                 <p className="text-muted-foreground">{currentCity.country}</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge variant="secondary">🎵 Music Scene: {currentCity.music_scene}%</Badge>
+                  {currentCity.is_coastal && <Badge variant="outline">🏖️ Coastal</Badge>}
+                  {currentCity.has_train_network && <Badge variant="outline">🚄 Rail Hub</Badge>}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">Music Scene: {currentCity.music_scene}%</Badge>
-                <Badge variant="outline">Population: {(currentCity.population / 1_000_000).toFixed(1)}M</Badge>
-                <Badge variant="outline">Cost of Living: {currentCity.cost_of_living}%</Badge>
-              </div>
-              <div className="flex gap-3">
-                <Button asChild>
+              <div className="flex gap-2">
+                <Button asChild variant="outline">
                   <Link to={`/cities/${currentCity.id}`}>Explore City</Link>
                 </Button>
-                <Button variant="outline" asChild>
-                  <Link to="/cities">View All Cities</Link>
-                </Button>
+                <Badge variant="secondary" className="text-lg px-4 py-2">
+                  💰 ${(profile?.cash || 0).toLocaleString()}
+                </Badge>
               </div>
-            </>
+            </div>
           ) : (
             <Alert>
               <MapPin className="h-4 w-4" />
               <AlertTitle>No Location Set</AlertTitle>
               <AlertDescription>
                 You haven't set your current location yet. All players start in London by default.
-                <Button variant="link" asChild className="pl-0">
-                  <Link to="/cities">Explore cities to set your location</Link>
-                </Button>
               </AlertDescription>
             </Alert>
           )}
         </CardContent>
       </Card>
 
+      {/* Destination Browser */}
       {currentCity && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Available Routes from {currentCity.name}
-            </CardTitle>
-            <CardDescription>Choose your next destination</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {availableRoutes.length === 0 ? (
-              <Alert>
-                <Clock className="h-4 w-4" />
-                <AlertTitle>No Routes Available</AlertTitle>
-                <AlertDescription>
-                  No direct routes are available from this city yet. Check back later as we expand our travel network!
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="grid gap-3">
-                {availableRoutes.map((route) => (
-                  <Card key={route.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-full bg-primary/10 p-2">
-                            {getTransportIcon(route.transport_type)}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold">
-                              {route.to_city?.name}, {route.to_city?.country}
-                            </h4>
-                            <p className="text-sm text-muted-foreground capitalize">
-                              via {route.transport_type}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {route.duration_hours}h
-                            </div>
-                            <div className="flex items-center gap-1 text-sm font-semibold">
-                              <DollarSign className="h-3 w-3" />
-                              {route.base_cost}
-                            </div>
-                          </div>
-                          <Button 
-                            size="sm"
-                            onClick={() => setBookingDialogOpen(true)}
-                          >
-                            Book
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TravelDestinationBrowser
+          currentCityId={currentCity.id}
+          currentCityName={currentCity.name}
+          onSelectDestination={handleSelectDestination}
+        />
       )}
 
+      {/* Travel History */}
       {travelHistory.length > 0 && (
         <Card>
           <CardHeader>
@@ -253,7 +245,7 @@ const Travel = () => {
               <History className="h-5 w-5" />
               Travel History
             </CardTitle>
-            <CardDescription>Your recent journeys across the music world</CardDescription>
+            <CardDescription>Your recent journeys</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -270,17 +262,19 @@ const Travel = () => {
                 {travelHistory.map((trip) => (
                   <TableRow key={trip.id}>
                     <TableCell className="font-medium">
-                      <div className="space-y-1">
+                      <div className="flex items-center gap-2">
                         {trip.from_city && (
-                          <div className="text-xs text-muted-foreground">
-                            From: {trip.from_city.name}
-                          </div>
+                          <span className="text-muted-foreground">{trip.from_city.name}</span>
                         )}
-                        <div>To: {trip.to_city.name}</div>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        <span>{trip.to_city.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{trip.transport_type}</Badge>
+                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                        {getTransportIcon(trip.transport_type)}
+                        <span className="capitalize">{trip.transport_type}</span>
+                      </Badge>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {formatDuration(trip.travel_duration_hours)}
@@ -299,12 +293,63 @@ const Travel = () => {
         </Card>
       )}
 
-      <TravelBookingDialog
-        open={bookingDialogOpen}
-        onOpenChange={setBookingDialogOpen}
-        currentCityId={currentCity?.id || null}
-        currentCityName={currentCity ? `${currentCity.name}, ${currentCity.country}` : undefined}
-      />
+      {/* Booking Dialog */}
+      <Dialog open={!!selectedDestination} onOpenChange={(open) => !open && setSelectedDestination(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plane className="h-5 w-5" />
+              Travel to {selectedDestination?.city.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDestination?.city.country} • {selectedDestination?.distanceKm.toLocaleString()} km away
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDestination && (
+            <div className="space-y-4">
+              {/* City Info */}
+              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{currentCity?.name}</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">{selectedDestination.city.name}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {selectedDestination.city.music_scene}% Music Scene
+                  </div>
+                </div>
+              </div>
+
+              {/* Transport Options */}
+              <TransportComparison
+                options={selectedDestination.options}
+                selectedMode={selectedMode}
+                onSelectMode={setSelectedMode}
+                userCash={profile?.cash || 0}
+              />
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setSelectedDestination(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBookTravel}
+              disabled={!selectedMode || isBooking || !selectedDestination?.options.find(o => o.mode === selectedMode)?.available}
+            >
+              {isBooking ? "Booking..." : `Book Travel`}
+              {selectedMode && selectedDestination?.options.find(o => o.mode === selectedMode) && (
+                <span className="ml-2">
+                  (${selectedDestination.options.find(o => o.mode === selectedMode)?.cost})
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
