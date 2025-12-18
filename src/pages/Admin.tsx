@@ -8,7 +8,7 @@ import { Shield, LayoutDashboard } from "lucide-react";
 import { AdminNav, adminCategories } from "@/components/admin/AdminNav";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { NationalSelectionsRunner } from "@/components/admin/NationalSelectionsRunner";
+
 
 const Admin = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,8 +47,7 @@ const Admin = () => {
           </Badge>
         </div>
 
-        {/* Quick Actions */}
-        <NationalSelectionsRunner />
+        {/* Quick Actions removed - Eurovision now managed via /admin/eurovision */}
 
         {/* Search */}
         <div className="max-w-md">

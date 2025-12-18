@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,32 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Sparkles, Music2, Trophy, Vote, Loader2, CheckCircle, Crown, Flag, Play } from "lucide-react";
+import { Sparkles, Music2, Trophy, Vote, Loader2, CheckCircle, Crown, Flag, Play, Pause } from "lucide-react";
+
+// Simple inline audio player component
+function SimpleAudioPlayer({ audioUrl, title }: { audioUrl: string; title: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} />
+      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={togglePlay}>
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </Button>
+    </div>
+  );
+}
 const EUROVISION_COUNTRIES = [
   "Albania", "Armenia", "Australia", "Austria", "Azerbaijan", "Belgium", "Bulgaria", 
   "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland", "France", 
@@ -281,9 +306,9 @@ export default function Eurovision() {
                   <CheckCircle className="h-6 w-6 text-emerald-500" />
                 </div>
                 {userEntry.song?.audio_url && (
-                  <SongPlayer 
+                  <SimpleAudioPlayer 
                     audioUrl={userEntry.song.audio_url} 
-                    title={userEntry.song.title} 
+                    title={userEntry.song.title || "Song"} 
                   />
                 )}
                 <Button 
@@ -415,10 +440,9 @@ export default function Eurovision() {
                         <div className="flex items-center gap-2">
                           {entry.song?.title || "Unknown"}
                           {entry.song?.audio_url && (
-                            <SongPlayer 
+                            <SimpleAudioPlayer 
                               audioUrl={entry.song.audio_url} 
                               title={entry.song.title || "Song"} 
-                              compact
                             />
                           )}
                         </div>
