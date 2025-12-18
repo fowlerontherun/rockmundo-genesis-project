@@ -3,7 +3,7 @@ import { Gift, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { claimBirthdayReward, calculateInGameAge } from "@/utils/gameCalendar";
+import { claimBirthdayReward } from "@/utils/gameCalendar";
 import { useQueryClient } from "@tanstack/react-query";
 import type { InGameDate } from "@/utils/gameCalendar";
 
@@ -11,8 +11,7 @@ interface BirthdayNotificationProps {
   userId: string;
   profileId: string;
   gameYear: number;
-  birthDate: Date;
-  createdAt: Date;
+  playerAge: number;
   inGameDate: InGameDate;
 }
 
@@ -20,14 +19,14 @@ export function BirthdayNotification({
   userId,
   profileId,
   gameYear,
-  birthDate,
-  createdAt,
+  playerAge,
   inGameDate,
 }: BirthdayNotificationProps) {
   const [claiming, setClaiming] = useState(false);
   const queryClient = useQueryClient();
 
-  const age = calculateInGameAge(birthDate, createdAt, inGameDate);
+  // Age is passed directly now
+  const age = playerAge;
 
   const handleClaim = async () => {
     setClaiming(true);
