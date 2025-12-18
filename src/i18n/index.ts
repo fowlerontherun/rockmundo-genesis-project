@@ -1,5 +1,6 @@
 import { en, type TranslationKeys } from './en';
 import { es } from './es';
+import { tr } from './tr';
 
 export type Language = 'en' | 'es' | 'zh' | 'hi' | 'ar' | 'pt' | 'bn' | 'ru' | 'ja' | 'pa' | 'de' | 'jv' | 'ko' | 'fr' | 'te' | 'mr' | 'tr' | 'ta' | 'vi' | 'it';
 
@@ -7,6 +8,7 @@ export type Language = 'en' | 'es' | 'zh' | 'hi' | 'ar' | 'pt' | 'bn' | 'ru' | '
 export const translations: Record<Language, TranslationKeys> = {
   en,
   es,
+  tr, // Turkish - fully translated
   // Other languages fall back to English for now
   zh: en,
   hi: en,
@@ -22,7 +24,6 @@ export const translations: Record<Language, TranslationKeys> = {
   fr: en,
   te: en,
   mr: en,
-  tr: en,
   ta: en,
   vi: en,
   it: en,
