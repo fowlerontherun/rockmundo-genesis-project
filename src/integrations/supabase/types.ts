@@ -8700,6 +8700,96 @@ export type Database = {
         }
         Relationships: []
       }
+      player_investments: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_value: number
+          growth_rate: number | null
+          id: string
+          invested_amount: number
+          investment_name: string
+          notes: string | null
+          purchased_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          current_value: number
+          growth_rate?: number | null
+          id?: string
+          invested_amount: number
+          investment_name: string
+          notes?: string | null
+          purchased_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_value?: number
+          growth_rate?: number | null
+          id?: string
+          invested_amount?: number
+          investment_name?: string
+          notes?: string | null
+          purchased_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      player_loans: {
+        Row: {
+          created_at: string | null
+          due_date: string
+          id: string
+          interest_rate: number
+          loan_name: string
+          principal: number
+          remaining_balance: number
+          started_at: string | null
+          status: string | null
+          total_paid: number | null
+          updated_at: string | null
+          user_id: string
+          weekly_payment: number
+        }
+        Insert: {
+          created_at?: string | null
+          due_date: string
+          id?: string
+          interest_rate: number
+          loan_name: string
+          principal: number
+          remaining_balance: number
+          started_at?: string | null
+          status?: string | null
+          total_paid?: number | null
+          updated_at?: string | null
+          user_id: string
+          weekly_payment: number
+        }
+        Update: {
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          interest_rate?: number
+          loan_name?: string
+          principal?: number
+          remaining_balance?: number
+          started_at?: string | null
+          status?: string | null
+          total_paid?: number | null
+          updated_at?: string | null
+          user_id?: string
+          weekly_payment?: number
+        }
+        Relationships: []
+      }
       player_mentor_sessions: {
         Row: {
           attribute_gains: Json
