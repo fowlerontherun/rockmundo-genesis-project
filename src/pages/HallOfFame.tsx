@@ -7,10 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getHallOfFame } from "@/utils/retirement";
+import { useTranslation } from "@/hooks/useTranslation";
 
 type SortType = "fame" | "wealth" | "songs" | "gigs";
 
 export default function HallOfFame() {
+  const { t } = useTranslation();
   const [sortBy, setSortBy] = useState<SortType>("fame");
 
   const { data: legends, isLoading } = useQuery({

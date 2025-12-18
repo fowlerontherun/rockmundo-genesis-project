@@ -301,10 +301,10 @@ const Travel = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plane className="h-5 w-5" />
-              Travel to {selectedDestination?.city.name}
+              {t('travel.travelTo', 'Travel to')} {selectedDestination?.city.name}
             </DialogTitle>
             <DialogDescription>
-              {selectedDestination?.city.country} • {selectedDestination?.distanceKm.toLocaleString()} km away
+              {selectedDestination?.city.country} • {selectedDestination?.distanceKm.toLocaleString()} km
             </DialogDescription>
           </DialogHeader>
 
@@ -319,7 +319,7 @@ const Travel = () => {
                     <span className="font-semibold">{selectedDestination.city.name}</span>
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    {selectedDestination.city.music_scene}% Music Scene
+                    {selectedDestination.city.music_scene}% {t('travel.musicScene')}
                   </div>
                 </div>
               </div>
@@ -336,13 +336,13 @@ const Travel = () => {
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setSelectedDestination(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleBookTravel}
               disabled={!selectedMode || isBooking || !selectedDestination?.options.find(o => o.mode === selectedMode)?.available}
             >
-              {isBooking ? "Booking..." : `Book Travel`}
+              {isBooking ? t('travel.booking') : t('travel.bookTravel')}
               {selectedMode && selectedDestination?.options.find(o => o.mode === selectedMode) && (
                 <span className="ml-2">
                   (${selectedDestination.options.find(o => o.mode === selectedMode)?.cost})

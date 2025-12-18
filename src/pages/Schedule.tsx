@@ -6,8 +6,10 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const Schedule = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());

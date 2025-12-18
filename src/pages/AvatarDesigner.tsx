@@ -9,6 +9,7 @@ import { ReadyPlayerMeCreator } from "@/components/avatar-designer/ReadyPlayerMe
 import { ReadyPlayerMeAvatar } from "@/components/avatar-system/ReadyPlayerMeAvatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useTranslation } from "@/hooks/useTranslation";
 import * as THREE from "three";
 
 type ViewPreset = 'full' | 'upper' | 'head';
@@ -80,6 +81,7 @@ const AvatarPreviewScene = ({ avatarUrl, viewPreset, autoRotate, controlsRef }: 
 };
 
 const AvatarDesigner = () => {
+  const { t } = useTranslation();
   const {
     avatarConfig,
     isLoading,
@@ -146,21 +148,21 @@ const AvatarDesigner = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-oswald">Avatar</h1>
+          <h1 className="text-2xl font-bold font-oswald">{t('nav.avatar')}</h1>
           <p className="text-sm text-muted-foreground">
-            {hasAvatar ? 'Your 3D avatar for performances' : 'Create your unique 3D avatar'}
+            {hasAvatar ? t('character.avatarCreated', 'Your 3D avatar for performances') : t('character.createAvatar', 'Create your unique 3D avatar')}
           </p>
         </div>
         <div className="flex gap-2">
           {hasAvatar && (
             <Button variant="outline" onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-2" />
-              Remove
+              {t('common.delete')}
             </Button>
           )}
           <Button onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? t('character.saving') : t('common.save')}
           </Button>
         </div>
       </div>

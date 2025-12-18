@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const YEAR_OPTIONS = ["all", 2025, 2024, 2023] as const;
 
@@ -14,6 +15,7 @@ const formatYearLabel = (value: (typeof YEAR_OPTIONS)[number]) =>
   value === "all" ? "All time" : value.toString();
 
 const OverviewPage = () => {
+  const { t } = useTranslation();
   const [year, setYear] = useState<(typeof YEAR_OPTIONS)[number]>("all");
 
   // Fetch aggregate game stats

@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useGameData } from "@/hooks/useGameData";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useEquipPlayerEquipment } from "@/hooks/usePlayerEquipmentMutations";
+import { useTranslation } from "@/hooks/useTranslation";
 import { 
   Guitar, 
   ShoppingCart, 
@@ -54,6 +55,7 @@ const statIcons: Record<string, any> = {
 };
 
 export default function Gear() {
+  const { t } = useTranslation();
   const { profile } = useGameData();
   const userId = profile?.user_id;
   
