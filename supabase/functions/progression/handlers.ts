@@ -124,10 +124,10 @@ export async function handleSpendAttributeXp(
 
   // Auto-create attributes if missing
   if (!attrs) {
-    console.log(`[SpendAttributeXp] Creating missing player_attributes for profile: ${profileId}`);
+    console.log(`[SpendAttributeXp] Creating missing player_attributes for profile: ${profileId}, user: ${userId}`);
     const { data: newAttrs, error: createError } = await client
       .from("player_attributes")
-      .insert({ profile_id: profileId })
+      .insert({ profile_id: profileId, user_id: userId })
       .select()
       .single();
     
