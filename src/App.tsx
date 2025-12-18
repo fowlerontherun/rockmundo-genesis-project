@@ -71,7 +71,7 @@ const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
-const TourManagerNew = lazyWithRetry(() => import("./pages/TourManagerNew"));
+// TourManagerNew removed - using TourManager instead
 const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
@@ -228,7 +228,7 @@ function App() {
                     <Route path="wellness" element={<WellnessPage />} />
                     <Route path="underworld" element={<UnderworldNew />} />
                     <Route path="dikcok" element={<DikCok />} />
-                    <Route path="tour-manager" element={<TourManagerNew />} />
+                    <Route path="tour-manager" element={<TourManager />} />
                     <Route path="streaming" element={<StreamingNew />} />
                     <Route path="music/charts" element={<ChartsPage />} />
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
