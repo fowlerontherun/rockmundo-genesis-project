@@ -52,7 +52,7 @@ serve(async (req) => {
         release_type,
         bands(fame, popularity, chemistry_level),
         release_formats(id, format_type, retail_price, quantity),
-        release_songs(song:songs(quality_score))
+        release_songs!release_songs_release_id_fkey(song:songs(quality_score))
       `)
       .eq("release_status", "released");
 

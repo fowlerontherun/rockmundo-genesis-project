@@ -134,7 +134,7 @@ export function SongSelectionStep({
       if (isGreatestHits) {
         const { data: releasedSongIds } = await supabase
           .from("release_songs")
-          .select("song_id, releases!inner(release_status)")
+          .select("song_id, releases!release_songs_release_id_fkey!inner(release_status)")
           .eq("releases.release_status", "released");
         
         const releasedIds = new Set(releasedSongIds?.map(rs => rs.song_id) || []);

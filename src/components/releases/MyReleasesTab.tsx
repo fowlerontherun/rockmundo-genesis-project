@@ -58,7 +58,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         .from("releases")
         .select(`
           *,
-          release_songs(
+          release_songs!release_songs_release_id_fkey(
             song_id,
             is_b_side,
             track_number,
