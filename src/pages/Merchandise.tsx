@@ -804,11 +804,11 @@ const Merchandise = () => {
                       <TableRow>
                         <TableHead>Product</TableHead>
                         <TableHead className="hidden xl:table-cell">Category</TableHead>
+                        <TableHead>Quality</TableHead>
                         <TableHead>Cost</TableHead>
                         <TableHead>Sale</TableHead>
                         <TableHead>Stock</TableHead>
                         <TableHead className="hidden lg:table-cell">Potential</TableHead>
-                        <TableHead className="hidden lg:table-cell">Margin</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -818,6 +818,8 @@ const Merchandise = () => {
                         const unitProfit = safeNumber(product.selling_price) - safeNumber(product.cost_to_produce);
                         const potential = safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
                         const status = getStatus(product.stock_quantity);
+                        const qualityTier = (product as any).quality_tier || 'basic';
+                        const qualityInfo = QUALITY_TIERS[qualityTier as keyof typeof QUALITY_TIERS] || QUALITY_TIERS.basic;
 
                         return (
                           <TableRow key={product.id}>
@@ -830,11 +832,15 @@ const Merchandise = () => {
                               </div>
                             </TableCell>
                             <TableCell className="hidden xl:table-cell">{formatProductType(product.item_type)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-xs ${qualityInfo.color}`}>
+                                {qualityInfo.label}
+                              </Badge>
+                            </TableCell>
                             <TableCell>{currencyFormatter.format(safeNumber(product.cost_to_produce))}</TableCell>
                             <TableCell>{currencyFormatter.format(safeNumber(product.selling_price))}</TableCell>
                             <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
                             <TableCell className="hidden lg:table-cell">{currencyFormatter.format(potential)}</TableCell>
-                            <TableCell className="hidden lg:table-cell">{percentFormatter.format(margin)}</TableCell>
                             <TableCell>
                               <Badge variant={statusVariants[status]}>{statusLabels[status]}</Badge>
                             </TableCell>
@@ -855,6 +861,30 @@ const Merchandise = () => {
             </Card>
 
             <div className="space-y-6">
+              {/* Quality Distribution Card */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Quality Distribution</CardTitle>
+                  <CardDescription className="text-xs">Higher quality = better sales velocity</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {Object.entries(QUALITY_TIERS).map(([tier, info]) => {
+                    const count = Array.isArray(merchandise) 
+                      ? merchandise.filter((p: any) => (p.quality_tier || 'basic') === tier).length 
+                      : 0;
+                    return (
+                      <div key={tier} className="flex items-center justify-between text-xs">
+                        <span className={`font-medium ${info.color}`}>{info.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{count} items</span>
+                          <span className="text-muted-foreground">({info.salesMultiplier}x)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Category Breakdown</CardTitle>
