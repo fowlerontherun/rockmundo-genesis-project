@@ -10,10 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Calendar, MapPin, Music, DollarSign, ArrowLeft, Plus } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTours } from "@/hooks/useTours";
+import { useAuth } from "@/hooks/use-auth-context";
 import { format } from "date-fns";
 
 export default function TourManagerNew() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { tours, tourGigs, venues, createTour, addGigToTour } = useTours(undefined);
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -22,11 +24,12 @@ export default function TourManagerNew() {
   const [endDate, setEndDate] = useState("");
 
   const handleCreateTour = () => {
-    if (!tourName || !startDate || !endDate) return;
+    if (!tourName || !startDate || !endDate || !user) return;
 
     createTour.mutate({
       name: tourName,
-      artistId: "temp-band-id",
+      bandId: null,
+      userId: user.id,
       startDate,
       endDate,
     }, {

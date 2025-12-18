@@ -6,14 +6,15 @@ export type TourRecord = Tables<"tours">;
 
 export interface CreateTourInput {
   name: TourRecord["name"];
-  artistId: TourRecord["artist_id"];
+  bandId: TourRecord["band_id"];
   startDate: TourRecord["start_date"];
   endDate: TourRecord["end_date"];
+  userId: TourRecord["user_id"];
 }
 
 export interface UpdateTourInput {
   name?: TourRecord["name"];
-  artistId?: TourRecord["artist_id"];
+  bandId?: TourRecord["band_id"];
   startDate?: TourRecord["start_date"];
   endDate?: TourRecord["end_date"];
 }
@@ -25,8 +26,12 @@ const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>) => {
     payload.name = input.name;
   }
 
-  if (input.artistId !== undefined) {
-    payload.artist_id = input.artistId;
+  if (input.bandId !== undefined) {
+    payload.band_id = input.bandId;
+  }
+
+  if ((input as CreateTourInput).userId !== undefined) {
+    payload.user_id = (input as CreateTourInput).userId;
   }
 
   if (input.startDate !== undefined) {
@@ -40,11 +45,11 @@ const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>) => {
   return payload;
 };
 
-export const listTours = async (artistId?: string): Promise<TourRecord[]> => {
+export const listTours = async (bandId?: string): Promise<TourRecord[]> => {
   let query = supabase.from("tours").select("*").order("start_date", { ascending: true });
 
-  if (artistId) {
-    query = query.eq("artist_id", artistId);
+  if (bandId) {
+    query = query.eq("band_id", bandId);
   }
 
   const { data, error } = await query;
