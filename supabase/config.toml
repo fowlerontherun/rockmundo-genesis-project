@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.complete-open-mic]
 verify_jwt = false
+
+[functions.bot-engagement]
+verify_jwt = false

@@ -16,10 +16,12 @@ import { useTwaaterBookmarks } from "@/hooks/useTwaaterBookmarks";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
 import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
-import { Home, TrendingUp, AtSign, Bookmark } from "lucide-react";
+import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
+import { Home, TrendingUp, AtSign, Bookmark, Search, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useNavigate } from "react-router-dom";
 
 export default function Twaater() {
   const { profile } = useGameData();
@@ -28,6 +30,7 @@ export default function Twaater() {
   const { account, isLoading: accountLoading } = useTwaaterAccount(selectedOwnerType, selectedOwnerId);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const { bookmarks } = useTwaaterBookmarks(activeAccountId || account?.id);
+  const navigate = useNavigate();
 
   // Use either the switched account or the default account
   const currentAccountId = activeAccountId || account?.id;
@@ -47,6 +50,21 @@ export default function Twaater() {
     enabled: !!currentAccountId,
   });
 
+  // Fetch follower count for current account
+  const { data: followerCount } = useQuery({
+    queryKey: ["twaater-follower-count", currentAccountId],
+    queryFn: async () => {
+      if (!currentAccountId) return 0;
+      const { count, error } = await supabase
+        .from("twaater_follows")
+        .select("*", { count: "exact", head: true })
+        .eq("followed_account_id", currentAccountId);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentAccountId,
+  });
+
   const displayAccount = currentAccount || account;
 
   if (!profile || accountLoading) return <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}><p>Loading...</p></div>;
@@ -59,7 +77,18 @@ export default function Twaater() {
         <div className="flex-1 max-w-2xl">
           <div className="sticky top-0 z-50 border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "hsl(var(--twaater-bg))", borderColor: "hsl(var(--twaater-border))" }}>
             <TwaaterLogo size="md" />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Follower count display */}
+              {currentAccountId && (
+                <button
+                  onClick={() => navigate(`/twaater/profile/${displayAccount?.handle}`)}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-[hsl(var(--twaater-purple)_/_0.1)] transition-colors text-sm"
+                >
+                  <Users className="h-4 w-4 text-[hsl(var(--twaater-purple))]" />
+                  <span className="font-medium">{followerCount?.toLocaleString() || 0}</span>
+                  <span className="text-muted-foreground hidden sm:inline">followers</span>
+                </button>
+              )}
               {displayAccount && profile?.user_id && (
                 <TwaaterAccountSwitcher
                   currentAccount={displayAccount}
@@ -72,10 +101,14 @@ export default function Twaater() {
           </div>
 
           <Tabs defaultValue="feed" className="w-full">
-            <TabsList className="grid w-full grid-cols-4" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+            <TabsList className="grid w-full grid-cols-5" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
               <TabsTrigger value="feed" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                 <Home className="h-4 w-4" />
                 <span className="hidden sm:inline">Feed</span>
+              </TabsTrigger>
+              <TabsTrigger value="search" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline">Search</span>
               </TabsTrigger>
               <TabsTrigger value="trending" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                 <TrendingUp className="h-4 w-4" />
@@ -87,7 +120,7 @@ export default function Twaater() {
               </TabsTrigger>
               <TabsTrigger value="bookmarks" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                 <Bookmark className="h-4 w-4" />
-                <span className="hidden sm:inline">Bookmarks</span>
+                <span className="hidden sm:inline">Saved</span>
               </TabsTrigger>
             </TabsList>
 
@@ -96,6 +129,10 @@ export default function Twaater() {
                 {currentAccountId && <TwaaterComposer accountId={currentAccountId} />}
               </div>
               <TwaaterFeed viewerAccountId={currentAccountId} feedType="feed" />
+            </TabsContent>
+
+            <TabsContent value="search" className="mt-0 p-4">
+              {currentAccountId && <TwaaterSearch currentAccountId={currentAccountId} />}
             </TabsContent>
 
             <TabsContent value="trending" className="mt-0"><TrendingSection viewerAccountId={currentAccountId} /></TabsContent>
