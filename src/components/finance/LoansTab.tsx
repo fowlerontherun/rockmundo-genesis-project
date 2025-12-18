@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Landmark, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, addWeeks } from "date-fns";

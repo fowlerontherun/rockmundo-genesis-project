@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrendingUp, Plus, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { PlayerInvestment, InvestmentOption } from "@/hooks/useFinances";
