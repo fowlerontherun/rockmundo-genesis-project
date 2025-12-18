@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useTranslation } from "@/hooks/useTranslation";
 import {
   useSongwritingData,
   type SongwritingProject,
@@ -382,6 +383,7 @@ const getProgressPercent = (value?: number | null) => {
   return Math.min(100, Math.round((value / PROGRESS_TARGET) * 100));
 };
 const Songwriting = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
   const {
@@ -1177,23 +1179,23 @@ const Songwriting = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              Songwriting Studio - Locked
+              {t('songwriting.title')} - {t('songwriting.locked')}
             </CardTitle>
             <CardDescription>
-              You need to train your basic composing skills to unlock songwriting.
+              {t('songwriting.unlockGenreSkill')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Required: <strong>Songwriting Basic Composing</strong> level 10 or higher
+              {t('songwriting.genreRequired')}
             </p>
             <p className="text-sm text-muted-foreground">
-              Head to the Skills page to train your songwriting abilities and unlock this feature.
+              {t('songwriting.unlockGenreSkill')}
             </p>
             <Button asChild>
               <Link to="/skills">
                 <Music className="mr-2 h-4 w-4" />
-                Train Skills
+                {t('skills.title')}
               </Link>
             </Button>
           </CardContent>
@@ -1206,7 +1208,7 @@ const Songwriting = () => {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading songwriting studio...</div>
+          <div className="text-muted-foreground">{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -1219,10 +1221,10 @@ const Songwriting = () => {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Music className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-              Songwriting Studio
+              {t('songwriting.title')}
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
-              Create songwriting sprints, track progress, and convert to songs.
+              {t('songwriting.subtitle')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -1233,7 +1235,7 @@ const Songwriting = () => {
               disabled={isRefreshing}
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              {isRefreshing ? 'Checking...' : 'Refresh Sessions'}
+              {isRefreshing ? t('common.loading') : t('songwriting.refreshSessions')}
             </Button>
           </div>
         </div>
@@ -1241,7 +1243,7 @@ const Songwriting = () => {
           <DialogTrigger asChild>
             <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
               <Plus className="mr-2 h-4 w-4" />
-              New Project
+              {t('songwriting.newProject')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-3xl">
