@@ -100,8 +100,25 @@ export async function executeGigPerformance(data: GigExecutionData) {
 
   const equipmentQuality = Math.min(100, baseEquipmentQuality + gearEffects.equipmentQualityBonus);
 
+  // Calculate crew skill level factoring in star ratings and cohesion
   const crewSkillLevel = crew.length > 0
-    ? crew.reduce((sum, c) => sum + c.skill_level, 0) / crew.length
+    ? crew.reduce((sum, c) => {
+        const baseSkill = c.skill_level || 50;
+        const starRating = (c as any).star_rating || 5;
+        const cohesion = (c as any).cohesion_rating || 0;
+        
+        // Star rating bonus: each star above 5 adds 2%, below 5 subtracts 2%
+        const starBonus = (starRating - 5) * 2;
+        
+        // Cohesion bonus: 0-20 = -10%, 21-50 = 0%, 51-80 = +5%, 81-100 = +10%
+        let cohesionBonus = 0;
+        if (cohesion <= 20) cohesionBonus = -10;
+        else if (cohesion <= 50) cohesionBonus = 0;
+        else if (cohesion <= 80) cohesionBonus = 5;
+        else cohesionBonus = 10;
+        
+        return sum + baseSkill + starBonus + cohesionBonus;
+      }, 0) / crew.length
     : 40;
 
   const bandChemistry = band.chemistry_level || 0;
