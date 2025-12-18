@@ -58,12 +58,22 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   if (profileError) throw profileError;
 
-  // Deduct cost only - do NOT update current_city_id yet
-  // Player will move to new city only after travel completes
+  // Calculate arrival time for setting travel status
+  const departureTime = scheduledDepartureTime || new Date().toISOString();
+  const departureDate = new Date(departureTime);
+  const arrivalTimeCalc = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000).toISOString();
+  
+  // Determine if travel starts immediately or is scheduled for later
+  const now = new Date();
+  const startsImmediately = departureDate <= now;
+  
+  // Deduct cost and set travel status if starting immediately
   const { error: updateError } = await supabase
     .from("profiles")
     .update({ 
-      cash: (profile.cash || 0) - cost
+      cash: (profile.cash || 0) - cost,
+      is_traveling: startsImmediately,
+      travel_arrives_at: startsImmediately ? arrivalTimeCalc : null,
     })
     .eq("user_id", userId);
 
@@ -83,13 +93,8 @@ export async function bookTravel(bookingData: TravelBookingData) {
     .single();
 
   // Create travel history entry
-  const departureTime = scheduledDepartureTime || new Date().toISOString();
-  const departureDate = new Date(departureTime);
-  const arrivalTime = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000).toISOString();
-  
-  // Determine status: if departure is in the future, it's scheduled; if now, it's in progress
-  const now = new Date();
-  const status = departureDate > now ? 'scheduled' : 'in_progress';
+  const arrivalTime = arrivalTimeCalc;
+  const status = startsImmediately ? 'in_progress' : 'scheduled';
   
   const { error: historyError } = await supabase
     .from("player_travel_history")

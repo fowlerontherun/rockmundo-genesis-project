@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useGameData } from "@/hooks/useGameData";
+import { useTravelStatus } from "@/hooks/useTravelStatus";
+import { TravelProgressOverlay } from "@/components/travel/TravelProgressOverlay";
 import { Lock } from "lucide-react";
 
 interface CharacterGateProps {
@@ -11,6 +13,7 @@ interface CharacterGateProps {
 
 export const CharacterGate = ({ children }: CharacterGateProps) => {
   const { loading, error, profile, refetch } = useGameData();
+  const { travelStatus, cancelTravel } = useTravelStatus();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,6 +25,18 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
   // Paths allowed while imprisoned
   const allowedWhileImprisoned = ["/prison", "/songwriting", "/my-character", "/"];
   const isAllowedWhileImprisoned = allowedWhileImprisoned.some(p => location.pathname.startsWith(p));
+
+  // Paths allowed while traveling (limited activities)
+  const allowedWhileTraveling = [
+    "/songwriting", 
+    "/library", 
+    "/twaater", 
+    "/dikcok",
+    "/my-character",
+    "/travel",
+    "/"
+  ];
+  const isAllowedWhileTraveling = allowedWhileTraveling.some(p => location.pathname.startsWith(p));
 
   if (loading) {
     return (
@@ -79,6 +94,27 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Travel blocking - show travel overlay when traveling and trying to access restricted areas
+  if (travelStatus?.is_traveling && !isAllowedWhileTraveling && travelStatus.destination_city_name) {
+    const handleCancelTravel = () => {
+      if (travelStatus.travel_id) {
+        cancelTravel(travelStatus.travel_id);
+      }
+    };
+    
+    return (
+      <TravelProgressOverlay
+        destinationCity={travelStatus.destination_city_name}
+        departureCity={travelStatus.current_city_name || undefined}
+        arrivalTime={new Date(travelStatus.travel_arrives_at || Date.now())}
+        departureTime={new Date(travelStatus.departure_time || Date.now())}
+        transportType={travelStatus.transport_type || "plane"}
+        onCancel={handleCancelTravel}
+        canCancel={!!travelStatus.travel_id}
+      />
     );
   }
 

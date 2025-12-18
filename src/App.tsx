@@ -189,6 +189,7 @@ const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
 const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
+const BandVehicles = lazyWithRetry(() => import("./pages/BandVehicles"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const Prison = lazyWithRetry(() => import("./pages/Prison"));
@@ -263,6 +264,7 @@ function App() {
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
+                    <Route path="band-vehicles" element={<BandVehicles />} />
                     <Route path="relationships" element={<Relationships />} />
                     {/* <Route path="public-relations" element={<PublicRelations />} /> */}
                     {/* <Route path="pr" element={<PublicRelations />} /> */}
