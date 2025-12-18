@@ -68,8 +68,13 @@ export function BandProfileEdit({
 
     setUploading(true);
     try {
+      // Get current user for storage policy compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const fileExt = file.name.split(".").pop();
-      const fileName = `band-logos/${bandId}-${Date.now()}.${fileExt}`;
+      // Use user's auth.uid as folder prefix to comply with storage policy
+      const fileName = `${user.id}/band-logo-${bandId}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
