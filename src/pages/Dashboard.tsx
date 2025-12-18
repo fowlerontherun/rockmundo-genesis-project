@@ -15,6 +15,7 @@ import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector"
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
+import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
 
 // Advisor imports
 import { Link } from "react-router-dom";
@@ -218,6 +219,8 @@ const Dashboard = () => {
         </div>
         
       </div>
+
+      <DebtWarningBanner />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
