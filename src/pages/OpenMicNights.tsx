@@ -89,6 +89,7 @@ export default function OpenMicNights() {
       song1Id: song1Id,
       song2Id: song2Id,
       scheduledDate,
+      venueName: venue.name,
     });
   };
 

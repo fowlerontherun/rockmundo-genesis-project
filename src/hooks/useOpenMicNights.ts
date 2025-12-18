@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { checkTimeSlotAvailable, createScheduledActivity } from "@/hooks/useActivityBooking";
 
 export interface OpenMicVenue {
   id: string;
@@ -176,15 +177,30 @@ export function useSignUpForOpenMic() {
       song1Id,
       song2Id,
       scheduledDate,
+      venueName,
     }: {
       venueId: string;
       bandId: string;
       song1Id: string;
       song2Id: string;
       scheduledDate: Date;
+      venueName: string;
     }) => {
       if (!user) throw new Error('Must be logged in');
 
+      // Check if time slot is available (open mic is ~30 min for 2 songs)
+      const endDate = new Date(scheduledDate.getTime() + 30 * 60 * 1000);
+      const { available, conflictingActivity } = await checkTimeSlotAvailable(
+        user.id,
+        scheduledDate,
+        endDate
+      );
+
+      if (!available) {
+        throw new Error(`Time slot conflicts with: ${conflictingActivity?.title || 'another activity'}`);
+      }
+
+      // Create the open mic performance record
       const { data, error } = await supabase
         .from('open_mic_performances')
         .insert({
@@ -200,14 +216,28 @@ export function useSignUpForOpenMic() {
         .single();
 
       if (error) throw error;
+
+      // Create scheduled activity to block the time slot
+      await createScheduledActivity({
+        userId: user.id,
+        bandId,
+        activityType: 'open_mic',
+        scheduledStart: scheduledDate,
+        scheduledEnd: endDate,
+        title: `Open Mic at ${venueName}`,
+        description: 'Open mic night performance - 2 songs',
+        linkedOpenMicId: data.id,
+      });
+
       return data;
     },
     onSuccess: () => {
       toast({
         title: "Signed up!",
-        description: "You're registered for open mic night.",
+        description: "You're registered for open mic night. It's been added to your schedule.",
       });
       queryClient.invalidateQueries({ queryKey: ['open-mic-performances'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
     },
     onError: (error) => {
       toast({
