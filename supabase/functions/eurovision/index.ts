@@ -1,563 +1,258 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { safeJson } from "../_shared/job-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-triggered-by",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type EurovisionPhase =
-  | "SubmissionsOpen"
-  | "SelectionsDone"
-  | "EventLive"
-  | "VotingClosed"
-  | "Results";
+type EurovisionAction = "get-event" | "submit-entry" | "cast-vote" | "advance-phase";
 
-type SubmissionStatus = "Pending" | "Selected" | "Rejected";
-
-type EurovisionRequest =
-  | ({ action: "submit" } & SubmitPayload)
-  | { action: "run-selections"; year: number }
-  | { action: "start-event"; year: number }
-  | ({ action: "cast-vote" } & CastVotePayload)
-  | ({ action: "advance-phase" } & AdvancePhasePayload);
-
-interface SubmitPayload {
-  year: number;
-  countryCode: string;
-  artistName: string;
-  songTitle: string;
-  playerId: string;
+interface EurovisionRequest {
+  action: EurovisionAction;
+  eventId?: string;
+  entryId?: string;
+  bandId?: string;
+  songId?: string;
+  country?: string;
+  voterId?: string;
 }
-
-interface CastVotePayload {
-  year: number;
-  entryId: string;
-  voterId: string;
-  points: number;
-}
-
-interface AdvancePhasePayload {
-  year: number;
-  forcePhase?: EurovisionPhase;
-  triggeredBy?: string;
-}
-
-interface YearRecord {
-  year: number;
-  phase: EurovisionPhase;
-  submission_window_open: boolean;
-  selection_completed_at: string | null;
-  event_started_at: string | null;
-}
-
-interface SubmissionRecord {
-  id: string;
-  year: number;
-  country_code: string;
-  artist_name: string;
-  song_title: string;
-  submitted_by: string;
-  status: SubmissionStatus;
-  created_at: string;
-}
-
-interface EntryRecord {
-  id: string;
-  year: number;
-  submission_id: string;
-  country_code: string;
-  artist_name: string;
-  song_title: string;
-  running_order: number | null;
-  selection_method: string | null;
-  vote_total: number;
-  vote_count: number;
-}
-
-interface VoteRecord {
-  id: string;
-  year: number;
-  voter_id: string;
-  entry_id: string;
-  points: number;
-  created_at: string;
-}
-
-const MAX_VOTES_PER_PLAYER = 5;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const payload = await safeJson<EurovisionRequest>(req);
-
-  if (!payload || !("action" in payload)) {
-    return jsonError("Invalid payload", 400);
-  }
-
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
-
   try {
+    const payload: EurovisionRequest = await req.json();
+
+    if (!payload.action) {
+      return jsonError("Missing action", 400);
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     switch (payload.action) {
-      case "submit":
-        return handleSubmission(supabaseClient, payload);
-      case "run-selections":
-        return handleSelections(supabaseClient, payload.year);
-      case "start-event":
-        return handleStartEvent(supabaseClient, payload.year);
+      case "get-event":
+        return handleGetEvent(supabaseClient);
+      case "submit-entry":
+        return handleSubmitEntry(supabaseClient, payload);
       case "cast-vote":
-        return handleVote(supabaseClient, payload);
+        return handleCastVote(supabaseClient, payload);
       case "advance-phase":
         return handleAdvancePhase(supabaseClient, payload);
       default:
         return jsonError("Unsupported action", 400);
     }
   } catch (error) {
-    console.error("[eurovision] Unexpected error", error);
-    return jsonError("Unexpected error", 500);
+    console.error("[eurovision] Error:", error);
+    return jsonError("Internal server error", 500);
   }
 });
 
-async function ensureYear(
-  supabaseClient: ReturnType<typeof createClient>,
-  year: number
-): Promise<YearRecord> {
-  const { data, error } = await supabaseClient
-    .from("eurovision_years")
-    .select("year, phase, submission_window_open, selection_completed_at, event_started_at")
-    .eq("year", year)
-    .single();
-
-  if (error && error.code !== "PGRST116") {
-    throw error;
-  }
-
-  if (data) return data as YearRecord;
-
-  const { data: inserted, error: insertError } = await supabaseClient
-    .from("eurovision_years")
-    .insert({
-      year,
-      phase: "SubmissionsOpen",
-      submission_window_open: true,
-    })
-    .select()
-    .single();
-
-  if (insertError || !inserted) {
-    throw insertError ?? new Error("Failed to create year record");
-  }
-
-  return inserted as YearRecord;
-}
-
-async function validateCountryEligibility(
-  supabaseClient: ReturnType<typeof createClient>,
-  countryCode: string
-) {
-  const { data, error } = await supabaseClient
-    .from("eurovision_countries")
-    .select("code, eligible")
-    .eq("code", countryCode)
-    .single();
-
-  if (error && error.code !== "PGRST116") {
-    throw error;
-  }
-
-  if (data && data.eligible === false) {
-    throw new Error(`Country ${countryCode} is not eligible this year`);
-  }
-}
-
-async function handleSubmission(
-  supabaseClient: ReturnType<typeof createClient>,
-  payload: SubmitPayload
-) {
-  const yearRecord = await ensureYear(supabaseClient, payload.year);
-
-  if (!yearRecord.submission_window_open || yearRecord.phase !== "SubmissionsOpen") {
-    return jsonError("Submissions are closed for this year", 400);
-  }
-
-  await validateCountryEligibility(supabaseClient, payload.countryCode);
-
-  const { data: duplicate } = await supabaseClient
-    .from("eurovision_submissions")
-    .select("id")
-    .eq("year", payload.year)
-    .eq("country_code", payload.countryCode)
-    .eq("artist_name", payload.artistName)
+async function handleGetEvent(supabaseClient: ReturnType<typeof createClient>) {
+  const { data: event, error } = await supabaseClient
+    .from("eurovision_events")
+    .select("*")
+    .order("year", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  if (duplicate) {
-    return jsonError("This artist already submitted for the selected country", 409);
-  }
-
-  const submission: Omit<SubmissionRecord, "created_at" | "status"> & {
-    created_at: string;
-    status: SubmissionStatus;
-  } = {
-    id: crypto.randomUUID(),
-    year: payload.year,
-    country_code: payload.countryCode,
-    artist_name: payload.artistName,
-    song_title: payload.songTitle,
-    submitted_by: payload.playerId,
-    status: "Pending",
-    created_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabaseClient
-    .from("eurovision_submissions")
-    .insert(submission);
-
   if (error) {
     return jsonError(error.message, 400);
   }
 
-  return jsonResponse({
-    id: submission.id,
-    year: submission.year,
-    countryCode: submission.country_code,
-    artistName: submission.artist_name,
-    songTitle: submission.song_title,
-    submittedBy: submission.submitted_by,
-    status: submission.status,
-    submittedAt: submission.created_at,
-  });
-}
-
-async function handleSelections(
-  supabaseClient: ReturnType<typeof createClient>,
-  year: number
-) {
-  const yearRecord = await ensureYear(supabaseClient, year);
-
-  if (yearRecord.phase !== "SubmissionsOpen") {
-    return jsonError("Selections can only run while submissions are open", 400);
+  if (!event) {
+    return jsonResponse({ event: null, entries: [] });
   }
 
-  const { data: submissions, error } = await supabaseClient
-    .from("eurovision_submissions")
-    .select("id, year, country_code, artist_name, song_title, submitted_by")
-    .eq("year", year)
-    .eq("status", "Pending");
-
-  if (error) {
-    return jsonError(error.message, 400);
-  }
-
-  const grouped = new Map<string, SubmissionRecord[]>();
-  for (const submission of submissions ?? []) {
-    const list = grouped.get(submission.country_code) ?? [];
-    list.push(submission as SubmissionRecord);
-    grouped.set(submission.country_code, list);
-  }
-
-  const selections: EntryRecord[] = [];
-  const selectedIds: string[] = [];
-
-  for (const [country, countrySubmissions] of grouped.entries()) {
-    if (countrySubmissions.length === 0) continue;
-    const randomIndex = Math.floor(Math.random() * countrySubmissions.length);
-    const chosen = countrySubmissions[randomIndex];
-    selectedIds.push(chosen.id);
-    selections.push({
-      id: crypto.randomUUID(),
-      year,
-      submission_id: chosen.id,
-      country_code: country,
-      artist_name: chosen.artist_name,
-      song_title: chosen.song_title,
-      running_order: null,
-      selection_method: "Random",
-      vote_total: 0,
-      vote_count: 0,
-    });
-  }
-
-  if (selections.length === 0) {
-    return jsonError("No submissions available for selection", 400);
-  }
-
-  const { error: entryError } = await supabaseClient
+  const { data: entries } = await supabaseClient
     .from("eurovision_entries")
-    .upsert(selections, { onConflict: "year,country_code" });
+    .select(`
+      id, event_id, band_id, song_id, country, vote_count, final_rank,
+      band:bands(name, logo_url),
+      song:songs(title, audio_url)
+    `)
+    .eq("event_id", event.id)
+    .order("vote_count", { ascending: false });
 
-  if (entryError) {
-    return jsonError(entryError.message, 400);
-  }
-
-  await supabaseClient
-    .from("eurovision_submissions")
-    .update({ status: "Selected" })
-    .in("id", selectedIds);
-
-  const { error: yearUpdateError } = await supabaseClient
-    .from("eurovision_years")
-    .update({
-      phase: "SelectionsDone",
-      submission_window_open: false,
-      selection_completed_at: new Date().toISOString(),
-    })
-    .eq("year", year);
-
-  if (yearUpdateError) {
-    return jsonError(yearUpdateError.message, 400);
-  }
-
-  return jsonResponse(
-    selections.map((entry) => ({
-      id: entry.id,
-      submissionId: entry.submission_id,
-      countryCode: entry.country_code,
-      artistName: entry.artist_name,
-      songTitle: entry.song_title,
-      runningOrder: entry.running_order,
-      selectionMethod: "Random" as const,
-      voteCount: entry.vote_count,
-      pointsTotal: entry.vote_total,
-    }))
-  );
+  return jsonResponse({ event, entries: entries || [] });
 }
 
-function shuffle<T>(items: T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-async function handleStartEvent(
+async function handleSubmitEntry(
   supabaseClient: ReturnType<typeof createClient>,
-  year: number
+  payload: EurovisionRequest
 ) {
-  const yearRecord = await ensureYear(supabaseClient, year);
+  const { eventId, bandId, songId, country } = payload;
 
-  if (yearRecord.phase !== "SelectionsDone") {
-    return jsonError("Event can only start after selections", 400);
+  if (!eventId || !bandId || !songId || !country) {
+    return jsonError("Missing required fields: eventId, bandId, songId, country", 400);
   }
 
-  const { data: entries, error } = await supabaseClient
+  // Verify event is in submissions phase
+  const { data: event } = await supabaseClient
+    .from("eurovision_events")
+    .select("status")
+    .eq("id", eventId)
+    .single();
+
+  if (!event || event.status !== "submissions") {
+    return jsonError("Submissions are not open", 400);
+  }
+
+  // Check if band already has an entry
+  const { data: existingEntry } = await supabaseClient
     .from("eurovision_entries")
-    .select("id, submission_id, country_code, artist_name, song_title, vote_total, vote_count")
-    .eq("year", year);
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("band_id", bandId)
+    .maybeSingle();
 
-  if (error) {
-    return jsonError(error.message, 400);
+  if (existingEntry) {
+    return jsonError("Band already has an entry for this event", 409);
   }
 
-  const shuffled = shuffle(entries ?? []);
-  const runningOrderUpdates = shuffled.map((entry, index) => ({
-    id: entry.id,
-    running_order: index + 1,
-  }));
+  // Check if country is taken
+  const { data: countryEntry } = await supabaseClient
+    .from("eurovision_entries")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("country", country)
+    .maybeSingle();
 
-  await supabaseClient.from("eurovision_entries").upsert(runningOrderUpdates);
+  if (countryEntry) {
+    return jsonError("Country already has a representative", 409);
+  }
 
-  const startedAt = new Date().toISOString();
-  const { data: updatedYear, error: yearUpdateError } = await supabaseClient
-    .from("eurovision_years")
-    .update({ phase: "EventLive", event_started_at: startedAt })
-    .eq("year", year)
+  const { data: entry, error } = await supabaseClient
+    .from("eurovision_entries")
+    .insert({ event_id: eventId, band_id: bandId, song_id: songId, country })
     .select()
     .single();
 
-  if (yearUpdateError) {
-    return jsonError(yearUpdateError.message, 400);
+  if (error) {
+    return jsonError(error.message, 400);
   }
 
-  return jsonResponse({
-    year: updatedYear?.year ?? year,
-    phase: "EventLive" as EurovisionPhase,
-    submissionWindowOpen: false,
-    selectionCompletedAt: updatedYear?.selection_completed_at ?? null,
-    eventStartedAt: startedAt,
-    runningOrder: shuffled.map((entry, index) => ({
-      id: entry.id,
-      submissionId: entry.submission_id,
-      countryCode: entry.country_code,
-      artistName: entry.artist_name,
-      songTitle: entry.song_title,
-      runningOrder: index + 1,
-      selectionMethod: "Random" as const,
-      voteCount: entry.vote_count,
-      pointsTotal: entry.vote_total,
-    })),
-    maxVotesPerPlayer: MAX_VOTES_PER_PLAYER,
-  });
+  return jsonResponse({ success: true, entry });
 }
 
-async function handleVote(
+async function handleCastVote(
   supabaseClient: ReturnType<typeof createClient>,
-  payload: CastVotePayload
+  payload: EurovisionRequest
 ) {
-  const yearRecord = await ensureYear(supabaseClient, payload.year);
-  if (yearRecord.phase !== "EventLive") {
+  const { entryId, voterId } = payload;
+
+  if (!entryId || !voterId) {
+    return jsonError("Missing required fields: entryId, voterId", 400);
+  }
+
+  // Verify entry exists and event is in voting phase
+  const { data: entry } = await supabaseClient
+    .from("eurovision_entries")
+    .select("event_id, eurovision_events(status)")
+    .eq("id", entryId)
+    .single();
+
+  if (!entry || (entry as any).eurovision_events?.status !== "voting") {
     return jsonError("Voting is not open", 400);
   }
 
-  const { data: entry, error: entryError } = await supabaseClient
-    .from("eurovision_entries")
-    .select("id, country_code, year")
-    .eq("id", payload.entryId)
-    .single();
-
-  if (entryError || !entry) {
-    return jsonError("Entry not found", 404);
-  }
-
-  if (entry.year !== payload.year) {
-    return jsonError("Entry does not belong to this year", 400);
-  }
-
-  const { count } = await supabaseClient
+  // Check if already voted
+  const { data: existingVote } = await supabaseClient
     .from("eurovision_votes")
-    .select("id", { count: "exact", head: true })
-    .eq("year", payload.year)
-    .eq("voter_id", payload.voterId);
+    .select("id")
+    .eq("entry_id", entryId)
+    .eq("voter_id", voterId)
+    .maybeSingle();
 
-  if ((count ?? 0) >= MAX_VOTES_PER_PLAYER) {
-    return jsonError("Vote limit reached for this player", 400);
+  if (existingVote) {
+    return jsonError("Already voted for this entry", 409);
   }
 
-  const vote: Omit<VoteRecord, "created_at"> & { created_at?: string } = {
-    id: crypto.randomUUID(),
-    year: payload.year,
-    voter_id: payload.voterId,
-    entry_id: payload.entryId,
-    points: payload.points,
-  };
-
-  const { error: voteError } = await supabaseClient
+  const { error } = await supabaseClient
     .from("eurovision_votes")
-    .upsert(vote, { onConflict: "year,voter_id,entry_id" });
+    .insert({ entry_id: entryId, voter_id: voterId });
 
-  if (voteError) {
-    return jsonError(voteError.message, 400);
+  if (error) {
+    return jsonError(error.message, 400);
   }
 
-  const { data: entryVotes, error: tallyError } = await supabaseClient
-    .from("eurovision_votes")
-    .select("points")
-    .eq("entry_id", payload.entryId)
-    .eq("year", payload.year);
-
-  if (tallyError) {
-    return jsonError(tallyError.message, 400);
-  }
-
-  const pointsTotal = (entryVotes ?? []).reduce((sum, row) => sum + (row.points ?? 0), 0);
-  const voteCount = entryVotes?.length ?? 0;
-
-  await supabaseClient
-    .from("eurovision_entries")
-    .update({ vote_total: pointsTotal, vote_count: voteCount })
-    .eq("id", payload.entryId);
-
-  return jsonResponse({
-    id: vote.id,
-    year: payload.year,
-    voterId: payload.voterId,
-    entryId: payload.entryId,
-    points: payload.points,
-    castAt: new Date().toISOString(),
-  });
+  return jsonResponse({ success: true });
 }
 
 async function handleAdvancePhase(
   supabaseClient: ReturnType<typeof createClient>,
-  payload: AdvancePhasePayload
+  payload: EurovisionRequest
 ) {
-  const yearRecord = await ensureYear(supabaseClient, payload.year);
-  const nextPhase = payload.forcePhase ?? getNextPhase(yearRecord.phase);
+  const { eventId } = payload;
 
-  switch (nextPhase) {
-    case "SelectionsDone":
-      return handleSelections(supabaseClient, payload.year);
-    case "EventLive":
-      return handleStartEvent(supabaseClient, payload.year);
-    case "VotingClosed": {
-      const { error } = await supabaseClient
-        .from("eurovision_years")
-        .update({ phase: "VotingClosed" })
-        .eq("year", payload.year);
-
-      if (error) return jsonError(error.message, 400);
-
-      return jsonResponse({
-        year: payload.year,
-        phase: "VotingClosed" as EurovisionPhase,
-        submissionWindowOpen: false,
-        runningOrder: [],
-        maxVotesPerPlayer: MAX_VOTES_PER_PLAYER,
-      });
-    }
-    case "Results": {
-      const { data: entries } = await supabaseClient
-        .from("eurovision_entries")
-        .select("id, vote_total, vote_count");
-
-      const tally = Object.fromEntries(
-        (entries ?? []).map((entry) => [
-          entry.id,
-          { voteCount: entry.vote_count, points: entry.vote_total },
-        ])
-      );
-
-      const { error } = await supabaseClient
-        .from("eurovision_years")
-        .update({ phase: "Results" })
-        .eq("year", payload.year);
-
-      if (error) return jsonError(error.message, 400);
-
-      return jsonResponse({
-        year: payload.year,
-        phase: "Results" as EurovisionPhase,
-        submissionWindowOpen: false,
-        runningOrder: [],
-        maxVotesPerPlayer: MAX_VOTES_PER_PLAYER,
-        tally,
-      });
-    }
-    default:
-      return jsonResponse(yearRecord);
+  if (!eventId) {
+    return jsonError("Missing eventId", 400);
   }
+
+  const { data: event } = await supabaseClient
+    .from("eurovision_events")
+    .select("status")
+    .eq("id", eventId)
+    .single();
+
+  if (!event) {
+    return jsonError("Event not found", 404);
+  }
+
+  const phases = ["submissions", "voting", "complete"];
+  const currentIdx = phases.indexOf(event.status);
+  
+  if (currentIdx >= phases.length - 1) {
+    return jsonError("Already at final phase", 400);
+  }
+
+  const nextPhase = phases[currentIdx + 1];
+
+  // If advancing to complete, set final ranks
+  if (nextPhase === "complete") {
+    const { data: entries } = await supabaseClient
+      .from("eurovision_entries")
+      .select("id, vote_count")
+      .eq("event_id", eventId)
+      .order("vote_count", { ascending: false });
+
+    if (entries) {
+      for (let i = 0; i < entries.length; i++) {
+        await supabaseClient
+          .from("eurovision_entries")
+          .update({ final_rank: i + 1 })
+          .eq("id", entries[i].id);
+      }
+    }
+  }
+
+  const { error } = await supabaseClient
+    .from("eurovision_events")
+    .update({ status: nextPhase })
+    .eq("id", eventId);
+
+  if (error) {
+    return jsonError(error.message, 400);
+  }
+
+  return jsonResponse({ success: true, newPhase: nextPhase });
 }
 
-function getNextPhase(current: EurovisionPhase): EurovisionPhase {
-  switch (current) {
-    case "SubmissionsOpen":
-      return "SelectionsDone";
-    case "SelectionsDone":
-      return "EventLive";
-    case "EventLive":
-      return "VotingClosed";
-    case "VotingClosed":
-      return "Results";
-    default:
-      return current;
-  }
-}
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
+function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
-function jsonError(message: string, status = 400) {
-  return jsonResponse({ error: message }, status);
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
