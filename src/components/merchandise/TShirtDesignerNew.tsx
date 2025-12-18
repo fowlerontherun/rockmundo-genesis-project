@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Upload, Save, RotateCcw, ZoomIn, ZoomOut, Move, Type, Layers } from "lucide-react";
+import { Trash2, Upload, Save, Type, Layers, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { TShirtColorPicker } from "./TShirtColorPicker";
 import { cn } from "@/lib/utils";
 
 interface DesignElement {
@@ -25,6 +24,8 @@ interface DesignElement {
   fontSize?: number;
   fontFamily?: string;
   color?: string;
+  isLocked?: boolean; // For default elements like logo
+  zone?: "main" | "sleeve"; // Which zone the element belongs to
 }
 
 interface TShirtDesignerNewProps {
@@ -49,6 +50,21 @@ const PRINT_AREA = {
   back: { x: 85, y: 90, width: 130, height: 180 },
 };
 
+// Left sleeve print area (visible on front view)
+const SLEEVE_AREA = {
+  front: { x: 20, y: 85, width: 35, height: 35 },
+};
+
+// Rockmundo logo as SVG data URL
+const ROCKMUNDO_LOGO = `data:image/svg+xml,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="45" fill="#1a1a1a" stroke="#dc2626" stroke-width="3"/>
+  <text x="50" y="45" font-family="Arial Black, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">ROCK</text>
+  <text x="50" y="62" font-family="Arial Black, sans-serif" font-size="14" font-weight="bold" fill="#dc2626" text-anchor="middle">MUNDO</text>
+  <path d="M30 75 L50 68 L70 75" stroke="#dc2626" stroke-width="2" fill="none"/>
+</svg>
+`)}`;
+
 export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDesignerNewProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tshirtColor, setTshirtColor] = useState<string>("#ffffff");
@@ -59,7 +75,11 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
   const [backElements, setBackElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeCorner, setResizeCorner] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
+  const [initialPos, setInitialPos] = useState({ x: 0, y: 0 });
   const { toast } = useToast();
 
   const currentElements = activeView === "front" ? frontElements : backElements;
@@ -68,11 +88,32 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
 
   const generateId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+  // Add default Rockmundo logo on component mount
+  useEffect(() => {
+    if (frontElements.length === 0) {
+      const sleeveArea = SLEEVE_AREA.front;
+      const logoElement: DesignElement = {
+        id: "rockmundo-logo-default",
+        type: "image",
+        src: ROCKMUNDO_LOGO,
+        x: sleeveArea.x + 2,
+        y: sleeveArea.y + 2,
+        width: sleeveArea.width - 4,
+        height: sleeveArea.height - 4,
+        rotation: 0,
+        scale: 1,
+        isLocked: false, // Allow users to move/resize it
+        zone: "sleeve",
+      };
+      setFrontElements([logoElement]);
+    }
+  }, []);
+
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const remainingSlots = 5 - currentElements.filter(el => el.type === "image").length;
+    const remainingSlots = 5 - currentElements.filter(el => el.type === "image" && el.zone !== "sleeve").length;
     if (files.length > remainingSlots) {
       toast({
         title: "Too many images",
@@ -100,6 +141,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
             height: img.height * scale,
             rotation: 0,
             scale: 1,
+            zone: "main",
           };
           setCurrentElements(prev => [...prev, newElement]);
         };
@@ -126,6 +168,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
       fontFamily: "Arial",
       color: tshirtColor === "#ffffff" || tshirtColor === "#1a1a1a" ? 
         (tshirtColor === "#ffffff" ? "#000000" : "#ffffff") : "#ffffff",
+      zone: "main",
     };
     setCurrentElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
@@ -133,47 +176,146 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
 
   const handleMouseDown = useCallback((e: React.MouseEvent, elementId: string) => {
     e.stopPropagation();
+    const element = currentElements.find(el => el.id === elementId);
+    if (element?.isLocked) return;
+    
     setSelectedElementId(elementId);
     setIsDragging(true);
     
-    const element = currentElements.find(el => el.id === elementId);
     if (element) {
       const rect = (e.currentTarget as HTMLElement).closest('.design-canvas')?.getBoundingClientRect();
       if (rect) {
+        const scaleX = 300 / rect.width;
+        const scaleY = 380 / rect.height;
         setDragOffset({
-          x: e.clientX - rect.left - element.x,
-          y: e.clientY - rect.top - element.y,
+          x: (e.clientX - rect.left) * scaleX - element.x,
+          y: (e.clientY - rect.top) * scaleY - element.y,
+        });
+      }
+    }
+  }, [currentElements]);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, elementId: string, corner: string) => {
+    e.stopPropagation();
+    const element = currentElements.find(el => el.id === elementId);
+    if (element?.isLocked) return;
+
+    setSelectedElementId(elementId);
+    setIsResizing(true);
+    setResizeCorner(corner);
+    
+    if (element) {
+      const rect = (e.currentTarget as HTMLElement).closest('.design-canvas')?.getBoundingClientRect();
+      if (rect) {
+        const scaleX = 300 / rect.width;
+        const scaleY = 380 / rect.height;
+        setInitialSize({ width: element.width, height: element.height });
+        setInitialPos({ 
+          x: (e.clientX - rect.left) * scaleX, 
+          y: (e.clientY - rect.top) * scaleY 
         });
       }
     }
   }, [currentElements]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const scaleX = 300 / rect.width;
+    const scaleY = 380 / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+
+    if (isResizing && selectedElementId && resizeCorner) {
+      const element = currentElements.find(el => el.id === selectedElementId);
+      if (!element) return;
+
+      const deltaX = mouseX - initialPos.x;
+      const deltaY = mouseY - initialPos.y;
+      
+      let newWidth = initialSize.width;
+      let newHeight = initialSize.height;
+      let newX = element.x;
+      let newY = element.y;
+
+      // Maintain aspect ratio
+      const aspectRatio = initialSize.width / initialSize.height;
+
+      if (resizeCorner.includes('e')) {
+        newWidth = Math.max(20, initialSize.width + deltaX);
+        newHeight = newWidth / aspectRatio;
+      }
+      if (resizeCorner.includes('w')) {
+        const widthChange = -deltaX;
+        newWidth = Math.max(20, initialSize.width + widthChange);
+        newHeight = newWidth / aspectRatio;
+        newX = element.x - (newWidth - element.width);
+      }
+      if (resizeCorner.includes('s')) {
+        newHeight = Math.max(20, initialSize.height + deltaY);
+        newWidth = newHeight * aspectRatio;
+      }
+      if (resizeCorner.includes('n')) {
+        const heightChange = -deltaY;
+        newHeight = Math.max(20, initialSize.height + heightChange);
+        newWidth = newHeight * aspectRatio;
+        newY = element.y - (newHeight - element.height);
+      }
+
+      setCurrentElements(prev => prev.map(el =>
+        el.id === selectedElementId
+          ? { ...el, width: newWidth, height: newHeight, x: newX, y: newY }
+          : el
+      ));
+      return;
+    }
+
     if (!isDragging || !selectedElementId) return;
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const newX = e.clientX - rect.left - dragOffset.x;
-    const newY = e.clientY - rect.top - dragOffset.y;
+    const newX = mouseX - dragOffset.x;
+    const newY = mouseY - dragOffset.y;
+
+    const element = currentElements.find(el => el.id === selectedElementId);
+    if (!element) return;
+
+    // Determine constraints based on zone
+    let constraintArea = printArea;
+    if (element.zone === "sleeve" && activeView === "front") {
+      constraintArea = SLEEVE_AREA.front;
+    }
 
     setCurrentElements(prev => prev.map(el => 
       el.id === selectedElementId
-        ? { ...el, x: Math.max(printArea.x, Math.min(newX, printArea.x + printArea.width - el.width)), 
-            y: Math.max(printArea.y, Math.min(newY, printArea.y + printArea.height - el.height)) }
+        ? { 
+            ...el, 
+            x: Math.max(0, Math.min(newX, 300 - el.width)), 
+            y: Math.max(0, Math.min(newY, 380 - el.height)) 
+          }
         : el
     ));
-  }, [isDragging, selectedElementId, dragOffset, printArea, setCurrentElements]);
+  }, [isDragging, isResizing, selectedElementId, dragOffset, resizeCorner, initialPos, initialSize, printArea, setCurrentElements, currentElements, activeView]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsResizing(false);
+    setResizeCorner(null);
   }, []);
 
   const deleteSelectedElement = useCallback(() => {
     if (selectedElementId) {
+      const element = currentElements.find(el => el.id === selectedElementId);
+      if (element?.isLocked) {
+        toast({ 
+          title: "Cannot delete", 
+          description: "This element is locked.",
+          variant: "destructive"
+        });
+        return;
+      }
       setCurrentElements(prev => prev.filter(el => el.id !== selectedElementId));
       setSelectedElementId(null);
       toast({ title: "Element removed" });
     }
-  }, [selectedElementId, setCurrentElements, toast]);
+  }, [selectedElementId, setCurrentElements, toast, currentElements]);
 
   const updateSelectedElement = useCallback((updates: Partial<DesignElement>) => {
     if (selectedElementId) {
@@ -202,7 +344,6 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
         tshirtColor,
       };
 
-      // Create a simple preview by describing the design
       const previewDataUrl = `data:text/plain,Design:${designName}`;
 
       const { data, error } = await (supabase as any)
@@ -240,6 +381,38 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
 
   const selectedElement = currentElements.find(el => el.id === selectedElementId);
 
+  // Resize handle component
+  const ResizeHandles = ({ element }: { element: DesignElement }) => {
+    if (element.isLocked) return null;
+    
+    const handleSize = 8;
+    const handles = [
+      { corner: 'nw', x: -handleSize/2, y: -handleSize/2, cursor: 'nw-resize' },
+      { corner: 'ne', x: element.width - handleSize/2, y: -handleSize/2, cursor: 'ne-resize' },
+      { corner: 'sw', x: -handleSize/2, y: element.height - handleSize/2, cursor: 'sw-resize' },
+      { corner: 'se', x: element.width - handleSize/2, y: element.height - handleSize/2, cursor: 'se-resize' },
+    ];
+
+    return (
+      <>
+        {handles.map(({ corner, x, y, cursor }) => (
+          <div
+            key={corner}
+            className="absolute bg-primary border border-background rounded-sm"
+            style={{
+              left: x,
+              top: y,
+              width: handleSize,
+              height: handleSize,
+              cursor,
+            }}
+            onMouseDown={(e) => handleResizeStart(e, element.id, corner)}
+          />
+        ))}
+      </>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -248,7 +421,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
           <Badge variant="secondary">New</Badge>
         </CardTitle>
         <CardDescription>
-          Create front and back designs. Custom designs get a quality boost!
+          Create front and back designs. Drag elements to move, use corners to resize. Custom designs get a quality boost!
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -263,7 +436,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
             </Tabs>
 
             <div 
-              className="design-canvas relative border rounded-lg overflow-hidden bg-muted/30 mx-auto"
+              className="design-canvas relative border rounded-lg overflow-hidden bg-muted/30 mx-auto select-none"
               style={{ width: 300, height: 380 }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -271,7 +444,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
               onClick={() => setSelectedElementId(null)}
             >
               {/* T-Shirt SVG */}
-              <svg viewBox="0 0 300 380" className="absolute inset-0 w-full h-full">
+              <svg viewBox="0 0 300 380" className="absolute inset-0 w-full h-full pointer-events-none">
                 {/* T-Shirt Shape */}
                 <path
                   d={activeView === "front" 
@@ -291,7 +464,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                     strokeWidth="1.5"
                   />
                 )}
-                {/* Print Area Guide */}
+                {/* Main Print Area Guide */}
                 <rect
                   x={printArea.x}
                   y={printArea.y}
@@ -303,6 +476,20 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                   strokeDasharray="4 2"
                   opacity="0.5"
                 />
+                {/* Sleeve Print Area Guide (front only) */}
+                {activeView === "front" && (
+                  <rect
+                    x={SLEEVE_AREA.front.x}
+                    y={SLEEVE_AREA.front.y}
+                    width={SLEEVE_AREA.front.width}
+                    height={SLEEVE_AREA.front.height}
+                    fill="none"
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeWidth="1"
+                    strokeDasharray="2 2"
+                    opacity="0.4"
+                  />
+                )}
               </svg>
 
               {/* Design Elements */}
@@ -310,8 +497,9 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                 <div
                   key={element.id}
                   className={cn(
-                    "absolute cursor-move select-none",
-                    selectedElementId === element.id && "ring-2 ring-primary ring-offset-1"
+                    "absolute select-none",
+                    element.isLocked ? "cursor-not-allowed opacity-90" : "cursor-move",
+                    selectedElementId === element.id && !element.isLocked && "ring-2 ring-primary ring-offset-1"
                   )}
                   style={{
                     left: element.x,
@@ -319,6 +507,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                     width: element.width,
                     height: element.height,
                     transform: `rotate(${element.rotation}deg) scale(${element.scale})`,
+                    transformOrigin: 'center center',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, element.id)}
                 >
@@ -332,7 +521,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                   )}
                   {element.type === "text" && (
                     <div
-                      className="w-full h-full flex items-center justify-center pointer-events-none"
+                      className="w-full h-full flex items-center justify-center pointer-events-none whitespace-nowrap"
                       style={{
                         fontSize: element.fontSize,
                         fontFamily: element.fontFamily,
@@ -341,6 +530,15 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                       }}
                     >
                       {element.text}
+                    </div>
+                  )}
+                  {/* Resize handles for selected element */}
+                  {selectedElementId === element.id && <ResizeHandles element={element} />}
+                  {/* Drag indicator */}
+                  {selectedElementId === element.id && !element.isLocked && (
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <GripVertical className="h-3 w-3" />
+                      Drag
                     </div>
                   )}
                 </div>
@@ -361,10 +559,10 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
                 size="sm"
-                disabled={currentElements.filter(el => el.type === "image").length >= 5}
+                disabled={currentElements.filter(el => el.type === "image" && el.zone !== "sleeve").length >= 5}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Add Image ({currentElements.filter(el => el.type === "image").length}/5)
+                Add Image ({currentElements.filter(el => el.type === "image" && el.zone !== "sleeve").length}/5)
               </Button>
               <Button onClick={addTextElement} variant="outline" size="sm">
                 <Type className="h-4 w-4 mr-2" />
@@ -374,7 +572,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                 onClick={deleteSelectedElement} 
                 variant="outline" 
                 size="sm"
-                disabled={!selectedElementId}
+                disabled={!selectedElementId || currentElements.find(el => el.id === selectedElementId)?.isLocked}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
@@ -427,6 +625,9 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Layers className="h-4 w-4" />
                     Element Settings
+                    {selectedElement.zone === "sleeve" && (
+                      <Badge variant="outline" className="text-[10px]">Sleeve Logo</Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -448,21 +649,31 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                           max="48"
                           value={selectedElement.fontSize || 16}
                           onChange={(e) => updateSelectedElement({ fontSize: parseInt(e.target.value) })}
-                          className="w-full"
+                          className="w-full accent-primary"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Text Color</Label>
+                        <div className="flex gap-2">
+                          {["#000000", "#ffffff", "#dc2626", "#2563eb", "#15803d", "#9333ea"].map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => updateSelectedElement({ color })}
+                              className={cn(
+                                "w-8 h-8 rounded border-2",
+                                selectedElement.color === color ? "border-primary" : "border-border"
+                              )}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </>
                   )}
                   <div className="space-y-2">
-                    <Label>Scale: {Math.round(selectedElement.scale * 100)}%</Label>
-                    <input
-                      type="range"
-                      min="50"
-                      max="200"
-                      value={selectedElement.scale * 100}
-                      onChange={(e) => updateSelectedElement({ scale: parseInt(e.target.value) / 100 })}
-                      className="w-full"
-                    />
+                    <Label>Size: {Math.round(selectedElement.width)}×{Math.round(selectedElement.height)}px</Label>
+                    <p className="text-xs text-muted-foreground">Drag the corner handles to resize</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Rotation: {selectedElement.rotation}°</Label>
@@ -472,7 +683,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                       max="180"
                       value={selectedElement.rotation}
                       onChange={(e) => updateSelectedElement({ rotation: parseInt(e.target.value) })}
-                      className="w-full"
+                      className="w-full accent-primary"
                     />
                   </div>
                 </CardContent>
@@ -484,9 +695,10 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
               <p className="font-medium">Tips:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Click and drag elements to position</li>
-                <li>Select an element to adjust size/rotation</li>
+                <li>Drag corner handles to resize</li>
+                <li>Rockmundo logo added to left sleeve by default</li>
                 <li>Design both front and back</li>
-                <li>Stay within the dashed print area</li>
+                <li>Stay within the dashed print areas</li>
               </ul>
             </div>
 
