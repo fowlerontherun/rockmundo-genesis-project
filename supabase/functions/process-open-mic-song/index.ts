@@ -70,8 +70,8 @@ serve(async (req) => {
       score += 5;
     }
     
-    // Clamp score
-    score = Math.min(100, Math.max(0, score));
+    // Clamp score to valid range for NUMERIC(4,2) - max 99.99
+    score = Math.min(99.99, Math.max(0, Math.round(score * 100) / 100));
 
     // Determine crowd response based on score
     let crowdResponse: string;
