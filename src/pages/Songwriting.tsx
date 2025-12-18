@@ -1239,6 +1239,25 @@ const Songwriting = () => {
             </Button>
           </div>
         </div>
+        
+        {/* Session Info Banner */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <ClockIcon className="h-4 w-4 text-primary" />
+                <span><strong>1-hour</strong> sessions</span>
+              </div>
+              <Separator orientation="vertical" className="h-4" />
+              <div className="flex items-center gap-2">
+                <NotebookPen className="h-4 w-4 text-primary" />
+                <span>Write <strong>2 songs</strong> at once</span>
+              </div>
+              <Separator orientation="vertical" className="h-4 hidden sm:block" />
+              <span className="text-muted-foreground hidden sm:block">Sessions auto-complete when time expires</span>
+            </div>
+          </CardContent>
+        </Card>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
