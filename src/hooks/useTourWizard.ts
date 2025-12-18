@@ -302,6 +302,58 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         if (venuesError) throw venuesError;
       }
 
+      // Create actual gigs for each venue
+      const gigsToCreate = venueMatches.map(v => ({
+        venue_id: v.venueId,
+        band_id: state.bandId,
+        scheduled_date: v.date,
+        tour_id: tour.id,
+        setlist_id: state.setlistId || null,
+        status: 'scheduled',
+        ticket_price: 0, // Will be auto-calculated
+        booking_fee: v.bookingFee,
+        estimated_revenue: v.estimatedTicketRevenue,
+      }));
+
+      if (gigsToCreate.length > 0) {
+        const { error: gigsError } = await supabase
+          .from('gigs')
+          .insert(gigsToCreate);
+        if (gigsError) throw gigsError;
+      }
+
+      // Create travel legs between consecutive venues
+      if (venueMatches.length > 1) {
+        const travelLegs = [];
+        for (let i = 0; i < venueMatches.length - 1; i++) {
+          const fromVenue = venueMatches[i];
+          const toVenue = venueMatches[i + 1];
+          
+          // Calculate departure as day after show, arrival as day of next show
+          const departureDate = new Date(fromVenue.date);
+          departureDate.setDate(departureDate.getDate() + 1);
+          const arrivalDate = new Date(toVenue.date);
+          
+          travelLegs.push({
+            tour_id: tour.id,
+            from_city_id: fromVenue.cityId,
+            to_city_id: toVenue.cityId,
+            travel_mode: state.travelMode === 'tour_bus' ? 'bus' : 'auto',
+            travel_cost: 0, // Will be calculated based on mode
+            departure_date: departureDate.toISOString(),
+            arrival_date: arrivalDate.toISOString(),
+            sequence_order: i,
+          });
+        }
+
+        if (travelLegs.length > 0) {
+          const { error: travelError } = await supabase
+            .from('tour_travel_legs')
+            .insert(travelLegs);
+          if (travelError) throw travelError;
+        }
+      }
+
       // Deduct upfront cost from band balance
       if (costEstimate.totalUpfrontCost > 0) {
         const { error: balanceError } = await supabase

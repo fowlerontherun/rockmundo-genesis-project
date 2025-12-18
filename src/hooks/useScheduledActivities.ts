@@ -64,22 +64,39 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
-      // Fetch gigs
-      const { data: gigs } = await supabase
-        .from('gigs')
-        .select('*, venues:venue_id(name, cities(name)), bands:band_id(name)')
-        .or(`user_id.eq.${userId},band_id.in.(select band_id from band_members where user_id='${userId}')`)
-        .gte('performance_date', dayStart.toISOString())
-        .lte('performance_date', dayEnd.toISOString())
-        .in('status', ['scheduled', 'in_progress', 'completed']);
+      // Get user's band IDs for filtering
+      const { data: userBands } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', userId);
+      
+      const userBandIds = userBands?.map(b => b.band_id) || [];
 
-      // Fetch rehearsals
-      const { data: rehearsals } = await supabase
-        .from('band_rehearsals')
-        .select('*, rehearsal_rooms(name, location), bands:band_id(name)')
-        .gte('scheduled_start', dayStart.toISOString())
-        .lte('scheduled_start', dayEnd.toISOString())
-        .in('status', ['scheduled', 'in_progress', 'completed']);
+      // Fetch gigs for user's bands
+      let gigs: any[] = [];
+      if (userBandIds.length > 0) {
+        const { data: bandGigs } = await supabase
+          .from('gigs')
+          .select('*, venues:venue_id(name, cities(name)), bands:band_id(name), tours:tour_id(name)')
+          .in('band_id', userBandIds)
+          .gte('scheduled_date', dayStart.toISOString())
+          .lte('scheduled_date', dayEnd.toISOString())
+          .in('status', ['scheduled', 'in_progress', 'completed']);
+        gigs = bandGigs || [];
+      }
+
+      // Fetch rehearsals for user's bands
+      let rehearsals: any[] = [];
+      if (userBandIds.length > 0) {
+        const { data: bandRehearsals } = await supabase
+          .from('band_rehearsals')
+          .select('*, rehearsal_rooms(name, location), bands:band_id(name)')
+          .in('band_id', userBandIds)
+          .gte('scheduled_start', dayStart.toISOString())
+          .lte('scheduled_start', dayEnd.toISOString())
+          .in('status', ['scheduled', 'in_progress', 'completed']);
+        rehearsals = bandRehearsals || [];
+      }
 
       // Fetch recordings
       const { data: recordings } = await supabase
@@ -90,12 +107,51 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
+      // Fetch tour travel legs for user's bands
+      let travelLegs: any[] = [];
+      if (userBandIds.length > 0) {
+        const { data: tourTravelLegs } = await supabase
+          .from('tour_travel_legs')
+          .select('*, from_city:from_city_id(name), to_city:to_city_id(name), tours!inner(band_id, name)')
+          .gte('departure_date', dayStart.toISOString())
+          .lte('departure_date', dayEnd.toISOString());
+        
+        // Filter for user's bands
+        travelLegs = (tourTravelLegs || []).filter((leg: any) => 
+          userBandIds.includes(leg.tours?.band_id)
+        );
+      }
+
       // Convert to unified format
       const activities: ScheduledActivity[] = [
         ...(scheduledData || []),
-        ...(gigs || []).map((g: any) => ({ id: g.id, user_id: userId, profile_id: userId, activity_type: 'gig' as const, scheduled_start: g.performance_date, scheduled_end: g.performance_date, status: g.status, title: `Gig: ${g.venues?.name}`, linked_gig_id: g.id })),
+        ...(gigs || []).map((g: any) => ({ 
+          id: g.id, 
+          user_id: userId, 
+          profile_id: userId, 
+          activity_type: 'gig' as const, 
+          scheduled_start: g.scheduled_date, 
+          scheduled_end: g.scheduled_date, 
+          status: g.status, 
+          title: g.tour_id ? `Tour Gig: ${g.venues?.name}` : `Gig: ${g.venues?.name}`,
+          location: g.venues?.cities?.name,
+          linked_gig_id: g.id,
+          metadata: g.tour_id ? { tour_id: g.tour_id, tour_name: g.tours?.name } : undefined,
+        })),
         ...(rehearsals || []).map((r: any) => ({ id: r.id, user_id: userId, profile_id: userId, activity_type: 'rehearsal' as const, scheduled_start: r.scheduled_start, scheduled_end: r.scheduled_end, status: r.status, title: `Rehearsal: ${r.bands?.name}`, linked_rehearsal_id: r.id })),
         ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: userId, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: `Recording: ${s.songs?.title}`, linked_recording_id: s.id })),
+        ...(travelLegs || []).map((t: any) => ({
+          id: t.id,
+          user_id: userId,
+          profile_id: userId,
+          activity_type: 'travel' as const,
+          scheduled_start: t.departure_date,
+          scheduled_end: t.arrival_date,
+          status: 'scheduled' as const,
+          title: `Tour Travel: ${t.from_city?.name} → ${t.to_city?.name}`,
+          location: t.travel_mode,
+          metadata: { tour_travel_leg: true, tour_name: t.tours?.name },
+        })),
       ];
 
       return activities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
