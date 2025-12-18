@@ -169,6 +169,8 @@ const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
+const OpenMicNights = lazyWithRetry(() => import("./pages/OpenMicNights"));
+const PerformOpenMic = lazyWithRetry(() => import("./pages/PerformOpenMic"));
 const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
@@ -256,6 +258,8 @@ function App() {
                     <Route path="gig-booking" element={<GigBooking />} />
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
+                    <Route path="open-mic" element={<OpenMicNights />} />
+                    <Route path="open-mic/perform/:performanceId" element={<PerformOpenMic />} />
                     <Route path="band-riders" element={<BandRiders />} />
                     <Route path="radio" element={<Radio />} />
                     <Route path="radio-stations" element={<RadioStations />} />
