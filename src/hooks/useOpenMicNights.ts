@@ -188,6 +188,15 @@ export function useSignUpForOpenMic() {
     }) => {
       if (!user) throw new Error('Must be logged in');
 
+      // Get profile_id for scheduled activity
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) throw new Error('Profile not found');
+
       // Check if time slot is available (open mic is ~30 min for 2 songs)
       const endDate = new Date(scheduledDate.getTime() + 30 * 60 * 1000);
       const { available, conflictingActivity } = await checkTimeSlotAvailable(
@@ -217,24 +226,25 @@ export function useSignUpForOpenMic() {
 
       if (error) throw error;
 
-      // Create scheduled activity to block the time slot (skip conflict check since we already did it)
-      try {
-        await (supabase as any)
-          .from('player_scheduled_activities')
-          .insert({
-            user_id: user.id,
-            activity_type: 'open_mic',
-            scheduled_start: scheduledDate.toISOString(),
-            scheduled_end: endDate.toISOString(),
-            title: `Open Mic at ${venueName}`,
-            description: 'Open mic night performance - 2 songs',
-            metadata: {
-              band_id: bandId,
-              linked_open_mic_id: data.id,
-            },
-          });
-      } catch (activityError) {
-        // Log but don't fail the whole operation - the open mic is booked
+      // Create scheduled activity to block the time slot
+      const { error: activityError } = await (supabase as any)
+        .from('player_scheduled_activities')
+        .insert({
+          user_id: user.id,
+          profile_id: profile.id,
+          activity_type: 'open_mic',
+          status: 'scheduled',
+          scheduled_start: scheduledDate.toISOString(),
+          scheduled_end: endDate.toISOString(),
+          title: `Open Mic at ${venueName}`,
+          description: 'Open mic night performance - 2 songs',
+          metadata: {
+            band_id: bandId,
+            linked_open_mic_id: data.id,
+          },
+        });
+      
+      if (activityError) {
         console.warn('Failed to create scheduled activity:', activityError);
       }
 
