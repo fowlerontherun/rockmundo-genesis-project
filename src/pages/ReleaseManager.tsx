@@ -8,10 +8,12 @@ import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
 import { ReleaseSalesTab } from "@/components/releases/ReleaseSalesTab";
 import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function ReleaseManager() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const userId = user?.id;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,7 +41,7 @@ export default function ReleaseManager() {
   if (!userId) {
     return (
       <div className="container mx-auto p-6">
-        <p>Please log in to manage releases.</p>
+        <p>{t('releases.pleaseLogin')}</p>
       </div>
     );
   }
@@ -53,25 +55,25 @@ export default function ReleaseManager() {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Music Hub
+          {t('releases.backToMusicHub')}
         </Button>
         <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
-          New Release
+          {t('releases.newRelease')}
         </Button>
       </div>
 
       <div>
-        <h1 className="text-4xl font-bold mb-2">Release Manager</h1>
+        <h1 className="text-4xl font-bold mb-2">{t('releases.title')}</h1>
         <p className="text-muted-foreground">
-          Create and manage Singles, EPs, and Albums across Digital, CD, Vinyl, and Streaming formats
+          {t('releases.description')}
         </p>
       </div>
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="releases">My Releases</TabsTrigger>
-          <TabsTrigger value="sales">Sales & Revenue</TabsTrigger>
+          <TabsTrigger value="releases">{t('releases.myReleases')}</TabsTrigger>
+          <TabsTrigger value="sales">{t('releases.salesRevenue')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="releases" className="mt-6">
