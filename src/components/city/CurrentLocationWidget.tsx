@@ -1,8 +1,10 @@
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Music } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CountryFlag } from "@/components/location/CountryFlag";
+import { getCountryColors } from "@/data/countryData";
 
 interface CurrentLocationWidgetProps {
   city: {
@@ -53,27 +55,63 @@ export const CurrentLocationWidget = ({ city, loading }: CurrentLocationWidgetPr
     );
   }
 
+  const colors = getCountryColors(city.country);
+
   return (
-    <Card>
-      <CardHeader>
+    <Card 
+      className="overflow-hidden"
+      style={{
+        borderColor: `hsl(${colors.primary} / 0.3)`
+      }}
+    >
+      {/* Country color accent bar */}
+      <div 
+        className="h-1"
+        style={{
+          background: `linear-gradient(90deg, hsl(${colors.primary}), hsl(${colors.secondary}))`
+        }}
+      />
+      <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          Your Location
+          <CountryFlag country={city.country} size="md" showTooltip={false} />
+          <span>Your Location</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <h3 className="text-2xl font-bold">{city.name}</h3>
-          <p className="text-sm text-muted-foreground">{city.country}</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {city.country}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">Music Scene: {city.music_scene}%</Badge>
+          <Badge 
+            variant="secondary"
+            className="flex items-center gap-1"
+            style={{
+              borderColor: `hsl(${colors.primary} / 0.4)`,
+              background: `hsl(${colors.primary} / 0.1)`
+            }}
+          >
+            <Music className="h-3 w-3" />
+            Music Scene: {city.music_scene}%
+          </Badge>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild className="flex-1">
             <Link to={`/cities/${city.id}`}>Explore City</Link>
           </Button>
-          <Button variant="outline" size="sm" asChild className="flex-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            asChild 
+            className="flex-1"
+            style={{
+              borderColor: `hsl(${colors.primary} / 0.5)`,
+              color: `hsl(${colors.primary})`
+            }}
+          >
             <Link to="/travel">Travel</Link>
           </Button>
         </div>
