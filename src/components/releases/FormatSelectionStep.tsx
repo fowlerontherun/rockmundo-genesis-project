@@ -79,6 +79,31 @@ export function FormatSelectionStep({
     return baseCost;
   };
 
+  // Get volume discount info for a format
+  const getVolumeDiscountInfo = (formatType: string, quantity: number) => {
+    if (formatType === "digital" || formatType === "streaming") return null;
+    
+    const costs = manufacturingCosts?.filter(c => c.format_type === formatType).sort((a, b) => a.min_quantity - b.min_quantity) || [];
+    if (costs.length === 0) return null;
+    
+    const baseTier = costs[0];
+    const currentTier = costs.find(c => 
+      quantity >= c.min_quantity && (c.max_quantity === null || quantity <= c.max_quantity)
+    );
+    
+    if (!currentTier || !baseTier) return null;
+    
+    const discountPercent = Math.round((1 - currentTier.cost_per_unit / baseTier.cost_per_unit) * 100);
+    const nextTier = costs.find(c => c.min_quantity > quantity);
+    
+    return {
+      unitPrice: currentTier.cost_per_unit,
+      discountPercent,
+      nextTierQty: nextTier?.min_quantity,
+      nextTierPrice: nextTier?.cost_per_unit,
+    };
+  };
+
   // Calculate manufacturing completion date
   const getManufacturingCompleteDate = () => {
     if (selectedFormats.length === 0) return addDays(new Date(), 2);
@@ -322,8 +347,31 @@ export function FormatSelectionStep({
                         />
                       </div>
 
-                      <div className="text-xs font-medium">
-                        Manufacturing Cost: ${selectedFormats.find(f => f.format_type === fmt.type)?.manufacturing_cost || 0}
+                      <div className="text-xs space-y-1">
+                        {(() => {
+                          const discountInfo = getVolumeDiscountInfo(fmt.type, formatConfigs[fmt.type].quantity);
+                          const cost = selectedFormats.find(f => f.format_type === fmt.type)?.manufacturing_cost || 0;
+                          return (
+                            <>
+                              <div className="font-medium">
+                                Manufacturing: ${(cost / 100).toFixed(2)}
+                                {discountInfo && discountInfo.discountPercent > 0 && (
+                                  <span className="text-green-600 ml-1">({discountInfo.discountPercent}% volume discount)</span>
+                                )}
+                              </div>
+                              {discountInfo && (
+                                <div className="text-muted-foreground">
+                                  ${(discountInfo.unitPrice / 100).toFixed(2)}/unit
+                                  {discountInfo.nextTierQty && (
+                                    <span className="ml-1">
+                                      • Order {discountInfo.nextTierQty}+ for ${(discountInfo.nextTierPrice! / 100).toFixed(2)}/unit
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -340,10 +388,10 @@ export function FormatSelectionStep({
           <div className="text-right">
             {revenueShareEnabled && originalCost !== totalCost && (
               <span className="text-sm text-muted-foreground line-through mr-2">
-                ${originalCost}
+                ${(originalCost / 100).toFixed(2)}
               </span>
             )}
-            <span className="text-2xl font-bold">${totalCost}</span>
+            <span className="text-2xl font-bold">${(totalCost / 100).toFixed(2)}</span>
             {revenueShareEnabled && (
               <p className="text-xs text-primary">50% discount applied + 10% revenue share</p>
             )}
