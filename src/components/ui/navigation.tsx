@@ -145,6 +145,7 @@ const Navigation = () => {
       titleKey: "nav.performance",
       items: [
         { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
+        { icon: Mic, labelKey: "nav.openMic", path: "/open-mic" },
         { icon: Music, labelKey: "nav.jamSessions", path: "/jam-sessions" },
         { icon: Music, labelKey: "nav.busking", path: "/busking" },
         { icon: Music, labelKey: "nav.rehearsals", path: "/rehearsals" },
