@@ -16,8 +16,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function DikCok() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { profile } = useGameData();
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);

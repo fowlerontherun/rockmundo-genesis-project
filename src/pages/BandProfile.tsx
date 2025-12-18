@@ -8,8 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, TrendingUp, Music, User } from "lucide-react";
 import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function BandProfile() {
+  const { t } = useTranslation();
   const { bandId } = useParams();
 
   const { data: band, isLoading } = useQuery({
