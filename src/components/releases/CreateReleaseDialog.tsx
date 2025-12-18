@@ -347,6 +347,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             revenueShareEnabled={revenueShareEnabled}
             onRevenueShareChange={setRevenueShareEnabled}
             scheduledReleaseDate={scheduledReleaseDate}
+            bandId={userBand?.id}
           />
         )}
 

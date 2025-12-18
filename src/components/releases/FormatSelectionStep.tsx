@@ -20,16 +20,21 @@ interface FormatSelectionStepProps {
   revenueShareEnabled?: boolean;
   onRevenueShareChange?: (enabled: boolean) => void;
   scheduledReleaseDate?: Date | null;
+  bandId?: string;
 }
 
-// Manufacturing days by format type
+// Manufacturing days by format type - digital/streaming are instant
 const MANUFACTURING_DAYS: Record<string, number> = {
   vinyl: 14,
   cd: 7,
   cassette: 5,
-  digital: 2,
-  streaming: 2,
+  digital: 0,
+  streaming: 0,
 };
+
+// Digital distribution costs (in cents)
+const DIGITAL_FIRST_RELEASE_FEE = 500; // $5.00 first time setup
+const DIGITAL_SUBSEQUENT_FEE = 50;     // $0.50 per release after first
 
 export function FormatSelectionStep({
   selectedFormats,
@@ -40,6 +45,7 @@ export function FormatSelectionStep({
   revenueShareEnabled = false,
   onRevenueShareChange,
   scheduledReleaseDate,
+  bandId,
 }: FormatSelectionStepProps) {
   const [formatConfigs, setFormatConfigs] = useState<Record<string, any>>({
     digital: { release_date: "", quantity: 0, retail_price: 1000, distribution_fee_percentage: 30 },
@@ -61,8 +67,27 @@ export function FormatSelectionStep({
     }
   });
 
+  // Check if band has previous releases (for digital/streaming pricing)
+  const { data: existingReleasesCount } = useQuery({
+    queryKey: ["band-releases-count", bandId],
+    queryFn: async () => {
+      if (!bandId) return 0;
+      const { count } = await supabase
+        .from("releases")
+        .select("*", { count: "exact", head: true })
+        .eq("band_id", bandId);
+      return count || 0;
+    },
+    enabled: !!bandId,
+  });
+
+  const isFirstRelease = (existingReleasesCount ?? 0) === 0;
+
   const calculateManufacturingCost = (formatType: string, quantity: number) => {
-    if (formatType === "digital" || formatType === "streaming") return 500; // Setup fee
+    // Digital/streaming: first release has setup fee, subsequent releases are minimal
+    if (formatType === "digital" || formatType === "streaming") {
+      return isFirstRelease ? DIGITAL_FIRST_RELEASE_FEE : DIGITAL_SUBSEQUENT_FEE;
+    }
     
     const costs = manufacturingCosts?.filter(c => c.format_type === formatType) || [];
     const tier = costs.find(c => 
@@ -176,7 +201,9 @@ export function FormatSelectionStep({
   };
 
   const calculateManufacturingCostWithShare = (formatType: string, quantity: number, shareEnabled: boolean) => {
-    if (formatType === "digital" || formatType === "streaming") return 500;
+    if (formatType === "digital" || formatType === "streaming") {
+      return isFirstRelease ? DIGITAL_FIRST_RELEASE_FEE : DIGITAL_SUBSEQUENT_FEE;
+    }
     
     const costs = manufacturingCosts?.filter(c => c.format_type === formatType) || [];
     const tier = costs.find(c => 
