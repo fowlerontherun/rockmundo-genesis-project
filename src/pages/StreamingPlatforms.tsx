@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Disc, ArrowLeft, Music, Radio, BarChart3, ListMusic, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "@/hooks/useTranslation";
 import { useGameData } from "@/hooks/useGameData";
 import { StreamingMyReleasesTab } from "@/components/streaming/StreamingMyReleasesTab";
 import { ReleaseSongTab } from "@/components/streaming/ReleaseSongTab";
@@ -17,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const StreamingPlatforms = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { profile } = useGameData();
   const userId = profile?.user_id;
 
