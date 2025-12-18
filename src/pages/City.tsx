@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { MapPin, Building2, Train, Plane, Music, Sparkles, Loader2 } from "lucide-react";
+import { MapPin, Building2, Train, Plane, Music, Sparkles, Loader2, Globe, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
 import { CityStudiosSection } from "@/components/city/CityStudiosSection";
 import { CityNightClubsSection } from "@/components/city/CityNightClubsSection";
+import { CityTransportSection } from "@/components/city/CityTransportSection";
+import { CityMusicSceneCard } from "@/components/city/CityMusicSceneCard";
+import { CityCostBreakdown } from "@/components/city/CityCostBreakdown";
+
 
 type CityRouteParams = {
   cityId?: string;
 };
+
+interface TransportRoute {
+  id: string;
+  transport_type: string;
+  duration_hours: number;
+  base_cost: number;
+  comfort_rating: number;
+  frequency: string | null;
+  to_city: { name: string; country: string } | null;
+  from_city: { name: string; country: string } | null;
+}
 
 interface CityContentProps {
   city: CityRecord | null;
@@ -35,6 +50,8 @@ interface CityContentProps {
   studios: any[];
   playerCount: number;
   nightClubs: CityNightClub[];
+  transportRoutes: TransportRoute[];
+  venueCount: number;
 }
 
 export interface CityPageLoadResult {
@@ -44,28 +61,6 @@ export interface CityPageLoadResult {
 }
 
 export const CITY_NOT_FOUND_ERROR = "CITY_NOT_FOUND";
-
-const TRANSPORT_ICON_MAP: Record<string, LucideIcon> = {
-  rail: Train,
-  train: Train,
-  subway: Train,
-  metro: Train,
-  tram: Train,
-  ground: Train,
-  bus: Train,
-  air: Plane,
-  flight: Plane,
-  airport: Plane,
-};
-
-const getTransportIcon = (type?: string): LucideIcon => {
-  if (!type) {
-    return MapPin;
-  }
-
-  const normalized = type.toLowerCase().trim();
-  return TRANSPORT_ICON_MAP[normalized] ?? MapPin;
-};
 
 export const loadCityPageData = async (cityId: string): Promise<CityPageLoadResult> => {
   const snapshot = await fetchWorldEnvironmentSnapshot();
@@ -85,7 +80,8 @@ export const loadCityPageData = async (cityId: string): Promise<CityPageLoadResu
     });
   } catch (error) {
     console.error(`Failed to load city environment details for ${matchedCity.name}`, error);
-    detailsError = "We couldn't load extended city details right now.";
+    // Only show error for critical failures, not optional metadata
+    detailsError = null;
   }
 
   return {
@@ -107,6 +103,8 @@ export const CityContent = ({
   studios,
   playerCount,
   nightClubs,
+  transportRoutes,
+  venueCount,
   rehearsalRooms = [],
 }: CityContentProps & { rehearsalRooms?: any[] }) => {
   const culturalEvents = useMemo(
@@ -114,9 +112,6 @@ export const CityContent = ({
     [city?.cultural_events],
   );
 
-  const venueHighlights = city?.venueHighlights ?? [];
-  const studioProfiles = city?.studioProfiles ?? [];
-  const transportLinks = city?.transportLinks ?? [];
   const metadata = details?.metadata ?? null;
 
   const summary = useMemo(() => {
@@ -132,12 +127,11 @@ export const CityContent = ({
       return city.description;
     }
 
-    return "This city is ready to be explored. Updated details will appear here as the world simulation grows.";
-  }, [metadata?.summary, city?.profileDescription, city?.description]);
+    return `Welcome to ${city?.name ?? 'this city'} - a vibrant destination for musicians with ${city?.music_scene ?? 0}% music scene rating.`;
+  }, [metadata?.summary, city?.profileDescription, city?.description, city?.name, city?.music_scene]);
 
   const famousResident = metadata?.famousResident ?? city?.famousResident ?? null;
   const signatureSound = metadata?.signatureSound ?? null;
-  const travelHub = city?.travelHub ?? metadata?.metroArea ?? null;
 
   if (loading) {
     return (
@@ -171,70 +165,78 @@ export const CityContent = ({
 
   return (
     <div className="container mx-auto space-y-8 px-4 py-10">
-      <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Badge variant="secondary" className="text-sm uppercase tracking-wide">
-              City Overview
-            </Badge>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{city.name}</h1>
-              <p className="text-muted-foreground md:text-base">{summary}</p>
+      <header className="relative rounded-xl border border-border/60 p-6 overflow-hidden">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between relative z-10">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-sm uppercase tracking-wide">
+                  City Overview
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{city.name}</h1>
+                <p className="text-muted-foreground md:text-base max-w-2xl">{summary}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{city.country}</Badge>
-            {playerCount > 0 && (
-              <Badge variant="outline" className="bg-primary/10 text-primary">
-                {playerCount} {playerCount === 1 ? "player" : "players"} here
+            
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                {city.country}
               </Badge>
-            )}
-            {signatureSound && (
-              <Badge variant="outline" className="bg-primary/5 text-primary">
-                Signature sound: {signatureSound}
-              </Badge>
-            )}
-            {travelHub && (
-              <Badge variant="outline" className="bg-secondary/20">
-                Travel hub: {travelHub}
-              </Badge>
-            )}
-          </div>
-          {famousResident && (
-            <p className="text-sm text-muted-foreground">
-              Famous resident: <span className="font-medium text-foreground">{famousResident}</span>
-            </p>
-          )}
-          {detailsLoading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Fetching extended city data...
+              {playerCount > 0 && (
+                <Badge variant="outline" className="bg-primary/10 text-primary flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {playerCount} {playerCount === 1 ? "player" : "players"} here
+                </Badge>
+              )}
+              {signatureSound && (
+                <Badge variant="outline" className="bg-primary/5 text-primary flex items-center gap-1">
+                  <Music className="h-3 w-3" />
+                  {signatureSound}
+                </Badge>
+              )}
             </div>
-          )}
-        </div>
-        <div className="flex flex-col items-stretch gap-3">
-          <Button variant="outline" asChild>
-            <Link to="/cities">Back to cities</Link>
-          </Button>
-          <div className="rounded-md border border-border/60 p-3 text-sm text-muted-foreground">
-            <div className="font-medium text-foreground">City metrics</div>
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Population</div>
-                <div className="font-semibold">{(city.population / 1_000_000).toFixed(1)}M</div>
+            
+            {famousResident && (
+              <p className="text-sm text-muted-foreground">
+                Famous resident: <span className="font-medium text-foreground">{famousResident}</span>
+              </p>
+            )}
+            
+            {detailsLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Fetching extended city data...
               </div>
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Music Scene</div>
-                <div className="font-semibold">{city.music_scene}%</div>
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Cost of Living</div>
-                <div className="font-semibold">{city.cost_of_living}%</div>
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Local Bonus</div>
-                <div className="font-semibold text-green-600">
-                  {Number.isFinite(city.local_bonus) ? `${city.local_bonus}%` : "—"}
+            )}
+          </div>
+          
+          <div className="flex flex-col items-stretch gap-3 min-w-[200px]">
+            <Button variant="outline" asChild>
+              <Link to="/cities">Back to cities</Link>
+            </Button>
+            <div className="rounded-md border border-border/60 bg-background/80 p-3 text-sm">
+              <div className="font-medium text-foreground mb-2">Quick Stats</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Population</div>
+                  <div className="font-semibold">{(city.population / 1_000_000).toFixed(1)}M</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Music Scene</div>
+                  <div className="font-semibold text-primary">{city.music_scene}%</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Cost of Living</div>
+                  <div className="font-semibold">{city.cost_of_living}%</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Local Bonus</div>
+                  <div className="font-semibold text-green-600">
+                    {Number.isFinite(city.local_bonus) ? `+${city.local_bonus}%` : "—"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,66 +244,45 @@ export const CityContent = ({
         </div>
       </header>
 
-      {detailsError && (
-        <Alert variant="default" className="border-yellow-200 bg-yellow-50 text-yellow-900">
-          <AlertTitle>Some information is unavailable</AlertTitle>
-          <AlertDescription>{detailsError}</AlertDescription>
-        </Alert>
-      )}
+      {/* Music Scene & Cost Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <CityMusicSceneCard
+          musicScene={city.music_scene}
+          dominantGenre={city.dominant_genre}
+          localBonus={city.local_bonus}
+          venueCount={venueCount}
+          playerCount={playerCount}
+        />
+        <CityCostBreakdown
+          costOfLiving={city.cost_of_living}
+          cityName={city.name}
+        />
+        <CityTransportSection
+          routes={transportRoutes}
+          cityName={city.name}
+        />
+      </div>
 
+      {/* Districts */}
       <CityDistrictsSection districts={districts} />
 
+      {/* Studios, Night Clubs, Festivals */}
       <div className="grid gap-6 lg:grid-cols-2">
         <CityStudiosSection studios={studios} />
-
         <CityNightClubsSection nightClubs={nightClubs} />
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Train className="h-5 w-5 text-primary" />
-              Transport Connections
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {transportLinks.length ? (
-              transportLinks.map((option) => {
-                const Icon = getTransportIcon(option.type);
-                return (
-                  <div key={`${option.name}-${option.type}`} className="space-y-2 rounded-lg border border-border/60 p-4">
-                    <div className="flex items-start gap-3">
-                      <Icon className="mt-1 h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="text-base font-semibold">{option.name}</h3>
-                        <p className="text-sm text-muted-foreground">{option.description}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {option.distance ? option.distance : "Distance not specified"}
-                    </p>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                Transport data will appear here once routes are confirmed.
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Festival Circuit Highlights
+              Festival Circuit & Cultural Events
             </CardTitle>
           </CardHeader>
           <CardContent>
             {culturalEvents.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {culturalEvents.map((event) => (
-                  <div key={`${city.id}-event-${event}`} className="flex flex-col justify-between rounded-lg border border-border/60 p-4">
+                  <div key={`${city.id}-event-${event}`} className="flex flex-col justify-between rounded-lg border border-border/60 p-4 hover:border-primary/50 transition-colors">
                     <div className="space-y-2">
                       <h3 className="text-base font-semibold leading-snug">{event}</h3>
                       <p className="text-sm text-muted-foreground">
@@ -309,7 +290,7 @@ export const CityContent = ({
                       </p>
                     </div>
                     <div className="pt-4 text-xs text-muted-foreground">
-                      Opportunity index: {city.music_scene}% | Local bonus {city.local_bonus}x
+                      Opportunity index: {city.music_scene}% | Local bonus +{city.local_bonus}%
                     </div>
                   </div>
                 ))}
@@ -339,6 +320,8 @@ export default function City() {
   const [playerCount, setPlayerCount] = useState<number>(0);
   const [nightClubs, setNightClubs] = useState<CityNightClub[]>([]);
   const [rehearsalRooms, setRehearsalRooms] = useState<any[]>([]);
+  const [transportRoutes, setTransportRoutes] = useState<TransportRoute[]>([]);
+  const [venueCount, setVenueCount] = useState<number>(0);
 
   const loadCity = useCallback(
     async (options: { signal?: { cancelled: boolean } } = {}) => {
@@ -353,6 +336,7 @@ export default function City() {
       setDetailsError(null);
       setDetailsLoading(false);
       setNightClubs([]);
+      setTransportRoutes([]);
 
       try {
         const snapshot = await fetchWorldEnvironmentSnapshot();
@@ -378,29 +362,28 @@ export default function City() {
         setLoading(false);
         setDetailsLoading(true);
 
-        // Get user's current city to filter studios
-        const { data: userData } = await supabase.auth.getUser();
-        let userCityId = matchedCity.id;
-        
-        if (userData?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("current_city_id")
-            .eq("user_id", userData.user.id)
-            .single();
-          
-          if (profile?.current_city_id) {
-            userCityId = profile.current_city_id;
-          }
-        }
-
-        // Load districts, studios, night clubs, rehearsal rooms, and player count in parallel
-        const [districtsResult, studiosResult, nightClubsResult, rehearsalRoomsResult, playerCountResult, cityDetails] = await Promise.allSettled([
+        // Load all city data in parallel - use matchedCity.id for all queries
+        const [
+          districtsResult,
+          studiosResult,
+          nightClubsResult,
+          rehearsalRoomsResult,
+          playerCountResult,
+          transportResult,
+          venueCountResult,
+          cityDetails
+        ] = await Promise.allSettled([
           supabase.from("city_districts").select("*").eq("city_id", matchedCity.id).order("name"),
-          supabase.from("city_studios").select("*, district:city_districts(name)").eq("city_id", userCityId).order("quality_rating", { ascending: false }),
+          supabase.from("city_studios").select("*, district:city_districts(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
           supabase.from("city_night_clubs").select("*").eq("city_id", matchedCity.id).order("quality_level", { ascending: false }),
           supabase.from("rehearsal_rooms").select("*, city:cities(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
           supabase.from("profiles").select("id", { count: "exact", head: true }).eq("current_city_id", matchedCity.id),
+          supabase
+            .from("city_transport_routes")
+            .select("*, from_city:cities!city_transport_routes_from_city_id_fkey(name, country), to_city:cities!city_transport_routes_to_city_id_fkey(name, country)")
+            .eq("from_city_id", matchedCity.id)
+            .order("duration_hours", { ascending: true }),
+          supabase.from("venues").select("id", { count: "exact", head: true }).eq("city_id", matchedCity.id),
           fetchCityEnvironmentDetails(matchedCity.id, {
             cityName: matchedCity.name,
             country: matchedCity.country,
@@ -416,7 +399,6 @@ export default function City() {
             setStudios(studiosResult.value.data);
           }
 
-          // Load night clubs from database query
           if (nightClubsResult.status === "fulfilled" && nightClubsResult.value.data) {
             setNightClubs(nightClubsResult.value.data as any);
           }
@@ -428,6 +410,14 @@ export default function City() {
           if (playerCountResult.status === "fulfilled" && playerCountResult.value.count !== null) {
             setPlayerCount(playerCountResult.value.count);
           }
+
+          if (transportResult.status === "fulfilled" && transportResult.value.data) {
+            setTransportRoutes(transportResult.value.data as TransportRoute[]);
+          }
+
+          if (venueCountResult.status === "fulfilled" && venueCountResult.value.count !== null) {
+            setVenueCount(venueCountResult.value.count);
+          }
           
           if (cityDetails.status === "fulfilled") {
             setDetails(cityDetails.value);
@@ -437,7 +427,8 @@ export default function City() {
             }
           } else if (cityDetails.status === "rejected") {
             console.error(`Failed to load city environment details for ${matchedCity.name}`, cityDetails.reason);
-            setDetailsError("We couldn't load extended city details right now.");
+            // Don't show error banner for optional metadata failures
+            setDetailsError(null);
             if (nightClubsResult.status === "rejected") {
               setNightClubs([]);
             }
@@ -482,14 +473,14 @@ export default function City() {
       loading={loading}
       error={error}
       detailsError={detailsError}
+      onRetry={loadCity}
       districts={districts}
       studios={studios}
       playerCount={playerCount}
       nightClubs={nightClubs}
       rehearsalRooms={rehearsalRooms}
-      onRetry={() => {
-        void loadCity();
-      }}
+      transportRoutes={transportRoutes}
+      venueCount={venueCount}
     />
   );
 }
