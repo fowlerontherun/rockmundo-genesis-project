@@ -102,7 +102,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           *,
           gigs!gig_outcomes_gig_id_fkey(
             *,
-            venues(name, capacity, location),
+            venues:venues!gigs_venue_id_fkey(name, capacity, location),
             setlists(name)
           )
         `)
