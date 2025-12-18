@@ -77,6 +77,17 @@ serve(async (req) => {
       );
     }
 
+    // Get active band count for market scaling
+    const { count: activeBandCount } = await supabaseClient
+      .from("bands")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active");
+    
+    // Market scarcity bonus: fewer bands = more sales per release
+    // At 10 bands: 5x boost, at 50 bands: 2x, at 100+ bands: 1x
+    const marketMultiplier = Math.max(1, Math.min(5, 100 / Math.max(activeBandCount || 100, 20)));
+    console.log(`Market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
+
     for (const release of releases || []) {
       try {
         releasesProcessed += 1;
@@ -119,7 +130,7 @@ serve(async (req) => {
           }
 
           const calculatedSales = Math.floor(
-            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier
+            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier
           );
 
           const actualSales = Math.min(calculatedSales, format.quantity || 0);

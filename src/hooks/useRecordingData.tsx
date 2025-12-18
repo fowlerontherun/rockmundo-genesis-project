@@ -379,7 +379,7 @@ export const useCompleteRecordingSession = () => {
 
       if (songError) throw songError;
 
-      // Log the activity
+      // Log the activity and award XP
       const { data: userData } = await supabase.auth.getUser();
       if (userData?.user?.id) {
         await logGameActivity({
@@ -391,6 +391,63 @@ export const useCompleteRecordingSession = () => {
           beforeState: { quality_score: currentQuality },
           afterState: { quality_score: newQuality },
         });
+        
+        // Award XP based on quality improvement (50-200 XP range)
+        const xpAmount = Math.min(200, Math.max(50, Math.round(qualityImprovement * 3)));
+        
+        // Get profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .single();
+        
+        if (profile) {
+          // Add to experience ledger
+          await supabase
+            .from('experience_ledger')
+            .insert({
+              user_id: userData.user.id,
+              profile_id: profile.id,
+              activity_type: 'recording_complete',
+              xp_amount: xpAmount,
+              metadata: {
+                session_id: sessionId,
+                song_id: session.song_id,
+                quality_before: currentQuality,
+                quality_after: newQuality,
+                quality_improvement: qualityImprovement
+              }
+            });
+          
+          // Update XP wallet
+          const { data: wallet } = await supabase
+            .from('player_xp_wallet')
+            .select('xp_balance, lifetime_xp')
+            .eq('profile_id', profile.id)
+            .single();
+          
+          if (wallet) {
+            await supabase
+              .from('player_xp_wallet')
+              .update({
+                xp_balance: (wallet.xp_balance || 0) + xpAmount,
+                lifetime_xp: (wallet.lifetime_xp || 0) + xpAmount
+              })
+              .eq('profile_id', profile.id);
+          } else {
+            await supabase
+              .from('player_xp_wallet')
+              .insert({
+                profile_id: profile.id,
+                xp_balance: xpAmount,
+                lifetime_xp: xpAmount,
+                xp_spent: 0
+              });
+          }
+          
+          console.log(`Awarded ${xpAmount} XP for recording completion`);
+        }
       }
 
       return { ...session, qualityBefore: currentQuality, qualityAfter: newQuality };
