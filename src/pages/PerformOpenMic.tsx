@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Slider } from "@/components/ui/slider";
 import { 
   Mic, 
   Play, 
@@ -21,6 +22,7 @@ import {
   MapPin, 
   Loader2,
   Volume2,
+  VolumeX,
   Users,
   Sparkles
 } from "lucide-react";
@@ -44,16 +46,166 @@ export default function PerformOpenMic() {
   const [commentary, setCommentary] = useState<LiveCommentary[]>([]);
   const [currentSongProgress, setCurrentSongProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Audio playback state
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.7);
+  const [isMuted, setIsMuted] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
 
   // Get current song based on position
   const currentSong = performance?.current_song_position === 1 
     ? performance?.song_1 
     : performance?.song_2;
 
-  // Process song when performance is in progress
+  // Audio playback effect
+  useEffect(() => {
+    if (!currentSong || performance?.status !== 'in_progress') {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      return;
+    }
+
+    const audioUrl = (currentSong as any).audio_url;
+    if (!audioUrl) return;
+
+    // Create or update audio element
+    if (!audioRef.current || audioRef.current.src !== audioUrl) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.volume = isMuted ? 0 : volume;
+      
+      audioRef.current.onloadedmetadata = () => {
+        setAudioDuration(audioRef.current?.duration || 0);
+      };
+      
+      audioRef.current.ontimeupdate = () => {
+        if (audioRef.current) {
+          setAudioCurrentTime(audioRef.current.currentTime);
+          const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+          setCurrentSongProgress(progress);
+        }
+      };
+      
+      audioRef.current.onended = async () => {
+        setIsAudioPlaying(false);
+        // Song finished - process it
+        await processSongComplete();
+      };
+      
+      // Auto-play when ready
+      audioRef.current.play().then(() => {
+        setIsAudioPlaying(true);
+      }).catch(err => {
+        console.error('Audio playback error:', err);
+        // Fall back to simulated progress if audio fails
+        setIsAudioPlaying(false);
+      });
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [currentSong, performance?.status]);
+
+  // Update volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
+
+  // Process song completion
+  const processSongComplete = async () => {
+    if (!performance || !currentSong || isProcessing) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      // Call edge function to process the song
+      const { data, error } = await supabase.functions.invoke('process-open-mic-song', {
+        body: {
+          performanceId: performance.id,
+          songId: currentSong.id,
+          position: performance.current_song_position,
+        },
+      });
+
+      if (error) throw error;
+
+      // Add result commentary
+      const crowdResponse = data?.crowd_response || 'engaged';
+      const responseComments: Record<string, string> = {
+        ecstatic: '🎉 The crowd goes wild! Standing ovation!',
+        enthusiastic: '👏 Great response from the audience!',
+        engaged: '👍 The crowd is appreciating the performance.',
+        mixed: '😐 Some mixed reactions from the audience.',
+        disappointed: '😔 The crowd seems a bit underwhelmed.',
+      };
+      
+      setCommentary(prev => [...prev, { 
+        text: responseComments[crowdResponse] || 'Song completed.', 
+        type: crowdResponse === 'ecstatic' || crowdResponse === 'enthusiastic' ? 'positive' : 
+              crowdResponse === 'disappointed' ? 'negative' : 'neutral',
+        timestamp: Date.now() 
+      }]);
+
+      // Advance to next song or complete
+      if (performance.current_song_position < 2) {
+        await supabase
+          .from('open_mic_performances')
+          .update({ current_song_position: 2 })
+          .eq('id', performance.id);
+        
+        setCommentary(prev => [...prev, { 
+          text: 'Getting ready for the next song...', 
+          type: 'neutral', 
+          timestamp: Date.now() 
+        }]);
+        
+        // Reset audio state for next song
+        setCurrentSongProgress(0);
+        setAudioCurrentTime(0);
+      } else {
+        // Complete the performance
+        const { error: completeError } = await supabase.functions.invoke('complete-open-mic', {
+          body: { performanceId: performance.id },
+        });
+
+        if (completeError) throw completeError;
+      }
+
+      // Refetch data
+      await refetch();
+      await refetchSongs();
+      
+    } catch (err) {
+      console.error('Error processing song:', err);
+      setCommentary(prev => [...prev, { 
+        text: 'Technical difficulties... but the show goes on!', 
+        type: 'negative', 
+        timestamp: Date.now() 
+      }]);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Fallback: simulated progression if no audio
   useEffect(() => {
     if (!performance || performance.status !== 'in_progress' || !currentSong) return;
-    if (performance.current_song_position > 2) return; // Already done
+    if (performance.current_song_position > 2) return;
+    
+    const audioUrl = (currentSong as any).audio_url;
+    if (audioUrl) return; // Use audio-based progression instead
 
     let progressInterval: NodeJS.Timeout;
     let processingTimeout: NodeJS.Timeout;
@@ -69,8 +221,8 @@ export default function PerformOpenMic() {
       ];
       setCommentary(prev => [...prev, ...introComments.map((c, i) => ({ ...c, timestamp: Date.now() + i }))]);
 
-      // Simulate song progress (30 seconds for demo, real would use duration)
-      const songDuration = Math.min(currentSong.duration_seconds || 180, 30) * 1000;
+      // Simulate song progress (use actual duration, capped at 60s for demo)
+      const songDuration = Math.min(currentSong.duration_seconds || 180, 60) * 1000;
       const progressStep = 100 / (songDuration / 500);
       
       progressInterval = setInterval(() => {
@@ -92,71 +244,8 @@ export default function PerformOpenMic() {
       processingTimeout = setTimeout(async () => {
         clearInterval(progressInterval);
         setCurrentSongProgress(100);
-
-        try {
-          // Call edge function to process the song
-          const { data, error } = await supabase.functions.invoke('process-open-mic-song', {
-            body: {
-              performanceId: performance.id,
-              songId: currentSong.id,
-              position: performance.current_song_position,
-            },
-          });
-
-          if (error) throw error;
-
-          // Add result commentary
-          const crowdResponse = data?.crowd_response || 'engaged';
-          const responseComments: Record<string, string> = {
-            ecstatic: '🎉 The crowd goes wild! Standing ovation!',
-            enthusiastic: '👏 Great response from the audience!',
-            engaged: '👍 The crowd is appreciating the performance.',
-            mixed: '😐 Some mixed reactions from the audience.',
-            disappointed: '😔 The crowd seems a bit underwhelmed.',
-          };
-          
-          setCommentary(prev => [...prev, { 
-            text: responseComments[crowdResponse] || 'Song completed.', 
-            type: crowdResponse === 'ecstatic' || crowdResponse === 'enthusiastic' ? 'positive' : 
-                  crowdResponse === 'disappointed' ? 'negative' : 'neutral',
-            timestamp: Date.now() 
-          }]);
-
-          // Advance to next song or complete
-          if (performance.current_song_position < 2) {
-            await supabase
-              .from('open_mic_performances')
-              .update({ current_song_position: 2 })
-              .eq('id', performance.id);
-            
-            setCommentary(prev => [...prev, { 
-              text: 'Getting ready for the next song...', 
-              type: 'neutral', 
-              timestamp: Date.now() 
-            }]);
-          } else {
-            // Complete the performance
-            const { error: completeError } = await supabase.functions.invoke('complete-open-mic', {
-              body: { performanceId: performance.id },
-            });
-
-            if (completeError) throw completeError;
-          }
-
-          // Refetch data
-          await refetch();
-          await refetchSongs();
-          
-        } catch (err) {
-          console.error('Error processing song:', err);
-          setCommentary(prev => [...prev, { 
-            text: 'Technical difficulties... but the show goes on!', 
-            type: 'negative', 
-            timestamp: Date.now() 
-          }]);
-        } finally {
-          setIsProcessing(false);
-        }
+        await processSongComplete();
+        setIsProcessing(false);
       }, songDuration);
     };
 
@@ -168,9 +257,25 @@ export default function PerformOpenMic() {
     };
   }, [performance?.status, performance?.current_song_position, currentSong?.id]);
 
+  // Add intro commentary when starting
+  useEffect(() => {
+    if (performance?.status === 'in_progress' && currentSong && commentary.length === 0) {
+      setCommentary([
+        { text: `Now performing: "${currentSong.title}"`, type: 'neutral', timestamp: Date.now() },
+        { text: 'The crowd settles in...', type: 'neutral', timestamp: Date.now() + 1 },
+      ]);
+    }
+  }, [performance?.status, currentSong]);
+
   const handleStart = () => {
     if (!performanceId) return;
     startPerformance.mutate(performanceId);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (isLoading) {
@@ -302,6 +407,8 @@ export default function PerformOpenMic() {
   }
 
   // Live performance view
+  const hasAudio = !!(currentSong as any)?.audio_url;
+  
   return (
     <div className="container max-w-4xl py-8 space-y-6">
       <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-transparent">
@@ -325,7 +432,43 @@ export default function PerformOpenMic() {
             </p>
           </div>
 
-          <Progress value={currentSongProgress} className="h-3" />
+          {/* Progress bar with time display */}
+          <div className="space-y-2">
+            <Progress value={currentSongProgress} className="h-3" />
+            {hasAudio && audioDuration > 0 && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{formatTime(audioCurrentTime)}</span>
+                <span>{formatTime(audioDuration)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Audio Controls */}
+          {hasAudio && (
+            <div className="flex items-center justify-center gap-4 p-3 bg-muted/50 rounded-lg">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </Button>
+              <Slider
+                value={[isMuted ? 0 : volume * 100]}
+                onValueChange={([val]) => {
+                  setVolume(val / 100);
+                  if (val > 0) setIsMuted(false);
+                }}
+                max={100}
+                step={1}
+                className="w-32"
+              />
+              <span className="text-xs text-muted-foreground w-8">
+                {Math.round((isMuted ? 0 : volume) * 100)}%
+              </span>
+            </div>
+          )}
 
           <div className="flex justify-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
