@@ -163,27 +163,85 @@ const TutorialOverlay = ({
 export const DASHBOARD_TUTORIAL: TutorialStep[] = [
   {
     id: "welcome",
-    title: "Welcome to Rock Manager!",
-    content: "This is your command center for managing your music career. Let's take a quick tour of the key features.",
+    title: "Welcome to Rockmundo!",
+    content: "This is your command center for managing your music career. Let's take a quick tour of the key features and get you started on your journey to stardom!",
   },
   {
-    id: "stats",
-    title: "Your Stats",
-    content: "Here you can see your character's attributes, skills, and progression. Keep training to improve!",
+    id: "character",
+    title: "Your Character",
+    content: "Your character has skills, attributes, and a wallet. Keep training and performing to improve your abilities. Check your profile to see your progress!",
+  },
+  {
+    id: "songwriting",
+    title: "Write Your First Song",
+    content: "Head to Music Hub → Songwriting Studio to write your first song. You can write lyrics manually or use AI assistance. Song quality depends on your songwriting skill.",
   },
   {
     id: "band",
     title: "Band Management",
-    content: "Create or join a band to start performing gigs. Collaborate with other musicians to grow your fame.",
+    content: "Create or join a band to unlock more opportunities! Bands can book bigger gigs, and chemistry between members improves your performances.",
+  },
+  {
+    id: "openmic",
+    title: "Start with Open Mic Nights!",
+    content: "Open Mic Nights are perfect for beginners! Every city has a venue with a weekly open mic. Sign up, pick 2 songs, and perform when it's showtime. You'll earn fame and fans - no money, but great exposure!",
+  },
+  {
+    id: "rehearsals",
+    title: "Rehearse Your Songs",
+    content: "Book rehearsal rooms to practice your songs with your band. Higher familiarity means better live performances. Rehearsals also build band chemistry!",
   },
   {
     id: "gigs",
     title: "Book Gigs",
-    content: "Book gigs at venues to earn money and fame. Better performances lead to bigger opportunities!",
+    content: "Once you've built some fame, book gigs at venues! Create setlists from your rehearsed songs. Better performances lead to bigger payouts and more fans.",
   },
   {
-    id: "recording",
-    title: "Recording Studio",
-    content: "Record your songs to release them and earn streaming revenue. Quality recordings attract more listeners.",
+    id: "schedule",
+    title: "Check Your Schedule",
+    content: "Your activities are scheduled and block time slots. Open mics, gigs, classes, and rehearsals all take time. Plan wisely - you can't double-book!",
+  },
+  {
+    id: "education",
+    title: "Keep Learning",
+    content: "Visit Education to attend university courses, read skill books, watch videos, or work with mentors. More skills = better songs and performances!",
+  },
+  {
+    id: "social",
+    title: "Build Your Fanbase",
+    content: "Use Twaater (social media) to post updates and engage with fans. Travel to new cities to expand your reach. Your fame grows with every performance and interaction!",
+  },
+];
+
+export const OPEN_MIC_TUTORIAL: TutorialStep[] = [
+  {
+    id: "intro",
+    title: "Open Mic Nights",
+    content: "Open mic nights are the perfect way to start your music career! Every city has a venue hosting weekly open mic nights.",
+  },
+  {
+    id: "schedule",
+    title: "Weekly Schedule",
+    content: "Each venue has a specific day of the week for their open mic. All performances start at 8 PM. Check the venue cards to see their schedule.",
+  },
+  {
+    id: "signup",
+    title: "Sign Up to Play",
+    content: "Click 'Sign Up to Play' on any venue to register. You'll need to select 2 songs from your band's repertoire.",
+  },
+  {
+    id: "waiting",
+    title: "Wait for Showtime",
+    content: "After signing up, you'll need to wait until the scheduled date and time. The 'Start Performance' button activates when it's showtime!",
+  },
+  {
+    id: "performing",
+    title: "Live Performance",
+    content: "During your set, you'll see live commentary as the crowd reacts to your performance. Song quality, rehearsal level, and band chemistry all affect your score.",
+  },
+  {
+    id: "rewards",
+    title: "Fame & Fans",
+    content: "Open mics don't pay money - they're about exposure! You'll earn fame and fans based on your performance. Great for building an audience before booking paid gigs.",
   },
 ];
