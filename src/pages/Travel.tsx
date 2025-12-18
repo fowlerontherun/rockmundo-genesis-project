@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/use-auth-context";
+import { useTranslation } from "@/hooks/useTranslation";
 import { TravelDestinationBrowser } from "@/components/travel/TravelDestinationBrowser";
 import { TransportComparison } from "@/components/travel/TransportComparison";
 import { bookTravel } from "@/utils/travelSystem";
@@ -45,6 +46,7 @@ const TRANSPORT_ICONS = {
 
 const Travel = () => {
   const { user } = useContext(AuthContext);
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [currentCity, setCurrentCity] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -180,10 +182,10 @@ const Travel = () => {
       <header className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Globe className="h-8 w-8 text-primary" />
-          Travel Hub
+          {t('travel.title')}
         </h1>
         <p className="text-muted-foreground">
-          Explore the world and travel to new cities for gigs, recording, and more.
+          {t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
         </p>
       </header>
 
@@ -192,7 +194,7 @@ const Travel = () => {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <MapPin className="h-5 w-5 text-primary" />
-            Your Location
+            {t('travel.currentLocation')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -202,14 +204,14 @@ const Travel = () => {
                 <h2 className="text-2xl font-bold">{currentCity.name}</h2>
                 <p className="text-muted-foreground">{currentCity.country}</p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="secondary">🎵 Music Scene: {currentCity.music_scene}%</Badge>
-                  {currentCity.is_coastal && <Badge variant="outline">🏖️ Coastal</Badge>}
-                  {currentCity.has_train_network && <Badge variant="outline">🚄 Rail Hub</Badge>}
+                  <Badge variant="secondary">🎵 {t('nav.music', 'Music Scene')}: {currentCity.music_scene}%</Badge>
+                  {currentCity.is_coastal && <Badge variant="outline">🏖️ {t('travel.ship', 'Coastal')}</Badge>}
+                  {currentCity.has_train_network && <Badge variant="outline">🚄 {t('travel.train', 'Rail Hub')}</Badge>}
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button asChild variant="outline">
-                  <Link to={`/cities/${currentCity.id}`}>Explore City</Link>
+                  <Link to={`/cities/${currentCity.id}`}>{t('common.viewDetails', 'Explore City')}</Link>
                 </Button>
                 <Badge variant="secondary" className="text-lg px-4 py-2">
                   💰 ${(profile?.cash || 0).toLocaleString()}
@@ -219,9 +221,9 @@ const Travel = () => {
           ) : (
             <Alert>
               <MapPin className="h-4 w-4" />
-              <AlertTitle>No Location Set</AlertTitle>
+              <AlertTitle>{t('common.noData', 'No Location Set')}</AlertTitle>
               <AlertDescription>
-                You haven't set your current location yet. All players start in London by default.
+                {t('travel.inTransit', "You haven't set your current location yet. All players start in London by default.")}
               </AlertDescription>
             </Alert>
           )}
@@ -243,9 +245,9 @@ const Travel = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
-              Travel History
+              {t('schedule.past', 'Travel History')}
             </CardTitle>
-            <CardDescription>Your recent journeys</CardDescription>
+            <CardDescription>{t('travel.duration', 'Your recent journeys')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>

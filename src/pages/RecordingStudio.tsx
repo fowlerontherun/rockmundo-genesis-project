@@ -9,6 +9,7 @@ import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useTranslation } from "@/hooks/useTranslation";
 import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
@@ -17,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 export default function RecordingStudio() {
   const { session } = useAuth();
   const { currentCity } = useGameData();
+  const { t } = useTranslation();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -65,13 +67,13 @@ export default function RecordingStudio() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge variant="default">Completed</Badge>;
+        return <Badge variant="default">{t('common.completed')}</Badge>;
       case 'in_progress':
-        return <Badge variant="secondary">In Progress</Badge>;
+        return <Badge variant="secondary">{t('gigs.inProgress')}</Badge>;
       case 'cancelled':
-        return <Badge variant="destructive">Cancelled</Badge>;
+        return <Badge variant="destructive">{t('gigs.cancelled')}</Badge>;
       default:
-        return <Badge variant="outline">Scheduled</Badge>;
+        return <Badge variant="outline">{t('gigs.scheduled')}</Badge>;
     }
   };
 
@@ -81,15 +83,15 @@ export default function RecordingStudio() {
         <div>
           <h1 className="text-4xl font-bold flex items-center gap-3">
             <Music className="h-8 w-8 text-primary" />
-            Recording Studio
+            {t('recording.title')}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Record your songs with professional producers and studios
+            {t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
           </p>
         </div>
         <Button onClick={() => setWizardOpen(true)} size="lg">
           <Plus className="h-5 w-5 mr-2" />
-          New Recording
+          {t('recording.startSession', 'New Recording')}
         </Button>
       </div>
 
@@ -98,11 +100,11 @@ export default function RecordingStudio() {
           <CardContent className="pt-6 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
             <p className="text-yellow-600 dark:text-yellow-400">
-              You need to set your current city first.{" "}
+              {t('travel.currentLocation', 'You need to set your current city first.')}{" "}
               <Link to="/travel" className="underline font-medium">
-                Travel to a city
+                {t('travel.title')}
               </Link>{" "}
-              to access recording studios.
+              {t('recording.selectStudio', 'to access recording studios.')}
             </p>
           </CardContent>
         </Card>
@@ -112,38 +114,38 @@ export default function RecordingStudio() {
         <TabsList>
           <TabsTrigger value="sessions" className="gap-2">
             <ListMusic className="h-4 w-4" />
-            <span className="hidden sm:inline">Sessions</span>
+            <span className="hidden sm:inline">{t('recording.currentSession', 'Sessions')}</span>
           </TabsTrigger>
           <TabsTrigger value="recorded" className="gap-2">
             <Disc3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Recorded Songs</span>
+            <span className="hidden sm:inline">{t('recording.recordedSongs')}</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sessions">
           <Card>
             <CardHeader>
-              <CardTitle>Recording Sessions</CardTitle>
+              <CardTitle>{t('recording.currentSession', 'Recording Sessions')}</CardTitle>
               <CardDescription>
-                Track your current and past recording sessions
+                {t('recording.recordingHistory', 'Track your current and past recording sessions')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Loading sessions...
+                  {t('common.loading')}
                 </div>
               ) : !sessions || sessions.length === 0 ? (
                 <div className="text-center py-12 space-y-4">
                   <Music className="h-12 w-12 text-muted-foreground mx-auto" />
                   <div>
-                    <p className="text-muted-foreground font-medium">No recording sessions yet</p>
+                    <p className="text-muted-foreground font-medium">{t('common.noResults', 'No recording sessions yet')}</p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Start by creating songs in the{" "}
+                      {t('recording.selectSong', 'Start by creating songs in the')}{" "}
                       <Link to="/songwriting" className="text-primary underline font-medium">
-                        Songwriting
+                        {t('nav.songwriting')}
                       </Link>{" "}
-                      section, then come back here to record them professionally.
+                      {t('recording.selectSong', 'section, then come back here to record them professionally.')}
                     </p>
                   </div>
                 </div>
@@ -163,15 +165,15 @@ export default function RecordingStudio() {
                             </div>
                             
                             <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                              <div>Studio: {session.city_studios?.name || 'N/A'}</div>
-                              <div>Producer: {session.recording_producers?.name || 'N/A'}</div>
-                              <div>Duration: {session.duration_hours} hours</div>
-                              <div>Cost: ${session.total_cost.toLocaleString()}</div>
+                              <div>{t('recording.selectStudio', 'Studio')}: {session.city_studios?.name || 'N/A'}</div>
+                              <div>{t('recording.selectSong', 'Producer')}: {session.recording_producers?.name || 'N/A'}</div>
+                              <div>{t('recording.duration')}: {session.duration_hours} {t('time.hours')}</div>
+                              <div>{t('releases.cost')}: ${session.total_cost.toLocaleString()}</div>
                             </div>
 
                             {session.status === 'completed' && session.quality_improvement > 0 && (
                               <div className="mt-2 text-sm">
-                                <span className="text-muted-foreground">Quality Improvement: </span>
+                                <span className="text-muted-foreground">{t('recording.qualityBoost')}: </span>
                                 <span className="font-semibold text-green-600">
                                   +{session.quality_improvement}
                                 </span>
@@ -182,11 +184,11 @@ export default function RecordingStudio() {
                           <div className="flex flex-col items-end gap-2">
                             <div className="text-sm text-muted-foreground">
                               {session.completed_at ? (
-                                <div>Completed {formatDistanceToNow(new Date(session.completed_at))} ago</div>
+                                <div>{t('common.completed')} {formatDistanceToNow(new Date(session.completed_at))} {t('time.ago')}</div>
                               ) : session.status === 'in_progress' ? (
-                                <div>Ends {formatDistanceToNow(new Date(session.scheduled_end))}</div>
+                                <div>{t('recording.endSession', 'Ends')} {formatDistanceToNow(new Date(session.scheduled_end))}</div>
                               ) : (
-                                <div>Created {formatDistanceToNow(new Date(session.created_at))} ago</div>
+                                <div>{t('common.create', 'Created')} {formatDistanceToNow(new Date(session.created_at))} {t('time.ago')}</div>
                               )}
                             </div>
                             {session.status === 'in_progress' && new Date(session.scheduled_end) <= new Date() && (
@@ -198,7 +200,7 @@ export default function RecordingStudio() {
                                 }}
                               >
                                 <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Complete
+                                {t('recording.finalizeRecording', 'Complete')}
                               </Button>
                             )}
                           </div>
@@ -215,9 +217,9 @@ export default function RecordingStudio() {
         <TabsContent value="recorded">
           <Card>
             <CardHeader>
-              <CardTitle>Recorded Songs</CardTitle>
+              <CardTitle>{t('recording.recordedSongs')}</CardTitle>
               <CardDescription>
-                View all your recorded songs and their versions
+                {t('recording.recordingHistory', 'View all your recorded songs and their versions')}
               </CardDescription>
             </CardHeader>
             <CardContent>
