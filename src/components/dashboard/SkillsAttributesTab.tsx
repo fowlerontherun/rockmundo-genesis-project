@@ -14,6 +14,7 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
   const [xpWallet, setXpWallet] = useState<Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null>(null);
   const [dailyXpGrant, setDailyXpGrant] = useState<Database["public"]["Tables"]["profile_daily_xp_grants"]["Row"] | null>(null);
   const [rawAttributes, setRawAttributes] = useState<Database["public"]["Tables"]["player_attributes"]["Row"] | null>(null);
+  const [activityBonusXp, setActivityBonusXp] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchData = useCallback(async () => {
@@ -53,6 +54,31 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
     if (attrData) {
       setRawAttributes(attrData);
     }
+
+    // Fetch activity bonus XP from experience_ledger
+    const { data: activityXpData } = await supabase
+      .from("experience_ledger")
+      .select("xp_amount")
+      .eq("profile_id", profile.id)
+      .in("activity_type", [
+        "busking_session",
+        "mentor_session", 
+        "university_attendance",
+        "exercise",
+        "meditation",
+        "book_reading",
+        "rest",
+        "nutrition",
+        "therapy",
+        "admin_grant",
+        "birthday_reward",
+        "weekly_bonus"
+      ]);
+    
+    if (activityXpData) {
+      const totalBonus = activityXpData.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0);
+      setActivityBonusXp(totalBonus);
+    }
   }, [profile?.id]);
 
   useEffect(() => {
@@ -76,6 +102,7 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
         lifetimeXp={lifetimeXp}
         attributePointsAvailable={attributePointsAvailable}
         attributePointsSpent={attributePointsSpent}
+        activityBonusXp={activityBonusXp}
       />
 
       <DailyStipendCard lastClaimDate={lastClaimDate} onClaimed={handleRefresh} />
