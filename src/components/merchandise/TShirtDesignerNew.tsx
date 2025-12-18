@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,20 +50,6 @@ const PRINT_AREA = {
   back: { x: 85, y: 90, width: 130, height: 180 },
 };
 
-// Left sleeve print area (visible on front view)
-const SLEEVE_AREA = {
-  front: { x: 20, y: 85, width: 35, height: 35 },
-};
-
-// Rockmundo logo as SVG data URL
-const ROCKMUNDO_LOGO = `data:image/svg+xml,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="45" fill="#1a1a1a" stroke="#dc2626" stroke-width="3"/>
-  <text x="50" y="45" font-family="Arial Black, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">ROCK</text>
-  <text x="50" y="62" font-family="Arial Black, sans-serif" font-size="14" font-weight="bold" fill="#dc2626" text-anchor="middle">MUNDO</text>
-  <path d="M30 75 L50 68 L70 75" stroke="#dc2626" stroke-width="2" fill="none"/>
-</svg>
-`)}`;
 
 export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDesignerNewProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,26 +74,6 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
 
   const generateId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Add default Rockmundo logo on component mount
-  useEffect(() => {
-    if (frontElements.length === 0) {
-      const sleeveArea = SLEEVE_AREA.front;
-      const logoElement: DesignElement = {
-        id: "rockmundo-logo-default",
-        type: "image",
-        src: ROCKMUNDO_LOGO,
-        x: sleeveArea.x + 2,
-        y: sleeveArea.y + 2,
-        width: sleeveArea.width - 4,
-        height: sleeveArea.height - 4,
-        rotation: 0,
-        scale: 1,
-        isLocked: false, // Allow users to move/resize it
-        zone: "sleeve",
-      };
-      setFrontElements([logoElement]);
-    }
-  }, []);
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -277,13 +243,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
     const element = currentElements.find(el => el.id === selectedElementId);
     if (!element) return;
 
-    // Determine constraints based on zone
-    let constraintArea = printArea;
-    if (element.zone === "sleeve" && activeView === "front") {
-      constraintArea = SLEEVE_AREA.front;
-    }
-
-    setCurrentElements(prev => prev.map(el => 
+    setCurrentElements(prev => prev.map(el =>
       el.id === selectedElementId
         ? { 
             ...el, 
@@ -476,20 +436,6 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                   strokeDasharray="4 2"
                   opacity="0.5"
                 />
-                {/* Sleeve Print Area Guide (front only) */}
-                {activeView === "front" && (
-                  <rect
-                    x={SLEEVE_AREA.front.x}
-                    y={SLEEVE_AREA.front.y}
-                    width={SLEEVE_AREA.front.width}
-                    height={SLEEVE_AREA.front.height}
-                    fill="none"
-                    stroke="hsl(var(--muted-foreground))"
-                    strokeWidth="1"
-                    strokeDasharray="2 2"
-                    opacity="0.4"
-                  />
-                )}
               </svg>
 
               {/* Design Elements */}
@@ -696,9 +642,8 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
               <ul className="list-disc list-inside space-y-1">
                 <li>Click and drag elements to position</li>
                 <li>Drag corner handles to resize</li>
-                <li>Rockmundo logo added to left sleeve by default</li>
                 <li>Design both front and back</li>
-                <li>Stay within the dashed print areas</li>
+                <li>Stay within the dashed print area</li>
               </ul>
             </div>
 
