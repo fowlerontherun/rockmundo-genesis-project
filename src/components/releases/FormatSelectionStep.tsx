@@ -6,8 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Disc3, Globe, Headphones, Radio, Music } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Disc3, Globe, Headphones, Radio, Music, Percent, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { addDays, format as formatDate, isBefore } from "date-fns";
 
 interface FormatSelectionStepProps {
   selectedFormats: any[];
@@ -15,14 +17,29 @@ interface FormatSelectionStepProps {
   onBack: () => void;
   onSubmit: () => void;
   isLoading: boolean;
+  revenueShareEnabled?: boolean;
+  onRevenueShareChange?: (enabled: boolean) => void;
+  scheduledReleaseDate?: Date | null;
 }
+
+// Manufacturing days by format type
+const MANUFACTURING_DAYS: Record<string, number> = {
+  vinyl: 14,
+  cd: 7,
+  cassette: 5,
+  digital: 2,
+  streaming: 2,
+};
 
 export function FormatSelectionStep({
   selectedFormats,
   onFormatsChange,
   onBack,
   onSubmit,
-  isLoading
+  isLoading,
+  revenueShareEnabled = false,
+  onRevenueShareChange,
+  scheduledReleaseDate,
 }: FormatSelectionStepProps) {
   const [formatConfigs, setFormatConfigs] = useState<Record<string, any>>({
     digital: { release_date: "", quantity: 0, retail_price: 1000, distribution_fee_percentage: 30 },
@@ -52,8 +69,27 @@ export function FormatSelectionStep({
       quantity >= c.min_quantity && (c.max_quantity === null || quantity <= c.max_quantity)
     );
     
-    return tier ? tier.cost_per_unit * quantity : 0;
+    let baseCost = tier ? tier.cost_per_unit * quantity : 0;
+    
+    // Apply 50% discount if revenue share is enabled
+    if (revenueShareEnabled) {
+      baseCost = Math.round(baseCost * 0.5);
+    }
+    
+    return baseCost;
   };
+
+  // Calculate manufacturing completion date
+  const getManufacturingCompleteDate = () => {
+    if (selectedFormats.length === 0) return addDays(new Date(), 2);
+    const maxDays = Math.max(
+      ...selectedFormats.map(f => MANUFACTURING_DAYS[f.format_type] || 2)
+    );
+    return addDays(new Date(), maxDays);
+  };
+
+  const manufacturingCompleteDate = getManufacturingCompleteDate();
+  const isScheduledTooEarly = scheduledReleaseDate && isBefore(scheduledReleaseDate, manufacturingCompleteDate);
 
   const formats = [
     { type: "digital", label: "Digital", icon: Globe, description: "Download" },
@@ -102,20 +138,98 @@ export function FormatSelectionStep({
     onFormatsChange(updatedFormats);
   };
 
+  // Recalculate costs when revenue share changes
+  const handleRevenueShareToggle = (checked: boolean) => {
+    onRevenueShareChange?.(checked);
+    
+    // Recalculate all manufacturing costs
+    const updatedFormats = selectedFormats.map(f => ({
+      ...f,
+      manufacturing_cost: calculateManufacturingCostWithShare(f.format_type, f.quantity || 0, checked)
+    }));
+    onFormatsChange(updatedFormats);
+  };
+
+  const calculateManufacturingCostWithShare = (formatType: string, quantity: number, shareEnabled: boolean) => {
+    if (formatType === "digital" || formatType === "streaming") return 500;
+    
+    const costs = manufacturingCosts?.filter(c => c.format_type === formatType) || [];
+    const tier = costs.find(c => 
+      quantity >= c.min_quantity && (c.max_quantity === null || quantity <= c.max_quantity)
+    );
+    
+    let baseCost = tier ? tier.cost_per_unit * quantity : 0;
+    if (shareEnabled) {
+      baseCost = Math.round(baseCost * 0.5);
+    }
+    return baseCost;
+  };
+
   const totalCost = selectedFormats.reduce((sum, f) => sum + f.manufacturing_cost, 0);
+  const originalCost = selectedFormats.reduce((sum, f) => {
+    const baseCost = calculateManufacturingCostWithShare(f.format_type, f.quantity || 0, false);
+    return sum + baseCost;
+  }, 0);
 
   return (
     <div className="space-y-4">
+      {/* Revenue Share Option */}
+      {onRevenueShareChange && (
+        <Card className="p-4 border-primary/30 bg-primary/5">
+          <div className="flex items-start gap-3">
+            <Checkbox 
+              checked={revenueShareEnabled}
+              onCheckedChange={(checked) => handleRevenueShareToggle(!!checked)}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Percent className="h-4 w-4 text-primary" />
+                <span className="font-semibold">Revenue Share Deal</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Reduce manufacturing costs by <strong>50%</strong> by sharing <strong>10%</strong> of sales revenue with manufacturers.
+              </p>
+              {revenueShareEnabled && (
+                <p className="text-xs text-primary mt-2">
+                  Manufacturing partners will receive 10% of all physical sales revenue.
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Manufacturing Timeline Warning */}
+      {selectedFormats.length > 0 && (
+        <Alert className="bg-muted/50">
+          <AlertDescription className="text-sm">
+            Manufacturing will complete by <strong>{formatDate(manufacturingCompleteDate, "MMM d, yyyy")}</strong>
+            {selectedFormats.some(f => f.format_type === "vinyl") && (
+              <span className="text-muted-foreground"> (vinyl takes 14 days)</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isScheduledTooEarly && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Your scheduled release date is before manufacturing completes. Consider pushing back to after {formatDate(manufacturingCompleteDate, "MMM d, yyyy")}.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
-        {formats.map((format) => {
-          const Icon = format.icon;
-          const isSelected = selectedFormats.some(f => f.format_type === format.type);
+        {formats.map((fmt) => {
+          const Icon = fmt.icon;
+          const isSelected = selectedFormats.some(f => f.format_type === fmt.type);
           
           return (
             <Card
-              key={format.type}
+              key={fmt.type}
               className={`p-4 cursor-pointer ${isSelected ? "border-primary" : ""}`}
-              onClick={() => toggleFormat(format.type)}
+              onClick={() => toggleFormat(fmt.type)}
             >
               <div className="flex items-start gap-3">
                 <Checkbox checked={isSelected} />
@@ -123,8 +237,8 @@ export function FormatSelectionStep({
                   <div className="flex items-center gap-2 mb-2">
                     <Icon className="h-5 w-5" />
                     <div>
-                      <div className="font-semibold">{format.label}</div>
-                      <div className="text-xs text-muted-foreground">{format.description}</div>
+                      <div className="font-semibold">{fmt.label}</div>
+                      <div className="text-xs text-muted-foreground">{fmt.description}</div>
                     </div>
                   </div>
 
@@ -134,26 +248,27 @@ export function FormatSelectionStep({
                         <Label className="text-xs">Release Date</Label>
                         <Input
                           type="date"
-                          value={formatConfigs[format.type].release_date}
-                          onChange={(e) => updateFormatConfig(format.type, "release_date", e.target.value)}
+                          value={formatConfigs[fmt.type].release_date}
+                          onChange={(e) => updateFormatConfig(fmt.type, "release_date", e.target.value)}
                           className="h-8"
+                          min={formatDate(manufacturingCompleteDate, "yyyy-MM-dd")}
                         />
                       </div>
 
-                      {(format.type === "cd" || format.type === "vinyl" || format.type === "cassette") && (
+                      {(fmt.type === "cd" || fmt.type === "vinyl" || fmt.type === "cassette") && (
                         <div>
                           <Label className="text-xs">Quantity</Label>
                           <Input
                             type="number"
-                            value={formatConfigs[format.type].quantity}
-                            onChange={(e) => updateFormatConfig(format.type, "quantity", e.target.value)}
+                            value={formatConfigs[fmt.type].quantity}
+                            onChange={(e) => updateFormatConfig(fmt.type, "quantity", e.target.value)}
                             min="1"
                             className="h-8"
                           />
                         </div>
                       )}
 
-                      {format.type === "vinyl" && (
+                      {fmt.type === "vinyl" && (
                         <>
                           <div>
                             <Label className="text-xs">Vinyl Color</Label>
@@ -200,15 +315,15 @@ export function FormatSelectionStep({
                         <Label className="text-xs">Retail Price ($)</Label>
                         <Input
                           type="number"
-                          value={formatConfigs[format.type].retail_price}
-                          onChange={(e) => updateFormatConfig(format.type, "retail_price", e.target.value)}
+                          value={formatConfigs[fmt.type].retail_price}
+                          onChange={(e) => updateFormatConfig(fmt.type, "retail_price", e.target.value)}
                           min="0"
                           className="h-8"
                         />
                       </div>
 
                       <div className="text-xs font-medium">
-                        Manufacturing Cost: ${selectedFormats.find(f => f.format_type === format.type)?.manufacturing_cost || 0}
+                        Manufacturing Cost: ${selectedFormats.find(f => f.format_type === fmt.type)?.manufacturing_cost || 0}
                       </div>
                     </div>
                   )}
@@ -222,7 +337,17 @@ export function FormatSelectionStep({
       <Card className="p-4 bg-primary/5">
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total Manufacturing Cost:</span>
-          <span className="text-2xl font-bold">${totalCost}</span>
+          <div className="text-right">
+            {revenueShareEnabled && originalCost !== totalCost && (
+              <span className="text-sm text-muted-foreground line-through mr-2">
+                ${originalCost}
+              </span>
+            )}
+            <span className="text-2xl font-bold">${totalCost}</span>
+            {revenueShareEnabled && (
+              <p className="text-xs text-primary">50% discount applied + 10% revenue share</p>
+            )}
+          </div>
         </div>
       </Card>
 

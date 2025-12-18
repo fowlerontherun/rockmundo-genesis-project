@@ -10047,6 +10047,7 @@ export type Database = {
       }
       release_songs: {
         Row: {
+          album_release_id: string | null
           created_at: string
           id: string
           is_b_side: boolean | null
@@ -10056,6 +10057,7 @@ export type Database = {
           track_number: number
         }
         Insert: {
+          album_release_id?: string | null
           created_at?: string
           id?: string
           is_b_side?: boolean | null
@@ -10065,6 +10067,7 @@ export type Database = {
           track_number: number
         }
         Update: {
+          album_release_id?: string | null
           created_at?: string
           id?: string
           is_b_side?: boolean | null
@@ -10074,6 +10077,20 @@ export type Database = {
           track_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "release_songs_album_release_id_fkey"
+            columns: ["album_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_songs_album_release_id_fkey"
+            columns: ["album_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "release_songs_release_id_fkey"
             columns: ["release_id"]
@@ -10131,12 +10148,17 @@ export type Database = {
           digital_sales: number | null
           format_type: string | null
           id: string
+          is_greatest_hits: boolean | null
+          last_greatest_hits_date: string | null
           manufacturing_complete_at: string | null
+          manufacturing_discount_percentage: number | null
           pre_order_count: number | null
           pre_order_start_date: string | null
           promotion_budget: number | null
           release_status: string
           release_type: string
+          revenue_share_enabled: boolean | null
+          revenue_share_percentage: number | null
           scheduled_release_date: string | null
           streaming_platforms: string[] | null
           title: string
@@ -10159,12 +10181,17 @@ export type Database = {
           digital_sales?: number | null
           format_type?: string | null
           id?: string
+          is_greatest_hits?: boolean | null
+          last_greatest_hits_date?: string | null
           manufacturing_complete_at?: string | null
+          manufacturing_discount_percentage?: number | null
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
           release_status?: string
           release_type: string
+          revenue_share_enabled?: boolean | null
+          revenue_share_percentage?: number | null
           scheduled_release_date?: string | null
           streaming_platforms?: string[] | null
           title: string
@@ -10187,12 +10214,17 @@ export type Database = {
           digital_sales?: number | null
           format_type?: string | null
           id?: string
+          is_greatest_hits?: boolean | null
+          last_greatest_hits_date?: string | null
           manufacturing_complete_at?: string | null
+          manufacturing_discount_percentage?: number | null
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
           release_status?: string
           release_type?: string
+          revenue_share_enabled?: boolean | null
+          revenue_share_percentage?: number | null
           scheduled_release_date?: string | null
           streaming_platforms?: string[] | null
           title?: string
@@ -14147,6 +14179,10 @@ export type Database = {
         Args: { p_account_id: string; p_posts_today: number }
         Returns: number
       }
+      check_greatest_hits_eligibility: {
+        Args: { p_band_id: string; p_user_id: string }
+        Returns: Json
+      }
       check_scheduling_conflict: {
         Args: {
           p_end: string
@@ -14172,6 +14208,14 @@ export type Database = {
         Returns: number
       }
       get_song_vote_score: { Args: { p_song_id: string }; Returns: number }
+      get_songs_on_albums: {
+        Args: { p_band_id: string; p_user_id: string }
+        Returns: {
+          album_title: string
+          release_id: string
+          song_id: string
+        }[]
+      }
       get_top_played_songs: {
         Args: { p_limit?: number }
         Returns: {

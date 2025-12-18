@@ -9,11 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3
+  Play, Users, BarChart3, XCircle
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { ManufacturingProgress } from "./ManufacturingProgress";
 import { EditReleaseDialog } from "./EditReleaseDialog";
+import { CancelReleaseDialog } from "./CancelReleaseDialog";
 import { ReleaseTracklistWithAudio } from "./ReleaseTracklistWithAudio";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 
@@ -26,6 +27,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   planned: { label: "Planned", variant: "secondary", icon: Clock },
   manufacturing: { label: "Manufacturing", variant: "secondary", icon: Package },
   released: { label: "Released", variant: "default", icon: CheckCircle2 },
+  cancelled: { label: "Cancelled", variant: "destructive", icon: XCircle },
 };
 
 const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }> = {
@@ -37,6 +39,7 @@ const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }>
 export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const navigate = useNavigate();
   const [editingRelease, setEditingRelease] = useState<any>(null);
+  const [cancellingRelease, setCancellingRelease] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: releases, isLoading, error } = useQuery({
@@ -100,6 +103,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   });
 
   const filteredReleases = releases?.filter(r => {
+    if (r.release_status === "cancelled") return statusFilter === "all"; // Only show cancelled in "all"
     if (statusFilter === "all") return true;
     if (statusFilter === "released") return r.release_status === "released";
     if (statusFilter === "upcoming") return ["manufacturing", "planned", "draft"].includes(r.release_status);
@@ -226,6 +230,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             key={release.id} 
             release={release} 
             onEdit={() => setEditingRelease(release)}
+            onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
           />
         ))}
@@ -244,6 +249,12 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         onOpenChange={(open) => !open && setEditingRelease(null)}
         release={editingRelease}
       />
+
+      <CancelReleaseDialog
+        open={!!cancellingRelease}
+        onOpenChange={(open) => !open && setCancellingRelease(null)}
+        release={cancellingRelease}
+      />
     </div>
   );
 }
@@ -251,10 +262,11 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 interface ReleaseCardProps {
   release: any;
   onEdit: () => void;
+  onCancel: () => void;
   onViewDetails: () => void;
 }
 
-function ReleaseCard({ release, onEdit, onViewDetails }: ReleaseCardProps) {
+function ReleaseCard({ release, onEdit, onCancel, onViewDetails }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -475,14 +487,24 @@ function ReleaseCard({ release, onEdit, onViewDetails }: ReleaseCardProps) {
           >
             View Details
           </Button>
-          {release.release_status !== "released" && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onEdit}
-            >
-              Edit Release
-            </Button>
+          {release.release_status !== "released" && release.release_status !== "cancelled" && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onEdit}
+              >
+                Edit Release
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={onCancel}
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+            </>
           )}
           {release.release_status === "released" && (
             <Button 
