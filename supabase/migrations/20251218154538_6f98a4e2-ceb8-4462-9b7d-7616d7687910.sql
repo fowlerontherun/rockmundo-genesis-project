@@ -1,0 +1,1 @@
+DELETE FROM tours WHERE id = 'ec8e767c-dc95-4a37-858a-7de04101574f';
