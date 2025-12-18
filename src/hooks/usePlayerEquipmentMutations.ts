@@ -34,7 +34,7 @@ export const useEquipPlayerEquipment = () => {
 
       if (unequipIds.length > 0) {
         const { error: unequipError } = await supabase
-          .from("player_equipment")
+          .from("player_equipment_inventory")
           .update({ is_equipped: false })
           .in("id", unequipIds)
           .eq("user_id", user.id);
@@ -45,7 +45,7 @@ export const useEquipPlayerEquipment = () => {
       }
 
       const { data, error } = await supabase
-        .from("player_equipment")
+        .from("player_equipment_inventory")
         .update({ is_equipped: variables.equip })
         .eq("id", targetId)
         .eq("user_id", user.id)
