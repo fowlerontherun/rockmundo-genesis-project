@@ -16,8 +16,10 @@ import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
 import { AttributePanel } from "@/components/attributes/AttributePanel";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const SkillsPage = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { skillProgress, loading, xpWallet, profile, dailyXpGrant } = useGameData();
   const [selectedSkill, setSelectedSkill] = useState<{ slug: string; name: string } | null>(null);

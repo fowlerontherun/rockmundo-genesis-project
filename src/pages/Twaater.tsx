@@ -19,6 +19,7 @@ import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { Home, TrendingUp, AtSign, Bookmark } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function Twaater() {
   const { profile } = useGameData();
