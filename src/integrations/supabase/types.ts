@@ -5277,6 +5277,7 @@ export type Database = {
       jobs: {
         Row: {
           category: string
+          city_id: string | null
           company_name: string
           created_at: string | null
           current_employees: number | null
@@ -5298,6 +5299,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          city_id?: string | null
           company_name: string
           created_at?: string | null
           current_employees?: number | null
@@ -5319,6 +5321,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          city_id?: string | null
           company_name?: string
           created_at?: string | null
           current_employees?: number | null
@@ -5338,7 +5341,15 @@ export type Database = {
           updated_at?: string | null
           work_days?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jobs_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       label_deal_types: {
         Row: {
