@@ -105,19 +105,37 @@ export async function handleSpendAttributeXp(
   const profileId = profileState.profile.id;
   const currentBalance = profileState.wallet?.xp_balance ?? 0;
 
-  if (currentBalance < xpAmount) {
-    throw new Error("Insufficient XP balance");
+  console.log(`[SpendAttributeXp] Profile: ${profileId}, Attribute: ${attributeKey}, Amount: ${xpAmount}, Balance: ${currentBalance}`);
+
+  if (xpAmount <= 0) {
+    throw new Error("XP amount must be positive");
   }
 
-  // Get current attributes
-  const { data: attrs } = await client
+  if (currentBalance < xpAmount) {
+    throw new Error(`Insufficient XP balance. You have ${currentBalance} XP but need ${xpAmount} XP.`);
+  }
+
+  // Get or create player attributes
+  let { data: attrs } = await client
     .from("player_attributes")
     .select("*")
     .eq("profile_id", profileId)
     .maybeSingle();
 
+  // Auto-create attributes if missing
   if (!attrs) {
-    throw new Error("Player attributes not found");
+    console.log(`[SpendAttributeXp] Creating missing player_attributes for profile: ${profileId}`);
+    const { data: newAttrs, error: createError } = await client
+      .from("player_attributes")
+      .insert({ profile_id: profileId })
+      .select()
+      .single();
+    
+    if (createError) {
+      console.error(`[SpendAttributeXp] Failed to create attributes:`, createError);
+      throw new Error(`Failed to initialize player attributes: ${createError.message}`);
+    }
+    attrs = newAttrs;
   }
 
   const currentValue = (attrs as any)?.[attributeKey] ?? 10;
@@ -164,8 +182,14 @@ export async function handleSpendSkillXp(
   const profileId = profileState.profile.id;
   const currentBalance = profileState.wallet?.xp_balance ?? 0;
 
+  console.log(`[SpendSkillXp] Profile: ${profileId}, Skill: ${skillSlug}, Amount: ${xpAmount}, Balance: ${currentBalance}`);
+
+  if (xpAmount <= 0) {
+    throw new Error("XP amount must be positive");
+  }
+
   if (currentBalance < xpAmount) {
-    throw new Error("Insufficient XP balance");
+    throw new Error(`Insufficient XP balance. You have ${currentBalance} XP but need ${xpAmount} XP.`);
   }
 
   // Get or create skill progress
