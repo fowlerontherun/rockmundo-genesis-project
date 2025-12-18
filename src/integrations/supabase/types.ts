@@ -12907,9 +12907,76 @@ export type Database = {
           },
         ]
       }
+      tour_travel_legs: {
+        Row: {
+          arrival_date: string | null
+          created_at: string | null
+          departure_date: string | null
+          from_city_id: string | null
+          id: string
+          sequence_order: number
+          to_city_id: string | null
+          tour_id: string
+          travel_cost: number | null
+          travel_duration_hours: number | null
+          travel_mode: string
+        }
+        Insert: {
+          arrival_date?: string | null
+          created_at?: string | null
+          departure_date?: string | null
+          from_city_id?: string | null
+          id?: string
+          sequence_order?: number
+          to_city_id?: string | null
+          tour_id: string
+          travel_cost?: number | null
+          travel_duration_hours?: number | null
+          travel_mode: string
+        }
+        Update: {
+          arrival_date?: string | null
+          created_at?: string | null
+          departure_date?: string | null
+          from_city_id?: string | null
+          id?: string
+          sequence_order?: number
+          to_city_id?: string | null
+          tour_id?: string
+          travel_cost?: number | null
+          travel_duration_hours?: number | null
+          travel_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_travel_legs_from_city_id_fkey"
+            columns: ["from_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_travel_legs_to_city_id_fkey"
+            columns: ["to_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_travel_legs_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tour_venues: {
         Row: {
+          booking_fee: number | null
+          city_id: string | null
           date: string
+          estimated_revenue: number | null
           id: string
           revenue: number | null
           status: string | null
@@ -12919,7 +12986,10 @@ export type Database = {
           venue_id: string
         }
         Insert: {
+          booking_fee?: number | null
+          city_id?: string | null
           date: string
+          estimated_revenue?: number | null
           id?: string
           revenue?: number | null
           status?: string | null
@@ -12929,7 +12999,10 @@ export type Database = {
           venue_id: string
         }
         Update: {
+          booking_fee?: number | null
+          city_id?: string | null
           date?: string
+          estimated_revenue?: number | null
           id?: string
           revenue?: number | null
           status?: string | null
@@ -12954,6 +13027,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tour_venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tour_venues_tour_id_fkey"
             columns: ["tour_id"]
             isOneToOne: false
@@ -12973,53 +13053,95 @@ export type Database = {
         Row: {
           auto_pilot_enabled: boolean | null
           band_id: string | null
+          cancellation_date: string | null
+          cancellation_refund_amount: number | null
+          cancelled: boolean | null
           created_at: string | null
           description: string | null
           end_date: string
           id: string
+          max_venue_capacity: number | null
+          min_rest_days: number | null
           name: string
+          scope: string | null
+          selected_continents: string[] | null
+          selected_countries: string[] | null
+          setlist_id: string | null
           start_date: string
           status: string | null
+          target_show_count: number | null
           total_accommodation_cost: number | null
           total_revenue: number | null
           total_travel_cost: number | null
+          total_upfront_cost: number | null
+          tour_bus_daily_cost: number | null
           travel_manager_booked: boolean | null
+          travel_mode: string | null
           user_id: string
           vehicle_id: string | null
+          venue_type_filter: string[] | null
         }
         Insert: {
           auto_pilot_enabled?: boolean | null
           band_id?: string | null
+          cancellation_date?: string | null
+          cancellation_refund_amount?: number | null
+          cancelled?: boolean | null
           created_at?: string | null
           description?: string | null
           end_date: string
           id?: string
+          max_venue_capacity?: number | null
+          min_rest_days?: number | null
           name: string
+          scope?: string | null
+          selected_continents?: string[] | null
+          selected_countries?: string[] | null
+          setlist_id?: string | null
           start_date: string
           status?: string | null
+          target_show_count?: number | null
           total_accommodation_cost?: number | null
           total_revenue?: number | null
           total_travel_cost?: number | null
+          total_upfront_cost?: number | null
+          tour_bus_daily_cost?: number | null
           travel_manager_booked?: boolean | null
+          travel_mode?: string | null
           user_id: string
           vehicle_id?: string | null
+          venue_type_filter?: string[] | null
         }
         Update: {
           auto_pilot_enabled?: boolean | null
           band_id?: string | null
+          cancellation_date?: string | null
+          cancellation_refund_amount?: number | null
+          cancelled?: boolean | null
           created_at?: string | null
           description?: string | null
           end_date?: string
           id?: string
+          max_venue_capacity?: number | null
+          min_rest_days?: number | null
           name?: string
+          scope?: string | null
+          selected_continents?: string[] | null
+          selected_countries?: string[] | null
+          setlist_id?: string | null
           start_date?: string
           status?: string | null
+          target_show_count?: number | null
           total_accommodation_cost?: number | null
           total_revenue?: number | null
           total_travel_cost?: number | null
+          total_upfront_cost?: number | null
+          tour_bus_daily_cost?: number | null
           travel_manager_booked?: boolean | null
+          travel_mode?: string | null
           user_id?: string
           vehicle_id?: string | null
+          venue_type_filter?: string[] | null
         }
         Relationships: [
           {
@@ -13027,6 +13149,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tours_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
             referencedColumns: ["id"]
           },
           {
