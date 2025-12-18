@@ -62,8 +62,10 @@ export const HierarchicalSkillNode = ({
   const requiredXp = progress?.required_xp || 100;
   const progressPercent = (xp / requiredXp) * 100;
   
-  const cost = getTrainingCost(tier);
-  const canAfford = xpBalance >= cost;
+  const standardCost = getTrainingCost(tier);
+  // Allow spending whatever XP they have left if less than standard cost
+  const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
+  const canAfford = xpBalance > 0;
   const maxLevel = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
   const isMaxed = level >= maxLevel;
 
