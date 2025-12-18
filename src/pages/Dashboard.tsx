@@ -228,36 +228,38 @@ const Dashboard = () => {
       <DebtWarningBanner />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('common.profile')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="fame">
-            <Star className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('dashboard.fame')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="skills">
-            <Zap className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('nav.skills')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="friends">
-            <Users className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('social.friends', 'Friends')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="schedule">
-            <Calendar className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('nav.schedule')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="advisor">
-            <Bot className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('nav.advisor')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="achievements">
-            <Trophy className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('awards.achievements')}</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-7 gap-1">
+            <TabsTrigger value="profile" className="flex-shrink-0">
+              <User className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('common.profile')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="fame" className="flex-shrink-0">
+              <Star className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('dashboard.fame')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="skills" className="flex-shrink-0">
+              <Zap className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('nav.skills')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="friends" className="flex-shrink-0">
+              <Users className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('social.friends', 'Friends')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="flex-shrink-0">
+              <Calendar className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('nav.schedule')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="advisor" className="flex-shrink-0">
+              <Bot className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('nav.advisor')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="flex-shrink-0">
+              <Trophy className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('awards.achievements')}</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
