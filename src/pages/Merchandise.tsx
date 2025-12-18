@@ -684,27 +684,24 @@ const Merchandise = () => {
         onValueChange={(value) => setActiveTab(value as TabConfig["value"])}
         className="space-y-6"
       >
-        <TabsList className="-mx-4 flex w-[calc(100%+2rem)] gap-3 overflow-x-auto px-4 pb-2 md:hidden">
+        {/* Mobile Tabs - Icons with short labels */}
+        <TabsList className="grid w-full grid-cols-4 gap-1 rounded-xl bg-muted/40 p-1 md:hidden">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex min-w-[200px] flex-1 flex-col items-start gap-1 rounded-2xl border border-border bg-background px-4 py-3 text-left text-sm font-semibold shadow-sm transition data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+                className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
               >
-                <span className="flex items-center gap-2 text-sm">
-                  <Icon className="h-4 w-4 text-muted-foreground data-[state=active]:text-primary-foreground" />
-                  {tab.label}
-                </span>
-                <span className="text-xs font-normal text-muted-foreground data-[state=active]:text-primary-foreground/80">
-                  {tab.description}
-                </span>
+                <Icon className="h-4 w-4" />
+                <span className="truncate max-w-full text-[10px]">{tab.label.split(' ')[0]}</span>
               </TabsTrigger>
             );
           })}
         </TabsList>
 
+        {/* Desktop Tabs - Full labels */}
         <TabsList className="hidden w-full grid-cols-4 gap-2 rounded-xl bg-muted/40 p-1 md:grid">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
@@ -714,9 +711,8 @@ const Merchandise = () => {
                 value={tab.value}
                 className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
               >
-                <Icon className="hidden h-4 w-4 text-muted-foreground md:block lg:hidden" />
-                <span className="hidden lg:inline">{tab.label}</span>
-                <span className="lg:hidden">{tab.label}</span>
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
               </TabsTrigger>
             );
           })}
