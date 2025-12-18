@@ -20,7 +20,8 @@ import { BandSongGifts } from '@/components/band/BandSongGifts';
 import { BandSongsTab } from '@/components/band/BandSongsTab';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
-import { Users, Music, User } from 'lucide-react';
+import { FameFansOverview } from '@/components/fame/FameFansOverview';
+import { Users, Music, User, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
@@ -265,8 +266,12 @@ export default function BandManager() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="fame" className="flex items-center gap-1">
+              <Star className="h-3 w-3" />
+              Fame & Fans
+            </TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="songs">Songs</TabsTrigger>
@@ -280,6 +285,10 @@ export default function BandManager() {
         <TabsContent value="overview" className="space-y-4">
           <BandSongGifts bandId={selectedBand.id} />
           <BandOverview bandId={selectedBand.id} />
+        </TabsContent>
+
+        <TabsContent value="fame" className="space-y-4">
+          <FameFansOverview bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-4">
