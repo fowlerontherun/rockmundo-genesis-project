@@ -128,3 +128,9 @@ verify_jwt = false
 
 [functions.auto-clock-in-shifts]
 verify_jwt = false
+
+[functions.process-open-mic-song]
+verify_jwt = false
+
+[functions.complete-open-mic]
+verify_jwt = false

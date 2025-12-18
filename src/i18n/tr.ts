@@ -128,6 +128,7 @@ export const tr: TranslationKeys = {
     jamSessions: "Jam Oturumları",
     busking: "Sokak Müzisyenliği",
     eurovision: "Eurovision",
+    openMic: "Açık Mikrofon Geceleri",
     bandChemistry: "Grup Uyumu",
     twaater: "Twaater",
     dikcok: "DikCok",

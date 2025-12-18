@@ -126,6 +126,7 @@ export const es: TranslationKeys = {
     jamSessions: "Sesiones de Jam",
     busking: "Música Callejera",
     eurovision: "Eurovisión",
+    openMic: "Noche de Micrófono Abierto",
     bandChemistry: "Química de Banda",
     twaater: "Twaater",
     dikcok: "DikCok",
