@@ -1,506 +1,297 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import type { Database } from "@/lib/supabase-types";
-import {
-  CircleDashed,
-  ClipboardList,
-  Loader2,
-  PlaneTakeoff,
-  ShieldCheck,
-  Sparkles,
-  Trash2,
-  TrendingUp,
-  UserPlus,
-  Users,
-} from "lucide-react";
-import {
-  assignmentHighlights,
-  CREW_DISCIPLINES,
-  CrewAssignment,
-  CrewCatalogItem,
-  CrewDiscipline,
-  CrewMetadata,
-  CrewMorale,
-  DISCIPLINE_DEFAULTS,
-  formatCrewCurrency as formatCurrency,
-  moraleBadgeVariant,
-  moraleLabelMap,
-  moraleScoreMap,
-} from "@/features/band-crew/catalog";
-import { useBandCrewCatalog } from "@/features/band-crew/catalog-context";
+import { CircleDashed, Loader2, Lock, Star, Trash2, UserPlus, Users, Zap } from "lucide-react";
 
-type BandCrewMemberRow = Database["public"]["Tables"]["band_crew_members"]["Row"];
+// Star rating display component
+const StarRating = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) => {
+  const stars = [];
+  const fullStars = Math.floor(rating);
+  const sizeClass = size === "lg" ? "h-5 w-5" : "h-4 w-4";
+  
+  for (let i = 0; i < 10; i++) {
+    stars.push(
+      <Star
+        key={i}
+        className={`${sizeClass} ${i < fullStars ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground/30"}`}
+      />
+    );
+  }
+  return <div className="flex gap-0.5">{stars}</div>;
+};
 
-interface ManageCrewFormValues {
-  assignment: CrewAssignment;
-  morale: CrewMorale;
+// Cohesion bar component
+const CohesionBar = ({ value }: { value: number }) => {
+  const getColor = () => {
+    if (value >= 80) return "bg-green-500";
+    if (value >= 50) return "bg-blue-500";
+    if (value >= 20) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+  
+  const getLabel = () => {
+    if (value >= 80) return "Legendary synergy";
+    if (value >= 50) return "Well-oiled machine";
+    if (value >= 20) return "Functional team";
+    return "Still learning";
+  };
+  
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">Cohesion</span>
+        <span className="font-medium">{value.toFixed(0)}%</span>
+      </div>
+      <Progress value={value} className={`h-2 ${getColor()}`} />
+      <span className="text-xs text-muted-foreground">{getLabel()}</span>
+    </div>
+  );
+};
+
+// Fame tier configuration
+const FAME_TIERS = [
+  { min: 0, max: 499, label: "Beginner", stars: [1, 2] },
+  { min: 500, max: 1999, label: "Rising", stars: [3, 4] },
+  { min: 2000, max: 9999, label: "Professional", stars: [5, 6] },
+  { min: 10000, max: 49999, label: "Elite", stars: [7, 8] },
+  { min: 50000, max: Infinity, label: "Legendary", stars: [9, 10] },
+];
+
+interface CrewCatalogRow {
+  id: string;
+  name: string;
+  role: string;
+  headline: string;
+  background: string;
+  skill: number;
+  salary: number;
+  experience: number;
+  morale: string;
   loyalty: number;
-  trainingFocus: string;
-  trainingProgress: number;
+  assignment: string;
   focus: string;
-  traits: string;
-  specialties: string;
-  biography: string;
+  specialties: string[];
+  traits: string[];
+  openings: number;
+  star_rating: number;
+  min_fame_required: number;
+  hired_by_band_id: string | null;
 }
 
+interface BandCrewMemberRow {
+  id: string;
+  band_id: string;
+  crew_type: string;
+  name: string;
+  skill_level: number;
+  salary_per_gig: number;
+  hire_date: string;
+  experience_years: number;
+  notes: string | null;
+  star_rating: number | null;
+  cohesion_rating: number;
+  gigs_together: number;
+  catalog_crew_id: string | null;
+}
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "No shows logged";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "No shows logged";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-};
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-const stepMoraleUp = (morale: CrewMorale): CrewMorale => {
-  switch (morale) {
-    case "burned_out":
-      return "strained";
-    case "strained":
-      return "steady";
-    default:
-      return morale;
-  }
-};
-
-const mergeMetadata = (base: CrewMetadata, overrides?: Partial<CrewMetadata>): CrewMetadata => {
-  if (!overrides) {
-    return base;
-  }
-
-  return {
-    ...base,
-    ...overrides,
-    morale: overrides.morale ?? base.morale,
-    loyalty: clamp(overrides.loyalty ?? base.loyalty, 0, 100),
-    assignment: overrides.assignment ?? base.assignment,
-    focus: overrides.focus ?? base.focus,
-    specialties: overrides.specialties ?? base.specialties,
-    traits: overrides.traits ?? base.traits,
-    trainingFocus: overrides.trainingFocus ?? base.trainingFocus,
-    trainingProgress: clamp(overrides.trainingProgress ?? base.trainingProgress, 0, 100),
-    biography: overrides.biography ?? base.biography,
-    lastGigDate: overrides.lastGigDate ?? base.lastGigDate,
-  };
-};
-
-const createDefaultMetadata = (crewType: string): CrewMetadata => {
-  const defaults = DISCIPLINE_DEFAULTS[crewType as CrewDiscipline];
-  const base: CrewMetadata = {
-    morale: "steady",
-    loyalty: 60,
-    assignment: defaults?.assignment ?? "Production",
-    focus: defaults?.focus ?? crewType,
-    specialties: defaults?.specialties ?? [],
-    traits: defaults?.traits ?? [],
-    trainingFocus: null,
-    trainingProgress: 0,
-    biography: null,
-    lastGigDate: null,
-  };
-
-  return base;
-};
-
-const parseCrewMetadata = (row: BandCrewMemberRow): CrewMetadata => {
-  const base = createDefaultMetadata(row.crew_type);
-  if (!row.notes) {
-    return base;
-  }
-
-  try {
-    const raw = JSON.parse(row.notes) as Partial<CrewMetadata>;
-    return mergeMetadata(base, raw);
-  } catch (error) {
-    console.error("Failed to parse crew metadata", error);
-    return base;
-  }
-};
-
-const buildCrewMetadataFromCandidate = (candidate: CrewCatalogItem): CrewMetadata => {
-  const base = createDefaultMetadata(candidate.role);
-  return mergeMetadata(base, {
-    morale: candidate.morale,
-    loyalty: candidate.loyalty,
-    assignment: candidate.assignment,
-    focus: candidate.focus,
-    specialties: candidate.specialties,
-    traits: candidate.traits,
-    biography: candidate.background,
-    trainingFocus: null,
-    trainingProgress: 0,
-    lastGigDate: null,
-  });
-};
-
-type EnrichedCrewMember = BandCrewMemberRow & {
-  metadata: CrewMetadata;
-  impactScore: number;
-};
+const CREW_ROLES = [
+  "Tour Manager",
+  "Front of House Engineer", 
+  "Lighting Director",
+  "Road Crew Chief",
+  "Backline Technician",
+  "Merch Director",
+  "Security Lead",
+  "Wardrobe Stylist",
+];
 
 const BandCrewManagement = () => {
   const queryClient = useQueryClient();
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
+  const bandFame = primaryBand?.bands?.fame ?? 0;
 
-  const { catalog, setCatalog } = useBandCrewCatalog();
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all");
-  const [candidateDialogOpen, setCandidateDialogOpen] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<CrewCatalogItem | null>(null);
-  const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [activeCrew, setActiveCrew] = useState<EnrichedCrewMember | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [selectedTier, setSelectedTier] = useState<string>("all");
+  const [hireDialogOpen, setHireDialogOpen] = useState(false);
+  const [selectedCrewMember, setSelectedCrewMember] = useState<CrewCatalogRow | null>(null);
 
-  const manageForm = useForm<ManageCrewFormValues>({
-    defaultValues: {
-      assignment: "Touring",
-      morale: "steady",
-      loyalty: 60,
-      trainingFocus: "",
-      trainingProgress: 0,
-      focus: "",
-      traits: "",
-      specialties: "",
-      biography: "",
-    },
-  });
-
-  const { data: crewMembers, isLoading: loadingCrew } = useQuery<BandCrewMemberRow[]>({
+  // Fetch hired crew
+  const { data: hiredCrew, isLoading: loadingCrew } = useQuery<BandCrewMemberRow[]>({
     queryKey: ["band-crew", bandId],
     queryFn: async () => {
-      if (!bandId) {
-        return [];
-      }
-
+      if (!bandId) return [];
       const { data, error } = await supabase
         .from("band_crew_members")
         .select("*")
         .eq("band_id", bandId)
         .order("hire_date", { ascending: true });
-
       if (error) throw error;
       return data ?? [];
     },
     enabled: Boolean(bandId),
   });
 
-  const enrichedCrew = useMemo<EnrichedCrewMember[]>(() => {
-    if (!crewMembers) return [];
+  // Fetch available crew from catalog
+  const { data: availableCrew, isLoading: loadingCatalog } = useQuery<CrewCatalogRow[]>({
+    queryKey: ["crew-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crew_catalog")
+        .select("*")
+        .order("star_rating", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
-    return crewMembers.map((row) => {
-      const metadata = parseCrewMetadata(row);
-      const skill = row.skill_level ?? 0;
-      const experience = row.experience_years ?? 0;
-      const loyalty = metadata.loyalty ?? 0;
-      const impactScore = Math.round(skill * 0.6 + experience * 4 + loyalty * 0.3);
-
-      return {
-        ...row,
-        metadata,
-        impactScore,
-      };
-    });
-  }, [crewMembers]);
-
+  // Filter available crew (not hired by any band)
   const filteredCatalog = useMemo(() => {
-    if (selectedDiscipline === "all") {
-      return catalog;
-    }
-    return catalog.filter((item) => item.role === selectedDiscipline);
-  }, [catalog, selectedDiscipline]);
-
-  const crewCount = enrichedCrew.length;
-  const totalPayroll = enrichedCrew.reduce((sum, crew) => sum + (crew.salary_per_gig ?? 0), 0);
-  const averageSkill = crewCount > 0 ? Math.round(enrichedCrew.reduce((sum, crew) => sum + (crew.skill_level ?? 0), 0) / crewCount) : 0;
-  const averageLoyalty = crewCount > 0 ? Math.round(enrichedCrew.reduce((sum, crew) => sum + (crew.metadata.loyalty ?? 0), 0) / crewCount) : 0;
-
-  const dominantMorale = useMemo(() => {
-    if (!crewCount) return null;
-    const counts = enrichedCrew.reduce((acc, crew) => {
-      acc[crew.metadata.morale] = (acc[crew.metadata.morale] ?? 0) + 1;
-      return acc;
-    }, {} as Record<CrewMorale, number>);
-    return (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] as CrewMorale | undefined) ?? null;
-  }, [crewCount, enrichedCrew]);
-
-  const assignmentCounts = useMemo(() => {
-    const counts: Record<CrewAssignment, number> = {
-      Touring: 0,
-      Studio: 0,
-      Production: 0,
-      Standby: 0,
-    };
-
-    enrichedCrew.forEach((crew) => {
-      counts[crew.metadata.assignment] = (counts[crew.metadata.assignment] ?? 0) + 1;
+    if (!availableCrew) return [];
+    
+    return availableCrew.filter((crew) => {
+      // Must not be hired by any band
+      if (crew.hired_by_band_id !== null) return false;
+      
+      // Filter by role
+      if (selectedRole !== "all" && crew.role !== selectedRole) return false;
+      
+      // Filter by tier
+      if (selectedTier !== "all") {
+        const tierNum = parseInt(selectedTier);
+        const tier = FAME_TIERS[tierNum - 1];
+        if (tier && (crew.star_rating < tier.stars[0] || crew.star_rating > tier.stars[1])) {
+          return false;
+        }
+      }
+      
+      return true;
     });
+  }, [availableCrew, selectedRole, selectedTier]);
 
-    return counts;
-  }, [enrichedCrew]);
+  // Stats
+  const crewCount = hiredCrew?.length ?? 0;
+  const totalPayroll = hiredCrew?.reduce((sum, c) => sum + c.salary_per_gig, 0) ?? 0;
+  const avgStarRating = crewCount > 0 
+    ? (hiredCrew?.reduce((sum, c) => sum + (c.star_rating ?? 5), 0) ?? 0) / crewCount 
+    : 0;
+  const avgCohesion = crewCount > 0
+    ? (hiredCrew?.reduce((sum, c) => sum + c.cohesion_rating, 0) ?? 0) / crewCount
+    : 0;
 
-  const hireCrewMutation = useMutation({
-    mutationFn: async (candidate: CrewCatalogItem) => {
-      if (!bandId) {
-        throw new Error("Join a band to hire crew");
+  // Calculate what tier the band can access
+  const currentTier = FAME_TIERS.findIndex(t => bandFame >= t.min && bandFame <= t.max);
+  const maxAccessibleStars = FAME_TIERS[currentTier]?.stars[1] ?? 2;
+
+  // Hire mutation
+  const hireMutation = useMutation({
+    mutationFn: async (crew: CrewCatalogRow) => {
+      if (!bandId) throw new Error("Join a band first");
+      
+      // Check fame requirement
+      if (bandFame < crew.min_fame_required) {
+        throw new Error(`Need ${crew.min_fame_required.toLocaleString()} fame to hire this crew member`);
       }
-
-      const metadata = buildCrewMetadataFromCandidate(candidate);
-      const { error } = await supabase.from("band_crew_members").insert({
+      
+      // Insert into band_crew_members
+      const { error: insertError } = await supabase.from("band_crew_members").insert({
         band_id: bandId,
-        name: candidate.name,
-        crew_type: candidate.role,
-        experience_years: candidate.experience,
+        name: crew.name,
+        crew_type: crew.role,
+        experience_years: crew.experience,
         hire_date: new Date().toISOString(),
-        salary_per_gig: candidate.salary,
-        skill_level: candidate.skill,
-        notes: JSON.stringify(metadata),
+        salary_per_gig: crew.salary,
+        skill_level: crew.skill,
+        star_rating: crew.star_rating,
+        cohesion_rating: 0,
+        gigs_together: 0,
+        catalog_crew_id: crew.id,
+        notes: JSON.stringify({ specialties: crew.specialties, traits: crew.traits }),
       });
-
-      if (error) throw error;
+      if (insertError) throw insertError;
+      
+      // Mark as hired in catalog
+      const { error: updateError } = await supabase
+        .from("crew_catalog")
+        .update({ hired_by_band_id: bandId })
+        .eq("id", crew.id);
+      if (updateError) throw updateError;
     },
-    onSuccess: (_, candidate) => {
+    onSuccess: (_, crew) => {
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
-      setCatalog((prev) =>
-        prev.map((item) =>
-          item.id === candidate.id ? { ...item, openings: Math.max(0, item.openings - 1) } : item,
-        ),
-      );
-      setCandidateDialogOpen(false);
-      setSelectedCandidate(null);
-      toast.success(`${candidate.name} hired to the crew`, {
-        description: `${candidate.role} joins with ${candidate.skill}/100 skill and ${candidate.experience} years on the road.`,
+      queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+      setHireDialogOpen(false);
+      setSelectedCrewMember(null);
+      toast.success(`${crew.name} hired!`, {
+        description: `${crew.star_rating}★ ${crew.role} joins your crew.`,
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to hire crew member");
+      toast.error(error.message || "Failed to hire");
     },
   });
 
-  const updateCrewMutation = useMutation({
-    mutationFn: async ({
-      crewId,
-      updates,
-      metadata,
-    }: {
-      crewId: string;
-      updates?: Partial<BandCrewMemberRow>;
-      metadata?: CrewMetadata;
-    }) => {
-      const payload: Database["public"]["Tables"]["band_crew_members"]["Update"] = { ...updates };
-      if (metadata) {
-        payload.notes = JSON.stringify(metadata);
+  // Release mutation
+  const releaseMutation = useMutation({
+    mutationFn: async (crew: BandCrewMemberRow) => {
+      // Delete from band_crew_members
+      const { error: deleteError } = await supabase
+        .from("band_crew_members")
+        .delete()
+        .eq("id", crew.id);
+      if (deleteError) throw deleteError;
+      
+      // If they came from catalog, mark as available
+      if (crew.catalog_crew_id) {
+        await supabase
+          .from("crew_catalog")
+          .update({ hired_by_band_id: null })
+          .eq("id", crew.catalog_crew_id);
       }
-
-      const { error } = await supabase.from("band_crew_members").update(payload).eq("id", crewId);
-      if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, crew) => {
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update crew member");
-    },
-  });
-
-  const releaseCrewMutation = useMutation({
-    mutationFn: async ({ crewId }: { crewId: string }) => {
-      const { error } = await supabase.from("band_crew_members").delete().eq("id", crewId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+      toast.success(`${crew.name} released from crew`);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to release crew member");
     },
   });
 
-  useEffect(() => {
-    if (!activeCrew) return;
-
-    manageForm.reset({
-      assignment: activeCrew.metadata.assignment,
-      morale: activeCrew.metadata.morale,
-      loyalty: activeCrew.metadata.loyalty,
-      trainingFocus: activeCrew.metadata.trainingFocus ?? "",
-      trainingProgress: activeCrew.metadata.trainingProgress ?? 0,
-      focus: activeCrew.metadata.focus,
-      traits: activeCrew.metadata.traits.join(", "),
-      specialties: activeCrew.metadata.specialties.join("\n"),
-      biography: activeCrew.metadata.biography ?? "",
-    });
-  }, [activeCrew, manageForm]);
-
-  const openCandidateDialog = (candidate: CrewCatalogItem) => {
-    setSelectedCandidate(candidate);
-    setCandidateDialogOpen(true);
-  };
-
-  const closeCandidateDialog = () => {
-    setCandidateDialogOpen(false);
-    setSelectedCandidate(null);
-  };
-
-  const beginManageCrew = (crew: EnrichedCrewMember) => {
-    setActiveCrew(crew);
-    setManageDialogOpen(true);
-  };
-
-  const handleManageDialogChange = (open: boolean) => {
-    setManageDialogOpen(open);
-    if (!open) {
-      setActiveCrew(null);
-    }
+  const handleHire = (crew: CrewCatalogRow) => {
+    setSelectedCrewMember(crew);
+    setHireDialogOpen(true);
   };
 
   const confirmHire = () => {
-    if (!selectedCandidate) return;
-    hireCrewMutation.mutate(selectedCandidate);
+    if (selectedCrewMember) {
+      hireMutation.mutate(selectedCrewMember);
+    }
   };
 
-  const handleLogGig = (crew: EnrichedCrewMember) => {
-    const nextExperience = (crew.experience_years ?? 0) + 1;
-    const nextSkill = clamp((crew.skill_level ?? 0) + 1, 0, 100);
-    const nextMetadata: CrewMetadata = {
-      ...crew.metadata,
-      loyalty: clamp(crew.metadata.loyalty + 3, 0, 100),
-      morale: stepMoraleUp(crew.metadata.morale),
-      lastGigDate: new Date().toISOString(),
-    };
-
-    updateCrewMutation.mutate(
-      {
-        crewId: crew.id,
-        updates: { experience_years: nextExperience, skill_level: nextSkill },
-        metadata: nextMetadata,
-      },
-      {
-        onSuccess: () => {
-          toast.success(`${crew.name} logged another show`, {
-            description: `Experience ${nextExperience} yrs · Skill ${nextSkill}/100`,
-          });
-        },
-      },
-    );
+  const handleRelease = (crew: BandCrewMemberRow) => {
+    if (window.confirm(`Release ${crew.name}? They'll become available for other bands to hire.`)) {
+      releaseMutation.mutate(crew);
+    }
   };
 
-  const handleTrainCrew = (crew: EnrichedCrewMember) => {
-    const nextSkill = clamp((crew.skill_level ?? 0) + 2, 0, 100);
-    const nextMetadata: CrewMetadata = {
-      ...crew.metadata,
-      trainingProgress: clamp((crew.metadata.trainingProgress ?? 0) + 15, 0, 100),
-      morale: stepMoraleUp(crew.metadata.morale),
-    };
-
-    updateCrewMutation.mutate(
-      {
-        crewId: crew.id,
-        updates: { skill_level: nextSkill },
-        metadata: nextMetadata,
-      },
-      {
-        onSuccess: () => {
-          toast.success(`${crew.name} completed a training session`, {
-            description: `Skill ${crew.skill_level}/100 → ${nextSkill}/100`,
-          });
-        },
-      },
-    );
-  };
-
-  const handleReleaseCrew = (crew: EnrichedCrewMember) => {
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm(`Release ${crew.name} from the touring crew? Payroll will free up immediately.`);
-    if (!confirmed) return;
-
-    releaseCrewMutation.mutate(
-      { crewId: crew.id },
-      {
-        onSuccess: () => {
-          toast.success(`${crew.name} has been released`, {
-            description: "You now have room to recruit a fresh specialist.",
-          });
-        },
-      },
-    );
-  };
-
-  const submitManageForm = manageForm.handleSubmit((values) => {
-    if (!activeCrew) return;
-
-    const nextMetadata: CrewMetadata = {
-      ...activeCrew.metadata,
-      assignment: values.assignment,
-      morale: values.morale,
-      loyalty: clamp(Number(values.loyalty) || 0, 0, 100),
-      trainingFocus: values.trainingFocus.trim() || null,
-      trainingProgress: clamp(Number(values.trainingProgress) || 0, 0, 100),
-      focus: values.focus.trim() || activeCrew.metadata.focus,
-      traits: values.traits
-        .split(",")
-        .map((trait) => trait.trim())
-        .filter(Boolean),
-      specialties: values.specialties
-        .split(/\n|,/)
-        .map((specialty) => specialty.trim())
-        .filter(Boolean),
-      biography: values.biography.trim() ? values.biography.trim() : null,
-    };
-
-    updateCrewMutation.mutate(
-      {
-        crewId: activeCrew.id,
-        metadata: nextMetadata,
-      },
-      {
-        onSuccess: () => {
-          toast.success(`${activeCrew.name}'s assignment updated`, {
-            description: `${values.assignment} focus locked with morale ${moraleLabelMap[nextMetadata.morale]}.`,
-          });
-          handleManageDialogChange(false);
-        },
-      },
-    );
-  });
+  const isLocked = (crew: CrewCatalogRow) => bandFame < crew.min_fame_required;
 
   if (loadingBand || loadingCrew) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" /> Loading crew data...
-        </div>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -508,93 +299,59 @@ const BandCrewManagement = () => {
   if (!bandId) {
     return (
       <div className="min-h-screen bg-background p-6">
-        <div className="mx-auto max-w-3xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Join a band to recruit crew</CardTitle>
-              <CardDescription>
-                Road and production staff live with your band. Form or join a band to unlock touring crew management.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Alert>
-                <CircleDashed className="h-4 w-4" />
-                <AlertTitle>No active band</AlertTitle>
-                <AlertDescription>
-                  Head over to the Band hub and pick your team. Once you have a band, you can hire specialists, set
-                  assignments, and log their growth here.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="mx-auto max-w-lg">
+          <CardHeader>
+            <CardTitle>Join a Band First</CardTitle>
+            <CardDescription>You need to be in a band to hire crew members.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        {/* Header Stats */}
         <Card>
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle className="text-2xl">Band Crew • {bandName}</CardTitle>
-              <CardDescription>
-                Track your touring specialists, keep morale high, and shape assignments so every show fires on all cylinders.
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                <span className="font-semibold text-foreground">{crewCount}</span> crew on payroll
-              </div>
-              <div className="flex items-center gap-1">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                Avg skill <span className="font-semibold text-foreground">{averageSkill}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                Loyalty <span className="font-semibold text-foreground">{averageLoyalty}</span>
-              </div>
-              <div>
-                Payroll per gig: <span className="font-semibold text-foreground">{formatCurrency(totalPayroll)}</span>
-              </div>
-            </div>
+          <CardHeader>
+            <CardTitle className="text-2xl">Crew Management • {bandName}</CardTitle>
+            <CardDescription>
+              Hire crew to boost your gig performance. Higher star ratings = better bonuses. Cohesion grows over time.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm font-medium text-muted-foreground">Dominant morale</div>
+                <div className="text-sm text-muted-foreground">Crew Size</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <Badge variant={moraleBadgeVariant[dominantMorale ?? "steady"]}>
-                    {dominantMorale ? moraleLabelMap[dominantMorale] : "Balanced"}
-                  </Badge>
-                  {dominantMorale && (
-                    <span className="text-xs text-muted-foreground">
-                      {moraleScoreMap[dominantMorale]} morale score
-                    </span>
-                  )}
+                  <Users className="h-5 w-5 text-primary" />
+                  <span className="text-2xl font-bold">{crewCount}</span>
                 </div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm font-medium text-muted-foreground">Touring coverage</div>
-                <div className="mt-1 text-foreground">
-                  {assignmentCounts.Touring} specialists
-                  <p className="text-xs text-muted-foreground">{assignmentHighlights.Touring}</p>
+                <div className="text-sm text-muted-foreground">Avg Star Rating</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                  <span className="text-2xl font-bold">{avgStarRating.toFixed(1)}</span>
                 </div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm font-medium text-muted-foreground">Production backbone</div>
-                <div className="mt-1 text-foreground">
-                  {assignmentCounts.Production} leads
-                  <p className="text-xs text-muted-foreground">{assignmentHighlights.Production}</p>
+                <div className="text-sm text-muted-foreground">Avg Cohesion</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-blue-500" />
+                  <span className="text-2xl font-bold">{avgCohesion.toFixed(0)}%</span>
                 </div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm font-medium text-muted-foreground">Reserve bench</div>
-                <div className="mt-1 text-foreground">
-                  {assignmentCounts.Standby} floaters
-                  <p className="text-xs text-muted-foreground">{assignmentHighlights.Standby}</p>
+                <div className="text-sm text-muted-foreground">Cost per Gig</div>
+                <div className="mt-1 text-2xl font-bold">${totalPayroll.toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="text-sm text-muted-foreground">Your Fame</div>
+                <div className="mt-1 text-2xl font-bold">{bandFame.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">
+                  Can hire up to {maxAccessibleStars}★ crew
                 </div>
               </div>
             </div>
@@ -602,456 +359,267 @@ const BandCrewManagement = () => {
         </Card>
 
         <Tabs defaultValue="roster" className="space-y-4">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="roster">Crew Roster</TabsTrigger>
-            <TabsTrigger value="recruit">Recruit Talent</TabsTrigger>
-            <TabsTrigger value="playbooks">Crew Playbooks</TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="roster">Your Crew ({crewCount})</TabsTrigger>
+            <TabsTrigger value="hire">Hire Crew</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="roster" className="space-y-4">
+          {/* Roster Tab */}
+          <TabsContent value="roster">
             <Card>
               <CardHeader>
-                <CardTitle>Active crew assignments</CardTitle>
+                <CardTitle>Active Crew</CardTitle>
                 <CardDescription>
-                  Keep morale pulsing, rotate training, and log shows so your specialists keep sharpening their edge.
+                  Your crew's cohesion grows with each gig performed together. Higher cohesion = better performance bonuses.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {enrichedCrew.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-10 text-center text-muted-foreground">
-                    <UserPlus className="h-6 w-6" />
+                {!hiredCrew || hiredCrew.length === 0 ? (
+                  <div className="flex flex-col items-center gap-4 py-10 text-center">
+                    <UserPlus className="h-12 w-12 text-muted-foreground" />
                     <div>
-                      <div className="font-semibold text-foreground">No crew yet</div>
-                      <p className="text-sm">
-                        Recruit tour managers, engineers, and specialists to boost your live show consistency.
-                      </p>
+                      <p className="font-semibold">No crew hired yet</p>
+                      <p className="text-sm text-muted-foreground">Head to the Hire tab to recruit specialists</p>
                     </div>
-                    <Button onClick={() => setSelectedDiscipline("all")}>Open recruitment board</Button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Member</TableHead>
-                          <TableHead>Morale & Loyalty</TableHead>
-                          <TableHead>Skill</TableHead>
-                          <TableHead>Experience</TableHead>
-                          <TableHead>Assignment</TableHead>
-                          <TableHead>Payroll</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {enrichedCrew.map((crew) => (
-                          <TableRow key={crew.id}>
-                            <TableCell>
-                              <div className="font-semibold text-foreground">{crew.name}</div>
-                              <div className="text-xs text-muted-foreground">{crew.crew_type}</div>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {crew.metadata.traits.map((trait) => (
-                                  <Badge key={trait} variant="outline" className="text-xs">
-                                    {trait}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-2">
-                                <Badge variant={moraleBadgeVariant[crew.metadata.morale]}>
-                                  {moraleLabelMap[crew.metadata.morale]}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">Loyalty {crew.metadata.loyalty}/100</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-foreground">{crew.skill_level}/100</div>
-                              <p className="text-xs text-muted-foreground">Impact {crew.impactScore}</p>
-                              {crew.metadata.trainingProgress > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  Training {crew.metadata.trainingProgress}%
-                                </p>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-foreground">{crew.experience_years} yrs</div>
-                              <p className="text-xs text-muted-foreground">{formatDate(crew.metadata.lastGigDate)}</p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge variant="outline">{crew.metadata.assignment}</Badge>
-                                <span className="text-xs text-muted-foreground">{crew.metadata.focus}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {assignmentHighlights[crew.metadata.assignment]}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-foreground">{formatCurrency(crew.salary_per_gig)}</div>
-                              <p className="text-xs text-muted-foreground">per gig</p>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex flex-wrap justify-end gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => beginManageCrew(crew)}
-                                  disabled={updateCrewMutation.isPending}
-                                >
-                                  <ClipboardList className="mr-1 h-4 w-4" /> Manage
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleTrainCrew(crew)}
-                                  disabled={updateCrewMutation.isPending}
-                                >
-                                  <TrendingUp className="mr-1 h-4 w-4" /> Train
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleLogGig(crew)}
-                                  disabled={updateCrewMutation.isPending}
-                                >
-                                  <PlaneTakeoff className="mr-1 h-4 w-4" /> Log gig
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => handleReleaseCrew(crew)}
-                                  disabled={releaseCrewMutation.isPending}
-                                >
-                                  <Trash2 className="mr-1 h-4 w-4" /> Release
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {hiredCrew.map((crew) => (
+                      <Card key={crew.id} className="relative">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-lg">{crew.name}</CardTitle>
+                              <CardDescription>{crew.crew_type}</CardDescription>
+                            </div>
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                              {crew.star_rating ?? 5}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <StarRating rating={crew.star_rating ?? 5} />
+                          
+                          <CohesionBar value={crew.cohesion_rating} />
+                          
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Skill:</span>{" "}
+                              <span className="font-medium">{crew.skill_level}/100</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Experience:</span>{" "}
+                              <span className="font-medium">{crew.experience_years} yrs</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Gigs Together:</span>{" "}
+                              <span className="font-medium">{crew.gigs_together}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Salary:</span>{" "}
+                              <span className="font-medium">${crew.salary_per_gig}/gig</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-destructive hover:text-destructive"
+                            onClick={() => handleRelease(crew)}
+                            disabled={releaseMutation.isPending}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Release
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="recruit" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle>Recruit elite crew</CardTitle>
-                  <CardDescription>
-                    Hand-pick specialists from the touring talent network. Each hire arrives with proven stories and starts
-                    contributing immediately.
-                  </CardDescription>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Label htmlFor="discipline-filter" className="text-xs uppercase text-muted-foreground">
-                    Filter discipline
-                  </Label>
-                  <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline}>
-                    <SelectTrigger id="discipline-filter" className="w-[220px]">
-                      <SelectValue placeholder="All disciplines" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All disciplines</SelectItem>
-                      {CREW_DISCIPLINES.map((discipline) => (
-                        <SelectItem key={discipline} value={discipline}>
-                          {discipline}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <Alert>
-                  <Sparkles className="h-4 w-4" />
-                  <AlertTitle>Popmundo-inspired crew management</AlertTitle>
-                  <AlertDescription>
-                    Each hire comes with unique specialties, loyalty, and morale. Rotate them through tours, rehearse their
-                    playbooks, and keep a reserve bench just like the classic Popmundo touring meta.
-                  </AlertDescription>
-                </Alert>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredCatalog.map((candidate) => (
-                    <Card key={candidate.id} className="flex h-full flex-col justify-between">
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between text-lg">
-                          {candidate.name}
-                          <Badge variant="secondary">{candidate.role}</Badge>
-                        </CardTitle>
-                        <CardDescription>{candidate.headline}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex flex-1 flex-col justify-between space-y-4">
-                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          <Badge variant="outline">Skill {candidate.skill}/100</Badge>
-                          <Badge variant="outline">{candidate.experience} yrs touring</Badge>
-                          <Badge variant={moraleBadgeVariant[candidate.morale]}>
-                            {moraleLabelMap[candidate.morale]}
-                          </Badge>
-                          <Badge variant="outline">Payroll {formatCurrency(candidate.salary)}</Badge>
-                          <Badge variant="outline">Loyalty {candidate.loyalty}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{candidate.background}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {candidate.specialties.map((specialty) => (
-                            <Badge key={specialty} variant="outline" className="text-xs">
-                              {specialty}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          Openings: {candidate.openings > 0 ? candidate.openings : "Filled"}
-                        </span>
-                        <Button
-                          size="sm"
-                          onClick={() => openCandidateDialog(candidate)}
-                          disabled={candidate.openings === 0 || hireCrewMutation.isPending}
-                        >
-                          Review & hire
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                  {filteredCatalog.length === 0 && (
-                    <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                      No specialists match that filter right now. Try another discipline or check back after a few in-game
-                      days for refreshed leads.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="playbooks" className="space-y-4">
+          {/* Hire Tab */}
+          <TabsContent value="hire">
             <Card>
               <CardHeader>
-                <CardTitle>Tour crew operating rhythm</CardTitle>
-                <CardDescription>
-                  Blend arena-proven structure with Popmundo-style depth. Rotate responsibilities, protect morale, and keep
-                  the road family thriving.
-                </CardDescription>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <CardTitle>Available Crew</CardTitle>
+                    <CardDescription>
+                      Higher fame unlocks better crew. Crew can only work for one band at a time.
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Select value={selectedRole} onValueChange={setSelectedRole}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {CREW_ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedTier} onValueChange={setSelectedTier}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filter by tier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Tiers</SelectItem>
+                        <SelectItem value="1">Tier 1 (1-2★)</SelectItem>
+                        <SelectItem value="2">Tier 2 (3-4★)</SelectItem>
+                        <SelectItem value="3">Tier 3 (5-6★)</SelectItem>
+                        <SelectItem value="4">Tier 4 (7-8★)</SelectItem>
+                        <SelectItem value="5">Tier 5 (9-10★)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6 text-sm text-muted-foreground">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Weekly cadence</h4>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    <li>Touring crew logs each show for morale bumps and incremental skill gains.</li>
-                    <li>Production leads review load-in notes after every third show and flag venue quirks for the roadmap.</li>
-                    <li>Standby bench rotates into rehearsals twice a week to stay warmed up for emergencies.</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Morale levers</h4>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    <li>"Electric" morale unlocks surprise fan activations and reduces production mishaps.</li>
-                    <li>"Strained" morale signals it's time for recovery days, merch splits, or crew appreciation moments.</li>
-                    <li>Keep loyalty above 70 to prevent poaching offers from rival labels.</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Playbook rotations</h4>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    <li>Tour Manager anchors the daily advance, Production chief handles night-load and vendor calls.</li>
-                    <li>FOH and Lighting trade post-show debriefs with the band to sync next-night tweaks.</li>
-                    <li>Merch & Wardrobe co-design weekend capsule drops tied to city lore and fan quests.</li>
-                  </ul>
-                </div>
+              <CardContent>
+                {loadingCatalog ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : filteredCatalog.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    No available crew matching your filters
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredCatalog.map((crew) => {
+                      const locked = isLocked(crew);
+                      return (
+                        <Card 
+                          key={crew.id} 
+                          className={`relative ${locked ? "opacity-60" : ""}`}
+                        >
+                          {locked && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
+                              <div className="text-center">
+                                <Lock className="mx-auto h-8 w-8 text-muted-foreground" />
+                                <p className="mt-2 text-sm font-medium">
+                                  Requires {crew.min_fame_required.toLocaleString()} Fame
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          <CardHeader className="pb-2">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{crew.name}</CardTitle>
+                                <CardDescription>{crew.role}</CardDescription>
+                              </div>
+                              <Badge 
+                                variant={crew.star_rating >= 9 ? "default" : crew.star_rating >= 7 ? "secondary" : "outline"}
+                                className="flex items-center gap-1"
+                              >
+                                <Star className={`h-3 w-3 ${crew.star_rating >= 7 ? "fill-yellow-500 text-yellow-500" : ""}`} />
+                                {crew.star_rating}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <StarRating rating={crew.star_rating} />
+                            
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {crew.headline}
+                            </p>
+                            
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Skill:</span>{" "}
+                                <span className="font-medium">{crew.skill}/100</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Experience:</span>{" "}
+                                <span className="font-medium">{crew.experience} yrs</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-1">
+                              {crew.specialties.slice(0, 2).map((s) => (
+                                <Badge key={s} variant="outline" className="text-xs">
+                                  {s}
+                                </Badge>
+                              ))}
+                            </div>
+                            
+                            <div className="text-lg font-bold text-primary">
+                              ${crew.salary.toLocaleString()}/gig
+                            </div>
+                          </CardContent>
+                          <CardFooter>
+                            <Button
+                              className="w-full"
+                              onClick={() => handleHire(crew)}
+                              disabled={locked || hireMutation.isPending}
+                            >
+                              <UserPlus className="mr-2 h-4 w-4" /> Hire
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
 
-      <Dialog open={candidateDialogOpen} onOpenChange={(open) => (open ? setCandidateDialogOpen(true) : closeCandidateDialog())}>
+      {/* Hire Dialog */}
+      <Dialog open={hireDialogOpen} onOpenChange={setHireDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hire crew specialist</DialogTitle>
+            <DialogTitle>Hire {selectedCrewMember?.name}?</DialogTitle>
             <DialogDescription>
-              Confirm the hire to add this specialist to your band's touring roster. They'll appear in your crew table
-              immediately.
+              This crew member will join your band exclusively.
             </DialogDescription>
           </DialogHeader>
-          {selectedCandidate && (
+          {selectedCrewMember && (
             <div className="space-y-4">
-              <div>
-                <div className="text-lg font-semibold text-foreground">{selectedCandidate.name}</div>
-                <div className="text-sm text-muted-foreground">{selectedCandidate.headline}</div>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <Badge variant="secondary">{selectedCandidate.role}</Badge>
-                <Badge variant="outline">Skill {selectedCandidate.skill}/100</Badge>
-                <Badge variant="outline">{selectedCandidate.experience} yrs</Badge>
-                <Badge variant="outline">Payroll {formatCurrency(selectedCandidate.salary)}</Badge>
-                <Badge variant={moraleBadgeVariant[selectedCandidate.morale]}>
-                  {moraleLabelMap[selectedCandidate.morale]}
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="text-lg font-semibold">{selectedCrewMember.name}</div>
+                  <div className="text-sm text-muted-foreground">{selectedCrewMember.role}</div>
+                </div>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                  {selectedCrewMember.star_rating}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">{selectedCandidate.background}</p>
-              <div>
-                <h4 className="text-sm font-semibold text-foreground">Specialties</h4>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                  {selectedCandidate.specialties.map((specialty) => (
-                    <li key={specialty}>{specialty}</li>
-                  ))}
-                </ul>
+              
+              <StarRating rating={selectedCrewMember.star_rating} size="lg" />
+              
+              <p className="text-sm text-muted-foreground">{selectedCrewMember.background}</p>
+              
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>Skill: <span className="font-medium">{selectedCrewMember.skill}/100</span></div>
+                  <div>Experience: <span className="font-medium">{selectedCrewMember.experience} yrs</span></div>
+                  <div>Loyalty: <span className="font-medium">{selectedCrewMember.loyalty}%</span></div>
+                  <div className="font-bold text-primary">
+                    ${selectedCrewMember.salary.toLocaleString()}/gig
+                  </div>
+                </div>
               </div>
             </div>
           )}
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-            <Button variant="outline" onClick={closeCandidateDialog}>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHireDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={confirmHire}
-              disabled={!selectedCandidate || selectedCandidate.openings === 0 || hireCrewMutation.isPending}
-            >
-              {hireCrewMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <UserPlus className="mr-2 h-4 w-4" />
-              )}
-              Confirm hire
+            <Button onClick={confirmHire} disabled={hireMutation.isPending}>
+              {hireMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Hire
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={manageDialogOpen} onOpenChange={handleManageDialogChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Manage crew assignment</DialogTitle>
-            <DialogDescription>
-              Update morale targets, assignments, and training focus to keep your crew aligned with the tour strategy.
-            </DialogDescription>
-          </DialogHeader>
-          {activeCrew && (
-            <form onSubmit={submitManageForm} className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Assignment</Label>
-                  <Controller
-                    name="assignment"
-                    control={manageForm.control}
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Touring">Touring</SelectItem>
-                          <SelectItem value="Studio">Studio</SelectItem>
-                          <SelectItem value="Production">Production</SelectItem>
-                          <SelectItem value="Standby">Standby</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Morale</Label>
-                  <Controller
-                    name="morale"
-                    control={manageForm.control}
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="electric">Electric</SelectItem>
-                          <SelectItem value="steady">Steady</SelectItem>
-                          <SelectItem value="strained">Strained</SelectItem>
-                          <SelectItem value="burned_out">Burned Out</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Loyalty</Label>
-                  <Controller
-                    name="loyalty"
-                    control={manageForm.control}
-                    render={({ field }) => (
-                      <Input type="number" min={0} max={100} {...field} />
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Training focus</Label>
-                  <Controller
-                    name="trainingFocus"
-                    control={manageForm.control}
-                    render={({ field }) => <Input placeholder="Rig redesign, crisis playbooks, etc." {...field} />}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Training progress</Label>
-                  <Controller
-                    name="trainingProgress"
-                    control={manageForm.control}
-                    render={({ field }) => <Input type="number" min={0} max={100} {...field} />}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Focus headline</Label>
-                  <Controller
-                    name="focus"
-                    control={manageForm.control}
-                    render={({ field }) => <Input placeholder="Nightly settlements, Lighting design, etc." {...field} />}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Traits (comma separated)</Label>
-                  <Controller
-                    name="traits"
-                    control={manageForm.control}
-                    render={({ field }) => <Input placeholder="Calm under pressure, Logistics wizard" {...field} />}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Specialties (comma or new line)</Label>
-                  <Controller
-                    name="specialties"
-                    control={manageForm.control}
-                    render={({ field }) => <Textarea rows={3} placeholder="Timecode sequencing, Crisis response" {...field} />}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Backstage notes</Label>
-                <Controller
-                  name="biography"
-                  control={manageForm.control}
-                  render={({ field }) => (
-                    <Textarea rows={4} placeholder="Document crew history, motivations, and road quirks." {...field} />
-                  )}
-                />
-              </div>
-              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                <Button type="button" variant="outline" onClick={() => handleManageDialogChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateCrewMutation.isPending}>
-                  {updateCrewMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                  )}
-                  Save changes
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
         </DialogContent>
       </Dialog>
     </div>

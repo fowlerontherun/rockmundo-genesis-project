@@ -920,41 +920,53 @@ export type Database = {
       band_crew_members: {
         Row: {
           band_id: string
+          catalog_crew_id: string | null
+          cohesion_rating: number
           created_at: string
           crew_type: string
           experience_years: number
+          gigs_together: number
           hire_date: string
           id: string
           name: string
           notes: string | null
           salary_per_gig: number
           skill_level: number
+          star_rating: number | null
           updated_at: string
         }
         Insert: {
           band_id: string
+          catalog_crew_id?: string | null
+          cohesion_rating?: number
           created_at?: string
           crew_type: string
           experience_years?: number
+          gigs_together?: number
           hire_date?: string
           id?: string
           name: string
           notes?: string | null
           salary_per_gig?: number
           skill_level?: number
+          star_rating?: number | null
           updated_at?: string
         }
         Update: {
           band_id?: string
+          catalog_crew_id?: string | null
+          cohesion_rating?: number
           created_at?: string
           crew_type?: string
           experience_years?: number
+          gigs_together?: number
           hire_date?: string
           id?: string
           name?: string
           notes?: string | null
           salary_per_gig?: number
           skill_level?: number
+          star_rating?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2795,12 +2807,15 @@ export type Database = {
         Row: {
           assignment: string
           background: string
+          city: string | null
           created_at: string
           experience: number
           focus: string
           headline: string
+          hired_by_band_id: string | null
           id: string
           loyalty: number
+          min_fame_required: number
           morale: string
           name: string
           openings: number
@@ -2808,18 +2823,22 @@ export type Database = {
           salary: number
           skill: number
           specialties: string[]
+          star_rating: number
           traits: string[]
           updated_at: string
         }
         Insert: {
           assignment: string
           background: string
+          city?: string | null
           created_at?: string
           experience: number
           focus: string
           headline: string
+          hired_by_band_id?: string | null
           id: string
           loyalty: number
+          min_fame_required?: number
           morale: string
           name: string
           openings?: number
@@ -2827,18 +2846,22 @@ export type Database = {
           salary: number
           skill: number
           specialties?: string[]
+          star_rating?: number
           traits?: string[]
           updated_at?: string
         }
         Update: {
           assignment?: string
           background?: string
+          city?: string | null
           created_at?: string
           experience?: number
           focus?: string
           headline?: string
+          hired_by_band_id?: string | null
           id?: string
           loyalty?: number
+          min_fame_required?: number
           morale?: string
           name?: string
           openings?: number
@@ -2846,10 +2869,19 @@ export type Database = {
           salary?: number
           skill?: number
           specialties?: string[]
+          star_rating?: number
           traits?: string[]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crew_catalog_hired_by_band_id_fkey"
+            columns: ["hired_by_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cron_job_config: {
         Row: {
