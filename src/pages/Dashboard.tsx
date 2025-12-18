@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useTranslation } from "@/hooks/useTranslation";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
 import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star } from "lucide-react";
@@ -52,6 +53,7 @@ const Dashboard = () => {
   const {
     toast
   } = useToast();
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
@@ -215,9 +217,9 @@ const Dashboard = () => {
   return <div className="container mx-auto p-3 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">{t('dashboard.title')}</h1>
           <p className="text-sm text-muted-foreground">
-            Welcome back, {(profile as any)?.display_name || (profile as any)?.username || "Player"}
+            {t('dashboard.welcome')}, {(profile as any)?.display_name || (profile as any)?.username || "Player"}
           </p>
         </div>
         
@@ -229,31 +231,31 @@ const Dashboard = () => {
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Profile</span>
+            <span className="hidden sm:inline">{t('common.profile')}</span>
           </TabsTrigger>
           <TabsTrigger value="fame">
             <Star className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Fame</span>
+            <span className="hidden sm:inline">{t('dashboard.fame')}</span>
           </TabsTrigger>
           <TabsTrigger value="skills">
             <Zap className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Skills</span>
+            <span className="hidden sm:inline">{t('nav.skills')}</span>
           </TabsTrigger>
           <TabsTrigger value="friends">
             <Users className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Friends</span>
+            <span className="hidden sm:inline">{t('social.friends', 'Friends')}</span>
           </TabsTrigger>
           <TabsTrigger value="schedule">
             <Calendar className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Schedule</span>
+            <span className="hidden sm:inline">{t('nav.schedule')}</span>
           </TabsTrigger>
           <TabsTrigger value="advisor">
             <Bot className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Advisor</span>
+            <span className="hidden sm:inline">{t('nav.advisor')}</span>
           </TabsTrigger>
           <TabsTrigger value="achievements">
             <Trophy className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Achievements</span>
+            <span className="hidden sm:inline">{t('awards.achievements')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -272,9 +274,9 @@ const Dashboard = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle>{t('dashboard.profileInfo', 'Profile Information')}</CardTitle>
                 <Link to="/my-character/edit">
-                  <Button variant="outline" size="sm">Edit Profile</Button>
+                  <Button variant="outline" size="sm">{t('dashboard.editProfile', 'Edit Profile')}</Button>
                 </Link>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -297,27 +299,27 @@ const Dashboard = () => {
 
                 <div className="grid grid-cols-2 gap-3 pt-4 border-t">
                   <div>
-                    <p className="text-xs text-muted-foreground">Age</p>
-                    <p className="text-sm font-medium">{(profile as any)?.age || "Not set"}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.age', 'Age')}</p>
+                    <p className="text-sm font-medium">{(profile as any)?.age || t('dashboard.notSet', 'Not set')}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Gender</p>
-                    <p className="text-sm font-medium capitalize">{(profile as any)?.gender || "unspecified"}</p>
+                    <p className="text-xs text-muted-foreground">{t('forms.gender')}</p>
+                    <p className="text-sm font-medium capitalize">{(profile as any)?.gender || t('dashboard.unspecified', 'unspecified')}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Fame</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.fame')}</p>
                     <p className="text-sm font-medium">{(profile as any)?.fame || 0}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Fans</p>
+                    <p className="text-xs text-muted-foreground">{t('band.fans')}</p>
                     <p className="text-sm font-medium">{(profile as any)?.fans || 0}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Cash</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.cash')}</p>
                     <p className="text-sm font-medium">${(profile as any)?.cash || 0}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Hours</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.totalHours', 'Total Hours')}</p>
                     <p className="text-sm font-medium">{((profile as any)?.total_hours_played || 0).toFixed(1)}h</p>
                   </div>
                 </div>
@@ -325,12 +327,12 @@ const Dashboard = () => {
                 <div className="pt-4 border-t space-y-2">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{currentCity?.name || "No location"}</span>
+                    <span className="text-sm">{currentCity?.name || t('dashboard.noLocation', 'No location')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      Joined {(profile as any)?.created_at && formatDistanceToNow(new Date((profile as any).created_at), {
+                      {t('dashboard.joined', 'Joined')} {(profile as any)?.created_at && formatDistanceToNow(new Date((profile as any).created_at), {
                       addSuffix: true
                     })}
                     </span>
@@ -338,7 +340,7 @@ const Dashboard = () => {
                   {(profile as any)?.last_active && <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
-                        Last active {formatDistanceToNow(new Date((profile as any).last_active), {
+                        {t('dashboard.lastActive', 'Last active')} {formatDistanceToNow(new Date((profile as any).last_active), {
                       addSuffix: true
                     })}
                       </span>
@@ -349,14 +351,14 @@ const Dashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Stats</CardTitle>
+                <CardTitle>{t('dashboard.stats', 'Stats')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Heart className="h-4 w-4 text-red-500" />
-                      <span className="text-sm font-medium">Health</span>
+                      <span className="text-sm font-medium">{t('wellness.health')}</span>
                     </div>
                     <span className="text-sm font-semibold">{(profile as any)?.health || 100}%</span>
                   </div>
@@ -367,7 +369,7 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm font-medium">Energy</span>
+                      <span className="text-sm font-medium">{t('wellness.energy')}</span>
                     </div>
                     <span className="text-sm font-semibold">{(profile as any)?.energy || 100}%</span>
                   </div>
@@ -377,7 +379,7 @@ const Dashboard = () => {
                 <div className="pt-4 border-t">
                   <div className="flex items-center gap-2 mb-2">
                     <Coins className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm font-medium">Cash Balance</span>
+                    <span className="text-sm font-medium">{t('dashboard.cashBalance', 'Cash Balance')}</span>
                   </div>
                   <p className="text-2xl font-bold">${(profile as any)?.cash || 0}</p>
                 </div>
@@ -387,7 +389,7 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
+              <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
             </CardHeader>
             <CardContent>
               <RecentActivitySection userId={user?.id} />
@@ -412,12 +414,12 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Friends List
+                  {t('dashboard.friendsList', 'Friends List')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {!friendships || friendships.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                    No friends yet. Start connecting with other players!
+                    {t('dashboard.noFriendsYet', 'No friends yet. Start connecting with other players!')}
                   </p> : <ScrollArea className="h-[500px]">
                     <div className="space-y-2">
                       {friendships.map((friendship: any) => {
@@ -446,7 +448,7 @@ const Dashboard = () => {
 
             <Card className="lg:col-span-3">
               <CardHeader>
-                <CardTitle>Chat Channels</CardTitle>
+                <CardTitle>{t('dashboard.chatChannels', 'Chat Channels')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ChatChannelSelector isVip={(profile as any)?.is_vip || false} />
@@ -460,20 +462,20 @@ const Dashboard = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <CardTitle>Schedule</CardTitle>
+                <CardTitle>{t('nav.schedule')}</CardTitle>
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" variant="outline" className="text-xs sm:text-sm" onClick={() => window.location.href = '/booking/songwriting'}>
-                    <span className="hidden sm:inline">Songwriting</span>
-                    <span className="sm:hidden">Write</span>
+                    <span className="hidden sm:inline">{t('nav.songwriting')}</span>
+                    <span className="sm:hidden">{t('dashboard.write', 'Write')}</span>
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/performance'}>
-                    Performance
+                    {t('nav.perform')}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/education'}>
-                    Education
+                    {t('nav.education')}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/work'}>
-                    Life
+                    {t('dashboard.life', 'Life')}
                   </Button>
                 </div>
               </div>
@@ -485,7 +487,7 @@ const Dashboard = () => {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setCurrentDate(new Date())}>
-                    Today
+                    {t('common.today')}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? 1 : 7))}>
                     <ChevronRight className="h-4 w-4" />
@@ -495,11 +497,11 @@ const Dashboard = () => {
                 <div className="flex gap-2">
                   <Button size="sm" variant={viewMode === 'day' ? 'default' : 'outline'} onClick={() => setViewMode('day')}>
                     <Calendar className="h-4 w-4 mr-1" />
-                    Day
+                    {t('dashboard.day', 'Day')}
                   </Button>
                   <Button size="sm" variant={viewMode === 'week' ? 'default' : 'outline'} onClick={() => setViewMode('week')}>
                     <CalendarDays className="h-4 w-4 mr-1" />
-                    Week
+                    {t('dashboard.week', 'Week')}
                   </Button>
                 </div>
               </div>
@@ -529,15 +531,15 @@ const Dashboard = () => {
                     <Bot className="h-6 w-6" />
                   </div>
                   <div>
-                    <CardTitle>Advisor</CardTitle>
+                    <CardTitle>{t('nav.advisor')}</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      Your tactical coach for data-driven decisions
+                      {t('dashboard.advisorDescription', 'Your tactical coach for data-driven decisions')}
                     </p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={loadInsights} disabled={loading}>
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  Refresh insights
+                  {t('dashboard.refreshInsights', 'Refresh insights')}
                 </Button>
               </div>
             </CardHeader>
@@ -554,8 +556,8 @@ const Dashboard = () => {
                         <div className="flex items-center gap-2 text-sm font-medium">
                           {message.role === "advisor" ? <>
                               <Bot className="h-4 w-4" />
-                              <span>Advisor</span>
-                            </> : <span>You</span>}
+                              <span>{t('nav.advisor')}</span>
+                            </> : <span>{t('dashboard.you', 'You')}</span>}
                         </div>
                         <p className="mt-2 text-sm leading-relaxed">{message.content}</p>
                         
@@ -576,7 +578,7 @@ const Dashboard = () => {
                   {loading && <div className="flex justify-start">
                       <div className="flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Analyzing...</span>
+                        <span>{t('dashboard.analyzing', 'Analyzing...')}</span>
                       </div>
                     </div>}
                 </div>
@@ -608,12 +610,12 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
-                Achievements
+                {t('awards.achievements')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!achievements || achievements.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                  No achievements unlocked yet. Keep playing to earn achievements!
+                  {t('dashboard.noAchievements', 'No achievements unlocked yet. Keep playing to earn achievements!')}
                 </p> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {achievements.map((achievement: any) => <div key={achievement.id} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
                       <div className="flex items-start gap-3">
