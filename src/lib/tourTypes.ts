@@ -61,7 +61,7 @@ export const CANCELLATION_REFUND_SCALE = [
   { daysBeforeStart: 0, refundPercent: 0 },
 ] as const;
 
-export const TOUR_BUS_DAILY_COST = 500; // Default daily rental
+export const TOUR_BUS_DAILY_COST = 150; // Default daily rental (reduced from $500)
 
 export const DEFAULT_WIZARD_STATE: TourWizardState = {
   name: '',
@@ -86,6 +86,8 @@ export interface TourCostEstimate {
   travelCosts: number;
   tourBusCosts: number;
   totalUpfrontCost: number;
+  estimatedTicketRevenue: number;
+  estimatedMerchRevenue: number;
   estimatedRevenue: number;
   estimatedProfit: number;
   showCount: number;

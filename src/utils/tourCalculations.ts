@@ -113,6 +113,14 @@ export function calculateCancellationRefund(
   return Math.round(totalUpfrontCost * (refundPercent / 100));
 }
 
+// Estimate merchandise sales per attendee based on band fame
+export function estimateMerchSalesPerAttendee(bandFame: number): number {
+  // Base $5 per attendee, scales with fame (up to $20 per attendee at high fame)
+  const baseAmount = 5;
+  const fameMultiplier = 1 + Math.min(bandFame / 50000, 3);
+  return Math.round(baseAmount * fameMultiplier);
+}
+
 // Calculate full tour cost estimate
 export function calculateTourCostEstimate(
   venues: VenueMatch[],
@@ -122,8 +130,11 @@ export function calculateTourCostEstimate(
 ): TourCostEstimate {
   let venueCosts = 0;
   let bookingFees = 0;
-  let estimatedRevenue = 0;
+  let estimatedTicketRevenue = 0;
+  let estimatedMerchRevenue = 0;
   let travelCosts = 0;
+  
+  const merchPerAttendee = estimateMerchSalesPerAttendee(bandFame);
   
   venues.forEach((venue, index) => {
     // Calculate ticket price and estimated sales
@@ -136,9 +147,13 @@ export function calculateTourCostEstimate(
     // Booking fee based on estimated revenue
     const bookingFee = calculateBookingFee(bandShare);
     
+    // Merch sales (based on attendees, not capacity)
+    const merchSales = ticketsSold * merchPerAttendee;
+    
     venueCosts += venue.basePayment || 0;
     bookingFees += bookingFee;
-    estimatedRevenue += bandShare;
+    estimatedTicketRevenue += bandShare;
+    estimatedMerchRevenue += merchSales;
     
     // Calculate travel cost to next venue (if not last)
     if (index < venues.length - 1) {
@@ -159,6 +174,7 @@ export function calculateTourCostEstimate(
   const totalTravelCosts = state.travelMode === 'tour_bus' ? travelCosts : travelCosts;
   
   const totalUpfrontCost = venueCosts + bookingFees + totalTravelCosts + tourBusCosts;
+  const estimatedRevenue = estimatedTicketRevenue + estimatedMerchRevenue;
   const estimatedProfit = estimatedRevenue - totalUpfrontCost;
   
   return {
@@ -167,6 +183,8 @@ export function calculateTourCostEstimate(
     travelCosts: totalTravelCosts,
     tourBusCosts,
     totalUpfrontCost,
+    estimatedTicketRevenue,
+    estimatedMerchRevenue,
     estimatedRevenue,
     estimatedProfit,
     showCount: venues.length,
