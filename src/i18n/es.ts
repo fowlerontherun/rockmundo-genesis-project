@@ -472,6 +472,8 @@ export const es: TranslationKeys = {
   
   radio: {
     title: "Radio",
+    description: "Envía tus canciones a estaciones y activa reproducciones en tiempo real.",
+    submitInfo: "Envía una canción grabada por estación cada semana. Los envíos aceptados aumentan streams, ventas y fama.",
     stations: "Estaciones",
     nowPlaying: "Reproduciendo Ahora",
     upNext: "Siguiente",
@@ -484,6 +486,23 @@ export const es: TranslationKeys = {
     genre: "Género",
     popularity: "Popularidad",
     reach: "Alcance",
+    analytics: "Analíticas",
+    history: "Historial",
+    selectStation: "Seleccionar estación",
+    selectSong: "Seleccionar canción",
+    noRecordedSongs: "Sin canciones grabadas",
+    submitSong: "Enviar Canción",
+    submitting: "Enviando...",
+    genreMismatch: "El género no coincide con los requisitos",
+    alreadySubmitted: "Ya enviaste esta semana",
+    listeners: "Oyentes",
+    hypeGained: "Hype Ganado",
+    streamsBoost: "Aumento de Streams",
+    recentPlays: "Reproducciones Recientes",
+    topSongs: "Canciones Top",
+    stationStats: "Estadísticas",
+    totalPlays: "Total de Reproducciones",
+    avgListeners: "Oyentes Promedio",
   },
   
   social: {
@@ -605,6 +624,12 @@ export const es: TranslationKeys = {
   
   releases: {
     title: "Gestor de Lanzamientos",
+    description: "Crea y gestiona Singles, EPs y Álbumes en formatos Digital, CD, Vinilo y Streaming",
+    pleaseLogin: "Inicia sesión para gestionar lanzamientos.",
+    backToMusicHub: "Volver a Music Hub",
+    newRelease: "Nuevo Lanzamiento",
+    myReleases: "Mis Lanzamientos",
+    salesRevenue: "Ventas e Ingresos",
     createRelease: "Crear Lanzamiento",
     releaseType: "Tipo de Lanzamiento",
     single: "Single",

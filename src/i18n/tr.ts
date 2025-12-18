@@ -485,6 +485,8 @@ export const tr: TranslationKeys = {
   // Radio
   radio: {
     title: "Radyo",
+    description: "Parçalarını radyo istasyonlarına gönder ve canlı yayınları tetikle.",
+    submitInfo: "Her istasyona haftada bir şarkı gönder. Kabul edilen gönderiler stream, satış ve şöhreti artırır.",
     stations: "İstasyonlar",
     nowPlaying: "Şu An Çalıyor",
     upNext: "Sırada",
@@ -497,6 +499,23 @@ export const tr: TranslationKeys = {
     genre: "Tür",
     popularity: "Popülerlik",
     reach: "Erişim",
+    analytics: "Analitik",
+    history: "Geçmiş",
+    selectStation: "İstasyon seç",
+    selectSong: "Şarkı seç",
+    noRecordedSongs: "Kayıtlı şarkı yok",
+    submitSong: "Şarkı Gönder",
+    submitting: "Gönderiliyor...",
+    genreMismatch: "Tür istasyon gereksinimleriyle eşleşmiyor",
+    alreadySubmitted: "Bu hafta zaten gönderildi",
+    listeners: "Dinleyiciler",
+    hypeGained: "Kazanılan Hype",
+    streamsBoost: "Stream Artışı",
+    recentPlays: "Son Çalınanlar",
+    topSongs: "En İyi Şarkılar",
+    stationStats: "İstasyon İstatistikleri",
+    totalPlays: "Toplam Çalma",
+    avgListeners: "Ort. Dinleyici",
   },
   
   // Social
@@ -626,6 +645,12 @@ export const tr: TranslationKeys = {
   // Release Manager
   releases: {
     title: "Yayın Yöneticisi",
+    description: "Dijital, CD, Plak ve Streaming formatlarında Single, EP ve Albümler oluştur",
+    pleaseLogin: "Yayınları yönetmek için giriş yapın.",
+    backToMusicHub: "Music Hub'a Dön",
+    newRelease: "Yeni Yayın",
+    myReleases: "Yayınlarım",
+    salesRevenue: "Satış ve Gelir",
     createRelease: "Yayın Oluştur",
     releaseType: "Yayın Türü",
     single: "Single",

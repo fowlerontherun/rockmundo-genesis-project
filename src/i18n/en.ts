@@ -482,7 +482,9 @@ export const en = {
   
   // Radio
   radio: {
-    title: "Radio",
+    title: "Radio Airplay",
+    description: "Pitch your tracks to curated stations and trigger real-time spins.",
+    submitInfo: "Submit one recorded song per station each week. Accepted submissions immediately boost streams, sales, and band fame.",
     stations: "Stations",
     nowPlaying: "Now Playing",
     upNext: "Up Next",
@@ -495,6 +497,23 @@ export const en = {
     genre: "Genre",
     popularity: "Popularity",
     reach: "Reach",
+    analytics: "Analytics",
+    history: "History",
+    selectStation: "Select a station",
+    selectSong: "Select a song",
+    noRecordedSongs: "No recorded songs available",
+    submitSong: "Submit Song",
+    submitting: "Submitting...",
+    genreMismatch: "Genre doesn't match station requirements",
+    alreadySubmitted: "Already submitted this week",
+    listeners: "Listeners",
+    hypeGained: "Hype Gained",
+    streamsBoost: "Streams Boost",
+    recentPlays: "Recent Plays",
+    topSongs: "Top Songs",
+    stationStats: "Station Stats",
+    totalPlays: "Total Plays",
+    avgListeners: "Avg Listeners",
   },
   
   // Social
@@ -624,6 +643,12 @@ export const en = {
   // Release Manager
   releases: {
     title: "Release Manager",
+    description: "Create and manage Singles, EPs, and Albums across Digital, CD, Vinyl, and Streaming formats",
+    pleaseLogin: "Please log in to manage releases.",
+    backToMusicHub: "Back to Music Hub",
+    newRelease: "New Release",
+    myReleases: "My Releases",
+    salesRevenue: "Sales & Revenue",
     createRelease: "Create Release",
     releaseType: "Release Type",
     single: "Single",
