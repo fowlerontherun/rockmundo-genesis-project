@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
         user_id,
         band_id,
         streaming_platforms,
-        release_songs(id, song_id)
+        release_songs!release_songs_release_id_fkey(id, song_id)
       `)
       .eq('release_status', 'released')
       .not('streaming_platforms', 'is', null)
