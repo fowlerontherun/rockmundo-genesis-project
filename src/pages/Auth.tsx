@@ -10,6 +10,7 @@ import { Mail, Lock, AlertCircle, Guitar, Users, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
+import discordLogo from "@/assets/discord-logo.png";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
@@ -657,9 +658,14 @@ const Auth = () => {
           <p className="text-xs text-muted-foreground/70 font-oswald">
             Join thousands of musicians living their dream
           </p>
-          <Button type="button" onClick={handleDiscordLinkClick} variant="link" className="text-xs font-oswald text-primary underline underline-offset-4 hover:text-primary/80 px-0 h-auto">
-            Connect with the Rockmundo community on Discord
-          </Button>
+          <button
+            type="button"
+            onClick={handleDiscordLinkClick}
+            className="flex items-center justify-center gap-3 mx-auto px-6 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] transition-colors text-white font-oswald tracking-wide shadow-lg hover:shadow-xl"
+          >
+            <img src={discordLogo} alt="Discord" className="h-6 w-auto" />
+            <span>Join our Discord Community</span>
+          </button>
         </div>
       </div>
     </div>
