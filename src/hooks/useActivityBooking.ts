@@ -3,6 +3,8 @@ import { toast } from "@/hooks/use-toast";
 import type { ActivityType } from "./useScheduledActivities";
 
 export interface BookingParams {
+  userId?: string;
+  bandId?: string;
   activityType: ActivityType;
   scheduledStart: Date;
   scheduledEnd: Date;
@@ -14,6 +16,7 @@ export interface BookingParams {
   linkedRehearsalId?: string;
   linkedRecordingId?: string;
   linkedJobShiftId?: string;
+  linkedOpenMicId?: string;
 }
 
 /**
@@ -53,12 +56,17 @@ export async function checkTimeSlotAvailable(
  * Create a scheduled activity entry
  */
 export async function createScheduledActivity(params: BookingParams): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  let userId = params.userId;
+  
+  if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    userId = user.id;
+  }
 
   // Check for conflicts
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
-    user.id,
+    userId,
     params.scheduledStart,
     params.scheduledEnd
   );
@@ -72,14 +80,18 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
   const { data: activity, error } = await (supabase as any)
     .from('player_scheduled_activities')
     .insert({
-      user_id: user.id,
+      user_id: userId,
       activity_type: params.activityType,
       scheduled_start: params.scheduledStart.toISOString(),
       scheduled_end: params.scheduledEnd.toISOString(),
       title: params.title,
       description: params.description,
       location: params.location,
-      metadata: params.metadata || {},
+      metadata: {
+        ...params.metadata,
+        band_id: params.bandId,
+        linked_open_mic_id: params.linkedOpenMicId,
+      },
       linked_gig_id: params.linkedGigId,
       linked_rehearsal_id: params.linkedRehearsalId,
       linked_recording_id: params.linkedRecordingId,
