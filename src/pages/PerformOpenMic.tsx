@@ -24,7 +24,7 @@ import {
   Users,
   Sparkles
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isPast, differenceInMinutes, differenceInHours } from "date-fns";
 
 interface LiveCommentary {
   text: string;
@@ -212,6 +212,23 @@ export default function PerformOpenMic() {
 
   // Pre-show view
   if (performance.status === 'scheduled') {
+    const scheduledDate = new Date(performance.scheduled_date);
+    const canStartNow = isPast(scheduledDate);
+    const minutesUntilStart = differenceInMinutes(scheduledDate, new Date());
+    const hoursUntilStart = differenceInHours(scheduledDate, new Date());
+    
+    const getTimeUntilText = () => {
+      if (hoursUntilStart > 24) {
+        const days = Math.floor(hoursUntilStart / 24);
+        return `${days} day${days > 1 ? 's' : ''} until showtime`;
+      } else if (hoursUntilStart >= 1) {
+        return `${hoursUntilStart} hour${hoursUntilStart > 1 ? 's' : ''} until showtime`;
+      } else if (minutesUntilStart > 0) {
+        return `${minutesUntilStart} minute${minutesUntilStart > 1 ? 's' : ''} until showtime`;
+      }
+      return "It's showtime!";
+    };
+
     return (
       <div className="container max-w-4xl py-8 space-y-6">
         <Card>
@@ -229,7 +246,7 @@ export default function PerformOpenMic() {
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {format(new Date(performance.scheduled_date), 'EEEE, MMM d @ h:mm a')}
+                {format(scheduledDate, 'EEEE, MMM d @ h:mm a')}
               </span>
             </div>
 
@@ -256,18 +273,27 @@ export default function PerformOpenMic() {
               </AlertDescription>
             </Alert>
 
+            {!canStartNow && (
+              <Alert variant="default" className="bg-amber-500/10 border-amber-500/30">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-amber-700 dark:text-amber-300">
+                  {getTimeUntilText()} - come back when it's time to perform!
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Button 
               size="lg" 
               className="w-full" 
               onClick={handleStart}
-              disabled={startPerformance.isPending}
+              disabled={startPerformance.isPending || !canStartNow}
             >
               {startPerformance.isPending ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
               ) : (
                 <Play className="h-5 w-5 mr-2" />
               )}
-              Start Performance
+              {canStartNow ? 'Start Performance' : getTimeUntilText()}
             </Button>
           </CardContent>
         </Card>
