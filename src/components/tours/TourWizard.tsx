@@ -278,7 +278,10 @@ export function TourWizard({ bandId, onComplete, onCancel }: TourWizardProps) {
                   )}
                   <hr />
                   <p className="text-lg font-bold"><strong>Total Upfront:</strong> ${wizard.costEstimate.totalUpfrontCost.toLocaleString()}</p>
-                  <p className="text-green-600"><strong>Est. Revenue:</strong> ${wizard.costEstimate.estimatedRevenue.toLocaleString()}</p>
+                  <p className="text-green-600"><strong>Est. Ticket Revenue:</strong> ${wizard.costEstimate.estimatedTicketRevenue.toLocaleString()}</p>
+                  <p className="text-green-600"><strong>Est. Merch Sales:</strong> ${wizard.costEstimate.estimatedMerchRevenue.toLocaleString()}</p>
+                  <hr />
+                  <p className="text-green-600 font-semibold"><strong>Est. Total Revenue:</strong> ${wizard.costEstimate.estimatedRevenue.toLocaleString()}</p>
                   <p className={wizard.costEstimate.estimatedProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
                     <strong>Est. Profit:</strong> ${wizard.costEstimate.estimatedProfit.toLocaleString()}
                   </p>

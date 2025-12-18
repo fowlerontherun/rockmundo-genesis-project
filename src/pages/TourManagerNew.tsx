@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
 
-const APP_VERSION = "1.0.221";
+const APP_VERSION = "1.0.222";
 
 export default function TourManagerNew() {
   const navigate = useNavigate();
