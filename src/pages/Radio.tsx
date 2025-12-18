@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "@/hooks/useTranslation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -132,6 +133,7 @@ const getStatusIcon = (status: string | null) => {
 };
 
 export default function Radio() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -477,9 +479,9 @@ export default function Radio() {
         <div className="flex flex-wrap items-center gap-3">
           <RadioIcon className="h-8 w-8 sm:h-9 sm:w-9" />
           <div>
-            <h1 className="font-oswald text-2xl sm:text-4xl">Radio Airplay</h1>
+            <h1 className="font-oswald text-2xl sm:text-4xl">{t('radio.title')}</h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Pitch your tracks to curated stations and trigger real-time spins.
+              {t('radio.description')}
             </p>
           </div>
         </div>
@@ -487,7 +489,7 @@ export default function Radio() {
         <Alert className="py-2">
           <Music className="h-4 w-4" />
           <AlertDescription className="text-sm">
-            Submit one recorded song per station each week. Accepted submissions immediately boost streams, sales, and band fame.
+            {t('radio.submitInfo')}
           </AlertDescription>
         </Alert>
 
@@ -497,23 +499,23 @@ export default function Radio() {
             <TabsList className="inline-flex w-max min-w-full gap-1 sm:grid sm:w-full sm:grid-cols-5">
               <TabsTrigger value="submit" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <Send className="h-4 w-4" />
-                <span className="hidden sm:inline">Submit</span>
+                <span className="hidden sm:inline">{t('radio.submit')}</span>
               </TabsTrigger>
               <TabsTrigger value="submissions" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <ListMusic className="h-4 w-4" />
-                <span className="hidden sm:inline">Submissions</span>
+                <span className="hidden sm:inline">{t('radio.submissions')}</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">Analytics</span>
+                <span className="hidden sm:inline">{t('radio.analytics')}</span>
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <History className="h-4 w-4" />
-                <span className="hidden sm:inline">History</span>
+                <span className="hidden sm:inline">{t('radio.history')}</span>
               </TabsTrigger>
               <TabsTrigger value="trending" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <Flame className="h-4 w-4" />
-                <span className="hidden sm:inline">Trending</span>
+                <span className="hidden sm:inline">{t('radio.trending')}</span>
               </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" className="sm:hidden" />
@@ -528,9 +530,9 @@ export default function Radio() {
                   <div className="flex items-center gap-3">
                     <Zap className="h-5 w-5 text-primary" />
                     <div>
-                      <p className="font-medium">Submit to All Eligible Stations</p>
+                      <p className="font-medium">{t('radio.submitToAllEligible')}</p>
                       <p className="text-sm text-muted-foreground">
-                        Batch submit your song to every station that matches your criteria
+                        {t('radio.batchSubmitDesc')}
                       </p>
                     </div>
                   </div>
@@ -538,7 +540,7 @@ export default function Radio() {
                     <DialogTrigger asChild>
                       <Button variant="default" className="w-full sm:w-auto">
                         <Send className="mr-2 h-4 w-4" />
-                        Batch Submit
+                        {t('radio.batchSubmit')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -556,8 +558,8 @@ export default function Radio() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Choose a Station</CardTitle>
-                <CardDescription className="text-sm">Find the right slot for your track.</CardDescription>
+                <CardTitle className="text-lg">{t('radio.chooseStation')}</CardTitle>
+                <CardDescription className="text-sm">{t('radio.findSlot')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Filter buttons - horizontal scroll on mobile */}
@@ -595,8 +597,8 @@ export default function Radio() {
                   </div>
                 ) : !stations?.length ? (
                   <Alert>
-                    <AlertTitle>No stations available</AlertTitle>
-                    <AlertDescription>Check back soon for new stations.</AlertDescription>
+                    <AlertTitle>{t('radio.noStationsAvailable')}</AlertTitle>
+                    <AlertDescription>{t('radio.checkBackSoon')}</AlertDescription>
                   </Alert>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -648,24 +650,24 @@ export default function Radio() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Submit Your Track</CardTitle>
-                <CardDescription className="text-sm">Select a recorded song that matches the station's genre.</CardDescription>
+                <CardTitle className="text-lg">{t('radio.submitTrack')}</CardTitle>
+                <CardDescription className="text-sm">{t('radio.selectRecordedSong')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {!releasedSongs?.length ? (
                   <Alert>
-                    <AlertTitle>No recorded songs yet</AlertTitle>
+                    <AlertTitle>{t('radio.noRecordedSongsYet')}</AlertTitle>
                     <AlertDescription>
-                      Finish recording a song in the studio before pitching it to radio.
+                      {t('radio.finishRecording')}
                     </AlertDescription>
                   </Alert>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Recorded Song</label>
+                      <label className="text-sm font-medium">{t('radio.recordedSong')}</label>
                       <Select value={selectedSong} onValueChange={setSelectedSong} disabled={submitSong.isPending}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a song" />
+                          <SelectValue placeholder={t('radio.selectASong')} />
                         </SelectTrigger>
                         <SelectContent>
                           {releasedSongs.map((s) => (
@@ -682,7 +684,7 @@ export default function Radio() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Active Shows</label>
+                      <label className="text-sm font-medium">{t('radio.activeShows')}</label>
                       <div className="rounded-md border bg-background/60 p-2 text-sm">
                         {showsLoading ? (
                           <Skeleton className="h-4 w-32" />
@@ -696,7 +698,7 @@ export default function Radio() {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-muted-foreground">No active shows</p>
+                          <p className="text-xs text-muted-foreground">{t('radio.noActiveShows')}</p>
                         )}
                       </div>
                     </div>
@@ -708,22 +710,22 @@ export default function Radio() {
                     {genreMatches ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                     <AlertDescription className="text-sm">
                       {genreMatches
-                        ? `Accepting: ${activeStation.accepted_genres.join(", ")}`
-                        : `Currently focused on: ${activeStation.accepted_genres.join(", ")}`}
+                        ? `${t('radio.accepting')}: ${activeStation.accepted_genres.join(", ")}`
+                        : `${t('radio.currentlyFocusedOn')}: ${activeStation.accepted_genres.join(", ")}`}
                     </AlertDescription>
                   </Alert>
                 )}
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-muted-foreground sm:text-sm">
-                    {primaryBand ? `Submitting as ${primaryBand.name ?? "your band"}` : "Create a band to maximise exposure"}
+                    {primaryBand ? `${t('radio.submittingAs')} ${primaryBand.name ?? "your band"}` : t('radio.createBandForExposure')}
                   </p>
                   <Button
                     onClick={() => submitSong.mutate()}
                     disabled={!selectedStation || !selectedSongData || submitSong.isPending || !genreMatches}
                     className="w-full sm:w-auto"
                   >
-                    {submitSong.isPending ? "Submitting..." : "Submit to Radio"}
+                    {submitSong.isPending ? t('radio.submitting') : t('radio.submitToRadio')}
                   </Button>
                 </div>
               </CardContent>
@@ -734,7 +736,7 @@ export default function Radio() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <PlayCircle className="h-5 w-5 text-primary" />
-                  Now Playing
+                  {t('radio.nowPlaying')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -766,20 +768,20 @@ export default function Radio() {
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-md border bg-background/60 p-2">
                         <p className="text-lg font-bold text-emerald-500">{(nowPlaying.listeners ?? 0).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">Listeners</p>
+                        <p className="text-xs text-muted-foreground">{t('radio.listeners')}</p>
                       </div>
                       <div className="rounded-md border bg-background/60 p-2">
                         <p className="text-lg font-bold text-amber-500">{nowPlaying.streams_boost ?? 0}</p>
-                        <p className="text-xs text-muted-foreground">Streams</p>
+                        <p className="text-xs text-muted-foreground">{t('radio.streams')}</p>
                       </div>
                       <div className="rounded-md border bg-background/60 p-2">
                         <p className="text-lg font-bold text-blue-500">{nowPlaying.hype_gained ?? 0}</p>
-                        <p className="text-xs text-muted-foreground">Hype</p>
+                        <p className="text-xs text-muted-foreground">{t('radio.hype')}</p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No spins yet. Submit a track to start!</p>
+                  <p className="text-sm text-muted-foreground">{t('radio.noSpinsYet')}</p>
                 )}
               </CardContent>
             </Card>
@@ -789,8 +791,8 @@ export default function Radio() {
           <TabsContent value="submissions" className="mt-4 space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Submission History</CardTitle>
-                <CardDescription className="text-sm">Track your radio pitches and outcomes.</CardDescription>
+                <CardTitle className="text-lg">{t('radio.submissionHistory')}</CardTitle>
+                <CardDescription className="text-sm">{t('radio.trackPitches')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {submissionsLoading ? (
@@ -801,8 +803,8 @@ export default function Radio() {
                   </div>
                 ) : !submissions?.length ? (
                   <Alert>
-                    <AlertTitle>No submissions yet</AlertTitle>
-                    <AlertDescription>Submit a song to see it here.</AlertDescription>
+                    <AlertTitle>{t('radio.noSubmissionsYet')}</AlertTitle>
+                    <AlertDescription>{t('radio.submitToSeeHere')}</AlertDescription>
                   </Alert>
                 ) : (
                   <div className="space-y-3">
