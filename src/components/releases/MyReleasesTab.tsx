@@ -103,17 +103,18 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   });
 
   const filteredReleases = releases?.filter(r => {
-    if (r.release_status === "cancelled") return statusFilter === "all"; // Only show cancelled in "all"
-    if (statusFilter === "all") return true;
+    if (statusFilter === "all") return r.release_status !== "cancelled"; // Exclude cancelled from "all"
     if (statusFilter === "released") return r.release_status === "released";
     if (statusFilter === "upcoming") return ["manufacturing", "planned", "draft"].includes(r.release_status);
+    if (statusFilter === "cancelled") return r.release_status === "cancelled";
     return true;
   }) || [];
 
   const stats = {
-    total: releases?.length || 0,
+    total: releases?.filter(r => r.release_status !== "cancelled").length || 0,
     released: releases?.filter(r => r.release_status === "released").length || 0,
     upcoming: releases?.filter(r => ["manufacturing", "planned", "draft"].includes(r.release_status)).length || 0,
+    cancelled: releases?.filter(r => r.release_status === "cancelled").length || 0,
     totalRevenue: releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
   };
 
@@ -213,12 +214,15 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
       {/* Filter Tabs */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
         <TabsList>
-          <TabsTrigger value="all">All ({releases.length})</TabsTrigger>
+          <TabsTrigger value="all">All ({stats.total})</TabsTrigger>
           <TabsTrigger value="released">
             Released ({stats.released})
           </TabsTrigger>
           <TabsTrigger value="upcoming">
             Upcoming ({stats.upcoming})
+          </TabsTrigger>
+          <TabsTrigger value="cancelled">
+            Cancelled ({stats.cancelled})
           </TabsTrigger>
         </TabsList>
       </Tabs>
