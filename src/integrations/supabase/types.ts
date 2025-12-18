@@ -1404,6 +1404,41 @@ export type Database = {
           },
         ]
       }
+      band_ratings: {
+        Row: {
+          band_id: string
+          created_at: string
+          id: string
+          rating: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          id?: string
+          rating: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          id?: string
+          rating?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_ratings_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_rehearsals: {
         Row: {
           band_id: string
