@@ -13,8 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useToast } from "@/hooks/use-toast";
-import { TShirtDesigner } from "@/components/merchandise/TShirtDesigner";
+import { TShirtDesignerNew } from "@/components/merchandise/TShirtDesignerNew";
 import { SavedDesigns } from "@/components/merchandise/SavedDesigns";
+import { MerchItemCard } from "@/components/merchandise/MerchItemCard";
+import { useMerchRequirements, QUALITY_TIERS } from "@/hooks/useMerchRequirements";
 import {
   Loader2,
   PackagePlus,
@@ -1171,7 +1173,7 @@ const Merchandise = () => {
         <TabsContent value="designer" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <TShirtDesigner 
+              <TShirtDesignerNew 
                 bandId={bandId}
                 onSave={() => {
                   queryClient.invalidateQueries({ queryKey: ['tshirt-designs', bandId] });
