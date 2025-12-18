@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BookOpen, GraduationCap, PlaySquare, Sparkles, Users } from "lucide-react";
+import { BookOpen, GraduationCap, PlaySquare, Users } from "lucide-react";
 
 import type { EducationTab } from "../types";
 
@@ -29,12 +29,6 @@ export const useEducationTabs = (): EducationTab[] => {
         label: "Mentors",
         icon: Users,
         description: "Connect with experts for personalized feedback, coaching, and accountability."
-      },
-      {
-        value: "band",
-        label: "Band Learning",
-        icon: Sparkles,
-        description: "Structured learning plans designed to level up your entire band together."
       }
     ],
     []

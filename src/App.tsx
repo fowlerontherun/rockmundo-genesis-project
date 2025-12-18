@@ -110,7 +110,7 @@ const AdminCityStudios = lazyWithRetry(() => import("./pages/admin/CityStudios")
 const AdminProductionNotes = lazyWithRetry(() => import("./pages/admin/ProductionNotes"));
 const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
-const AdminBandLearning = lazyWithRetry(() => import("./pages/admin/BandLearning"));
+
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
 const AdminStreamingPlatforms = lazyWithRetry(() => import("./pages/admin/StreamingPlatforms"));
@@ -351,7 +351,7 @@ function App() {
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
                     <Route path="admin/experience-rewards" element={<AdminExperienceRewards />} />
                     <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
-                    <Route path="admin/band-learning" element={<AdminBandLearning />} />
+                    
                     <Route path="admin/songwriting" element={<SongwritingAdmin />} />
                     <Route path="admin/ai-song-generation" element={<AISongGeneration />} />
                     <Route path="admin/gigs" element={<GigsAdmin />} />
