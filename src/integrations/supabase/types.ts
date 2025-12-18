@@ -3738,6 +3738,141 @@ export type Database = {
         }
         Relationships: []
       }
+      eurovision_entries: {
+        Row: {
+          band_id: string
+          country: string
+          created_at: string
+          event_id: string
+          final_rank: number | null
+          id: string
+          song_id: string
+          vote_count: number
+        }
+        Insert: {
+          band_id: string
+          country: string
+          created_at?: string
+          event_id: string
+          final_rank?: number | null
+          id?: string
+          song_id: string
+          vote_count?: number
+        }
+        Update: {
+          band_id?: string
+          country?: string
+          created_at?: string
+          event_id?: string
+          final_rank?: number | null
+          id?: string
+          song_id?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eurovision_entries_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "eurovision_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eurovision_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eurovision_events: {
+        Row: {
+          created_at: string
+          host_city: string | null
+          host_country: string | null
+          id: string
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          host_city?: string | null
+          host_country?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          host_city?: string | null
+          host_country?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      eurovision_votes: {
+        Row: {
+          created_at: string
+          entry_id: string
+          id: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          id?: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eurovision_votes_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "eurovision_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_participants: {
         Row: {
           event_id: string

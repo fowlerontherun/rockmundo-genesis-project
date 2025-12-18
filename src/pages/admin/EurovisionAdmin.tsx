@@ -9,338 +9,393 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Play, Edit, Trash2 } from "lucide-react";
+import { Sparkles, Plus, ArrowRight, Trash2, Trophy, Users, Music2 } from "lucide-react";
 import { toast } from "sonner";
 
-const PHASES = ["SubmissionsOpen", "SelectionsDone", "EventLive", "VotingClosed", "Results"];
+interface EurovisionEvent {
+  id: string;
+  year: number;
+  status: "submissions" | "voting" | "complete";
+  host_city: string | null;
+  host_country: string | null;
+  created_at: string;
+}
+
+interface EurovisionEntry {
+  id: string;
+  event_id: string;
+  band_id: string;
+  song_id: string;
+  country: string;
+  vote_count: number;
+  final_rank: number | null;
+  band: { name: string } | null;
+  song: { title: string } | null;
+}
+
+const PHASES = ["submissions", "voting", "complete"] as const;
+const PHASE_LABELS: Record<string, string> = {
+  submissions: "Submissions Open",
+  voting: "Voting Open", 
+  complete: "Complete",
+};
 
 function EurovisionAdmin() {
   const queryClient = useQueryClient();
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [formData, setFormData] = useState({
-    year: new Date().getFullYear(),
-    phase: "SubmissionsOpen",
-  });
+  const [newYear, setNewYear] = useState(new Date().getFullYear() + 1);
+  const [hostCity, setHostCity] = useState("");
+  const [hostCountry, setHostCountry] = useState("");
 
-  const { data: years = [] } = useQuery({
-    queryKey: ["eurovision-years"],
+  // Fetch all events
+  const { data: events = [] } = useQuery({
+    queryKey: ["eurovision-admin-events"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("eurovision_years")
+      const { data, error } = await supabase
+        .from("eurovision_events")
         .select("*")
         .order("year", { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return data as EurovisionEvent[];
     },
   });
 
-  const { data: submissions = [] } = useQuery({
-    queryKey: ["eurovision-submissions", selectedYear],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("eurovision_submissions")
-        .select("*")
-        .eq("year", selectedYear)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as any[];
-    },
-    enabled: !!selectedYear,
-  });
+  const currentEvent = events[0];
 
+  // Fetch entries for current event
   const { data: entries = [] } = useQuery({
-    queryKey: ["eurovision-entries", selectedYear],
+    queryKey: ["eurovision-admin-entries", currentEvent?.id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      if (!currentEvent?.id) return [];
+      const { data, error } = await supabase
         .from("eurovision_entries")
-        .select("*")
-        .eq("year", selectedYear)
-        .order("vote_total", { ascending: false });
+        .select(`
+          id, event_id, band_id, song_id, country, vote_count, final_rank,
+          band:bands(name),
+          song:songs(title)
+        `)
+        .eq("event_id", currentEvent.id)
+        .order("vote_count", { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return (data || []) as unknown as EurovisionEntry[];
     },
-    enabled: !!selectedYear,
+    enabled: !!currentEvent?.id,
   });
 
-  const createYearMutation = useMutation({
+  // Create new event mutation
+  const createEventMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("eurovision_years")
+      const { error } = await supabase
+        .from("eurovision_events")
         .insert({
-          year: formData.year,
-          phase: formData.phase,
-          submission_window_open: formData.phase === "SubmissionsOpen",
-        })
-        .select()
-        .single();
+          year: newYear,
+          status: "submissions",
+          host_city: hostCity || null,
+          host_country: hostCountry || null,
+        });
       if (error) throw error;
-      return data as any;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["eurovision-years"] });
-      toast.success("Eurovision year created");
+      queryClient.invalidateQueries({ queryKey: ["eurovision-admin-events"] });
+      toast.success(`Eurovision ${newYear} created!`);
+      setNewYear(newYear + 1);
+      setHostCity("");
+      setHostCountry("");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
 
-  const updatePhaseMutation = useMutation({
-    mutationFn: async ({ year, phase }: { year: number; phase: string }) => {
-      const response = await fetch(
-        `https://yztogmdixmchsmimtent.supabase.co/functions/v1/eurovision`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dG9nbWRpeG1jaHNtaW10ZW50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODU0ODcsImV4cCI6MjA3MzU2MTQ4N30.vqfz_ZIvCIEXAuoSYmydg-XA6oUiPbcCc6yjfb2zL0g"}`,
-          },
-          body: JSON.stringify({
-            action: "advance-phase",
-            year,
-            forcePhase: phase,
-          }),
+  // Advance phase mutation
+  const advancePhaseMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const event = events.find(e => e.id === eventId);
+      if (!event) throw new Error("Event not found");
+      
+      const currentIdx = PHASES.indexOf(event.status as typeof PHASES[number]);
+      if (currentIdx >= PHASES.length - 1) throw new Error("Already at final phase");
+      
+      const nextPhase = PHASES[currentIdx + 1];
+      
+      // If advancing to complete, set final ranks
+      if (nextPhase === "complete") {
+        const sortedEntries = [...entries].sort((a, b) => b.vote_count - a.vote_count);
+        for (let i = 0; i < sortedEntries.length; i++) {
+          await supabase
+            .from("eurovision_entries")
+            .update({ final_rank: i + 1 })
+            .eq("id", sortedEntries[i].id);
         }
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update phase");
       }
-      return response.json();
+      
+      const { error } = await supabase
+        .from("eurovision_events")
+        .update({ status: nextPhase })
+        .eq("id", eventId);
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["eurovision-years"] });
-      queryClient.invalidateQueries({ queryKey: ["eurovision-entries"] });
-      toast.success("Phase updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["eurovision-admin-events"] });
+      queryClient.invalidateQueries({ queryKey: ["eurovision-admin-entries"] });
+      toast.success("Phase advanced!");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
 
-  const deleteSubmissionMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from("eurovision_submissions")
+  // Delete entry mutation
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const { error } = await supabase
+        .from("eurovision_entries")
         .delete()
-        .eq("id", id);
+        .eq("id", entryId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["eurovision-submissions"] });
-      toast.success("Submission deleted");
+      queryClient.invalidateQueries({ queryKey: ["eurovision-admin-entries"] });
+      toast.success("Entry deleted");
     },
   });
 
-  const currentYearData = years.find((y) => y.year === selectedYear);
+  // Delete event mutation
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await supabase
+        .from("eurovision_events")
+        .delete()
+        .eq("id", eventId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["eurovision-admin-events"] });
+      toast.success("Event deleted");
+    },
+  });
+
+  const getNextPhaseLabel = (currentStatus: string) => {
+    const idx = PHASES.indexOf(currentStatus as typeof PHASES[number]);
+    if (idx >= PHASES.length - 1) return null;
+    return PHASE_LABELS[PHASES[idx + 1]];
+  };
 
   return (
-    <div className="container mx-auto max-w-7xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto max-w-6xl space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Sparkles className="h-8 w-8" />
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Sparkles className="h-8 w-8" />
-            Eurovision Administration
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Manage Eurovision years, phases, submissions, and entries
-          </p>
+          <h1 className="text-3xl font-bold">Eurovision Admin</h1>
+          <p className="text-muted-foreground">Manage Eurovision events, entries, and phases</p>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Years</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Trophy className="h-4 w-4" /> Total Events
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{years.length}</p>
+            <p className="text-3xl font-bold">{events.length}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Current Phase</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Music2 className="h-4 w-4" /> Current Entries
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg font-bold">{currentYearData?.phase || "N/A"}</p>
+            <p className="text-3xl font-bold">{entries.length}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Submissions</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Users className="h-4 w-4" /> Total Votes
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{submissions.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Entries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{entries.length}</p>
+            <p className="text-3xl font-bold">{entries.reduce((sum, e) => sum + e.vote_count, 0)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Create Year */}
+      {/* Create New Event */}
       <Card>
         <CardHeader>
-          <CardTitle>Create Eurovision Year</CardTitle>
-          <CardDescription>Initialize a new Eurovision season</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" /> Create New Eurovision
+          </CardTitle>
+          <CardDescription>Start a new Eurovision season</CardDescription>
         </CardHeader>
         <CardContent>
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              createYearMutation.mutate();
+              createEventMutation.mutate();
             }}
-            className="flex gap-4 items-end"
+            className="flex flex-wrap gap-4 items-end"
           >
             <div className="space-y-2">
               <Label>Year</Label>
               <Input
                 type="number"
-                value={formData.year}
-                onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                value={newYear}
+                onChange={(e) => setNewYear(parseInt(e.target.value))}
+                className="w-28"
               />
             </div>
             <div className="space-y-2">
-              <Label>Initial Phase</Label>
-              <Select value={formData.phase} onValueChange={(value) => setFormData({ ...formData, phase: value })}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PHASES.map((phase) => (
-                    <SelectItem key={phase} value={phase}>
-                      {phase}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Host City (optional)</Label>
+              <Input
+                value={hostCity}
+                onChange={(e) => setHostCity(e.target.value)}
+                placeholder="e.g. Malmö"
+                className="w-40"
+              />
             </div>
-            <Button type="submit" disabled={createYearMutation.isPending}>
-              Create Year
+            <div className="space-y-2">
+              <Label>Host Country (optional)</Label>
+              <Input
+                value={hostCountry}
+                onChange={(e) => setHostCountry(e.target.value)}
+                placeholder="e.g. Sweden"
+                className="w-40"
+              />
+            </div>
+            <Button type="submit" disabled={createEventMutation.isPending}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Event
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* Year Management */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Manage Years</CardTitle>
-            <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((year) => (
-                  <SelectItem key={year.year} value={year.year.toString()}>
-                    {year.year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {currentYearData && (
-            <>
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div>
-                  <p className="font-semibold">Current Phase: {currentYearData.phase}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Submissions: {currentYearData.submission_window_open ? "Open" : "Closed"}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {PHASES.map((phase) => (
-                    <Button
-                      key={phase}
-                      size="sm"
-                      variant={currentYearData.phase === phase ? "default" : "outline"}
-                      onClick={() => updatePhaseMutation.mutate({ year: selectedYear, phase })}
-                      disabled={updatePhaseMutation.isPending}
-                    >
-                      {phase}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
+      {/* Current Event Management */}
+      {currentEvent && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold mb-2">Submissions ({submissions.length})</h3>
+                <CardTitle>Eurovision {currentEvent.year}</CardTitle>
+                <CardDescription>
+                  {currentEvent.host_city && `${currentEvent.host_city}, ${currentEvent.host_country}`}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={currentEvent.status === "complete" ? "default" : "secondary"}>
+                  {PHASE_LABELS[currentEvent.status]}
+                </Badge>
+                {getNextPhaseLabel(currentEvent.status) && (
+                  <Button
+                    size="sm"
+                    onClick={() => advancePhaseMutation.mutate(currentEvent.id)}
+                    disabled={advancePhaseMutation.isPending}
+                  >
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Advance to {getNextPhaseLabel(currentEvent.status)}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <h3 className="font-semibold">Entries ({entries.length})</h3>
+              {entries.length === 0 ? (
+                <p className="text-muted-foreground">No entries yet</p>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">#</TableHead>
                       <TableHead>Country</TableHead>
-                      <TableHead>Artist</TableHead>
+                      <TableHead>Band</TableHead>
                       <TableHead>Song</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-right">Votes</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {submissions.map((sub: any) => (
-                      <TableRow key={sub.id}>
-                        <TableCell>{sub.country_code}</TableCell>
-                        <TableCell>{sub.artist_name}</TableCell>
-                        <TableCell>{sub.song_title}</TableCell>
-                        <TableCell>
-                          <Badge variant={sub.status === "Selected" ? "default" : "secondary"}>
-                            {sub.status}
-                          </Badge>
-                        </TableCell>
+                    {entries.map((entry, idx) => (
+                      <TableRow key={entry.id}>
+                        <TableCell>{idx + 1}</TableCell>
+                        <TableCell className="font-medium">{entry.country}</TableCell>
+                        <TableCell>{entry.band?.name || "Unknown"}</TableCell>
+                        <TableCell>{entry.song?.title || "Unknown"}</TableCell>
+                        <TableCell className="text-right font-semibold">{entry.vote_count}</TableCell>
                         <TableCell>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => deleteSubmissionMutation.mutate(sub.id)}
+                            size="icon"
+                            onClick={() => deleteEntryMutation.mutate(entry.id)}
+                            disabled={deleteEntryMutation.isPending}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-              <div>
-                <h3 className="font-semibold mb-2">Contest Entries ({entries.length})</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Rank</TableHead>
-                      <TableHead>Country</TableHead>
-                      <TableHead>Artist</TableHead>
-                      <TableHead>Song</TableHead>
-                      <TableHead>Votes</TableHead>
-                      <TableHead>Running Order</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entries.map((entry: any, idx: number) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{idx + 1}</TableCell>
-                        <TableCell>{entry.country_code}</TableCell>
-                        <TableCell>{entry.artist_name}</TableCell>
-                        <TableCell>{entry.song_title}</TableCell>
-                        <TableCell>{entry.vote_total}</TableCell>
-                        <TableCell>{entry.running_order || "-"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {/* All Events */}
+      {events.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>All Events</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Year</TableHead>
+                  <TableHead>Host</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="font-semibold">{event.year}</TableCell>
+                    <TableCell>
+                      {event.host_city ? `${event.host_city}, ${event.host_country}` : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{PHASE_LABELS[event.status]}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm("Delete this event and all its entries?")) {
+                            deleteEventMutation.mutate(event.id);
+                          }
+                        }}
+                        disabled={deleteEventMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
