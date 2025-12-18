@@ -572,15 +572,16 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
 }
 
 function generatePlaceholderLyrics(songTitle: string, genre: string): string {
-  const titleWords = songTitle.split(' ').slice(0, 3).join(' ')
+  // Use full title, not truncated
+  const title = songTitle || 'This song'
   
   return `[Verse]
-${titleWords}
+${title}
 Feel the rhythm tonight
-${titleWords}
+${title}
 Everything feels right
 
 [Chorus]
-${titleWords}
-${titleWords}`
+${title}
+${title}`
 }
