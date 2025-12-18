@@ -30,6 +30,7 @@ import {
   Minus,
   ShoppingCart,
   Sparkles,
+  Wand2,
 } from "lucide-react";
 import {
   CONDITION_ORDER,
@@ -44,6 +45,7 @@ import {
   ConditionTier,
 } from "@/features/stage-equipment/catalog";
 import { useStageEquipmentCatalog } from "@/features/stage-equipment/catalog-context";
+import { RecommendedSetup } from "@/components/stage-equipment/RecommendedSetup";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
 
@@ -196,6 +198,24 @@ const StageEquipmentSystem = () => {
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
+  const bandGenre = primaryBand?.bands?.genre ?? "Rock";
+  const bandFame = primaryBand?.bands?.fame ?? 0;
+
+  // Fetch band member count
+  const { data: memberCount = 1 } = useQuery({
+    queryKey: ["band-member-count", bandId],
+    queryFn: async () => {
+      if (!bandId) return 1;
+      const { count, error } = await supabase
+        .from("band_members")
+        .select("*", { count: "exact", head: true })
+        .eq("band_id", bandId)
+        .eq("is_touring_member", false);
+      if (error) throw error;
+      return count || 1;
+    },
+    enabled: Boolean(bandId),
+  });
 
   const { catalog: localCatalog, setCatalog } = useStageEquipmentCatalog();
   const [selectedType, setSelectedType] = useState<string>("all");
@@ -475,12 +495,33 @@ const StageEquipmentSystem = () => {
           </CardHeader>
         </Card>
 
-        <Tabs defaultValue="inventory" className="space-y-4">
+        <Tabs defaultValue="recommended" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="recommended" className="gap-1">
+              <Wand2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Recommended</span>
+            </TabsTrigger>
             <TabsTrigger value="inventory">Current Equipment</TabsTrigger>
             <TabsTrigger value="live">Live Stage Setup</TabsTrigger>
             <TabsTrigger value="market">Buy Equipment</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="recommended" className="space-y-4">
+            <RecommendedSetup
+              bandProfile={{
+                genre: bandGenre,
+                fame: bandFame,
+                memberCount: memberCount,
+              }}
+              catalogItems={dbCatalog.map(item => ({
+                ...item,
+                stat_boosts: (item.stat_boosts as Record<string, number> | null)
+              }))}
+              ownedItemNames={inventory.map(i => i.equipment_name || "")}
+              onPurchase={openDbPurchaseDialog}
+              isPurchasing={purchaseMutation.isPending}
+            />
+          </TabsContent>
 
           <TabsContent value="inventory" className="space-y-4">
             <Card>
