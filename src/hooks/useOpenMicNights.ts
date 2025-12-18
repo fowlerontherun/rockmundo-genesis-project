@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { checkTimeSlotAvailable, createScheduledActivity } from "@/hooks/useActivityBooking";
+import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 
 export interface OpenMicVenue {
   id: string;
@@ -217,17 +217,26 @@ export function useSignUpForOpenMic() {
 
       if (error) throw error;
 
-      // Create scheduled activity to block the time slot
-      await createScheduledActivity({
-        userId: user.id,
-        bandId,
-        activityType: 'open_mic',
-        scheduledStart: scheduledDate,
-        scheduledEnd: endDate,
-        title: `Open Mic at ${venueName}`,
-        description: 'Open mic night performance - 2 songs',
-        linkedOpenMicId: data.id,
-      });
+      // Create scheduled activity to block the time slot (skip conflict check since we already did it)
+      try {
+        await (supabase as any)
+          .from('player_scheduled_activities')
+          .insert({
+            user_id: user.id,
+            activity_type: 'open_mic',
+            scheduled_start: scheduledDate.toISOString(),
+            scheduled_end: endDate.toISOString(),
+            title: `Open Mic at ${venueName}`,
+            description: 'Open mic night performance - 2 songs',
+            metadata: {
+              band_id: bandId,
+              linked_open_mic_id: data.id,
+            },
+          });
+      } catch (activityError) {
+        // Log but don't fail the whole operation - the open mic is booked
+        console.warn('Failed to create scheduled activity:', activityError);
+      }
 
       return data;
     },
