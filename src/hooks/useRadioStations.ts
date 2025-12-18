@@ -12,11 +12,15 @@ export interface RadioStation {
   listener_base: number;
   frequency: string;
   accepted_genres: string[];
-  accepts_submissions: boolean;
+  accepts_submissions?: boolean;
   is_active: boolean;
   description: string | null;
   created_at: string;
   updated_at: string;
+  min_fans_required?: number;
+  min_fame_required?: number;
+  requires_local_presence?: boolean;
+  auto_accept_threshold?: number;
 }
 
 export interface RadioSubmission {

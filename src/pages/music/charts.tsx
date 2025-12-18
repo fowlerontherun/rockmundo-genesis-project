@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { fetchChartAggregates } from "@/lib/api/charts";
 import type { ChartAggregate, ChartFilters } from "@/lib/api/charts";
+import { MUSIC_GENRES, GENRE_SELECT_OPTIONS } from "@/data/genres";
 
 const chartTypeLabels: Record<string, string> = {
   streaming: "Streaming",
@@ -64,13 +65,7 @@ const countryOptions = [
 
 const genreOptions = [
   { value: "all", label: "All genres" },
-  { value: "Rock", label: "Rock" },
-  { value: "Pop", label: "Pop" },
-  { value: "Electronic", label: "Electronic" },
-  { value: "Hip Hop", label: "Hip Hop" },
-  { value: "Jazz", label: "Jazz" },
-  { value: "Indie", label: "Indie" },
-  { value: "Metal", label: "Metal" },
+  ...GENRE_SELECT_OPTIONS,
 ];
 
 type SortKey = "chartType" | "averageRank" | "totalPlays" | "momentum" | "entryCount";

@@ -10,7 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const GENRES = ["Rock", "Pop", "Dance", "Electronic", "Hip-Hop", "Jazz", "Classical", "Country", "R&B", "Indie"];
+import { MUSIC_GENRES } from "@/data/genres";
+
+const GENRES = [...MUSIC_GENRES];
 const SEASONS = ["spring", "summer", "autumn", "winter"];
 
 export default function GameCalendar() {

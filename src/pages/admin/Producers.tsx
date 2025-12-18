@@ -43,11 +43,9 @@ const TIERS = [
   { value: 'legendary', label: 'Legendary', color: 'bg-amber-500' },
 ];
 
-const GENRES = [
-  'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Country', 'Electronic', 
-  'Metal', 'Alternative', 'Indie', 'Punk', 'Soul', 'Funk', 'Blues', 
-  'Reggae', 'Classical', 'Folk', 'Dance', 'Rap', 'Grunge', 'Americana'
-];
+import { MUSIC_GENRES } from "@/data/genres";
+
+const GENRES = [...MUSIC_GENRES];
 
 const ProducersAdmin = () => {
   const queryClient = useQueryClient();
