@@ -41,10 +41,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    // Use scope: 'local' to ensure local session is cleared even if server call fails
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
       console.error("Error signing out:", error);
     }
+    // Explicitly clear state in case the onAuthStateChange doesn't fire
+    setSession(null);
+    setUser(null);
   };
 
   const value: AuthContextType = {
