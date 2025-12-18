@@ -155,6 +155,7 @@ const SkinCollectionsAdmin = lazyWithRetry(() => import("./pages/admin/SkinColle
 const AISongGeneration = lazyWithRetry(() => import("./pages/admin/AISongGeneration"));
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
 const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/CollectionItemsAdmin"));
+const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
@@ -363,6 +364,7 @@ function App() {
 
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
+                    <Route path="admin/fame-fans-gifting" element={<FameFansGifting />} />
                     <Route path="admin/releases" element={<ReleasesAdmin />} />
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
                     <Route path="admin/game-balance" element={<GameBalanceAdmin />} />

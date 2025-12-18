@@ -10,12 +10,13 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star } from "lucide-react";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
 import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
+import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
 import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 
@@ -225,10 +226,14 @@ const Dashboard = () => {
       <DebtWarningBanner />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="fame">
+            <Star className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Fame</span>
           </TabsTrigger>
           <TabsTrigger value="skills">
             <Zap className="h-4 w-4 sm:mr-2" />
@@ -388,6 +393,11 @@ const Dashboard = () => {
               <RecentActivitySection userId={user?.id} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Fame & Fans Tab */}
+        <TabsContent value="fame" className="space-y-4">
+          <CharacterFameOverview />
         </TabsContent>
 
         {/* Skills & Attributes Tab */}
