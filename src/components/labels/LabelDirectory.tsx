@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useGameData } from "@/hooks/useGameData";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Globe2, Rocket, Star } from "lucide-react";
+import { Building2, Globe2, MapPin, Rocket, Star } from "lucide-react";
 import { RequestContractDialog } from "./RequestContractDialog";
 import type {
   ArtistEntity,
@@ -25,11 +26,20 @@ interface LabelDirectoryProps {
 }
 
 export function LabelDirectory({ artistEntities, dealTypes, territories }: LabelDirectoryProps) {
+  const { currentCity } = useGameData();
   const [searchTerm, setSearchTerm] = useState("");
   const [territoryFilter, setTerritoryFilter] = useState<string>("all");
   const [reputationFilter, setReputationFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
   const [selectedLabel, setSelectedLabel] = useState<LabelWithRelations | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+
+  // Default city filter to user's current city
+  useEffect(() => {
+    if (currentCity?.name && cityFilter === "all") {
+      setCityFilter(currentCity.name);
+    }
+  }, [currentCity?.name]);
 
   const { data: labels, isLoading } = useQuery<LabelWithRelations[]>({
     queryKey: ["labels-directory"],
@@ -58,6 +68,15 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
     return map;
   }, [territories]);
 
+  // Get unique cities from labels
+  const uniqueCities = useMemo(() => {
+    if (!labels) return [];
+    const cities = labels
+      .map((label) => label.headquarters_city)
+      .filter((city): city is string => !!city);
+    return [...new Set(cities)].sort();
+  }, [labels]);
+
   const filteredLabels = useMemo(() => {
     if (!labels) return [];
 
@@ -73,9 +92,13 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
         (reputationFilter === "established" && (label.reputation_score ?? 0) >= 30 && (label.reputation_score ?? 0) < 70) ||
         (reputationFilter === "elite" && (label.reputation_score ?? 0) >= 70);
 
-      return matchesSearch && matchesTerritory && matchesReputation;
+      const matchesCity =
+        cityFilter === "all" ||
+        label.headquarters_city === cityFilter;
+
+      return matchesSearch && matchesTerritory && matchesReputation && matchesCity;
     });
-  }, [labels, searchTerm, territoryFilter, reputationFilter]);
+  }, [labels, searchTerm, territoryFilter, reputationFilter, cityFilter]);
 
   const handleRequestContract = (label: LabelWithRelations) => {
     setSelectedLabel(label);
@@ -92,12 +115,28 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
         </TabsList>
 
         <TabsContent value="directory" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Input
               placeholder="Search by label name"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by city" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All cities</SelectItem>
+                {uniqueCities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    <span className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3" />
+                      {city}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={territoryFilter} onValueChange={setTerritoryFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by territory" />
