@@ -191,6 +191,7 @@ const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
 const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
+const Prison = lazyWithRetry(() => import("./pages/Prison"));
 const queryClient = new QueryClient();
 
 function App() {
