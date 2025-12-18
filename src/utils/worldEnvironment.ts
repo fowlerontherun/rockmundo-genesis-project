@@ -1416,7 +1416,10 @@ export const fetchCityEnvironmentDetails = async (
 
   if (playersResponse.error) throw playersResponse.error;
   if (gigsResponse.error) throw gigsResponse.error;
-  if (metadataResponse.error) throw metadataResponse.error;
+  // city_metadata is optional - don't throw if table doesn't exist or query fails
+  if (metadataResponse.error && !isSchemaCacheMissingTableError(metadataResponse.error, "city_metadata")) {
+    console.warn("city_metadata query failed (non-critical):", metadataResponse.error);
+  }
   if (nightClubsResponse.error && !isSchemaCacheMissingTableError(nightClubsResponse.error, "city_night_clubs")) {
     throw nightClubsResponse.error;
   }
