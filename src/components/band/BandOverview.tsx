@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Star, TrendingUp, Activity, Users, PiggyBank, BarChart3, Music, Calendar } from 'lucide-react';
 import { getBandFameTitle } from '@/utils/bandFame';
 import { getChemistryLabel, getChemistryColor } from '@/utils/bandChemistry';
+import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
+import { differenceInDays } from 'date-fns';
 import {
   Area,
   AreaChart,
@@ -33,6 +35,7 @@ export function BandOverview({ bandId }: BandOverviewProps) {
   const [band, setBand] = useState<BandRow | null>(null);
   const [memberCount, setMemberCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [calculatedSkillRating, setCalculatedSkillRating] = useState(0);
 
   useEffect(() => {
     const fetchBand = async () => {
@@ -51,6 +54,20 @@ export function BandOverview({ bandId }: BandOverviewProps) {
 
         setBand((bandData as BandRow) ?? null);
         setMemberCount(members?.length || 0);
+
+        // Calculate skill rating dynamically
+        if (bandData) {
+          const skillRating = await calculateBandSkillRating(bandId, bandData.chemistry_level || 0);
+          setCalculatedSkillRating(skillRating);
+          
+          // Update in database for caching
+          if (skillRating !== bandData.hidden_skill_rating) {
+            await supabase
+              .from('bands')
+              .update({ hidden_skill_rating: skillRating })
+              .eq('id', bandId);
+          }
+        }
       } catch (error) {
         console.error('Error loading band:', error);
       } finally {
@@ -90,9 +107,16 @@ export function BandOverview({ bandId }: BandOverviewProps) {
   const lifetimeFame = band?.collective_fame_earned ?? 0;
   const performanceCount = band?.performance_count ?? 0;
   const jamCount = band?.jam_count ?? 0;
-  const daysTogether = band?.days_together ?? 0;
+  
+  // Calculate days together from created_at date
+  const daysTogether = useMemo(() => {
+    if (!band?.created_at) return 0;
+    return differenceInDays(new Date(), new Date(band.created_at));
+  }, [band?.created_at]);
+  
   const popularity = band?.popularity ?? 0;
-  const hiddenSkillRating = band?.hidden_skill_rating ?? 0;
+  // Use calculated skill rating or fallback to stored value
+  const hiddenSkillRating = calculatedSkillRating || band?.hidden_skill_rating || 0;
   const chemistryLevel = band?.chemistry_level ?? 0;
   const cohesionScore = band?.cohesion_score ?? 0;
   const bandBalance = band?.band_balance ?? 0;
