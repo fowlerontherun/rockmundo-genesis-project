@@ -5,14 +5,14 @@ The songwriting system has been simplified to provide a streamlined experience w
 
 ## Key Changes
 
-### 1. Fixed 3-Hour Sessions
-- All songwriting sessions now last **exactly 3 hours**
-- Removed complex "effort level" selection (low/medium/high)
-- Sessions automatically complete after 3 hours
+### 1. Fixed 1-Hour Sessions
+- All songwriting sessions now last **exactly 1 hour**
+- Players can work on **2 songs simultaneously**
+- Sessions automatically complete after 1 hour
 - No manual completion button needed on project cards
 
 ### 2. Auto-Completion System
-- Sessions auto-complete when the 3-hour lock expires
+- Sessions auto-complete when the 1-hour lock expires
 - Edge function `cleanup-songwriting` handles auto-completion
 - Database function `auto_complete_songwriting_sessions()` processes expired sessions
 - Auto-checks run on page load and when tab becomes visible (max once per minute)
@@ -20,8 +20,8 @@ The songwriting system has been simplified to provide a streamlined experience w
 ### 3. Progress Display
 - **Database**: Still uses 0-2000 scale (preserves existing data)
 - **UI**: Shows as 0-100% for clarity
-- Each 3-hour session adds 500-700 points (25-35% progress)
-- Takes 3-7 sessions to complete a song (9-21 hours total)
+- Each 1-hour session adds 500-700 points (25-35% progress)
+- Takes 3-7 sessions to complete a song (3-7 hours total)
 
 ### 4. Simplified UI
 The project card now shows only essential information:

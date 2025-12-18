@@ -284,31 +284,28 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Start session - always 3 hours
+  // Start session - 1 hour duration, allows 2 concurrent songwriting projects
   const startSession = useMutation({
     mutationFn: async ({ projectId }: StartSessionInput) => {
       if (!userId) throw new Error("User ID required");
       
-      // Check for scheduling conflicts before starting
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       
-      const now = new Date();
-      const sessionEnd = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+      // Check how many songwriting sessions are currently active (max 2 allowed)
+      const { data: activeProjects } = await supabase
+        .from('songwriting_projects')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_locked', true)
+        .gt('locked_until', new Date().toISOString());
       
-      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
-        p_user_id: user.id,
-        p_start: now.toISOString(),
-        p_end: sessionEnd.toISOString(),
-        p_exclude_id: null,
-      });
-
-      if (hasConflict) {
-        throw new Error('You have another activity scheduled during this time. Please check your schedule.');
+      if ((activeProjects?.length || 0) >= 2) {
+        throw new Error('You can only work on 2 songs at once. Wait for a session to complete.');
       }
       
-      // Fixed 3-hour duration
-      const lockDuration = 3 * 60 * 60 * 1000;
+      // Fixed 1-hour duration
+      const lockDuration = 1 * 60 * 60 * 1000;
       const lockedUntil = new Date(Date.now() + lockDuration).toISOString();
       
       // Lock the project
@@ -344,7 +341,7 @@ export const useSongwritingData = (userId?: string | null) => {
         userId,
         activityType: 'songwriting_session_started',
         activityCategory: 'songwriting',
-        description: `Started 3-hour songwriting session for project`,
+        description: `Started 1-hour songwriting session for project`,
         metadata: { projectId, sessionId: data.id, lockedUntil }
       });
       
@@ -352,7 +349,7 @@ export const useSongwritingData = (userId?: string | null) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
-      toast({ title: "Session Started" });
+      toast({ title: "Session Started", description: "1-hour session in progress" });
     }
   });
 
