@@ -125,3 +125,6 @@ verify_jwt = true
 
 [functions.complete-travel]
 verify_jwt = false
+
+[functions.auto-clock-in-shifts]
+verify_jwt = false
