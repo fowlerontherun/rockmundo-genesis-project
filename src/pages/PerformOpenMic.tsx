@@ -480,6 +480,51 @@ export default function PerformOpenMic() {
               {performance.venue?.name}
             </span>
           </div>
+
+          {/* Manual Complete Button */}
+          <Button 
+            variant="destructive" 
+            className="w-full"
+            onClick={async () => {
+              setIsProcessing(true);
+              try {
+                // Process remaining songs first
+                if (!songPerformances.find(sp => sp.position === performance.current_song_position)) {
+                  await supabase.functions.invoke('process-open-mic-song', {
+                    body: {
+                      performanceId: performance.id,
+                      songId: currentSong?.id,
+                      position: performance.current_song_position,
+                    },
+                  });
+                }
+                if (performance.current_song_position === 1 && !songPerformances.find(sp => sp.position === 2)) {
+                  await supabase.functions.invoke('process-open-mic-song', {
+                    body: {
+                      performanceId: performance.id,
+                      songId: performance.song_2?.id,
+                      position: 2,
+                    },
+                  });
+                }
+                // Complete the performance
+                await supabase.functions.invoke('complete-open-mic', {
+                  body: { performanceId: performance.id },
+                });
+                await refetch();
+              } catch (err) {
+                console.error('Error completing performance:', err);
+              } finally {
+                setIsProcessing(false);
+              }
+            }}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Complete Performance Now
+          </Button>
         </CardContent>
       </Card>
 
