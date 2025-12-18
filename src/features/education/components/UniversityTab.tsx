@@ -1,13 +1,22 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Loader2, GraduationCap } from "lucide-react";
+import { Loader2, GraduationCap, Search, MapPin, Globe, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface University {
   id: string;
@@ -24,15 +33,40 @@ interface CourseCount {
   count: number;
 }
 
+interface CourseWithUniversity {
+  id: string;
+  name: string;
+  skill_slug: string;
+  base_price: number;
+  university_id: string;
+  universities: {
+    id: string;
+    name: string;
+    city: string | null;
+    prestige: number | null;
+  } | null;
+}
+
 export const UniversityTab = () => {
   const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCity, setSelectedCity] = useState<string>("current");
+  const [viewMode, setViewMode] = useState<"universities" | "courses">("universities");
 
+  // Fetch profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile_with_city", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id")
+        .select(`
+          id,
+          current_city_id,
+          cities:current_city_id (
+            id,
+            name
+          )
+        `)
         .eq("user_id", user!.id)
         .single();
       if (error) throw error;
@@ -40,6 +74,8 @@ export const UniversityTab = () => {
     },
     enabled: !!user,
   });
+
+  const currentCityName = (profile?.cities as any)?.name || null;
 
   const { data: currentEnrollment } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
@@ -83,6 +119,31 @@ export const UniversityTab = () => {
     },
   });
 
+  const { data: courses, isLoading: coursesLoading } = useQuery({
+    queryKey: ["all_courses_with_unis"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("university_courses")
+        .select(`
+          id,
+          name,
+          skill_slug,
+          base_price,
+          university_id,
+          universities (
+            id,
+            name,
+            city,
+            prestige
+          )
+        `)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as CourseWithUniversity[];
+    },
+  });
+
   const { data: courseCounts } = useQuery({
     queryKey: ["university_course_counts"],
     queryFn: async () => {
@@ -104,26 +165,86 @@ export const UniversityTab = () => {
     },
   });
 
-  const groupedUniversities = useMemo(() => {
-    if (!universities) return {};
+  // Get unique cities from universities
+  const availableCities = useMemo(() => {
+    if (!universities) return [];
+    const cities = new Set(universities.map(u => u.city).filter(Boolean) as string[]);
+    return Array.from(cities).sort();
+  }, [universities]);
+
+  // Determine which city to filter by
+  const filterCity = useMemo(() => {
+    if (selectedCity === "all") return null;
+    if (selectedCity === "current") return currentCityName;
+    return selectedCity;
+  }, [selectedCity, currentCityName]);
+
+  // Filter universities
+  const filteredUniversities = useMemo(() => {
+    if (!universities) return [];
     
+    let result = universities;
+    
+    // Filter by city
+    if (filterCity) {
+      result = result.filter(u => u.city === filterCity);
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(u => 
+        u.name.toLowerCase().includes(query) ||
+        u.city?.toLowerCase().includes(query) ||
+        u.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [universities, filterCity, searchQuery]);
+
+  // Filter courses
+  const filteredCourses = useMemo(() => {
+    if (!courses) return [];
+    
+    let result = courses;
+    
+    // Filter by city
+    if (filterCity) {
+      result = result.filter(c => c.universities?.city === filterCity);
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(c => 
+        c.name.toLowerCase().includes(query) ||
+        c.skill_slug.toLowerCase().includes(query) ||
+        c.universities?.name.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [courses, filterCity, searchQuery]);
+
+  // Group filtered universities by city
+  const groupedUniversities = useMemo(() => {
     const groups = new Map<string, University[]>();
-    for (const uni of universities) {
+    for (const uni of filteredUniversities) {
       const city = uni.city || "Other";
       const existing = groups.get(city) || [];
       existing.push(uni);
       groups.set(city, existing);
     }
-    
     return Object.fromEntries(groups.entries());
-  }, [universities]);
+  }, [filteredUniversities]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Academic Routes</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Explore universities across the globe and unlock new learning pathways, each contributing unique skills and reputation to your journey.
+        <p className="mt-1 text-sm text-muted-foreground">
+          Explore universities and courses across the globe.
         </p>
       </div>
 
@@ -140,58 +261,212 @@ export const UniversityTab = () => {
         </Alert>
       )}
 
-      {isLoading && (
-        <div className="flex items-center justify-center py-12 text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Loading universities...
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={viewMode === "universities" ? "Search universities..." : "Search courses..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      )}
+        
+        <Select value={selectedCity} onValueChange={setSelectedCity}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <MapPin className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Select city" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="current">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3 w-3" />
+                {currentCityName ? `My City (${currentCityName})` : "My City"}
+              </div>
+            </SelectItem>
+            <SelectItem value="all">
+              <div className="flex items-center gap-2">
+                <Globe className="h-3 w-3" />
+                All Cities
+              </div>
+            </SelectItem>
+            {availableCities.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      {!isLoading &&
-        Object.entries(groupedUniversities || {}).map(([city, cityUniversities]) => (
-          <div key={city} className="space-y-4">
-            <h3 className="text-lg font-semibold">{city}</h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {cityUniversities.map((uni) => {
-                const courseCount = courseCounts?.find((cc) => cc.university_id === uni.id)?.count ?? 0;
+      {/* View Mode Tabs */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "universities" | "courses")}>
+        <TabsList>
+          <TabsTrigger value="universities" className="gap-2">
+            <GraduationCap className="h-4 w-4" />
+            <span className="hidden sm:inline">Universities</span>
+          </TabsTrigger>
+          <TabsTrigger value="courses" className="gap-2">
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline">Browse Courses</span>
+          </TabsTrigger>
+        </TabsList>
 
-                return (
-                  <Card key={uni.id} className="transition-all hover:border-primary/50 hover:shadow-md">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base leading-snug">{uni.name}</CardTitle>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          Prestige {uni.prestige}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          Quality {uni.quality_of_learning}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {uni.description && (
-                        <p className="text-sm leading-relaxed text-muted-foreground">{uni.description}</p>
-                      )}
-                      <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Cost modifier</span>
-                          <span className="font-semibold">{uni.course_cost_modifier}x</span>
+        <TabsContent value="universities" className="mt-4">
+          {isLoading && (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading universities...
+            </div>
+          )}
+
+          {!isLoading && filteredUniversities.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground">
+              <GraduationCap className="mx-auto h-12 w-12 opacity-50" />
+              <p className="mt-4">No universities found{filterCity ? ` in ${filterCity}` : ""}.</p>
+              {filterCity && (
+                <Button
+                  variant="link"
+                  onClick={() => setSelectedCity("all")}
+                  className="mt-2"
+                >
+                  View all cities
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!isLoading &&
+            Object.entries(groupedUniversities).map(([city, cityUniversities]) => (
+              <div key={city} className="mb-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">{city}</h3>
+                  <Badge variant="secondary" className="text-xs">
+                    {cityUniversities.length} {cityUniversities.length === 1 ? "university" : "universities"}
+                  </Badge>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {cityUniversities.map((uni) => {
+                    const courseCount = courseCounts?.find((cc) => cc.university_id === uni.id)?.count ?? 0;
+
+                    return (
+                      <Card key={uni.id} className="transition-all hover:border-primary/50 hover:shadow-md">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base leading-snug">{uni.name}</CardTitle>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              Prestige {uni.prestige}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Quality {uni.quality_of_learning}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {uni.description && (
+                            <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                              {uni.description}
+                            </p>
+                          )}
+                          <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Cost modifier</span>
+                              <span className="font-semibold">{uni.course_cost_modifier}x</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Courses</span>
+                              <span className="font-semibold">{courseCount}</span>
+                            </div>
+                          </div>
+                          <Button asChild variant="secondary" size="sm" className="w-full">
+                            <Link to={`/university/${uni.id}`}>Browse Courses</Link>
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+        </TabsContent>
+
+        <TabsContent value="courses" className="mt-4">
+          {coursesLoading && (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading courses...
+            </div>
+          )}
+
+          {!coursesLoading && filteredCourses.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground">
+              <Filter className="mx-auto h-12 w-12 opacity-50" />
+              <p className="mt-4">No courses found{searchQuery ? ` matching "${searchQuery}"` : ""}.</p>
+              {(searchQuery || filterCity) && (
+                <Button
+                  variant="link"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCity("all");
+                  }}
+                  className="mt-2"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!coursesLoading && filteredCourses.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Found {filteredCourses.length} courses{filterCity ? ` in ${filterCity}` : ""}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredCourses.slice(0, 50).map((course) => (
+                  <Card key={course.id} className="transition-all hover:border-primary/50">
+                    <CardContent className="p-4">
+                      <div className="space-y-2">
+                        <h4 className="font-medium leading-tight">{course.name}</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant="outline" className="text-xs">
+                            {course.skill_slug.replace(/_/g, " ")}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            ${course.base_price}
+                          </Badge>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Courses</span>
-                          <span className="font-semibold">{courseCount}</span>
-                        </div>
+                        {course.universities && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <GraduationCap className="h-3 w-3" />
+                            <span className="truncate">{course.universities.name}</span>
+                          </div>
+                        )}
+                        {course.universities?.city && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <span>{course.universities.city}</span>
+                          </div>
+                        )}
+                        <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
+                          <Link to={`/university/${course.university_id}`}>View University</Link>
+                        </Button>
                       </div>
-                      <Button asChild variant="secondary" size="sm" className="w-full">
-                        <Link to={`/university/${uni.id}`}>Browse Courses</Link>
-                      </Button>
                     </CardContent>
                   </Card>
-                );
-              })}
+                ))}
+              </div>
+              {filteredCourses.length > 50 && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Showing first 50 of {filteredCourses.length} courses. Refine your search for more specific results.
+                </p>
+              )}
             </div>
-          </div>
-        ))}
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
