@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { RehearsalBookingDialog } from "@/components/performance/RehearsalBookingDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRehearsalBooking } from "@/hooks/useRehearsalBooking";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface Rehearsal {
   id: string;
@@ -44,6 +45,7 @@ const Rehearsals = () => {
   const { profile } = useGameData();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { bookRehearsal, isBooking } = useRehearsalBooking();
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">("upcoming");
@@ -252,13 +254,13 @@ const Rehearsals = () => {
     const currentBalance = selectedBand.band_balance || 0;
 
     if (currentBalance < totalCost) {
-      toast({
-        title: "Insufficient Funds",
-        description: `This rehearsal costs $${totalCost.toFixed(2)} but your band only has $${currentBalance.toFixed(2)}.`,
-        variant: "destructive",
-      });
-      return;
-    }
+          toast({
+            title: t('rehearsals.insufficientFunds'),
+            description: `${t('rehearsals.rehearsalCost')} $${totalCost.toFixed(2)} ${t('rehearsals.bandBalance')} $${currentBalance.toFixed(2)}.`,
+            variant: "destructive",
+          });
+          return;
+        }
 
     const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
     const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
@@ -305,9 +307,9 @@ const Rehearsals = () => {
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Band Rehearsals</h1>
+          <h1 className="text-3xl font-bold">{t('rehearsals.title')}</h1>
           <p className="text-muted-foreground">
-            Manage rehearsals for all your bands to improve chemistry and song familiarity
+            {t('rehearsals.subtitle')}
           </p>
         </div>
         
@@ -315,7 +317,7 @@ const Rehearsals = () => {
       {isLoadingBands ? (
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4 text-center text-muted-foreground">
-            Loading your bands...
+            {t('rehearsals.loadingBands')}
           </CardContent>
         </Card>
       ) : userBands.length > 0 ? (
@@ -323,9 +325,9 @@ const Rehearsals = () => {
             <CardContent className="p-4">
               <div className="flex flex-col gap-4">
                 <div>
-                  <h3 className="font-semibold text-lg">Ready to rehearse?</h3>
+                  <h3 className="font-semibold text-lg">{t('rehearsals.readyToRehearse')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Book a rehearsal session or plan one for later
+                    {t('rehearsals.bookSessionOrPlan')}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -342,7 +344,7 @@ const Rehearsals = () => {
                           className="w-full sm:w-auto"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Book Rehearsal
+                          {t('rehearsals.bookRehearsal')}
                         </Button>
                       </div>
                     </div>
@@ -354,8 +356,8 @@ const Rehearsals = () => {
         ) : (
           <Card className="bg-muted/50 border-muted">
             <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground mb-2">You're not in any bands yet.</p>
-              <p className="text-sm text-muted-foreground">Join or create a band to book rehearsals.</p>
+              <p className="text-muted-foreground mb-2">{t('rehearsals.notInBand')}</p>
+              <p className="text-sm text-muted-foreground">{t('rehearsals.joinOrCreateBand')}</p>
             </CardContent>
           </Card>
         )}
@@ -365,52 +367,52 @@ const Rehearsals = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('rehearsals.upcoming')}</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{upcomingRehearsals.length}</div>
             <p className="text-xs text-muted-foreground">
-              ${upcomingCost.toFixed(2)} committed
+              ${upcomingCost.toFixed(2)} {t('rehearsals.committed')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('rehearsals.completed')}</CardTitle>
             <Music2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedRehearsals.length}</div>
             <p className="text-xs text-muted-foreground">
-              Sessions total
+              {t('rehearsals.sessionsTotal')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('rehearsals.totalSpent')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalSpent.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              All time rehearsals
+              {t('rehearsals.allTimeRehearsals')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Chemistry</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('rehearsals.avgChemistry')}</CardTitle>
             <Music2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+{avgChemistryGain.toFixed(1)}</div>
             <p className="text-xs text-muted-foreground">
-              Per session
+              {t('rehearsals.perSession')}
             </p>
           </CardContent>
         </Card>
@@ -420,8 +422,8 @@ const Rehearsals = () => {
       {familiarityData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Song Familiarity Progress</CardTitle>
-            <CardDescription>Track how well your bands know their songs</CardDescription>
+            <CardTitle>{t('rehearsals.songFamiliarity')}</CardTitle>
+            <CardDescription>{t('rehearsals.trackFamiliarity')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {familiarityData.slice(0, 5).map((fam: any) => (
@@ -444,10 +446,10 @@ const Rehearsals = () => {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="upcoming">
-            Upcoming ({upcomingRehearsals.length})
+            {t('rehearsals.upcoming')} ({upcomingRehearsals.length})
           </TabsTrigger>
           <TabsTrigger value="completed">
-            Completed ({completedRehearsals.length})
+            {t('rehearsals.completed')} ({completedRehearsals.length})
           </TabsTrigger>
         </TabsList>
 
@@ -455,15 +457,15 @@ const Rehearsals = () => {
           {isLoading ? (
             <Card>
               <CardContent className="p-12 text-center text-muted-foreground">
-                Loading rehearsals...
+                {t('rehearsals.loadingRehearsals')}
               </CardContent>
             </Card>
           ) : displayRehearsals.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center text-muted-foreground">
                 {activeTab === "upcoming" 
-                  ? "No upcoming rehearsals scheduled."
-                  : "No completed rehearsals yet."}
+                  ? t('rehearsals.noUpcoming')
+                  : t('rehearsals.noCompleted')}
               </CardContent>
             </Card>
           ) : (
@@ -488,7 +490,7 @@ const Rehearsals = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          Date
+                          {t('gigs.date')}
                         </div>
                         <div className="font-medium">
                           {format(new Date(rehearsal.scheduled_start), "MMM d, yyyy")}
@@ -498,7 +500,7 @@ const Rehearsals = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          Time
+                          {t('gigs.time')}
                         </div>
                         <div className="font-medium">
                           {format(new Date(rehearsal.scheduled_start), "h:mm a")} - {format(new Date(rehearsal.scheduled_end), "h:mm a")}
@@ -508,7 +510,7 @@ const Rehearsals = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <DollarSign className="h-3 w-3" />
-                          Cost
+                          {t('rehearsals.cost')}
                         </div>
                         <div className="font-medium">${rehearsal.total_cost.toFixed(2)}</div>
                       </div>
@@ -516,7 +518,7 @@ const Rehearsals = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Music2 className="h-3 w-3" />
-                          Song
+                          {t('music.songs')}
                         </div>
                         <div className="font-medium truncate">
                           {rehearsal.songs?.title || "General Practice"}
