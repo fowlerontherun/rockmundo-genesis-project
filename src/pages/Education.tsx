@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useTranslation } from "@/hooks/useTranslation";
 
 import { BooksTab } from "@/features/education/components/BooksTab";
 import { UniversityTab } from "@/features/education/components/UniversityTab";
@@ -8,6 +9,7 @@ import { MentorsTab } from "@/features/education/components/MentorsTab";
 import { useEducationTabs } from "@/features/education/hooks/useEducationTabs";
 
 const Education = () => {
+  const { t } = useTranslation();
   const tabs = useEducationTabs();
   const defaultValue = tabs[0]?.value ?? "books";
 
@@ -22,13 +24,13 @@ const Education = () => {
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
       <header className="space-y-3 sm:space-y-4 text-center md:text-left">
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-          Education Hub
+          {t('education.hub', 'Education Hub')}
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-          Build your creative intelligence
+          {t('education.title', 'Build your creative intelligence')}
         </h1>
         <p className="max-w-3xl text-sm sm:text-base text-muted-foreground">
-          Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.
+          {t('education.subtitle', 'Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.')}
         </p>
       </header>
 

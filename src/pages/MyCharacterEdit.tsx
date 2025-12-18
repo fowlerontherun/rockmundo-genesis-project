@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Upload, User } from "lucide-react";
+import { useTranslation } from "@/hooks/useTranslation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

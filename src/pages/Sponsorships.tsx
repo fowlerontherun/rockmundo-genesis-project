@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
