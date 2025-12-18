@@ -26,6 +26,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   CheckCircle,
   Clock,
   Music,
@@ -45,10 +50,12 @@ import {
   ListMusic,
   History,
   Flame,
+  Zap,
 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
+import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
 
 import type { Database } from "@/lib/supabase-types";
 
@@ -514,6 +521,39 @@ export default function Radio() {
 
           {/* Submit Tab */}
           <TabsContent value="submit" className="mt-4 space-y-4">
+            {/* Batch Submit Option */}
+            {primaryBand && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium">Submit to All Eligible Stations</p>
+                      <p className="text-sm text-muted-foreground">
+                        Batch submit your song to every station that matches your criteria
+                      </p>
+                    </div>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="default" className="w-full sm:w-auto">
+                        <Send className="mr-2 h-4 w-4" />
+                        Batch Submit
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <RadioSubmissionWizard 
+                        bandId={primaryBand.id} 
+                        onComplete={() => {
+                          queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Choose a Station</CardTitle>
