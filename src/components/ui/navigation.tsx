@@ -68,13 +68,13 @@ import type { LucideIcon } from "lucide-react";
 
 type NavItem = {
   icon: LucideIcon;
-  label: string;
+  labelKey: string;
   path: string;
   search?: string;
 };
 
 type NavSection = {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 };
 
@@ -94,14 +94,14 @@ const Navigation = () => {
   });
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    Home: true,
-    Music: true,
-    Performance: true,
-    World: true,
-    Social: true,
-    Community: true,
-    Business: true,
-    Admin: true,
+    home: true,
+    music: true,
+    performance: true,
+    world: true,
+    social: true,
+    community: true,
+    business: true,
+    admin: true,
   });
 
   // Persist desktop sidebar state
@@ -117,101 +117,101 @@ const Navigation = () => {
 
   const navSections: NavSection[] = [
     {
-      title: "Home",
+      titleKey: "nav.home",
       items: [
-        { icon: Home, label: "Dashboard", path: "/dashboard" },
-        { icon: User, label: "Avatar", path: "/avatar-designer" },
-        { icon: ShoppingCart, label: "Skin Store", path: "/skin-store" },
-        { icon: Newspaper, label: "Today's News", path: "/todays-news" },
-        { icon: Guitar, label: "Gear", path: "/gear" },
-        { icon: HeartPulse, label: "Wellness", path: "/wellness" },
-        { icon: BookOpen, label: "Statistics", path: "/statistics" },
+        { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
+        { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
+        { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
+        { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
+        { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
+        { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
+        { icon: BookOpen, labelKey: "nav.statistics", path: "/statistics" },
       ],
     },
     {
-      title: "Music",
+      titleKey: "nav.music",
       items: [
-        { icon: Music, label: "Songwriting", path: "/songwriting" },
-        { icon: GraduationCap, label: "Education", path: "/education" },
-        { icon: Disc, label: "Recording", path: "/recording-studio" },
-        { icon: Music4, label: "Release Manager", path: "/release-manager" },
-        { icon: Radio, label: "Streaming", path: "/streaming" },
-        { icon: Video, label: "Music Videos", path: "/music-videos" },
-        { icon: Radio, label: "Radio", path: "/radio" },
-        { icon: TrendingUp, label: "Country Charts", path: "/country-charts" },
+        { icon: Music, labelKey: "nav.songwriting", path: "/songwriting" },
+        { icon: GraduationCap, labelKey: "nav.education", path: "/education" },
+        { icon: Disc, labelKey: "nav.recording", path: "/recording-studio" },
+        { icon: Music4, labelKey: "nav.releaseManager", path: "/release-manager" },
+        { icon: Radio, labelKey: "nav.streaming", path: "/streaming" },
+        { icon: Video, labelKey: "nav.musicVideos", path: "/music-videos" },
+        { icon: Radio, labelKey: "nav.radio", path: "/radio" },
+        { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
       ],
     },
     {
-      title: "Performance",
+      titleKey: "nav.performance",
       items: [
-        { icon: Calendar, label: "Gigs", path: "/gigs" },
-        { icon: Music, label: "Jam Sessions", path: "/jam-sessions" },
-        { icon: Music, label: "Busking", path: "/busking" },
-        { icon: Music, label: "Rehearsals", path: "/rehearsals" },
-        { icon: ListMusic, label: "Setlists", path: "/setlists" },
-        { icon: Calendar, label: "Festivals", path: "/festivals" },
-        { icon: Star, label: "Eurovision", path: "/events/eurovision" },
-        { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
+        { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
+        { icon: Music, labelKey: "nav.jamSessions", path: "/jam-sessions" },
+        { icon: Music, labelKey: "nav.busking", path: "/busking" },
+        { icon: Music, labelKey: "nav.rehearsals", path: "/rehearsals" },
+        { icon: ListMusic, labelKey: "nav.setlists", path: "/setlists" },
+        { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
+        { icon: Star, labelKey: "nav.eurovision", path: "/events/eurovision" },
+        { icon: Wrench, labelKey: "nav.stageEquipment", path: "/stage-equipment" },
       ],
     },
     {
-      title: "World",
+      titleKey: "nav.world",
       items: [
-        { icon: Globe, label: "Cities", path: "/cities" },
-        { icon: Plane, label: "Travel", path: "/travel" },
-        { icon: Bus, label: "Tours", path: "/tour-manager" },
-        { icon: Building2, label: "Current City", path: cityOverviewPath },
+        { icon: Globe, labelKey: "nav.cities", path: "/cities" },
+        { icon: Plane, labelKey: "nav.travel", path: "/travel" },
+        { icon: Bus, labelKey: "nav.tours", path: "/tour-manager" },
+        { icon: Building2, labelKey: "nav.currentCity", path: cityOverviewPath },
       ],
     },
     {
-      title: "Social",
+      titleKey: "nav.social",
       items: [
-        { icon: Users, label: "Band", path: "/band" },
-        { icon: Sparkles, label: "Band Chemistry", path: "/chemistry" },
-        { icon: UserPlus, label: "Band Crew", path: "/band-crew" },
-        { icon: Twitter, label: "Twaater", path: "/twaater" },
-        { icon: Video, label: "DikCok", path: "/dikcok" },
-        { icon: Heart, label: "Relationships", path: "/relationships" },
+        { icon: Users, labelKey: "nav.band", path: "/band" },
+        { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry" },
+        { icon: UserPlus, labelKey: "nav.bandCrew", path: "/band-crew" },
+        { icon: Twitter, labelKey: "nav.twaater", path: "/twaater" },
+        { icon: Video, labelKey: "nav.dikcok", path: "/dikcok" },
+        { icon: Heart, labelKey: "nav.relationships", path: "/relationships" },
       ],
     },
     {
-      title: "Community",
+      titleKey: "nav.community",
       items: [
-        { icon: HandHeart, label: "Community Feed", path: "/community/feed" },
+        { icon: HandHeart, labelKey: "nav.communityFeed", path: "/community/feed" },
       ],
     },
     {
-      title: "Business",
+      titleKey: "nav.business",
       items: [
-        { icon: Briefcase, label: "Employment", path: "/employment" },
-        { icon: DollarSign, label: "Finances", path: "/finances" },
-        { icon: Store, label: "Inventory", path: "/inventory" },
-        { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
-        { icon: Building2, label: "Venues", path: "/venues" },
-        { icon: Handshake, label: "Sponsorships", path: "/sponsorships" },
-        { icon: Building, label: "Record Labels", path: "/labels" },
+        { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
+        { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
+        { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
+        { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
+        { icon: Building2, labelKey: "nav.venues", path: "/venues" },
+        { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
+        { icon: Building, labelKey: "nav.recordLabels", path: "/labels" },
       ],
     },
     {
-      title: "Admin",
+      titleKey: "nav.admin",
       items: [
-        { icon: Settings, label: "Admin Panel", path: "/admin" },
+        { icon: Settings, labelKey: "nav.adminPanel", path: "/admin" },
       ],
     },
   ];
 
   const mobileShortcuts = [
-    { icon: Home, label: t('home'), path: "/dashboard" },
-    { icon: Calendar, label: t('gigs'), path: "/gigs" },
-    { icon: Music, label: t('music'), path: "/music-hub" },
+    { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
+    { icon: Music, labelKey: "nav.music", path: "/music-hub" },
   ];
 
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
     toast({
-      title: "Signed out",
-      description: "You have been logged out of Rockmundo.",
+      title: t('auth.logoutSuccess'),
+      description: t('auth.loggedOutMessage'),
     });
     setIsOpen(false);
   };
@@ -243,11 +243,16 @@ const Navigation = () => {
     setIsOpen(false);
   };
 
-  const toggleSection = (sectionTitle: string) => {
+  const toggleSection = (sectionKey: string) => {
     setOpenSections((prev) => ({
       ...prev,
-      [sectionTitle]: !prev[sectionTitle],
+      [sectionKey]: !prev[sectionKey],
     }));
+  };
+
+  // Helper to get section key from titleKey
+  const getSectionKey = (titleKey: string) => {
+    return titleKey.replace('nav.', '');
   };
 
   interface NavigationContentProps {
@@ -272,50 +277,54 @@ const Navigation = () => {
 
       {/* Navigation */}
       <nav className={`flex-1 ${collapsed ? 'p-2' : 'p-4'} space-y-2 overflow-y-auto`}>
-        {navSections.map((section) => (
-          <Collapsible
-            key={section.title}
-            open={collapsed ? false : openSections[section.title]}
-            onOpenChange={() => !collapsed && toggleSection(section.title)}
-          >
-            {!collapsed && (
-              <CollapsibleTrigger className="w-full group">
-                <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
-                  <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
-                    {section.title}
-                  </h3>
-                  {openSections[section.title] ? (
-                    <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform" />
-                  )}
-                </div>
-              </CollapsibleTrigger>
-            )}
-            <CollapsibleContent className={`${collapsed ? '' : 'space-y-1 pt-1'}`}>
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={`${item.path}-${item.label}`}
-                    variant={isActive(item) ? "secondary" : "ghost"}
-                    className={`${collapsed ? 'w-full justify-center p-2' : 'w-full justify-start gap-3'} ${
-                      isActive(item)
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    }`}
-                    onClick={() => handleNavigation(item.path, item.search)}
-                    aria-current={isActive(item) ? "page" : undefined}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {!collapsed && item.label}
-                  </Button>
-                );
-              })}
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
+        {navSections.map((section) => {
+          const sectionKey = getSectionKey(section.titleKey);
+          return (
+            <Collapsible
+              key={section.titleKey}
+              open={collapsed ? false : openSections[sectionKey]}
+              onOpenChange={() => !collapsed && toggleSection(sectionKey)}
+            >
+              {!collapsed && (
+                <CollapsibleTrigger className="w-full group">
+                  <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
+                    <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
+                      {t(section.titleKey)}
+                    </h3>
+                    {openSections[sectionKey] ? (
+                      <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+              )}
+              <CollapsibleContent className={`${collapsed ? '' : 'space-y-1 pt-1'}`}>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const label = t(item.labelKey);
+                  return (
+                    <Button
+                      key={`${item.path}-${item.labelKey}`}
+                      variant={isActive(item) ? "secondary" : "ghost"}
+                      className={`${collapsed ? 'w-full justify-center p-2' : 'w-full justify-start gap-3'} ${
+                        isActive(item)
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      }`}
+                      onClick={() => handleNavigation(item.path, item.search)}
+                      aria-current={isActive(item) ? "page" : undefined}
+                      title={collapsed ? label : undefined}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {!collapsed && label}
+                    </Button>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
       </nav>
 
       {/* Logout */}
@@ -324,10 +333,10 @@ const Navigation = () => {
           variant="ghost"
           className={`w-full ${collapsed ? 'justify-center p-2' : 'justify-start gap-3'} text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive`}
           onClick={handleLogout}
-          title={collapsed ? "Logout" : undefined}
+          title={collapsed ? t('nav.logout') : undefined}
         >
           <LogOut className="h-4 w-4" />
-          {!collapsed && "Logout"}
+          {!collapsed && t('nav.logout')}
         </Button>
       </div>
     </>
@@ -345,7 +354,7 @@ const Navigation = () => {
                 variant="outline" 
                 size="icon" 
                 className="h-10 w-10 border-primary/50 hover:bg-primary/10"
-                aria-label="Open navigation menu"
+                aria-label={t('nav.openMenu')}
               >
                 <Menu className="h-6 w-6 text-primary" />
               </Button>
@@ -383,7 +392,7 @@ const Navigation = () => {
             size="icon"
             className="h-8 w-8 border-primary/50 hover:bg-primary/10"
             onClick={toggleDesktopSidebar}
-            aria-label="Toggle navigation menu"
+            aria-label={t('nav.toggleMenu')}
           >
             <Menu className="h-5 w-5 text-primary" />
           </Button>
@@ -419,7 +428,7 @@ const Navigation = () => {
                 aria-current={isActive(item.path) ? "page" : undefined}
               >
                 <Icon className="h-4 w-4" />
-                <span className="text-xs font-oswald">{item.label}</span>
+                <span className="text-xs font-oswald">{t(item.labelKey)}</span>
               </Button>
             );
           })}
@@ -430,7 +439,7 @@ const Navigation = () => {
             onClick={() => setIsOpen(true)}
           >
             <Menu className="h-4 w-4" />
-            <span className="text-xs font-oswald">{t('more')}</span>
+            <span className="text-xs font-oswald">{t('nav.more')}</span>
           </Button>
         </div>
       </div>
