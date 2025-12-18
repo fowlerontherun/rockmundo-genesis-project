@@ -471,85 +471,104 @@ function getGenderVocalStyle(gender: string | null): string {
 }
 
 // Format lyrics with section markers for MiniMax Music-1.5
-// ONLY includes essential sections: Intro (if exists), first Verse, Chorus, Bridge
+// Includes full song structure with proper sections
 function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
   if (!rawLyrics || rawLyrics.trim().length === 0) {
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
-  return extractEssentialSections(rawLyrics, songTitle, genre)
+  return formatFullLyrics(rawLyrics, songTitle, genre)
 }
 
-// Extract only Intro (optional), first Verse, first Chorus, and Bridge
-function extractEssentialSections(lyrics: string, songTitle: string, genre: string): string {
-  const normalizedLyrics = lyrics
-    .replace(/\[verse\s*\d*\]/gi, '[Verse]')
-    .replace(/\[chorus\s*\d*\]/gi, '[Chorus]')
-    .replace(/\[bridge\s*\d*\]/gi, '[Bridge]')
-    .replace(/\[pre-?chorus\s*\d*\]/gi, '[Pre-Chorus]')
-    .replace(/\[outro\]/gi, '[Outro]')
-    .replace(/\[intro\]/gi, '[Intro]')
-    .replace(/\[hook\]/gi, '[Hook]')
+// Format full lyrics preserving song structure
+// MiniMax handles longer lyrics well - we preserve as much as possible
+function formatFullLyrics(lyrics: string, songTitle: string, genre: string): string {
+  // Normalize section markers to consistent format
+  let normalizedLyrics = lyrics
+    .replace(/\[verse\s*(\d*)\]/gi, (_, num) => `[Verse${num ? ' ' + num : ''}]`)
+    .replace(/\[chorus\s*(\d*)\]/gi, (_, num) => `[Chorus${num ? ' ' + num : ''}]`)
+    .replace(/\[bridge\s*(\d*)\]/gi, (_, num) => `[Bridge${num ? ' ' + num : ''}]`)
+    .replace(/\[pre-?chorus\s*(\d*)\]/gi, (_, num) => `[Pre-Chorus${num ? ' ' + num : ''}]`)
+    .replace(/\[outro\s*\d*\]/gi, '[Outro]')
+    .replace(/\[intro\s*\d*\]/gi, '[Intro]')
+    .replace(/\[hook\s*\d*\]/gi, '[Hook]')
+    .replace(/\[post-?chorus\s*\d*\]/gi, '[Post-Chorus]')
 
-  const hasMarkers = /\[(Verse|Chorus|Bridge|Intro|Hook)\]/i.test(normalizedLyrics)
+  const hasMarkers = /\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)\]/i.test(normalizedLyrics)
   
   if (!hasMarkers) {
-    const lines = lyrics.split('\n').filter(l => l.trim()).slice(0, 8)
+    // No markers - intelligently structure the lyrics
+    const lines = lyrics.split('\n').filter(l => l.trim())
     if (lines.length === 0) return generatePlaceholderLyrics(songTitle, genre)
     
-    const verse = lines.slice(0, 4).join('\n')
-    const chorus = lines.slice(4, 8).join('\n') || lines.slice(0, 2).join('\n')
+    // Try to create a proper song structure from unmarked lyrics
+    if (lines.length <= 8) {
+      const verse = lines.slice(0, Math.ceil(lines.length / 2)).join('\n')
+      const chorus = lines.slice(Math.ceil(lines.length / 2)).join('\n') || lines.slice(0, 2).join('\n')
+      return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
+    }
     
-    return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
+    // Longer unmarked lyrics - create verse-chorus-verse-chorus structure
+    const quarterLength = Math.floor(lines.length / 4)
+    return `[Verse 1]\n${lines.slice(0, quarterLength).join('\n')}\n\n[Chorus]\n${lines.slice(quarterLength, quarterLength * 2).join('\n')}\n\n[Verse 2]\n${lines.slice(quarterLength * 2, quarterLength * 3).join('\n')}\n\n[Chorus]\n${lines.slice(quarterLength * 3).join('\n')}`
   }
 
+  // Extract all sections maintaining order
   const sections: { type: string; content: string }[] = []
-  const sectionRegex = /\[(Intro|Verse|Chorus|Bridge|Pre-Chorus|Hook)\]([\s\S]*?)(?=\[|$)/gi
+  const sectionRegex = /\[(Intro|Verse\s*\d*|Chorus\s*\d*|Bridge\s*\d*|Pre-Chorus\s*\d*|Post-Chorus|Hook|Outro)\]([\s\S]*?)(?=\[|$)/gi
   let match
 
   while ((match = sectionRegex.exec(normalizedLyrics)) !== null) {
-    const type = match[1]
+    const type = match[1].trim()
     const content = match[2].trim()
     if (content) {
       sections.push({ type, content })
     }
   }
 
-  const result: string[] = []
-  let hasIntro = false
-  let hasVerse = false
-  let hasChorus = false
-  let hasBridge = false
-
-  for (const section of sections) {
-    const typeLower = section.type.toLowerCase()
-    
-    if (typeLower === 'intro' && !hasIntro) {
-      const introLines = section.content.split('\n').slice(0, 2).join('\n')
-      result.push(`[Intro]\n${introLines}`)
-      hasIntro = true
-    } else if (typeLower === 'verse' && !hasVerse) {
-      const verseLines = section.content.split('\n').slice(0, 4).join('\n')
-      result.push(`[Verse]\n${verseLines}`)
-      hasVerse = true
-    } else if (typeLower === 'chorus' && !hasChorus) {
-      const chorusLines = section.content.split('\n').slice(0, 4).join('\n')
-      result.push(`[Chorus]\n${chorusLines}`)
-      hasChorus = true
-    } else if (typeLower === 'bridge' && !hasBridge) {
-      const bridgeLines = section.content.split('\n').slice(0, 2).join('\n')
-      result.push(`[Bridge]\n${bridgeLines}`)
-      hasBridge = true
-    }
-
-    if (hasVerse && hasChorus) break
+  if (sections.length === 0) {
+    return generatePlaceholderLyrics(songTitle, genre)
   }
 
+  // Build output preserving full structure
+  // Limit to ~3000 chars total to stay reasonable for the model
+  const MAX_CHARS = 3000
+  let totalChars = 0
+  const result: string[] = []
+
+  for (const section of sections) {
+    const sectionText = `[${section.type}]\n${section.content}`
+    
+    // Check if adding this section would exceed limit
+    if (totalChars + sectionText.length > MAX_CHARS) {
+      // If we have at least verse and chorus, we can stop
+      const hasEssentials = result.some(s => s.toLowerCase().includes('[verse')) && 
+                           result.some(s => s.toLowerCase().includes('[chorus'))
+      if (hasEssentials) break
+      
+      // Otherwise, truncate this section to fit
+      const remaining = MAX_CHARS - totalChars - 50 // Buffer for section header
+      if (remaining > 100) {
+        const truncatedContent = section.content.substring(0, remaining).split('\n').slice(0, -1).join('\n')
+        if (truncatedContent.trim()) {
+          result.push(`[${section.type}]\n${truncatedContent}`)
+        }
+      }
+      break
+    }
+    
+    result.push(sectionText)
+    totalChars += sectionText.length + 2 // +2 for newlines
+  }
+
+  // Ensure we have at least a verse and chorus
   if (result.length === 0) {
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
-  return result.join('\n\n')
+  const output = result.join('\n\n')
+  console.log(`[generate-song-audio] Formatted lyrics: ${output.length} chars, ${result.length} sections`)
+  return output
 }
 
 function generatePlaceholderLyrics(songTitle: string, genre: string): string {
