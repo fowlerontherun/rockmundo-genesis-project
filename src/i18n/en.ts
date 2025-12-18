@@ -126,6 +126,7 @@ export const en = {
     jamSessions: "Jam Sessions",
     busking: "Busking",
     eurovision: "Eurovision",
+    openMic: "Open Mic",
     bandChemistry: "Band Chemistry",
     twaater: "Twaater",
     dikcok: "DikCok",

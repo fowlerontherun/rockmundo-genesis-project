@@ -6932,6 +6932,244 @@ export type Database = {
           },
         ]
       }
+      open_mic_performances: {
+        Row: {
+          band_id: string | null
+          completed_at: string | null
+          created_at: string
+          current_song_position: number | null
+          fame_gained: number | null
+          fans_gained: number | null
+          id: string
+          overall_rating: number | null
+          scheduled_date: string
+          song_1_id: string | null
+          song_2_id: string | null
+          started_at: string | null
+          status: string
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_song_position?: number | null
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          overall_rating?: number | null
+          scheduled_date: string
+          song_1_id?: string | null
+          song_2_id?: string | null
+          started_at?: string | null
+          status?: string
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          band_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_song_position?: number | null
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          overall_rating?: number | null
+          scheduled_date?: string
+          song_1_id?: string | null
+          song_2_id?: string | null
+          started_at?: string | null
+          status?: string
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_mic_performances_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_performances_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "open_mic_venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_mic_song_performances: {
+        Row: {
+          commentary: string[] | null
+          created_at: string
+          crowd_response: string | null
+          id: string
+          performance_id: string
+          performance_score: number | null
+          position: number
+          song_id: string
+        }
+        Insert: {
+          commentary?: string[] | null
+          created_at?: string
+          crowd_response?: string | null
+          id?: string
+          performance_id: string
+          performance_score?: number | null
+          position: number
+          song_id: string
+        }
+        Update: {
+          commentary?: string[] | null
+          created_at?: string
+          crowd_response?: string | null
+          id?: string
+          performance_id?: string
+          performance_score?: number | null
+          position?: number
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_mic_song_performances_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "open_mic_performances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "open_mic_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "open_mic_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_mic_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_mic_venues: {
+        Row: {
+          capacity: number
+          city_id: string
+          created_at: string
+          day_of_week: number
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          start_time: string
+        }
+        Insert: {
+          capacity?: number
+          city_id: string
+          created_at?: string
+          day_of_week: number
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          start_time?: string
+        }
+        Update: {
+          capacity?: number
+          city_id?: string
+          created_at?: string
+          day_of_week?: number
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_mic_venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orchestra_bookings: {
         Row: {
           cost: number
