@@ -5,7 +5,6 @@ import { BooksTab } from "@/features/education/components/BooksTab";
 import { UniversityTab } from "@/features/education/components/UniversityTab";
 import { VideosTab } from "@/features/education/components/VideosTab";
 import { MentorsTab } from "@/features/education/components/MentorsTab";
-import { BandLearningTab } from "@/features/education/components/BandLearningTab";
 import { useEducationTabs } from "@/features/education/hooks/useEducationTabs";
 
 const Education = () => {
@@ -17,7 +16,6 @@ const Education = () => {
     university: <UniversityTab />,
     videos: <VideosTab />,
     mentors: <MentorsTab />,
-    band: <BandLearningTab />,
   };
 
   return (
@@ -60,7 +58,7 @@ const Education = () => {
 
         {/* Desktop: Grid tabs */}
         <div className="hidden lg:block">
-          <TabsList className="grid w-full grid-cols-5 gap-2 bg-muted/50 p-1">
+          <TabsList className="grid w-full grid-cols-4 gap-2 bg-muted/50 p-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
 

@@ -176,7 +176,6 @@ export const HowToPlayDialog = () => {
                     <li><strong>Skill Books:</strong> Purchase and read books, gain XP over multiple days</li>
                     <li><strong>Mentors:</strong> One-on-one sessions with specialists for focused skill gains</li>
                     <li><strong>Videos:</strong> Watch educational content for quick learning</li>
-                    <li><strong>Band Learning:</strong> Learn collectively with your band</li>
                   </ul>
                 </CardContent>
               </Card>

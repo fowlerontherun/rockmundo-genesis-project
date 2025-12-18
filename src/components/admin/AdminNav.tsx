@@ -114,7 +114,6 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/universities", label: "Universities", description: "University system" },
       { path: "/admin/courses", label: "Courses", description: "Course catalog" },
       { path: "/admin/skill-books", label: "Skill Books", description: "Learning materials" },
-      { path: "/admin/band-learning", label: "Band Learning", description: "Band education" },
       { path: "/admin/youtube-videos", label: "YouTube Videos", description: "Video content" },
     ],
   },

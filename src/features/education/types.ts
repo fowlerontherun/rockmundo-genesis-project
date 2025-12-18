@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
 export interface EducationTab {
-  value: "books" | "university" | "videos" | "mentors" | "band";
+  value: "books" | "university" | "videos" | "mentors";
   label: string;
   icon: LucideIcon;
   description: string;
@@ -74,22 +74,4 @@ export interface MentorProgram {
   description: string;
   cohorts: MentorCohort[];
   action?: MentorProgramAction;
-}
-
-export interface BandLearningSession {
-  name: string;
-  focus: string;
-  deliverable: string;
-}
-
-export interface BandLearningTrackAction {
-  label: string;
-  href: string;
-}
-
-export interface BandLearningTrack {
-  title: string;
-  description: string;
-  sessions: BandLearningSession[];
-  action?: BandLearningTrackAction;
 }
