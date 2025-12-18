@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, MapPin, Music, DollarSign, ArrowLeft, Plus } from "lucide-react";
+import { Calendar, MapPin, Music, DollarSign, ArrowLeft, Plus, X } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTours } from "@/hooks/useTours";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -15,12 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
 
-const APP_VERSION = "1.0.223";
+const APP_VERSION = "1.0.224";
 
 export default function TourManagerNew() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { tours, tourGigs, venues } = useTours(undefined);
+  const { tours, tourGigs, venues, cancelTour } = useTours(undefined);
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
@@ -163,6 +163,22 @@ export default function TourManagerNew() {
                           ))}
                         </div>
                       )}
+
+                      <div className="flex justify-end mt-4 pt-4 border-t">
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to cancel this tour? Same-day cancellations get a full refund.')) {
+                              cancelTour.mutate(tour.id);
+                            }
+                          }}
+                          disabled={cancelTour.isPending}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel Tour
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
