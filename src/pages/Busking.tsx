@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useGameData } from '@/hooks/useGameData';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { Database, Tables } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
