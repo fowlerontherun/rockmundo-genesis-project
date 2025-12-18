@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
 import InteractiveWorldMap from "@/components/map/InteractiveWorldMap";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const WorldMap = () => {
+  const { t } = useTranslation();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["world-environment", "snapshot"],
     queryFn: fetchWorldEnvironmentSnapshot,

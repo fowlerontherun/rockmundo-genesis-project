@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGameData } from "@/hooks/useGameData";
+import { useTranslation } from "@/hooks/useTranslation";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useTwaaterFeed } from "@/hooks/useTwaats";
 import { TwaaterComposer } from "@/components/twaater/TwaaterComposer";
@@ -21,6 +22,7 @@ import { TrendingTwaats } from "@/components/twaater/TrendingTwaats";
 
 const SocialMedia = () => {
   const { profile } = useGameData();
+  const { t } = useTranslation();
   const { account: twaaterAccount, isLoading: twaaterAccountLoading } =
     useTwaaterAccount("persona", profile?.id);
   const { feed: twaaterFeed, isLoading: twaaterFeedLoading } = useTwaaterFeed(
@@ -34,9 +36,9 @@ const SocialMedia = () => {
       <div className="container mx-auto space-y-6 py-6">
         <Card>
           <CardHeader>
-            <CardTitle>Twaater</CardTitle>
+            <CardTitle>{t('twaater.title')}</CardTitle>
             <CardDescription>
-              Create your character profile to unlock social posting.
+              {t('social.createProfile')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -48,9 +50,9 @@ const SocialMedia = () => {
     <div className="container mx-auto space-y-6 py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Social Media</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('social.title')}</h1>
           <p className="text-muted-foreground">
-            Share updates with fans and grow your following on Twaater or craft viral clips on DikCok.
+            {t('social.description')}
           </p>
         </div>
       </div>

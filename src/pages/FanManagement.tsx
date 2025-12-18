@@ -4,11 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useFanManagement } from "@/hooks/useFanManagement";
+import { useTranslation } from "@/hooks/useTranslation";
 import { Users, TrendingUp, MessageCircle, Target, Calendar, DollarSign } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const FanManagement = () => {
   const [user, setUser] = useState<any>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
