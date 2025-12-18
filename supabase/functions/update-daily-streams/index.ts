@@ -52,9 +52,21 @@ Deno.serve(async (req) => {
       throw streamingError;
     }
 
+    // Get active band count for market scaling
+    const { count: activeBandCount } = await supabase
+      .from('bands')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active');
+    
+    // Market scarcity bonus: fewer bands = more streams per release
+    // At 10 bands: 5x boost, at 50 bands: 2x, at 100+ bands: 1x
+    const marketMultiplier = Math.max(1, Math.min(5, 100 / Math.max(activeBandCount || 100, 20)));
+    console.log(`Stream market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
+
     for (const release of streamingReleases || []) {
       try {
-        const dailyStreams = Math.floor(Math.random() * 4900) + 100;
+        const baseStreams = Math.floor(Math.random() * 4900) + 100;
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier);
         const dailyRevenue = Math.floor(dailyStreams * 0.004);
 
         const { error: updateError } = await supabase
@@ -97,7 +109,8 @@ Deno.serve(async (req) => {
     for (const format of physicalReleases || []) {
       if (Math.random() > 0.5) {
         try {
-          const quantity = Math.floor(Math.random() * 10) + 1;
+          const baseQuantity = Math.floor(Math.random() * 10) + 1;
+          const quantity = Math.floor(baseQuantity * marketMultiplier);
           let pricePerUnit = 10;
 
           if (format.format_type === 'cd') pricePerUnit = 15;

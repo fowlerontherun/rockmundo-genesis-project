@@ -196,8 +196,21 @@ export const useCompleteGigPerformance = () => {
       const totalRevenue = ticketRevenue + merchSales.totalRevenue;
       const netProfit = totalRevenue - crewCosts - equipmentWearCost;
 
-      // Calculate fame gained (based on performance and attendance)
-      const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5);
+      // Get active band count for market bonus (early game boost)
+      const { count: activeBandCount } = await supabase
+        .from('bands')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+      
+      // Market scarcity bonus: fewer bands = more attention (max 10x at 10 bands, 1x at 100+)
+      const marketBonus = Math.max(1, Math.min(10, 100 / (activeBandCount || 100)));
+      
+      // Calculate fame gained (based on performance and attendance) with market bonus
+      const baseFame = (overallRating / 25) * actualAttendance * 0.8; // Increased from 0.5 to 0.8
+      const fameGained = Math.round(baseFame * marketBonus);
+      
+      // Calculate XP to award (scales with fame gained)
+      const baseXp = Math.round(fameGained * 2); // Increased from 1.5 to 2
 
       // Calculate chemistry impact
       let chemistryImpact = 0;
@@ -310,7 +323,72 @@ export const useCompleteGigPerformance = () => {
           });
       }
 
-      return { outcome, songPerformances };
+      // Award XP to each band member
+      const nonTouringMembers = members.filter(m => !m.is_touring_member && m.user_id);
+      if (nonTouringMembers.length > 0 && baseXp > 0) {
+        const xpPerMember = Math.max(10, Math.floor(baseXp / nonTouringMembers.length));
+        
+        for (const member of nonTouringMembers) {
+          if (!member.user_id) continue;
+          
+          // Get profile for user
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', member.user_id)
+            .single();
+          
+          if (!profile) continue;
+          
+          // Add to experience ledger
+          await supabase
+            .from('experience_ledger')
+            .insert({
+              user_id: member.user_id,
+              profile_id: profile.id,
+              activity_type: 'gig_performance',
+              xp_amount: xpPerMember,
+              metadata: {
+                gig_id: gigId,
+                band_id: bandId,
+                rating: overallRating.toFixed(1),
+                attendance: actualAttendance,
+                fame_gained: fameGained,
+                market_bonus: marketBonus
+              }
+            });
+          
+          // Update XP wallet
+          const { data: wallet } = await supabase
+            .from('player_xp_wallet')
+            .select('xp_balance, lifetime_xp')
+            .eq('profile_id', profile.id)
+            .single();
+          
+          if (wallet) {
+            await supabase
+              .from('player_xp_wallet')
+              .update({
+                xp_balance: (wallet.xp_balance || 0) + xpPerMember,
+                lifetime_xp: (wallet.lifetime_xp || 0) + xpPerMember
+              })
+              .eq('profile_id', profile.id);
+          } else {
+            await supabase
+              .from('player_xp_wallet')
+              .insert({
+                profile_id: profile.id,
+                xp_balance: xpPerMember,
+                lifetime_xp: xpPerMember,
+                xp_spent: 0
+              });
+          }
+        }
+        
+        console.log(`Awarded ${xpPerMember} XP to ${nonTouringMembers.length} band members for gig performance`);
+      }
+
+      return { outcome, songPerformances, fameGained, xpAwarded: baseXp };
     }
   });
 };
