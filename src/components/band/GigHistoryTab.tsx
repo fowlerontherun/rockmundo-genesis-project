@@ -78,7 +78,24 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
     queryKey: ['gig-history', bandId],
     queryFn: async () => {
-      // Get gig outcomes directly for this band - includes completed and in_progress gigs
+      // First get all gig IDs for this band
+      const { data: bandGigs, error: gigsError } = await supabase
+        .from('gigs')
+        .select('id')
+        .eq('band_id', bandId);
+
+      if (gigsError) {
+        console.error('Error fetching band gigs:', gigsError);
+        throw gigsError;
+      }
+
+      if (!bandGigs || bandGigs.length === 0) {
+        return [];
+      }
+
+      const gigIds = bandGigs.map(g => g.id);
+
+      // Then get gig outcomes for those gigs
       const { data, error } = await supabase
         .from('gig_outcomes')
         .select(`
@@ -89,7 +106,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             setlists(name)
           )
         `)
-        .eq('gigs.band_id', bandId)
+        .in('gig_id', gigIds)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -97,10 +114,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         throw error;
       }
       
-      // Filter to only include outcomes where gig belongs to this band
-      const filteredData = (data ?? []).filter(outcome => outcome.gigs?.band_id === bandId);
-      
-      return filteredData as unknown as GigHistoryOutcome[];
+      return (data ?? []) as unknown as GigHistoryOutcome[];
     },
     refetchInterval: 30000, // Refetch every 30 seconds
     enabled: !!bandId,
