@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/useTranslation';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useSetlists } from '@/hooks/useSetlists';
@@ -36,6 +37,7 @@ const GigBooking = () => {
   const { user } = useAuth();
   const { profile, skills, attributes, addActivity } = useGameData();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -474,16 +476,16 @@ const GigBooking = () => {
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Gig Booking</h1>
-          <p className="text-muted-foreground">Book performances, grow your fanbase, and earn rewards.</p>
+          <h1 className="text-3xl font-bold">{t('gigs.title')}</h1>
+          <p className="text-muted-foreground">{t('gigs.bookGig', 'Book performances, grow your fanbase, and earn rewards.')}</p>
         </div>
         {band ? (
           <Badge variant="secondary" className="w-fit">
-            Managing gigs for {band.name}
+            {t('band.title', 'Managing gigs for')} {band.name}
           </Badge>
         ) : (
           <Button asChild variant="outline">
-            <Link to="/band">Create a band</Link>
+            <Link to="/band">{t('band.createBand')}</Link>
           </Button>
         )}
       </div>
