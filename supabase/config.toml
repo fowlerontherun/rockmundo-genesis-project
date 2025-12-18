@@ -104,3 +104,21 @@ verify_jwt = false
 
 [functions.choose-event-option]
 verify_jwt = true
+
+[functions.check-player-debt]
+verify_jwt = false
+
+[functions.release-prisoners]
+verify_jwt = false
+
+[functions.process-prison-events]
+verify_jwt = false
+
+[functions.pay-bail]
+verify_jwt = true
+
+[functions.community-service-check]
+verify_jwt = false
+
+[functions.choose-prison-event]
+verify_jwt = true

@@ -2326,6 +2326,39 @@ export type Database = {
           },
         ]
       }
+      community_service_assignments: {
+        Row: {
+          completed_sessions: number
+          created_at: string
+          deadline: string
+          debt_amount: number
+          id: string
+          required_busking_sessions: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_sessions?: number
+          created_at?: string
+          deadline: string
+          debt_amount: number
+          id?: string
+          required_busking_sessions?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_sessions?: number
+          created_at?: string
+          deadline?: string
+          debt_amount?: number
+          id?: string
+          required_busking_sessions?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contract_clauses: {
         Row: {
           clause_key: string
@@ -7080,6 +7113,50 @@ export type Database = {
           },
         ]
       }
+      player_criminal_record: {
+        Row: {
+          behavior_rating: string
+          escaped: boolean
+          id: string
+          imprisonment_id: string
+          offense_type: string
+          pardoned: boolean
+          recorded_at: string
+          sentence_served_days: number
+          user_id: string
+        }
+        Insert: {
+          behavior_rating: string
+          escaped?: boolean
+          id?: string
+          imprisonment_id: string
+          offense_type: string
+          pardoned?: boolean
+          recorded_at?: string
+          sentence_served_days: number
+          user_id: string
+        }
+        Update: {
+          behavior_rating?: string
+          escaped?: boolean
+          id?: string
+          imprisonment_id?: string
+          offense_type?: string
+          pardoned?: boolean
+          recorded_at?: string
+          sentence_served_days?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_criminal_record_imprisonment_id_fkey"
+            columns: ["imprisonment_id"]
+            isOneToOne: false
+            referencedRelation: "player_imprisonments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_daily_cats: {
         Row: {
           activity_count: number | null
@@ -7615,6 +7692,86 @@ export type Database = {
           },
         ]
       }
+      player_imprisonments: {
+        Row: {
+          bail_amount: number | null
+          bail_paid_by: string | null
+          behavior_score: number
+          cellmate_name: string | null
+          cellmate_skill: string | null
+          cellmate_skill_bonus: number | null
+          created_at: string
+          debt_amount_cleared: number
+          escape_attempts: number
+          good_behavior_days_earned: number
+          id: string
+          imprisoned_at: string
+          original_sentence_days: number
+          prison_id: string
+          reason: string
+          release_date: string
+          released_at: string | null
+          remaining_sentence_days: number
+          songs_written: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          bail_amount?: number | null
+          bail_paid_by?: string | null
+          behavior_score?: number
+          cellmate_name?: string | null
+          cellmate_skill?: string | null
+          cellmate_skill_bonus?: number | null
+          created_at?: string
+          debt_amount_cleared?: number
+          escape_attempts?: number
+          good_behavior_days_earned?: number
+          id?: string
+          imprisoned_at?: string
+          original_sentence_days: number
+          prison_id: string
+          reason?: string
+          release_date: string
+          released_at?: string | null
+          remaining_sentence_days: number
+          songs_written?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          bail_amount?: number | null
+          bail_paid_by?: string | null
+          behavior_score?: number
+          cellmate_name?: string | null
+          cellmate_skill?: string | null
+          cellmate_skill_bonus?: number | null
+          created_at?: string
+          debt_amount_cleared?: number
+          escape_attempts?: number
+          good_behavior_days_earned?: number
+          id?: string
+          imprisoned_at?: string
+          original_sentence_days?: number
+          prison_id?: string
+          reason?: string
+          release_date?: string
+          released_at?: string | null
+          remaining_sentence_days?: number
+          songs_written?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_imprisonments_prison_id_fkey"
+            columns: ["prison_id"]
+            isOneToOne: false
+            referencedRelation: "prisons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_instruments: {
         Row: {
           created_at: string
@@ -7838,6 +7995,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      player_prison_events: {
+        Row: {
+          choice_made: string | null
+          event_id: string
+          id: string
+          imprisonment_id: string
+          outcome_applied: boolean
+          status: string
+          triggered_at: string
+          user_id: string
+        }
+        Insert: {
+          choice_made?: string | null
+          event_id: string
+          id?: string
+          imprisonment_id: string
+          outcome_applied?: boolean
+          status?: string
+          triggered_at?: string
+          user_id: string
+        }
+        Update: {
+          choice_made?: string | null
+          event_id?: string
+          id?: string
+          imprisonment_id?: string
+          outcome_applied?: boolean
+          status?: string
+          triggered_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_prison_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "prison_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_prison_events_imprisonment_id_fkey"
+            columns: ["imprisonment_id"]
+            isOneToOne: false
+            referencedRelation: "player_imprisonments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_scheduled_activities: {
         Row: {
@@ -8635,6 +8840,101 @@ export type Database = {
           },
         ]
       }
+      prison_events: {
+        Row: {
+          behavior_max: number | null
+          behavior_min: number | null
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_common: boolean
+          option_a_effects: Json
+          option_a_text: string
+          option_b_effects: Json
+          option_b_text: string
+          title: string
+        }
+        Insert: {
+          behavior_max?: number | null
+          behavior_min?: number | null
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          is_common?: boolean
+          option_a_effects?: Json
+          option_a_text: string
+          option_b_effects?: Json
+          option_b_text: string
+          title: string
+        }
+        Update: {
+          behavior_max?: number | null
+          behavior_min?: number | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_common?: boolean
+          option_a_effects?: Json
+          option_a_text?: string
+          option_b_effects?: Json
+          option_b_text?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      prisons: {
+        Row: {
+          capacity: number
+          city_id: string
+          created_at: string
+          daily_cost: number
+          escape_difficulty: number
+          has_music_program: boolean
+          id: string
+          name: string
+          rehabilitation_rating: number
+          security_level: string
+        }
+        Insert: {
+          capacity?: number
+          city_id: string
+          created_at?: string
+          daily_cost?: number
+          escape_difficulty?: number
+          has_music_program?: boolean
+          id?: string
+          name: string
+          rehabilitation_rating?: number
+          security_level?: string
+        }
+        Update: {
+          capacity?: number
+          city_id?: string
+          created_at?: string
+          daily_cost?: number
+          escape_difficulty?: number
+          has_music_program?: boolean
+          id?: string
+          name?: string
+          rehabilitation_rating?: number
+          security_level?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prisons_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_activity_statuses: {
         Row: {
           activity_type: string
@@ -8732,6 +9032,7 @@ export type Database = {
           created_at: string | null
           current_activity: string | null
           current_city_id: string | null
+          debt_started_at: string | null
           display_name: string | null
           energy: number
           experience: number | null
@@ -8741,7 +9042,9 @@ export type Database = {
           gender: string | null
           health: number
           id: string
+          is_imprisoned: boolean
           is_vip: boolean | null
+          is_wanted: boolean
           last_health_update: string | null
           last_weekly_bonus_at: string | null
           level: number | null
@@ -8750,6 +9053,7 @@ export type Database = {
           terms_accepted_at: string | null
           terms_version: string | null
           total_hours_played: number | null
+          total_imprisonments: number
           updated_at: string | null
           user_id: string
           username: string
@@ -8765,6 +9069,7 @@ export type Database = {
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
+          debt_started_at?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -8774,7 +9079,9 @@ export type Database = {
           gender?: string | null
           health?: number
           id?: string
+          is_imprisoned?: boolean
           is_vip?: boolean | null
+          is_wanted?: boolean
           last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -8783,6 +9090,7 @@ export type Database = {
           terms_accepted_at?: string | null
           terms_version?: string | null
           total_hours_played?: number | null
+          total_imprisonments?: number
           updated_at?: string | null
           user_id: string
           username: string
@@ -8798,6 +9106,7 @@ export type Database = {
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
+          debt_started_at?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -8807,7 +9116,9 @@ export type Database = {
           gender?: string | null
           health?: number
           id?: string
+          is_imprisoned?: boolean
           is_vip?: boolean | null
+          is_wanted?: boolean
           last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -8816,6 +9127,7 @@ export type Database = {
           terms_accepted_at?: string | null
           terms_version?: string | null
           total_hours_played?: number | null
+          total_imprisonments?: number
           updated_at?: string | null
           user_id?: string
           username?: string
@@ -13794,7 +14106,15 @@ export type Database = {
       auto_complete_travel: { Args: never; Returns: undefined }
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       auto_verify_accounts: { Args: never; Returns: undefined }
+      calculate_bail_amount: {
+        Args: { p_imprisonment_id: string }
+        Returns: number
+      }
       calculate_chart_trends: { Args: never; Returns: undefined }
+      calculate_early_release_days: {
+        Args: { p_behavior_score: number; p_original_sentence: number }
+        Returns: number
+      }
       calculate_follower_quality: {
         Args: { p_follower_account_id: string }
         Returns: number
@@ -13884,6 +14204,7 @@ export type Database = {
         Args: { amount: number; release_id: string }
         Returns: undefined
       }
+      is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
       process_radio_submission: {
         Args: { p_submission_id: string }
