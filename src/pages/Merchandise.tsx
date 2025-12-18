@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { TShirtDesignerNew } from "@/components/merchandise/TShirtDesignerNew";
 import { SavedDesigns } from "@/components/merchandise/SavedDesigns";
 import { MerchItemCard } from "@/components/merchandise/MerchItemCard";
-import { useMerchRequirements, QUALITY_TIERS } from "@/hooks/useMerchRequirements";
+import { MerchCatalog } from "@/components/merchandise/MerchCatalog";
+import { useMerchRequirements, QUALITY_TIERS, MerchItemRequirement, calculateMerchQuality } from "@/hooks/useMerchRequirements";
 import {
   Loader2,
   PackagePlus,
@@ -233,6 +234,9 @@ const Merchandise = () => {
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
+  const bandFame = primaryBand?.bands?.fame ?? 0;
+  const bandFans = primaryBand?.bands?.weekly_fans ?? 0;
+  const playerLevel = 10; // TODO: Get from profile
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabConfig["value"]>("overview");
@@ -413,6 +417,47 @@ const Merchandise = () => {
         description: "The new product is now in your inventory.",
       });
       setNewProductForm(INITIAL_FORM);
+      queryClient.invalidateQueries({ queryKey: ["player-merchandise", bandId] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Unable to add product",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const catalogAddProductMutation = useMutation({
+    mutationFn: async ({ item, designName, price, stock }: { 
+      item: MerchItemRequirement; 
+      designName: string; 
+      price: number; 
+      stock: number;
+    }) => {
+      if (!bandId) {
+        throw new Error("Join a band to manage merchandise");
+      }
+
+      const quality = calculateMerchQuality(item.base_quality_tier, bandFame, false);
+
+      const { error } = await (supabase as any).from("player_merchandise").insert({
+        band_id: bandId,
+        design_name: designName,
+        item_type: item.item_type,
+        cost_to_produce: item.base_cost,
+        selling_price: price,
+        stock_quantity: stock,
+        quality_tier: quality,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Merch added",
+        description: "The new product is now in your inventory.",
+      });
       queryClient.invalidateQueries({ queryKey: ["player-merchandise", bandId] });
     },
     onError: (error: Error) => {
@@ -868,137 +913,15 @@ const Merchandise = () => {
         </TabsContent>
 
         <TabsContent value="add-product">
-          <Card>
-            <CardHeader>
-              <CardTitle>Launch a New Merch Drop</CardTitle>
-              <CardDescription>
-                Insert a new SKU into your live catalogue — pricing and stock sync directly to future gig simulations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="grid gap-4 md:grid-cols-2" onSubmit={handleAddProduct}>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="new-design-name">
-                    Product Name
-                  </label>
-                  <Input
-                    id="new-design-name"
-                    placeholder="e.g. Tour Finale Bomber Jacket"
-                    value={newProductForm.designName}
-                    onChange={(event) =>
-                      setNewProductForm((prev) => ({ ...prev, designName: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="new-item-type">
-                    Category
-                  </label>
-                  <Select
-                    value={newProductForm.category}
-                    onValueChange={(value) =>
-                      setNewProductForm((prev) => ({
-                        ...prev,
-                        category: value,
-                        itemType: "",
-                        cost: "",
-                      }))
-                    }
-                  >
-                    <SelectTrigger id="new-item-type">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productBlueprints.map((entry) => (
-                        <SelectItem key={entry.category} value={entry.category}>
-                          {entry.category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="new-item-subtype">
-                    Product Type
-                  </label>
-                  <Select
-                    value={newProductForm.itemType}
-                    onValueChange={(value) =>
-                      setNewProductForm((prev) => ({
-                        ...prev,
-                        itemType: value,
-                        cost: findBlueprintItem(value)?.cost.toString() ?? "",
-                      }))
-                    }
-                    disabled={!newProductForm.category}
-                  >
-                    <SelectTrigger id="new-item-subtype">
-                      <SelectValue placeholder="Select product type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {findBlueprintCategory(newProductForm.category)?.items.map((item) => (
-                        <SelectItem key={item.label} value={item.label}>
-                          {item.label} · {currencyFormatter.format(item.cost)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="new-cost">
-                    Cost to Produce (USD)
-                  </label>
-                  <Input
-                    id="new-cost"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="12"
-                    value={newProductForm.cost}
-                    readOnly
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="new-price">
-                    Sale Price (USD)
-                  </label>
-                  <Input
-                    id="new-price"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="45"
-                    value={newProductForm.price}
-                    onChange={(event) => setNewProductForm((prev) => ({ ...prev, price: event.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-sm font-medium" htmlFor="new-stock">
-                    Initial Stock Quantity
-                  </label>
-                  <Input
-                    id="new-stock"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="250"
-                    value={newProductForm.stock}
-                    onChange={(event) => setNewProductForm((prev) => ({ ...prev, stock: event.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Button type="submit" className="w-full" disabled={addProductMutation.isPending}>
-                    <PackagePlus className="mr-2 h-4 w-4" />
-                    {addProductMutation.isPending ? "Adding..." : "Submit for Approval"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          <MerchCatalog
+            bandFame={bandFame}
+            bandFans={bandFans}
+            playerLevel={playerLevel}
+            onAddProduct={(item, designName, price, stock) => {
+              catalogAddProductMutation.mutate({ item, designName, price, stock });
+            }}
+            isAdding={catalogAddProductMutation.isPending}
+          />
         </TabsContent>
 
         <TabsContent value="manage-product">
