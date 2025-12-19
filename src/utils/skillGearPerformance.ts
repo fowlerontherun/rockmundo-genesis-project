@@ -203,6 +203,38 @@ function calculateGearBonus(
 }
 
 /**
+ * Helper to check if equipment category matches a role
+ */
+function doesCategoryMatchRole(category: string, subcategory: string | null, role: string): boolean {
+  const roleCategories: Record<string, string[]> = {
+    "Lead Guitar": ["guitar", "electric_guitar"],
+    "Rhythm Guitar": ["guitar", "acoustic_guitar", "electric_guitar"],
+    "Bass": ["bass"],
+    "Drums": ["drums"],
+    "Vocals": ["microphone"],
+    "Lead Vocals": ["microphone"],
+    "Keys": ["keyboard", "piano"],
+    "Keyboard": ["keyboard", "piano", "synth"],
+    "Synth": ["synth", "keyboard"],
+    "DJ": ["dj", "controller"],
+    "Saxophone": ["wind", "saxophone"],
+    "Trumpet": ["brass", "trumpet"],
+    "Trombone": ["brass", "trombone"],
+    "Violin": ["strings", "violin"],
+    "Cello": ["strings", "cello"],
+    "Percussion": ["percussion", "drums"]
+  };
+
+  const validCategories = roleCategories[role] || [];
+  const catLower = category.toLowerCase();
+  const subLower = (subcategory || "").toLowerCase();
+
+  return validCategories.some(vc => 
+    catLower.includes(vc) || subLower.includes(vc) || vc.includes(catLower)
+  );
+}
+
+/**
  * Calculate performance modifiers for a profile based on role
  */
 export async function calculatePerformanceModifiers(
@@ -222,7 +254,10 @@ export async function calculatePerformanceModifiers(
 
   try {
     // Get relevant skills for this role
-    const relevantSkills = ROLE_SKILL_MAP[role] || [];
+    const relevantSkills: string[] = [];
+    const baseSkills = ROLE_SKILL_MAP[role] || [];
+    relevantSkills.push(...baseSkills);
+    
     if (relevantSkills.length === 0) {
       // Try to find partial match
       const roleKey = Object.keys(ROLE_SKILL_MAP).find(k => 
@@ -234,62 +269,106 @@ export async function calculatePerformanceModifiers(
       }
     }
 
-    // Fetch skill progress
-    const { data: skillProgress, error: skillError } = await supabase
+    // Fetch skill progress - use explicit typing to avoid TS2589
+    const skillQuery = supabase
       .from('skill_progress')
       .select('skill_slug, current_level')
-      .eq('profile_id', profileId)
-      .in('skill_slug', relevantSkills.length > 0 ? relevantSkills : ['instruments_basic_vocal_performance']);
+      .eq('profile_id', profileId);
+    
+    if (relevantSkills.length > 0) {
+      skillQuery.in('skill_slug', relevantSkills);
+    }
+
+    const { data: skillProgressData, error: skillError } = await skillQuery;
+    const skillProgress = (skillProgressData || []) as SkillProgressEntry[];
 
     if (skillError) {
       console.error('Error fetching skill progress:', skillError);
       return defaultResult;
     }
 
-    const skillLevel = getSkillLevelFromProgress(skillProgress || [], relevantSkills);
+    const skillLevel = getSkillLevelFromProgress(skillProgress, relevantSkills);
 
-    // Fetch equipped gear with skill bonuses
-    const { data: equipment, error: equipError } = await supabase
-      .from('player_equipment')
-      .select(`
-        equipment_id,
-        is_equipped,
-        equipment_items (
-          name,
-          category,
-          subcategory,
-          skill_bonuses
-        )
-      `)
-      .eq('profile_id', profileId)
-      .eq('is_equipped', true);
+    // Fetch equipped gear - use any to bypass TS2589 complex type inference
+    let playerEquipment: Array<{ equipment_id: string; is_equipped: boolean }> = [];
+    let equipError: Error | null = null;
+    
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query = (supabase as any)
+        .from('player_equipment')
+        .select('equipment_id, is_equipped')
+        .eq('profile_id', profileId)
+        .eq('is_equipped', true);
+      
+      const result = await query;
+      playerEquipment = (result.data || []) as typeof playerEquipment;
+      equipError = result.error;
+    } catch (e) {
+      equipError = e as Error;
+    }
 
     if (equipError) {
       console.error('Error fetching equipment:', equipError);
     }
 
-    // Extract gear bonuses
-    const gearBonuses: GearBonusEntry[] = [];
-    if (equipment) {
-      for (const eq of equipment) {
-        const item = eq.equipment_items as any;
-        if (item?.skill_bonuses && typeof item.skill_bonuses === 'object') {
-          for (const [skillSlug, bonus] of Object.entries(item.skill_bonuses)) {
-            if (typeof bonus === 'number') {
-              gearBonuses.push({ skill_slug: skillSlug, bonus_multiplier: bonus });
+    let gearMultiplier = 1.0;
+
+    if (playerEquipment.length > 0) {
+      const equipmentIds = playerEquipment.map(pe => pe.equipment_id);
+      
+      // Get equipment items - use explicit typing
+      const { data: itemsData } = await supabase
+        .from('equipment_items')
+        .select('id, name, category, subcategory, rarity, stat_boosts')
+        .in('id', equipmentIds);
+
+      const items = (itemsData || []) as Array<{
+        id: string;
+        name: string;
+        category: string;
+        subcategory: string | null;
+        rarity: string | null;
+        stat_boosts: Record<string, number> | null;
+      }>;
+
+      if (items.length > 0) {
+        // Calculate gear bonus based on rarity and stat_boosts
+        const rarityBonuses: Record<string, number> = {
+          'common': 0.05,
+          'uncommon': 0.10,
+          'rare': 0.18,
+          'epic': 0.25,
+          'legendary': 0.35
+        };
+
+        let totalBonus = 0;
+        for (const item of items) {
+          const rarityBonus = rarityBonuses[item.rarity || 'common'] || 0.05;
+          
+          // Check if item matches role (category-based matching)
+          const categoryMatches = doesCategoryMatchRole(item.category, item.subcategory, role);
+          if (categoryMatches) {
+            totalBonus += rarityBonus;
+            
+            // Add performance stat boost if exists
+            if (item.stat_boosts && typeof item.stat_boosts === 'object') {
+              const perfBoost = item.stat_boosts['performance'] || 0;
+              totalBonus += perfBoost / 100; // Convert to multiplier
             }
           }
         }
+        
+        gearMultiplier = 1 + Math.min(totalBonus, 0.5); // Cap at 50% bonus
       }
     }
 
-    const gearMultiplier = calculateGearBonus(gearBonuses, relevantSkills);
     const effectiveLevel = Math.round(skillLevel * gearMultiplier);
     const gearBonus = effectiveLevel - skillLevel;
 
     return {
       skillLevel,
-      gearMultiplier,
+      gearMultiplier: Number(gearMultiplier.toFixed(2)),
       effectiveLevel: Math.min(100, effectiveLevel),
       breakdown: {
         baseSkill: skillLevel,
