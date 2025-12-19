@@ -130,6 +130,9 @@ const buildSkillTree = (configs: TieredSkillConfig[]) => {
   return { definitions, relationships };
 };
 
+// ============================================================================
+// SONGWRITING & PRODUCTION SKILLS
+// ============================================================================
 const songwritingProductionConfigs: TieredSkillConfig[] = [
   {
     prefix: "songwriting",
@@ -386,35 +389,17 @@ const songwritingProductionConfigs: TieredSkillConfig[] = [
   }
 ];
 
+// ============================================================================
+// GENRE SKILLS
+// ============================================================================
 const genreTracks = [
-  "Rock",
-  "Pop",
-  "Hip Hop",
-  "Jazz",
-  "Blues",
-  "Country",
-  "Reggae",
-  "Heavy Metal",
-  "Classical",
-  "Electronica",
-  "Latin",
-  "World Music",
-  "R&B",
-  "Punk Rock",
-  "Flamenco",
-  "African Music",
-  "Modern Rock",
-  "EDM",
-  "Trap",
-  "Drill",
-  "Lo-Fi Hip Hop",
-  "K-Pop/J-Pop",
-  "Afrobeats/Amapiano",
-  "Synthwave",
-  "Indie/Bedroom Pop",
-  "Hyperpop",
-  "Metalcore/Djent",
-  "Alt R&B/Neo-Soul"
+  "Rock", "Pop", "Hip Hop", "Jazz", "Blues", "Country", "Reggae", "Heavy Metal",
+  "Classical", "Electronica", "Latin", "World Music", "R&B", "Punk Rock", "Flamenco",
+  "African Music", "Modern Rock", "EDM", "Trap", "Drill", "Lo-Fi Hip Hop",
+  "K-Pop/J-Pop", "Afrobeats/Amapiano", "Synthwave", "Indie/Bedroom Pop", "Hyperpop",
+  "Metalcore/Djent", "Alt R&B/Neo-Soul", "Funk", "Soul", "Gospel", "Folk",
+  "Bluegrass", "Celtic", "Ska", "Grunge", "Progressive Rock", "Ambient",
+  "Industrial", "Dubstep", "House", "Techno", "Trance", "Drum and Bass"
 ];
 
 const genreConfigs: TieredSkillConfig[] = genreTracks.map(track => {
@@ -444,7 +429,2145 @@ const genreConfigs: TieredSkillConfig[] = genreTracks.map(track => {
   } satisfies TieredSkillConfig;
 });
 
-const instrumentsConfigs: TieredSkillConfig[] = [
+// ============================================================================
+// SPECIFIC STRING INSTRUMENTS
+// ============================================================================
+const stringInstrumentConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Acoustic Guitar",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic Acoustic Guitar",
+        description: "Master open chords, strumming patterns, and fingerpicking fundamentals.",
+        slug: "instruments_basic_acoustic_guitar"
+      },
+      Professional: {
+        name: "Professional Acoustic Guitar",
+        description: "Perform advanced fingerstyle, alternate tunings, and acoustic arrangements.",
+        slug: "instruments_professional_acoustic_guitar"
+      },
+      Mastery: {
+        name: "Acoustic Guitar Mastery",
+        description: "Deliver virtuosic acoustic performances with percussive techniques and complex harmonics.",
+        slug: "instruments_mastery_acoustic_guitar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Classical Guitar",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic Classical Guitar",
+        description: "Learn proper hand position, nylon string technique, and classical repertoire basics.",
+        slug: "instruments_basic_classical_guitar"
+      },
+      Professional: {
+        name: "Professional Classical Guitar",
+        description: "Master tremolo, arpeggios, and Spanish guitar techniques with refined tone.",
+        slug: "instruments_professional_classical_guitar"
+      },
+      Mastery: {
+        name: "Classical Guitar Mastery",
+        description: "Perform concert-level classical pieces with expressive dynamics and flawless technique.",
+        slug: "instruments_mastery_classical_guitar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Electric Guitar",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic Electric Guitar",
+        description: "Learn power chords, distortion tones, and electric guitar fundamentals.",
+        slug: "instruments_basic_electric_guitar"
+      },
+      Professional: {
+        name: "Professional Electric Guitar",
+        description: "Master bending, vibrato, effects pedals, and genre-specific techniques.",
+        slug: "instruments_professional_electric_guitar"
+      },
+      Mastery: {
+        name: "Electric Guitar Mastery",
+        description: "Deliver arena-ready solos with tapping, sweep picking, and signature tone crafting.",
+        slug: "instruments_mastery_electric_guitar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Bass Guitar",
+    icon: "bass",
+    tiers: {
+      Basic: {
+        name: "Basic Bass Guitar",
+        description: "Lock into the pocket with fingerstyle, pick technique, and groove fundamentals.",
+        slug: "instruments_basic_bass_guitar"
+      },
+      Professional: {
+        name: "Professional Bass Guitar",
+        description: "Develop slap and pop, walking bass lines, and tight ensemble precision.",
+        slug: "instruments_professional_bass_guitar"
+      },
+      Mastery: {
+        name: "Bass Guitar Mastery",
+        description: "Command the low end with virtuosic technique, fills, and harmonic sophistication.",
+        slug: "instruments_mastery_bass_guitar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Upright Bass",
+    icon: "bass",
+    tiers: {
+      Basic: {
+        name: "Basic Upright Bass",
+        description: "Learn proper posture, intonation, and pizzicato technique on double bass.",
+        slug: "instruments_basic_upright_bass"
+      },
+      Professional: {
+        name: "Professional Upright Bass",
+        description: "Master arco bowing, jazz walking lines, and orchestral phrasing.",
+        slug: "instruments_professional_upright_bass"
+      },
+      Mastery: {
+        name: "Upright Bass Mastery",
+        description: "Perform virtuosic solos and lead sections with impeccable tone and timing.",
+        slug: "instruments_mastery_upright_bass"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Violin",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Violin",
+        description: "Develop bow control, intonation, and first position fundamentals.",
+        slug: "instruments_basic_violin"
+      },
+      Professional: {
+        name: "Professional Violin",
+        description: "Master shifting, vibrato, and advanced bowing techniques across styles.",
+        slug: "instruments_professional_violin"
+      },
+      Mastery: {
+        name: "Violin Mastery",
+        description: "Deliver concerto-level performances with expressive phrasing and virtuosic command.",
+        slug: "instruments_mastery_violin"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Viola",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Viola",
+        description: "Learn alto clef reading, proper bow weight, and viola-specific technique.",
+        slug: "instruments_basic_viola"
+      },
+      Professional: {
+        name: "Professional Viola",
+        description: "Master warm mid-register tone, chamber music, and orchestral phrasing.",
+        slug: "instruments_professional_viola"
+      },
+      Mastery: {
+        name: "Viola Mastery",
+        description: "Lead viola sections with rich tone, expressive solos, and ensemble leadership.",
+        slug: "instruments_mastery_viola"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Cello",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Cello",
+        description: "Develop proper posture, bow technique, and bass clef reading.",
+        slug: "instruments_basic_cello"
+      },
+      Professional: {
+        name: "Professional Cello",
+        description: "Master expressive vibrato, thumb position, and solo repertoire.",
+        slug: "instruments_professional_cello"
+      },
+      Mastery: {
+        name: "Cello Mastery",
+        description: "Deliver emotionally powerful performances with virtuosic technique and rich tone.",
+        slug: "instruments_mastery_cello"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Banjo",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Banjo",
+        description: "Learn clawhammer and three-finger picking on 5-string banjo.",
+        slug: "instruments_basic_banjo"
+      },
+      Professional: {
+        name: "Professional Banjo",
+        description: "Master Scruggs-style rolls, melodic playing, and bluegrass repertoire.",
+        slug: "instruments_professional_banjo"
+      },
+      Mastery: {
+        name: "Banjo Mastery",
+        description: "Deliver blazing bluegrass solos and innovative cross-genre performances.",
+        slug: "instruments_mastery_banjo"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Mandolin",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Mandolin",
+        description: "Learn chords, tremolo technique, and basic melody playing.",
+        slug: "instruments_basic_mandolin"
+      },
+      Professional: {
+        name: "Professional Mandolin",
+        description: "Master bluegrass leads, Celtic ornamentation, and ensemble playing.",
+        slug: "instruments_professional_mandolin"
+      },
+      Mastery: {
+        name: "Mandolin Mastery",
+        description: "Perform virtuosic solos with speed, accuracy, and stylistic authenticity.",
+        slug: "instruments_mastery_mandolin"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Ukulele",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Ukulele",
+        description: "Master chord shapes, strumming patterns, and Hawaiian style basics.",
+        slug: "instruments_basic_ukulele"
+      },
+      Professional: {
+        name: "Professional Ukulele",
+        description: "Develop fingerstyle arrangements, campanella technique, and advanced repertoire.",
+        slug: "instruments_professional_ukulele"
+      },
+      Mastery: {
+        name: "Ukulele Mastery",
+        description: "Deliver show-stopping performances with virtuosic technique across genres.",
+        slug: "instruments_mastery_ukulele"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Harp",
+    icon: "strings",
+    tiers: {
+      Basic: {
+        name: "Basic Harp",
+        description: "Learn proper hand position, pedal operation, and glissando technique.",
+        slug: "instruments_basic_harp"
+      },
+      Professional: {
+        name: "Professional Harp",
+        description: "Master complex pedal changes, harmonics, and orchestral repertoire.",
+        slug: "instruments_professional_harp"
+      },
+      Mastery: {
+        name: "Harp Mastery",
+        description: "Perform concerto-level pieces with ethereal tone and virtuosic command.",
+        slug: "instruments_mastery_harp"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "12-String Guitar",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic 12-String Guitar",
+        description: "Learn to handle the wider neck and doubled strings for rich chord tones.",
+        slug: "instruments_basic_12_string_guitar"
+      },
+      Professional: {
+        name: "Professional 12-String Guitar",
+        description: "Master the jangly textures, folk accompaniment, and unique voicings.",
+        slug: "instruments_professional_12_string_guitar"
+      },
+      Mastery: {
+        name: "12-String Guitar Mastery",
+        description: "Create shimmering, layered performances with impeccable intonation and control.",
+        slug: "instruments_mastery_12_string_guitar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Pedal Steel Guitar",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic Pedal Steel Guitar",
+        description: "Learn bar technique, pedal/knee lever coordination, and country basics.",
+        slug: "instruments_basic_pedal_steel"
+      },
+      Professional: {
+        name: "Professional Pedal Steel",
+        description: "Master crying bends, complex chord voicings, and session-ready playing.",
+        slug: "instruments_professional_pedal_steel"
+      },
+      Mastery: {
+        name: "Pedal Steel Mastery",
+        description: "Deliver iconic pedal steel solos with expressive bends and unique textures.",
+        slug: "instruments_mastery_pedal_steel"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Lap Steel Guitar",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic Lap Steel Guitar",
+        description: "Learn bar slide technique and open tuning fundamentals.",
+        slug: "instruments_basic_lap_steel"
+      },
+      Professional: {
+        name: "Professional Lap Steel",
+        description: "Master Hawaiian slack-key, blues slide, and volume swells.",
+        slug: "instruments_professional_lap_steel"
+      },
+      Mastery: {
+        name: "Lap Steel Mastery",
+        description: "Create haunting slide performances with perfect intonation and expression.",
+        slug: "instruments_mastery_lap_steel"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Dobro/Resonator",
+    icon: "guitar",
+    tiers: {
+      Basic: {
+        name: "Basic Dobro/Resonator",
+        description: "Learn slide technique and bluegrass resonator basics.",
+        slug: "instruments_basic_dobro"
+      },
+      Professional: {
+        name: "Professional Dobro",
+        description: "Master intricate bluegrass licks and hybrid picking on resonator.",
+        slug: "instruments_professional_dobro"
+      },
+      Mastery: {
+        name: "Dobro Mastery",
+        description: "Deliver blazing resonator solos with precision and authentic tone.",
+        slug: "instruments_mastery_dobro"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// KEYBOARD & PIANO INSTRUMENTS
+// ============================================================================
+const keyboardConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Classical Piano",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Classical Piano",
+        description: "Develop proper technique, sight-reading, and classical repertoire foundations.",
+        slug: "instruments_basic_classical_piano"
+      },
+      Professional: {
+        name: "Professional Classical Piano",
+        description: "Master advanced repertoire, pedaling, and expressive dynamics.",
+        slug: "instruments_professional_classical_piano"
+      },
+      Mastery: {
+        name: "Classical Piano Mastery",
+        description: "Perform concert-level pieces with technical brilliance and artistic depth.",
+        slug: "instruments_mastery_classical_piano"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Jazz Piano",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Jazz Piano",
+        description: "Learn shell voicings, swing comping, and ii-V-I progressions.",
+        slug: "instruments_basic_jazz_piano"
+      },
+      Professional: {
+        name: "Professional Jazz Piano",
+        description: "Improvise with extended harmony, stride variations, and reharmonization.",
+        slug: "instruments_professional_jazz_piano"
+      },
+      Mastery: {
+        name: "Jazz Piano Mastery",
+        description: "Command trio settings with modal improvisation and harmonic storytelling.",
+        slug: "instruments_mastery_jazz_piano"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Hammond Organ",
+    icon: "organ",
+    tiers: {
+      Basic: {
+        name: "Basic Hammond Organ",
+        description: "Learn drawbar registration, percussion switch, and basic gospel/jazz comping.",
+        slug: "instruments_basic_hammond_organ"
+      },
+      Professional: {
+        name: "Professional Hammond Organ",
+        description: "Master Leslie speaker control, jazz voicings, and registration changes.",
+        slug: "instruments_professional_hammond_organ"
+      },
+      Mastery: {
+        name: "Hammond Organ Mastery",
+        description: "Deliver soulful performances with signature tone and improvisational fire.",
+        slug: "instruments_mastery_hammond_organ"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Pipe Organ",
+    icon: "organ",
+    tiers: {
+      Basic: {
+        name: "Basic Pipe Organ",
+        description: "Learn manual technique, pedalboard, and registration fundamentals.",
+        slug: "instruments_basic_pipe_organ"
+      },
+      Professional: {
+        name: "Professional Pipe Organ",
+        description: "Master Bach repertoire, complex registrations, and liturgical playing.",
+        slug: "instruments_professional_pipe_organ"
+      },
+      Mastery: {
+        name: "Pipe Organ Mastery",
+        description: "Command cathedral instruments with virtuosic technique and profound musicality.",
+        slug: "instruments_mastery_pipe_organ"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Rhodes Piano",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Rhodes Piano",
+        description: "Learn the distinctive bell-like tone and dynamic touch of electric piano.",
+        slug: "instruments_basic_rhodes"
+      },
+      Professional: {
+        name: "Professional Rhodes Piano",
+        description: "Master neo-soul voicings, tremolo control, and warm tonal shaping.",
+        slug: "instruments_professional_rhodes"
+      },
+      Mastery: {
+        name: "Rhodes Piano Mastery",
+        description: "Deliver signature electric piano performances with soulful expression.",
+        slug: "instruments_mastery_rhodes"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Wurlitzer",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Wurlitzer",
+        description: "Explore the reedy tone and unique character of the Wurlitzer electric piano.",
+        slug: "instruments_basic_wurlitzer"
+      },
+      Professional: {
+        name: "Professional Wurlitzer",
+        description: "Master the biting edge and vintage textures in rock and pop contexts.",
+        slug: "instruments_professional_wurlitzer"
+      },
+      Mastery: {
+        name: "Wurlitzer Mastery",
+        description: "Create iconic Wurlitzer tones with perfect touch sensitivity and expression.",
+        slug: "instruments_mastery_wurlitzer"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Accordion",
+    icon: "accordion",
+    tiers: {
+      Basic: {
+        name: "Basic Accordion",
+        description: "Learn bellows control, bass buttons, and fundamental folk patterns.",
+        slug: "instruments_basic_accordion"
+      },
+      Professional: {
+        name: "Professional Accordion",
+        description: "Master button accordion, register changes, and cross-cultural styles.",
+        slug: "instruments_professional_accordion"
+      },
+      Mastery: {
+        name: "Accordion Mastery",
+        description: "Perform virtuosic accordion across zydeco, tango, and classical styles.",
+        slug: "instruments_mastery_accordion"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Harpsichord",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Harpsichord",
+        description: "Learn baroque articulation, registration, and period technique.",
+        slug: "instruments_basic_harpsichord"
+      },
+      Professional: {
+        name: "Professional Harpsichord",
+        description: "Master ornamentation, continuo playing, and baroque repertoire.",
+        slug: "instruments_professional_harpsichord"
+      },
+      Mastery: {
+        name: "Harpsichord Mastery",
+        description: "Deliver historically informed performances with virtuosic command.",
+        slug: "instruments_mastery_harpsichord"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Clavinet",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Clavinet",
+        description: "Learn the funky, percussive attack and basic playing techniques.",
+        slug: "instruments_basic_clavinet"
+      },
+      Professional: {
+        name: "Professional Clavinet",
+        description: "Master wah pedal integration, muting techniques, and funk grooves.",
+        slug: "instruments_professional_clavinet"
+      },
+      Mastery: {
+        name: "Clavinet Mastery",
+        description: "Deliver iconic Stevie Wonder-style performances with precision and groove.",
+        slug: "instruments_mastery_clavinet"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Mellotron",
+    icon: "synth",
+    tiers: {
+      Basic: {
+        name: "Basic Mellotron",
+        description: "Learn the unique tape-based sound and its role in progressive rock.",
+        slug: "instruments_basic_mellotron"
+      },
+      Professional: {
+        name: "Professional Mellotron",
+        description: "Master tape section selection, expression, and period-appropriate playing.",
+        slug: "instruments_professional_mellotron"
+      },
+      Mastery: {
+        name: "Mellotron Mastery",
+        description: "Create ethereal, otherworldly textures with expert Mellotron control.",
+        slug: "instruments_mastery_mellotron"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Celesta",
+    icon: "piano",
+    tiers: {
+      Basic: {
+        name: "Basic Celesta",
+        description: "Learn the delicate touch and bell-like tone of the celesta.",
+        slug: "instruments_basic_celesta"
+      },
+      Professional: {
+        name: "Professional Celesta",
+        description: "Master orchestral passages and the instrument's unique tonal palette.",
+        slug: "instruments_professional_celesta"
+      },
+      Mastery: {
+        name: "Celesta Mastery",
+        description: "Deliver magical, shimmering performances in orchestral and solo contexts.",
+        slug: "instruments_mastery_celesta"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// PERCUSSION & DRUMS
+// ============================================================================
+const percussionConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Rock Drum Kit",
+    icon: "drums",
+    tiers: {
+      Basic: {
+        name: "Basic Rock Drums",
+        description: "Learn standard grooves, fills, and rock drumming fundamentals.",
+        slug: "instruments_basic_rock_drums"
+      },
+      Professional: {
+        name: "Professional Rock Drums",
+        description: "Master power fills, dynamic control, and stadium-ready drumming.",
+        slug: "instruments_professional_rock_drums"
+      },
+      Mastery: {
+        name: "Rock Drums Mastery",
+        description: "Deliver arena-shaking performances with explosive technique and feel.",
+        slug: "instruments_mastery_rock_drums"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Jazz Drums",
+    icon: "drums",
+    tiers: {
+      Basic: {
+        name: "Basic Jazz Drums",
+        description: "Learn brush technique, swing patterns, and jazz time-keeping.",
+        slug: "instruments_basic_jazz_drums"
+      },
+      Professional: {
+        name: "Professional Jazz Drums",
+        description: "Master bebop coordination, trading fours, and conversational playing.",
+        slug: "instruments_professional_jazz_drums"
+      },
+      Mastery: {
+        name: "Jazz Drums Mastery",
+        description: "Command the drum chair with subtle dynamics and improvisational brilliance.",
+        slug: "instruments_mastery_jazz_drums"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Latin Percussion",
+    icon: "percussion",
+    tiers: {
+      Basic: {
+        name: "Basic Latin Percussion",
+        description: "Learn conga tones, bongo patterns, and timbale fundamentals.",
+        slug: "instruments_basic_latin_percussion"
+      },
+      Professional: {
+        name: "Professional Latin Percussion",
+        description: "Master son clave, guaguancó, and authentic Afro-Cuban rhythms.",
+        slug: "instruments_professional_latin_percussion"
+      },
+      Mastery: {
+        name: "Latin Percussion Mastery",
+        description: "Lead percussion sections with fire, authenticity, and improvisational flair.",
+        slug: "instruments_mastery_latin_percussion"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "African Drumming",
+    icon: "percussion",
+    tiers: {
+      Basic: {
+        name: "Basic African Drumming",
+        description: "Learn djembe tones, traditional rhythms, and call-and-response.",
+        slug: "instruments_basic_african_drums"
+      },
+      Professional: {
+        name: "Professional African Drumming",
+        description: "Master dundun ensemble, talking drum, and West African polyrhythms.",
+        slug: "instruments_professional_african_drums"
+      },
+      Mastery: {
+        name: "African Drumming Mastery",
+        description: "Lead drum circles with authentic technique and cultural understanding.",
+        slug: "instruments_mastery_african_drums"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Tabla",
+    icon: "percussion",
+    tiers: {
+      Basic: {
+        name: "Basic Tabla",
+        description: "Learn basic bols, hand positions, and simple compositions.",
+        slug: "instruments_basic_tabla"
+      },
+      Professional: {
+        name: "Professional Tabla",
+        description: "Master kaidas, relas, and accompaniment in classical contexts.",
+        slug: "instruments_professional_tabla"
+      },
+      Mastery: {
+        name: "Tabla Mastery",
+        description: "Perform virtuosic tabla with gharana-specific technique and improvisation.",
+        slug: "instruments_mastery_tabla"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Marimba",
+    icon: "mallet",
+    tiers: {
+      Basic: {
+        name: "Basic Marimba",
+        description: "Learn two and four-mallet technique with proper stroke and tone.",
+        slug: "instruments_basic_marimba"
+      },
+      Professional: {
+        name: "Professional Marimba",
+        description: "Master Stevens grip, rapid passages, and solo repertoire.",
+        slug: "instruments_professional_marimba"
+      },
+      Mastery: {
+        name: "Marimba Mastery",
+        description: "Deliver virtuosic performances with independence and musical expression.",
+        slug: "instruments_mastery_marimba"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Vibraphone",
+    icon: "mallet",
+    tiers: {
+      Basic: {
+        name: "Basic Vibraphone",
+        description: "Learn dampening, motor control, and jazz vibraphone basics.",
+        slug: "instruments_basic_vibraphone"
+      },
+      Professional: {
+        name: "Professional Vibraphone",
+        description: "Master four-mallet jazz comping and improvisation techniques.",
+        slug: "instruments_professional_vibraphone"
+      },
+      Mastery: {
+        name: "Vibraphone Mastery",
+        description: "Create shimmering jazz performances with harmonic sophistication.",
+        slug: "instruments_mastery_vibraphone"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Timpani",
+    icon: "mallet",
+    tiers: {
+      Basic: {
+        name: "Basic Timpani",
+        description: "Learn tuning, proper stroke, and basic orchestral excerpts.",
+        slug: "instruments_basic_timpani"
+      },
+      Professional: {
+        name: "Professional Timpani",
+        description: "Master rapid tuning changes, rolls, and major orchestral repertoire.",
+        slug: "instruments_professional_timpani"
+      },
+      Mastery: {
+        name: "Timpani Mastery",
+        description: "Command the timpani section with precision and musical authority.",
+        slug: "instruments_mastery_timpani"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Snare Drum",
+    icon: "drums",
+    tiers: {
+      Basic: {
+        name: "Basic Snare Drum",
+        description: "Learn rudiments, matched grip, and basic snare technique.",
+        slug: "instruments_basic_snare"
+      },
+      Professional: {
+        name: "Professional Snare Drum",
+        description: "Master rudimental solos, orchestral excerpts, and corps-style drumming.",
+        slug: "instruments_professional_snare"
+      },
+      Mastery: {
+        name: "Snare Drum Mastery",
+        description: "Deliver competition-ready performances with blazing technique.",
+        slug: "instruments_mastery_snare"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Steelpan",
+    icon: "percussion",
+    tiers: {
+      Basic: {
+        name: "Basic Steelpan",
+        description: "Learn note layout, mallet technique, and Caribbean rhythms.",
+        slug: "instruments_basic_steelpan"
+      },
+      Professional: {
+        name: "Professional Steelpan",
+        description: "Master chromatic playing, arranging, and steel band ensemble.",
+        slug: "instruments_professional_steelpan"
+      },
+      Mastery: {
+        name: "Steelpan Mastery",
+        description: "Lead panorama performances with virtuosic technique and expression.",
+        slug: "instruments_mastery_steelpan"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Taiko",
+    icon: "drums",
+    tiers: {
+      Basic: {
+        name: "Basic Taiko",
+        description: "Learn proper stance, striking technique, and basic patterns.",
+        slug: "instruments_basic_taiko"
+      },
+      Professional: {
+        name: "Professional Taiko",
+        description: "Master ensemble playing, choreography, and various drum types.",
+        slug: "instruments_professional_taiko"
+      },
+      Mastery: {
+        name: "Taiko Mastery",
+        description: "Lead powerful taiko performances with athleticism and showmanship.",
+        slug: "instruments_mastery_taiko"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Cajon",
+    icon: "percussion",
+    tiers: {
+      Basic: {
+        name: "Basic Cajon",
+        description: "Learn bass and slap tones, flamenco patterns, and pop grooves.",
+        slug: "instruments_basic_cajon"
+      },
+      Professional: {
+        name: "Professional Cajon",
+        description: "Master brush techniques, heel-toe, and acoustic band integration.",
+        slug: "instruments_professional_cajon"
+      },
+      Mastery: {
+        name: "Cajon Mastery",
+        description: "Deliver dynamic performances as a complete rhythm section.",
+        slug: "instruments_mastery_cajon"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Xylophone",
+    icon: "mallet",
+    tiers: {
+      Basic: {
+        name: "Basic Xylophone",
+        description: "Learn mallet grip, keyboard geography, and orchestral basics.",
+        slug: "instruments_basic_xylophone"
+      },
+      Professional: {
+        name: "Professional Xylophone",
+        description: "Master ragtime, orchestral excerpts, and rapid passage work.",
+        slug: "instruments_professional_xylophone"
+      },
+      Mastery: {
+        name: "Xylophone Mastery",
+        description: "Perform virtuosic solos with crystal clarity and precision.",
+        slug: "instruments_mastery_xylophone"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Glockenspiel",
+    icon: "mallet",
+    tiers: {
+      Basic: {
+        name: "Basic Glockenspiel",
+        description: "Learn delicate touch and bright tone production on orchestral bells.",
+        slug: "instruments_basic_glockenspiel"
+      },
+      Professional: {
+        name: "Professional Glockenspiel",
+        description: "Master orchestral excerpts and ensemble balancing techniques.",
+        slug: "instruments_professional_glockenspiel"
+      },
+      Mastery: {
+        name: "Glockenspiel Mastery",
+        description: "Deliver sparkling performances with perfect intonation and timing.",
+        slug: "instruments_mastery_glockenspiel"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Frame Drum",
+    icon: "percussion",
+    tiers: {
+      Basic: {
+        name: "Basic Frame Drum",
+        description: "Learn lap technique, finger rolls, and world music patterns.",
+        slug: "instruments_basic_frame_drum"
+      },
+      Professional: {
+        name: "Professional Frame Drum",
+        description: "Master tar, bodhran, and Middle Eastern frame drum techniques.",
+        slug: "instruments_professional_frame_drum"
+      },
+      Mastery: {
+        name: "Frame Drum Mastery",
+        description: "Create mesmerizing performances with advanced ornamentation and dynamics.",
+        slug: "instruments_mastery_frame_drum"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// WIND INSTRUMENTS
+// ============================================================================
+const windConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Flute",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Flute",
+        description: "Develop embouchure, breath support, and tone production fundamentals.",
+        slug: "instruments_basic_flute"
+      },
+      Professional: {
+        name: "Professional Flute",
+        description: "Master vibrato, extended range, and classical/jazz repertoire.",
+        slug: "instruments_professional_flute"
+      },
+      Mastery: {
+        name: "Flute Mastery",
+        description: "Deliver virtuosic performances with extended techniques and expression.",
+        slug: "instruments_mastery_flute"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Clarinet",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Clarinet",
+        description: "Learn embouchure, crossing the break, and tonal foundations.",
+        slug: "instruments_basic_clarinet"
+      },
+      Professional: {
+        name: "Professional Clarinet",
+        description: "Master altissimo, klezmer, and classical/jazz techniques.",
+        slug: "instruments_professional_clarinet"
+      },
+      Mastery: {
+        name: "Clarinet Mastery",
+        description: "Perform with liquid tone and virtuosic command across all registers.",
+        slug: "instruments_mastery_clarinet"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Oboe",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Oboe",
+        description: "Learn reed making basics, embouchure, and orchestral fundamentals.",
+        slug: "instruments_basic_oboe"
+      },
+      Professional: {
+        name: "Professional Oboe",
+        description: "Master major excerpts, English horn, and chamber music.",
+        slug: "instruments_professional_oboe"
+      },
+      Mastery: {
+        name: "Oboe Mastery",
+        description: "Lead orchestral wind sections with impeccable tone and intonation.",
+        slug: "instruments_mastery_oboe"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Bassoon",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Bassoon",
+        description: "Learn reed selection, breath support, and bass clef reading.",
+        slug: "instruments_basic_bassoon"
+      },
+      Professional: {
+        name: "Professional Bassoon",
+        description: "Master tenor clef, major excerpts, and chamber repertoire.",
+        slug: "instruments_professional_bassoon"
+      },
+      Mastery: {
+        name: "Bassoon Mastery",
+        description: "Deliver virtuosic performances with character and precision.",
+        slug: "instruments_mastery_bassoon"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Alto Saxophone",
+    icon: "saxophone",
+    tiers: {
+      Basic: {
+        name: "Basic Alto Saxophone",
+        description: "Learn embouchure, tone production, and fundamental jazz voicings.",
+        slug: "instruments_basic_alto_sax"
+      },
+      Professional: {
+        name: "Professional Alto Saxophone",
+        description: "Master bebop vocabulary, altissimo, and section playing.",
+        slug: "instruments_professional_alto_sax"
+      },
+      Mastery: {
+        name: "Alto Saxophone Mastery",
+        description: "Deliver virtuosic jazz and classical performances with signature voice.",
+        slug: "instruments_mastery_alto_sax"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Tenor Saxophone",
+    icon: "saxophone",
+    tiers: {
+      Basic: {
+        name: "Basic Tenor Saxophone",
+        description: "Develop the warm, rich tenor tone and jazz fundamentals.",
+        slug: "instruments_basic_tenor_sax"
+      },
+      Professional: {
+        name: "Professional Tenor Saxophone",
+        description: "Master Coltrane changes, subtone, and soul saxophone techniques.",
+        slug: "instruments_professional_tenor_sax"
+      },
+      Mastery: {
+        name: "Tenor Saxophone Mastery",
+        description: "Create iconic tenor solos with personal voice and fire.",
+        slug: "instruments_mastery_tenor_sax"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Soprano Saxophone",
+    icon: "saxophone",
+    tiers: {
+      Basic: {
+        name: "Basic Soprano Saxophone",
+        description: "Learn to control intonation and develop the unique soprano voice.",
+        slug: "instruments_basic_soprano_sax"
+      },
+      Professional: {
+        name: "Professional Soprano Saxophone",
+        description: "Master the challenging intonation and expressive upper register.",
+        slug: "instruments_professional_soprano_sax"
+      },
+      Mastery: {
+        name: "Soprano Saxophone Mastery",
+        description: "Deliver haunting soprano performances with perfect pitch and expression.",
+        slug: "instruments_mastery_soprano_sax"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Baritone Saxophone",
+    icon: "saxophone",
+    tiers: {
+      Basic: {
+        name: "Basic Baritone Saxophone",
+        description: "Learn to handle the large instrument with solid fundamentals.",
+        slug: "instruments_basic_bari_sax"
+      },
+      Professional: {
+        name: "Professional Baritone Saxophone",
+        description: "Master anchoring big band sections and solo playing.",
+        slug: "instruments_professional_bari_sax"
+      },
+      Mastery: {
+        name: "Baritone Saxophone Mastery",
+        description: "Deliver thundering baritone solos with agility and power.",
+        slug: "instruments_mastery_bari_sax"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Recorder",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Recorder",
+        description: "Learn proper baroque articulation and early music technique.",
+        slug: "instruments_basic_recorder"
+      },
+      Professional: {
+        name: "Professional Recorder",
+        description: "Master historical performance practice and virtuoso repertoire.",
+        slug: "instruments_professional_recorder"
+      },
+      Mastery: {
+        name: "Recorder Mastery",
+        description: "Perform at concert level with historically informed brilliance.",
+        slug: "instruments_mastery_recorder"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Harmonica",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Harmonica",
+        description: "Learn single notes, bending, and blues harp fundamentals.",
+        slug: "instruments_basic_harmonica"
+      },
+      Professional: {
+        name: "Professional Harmonica",
+        description: "Master chromatic harmonica, overblows, and advanced blues.",
+        slug: "instruments_professional_harmonica"
+      },
+      Mastery: {
+        name: "Harmonica Mastery",
+        description: "Deliver soul-stirring blues and virtuosic chromatic performances.",
+        slug: "instruments_mastery_harmonica"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Pan Flute",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Pan Flute",
+        description: "Learn breath control and Andean pan flute fundamentals.",
+        slug: "instruments_basic_pan_flute"
+      },
+      Professional: {
+        name: "Professional Pan Flute",
+        description: "Master circular breathing and world music repertoire.",
+        slug: "instruments_professional_pan_flute"
+      },
+      Mastery: {
+        name: "Pan Flute Mastery",
+        description: "Create evocative performances with authentic technique and expression.",
+        slug: "instruments_mastery_pan_flute"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Bagpipes",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Bagpipes",
+        description: "Learn bag control, chanter fingering, and traditional tunes.",
+        slug: "instruments_basic_bagpipes"
+      },
+      Professional: {
+        name: "Professional Bagpipes",
+        description: "Master piobaireachd, competition standards, and drone tuning.",
+        slug: "instruments_professional_bagpipes"
+      },
+      Mastery: {
+        name: "Bagpipes Mastery",
+        description: "Deliver championship-level piping with flawless technique.",
+        slug: "instruments_mastery_bagpipes"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Didgeridoo",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Didgeridoo",
+        description: "Learn circular breathing and fundamental drone technique.",
+        slug: "instruments_basic_didgeridoo"
+      },
+      Professional: {
+        name: "Professional Didgeridoo",
+        description: "Master rhythmic patterns, overtones, and animal sounds.",
+        slug: "instruments_professional_didgeridoo"
+      },
+      Mastery: {
+        name: "Didgeridoo Mastery",
+        description: "Create hypnotic performances with expert circular breathing and rhythm.",
+        slug: "instruments_mastery_didgeridoo"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Piccolo",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Piccolo",
+        description: "Learn to control the high register and piccolo-specific embouchure.",
+        slug: "instruments_basic_piccolo"
+      },
+      Professional: {
+        name: "Professional Piccolo",
+        description: "Master major orchestral excerpts and marching band techniques.",
+        slug: "instruments_professional_piccolo"
+      },
+      Mastery: {
+        name: "Piccolo Mastery",
+        description: "Deliver soaring piccolo passages with perfect intonation and brilliance.",
+        slug: "instruments_mastery_piccolo"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// BRASS INSTRUMENTS
+// ============================================================================
+const brassConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Trumpet",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Trumpet",
+        description: "Develop embouchure, breath support, and fundamental range.",
+        slug: "instruments_basic_trumpet"
+      },
+      Professional: {
+        name: "Professional Trumpet",
+        description: "Master upper register, jazz improvisation, and lead playing.",
+        slug: "instruments_professional_trumpet"
+      },
+      Mastery: {
+        name: "Trumpet Mastery",
+        description: "Deliver screaming lead or virtuosic classical with signature sound.",
+        slug: "instruments_mastery_trumpet"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Trombone",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Trombone",
+        description: "Learn slide positions, embouchure, and legato technique.",
+        slug: "instruments_basic_trombone"
+      },
+      Professional: {
+        name: "Professional Trombone",
+        description: "Master jazz improvisation, trigger use, and section playing.",
+        slug: "instruments_professional_trombone"
+      },
+      Mastery: {
+        name: "Trombone Mastery",
+        description: "Deliver virtuosic solos and lead section work with power and finesse.",
+        slug: "instruments_mastery_trombone"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "French Horn",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic French Horn",
+        description: "Learn hand position, embouchure, and fundamental technique.",
+        slug: "instruments_basic_french_horn"
+      },
+      Professional: {
+        name: "Professional French Horn",
+        description: "Master stopped horn, transposition, and major excerpts.",
+        slug: "instruments_professional_french_horn"
+      },
+      Mastery: {
+        name: "French Horn Mastery",
+        description: "Command the horn with warm tone, accurate attacks, and musical depth.",
+        slug: "instruments_mastery_french_horn"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Tuba",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Tuba",
+        description: "Learn breath support, embouchure, and low brass fundamentals.",
+        slug: "instruments_basic_tuba"
+      },
+      Professional: {
+        name: "Professional Tuba",
+        description: "Master brass band, orchestral, and solo repertoire.",
+        slug: "instruments_professional_tuba"
+      },
+      Mastery: {
+        name: "Tuba Mastery",
+        description: "Deliver powerful foundation and virtuosic solos with agility.",
+        slug: "instruments_mastery_tuba"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Euphonium",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Euphonium",
+        description: "Develop the warm, lyrical tone and brass band fundamentals.",
+        slug: "instruments_basic_euphonium"
+      },
+      Professional: {
+        name: "Professional Euphonium",
+        description: "Master British brass band style and solo repertoire.",
+        slug: "instruments_professional_euphonium"
+      },
+      Mastery: {
+        name: "Euphonium Mastery",
+        description: "Create singing, virtuosic performances with rich golden tone.",
+        slug: "instruments_mastery_euphonium"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Flugelhorn",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Flugelhorn",
+        description: "Learn the mellow tone and jazz ballad playing fundamentals.",
+        slug: "instruments_basic_flugelhorn"
+      },
+      Professional: {
+        name: "Professional Flugelhorn",
+        description: "Master warm jazz phrasing and lyrical solo playing.",
+        slug: "instruments_professional_flugelhorn"
+      },
+      Mastery: {
+        name: "Flugelhorn Mastery",
+        description: "Deliver intimate, expressive jazz performances with signature warmth.",
+        slug: "instruments_mastery_flugelhorn"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Cornet",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Cornet",
+        description: "Learn the conical bore tone and brass band traditions.",
+        slug: "instruments_basic_cornet"
+      },
+      Professional: {
+        name: "Professional Cornet",
+        description: "Master British brass band principal and solo playing.",
+        slug: "instruments_professional_cornet"
+      },
+      Mastery: {
+        name: "Cornet Mastery",
+        description: "Lead brass bands with agile, sweet-toned virtuosity.",
+        slug: "instruments_mastery_cornet"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Sousaphone",
+    icon: "brass",
+    tiers: {
+      Basic: {
+        name: "Basic Sousaphone",
+        description: "Learn marching technique and the massive wrap-around instrument.",
+        slug: "instruments_basic_sousaphone"
+      },
+      Professional: {
+        name: "Professional Sousaphone",
+        description: "Master New Orleans second line and marching band styles.",
+        slug: "instruments_professional_sousaphone"
+      },
+      Mastery: {
+        name: "Sousaphone Mastery",
+        description: "Deliver powerful street performances with infectious groove.",
+        slug: "instruments_mastery_sousaphone"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// ELECTRONIC & MODERN INSTRUMENTS
+// ============================================================================
+const electronicConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Turntablism",
+    icon: "dj",
+    tiers: {
+      Basic: {
+        name: "Basic Turntablism",
+        description: "Learn scratching techniques, cueing, and basic beat juggling.",
+        slug: "instruments_basic_turntablism"
+      },
+      Professional: {
+        name: "Professional Turntablism",
+        description: "Master chirps, crabs, flares, and battle-ready routines.",
+        slug: "instruments_professional_turntablism"
+      },
+      Mastery: {
+        name: "Turntablism Mastery",
+        description: "Deliver championship-level scratch performances and routines.",
+        slug: "instruments_mastery_turntablism"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Ableton Push/Launchpad",
+    icon: "controller",
+    tiers: {
+      Basic: {
+        name: "Basic Push/Launchpad",
+        description: "Learn clip launching, finger drumming, and grid navigation.",
+        slug: "instruments_basic_push_launchpad"
+      },
+      Professional: {
+        name: "Professional Push/Launchpad",
+        description: "Master melodic playing, session view performance, and custom mappings.",
+        slug: "instruments_professional_push_launchpad"
+      },
+      Mastery: {
+        name: "Push/Launchpad Mastery",
+        description: "Create mesmerizing grid performances with virtuosic finger work.",
+        slug: "instruments_mastery_push_launchpad"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Eurorack Modular",
+    icon: "synth",
+    tiers: {
+      Basic: {
+        name: "Basic Eurorack Modular",
+        description: "Learn oscillators, filters, and basic patching concepts.",
+        slug: "instruments_basic_eurorack"
+      },
+      Professional: {
+        name: "Professional Eurorack Modular",
+        description: "Master complex patches, generative systems, and live repatching.",
+        slug: "instruments_professional_eurorack"
+      },
+      Mastery: {
+        name: "Eurorack Mastery",
+        description: "Design innovative modular systems and deliver hypnotic performances.",
+        slug: "instruments_mastery_eurorack"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Theremin",
+    icon: "synth",
+    tiers: {
+      Basic: {
+        name: "Basic Theremin",
+        description: "Learn hand position, pitch/volume control, and vibrato.",
+        slug: "instruments_basic_theremin"
+      },
+      Professional: {
+        name: "Professional Theremin",
+        description: "Master classical repertoire and precise intonation control.",
+        slug: "instruments_professional_theremin"
+      },
+      Mastery: {
+        name: "Theremin Mastery",
+        description: "Deliver ethereal, pitch-perfect theremin performances.",
+        slug: "instruments_mastery_theremin"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "EWI (Electronic Wind)",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic EWI",
+        description: "Learn breath controller basics and synth sound triggering.",
+        slug: "instruments_basic_ewi"
+      },
+      Professional: {
+        name: "Professional EWI",
+        description: "Master bite pressure, pitch bend, and expressive synthesis.",
+        slug: "instruments_professional_ewi"
+      },
+      Mastery: {
+        name: "EWI Mastery",
+        description: "Create otherworldly performances blending breath and synthesis.",
+        slug: "instruments_mastery_ewi"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Keytar",
+    icon: "synth",
+    tiers: {
+      Basic: {
+        name: "Basic Keytar",
+        description: "Learn strap ergonomics, synth action, and stage movement.",
+        slug: "instruments_basic_keytar"
+      },
+      Professional: {
+        name: "Professional Keytar",
+        description: "Master pitch ribbon, modulation, and crowd-engaging performance.",
+        slug: "instruments_professional_keytar"
+      },
+      Mastery: {
+        name: "Keytar Mastery",
+        description: "Deliver iconic keytar performances with showmanship and virtuosity.",
+        slug: "instruments_mastery_keytar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "MPC/Maschine",
+    icon: "controller",
+    tiers: {
+      Basic: {
+        name: "Basic MPC/Maschine",
+        description: "Learn pad velocity, sampling basics, and sequencing.",
+        slug: "instruments_basic_mpc"
+      },
+      Professional: {
+        name: "Professional MPC/Maschine",
+        description: "Master live beatmaking, chopping, and performance modes.",
+        slug: "instruments_professional_mpc"
+      },
+      Mastery: {
+        name: "MPC/Maschine Mastery",
+        description: "Create iconic beats live with impeccable timing and creativity.",
+        slug: "instruments_mastery_mpc"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Loop Station",
+    icon: "fx",
+    tiers: {
+      Basic: {
+        name: "Basic Loop Station",
+        description: "Learn timing, layering, and simple loop arrangements.",
+        slug: "instruments_basic_loop_station"
+      },
+      Professional: {
+        name: "Professional Loop Station",
+        description: "Master complex arrangements, live mixing, and crowd engagement.",
+        slug: "instruments_professional_loop_station"
+      },
+      Mastery: {
+        name: "Loop Station Mastery",
+        description: "Deliver captivating one-person shows with intricate looped layers.",
+        slug: "instruments_mastery_loop_station"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Analog Synthesizer",
+    icon: "synth",
+    tiers: {
+      Basic: {
+        name: "Basic Analog Synthesizer",
+        description: "Learn oscillators, filters, and subtractive synthesis fundamentals.",
+        slug: "instruments_basic_analog_synth"
+      },
+      Professional: {
+        name: "Professional Analog Synthesizer",
+        description: "Master patch creation, modulation routing, and live tweaking.",
+        slug: "instruments_professional_analog_synth"
+      },
+      Mastery: {
+        name: "Analog Synth Mastery",
+        description: "Craft signature sounds and deliver expressive synthesizer performances.",
+        slug: "instruments_mastery_analog_synth"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Digital/VA Synthesizer",
+    icon: "synth",
+    tiers: {
+      Basic: {
+        name: "Basic Digital Synthesizer",
+        description: "Explore FM, wavetable, and virtual analog synthesis basics.",
+        slug: "instruments_basic_digital_synth"
+      },
+      Professional: {
+        name: "Professional Digital Synthesizer",
+        description: "Master advanced synthesis techniques and deep sound design.",
+        slug: "instruments_professional_digital_synth"
+      },
+      Mastery: {
+        name: "Digital Synth Mastery",
+        description: "Create cutting-edge sounds pushing synthesis boundaries.",
+        slug: "instruments_mastery_digital_synth"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Electronic Drums",
+    icon: "drums",
+    tiers: {
+      Basic: {
+        name: "Basic Electronic Drums",
+        description: "Learn trigger sensitivity, sound selection, and hybrid integration.",
+        slug: "instruments_basic_electronic_drums"
+      },
+      Professional: {
+        name: "Professional Electronic Drums",
+        description: "Master sample triggering, layering, and SPD-style playing.",
+        slug: "instruments_professional_electronic_drums"
+      },
+      Mastery: {
+        name: "Electronic Drums Mastery",
+        description: "Deliver cutting-edge performances blending acoustic and electronic.",
+        slug: "instruments_mastery_electronic_drums"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Vocoder",
+    icon: "fx",
+    tiers: {
+      Basic: {
+        name: "Basic Vocoder",
+        description: "Learn carrier/modulator concepts and robotic vocal effects.",
+        slug: "instruments_basic_vocoder"
+      },
+      Professional: {
+        name: "Professional Vocoder",
+        description: "Master talk box, vocoder chords, and expressive vocal synthesis.",
+        slug: "instruments_professional_vocoder"
+      },
+      Mastery: {
+        name: "Vocoder Mastery",
+        description: "Create iconic vocoded performances with musical expression.",
+        slug: "instruments_mastery_vocoder"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// WORLD & FOLK INSTRUMENTS
+// ============================================================================
+const worldFolkConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Sitar",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Sitar",
+        description: "Learn proper posture, meend technique, and basic ragas.",
+        slug: "instruments_basic_sitar"
+      },
+      Professional: {
+        name: "Professional Sitar",
+        description: "Master jhala, taans, and classical Indian music forms.",
+        slug: "instruments_professional_sitar"
+      },
+      Mastery: {
+        name: "Sitar Mastery",
+        description: "Deliver mesmerizing raga performances with authentic technique.",
+        slug: "instruments_mastery_sitar"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Oud",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Oud",
+        description: "Learn maqam basics, right-hand technique, and traditional patterns.",
+        slug: "instruments_basic_oud"
+      },
+      Professional: {
+        name: "Professional Oud",
+        description: "Master taqasim improvisation and microtonal expression.",
+        slug: "instruments_professional_oud"
+      },
+      Mastery: {
+        name: "Oud Mastery",
+        description: "Create transcendent performances with virtuosic maqam exploration.",
+        slug: "instruments_mastery_oud"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Kora",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Kora",
+        description: "Learn the 21-string harp-lute basics and Mandinka patterns.",
+        slug: "instruments_basic_kora"
+      },
+      Professional: {
+        name: "Professional Kora",
+        description: "Master kumbengo/birimintingo and griot traditions.",
+        slug: "instruments_professional_kora"
+      },
+      Mastery: {
+        name: "Kora Mastery",
+        description: "Deliver hypnotic West African performances with authentic spirit.",
+        slug: "instruments_mastery_kora"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Erhu",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Erhu",
+        description: "Learn bowing technique, intonation, and traditional melodies.",
+        slug: "instruments_basic_erhu"
+      },
+      Professional: {
+        name: "Professional Erhu",
+        description: "Master vibrato, ornamentation, and classical Chinese repertoire.",
+        slug: "instruments_professional_erhu"
+      },
+      Mastery: {
+        name: "Erhu Mastery",
+        description: "Create hauntingly beautiful performances with expressive depth.",
+        slug: "instruments_mastery_erhu"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Shamisen",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Shamisen",
+        description: "Learn bachi technique, striking, and fundamental patterns.",
+        slug: "instruments_basic_shamisen"
+      },
+      Professional: {
+        name: "Professional Shamisen",
+        description: "Master Tsugaru style, speed technique, and traditional forms.",
+        slug: "instruments_professional_shamisen"
+      },
+      Mastery: {
+        name: "Shamisen Mastery",
+        description: "Deliver electrifying performances with percussive virtuosity.",
+        slug: "instruments_mastery_shamisen"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Bouzouki",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Bouzouki",
+        description: "Learn pick technique and Greek/Irish bouzouki fundamentals.",
+        slug: "instruments_basic_bouzouki"
+      },
+      Professional: {
+        name: "Professional Bouzouki",
+        description: "Master tremolo, ornamentation, and both Greek and Irish styles.",
+        slug: "instruments_professional_bouzouki"
+      },
+      Mastery: {
+        name: "Bouzouki Mastery",
+        description: "Create distinctive performances bridging Mediterranean and Celtic.",
+        slug: "instruments_mastery_bouzouki"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Balalaika",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Balalaika",
+        description: "Learn the triangular instrument's strumming and picking basics.",
+        slug: "instruments_basic_balalaika"
+      },
+      Professional: {
+        name: "Professional Balalaika",
+        description: "Master tremolo, folk repertoire, and ensemble playing.",
+        slug: "instruments_professional_balalaika"
+      },
+      Mastery: {
+        name: "Balalaika Mastery",
+        description: "Deliver virtuosic Russian folk performances with authentic spirit.",
+        slug: "instruments_mastery_balalaika"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Charango",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Charango",
+        description: "Learn strumming patterns and Andean music fundamentals.",
+        slug: "instruments_basic_charango"
+      },
+      Professional: {
+        name: "Professional Charango",
+        description: "Master the bright, rapid technique and folk repertoire.",
+        slug: "instruments_professional_charango"
+      },
+      Mastery: {
+        name: "Charango Mastery",
+        description: "Create vibrant Andean performances with virtuosic flair.",
+        slug: "instruments_mastery_charango"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Kalimba/Mbira",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Kalimba/Mbira",
+        description: "Learn thumb technique and traditional African patterns.",
+        slug: "instruments_basic_kalimba"
+      },
+      Professional: {
+        name: "Professional Kalimba/Mbira",
+        description: "Master Shona mbira traditions and interlocking patterns.",
+        slug: "instruments_professional_kalimba"
+      },
+      Mastery: {
+        name: "Kalimba/Mbira Mastery",
+        description: "Create trance-inducing performances with authentic spirit.",
+        slug: "instruments_mastery_kalimba"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Gamelan",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Gamelan",
+        description: "Learn mallet technique and ensemble role fundamentals.",
+        slug: "instruments_basic_gamelan"
+      },
+      Professional: {
+        name: "Professional Gamelan",
+        description: "Master specific instruments and traditional Javanese/Balinese repertoire.",
+        slug: "instruments_professional_gamelan"
+      },
+      Mastery: {
+        name: "Gamelan Mastery",
+        description: "Lead gamelan ensembles with authentic knowledge and precision.",
+        slug: "instruments_mastery_gamelan"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Uilleann Pipes",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Uilleann Pipes",
+        description: "Learn bellows control and chanter fundamentals.",
+        slug: "instruments_basic_uilleann"
+      },
+      Professional: {
+        name: "Professional Uilleann Pipes",
+        description: "Master regulators, drones, and traditional Irish music.",
+        slug: "instruments_professional_uilleann"
+      },
+      Mastery: {
+        name: "Uilleann Pipes Mastery",
+        description: "Deliver hauntingly beautiful Irish music with full pipe set.",
+        slug: "instruments_mastery_uilleann"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Guzheng",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Guzheng",
+        description: "Learn finger techniques, tuning, and traditional melodies.",
+        slug: "instruments_basic_guzheng"
+      },
+      Professional: {
+        name: "Professional Guzheng",
+        description: "Master tremolo, bending, and classical Chinese repertoire.",
+        slug: "instruments_professional_guzheng"
+      },
+      Mastery: {
+        name: "Guzheng Mastery",
+        description: "Create flowing, virtuosic Chinese zither performances.",
+        slug: "instruments_mastery_guzheng"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Biwa",
+    icon: "world",
+    tiers: {
+      Basic: {
+        name: "Basic Biwa",
+        description: "Learn plectrum technique and narrative singing basics.",
+        slug: "instruments_basic_biwa"
+      },
+      Professional: {
+        name: "Professional Biwa",
+        description: "Master Satsuma biwa and traditional storytelling forms.",
+        slug: "instruments_professional_biwa"
+      },
+      Mastery: {
+        name: "Biwa Mastery",
+        description: "Deliver powerful narrative performances with dramatic expression.",
+        slug: "instruments_mastery_biwa"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Tin Whistle",
+    icon: "wind",
+    tiers: {
+      Basic: {
+        name: "Basic Tin Whistle",
+        description: "Learn breath control and Irish tune fundamentals.",
+        slug: "instruments_basic_tin_whistle"
+      },
+      Professional: {
+        name: "Professional Tin Whistle",
+        description: "Master ornamentation, rolls, and session playing.",
+        slug: "instruments_professional_tin_whistle"
+      },
+      Mastery: {
+        name: "Tin Whistle Mastery",
+        description: "Deliver lightning-fast reels with authentic Celtic expression.",
+        slug: "instruments_mastery_tin_whistle"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Concertina",
+    icon: "accordion",
+    tiers: {
+      Basic: {
+        name: "Basic Concertina",
+        description: "Learn push-pull bellows and Anglo/English systems.",
+        slug: "instruments_basic_concertina"
+      },
+      Professional: {
+        name: "Professional Concertina",
+        description: "Master Irish traditional music and chordal accompaniment.",
+        slug: "instruments_professional_concertina"
+      },
+      Mastery: {
+        name: "Concertina Mastery",
+        description: "Create virtuosic performances with authentic traditional flair.",
+        slug: "instruments_mastery_concertina"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// LEGACY INSTRUMENT CONFIGS (preserved for backward compatibility)
+// ============================================================================
+const legacyInstrumentsConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
@@ -484,483 +2607,6 @@ const instrumentsConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
-    track: "Brass",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Brass",
-        description: "Practice embouchure, tone production, and ensemble support.",
-        slug: createSlug("instruments", "Basic", "Brass")
-      },
-      Professional: {
-        name: "Professional Brass",
-        description: "Lead brass sections with advanced articulation and dynamics.",
-        slug: createSlug("instruments", "Professional", "Brass")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Keyboard",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Keyboard",
-        description: "Learn chords, voicings, and stage-ready keyboard techniques.",
-        slug: createSlug("instruments", "Basic", "Keyboard")
-      },
-      Professional: {
-        name: "Professional Keyboard",
-        description: "Layer synths, pianos, and organs with seamless transitions.",
-        slug: createSlug("instruments", "Professional", "Keyboard")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Percussions",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Percussions",
-        description: "Lock in time, grooves, and foundational rhythm reading.",
-        slug: createSlug("instruments", "Basic", "Percussions")
-      },
-      Professional: {
-        name: "Professional Percussions",
-        description: "Blend acoustic and electronic percussion for hybrid sets.",
-        slug: createSlug("instruments", "Professional", "Percussions")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Strings",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Strings",
-        description: "Strengthen fretting, bowing, and tonal control across stringed instruments.",
-        slug: createSlug("instruments", "Basic", "Strings")
-      },
-      Professional: {
-        name: "Professional Strings",
-        description: "Perform expressive solos and complex accompaniment across genres.",
-        slug: createSlug("instruments", "Professional", "Strings")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Woodwinds",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Woodwinds",
-        description: "Master embouchure, intonation, and phrasing across woodwind instruments.",
-        slug: createSlug("instruments", "Basic", "Woodwinds")
-      },
-      Professional: {
-        name: "Professional Woodwinds",
-        description: "Deliver improvisations, harmonies, and studio-ready performances.",
-        slug: createSlug("instruments", "Professional", "Woodwinds")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Electronic Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Electronic Instruments",
-        description: "Perform with synths, controllers, and hybrid rigs in real time.",
-        slug: createSlug("instruments", "Basic", "Electronic Instruments")
-      },
-      Professional: {
-        name: "Professional Electronic Instruments",
-        description: "Integrate modular, hardware, and software instruments on stage.",
-        slug: createSlug("instruments", "Professional", "Electronic Instruments")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "DJ Performance",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic DJ Controller Skills",
-        description: "Learn beatmatching, cueing, and controller-based transitions.",
-        slug: createSlug("instruments", "Basic", "DJ Performance")
-      },
-      Professional: {
-        name: "Professional DJing",
-        description: "Deliver extended club sets with creative mixing and crowd reading.",
-        slug: createSlug("instruments", "Professional", "DJ Performance")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "MIDI Performance",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic MIDI Controller Skills",
-        description: "Trigger clips, map controls, and perform live with MIDI devices.",
-        slug: createSlug("instruments", "Basic", "MIDI Performance")
-      },
-      Professional: {
-        name: "Professional MIDI Performance",
-        description: "Build expressive mappings, gestures, and performance rigs.",
-        slug: createSlug("instruments", "Professional", "MIDI Performance")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Sampler & Drum Machine",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Sampler/Drum Machine",
-        description: "Sequence beats, assign pads, and design live sampler sets.",
-        slug: createSlug("instruments", "Basic", "Sampler Drum Machine")
-      },
-      Professional: {
-        name: "Professional Drum Machine Use",
-        description: "Perform complex step sequencing and live resampling routines.",
-        slug: createSlug("instruments", "Professional", "Sampler Drum Machine")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Hybrid Drums",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Hybrid Drums",
-        description: "Blend acoustic kits with triggers and electronic elements.",
-        slug: createSlug("instruments", "Basic", "Hybrid Drums")
-      },
-      Professional: {
-        name: "Professional Hybrid Drumming",
-        description: "Design hybrid kits and perform genre-spanning rhythms live.",
-        slug: createSlug("instruments", "Professional", "Hybrid Drums")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Electronic Strings",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Electronic Strings",
-        description: "Perform with electric violins, cellos, and processed string rigs.",
-        slug: createSlug("instruments", "Basic", "Electronic Strings")
-      },
-      Professional: {
-        name: "Professional Electronic Strings",
-        description: "Layer live looping, effects, and virtuoso performances.",
-        slug: createSlug("instruments", "Professional", "Electronic Strings")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "String Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic String Instruments",
-        description: "Strum and pluck acoustic guitar, banjo, mandolin, and ukulele with confident timing.",
-        slug: "instruments_basic_string_instruments"
-      },
-      Professional: {
-        name: "Professional String Instruments",
-        description: "Arrange folk ensembles with fluid chord transitions, strumming patterns, and nuanced dynamics.",
-        slug: "instruments_professional_string_instruments"
-      },
-      Mastery: {
-        name: "String Instruments Mastery",
-        description: "Deliver expressive fingerstyle showcases, advanced chord vocabulary, and acoustic improvisation.",
-        slug: "instruments_mastery_string_instruments"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Advanced String Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Advanced String Instruments",
-        description: "Transition to electric and extended-range strings with controlled tone and articulation.",
-        slug: "instruments_basic_advanced_strings",
-        prerequisites: [
-          { slug: "instruments_professional_string_instruments", requiredValue: 500 }
-        ]
-      },
-      Professional: {
-        name: "Professional Advanced Strings",
-        description: "Blend electric guitar, bass, and Chapman Stick textures with expressive phrasing and tone design.",
-        slug: "instruments_professional_advanced_strings"
-      },
-      Mastery: {
-        name: "Advanced String Mastery",
-        description: "Execute shredding, tapping, harmonics, and live FX control for arena-ready performances.",
-        slug: "instruments_mastery_advanced_strings"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Modern Bass Techniques",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Modern Bass Techniques",
-        description: "Lock into the pocket with groove-minded fingerstyle, pick, and synth bass foundations.",
-        slug: "instruments_basic_modern_bass"
-      },
-      Professional: {
-        name: "Professional Modern Bass",
-        description: "Develop slap and pop fluency, walking bass vocabulary, and tight ensemble precision.",
-        slug: "instruments_professional_modern_bass"
-      },
-      Mastery: {
-        name: "Modern Bass Mastery",
-        description: "Command funk precision, compression artistry, and improvisational bass leadership.",
-        slug: "instruments_mastery_modern_bass"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Keyboard & Piano Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Keyboard & Piano Foundations",
-        description: "Strengthen piano, organ, and electric piano fundamentals with solid technique and timing.",
-        slug: "instruments_basic_keyboard_piano"
-      },
-      Professional: {
-        name: "Professional Keyboard & Piano",
-        description: "Deliver stage-ready performances with confident voicings, hand independence, and stylistic range.",
-        slug: "instruments_professional_keyboard_piano"
-      },
-      Mastery: {
-        name: "Keyboard & Piano Mastery",
-        description: "Improvise across classical, jazz, and pop repertoires with show-stopping dynamics.",
-        slug: "instruments_mastery_keyboard_piano"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Synths & Electronic Keys",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Synths & Electronic Keys",
-        description: "Explore analog, FM, and wavetable synth basics with performance-ready patch control.",
-        slug: "instruments_basic_synths_keys"
-      },
-      Professional: {
-        name: "Professional Synth Performance",
-        description: "Design expressive patches, modulation routings, and stacked textures for live sets.",
-        slug: "instruments_professional_synths_keys"
-      },
-      Mastery: {
-        name: "Synth & Keys Mastery",
-        description: "Craft immersive sound design with evolving layers, real-time macro control, and hybrid rigs.",
-        slug: "instruments_mastery_synths_keys"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Percussion & Drums",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Percussion & Drums",
-        description: "Build rhythmic accuracy, foundational rudiments, and kit independence.",
-        slug: "instruments_basic_percussion_drums"
-      },
-      Professional: {
-        name: "Professional Percussion & Drums",
-        description: "Blend cajón, congas, and drum kit grooves with consistent pocket and articulation.",
-        slug: "instruments_professional_percussion_drums"
-      },
-      Mastery: {
-        name: "Percussion & Drum Mastery",
-        description: "Lead ensembles with polyrhythms, explosive fills, and tempo management mastery.",
-        slug: "instruments_mastery_percussion_drums"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Electronic Percussion",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Electronic Percussion",
-        description: "Trigger drum machines, samplers, and grooveboxes with reliable timing and feel.",
-        slug: "instruments_basic_electronic_percussion"
-      },
-      Professional: {
-        name: "Professional Electronic Percussion",
-        description: "Program intricate beats, manage quantization, and sculpt live electronic percussion sets.",
-        slug: "instruments_professional_electronic_percussion"
-      },
-      Mastery: {
-        name: "Electronic Percussion Mastery",
-        description: "Deliver hybrid performances with loop craftsmanship, live remixing, and trigger mastery.",
-        slug: "instruments_mastery_electronic_percussion"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Wind Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Wind Instruments",
-        description: "Refine breath support, embouchure, and tone across flute, clarinet, oboe, and saxophone.",
-        slug: "instruments_basic_wind_instruments"
-      },
-      Professional: {
-        name: "Professional Wind Instruments",
-        description: "Expand vibrato control, scale fluency, and ensemble phrasing for winds.",
-        slug: "instruments_professional_wind_instruments"
-      },
-      Mastery: {
-        name: "Wind Instrument Mastery",
-        description: "Improvise lyrical solos with jazz phrasing, advanced articulation, and tonal finesse.",
-        slug: "instruments_mastery_wind_instruments"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Brass Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Brass Instruments",
-        description: "Build range, breath efficiency, and tone projection on trumpet, trombone, horn, and tuba.",
-        slug: "instruments_basic_brass_instruments"
-      },
-      Professional: {
-        name: "Professional Brass Instruments",
-        description: "Shape ensembles with mute techniques, stylistic articulation, and dynamic balance.",
-        slug: "instruments_professional_brass_instruments"
-      },
-      Mastery: {
-        name: "Brass Instrument Mastery",
-        description: "Lead brass sections with jazz improvisation, expanded range, and expressive tone sculpting.",
-        slug: "instruments_mastery_brass_instruments"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "World & Folk Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "World & Folk Instruments",
-        description: "Discover sitar, tabla, pan pipes, and other folk instruments with cultural context and respect.",
-        slug: "instruments_basic_world_folk"
-      },
-      Professional: {
-        name: "Professional World & Folk",
-        description: "Interpret traditional scales, rhythmic cycles, and ensemble etiquette across global instruments.",
-        slug: "instruments_professional_world_folk"
-      },
-      Mastery: {
-        name: "World & Folk Mastery",
-        description: "Fuse authentic repertoires with modern genres while maintaining cultural integrity.",
-        slug: "instruments_mastery_world_folk"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "DJ & Live Production",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "DJ & Live Production",
-        description: "Beatmatch on controllers and turntables while managing EQ and cue workflows.",
-        slug: "instruments_basic_dj_live"
-      },
-      Professional: {
-        name: "Professional DJ & Live Production",
-        description: "Integrate scratching, FX units, and hybrid sets for club-ready performances.",
-        slug: "instruments_professional_dj_live"
-      },
-      Mastery: {
-        name: "DJ & Live Production Mastery",
-        description: "Deliver seamless live transitions, storytelling mixes, and festival-grade energy.",
-        slug: "instruments_mastery_dj_live"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Electronic Production & Sampling",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Electronic Production & Sampling",
-        description: "Sequence ideas with samplers, DAW controllers, and live clip launching fundamentals.",
-        slug: "instruments_basic_electronic_sampling"
-      },
-      Professional: {
-        name: "Professional Electronic Production",
-        description: "Arrange tracks, sculpt automation, and manipulate samples for performance impact.",
-        slug: "instruments_professional_electronic_sampling"
-      },
-      Mastery: {
-        name: "Electronic Production Mastery",
-        description: "Command live performance FX, resampling workflows, and on-the-fly arrangement skills.",
-        slug: "instruments_mastery_electronic_sampling"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
     track: "Vocal & Performance Skills",
     icon: "performance",
     tiers: {
@@ -989,12 +2635,12 @@ const instrumentsConfigs: TieredSkillConfig[] = [
     tiers: {
       Basic: {
         name: "Vocal Effects & Technology",
-        description: "Route vocoders, talkboxes, and vocal processors with clean signal flow.",
+        description: "Explore auto-tune, harmonizers, and vocal FX chains in live settings.",
         slug: "instruments_basic_vocal_fx"
       },
       Professional: {
-        name: "Professional Vocal Effects",
-        description: "Dial harmonizers, auto-tune, and loopers in sync with live arrangements.",
+        name: "Professional Vocal FX",
+        description: "Configure real-time vocal FX rigs with confident signal routing.",
         slug: "instruments_professional_vocal_fx"
       },
       Mastery: {
@@ -1003,354 +2649,12 @@ const instrumentsConfigs: TieredSkillConfig[] = [
         slug: "instruments_mastery_vocal_fx"
       }
     }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Hybrid & Experimental Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Hybrid & Experimental Instruments",
-        description: "Experiment with theremins, motion controllers, and MPE devices for expressive control.",
-        slug: "instruments_basic_hybrid_experimental"
-      },
-      Professional: {
-        name: "Professional Hybrid Instrumentalist",
-        description: "Integrate spatial gestures, custom mappings, and responsive sound design in performance.",
-        slug: "instruments_professional_hybrid_experimental"
-      },
-      Mastery: {
-        name: "Hybrid Instrument Mastery",
-        description: "Innovate with experimental techniques, signal flow design, and immersive instrument rigs.",
-        slug: "instruments_mastery_hybrid_experimental"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Orchestral & Cinematic Instruments",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Orchestral & Cinematic Instruments",
-        description: "Refine bow control, ensemble timing, and expressive dynamics across orchestral sections.",
-        slug: "instruments_basic_orchestral_cinematic"
-      },
-      Professional: {
-        name: "Professional Orchestral & Cinematic",
-        description: "Lead strings, winds, and harp performances with nuanced vibrato and phrasing.",
-        slug: "instruments_professional_orchestral_cinematic"
-      },
-      Mastery: {
-        name: "Orchestral & Cinematic Mastery",
-        description: "Craft cinematic expression with dynamic swells, ensemble leadership, and scoring instincts.",
-        slug: "instruments_mastery_orchestral_cinematic"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Digital Music Tools",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Digital Music Tools",
-        description: "Streamline sessions in Logic, Ableton, FL Studio, and more with productive workflows.",
-        slug: "instruments_basic_digital_music_tools"
-      },
-      Professional: {
-        name: "Professional Digital Music Tools",
-        description: "Automate mixes, manage multitrack templates, and optimize plugin chains.",
-        slug: "instruments_professional_digital_music_tools"
-      },
-      Mastery: {
-        name: "Digital Music Tools Mastery",
-        description: "Build performance-ready DAW rigs with layered sound design, automation, and mastering polish.",
-        slug: "instruments_mastery_digital_music_tools"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Sound Engineering & Studio",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Sound Engineering & Studio",
-        description: "Set up studio consoles, mic chains, and gain staging for clean recordings.",
-        slug: "instruments_basic_sound_engineering"
-      },
-      Professional: {
-        name: "Professional Sound Engineering",
-        description: "Shape EQ, compression, and mixing balances for professional sessions.",
-        slug: "instruments_professional_sound_engineering"
-      },
-      Mastery: {
-        name: "Sound Engineering Mastery",
-        description: "Direct studio workflows with outboard FX, mastering chains, and production leadership.",
-        slug: "instruments_mastery_sound_engineering"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Songwriting & Arrangement",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Songwriting & Arrangement Skills",
-        description: "Compose chord progressions, melodies, and rhythmic motifs tailored for ensembles.",
-        slug: "instruments_basic_songwriting_arrangement"
-      },
-      Professional: {
-        name: "Professional Songwriting & Arrangement",
-        description: "Craft genre-adaptable arrangements with counter-melodies and dynamic pacing.",
-        slug: "instruments_professional_songwriting_arrangement"
-      },
-      Mastery: {
-        name: "Songwriting & Arrangement Mastery",
-        description: "Design cinematic compositions with seamless flow, advanced harmony, and ensemble direction.",
-        slug: "instruments_mastery_songwriting_arrangement"
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Acoustic Guitar Fingerstyle",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Acoustic Guitar Fingerstyle",
-        description: "Build alternating thumb patterns, Travis picking, and melodic fingerstyle textures.",
-        slug: createSlug("instruments", "Basic", "Acoustic Guitar Fingerstyle")
-      },
-      Professional: {
-        name: "Professional Acoustic Fingerstyle",
-        description: "Arrange solo guitar pieces with harmonics, syncopation, and dynamic phrasing.",
-        slug: createSlug("instruments", "Professional", "Acoustic Guitar Fingerstyle")
-      },
-      Mastery: {
-        name: "Acoustic Fingerstyle Mastery",
-        description: "Deliver virtuosic fingerstyle performances with percussive flair and harmonic layering.",
-        slug: createSlug("instruments", "Mastery", "Acoustic Guitar Fingerstyle")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Electric Guitar Lead Techniques",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Electric Guitar Lead Techniques",
-        description: "Strengthen bending accuracy, vibrato control, and scale fluency for solos.",
-        slug: createSlug("instruments", "Basic", "Electric Guitar Lead Techniques")
-      },
-      Professional: {
-        name: "Professional Electric Guitar Leads",
-        description: "Blend legato, tapping, and modal phrasing for expressive lead passages.",
-        slug: createSlug("instruments", "Professional", "Electric Guitar Lead Techniques")
-      },
-      Mastery: {
-        name: "Electric Lead Mastery",
-        description: "Command arena-ready solos with storytelling phrasing and tonal artistry.",
-        slug: createSlug("instruments", "Mastery", "Electric Guitar Lead Techniques")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Rhythm Guitar & Comping",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Rhythm Guitar & Comping",
-        description: "Lock in strumming patterns, chordal grooves, and muting clarity for ensembles.",
-        slug: createSlug("instruments", "Basic", "Rhythm Guitar & Comping")
-      },
-      Professional: {
-        name: "Professional Rhythm Guitar",
-        description: "Craft intricate comping with chord extensions, inversions, and syncopation.",
-        slug: createSlug("instruments", "Professional", "Rhythm Guitar & Comping")
-      },
-      Mastery: {
-        name: "Rhythm Guitar Mastery",
-        description: "Drive bands with genre-fluid comping, percussive textures, and pocket precision.",
-        slug: createSlug("instruments", "Mastery", "Rhythm Guitar & Comping")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Drum Set Pocket & Fills",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Drum Set Pocket & Fills",
-        description: "Develop timekeeping, subdivision control, and tasteful fill vocabulary.",
-        slug: createSlug("instruments", "Basic", "Drum Set Pocket & Fills")
-      },
-      Professional: {
-        name: "Professional Drum Set Pocket",
-        description: "Shape dynamic grooves with ghost notes, linear patterns, and stylistic fills.",
-        slug: createSlug("instruments", "Professional", "Drum Set Pocket & Fills")
-      },
-      Mastery: {
-        name: "Drum Set Mastery",
-        description: "Lead rhythm sections with polyrhythmic command, showpiece solos, and studio precision.",
-        slug: createSlug("instruments", "Mastery", "Drum Set Pocket & Fills")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "World Hand Percussion",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "World Hand Percussion",
-        description: "Explore djembé, cajón, and frame drum fundamentals with authentic grooves.",
-        slug: createSlug("instruments", "Basic", "World Hand Percussion")
-      },
-      Professional: {
-        name: "Professional Hand Percussion",
-        description: "Blend global rhythms, call-and-response, and ensemble interplay across instruments.",
-        slug: createSlug("instruments", "Professional", "World Hand Percussion")
-      },
-      Mastery: {
-        name: "Hand Percussion Mastery",
-        description: "Lead world ensembles with advanced solos, cultural nuance, and hybrid arrangements.",
-        slug: createSlug("instruments", "Mastery", "World Hand Percussion")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Jazz Piano & Harmony",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Jazz Piano & Harmony",
-        description: "Learn shell voicings, swing comping, and ii-V-I progressions at the keys.",
-        slug: createSlug("instruments", "Basic", "Jazz Piano & Harmony")
-      },
-      Professional: {
-        name: "Professional Jazz Piano",
-        description: "Improvise with extended harmony, stride variations, and reharmonization techniques.",
-        slug: createSlug("instruments", "Professional", "Jazz Piano & Harmony")
-      },
-      Mastery: {
-        name: "Jazz Piano Mastery",
-        description: "Command trio settings with modal improvisation, polyrhythms, and harmonic storytelling.",
-        slug: createSlug("instruments", "Mastery", "Jazz Piano & Harmony")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Gospel/Pop Vocal Harmonies",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Gospel/Pop Vocal Harmonies",
-        description: "Blend thirds, sixths, and call-and-response parts with confident tuning.",
-        slug: createSlug("instruments", "Basic", "Gospel/Pop Vocal Harmonies")
-      },
-      Professional: {
-        name: "Professional Vocal Harmonies",
-        description: "Arrange stacked harmonies, modulations, and dynamic swells for live sets.",
-        slug: createSlug("instruments", "Professional", "Gospel/Pop Vocal Harmonies")
-      },
-      Mastery: {
-        name: "Vocal Harmony Mastery",
-        description: "Direct choirs and pop ensembles with intricate voicings and improvisational blends.",
-        slug: createSlug("instruments", "Mastery", "Gospel/Pop Vocal Harmonies")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Brass Section Leadership",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Brass Section Leadership",
-        description: "Coordinate section phrasing, cues, and blend for live brass ensembles.",
-        slug: createSlug("instruments", "Basic", "Brass Section Leadership")
-      },
-      Professional: {
-        name: "Professional Brass Leadership",
-        description: "Shape voicings, balance dynamics, and cue hits across horn sections.",
-        slug: createSlug("instruments", "Professional", "Brass Section Leadership")
-      },
-      Mastery: {
-        name: "Brass Leadership Mastery",
-        description: "Direct touring brass sections with advanced arrangements and improvisational interplay.",
-        slug: createSlug("instruments", "Mastery", "Brass Section Leadership")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Woodwind Solo Improvisation",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Woodwind Solo Improvisation",
-        description: "Learn blues scales, motivic development, and breath phrasing for woodwind solos.",
-        slug: createSlug("instruments", "Basic", "Woodwind Solo Improvisation")
-      },
-      Professional: {
-        name: "Professional Woodwind Improvisation",
-        description: "Navigate chord changes, altissimo control, and stylistic articulations on woodwinds.",
-        slug: createSlug("instruments", "Professional", "Woodwind Solo Improvisation")
-      },
-      Mastery: {
-        name: "Woodwind Improvisation Mastery",
-        description: "Deliver emotive solos with circular breathing, extended techniques, and genre fusion.",
-        slug: createSlug("instruments", "Mastery", "Woodwind Solo Improvisation")
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Modular Synth Performance",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Modular Synth Performance",
-        description: "Patch oscillators, filters, and sequencers for evolving live textures.",
-        slug: createSlug("instruments", "Basic", "Modular Synth Performance")
-      },
-      Professional: {
-        name: "Professional Modular Performance",
-        description: "Integrate clocking, CV modulation, and external gear for improvisational sets.",
-        slug: createSlug("instruments", "Professional", "Modular Synth Performance")
-      },
-      Mastery: {
-        name: "Modular Synth Mastery",
-        description: "Design immersive modular showcases with live re-patching and narrative dynamics.",
-        slug: createSlug("instruments", "Mastery", "Modular Synth Performance")
-      }
-    }
   }
 ];
 
+// ============================================================================
+// CAPSTONE MASTERY SKILLS
+// ============================================================================
 const instrumentMasteryConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
@@ -1375,29 +2679,20 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
-    track: "Instrument",
+    track: "Multi-Instrumentalist",
     icon: "performance",
     chainPrerequisites: false,
     tiers: {
       Mastery: {
-        name: "Instrument Mastery",
-        description: "Achieve virtuosity across piano, drums, guitar, and more.",
-        slug: createSlug("instruments", "Mastery", "Instrument"),
+        name: "Multi-Instrumentalist Mastery",
+        description: "Play 5+ instruments with professional competency across families.",
+        slug: "instruments_mastery_multi_instrumentalist",
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Keyboard"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Percussions"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Strings"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Woodwinds"), requiredValue: 600 },
-          { slug: createSlug("instruments", "Professional", "Electronic Instruments"), requiredValue: 600 },
-          { slug: "instruments_professional_string_instruments", requiredValue: 650 },
-          { slug: "instruments_professional_advanced_strings", requiredValue: 650 },
-          { slug: "instruments_professional_modern_bass", requiredValue: 600 },
-          { slug: "instruments_professional_keyboard_piano", requiredValue: 650 },
-          { slug: "instruments_professional_synths_keys", requiredValue: 600 },
-          { slug: "instruments_professional_percussion_drums", requiredValue: 650 },
-          { slug: "instruments_professional_electronic_percussion", requiredValue: 600 },
-          { slug: "instruments_professional_world_folk", requiredValue: 550 },
-          { slug: "instruments_professional_orchestral_cinematic", requiredValue: 650 }
+          { slug: "instruments_professional_acoustic_guitar", requiredValue: 600 },
+          { slug: "instruments_professional_classical_piano", requiredValue: 600 },
+          { slug: "instruments_professional_rock_drums", requiredValue: 600 },
+          { slug: "instruments_professional_bass_guitar", requiredValue: 600 },
+          { slug: "instruments_professional_vocal_performance", requiredValue: 500 }
         ]
       }
     }
@@ -1405,17 +2700,19 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
-    track: "DJ",
+    track: "Session Musician",
     icon: "performance",
     chainPrerequisites: false,
     tiers: {
       Mastery: {
-        name: "DJ Mastery",
-        description: "Headliner-level DJ sets with intricate blends and storytelling.",
-        slug: createSlug("instruments", "Mastery", "DJ"),
+        name: "Session Musician Mastery",
+        description: "Excel at sight-reading, adaptability, and studio session work.",
+        slug: "instruments_mastery_session_musician",
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "DJ Performance"), requiredValue: 650 },
-          { slug: "instruments_professional_dj_live", requiredValue: 650 }
+          { slug: "instruments_professional_acoustic_guitar", requiredValue: 500 },
+          { slug: "instruments_professional_electric_guitar", requiredValue: 500 },
+          { slug: "instruments_professional_bass_guitar", requiredValue: 500 },
+          { slug: "songwriting_professional_record_production", requiredValue: 500 }
         ]
       }
     }
@@ -1423,18 +2720,18 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
-    track: "MIDI",
+    track: "Bandleader",
     icon: "performance",
     chainPrerequisites: false,
     tiers: {
       Mastery: {
-        name: "MIDI Mastery",
-        description: "Design expressive MIDI performances that feel organic.",
-        slug: createSlug("instruments", "Mastery", "MIDI"),
+        name: "Bandleader Mastery",
+        description: "Conduct, cue, and manage live ensembles with authority.",
+        slug: "instruments_mastery_bandleader",
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "MIDI Performance"), requiredValue: 650 },
-          { slug: "instruments_professional_digital_music_tools", requiredValue: 600 },
-          { slug: "instruments_professional_electronic_sampling", requiredValue: 600 }
+          { slug: "stage_professional_showmanship", requiredValue: 600 },
+          { slug: "stage_professional_crowd", requiredValue: 600 },
+          { slug: "instruments_professional_vocal_performance", requiredValue: 500 }
         ]
       }
     }
@@ -1442,18 +2739,17 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
-    track: "Sampler",
+    track: "Touring Musician",
     icon: "performance",
     chainPrerequisites: false,
     tiers: {
       Mastery: {
-        name: "Sampler/Drum Machine Mastery",
-        description: "Flip samples live with flawless timing and musicality.",
-        slug: createSlug("instruments", "Mastery", "Sampler"),
+        name: "Touring Musician Mastery",
+        description: "Maintain peak performance through road endurance and gear management.",
+        slug: "instruments_mastery_touring_musician",
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Sampler Drum Machine"), requiredValue: 650 },
-          { slug: "instruments_professional_electronic_percussion", requiredValue: 600 },
-          { slug: "instruments_professional_electronic_sampling", requiredValue: 600 }
+          { slug: "stage_professional_tech", requiredValue: 600 },
+          { slug: "stage_professional_showmanship", requiredValue: 600 }
         ]
       }
     }
@@ -1461,121 +2757,27 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
   {
     prefix: "instruments",
     category: "Instruments & Performance",
-    track: "Hybrid Drumming",
+    track: "Studio Virtuoso",
     icon: "performance",
     chainPrerequisites: false,
     tiers: {
       Mastery: {
-        name: "Hybrid Drumming Mastery",
-        description: "Fuse acoustic power with electronic precision effortlessly.",
-        slug: createSlug("instruments", "Mastery", "Hybrid Drumming"),
+        name: "Studio Virtuoso Mastery",
+        description: "Master recording techniques, efficiency, and tone crafting in studio.",
+        slug: "instruments_mastery_studio_virtuoso",
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Hybrid Drums"), requiredValue: 650 },
-          { slug: "instruments_professional_percussion_drums", requiredValue: 650 },
-          { slug: "instruments_professional_electronic_percussion", requiredValue: 600 }
-        ]
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Electronic Strings Mastery",
-    icon: "performance",
-    chainPrerequisites: false,
-    tiers: {
-      Mastery: {
-        name: "Electronic Strings Mastery",
-        description: "Deliver futuristic string performances with immersive sound design.",
-        slug: createSlug("instruments", "Mastery", "Electronic Strings"),
-        prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Electronic Strings"), requiredValue: 650 },
-          { slug: "instruments_professional_advanced_strings", requiredValue: 650 },
-          { slug: "instruments_professional_synths_keys", requiredValue: 600 }
-        ]
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Guitar Virtuoso",
-    icon: "performance",
-    chainPrerequisites: false,
-    tiers: {
-      Mastery: {
-        name: "Guitar Virtuoso Mastery",
-        description: "Deliver show-stopping solos with hybrid picking, speed, and expressive dynamics.",
-        slug: createSlug("instruments", "Mastery", "Guitar Virtuoso"),
-        prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Acoustic Guitar Fingerstyle"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Electric Guitar Lead Techniques"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Rhythm Guitar & Comping"), requiredValue: 600 },
-          { slug: "instruments_professional_advanced_strings", requiredValue: 600 }
-        ]
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Drumline Captain",
-    icon: "performance",
-    chainPrerequisites: false,
-    tiers: {
-      Mastery: {
-        name: "Drumline Captain Mastery",
-        description: "Lead percussion squads with precise rudiments, visuals, and ensemble direction.",
-        slug: createSlug("instruments", "Mastery", "Drumline Captain"),
-        prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Drum Set Pocket & Fills"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Hybrid Drums"), requiredValue: 600 },
-          { slug: "instruments_professional_percussion_drums", requiredValue: 650 }
-        ]
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Keyboard Improvisation",
-    icon: "performance",
-    chainPrerequisites: false,
-    tiers: {
-      Mastery: {
-        name: "Keyboard Improvisation Mastery",
-        description: "Improvise fearlessly across jazz, gospel, and synth-driven sets.",
-        slug: createSlug("instruments", "Mastery", "Keyboard Improvisation"),
-        prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Jazz Piano & Harmony"), requiredValue: 650 },
-          { slug: "instruments_professional_keyboard_piano", requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Modular Synth Performance"), requiredValue: 600 },
-          { slug: "instruments_professional_synths_keys", requiredValue: 600 }
-        ]
-      }
-    }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Vocal Harmony Director",
-    icon: "performance",
-    chainPrerequisites: false,
-    tiers: {
-      Mastery: {
-        name: "Vocal Harmony Director Mastery",
-        description: "Arrange, cue, and conduct lush harmony stacks with confidence.",
-        slug: createSlug("instruments", "Mastery", "Vocal Harmony Director"),
-        prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Gospel/Pop Vocal Harmonies"), requiredValue: 650 },
-          { slug: "instruments_professional_vocal_performance", requiredValue: 650 },
-          { slug: "instruments_professional_vocal_fx", requiredValue: 600 }
+          { slug: "songwriting_professional_record_production", requiredValue: 650 },
+          { slug: "songwriting_professional_mixing", requiredValue: 600 },
+          { slug: "songwriting_professional_daw", requiredValue: 600 }
         ]
       }
     }
   }
 ];
 
+// ============================================================================
+// STAGE & SHOWMANSHIP
+// ============================================================================
 const stageShowmanshipConfigs: TieredSkillConfig[] = [
   {
     prefix: "stage",
@@ -1717,10 +2919,20 @@ const stageShowmanshipConfigs: TieredSkillConfig[] = [
   }
 ];
 
+// ============================================================================
+// BUILD AND EXPORT
+// ============================================================================
 const { definitions, relationships } = buildSkillTree([
   ...songwritingProductionConfigs,
   ...genreConfigs,
-  ...instrumentsConfigs,
+  ...stringInstrumentConfigs,
+  ...keyboardConfigs,
+  ...percussionConfigs,
+  ...windConfigs,
+  ...brassConfigs,
+  ...electronicConfigs,
+  ...worldFolkConfigs,
+  ...legacyInstrumentsConfigs,
   ...instrumentMasteryConfigs,
   ...stageShowmanshipConfigs
 ]);
