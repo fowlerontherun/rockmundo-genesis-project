@@ -23,6 +23,7 @@ interface SubmitDemoDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   bandId?: string | null;
+  preselectedLabelId?: string | null;
 }
 
 interface RecordedSong {
@@ -40,9 +41,9 @@ interface LabelOption {
   reputation_score: number;
 }
 
-export function SubmitDemoDialog({ open, onOpenChange, userId, bandId }: SubmitDemoDialogProps) {
+export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselectedLabelId }: SubmitDemoDialogProps) {
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
-  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(preselectedLabelId ?? null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -148,13 +149,15 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId }: SubmitD
     },
   });
 
-  // Reset selections when dialog closes
+  // Reset selections when dialog closes, but respect preselected label
   useEffect(() => {
     if (!open) {
       setSelectedSongId(null);
-      setSelectedLabelId(null);
+      setSelectedLabelId(preselectedLabelId ?? null);
+    } else if (preselectedLabelId) {
+      setSelectedLabelId(preselectedLabelId);
     }
-  }, [open]);
+  }, [open, preselectedLabelId]);
 
   const selectedSong = songs.find((s) => s.id === selectedSongId);
   const selectedLabel = labels.find((l) => l.id === selectedLabelId);
