@@ -51,7 +51,7 @@ const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
-// const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
+const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
 const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
@@ -272,8 +272,8 @@ function App() {
                     <Route path="travel" element={<Travel />} />
                     <Route path="band-vehicles" element={<BandVehicles />} />
                     <Route path="relationships" element={<Relationships />} />
-                    {/* <Route path="public-relations" element={<PublicRelations />} /> */}
-                    {/* <Route path="pr" element={<PublicRelations />} /> */}
+                    <Route path="public-relations" element={<PublicRelations />} />
+                    <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
