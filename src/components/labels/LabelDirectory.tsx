@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Globe2, MapPin, Rocket, Send, Star } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Building2, Globe2, MapPin, Rocket, Send, Star, Settings, Crown } from "lucide-react";
 import { SubmitDemoDialog } from "./SubmitDemoDialog";
+import { LabelFinanceDialog } from "./LabelFinanceDialog";
+import { cn } from "@/lib/utils";
 import type {
   ArtistEntity,
   DealTypeRow,
@@ -33,9 +36,26 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [isDemoDialogOpen, setIsDemoDialogOpen] = useState(false);
+  const [manageLabelId, setManageLabelId] = useState<string | null>(null);
+  const [manageLabelName, setManageLabelName] = useState<string>("");
 
   // Get user's primary band for demo submission
   const primaryBand = artistEntities.find(e => e.type === 'band');
+
+  // Get user's profile ID
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile-id", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: labels, isLoading } = useQuery<LabelWithRelations[]>({
     queryKey: ["labels-directory"],
@@ -48,6 +68,7 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
           label_territories(territory_code),
           artist_label_contracts(id, status)
         `)
+        .eq("is_bankrupt", false)
         .order("reputation_score", { ascending: false });
 
       if (error) {
@@ -57,6 +78,10 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
       return data as LabelWithRelations[];
     },
   });
+
+  const isLabelOwner = (label: LabelWithRelations) => {
+    return userProfile?.id && label.owner_id === userProfile.id;
+  };
 
   const territoryMap = useMemo(() => {
     const map = new Map<string, TerritoryRow>();
@@ -182,15 +207,31 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                   territoryMap.get(item.territory_code)?.name ?? item.territory_code
                 );
 
+                const isOwner = isLabelOwner(label);
+
                 return (
-                  <Card key={label.id} className="flex flex-col">
+                  <Card key={label.id} className={cn("flex flex-col", isOwner && "border-amber-500/50 bg-amber-500/5")}>
                     <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-xl">{label.name}</CardTitle>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12 border">
+                          <AvatarImage src={label.logo_url || undefined} alt={label.name} />
+                          <AvatarFallback className="bg-muted">
+                            <Building2 className="h-5 w-5 text-muted-foreground" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-xl">{label.name}</CardTitle>
+                            {isOwner && (
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 gap-1">
+                                <Crown className="h-3 w-3" />
+                                Owner
+                              </Badge>
+                            )}
+                          </div>
                           {label.headquarters_city ? (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Building2 className="h-4 w-4" />
+                              <MapPin className="h-3 w-3" />
                               <span>{label.headquarters_city}</span>
                             </div>
                           ) : null}
@@ -265,13 +306,29 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                         <Rocket className="h-4 w-4" />
                         <span>{activeContracts} artists signed</span>
                       </div>
-                      <Button
-                        onClick={() => handleSubmitDemo(label)}
-                        disabled={artistEntities.length === 0}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Submit Demo
-                      </Button>
+                      <div className="flex gap-2">
+                        {isOwner && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setManageLabelId(label.id);
+                              setManageLabelName(label.name);
+                            }}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Manage
+                          </Button>
+                        )}
+                        {!isOwner && (
+                          <Button
+                            onClick={() => handleSubmitDemo(label)}
+                            disabled={artistEntities.length === 0}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Submit Demo
+                          </Button>
+                        )}
+                      </div>
                     </CardFooter>
                   </Card>
                 );
@@ -356,6 +413,15 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
         bandId={primaryBand?.bandId}
         preselectedLabelId={selectedLabelId}
       />
+
+      {manageLabelId && (
+        <LabelFinanceDialog
+          open={!!manageLabelId}
+          onOpenChange={(open) => !open && setManageLabelId(null)}
+          labelId={manageLabelId}
+          labelName={manageLabelName}
+        />
+      )}
     </div>
   );
 }
