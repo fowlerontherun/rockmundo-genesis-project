@@ -92,6 +92,17 @@ serve(async (req) => {
         .update({ status: 'accepted' })
         .eq('id', offerId);
 
+      // Get user's profile_id
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('id')
+        .eq('user_id', offer.user_id)
+        .single();
+
+      if (!profile) {
+        throw new Error('User profile not found');
+      }
+
       // Determine duration (film = 7 days, others = 1 hour)
       const isFilm = offer.media_type === 'film';
       const durationMinutes = isFilm ? 7 * 24 * 60 : 60;
@@ -104,10 +115,11 @@ serve(async (req) => {
         .from('player_scheduled_activities')
         .insert({
           user_id: offer.user_id,
-          activity_type: 'pr_appearance',
+          profile_id: profile.id,
+          activity_type: isFilm ? 'film_production' : 'pr_appearance',
           title: `PR: ${offer.media_type.toUpperCase()} Appearance`,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
+          scheduled_start: startTime.toISOString(),
+          scheduled_end: endTime.toISOString(),
           status: 'scheduled',
           metadata: {
             offer_id: offerId,

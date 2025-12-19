@@ -52,17 +52,9 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
   const { data: offers, isLoading } = useQuery({
     queryKey: ["pr-offers", bandId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("pr_media_offers")
-        .select(`
-          *,
-          tv_networks(name),
-          radio_stations(name),
-          podcasts(name),
-          newspapers(name),
-          magazines(name),
-          youtube_channels(name)
-        `)
+        .select("*")
         .eq("band_id", bandId)
         .eq("status", "pending")
         .order("proposed_date", { ascending: true });
@@ -101,16 +93,8 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
   });
 
   const getOutletName = (offer: any): string => {
-    switch (offer.media_type) {
-      case "tv": return offer.tv_networks?.name || "TV Network";
-      case "radio": return offer.radio_stations?.name || "Radio Station";
-      case "podcast": return offer.podcasts?.name || "Podcast";
-      case "newspaper": return offer.newspapers?.name || "Newspaper";
-      case "magazine": return offer.magazines?.name || "Magazine";
-      case "youtube": return offer.youtube_channels?.name || "YouTube Channel";
-      case "film": return "Film Production";
-      default: return "Media Outlet";
-    }
+    // Use outlet_name directly from the offer
+    return offer.outlet_name || offer.show_name || `${offer.media_type?.toUpperCase() || 'Media'} Outlet`;
   };
 
   if (isLoading) {
