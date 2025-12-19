@@ -132,30 +132,55 @@ function calculateProductionPotential(
   return Math.round(skillBase + attrBonus);
 }
 
+// Random variance function for songwriting inspiration/blocks
+function getRandomVariance(): number {
+  // Returns a multiplier between 0.85 and 1.20
+  // 70% chance of small variance (-5% to +10%)
+  // 20% chance of inspiration buff (+10% to +20%)
+  // 10% chance of creative block (-15% to -5%)
+  const roll = Math.random();
+  if (roll < 0.1) {
+    // Creative block
+    return 0.85 + Math.random() * 0.10; // 0.85 to 0.95
+  } else if (roll < 0.3) {
+    // Inspiration buff
+    return 1.10 + Math.random() * 0.10; // 1.10 to 1.20
+  } else {
+    // Normal variance
+    return 0.95 + Math.random() * 0.15; // 0.95 to 1.10
+  }
+}
+
+// Apply random variance to a strength value
+function applyVariance(baseValue: number): number {
+  return Math.round(baseValue * getRandomVariance());
+}
+
 // Main quality calculation function
 export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResult {
-  const melodyStrength = calculateMelodyStrength(
+  // Calculate base strengths then apply random variance
+  const melodyStrength = applyVariance(calculateMelodyStrength(
     inputs.skillLevels,
     inputs.attributes.musical_ability
-  );
+  ));
   
-  const lyricsStrength = calculateLyricsStrength(
+  const lyricsStrength = applyVariance(calculateLyricsStrength(
     inputs.skillLevels,
     inputs.attributes.creative_insight,
     inputs.aiLyrics
-  );
+  ));
   
-  const rhythmStrength = calculateRhythmStrength(inputs.skillLevels);
+  const rhythmStrength = applyVariance(calculateRhythmStrength(inputs.skillLevels));
   
-  const arrangementStrength = calculateArrangementStrength(
+  const arrangementStrength = applyVariance(calculateArrangementStrength(
     inputs.skillLevels,
     inputs.coWriters
-  );
+  ));
   
-  const productionPotential = calculateProductionPotential(
+  const productionPotential = applyVariance(calculateProductionPotential(
     inputs.skillLevels,
     inputs.attributes.technical_mastery
-  );
+  ));
   
   // Calculate genre familiarity multiplier (1.0 to 1.5x)
   const genreSkillSlug = getGenreSkillSlug(inputs.genre, 'basic');
