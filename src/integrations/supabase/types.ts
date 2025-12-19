@@ -4210,6 +4210,101 @@ export type Database = {
           },
         ]
       }
+      film_productions: {
+        Row: {
+          compensation_max: number | null
+          compensation_min: number | null
+          created_at: string | null
+          description: string | null
+          fame_boost: number | null
+          fan_boost: number | null
+          film_type: string | null
+          filming_duration_days: number | null
+          genre: string | null
+          id: string
+          is_available: boolean | null
+          min_fame_required: number | null
+          studio_id: string | null
+          title: string
+        }
+        Insert: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          film_type?: string | null
+          filming_duration_days?: number | null
+          genre?: string | null
+          id?: string
+          is_available?: boolean | null
+          min_fame_required?: number | null
+          studio_id?: string | null
+          title: string
+        }
+        Update: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          film_type?: string | null
+          filming_duration_days?: number | null
+          genre?: string | null
+          id?: string
+          is_available?: boolean | null
+          min_fame_required?: number | null
+          studio_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "film_productions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "film_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      film_studios: {
+        Row: {
+          country: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          min_fame_required: number | null
+          name: string
+          prestige_level: number | null
+          studio_type: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          name: string
+          prestige_level?: number | null
+          studio_type?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          name?: string
+          prestige_level?: number | null
+          studio_type?: string | null
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -6346,6 +6441,75 @@ export type Database = {
           },
         ]
       }
+      magazines: {
+        Row: {
+          compensation_max: number | null
+          compensation_min: number | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          fame_boost_max: number | null
+          fame_boost_min: number | null
+          fan_boost_max: number | null
+          fan_boost_min: number | null
+          genres: string[] | null
+          id: string
+          interview_slots_per_issue: number | null
+          is_active: boolean | null
+          logo_url: string | null
+          magazine_type: string | null
+          min_fame_required: number | null
+          name: string
+          publication_frequency: string | null
+          quality_level: number | null
+          readership: number | null
+        }
+        Insert: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          id?: string
+          interview_slots_per_issue?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          magazine_type?: string | null
+          min_fame_required?: number | null
+          name: string
+          publication_frequency?: string | null
+          quality_level?: number | null
+          readership?: number | null
+        }
+        Update: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          id?: string
+          interview_slots_per_issue?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          magazine_type?: string | null
+          min_fame_required?: number | null
+          name?: string
+          publication_frequency?: string | null
+          quality_level?: number | null
+          readership?: number | null
+        }
+        Relationships: []
+      }
       manufacturing_costs: {
         Row: {
           cost_per_unit: number
@@ -7063,6 +7227,83 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newspapers: {
+        Row: {
+          circulation: number | null
+          city_id: string | null
+          compensation_max: number | null
+          compensation_min: number | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          fame_boost_max: number | null
+          fame_boost_min: number | null
+          fan_boost_max: number | null
+          fan_boost_min: number | null
+          genres: string[] | null
+          id: string
+          interview_slots_per_day: number | null
+          is_active: boolean | null
+          logo_url: string | null
+          min_fame_required: number | null
+          name: string
+          newspaper_type: string | null
+          quality_level: number | null
+        }
+        Insert: {
+          circulation?: number | null
+          city_id?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          id?: string
+          interview_slots_per_day?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          min_fame_required?: number | null
+          name: string
+          newspaper_type?: string | null
+          quality_level?: number | null
+        }
+        Update: {
+          circulation?: number | null
+          city_id?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          id?: string
+          interview_slots_per_day?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          min_fame_required?: number | null
+          name?: string
+          newspaper_type?: string | null
+          quality_level?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newspapers_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]
@@ -8353,6 +8594,75 @@ export type Database = {
           },
         ]
       }
+      player_film_contracts: {
+        Row: {
+          accepted_at: string | null
+          band_id: string | null
+          compensation: number | null
+          completed_at: string | null
+          contract_year: number
+          created_at: string | null
+          fame_boost: number | null
+          fan_boost: number | null
+          film_id: string
+          filming_end_date: string | null
+          filming_start_date: string | null
+          id: string
+          role_type: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          band_id?: string | null
+          compensation?: number | null
+          completed_at?: string | null
+          contract_year: number
+          created_at?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          film_id: string
+          filming_end_date?: string | null
+          filming_start_date?: string | null
+          id?: string
+          role_type?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          band_id?: string | null
+          compensation?: number | null
+          completed_at?: string | null
+          contract_year?: number
+          created_at?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          film_id?: string
+          filming_end_date?: string | null
+          filming_start_date?: string | null
+          id?: string
+          role_type?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_film_contracts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_film_contracts_film_id_fkey"
+            columns: ["film_id"]
+            isOneToOne: false
+            referencedRelation: "film_productions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_gig_milestones: {
         Row: {
           achieved_at: string
@@ -9005,6 +9315,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      player_pr_consultants: {
+        Row: {
+          auto_accept_enabled: boolean | null
+          consultant_id: string | null
+          created_at: string | null
+          expires_at: string
+          hired_at: string | null
+          id: string
+          min_compensation: number | null
+          target_media_types: string[] | null
+          user_id: string
+        }
+        Insert: {
+          auto_accept_enabled?: boolean | null
+          consultant_id?: string | null
+          created_at?: string | null
+          expires_at: string
+          hired_at?: string | null
+          id?: string
+          min_compensation?: number | null
+          target_media_types?: string[] | null
+          user_id: string
+        }
+        Update: {
+          auto_accept_enabled?: boolean | null
+          consultant_id?: string | null
+          created_at?: string | null
+          expires_at?: string
+          hired_at?: string | null
+          id?: string
+          min_compensation?: number | null
+          target_media_types?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_pr_consultants_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "pr_consultants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_prison_events: {
         Row: {
@@ -9836,6 +10190,72 @@ export type Database = {
           },
         ]
       }
+      podcasts: {
+        Row: {
+          compensation_max: number | null
+          compensation_min: number | null
+          created_at: string | null
+          description: string | null
+          episodes_per_week: number | null
+          fame_boost_max: number | null
+          fame_boost_min: number | null
+          fan_boost_max: number | null
+          fan_boost_min: number | null
+          genres: string[] | null
+          host_name: string | null
+          id: string
+          is_active: boolean | null
+          listener_base: number | null
+          min_fame_required: number | null
+          podcast_name: string
+          podcast_type: string | null
+          quality_level: number | null
+          slots_per_episode: number | null
+        }
+        Insert: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          episodes_per_week?: number | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          host_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          listener_base?: number | null
+          min_fame_required?: number | null
+          podcast_name: string
+          podcast_type?: string | null
+          quality_level?: number | null
+          slots_per_episode?: number | null
+        }
+        Update: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          episodes_per_week?: number | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          host_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          listener_base?: number | null
+          min_fame_required?: number | null
+          podcast_name?: string
+          podcast_type?: string | null
+          quality_level?: number | null
+          slots_per_episode?: number | null
+        }
+        Relationships: []
+      }
       pr_campaigns: {
         Row: {
           band_id: string | null
@@ -9885,6 +10305,188 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pr_campaigns_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pr_consultant_requests: {
+        Row: {
+          consultant_contract_id: string | null
+          created_at: string | null
+          fulfilled_at: string | null
+          fulfilled_offer_id: string | null
+          id: string
+          media_type: string
+          notes: string | null
+          preferred_outlet_id: string | null
+          status: string | null
+          target_type: string | null
+          user_id: string
+        }
+        Insert: {
+          consultant_contract_id?: string | null
+          created_at?: string | null
+          fulfilled_at?: string | null
+          fulfilled_offer_id?: string | null
+          id?: string
+          media_type: string
+          notes?: string | null
+          preferred_outlet_id?: string | null
+          status?: string | null
+          target_type?: string | null
+          user_id: string
+        }
+        Update: {
+          consultant_contract_id?: string | null
+          created_at?: string | null
+          fulfilled_at?: string | null
+          fulfilled_offer_id?: string | null
+          id?: string
+          media_type?: string
+          notes?: string | null
+          preferred_outlet_id?: string | null
+          status?: string | null
+          target_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_consultant_requests_consultant_contract_id_fkey"
+            columns: ["consultant_contract_id"]
+            isOneToOne: false
+            referencedRelation: "player_pr_consultants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pr_consultant_requests_fulfilled_offer_id_fkey"
+            columns: ["fulfilled_offer_id"]
+            isOneToOne: false
+            referencedRelation: "pr_media_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pr_consultants: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          specialty: string | null
+          success_rate: number | null
+          tier: string | null
+          weekly_fee: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          specialty?: string | null
+          success_rate?: number | null
+          tier?: string | null
+          weekly_fee?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          specialty?: string | null
+          success_rate?: number | null
+          tier?: string | null
+          weekly_fee?: number | null
+        }
+        Relationships: []
+      }
+      pr_media_offers: {
+        Row: {
+          accepted_at: string | null
+          band_id: string | null
+          compensation: number | null
+          completed_at: string | null
+          created_at: string | null
+          duration_hours: number | null
+          expires_at: string
+          fame_boost: number | null
+          fan_boost: number | null
+          id: string
+          linked_release_id: string | null
+          linked_tour_id: string | null
+          media_outlet_id: string | null
+          media_type: string
+          offer_type: string
+          outlet_name: string | null
+          proposed_date: string
+          release_hype_boost_percent: number | null
+          show_id: string | null
+          show_name: string | null
+          status: string | null
+          ticket_sales_boost_percent: number | null
+          time_slot: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          band_id?: string | null
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_hours?: number | null
+          expires_at: string
+          fame_boost?: number | null
+          fan_boost?: number | null
+          id?: string
+          linked_release_id?: string | null
+          linked_tour_id?: string | null
+          media_outlet_id?: string | null
+          media_type: string
+          offer_type: string
+          outlet_name?: string | null
+          proposed_date: string
+          release_hype_boost_percent?: number | null
+          show_id?: string | null
+          show_name?: string | null
+          status?: string | null
+          ticket_sales_boost_percent?: number | null
+          time_slot?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          band_id?: string | null
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_hours?: number | null
+          expires_at?: string
+          fame_boost?: number | null
+          fan_boost?: number | null
+          id?: string
+          linked_release_id?: string | null
+          linked_tour_id?: string | null
+          media_outlet_id?: string | null
+          media_type?: string
+          offer_type?: string
+          outlet_name?: string | null
+          proposed_date?: string
+          release_hype_boost_percent?: number | null
+          show_id?: string | null
+          show_name?: string | null
+          status?: string | null
+          ticket_sales_boost_percent?: number | null
+          time_slot?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_media_offers_band_id_fkey"
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
@@ -13859,6 +14461,142 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_networks: {
+        Row: {
+          city_id: string | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          genres: string[] | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          min_fame_required: number | null
+          min_fans_required: number | null
+          name: string
+          network_type: string | null
+          quality_level: number | null
+          updated_at: string | null
+          viewer_base: number | null
+        }
+        Insert: {
+          city_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          genres?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          min_fame_required?: number | null
+          min_fans_required?: number | null
+          name: string
+          network_type?: string | null
+          quality_level?: number | null
+          updated_at?: string | null
+          viewer_base?: number | null
+        }
+        Update: {
+          city_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          genres?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          min_fame_required?: number | null
+          min_fans_required?: number | null
+          name?: string
+          network_type?: string | null
+          quality_level?: number | null
+          updated_at?: string | null
+          viewer_base?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_networks_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_shows: {
+        Row: {
+          compensation_max: number | null
+          compensation_min: number | null
+          created_at: string | null
+          days_of_week: number[] | null
+          description: string | null
+          fame_boost_max: number | null
+          fame_boost_min: number | null
+          fan_boost_max: number | null
+          fan_boost_min: number | null
+          host_name: string | null
+          id: string
+          is_active: boolean | null
+          min_fame_required: number | null
+          network_id: string | null
+          show_name: string
+          show_type: string | null
+          slots_per_day: number | null
+          time_slot: string | null
+          viewer_reach: number | null
+        }
+        Insert: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          host_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          network_id?: string | null
+          show_name: string
+          show_type?: string | null
+          slots_per_day?: number | null
+          time_slot?: string | null
+          viewer_reach?: number | null
+        }
+        Update: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          host_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          network_id?: string | null
+          show_name?: string
+          show_type?: string | null
+          slots_per_day?: number | null
+          time_slot?: string | null
+          viewer_reach?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_shows_network_id_fkey"
+            columns: ["network_id"]
+            isOneToOne: false
+            referencedRelation: "tv_networks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       twaat_metrics: {
         Row: {
           clicks: number | null
@@ -15142,6 +15880,75 @@ export type Database = {
           subscription_type?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      youtube_channels: {
+        Row: {
+          avg_views: number | null
+          channel_name: string
+          channel_type: string | null
+          channel_url: string | null
+          compensation_max: number | null
+          compensation_min: number | null
+          created_at: string | null
+          description: string | null
+          fame_boost_max: number | null
+          fame_boost_min: number | null
+          fan_boost_max: number | null
+          fan_boost_min: number | null
+          genres: string[] | null
+          host_name: string | null
+          id: string
+          is_active: boolean | null
+          min_fame_required: number | null
+          quality_level: number | null
+          slots_per_week: number | null
+          subscriber_count: number | null
+        }
+        Insert: {
+          avg_views?: number | null
+          channel_name: string
+          channel_type?: string | null
+          channel_url?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          host_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          quality_level?: number | null
+          slots_per_week?: number | null
+          subscriber_count?: number | null
+        }
+        Update: {
+          avg_views?: number | null
+          channel_name?: string
+          channel_type?: string | null
+          channel_url?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          genres?: string[] | null
+          host_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          quality_level?: number | null
+          slots_per_week?: number | null
+          subscriber_count?: number | null
         }
         Relationships: []
       }
