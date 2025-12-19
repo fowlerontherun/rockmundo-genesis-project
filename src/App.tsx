@@ -52,6 +52,7 @@ const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
+const PRSubmissionsHistory = lazyWithRetry(() => import("./pages/media/PRSubmissionsHistory"));
 const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
@@ -275,6 +276,7 @@ function App() {
                     <Route path="media/magazines" element={<MagazinesBrowser />} />
                     <Route path="media/podcasts" element={<PodcastsBrowser />} />
                     <Route path="media/films" element={<FilmsBrowser />} />
+                    <Route path="media/pr-history" element={<PRSubmissionsHistory />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />

@@ -146,3 +146,6 @@ verify_jwt = false
 
 [functions.process-demo-review]
 verify_jwt = false
+
+[functions.process-media-submissions]
+verify_jwt = false
