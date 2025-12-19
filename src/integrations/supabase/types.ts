@@ -6711,6 +6711,75 @@ export type Database = {
           },
         ]
       }
+      magazine_submissions: {
+        Row: {
+          band_id: string
+          compensation: number | null
+          completed_at: string | null
+          created_at: string | null
+          fame_boost: number | null
+          fan_boost: number | null
+          feature_type: string | null
+          id: string
+          magazine_id: string
+          proposed_date: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          status: string | null
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          feature_type?: string | null
+          id?: string
+          magazine_id: string
+          proposed_date?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          feature_type?: string | null
+          id?: string
+          magazine_id?: string
+          proposed_date?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "magazine_submissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "magazine_submissions_magazine_id_fkey"
+            columns: ["magazine_id"]
+            isOneToOne: false
+            referencedRelation: "magazines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       magazines: {
         Row: {
           compensation_max: number | null
@@ -7497,6 +7566,75 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newspaper_submissions: {
+        Row: {
+          band_id: string
+          compensation: number | null
+          completed_at: string | null
+          created_at: string | null
+          fame_boost: number | null
+          fan_boost: number | null
+          id: string
+          interview_type: string | null
+          newspaper_id: string
+          proposed_date: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          status: string | null
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          id?: string
+          interview_type?: string | null
+          newspaper_id: string
+          proposed_date?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          id?: string
+          interview_type?: string | null
+          newspaper_id?: string
+          proposed_date?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newspaper_submissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newspaper_submissions_newspaper_id_fkey"
+            columns: ["newspaper_id"]
+            isOneToOne: false
+            referencedRelation: "newspapers"
             referencedColumns: ["id"]
           },
         ]
@@ -10460,10 +10598,80 @@ export type Database = {
           },
         ]
       }
+      podcast_submissions: {
+        Row: {
+          band_id: string
+          compensation: number | null
+          completed_at: string | null
+          created_at: string | null
+          episode_topic: string | null
+          fame_boost: number | null
+          fan_boost: number | null
+          id: string
+          podcast_id: string
+          proposed_date: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          status: string | null
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          episode_topic?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          id?: string
+          podcast_id: string
+          proposed_date?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          episode_topic?: string | null
+          fame_boost?: number | null
+          fan_boost?: number | null
+          id?: string
+          podcast_id?: string
+          proposed_date?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_submissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "podcast_submissions_podcast_id_fkey"
+            columns: ["podcast_id"]
+            isOneToOne: false
+            referencedRelation: "podcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       podcasts: {
         Row: {
           compensation_max: number | null
           compensation_min: number | null
+          country: string | null
           created_at: string | null
           description: string | null
           episodes_per_week: number | null
@@ -10485,6 +10693,7 @@ export type Database = {
         Insert: {
           compensation_max?: number | null
           compensation_min?: number | null
+          country?: string | null
           created_at?: string | null
           description?: string | null
           episodes_per_week?: number | null
@@ -10506,6 +10715,7 @@ export type Database = {
         Update: {
           compensation_max?: number | null
           compensation_min?: number | null
+          country?: string | null
           created_at?: string | null
           description?: string | null
           episodes_per_week?: number | null

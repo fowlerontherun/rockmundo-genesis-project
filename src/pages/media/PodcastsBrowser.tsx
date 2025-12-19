@@ -2,12 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
-import { Podcast, Mic, Headphones, Star, Search, Filter, Globe, MapPin } from "lucide-react";
+import { useUserBand } from "@/hooks/useUserBand";
+import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
+import { 
+  Podcast, Mic, Headphones, Star, Search, Filter, Globe, MapPin,
+  TrendingUp, DollarSign, Send, CheckCircle
+} from "lucide-react";
 
 interface PodcastShow {
   id: string;
@@ -20,16 +26,23 @@ interface PodcastShow {
   genres: string[] | null;
   description: string | null;
   country: string | null;
+  fame_boost_min: number | null;
+  fame_boost_max: number | null;
+  fan_boost_min: number | null;
+  fan_boost_max: number | null;
+  compensation_min: number | null;
+  compensation_max: number | null;
 }
 
 const PodcastsBrowser = () => {
   const { currentCity } = useGameData();
+  const { data: userBand } = useUserBand();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
 
-  // Auto-set country filter based on user's current city
   useEffect(() => {
     if (currentCity?.country && countryFilter === "all") {
       setCountryFilter(currentCity.country);
@@ -49,7 +62,21 @@ const PodcastsBrowser = () => {
     }
   });
 
-  // Extract unique values for filters
+  const { data: existingSubmissions = [] } = useQuery({
+    queryKey: ['podcast-submissions', userBand?.id],
+    queryFn: async () => {
+      if (!userBand?.id) return [];
+      const { data, error } = await supabase
+        .from('podcast_submissions')
+        .select('podcast_id')
+        .eq('band_id', userBand.id)
+        .in('status', ['pending', 'approved', 'scheduled']);
+      if (error) throw error;
+      return data.map(s => s.podcast_id);
+    },
+    enabled: !!userBand?.id,
+  });
+
   const filterOptions = useMemo(() => {
     const types = new Set<string>();
     const countries = new Set<string>();
@@ -84,6 +111,13 @@ const PodcastsBrowser = () => {
     if (listeners >= 1000) return `${(listeners / 1000).toFixed(0)}K`;
     return listeners?.toString() || '0';
   };
+
+  const isEligible = (pod: PodcastShow) => {
+    if (!userBand) return false;
+    return !pod.min_fame_required || userBand.fame >= pod.min_fame_required;
+  };
+
+  const hasSubmission = (podId: string) => existingSubmissions.includes(podId);
 
   if (isLoading) {
     return (
@@ -166,12 +200,10 @@ const PodcastsBrowser = () => {
         </Select>
       </div>
 
-      {/* Results count */}
       <p className="text-sm text-muted-foreground">
         Showing {filteredPodcasts.length} of {podcasts?.length || 0} podcasts
       </p>
 
-      {/* Podcasts Grid */}
       {filteredPodcasts.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
@@ -214,10 +246,27 @@ const PodcastsBrowser = () => {
                 )}
                 {pod.min_fame_required !== null && pod.min_fame_required > 0 && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Star className="h-4 w-4 text-warning" />
+                    <Star className={`h-4 w-4 ${isEligible(pod) ? 'text-warning' : 'text-destructive'}`} />
                     <span>Min Fame: {pod.min_fame_required}</span>
+                    {userBand && (
+                      <span className="text-muted-foreground">(you: {userBand.fame})</span>
+                    )}
                   </div>
                 )}
+
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {pod.fame_boost_min != null && (
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />+{pod.fame_boost_min}-{pod.fame_boost_max} fame
+                    </span>
+                  )}
+                  {pod.compensation_min != null && (
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" />${pod.compensation_min}-{pod.compensation_max}
+                    </span>
+                  )}
+                </div>
+
                 {pod.genres && pod.genres.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {pod.genres.slice(0, 3).map(genre => (
@@ -237,10 +286,51 @@ const PodcastsBrowser = () => {
                     {pod.description}
                   </p>
                 )}
+
+                <div className="pt-2">
+                  {hasSubmission(pod.id) ? (
+                    <Button variant="outline" disabled className="w-full">
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Request Pending
+                    </Button>
+                  ) : (
+                    <Button
+                      variant={isEligible(pod) ? "default" : "outline"}
+                      className="w-full"
+                      disabled={!userBand}
+                      onClick={() => setSelectedPodcast(pod)}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      {isEligible(pod) ? "Request Appearance" : "Not Eligible"}
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
+      )}
+
+      {selectedPodcast && userBand && (
+        <MediaSubmissionDialog
+          open={!!selectedPodcast}
+          onOpenChange={(open) => !open && setSelectedPodcast(null)}
+          mediaType="podcast"
+          mediaItem={{
+            id: selectedPodcast.id,
+            name: selectedPodcast.podcast_name,
+            min_fame_required: selectedPodcast.min_fame_required,
+            genres: selectedPodcast.genres,
+            fame_boost_min: selectedPodcast.fame_boost_min,
+            fame_boost_max: selectedPodcast.fame_boost_max,
+            fan_boost_min: selectedPodcast.fan_boost_min,
+            fan_boost_max: selectedPodcast.fan_boost_max,
+            compensation_min: selectedPodcast.compensation_min,
+            compensation_max: selectedPodcast.compensation_max,
+          }}
+          bandId={userBand.id}
+          bandFame={userBand.fame}
+        />
       )}
     </div>
   );
