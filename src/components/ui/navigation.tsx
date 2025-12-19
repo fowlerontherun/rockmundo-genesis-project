@@ -63,6 +63,8 @@ import {
   Bus,
   ChevronDown,
   ChevronRight,
+  Tv,
+  Film,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 

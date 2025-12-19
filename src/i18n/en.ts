@@ -138,6 +138,14 @@ export const en = {
     more: "More",
     openMenu: "Open navigation menu",
     toggleMenu: "Toggle navigation menu",
+    media: "Media",
+    bandManager: "Band Manager",
+    radioStations: "Radio Stations",
+    tvShows: "TV Shows",
+    newspapers: "Newspapers",
+    magazines: "Magazines",
+    podcasts: "Podcasts",
+    films: "Films",
   },
   
   // Today's News Page

@@ -163,6 +163,11 @@ const Radio = lazyWithRetry(() => import("./pages/Radio"));
 const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
 const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
 const RadioStationDetail = lazyWithRetry(() => import("./pages/RadioStationDetail"));
+const TVShowsBrowser = lazyWithRetry(() => import("./pages/media/TVShowsBrowser"));
+const NewspapersBrowser = lazyWithRetry(() => import("./pages/media/NewspapersBrowser"));
+const MagazinesBrowser = lazyWithRetry(() => import("./pages/media/MagazinesBrowser"));
+const PodcastsBrowser = lazyWithRetry(() => import("./pages/media/PodcastsBrowser"));
+const FilmsBrowser = lazyWithRetry(() => import("./pages/media/FilmsBrowser"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
@@ -265,6 +270,11 @@ function App() {
                     <Route path="radio-stations" element={<RadioStations />} />
                     <Route path="radio/:stationId" element={<RadioStationDetail />} />
                     <Route path="music-videos" element={<MusicVideos />} />
+                    <Route path="media/tv-shows" element={<TVShowsBrowser />} />
+                    <Route path="media/newspapers" element={<NewspapersBrowser />} />
+                    <Route path="media/magazines" element={<MagazinesBrowser />} />
+                    <Route path="media/podcasts" element={<PodcastsBrowser />} />
+                    <Route path="media/films" element={<FilmsBrowser />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />

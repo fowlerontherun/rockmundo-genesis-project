@@ -140,6 +140,14 @@ export const tr: TranslationKeys = {
     more: "Daha Fazla",
     openMenu: "Menüyü aç",
     toggleMenu: "Menüyü değiştir",
+    media: "Medya",
+    bandManager: "Grup Yöneticisi",
+    radioStations: "Radyo İstasyonları",
+    tvShows: "TV Programları",
+    newspapers: "Gazeteler",
+    magazines: "Dergiler",
+    podcasts: "Podcastler",
+    films: "Filmler",
   },
   
   // Today's News Page
