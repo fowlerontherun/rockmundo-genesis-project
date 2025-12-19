@@ -47,6 +47,23 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch user's profile ID (different from auth user ID)
+  const { data: profileData } = useQuery({
+    queryKey: ["user-profile-id", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!userId,
+  });
+
+  const profileId = profileData?.id;
+
   // Fetch recorded songs that can be submitted as demos
   const { data: songs = [] } = useQuery<RecordedSong[]>({
     queryKey: ["demo-eligible-songs", userId, bandId],
@@ -93,7 +110,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
 
   // Fetch existing submissions to prevent duplicates
   const { data: existingSubmissions = [] } = useQuery({
-    queryKey: ["existing-demo-submissions", bandId, userId],
+    queryKey: ["existing-demo-submissions", bandId, profileId],
     queryFn: async () => {
       let query = supabase
         .from("demo_submissions")
@@ -102,15 +119,15 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
 
       if (bandId) {
         query = query.eq("band_id", bandId);
-      } else {
-        query = query.eq("artist_profile_id", userId);
+      } else if (profileId) {
+        query = query.eq("artist_profile_id", profileId);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
-    enabled: open,
+    enabled: open && (!!bandId || !!profileId),
   });
 
   const submitDemoMutation = useMutation({
@@ -119,11 +136,15 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
         throw new Error("Please select a song and label");
       }
 
+      if (!bandId && !profileId) {
+        throw new Error("Could not find your profile. Please try again.");
+      }
+
       const { error } = await supabase.from("demo_submissions").insert({
         song_id: selectedSongId,
         label_id: selectedLabelId,
         band_id: bandId || null,
-        artist_profile_id: bandId ? null : userId,
+        artist_profile_id: bandId ? null : profileId,
         status: "pending",
       });
 
