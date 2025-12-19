@@ -221,13 +221,18 @@ export type Database = {
       artist_label_contracts: {
         Row: {
           advance_amount: number | null
+          album_quota: number | null
+          albums_completed: number | null
           artist_profile_id: string | null
           band_id: string | null
+          contract_value: number | null
           created_at: string | null
           deal_type_id: string
+          demo_submission_id: string | null
           end_date: string
           id: string
           label_id: string
+          manufacturing_covered: boolean | null
           marketing_support: number | null
           masters_owned_by_artist: boolean | null
           recouped_amount: number | null
@@ -236,20 +241,30 @@ export type Database = {
           roster_slot_id: string | null
           royalty_artist_pct: number
           royalty_label_pct: number | null
+          single_quota: number | null
+          singles_completed: number | null
           start_date: string
           status: string | null
+          terminated_at: string | null
+          termination_fee_paid: number | null
+          termination_fee_pct: number | null
           territories: string[] | null
           updated_at: string | null
         }
         Insert: {
           advance_amount?: number | null
+          album_quota?: number | null
+          albums_completed?: number | null
           artist_profile_id?: string | null
           band_id?: string | null
+          contract_value?: number | null
           created_at?: string | null
           deal_type_id: string
+          demo_submission_id?: string | null
           end_date: string
           id?: string
           label_id: string
+          manufacturing_covered?: boolean | null
           marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
           recouped_amount?: number | null
@@ -258,20 +273,30 @@ export type Database = {
           roster_slot_id?: string | null
           royalty_artist_pct: number
           royalty_label_pct?: number | null
+          single_quota?: number | null
+          singles_completed?: number | null
           start_date: string
           status?: string | null
+          terminated_at?: string | null
+          termination_fee_paid?: number | null
+          termination_fee_pct?: number | null
           territories?: string[] | null
           updated_at?: string | null
         }
         Update: {
           advance_amount?: number | null
+          album_quota?: number | null
+          albums_completed?: number | null
           artist_profile_id?: string | null
           band_id?: string | null
+          contract_value?: number | null
           created_at?: string | null
           deal_type_id?: string
+          demo_submission_id?: string | null
           end_date?: string
           id?: string
           label_id?: string
+          manufacturing_covered?: boolean | null
           marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
           recouped_amount?: number | null
@@ -280,8 +305,13 @@ export type Database = {
           roster_slot_id?: string | null
           royalty_artist_pct?: number
           royalty_label_pct?: number | null
+          single_quota?: number | null
+          singles_completed?: number | null
           start_date?: string
           status?: string | null
+          terminated_at?: string | null
+          termination_fee_paid?: number | null
+          termination_fee_pct?: number | null
           territories?: string[] | null
           updated_at?: string | null
         }
@@ -298,6 +328,13 @@ export type Database = {
             columns: ["deal_type_id"]
             isOneToOne: false
             referencedRelation: "label_deal_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_label_contracts_demo_submission_id_fkey"
+            columns: ["demo_submission_id"]
+            isOneToOne: false
+            referencedRelation: "demo_submissions"
             referencedColumns: ["id"]
           },
           {
@@ -3124,6 +3161,118 @@ export type Database = {
           volume_24h?: number | null
         }
         Relationships: []
+      }
+      demo_submissions: {
+        Row: {
+          artist_profile_id: string | null
+          band_id: string | null
+          contract_offer_id: string | null
+          created_at: string | null
+          id: string
+          label_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewer_notes: string | null
+          song_id: string
+          status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          artist_profile_id?: string | null
+          band_id?: string | null
+          contract_offer_id?: string | null
+          created_at?: string | null
+          id?: string
+          label_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          song_id: string
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          artist_profile_id?: string | null
+          band_id?: string | null
+          contract_offer_id?: string | null
+          created_at?: string | null
+          id?: string
+          label_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          song_id?: string
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_submissions_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_contract_offer_fk"
+            columns: ["contract_offer_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dikcok_challenge_entries: {
         Row: {
@@ -11830,9 +11979,12 @@ export type Database = {
           format_type: string | null
           id: string
           is_greatest_hits: boolean | null
+          label_contract_id: string | null
+          label_revenue_share_pct: number | null
           last_greatest_hits_date: string | null
           manufacturing_complete_at: string | null
           manufacturing_discount_percentage: number | null
+          manufacturing_paid_by_label: boolean | null
           pre_order_count: number | null
           pre_order_start_date: string | null
           promotion_budget: number | null
@@ -11863,9 +12015,12 @@ export type Database = {
           format_type?: string | null
           id?: string
           is_greatest_hits?: boolean | null
+          label_contract_id?: string | null
+          label_revenue_share_pct?: number | null
           last_greatest_hits_date?: string | null
           manufacturing_complete_at?: string | null
           manufacturing_discount_percentage?: number | null
+          manufacturing_paid_by_label?: boolean | null
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
@@ -11896,9 +12051,12 @@ export type Database = {
           format_type?: string | null
           id?: string
           is_greatest_hits?: boolean | null
+          label_contract_id?: string | null
+          label_revenue_share_pct?: number | null
           last_greatest_hits_date?: string | null
           manufacturing_complete_at?: string | null
           manufacturing_discount_percentage?: number | null
+          manufacturing_paid_by_label?: boolean | null
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
@@ -11922,6 +12080,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "releases_label_contract_id_fkey"
+            columns: ["label_contract_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
             referencedColumns: ["id"]
           },
         ]
