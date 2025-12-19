@@ -91,16 +91,18 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
   const { data: labelsData } = useQuery({
     queryKey: ["labels-for-demo"],
     queryFn: async (): Promise<LabelOption[]> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const query = supabase.from("labels").select("id, name, genre_focus, reputation_score") as any;
-      const result = await query.eq("is_active", true).order("reputation_score", { ascending: false });
+      const { data, error } = await supabase
+        .from("labels")
+        .select("id, name, genre_focus, reputation_score, is_bankrupt")
+        .eq("is_bankrupt", false)
+        .order("reputation_score", { ascending: false });
 
-      if (result.error) throw result.error;
-      return (result.data ?? []).map((l: any) => ({
+      if (error) throw error;
+      return (data ?? []).map((l) => ({
         id: l.id,
         name: l.name,
         genre_focus: l.genre_focus as string[] | null,
-        reputation_score: l.reputation_score,
+        reputation_score: l.reputation_score ?? 0,
       }));
     },
     enabled: open,
