@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search, Filter, Download, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Filter, Download, Upload, Zap, Users } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RandomEvent {
   id: string;
@@ -219,6 +220,43 @@ export default function RandomEventsAdmin() {
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [triggerCategory, setTriggerCategory] = useState("all");
+
+  const { data: players } = useQuery({
+    queryKey: ["admin-players-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, username")
+        .order("display_name", { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const triggerEventMutation = useMutation({
+    mutationFn: async ({ userId, eventId, category }: { userId: string; eventId?: string; category?: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-trigger-event", {
+        body: { userId, eventId: eventId || null, category: category || null },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({ title: "Event triggered!", description: `Triggered "${data.event.title}" for player` });
+      setTriggerDialogOpen(false);
+      setSelectedUserId("");
+      setSelectedEventId("");
+      queryClient.invalidateQueries({ queryKey: ["admin-event-stats"] });
+    },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const filteredEvents = events?.filter((e) => {
     if (categoryFilter !== "all" && e.category !== categoryFilter) return false;
     if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
@@ -252,6 +290,81 @@ export default function RandomEventsAdmin() {
           <p className="text-muted-foreground">Manage random events that can happen to players</p>
         </div>
         <div className="flex gap-2">
+          <Dialog open={triggerDialogOpen} onOpenChange={setTriggerDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Zap className="h-4 w-4 mr-2" /> Trigger Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Trigger Random Event</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Select Player</Label>
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a player..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <ScrollArea className="h-60">
+                        {players?.map((p) => (
+                          <SelectItem key={p.user_id} value={p.user_id}>
+                            {p.display_name || p.username || p.user_id.slice(0, 8)}
+                          </SelectItem>
+                        ))}
+                      </ScrollArea>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Category Filter (optional)</Label>
+                  <Select value={triggerCategory} onValueChange={setTriggerCategory}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any Category</SelectItem>
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Specific Event (optional)</Label>
+                  <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Random event..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <ScrollArea className="h-60">
+                        <SelectItem value="">Random Event</SelectItem>
+                        {events?.filter(e => e.is_active).map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            [{e.category}] {e.title}
+                          </SelectItem>
+                        ))}
+                      </ScrollArea>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={() => triggerEventMutation.mutate({ 
+                    userId: selectedUserId, 
+                    eventId: selectedEventId || undefined,
+                    category: triggerCategory !== "all" ? triggerCategory : undefined
+                  })}
+                  disabled={!selectedUserId || triggerEventMutation.isPending}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  {triggerEventMutation.isPending ? "Triggering..." : "Trigger Event"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" onClick={exportEvents}>
             <Download className="h-4 w-4 mr-2" /> Export
           </Button>
