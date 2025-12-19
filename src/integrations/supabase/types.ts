@@ -6114,53 +6114,174 @@ export type Database = {
           },
         ]
       }
+      label_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          initiated_by: string | null
+          label_id: string
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          initiated_by?: string | null
+          label_id: string
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          initiated_by?: string | null
+          label_id?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_transactions_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_transactions_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_transactions_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_upgrades: {
+        Row: {
+          id: string
+          label_id: string
+          purchased_at: string | null
+          upgrade_level: number | null
+          upgrade_type: string
+        }
+        Insert: {
+          id?: string
+          label_id: string
+          purchased_at?: string | null
+          upgrade_level?: number | null
+          upgrade_type: string
+        }
+        Update: {
+          id?: string
+          label_id?: string
+          purchased_at?: string | null
+          upgrade_level?: number | null
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_upgrades_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labels: {
         Row: {
+          balance: number | null
+          balance_went_negative_at: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           genre_focus: string[] | null
           headquarters_city: string | null
+          headquarters_city_id: string | null
           id: string
+          is_bankrupt: boolean | null
           logo_url: string | null
           market_share: number | null
           marketing_budget: number | null
           name: string
+          owner_id: string | null
           reputation_score: number | null
           roster_slot_capacity: number | null
           updated_at: string | null
         }
         Insert: {
+          balance?: number | null
+          balance_went_negative_at?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           genre_focus?: string[] | null
           headquarters_city?: string | null
+          headquarters_city_id?: string | null
           id?: string
+          is_bankrupt?: boolean | null
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
           name: string
+          owner_id?: string | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
           updated_at?: string | null
         }
         Update: {
+          balance?: number | null
+          balance_went_negative_at?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           genre_focus?: string[] | null
           headquarters_city?: string | null
+          headquarters_city_id?: string | null
           id?: string
+          is_bankrupt?: boolean | null
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
           name?: string
+          owner_id?: string | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labels_headquarters_city_id_fkey"
+            columns: ["headquarters_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labels_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labels_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leaderboard_badge_awards: {
         Row: {
