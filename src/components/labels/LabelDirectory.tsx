@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useGameData } from "@/hooks/useGameData";
+import { useAuth } from "@/hooks/use-auth-context";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Globe2, MapPin, Rocket, Star } from "lucide-react";
-import { RequestContractDialog } from "./RequestContractDialog";
+import { Building2, Globe2, MapPin, Rocket, Send, Star } from "lucide-react";
+import { SubmitDemoDialog } from "./SubmitDemoDialog";
 import type {
   ArtistEntity,
   DealTypeRow,
@@ -26,16 +26,16 @@ interface LabelDirectoryProps {
 }
 
 export function LabelDirectory({ artistEntities, dealTypes, territories }: LabelDirectoryProps) {
-  const { currentCity } = useGameData();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [territoryFilter, setTerritoryFilter] = useState<string>("all");
   const [reputationFilter, setReputationFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
-  const [selectedLabel, setSelectedLabel] = useState<LabelWithRelations | null>(null);
-  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+  const [isDemoDialogOpen, setIsDemoDialogOpen] = useState(false);
 
-  // Removed auto-filter by city to show all labels by default
-  // Users can manually filter by city if needed
+  // Get user's primary band for demo submission
+  const primaryBand = artistEntities.find(e => e.type === 'band');
 
   const { data: labels, isLoading } = useQuery<LabelWithRelations[]>({
     queryKey: ["labels-directory"],
@@ -96,9 +96,9 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
     });
   }, [labels, searchTerm, territoryFilter, reputationFilter, cityFilter]);
 
-  const handleRequestContract = (label: LabelWithRelations) => {
-    setSelectedLabel(label);
-    setIsContractDialogOpen(true);
+  const handleSubmitDemo = (label: LabelWithRelations) => {
+    setSelectedLabelId(label.id);
+    setIsDemoDialogOpen(true);
   };
 
   return (
@@ -266,10 +266,11 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                         <span>{activeContracts} artists signed</span>
                       </div>
                       <Button
-                        onClick={() => handleRequestContract(label)}
+                        onClick={() => handleSubmitDemo(label)}
                         disabled={artistEntities.length === 0}
                       >
-                        Request contract
+                        <Send className="h-4 w-4 mr-2" />
+                        Submit Demo
                       </Button>
                     </CardFooter>
                   </Card>
@@ -348,13 +349,12 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
         </TabsContent>
       </Tabs>
 
-      <RequestContractDialog
-        open={isContractDialogOpen}
-        onOpenChange={setIsContractDialogOpen}
-        label={selectedLabel}
-        artistEntities={artistEntities}
-        dealTypes={dealTypes}
-        territories={territories}
+      <SubmitDemoDialog
+        open={isDemoDialogOpen}
+        onOpenChange={setIsDemoDialogOpen}
+        userId={user?.id ?? ""}
+        bandId={primaryBand?.bandId}
+        preselectedLabelId={selectedLabelId}
       />
     </div>
   );
