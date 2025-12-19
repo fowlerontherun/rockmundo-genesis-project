@@ -36,9 +36,8 @@ interface RecordedSong {
 interface LabelOption {
   id: string;
   name: string;
-  genre_focus: string | null;
+  genre_focus: string[] | null;
   reputation_score: number;
-  min_reputation_required: number | null;
 }
 
 export function SubmitDemoDialog({ open, onOpenChange, userId, bandId }: SubmitDemoDialogProps) {
@@ -71,20 +70,25 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId }: SubmitD
   });
 
   // Fetch available labels
-  const { data: labels = [] } = useQuery<LabelOption[]>({
+  const { data: labelsData } = useQuery({
     queryKey: ["labels-for-demo"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("labels")
-        .select("id, name, genre_focus, reputation_score")
-        .eq("is_active", true)
-        .order("reputation_score", { ascending: false });
+    queryFn: async (): Promise<LabelOption[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query = supabase.from("labels").select("id, name, genre_focus, reputation_score") as any;
+      const result = await query.eq("is_active", true).order("reputation_score", { ascending: false });
 
-      if (error) throw error;
-      return (data ?? []).map(l => ({ ...l, min_reputation_required: null })) as LabelOption[];
+      if (result.error) throw result.error;
+      return (result.data ?? []).map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        genre_focus: l.genre_focus as string[] | null,
+        reputation_score: l.reputation_score,
+      }));
     },
     enabled: open,
   });
+  
+  const labels = labelsData ?? [];
 
   // Fetch existing submissions to prevent duplicates
   const { data: existingSubmissions = [] } = useQuery({
@@ -162,7 +166,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId }: SubmitD
 
   // Check genre match between song and label
   const isGenreMatch = selectedSong && selectedLabel && 
-    selectedLabel.genre_focus?.toLowerCase().includes(selectedSong.genre.toLowerCase());
+    selectedLabel.genre_focus?.some(g => g.toLowerCase().includes(selectedSong.genre.toLowerCase()));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
