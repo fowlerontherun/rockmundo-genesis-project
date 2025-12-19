@@ -96,11 +96,12 @@ const Navigation = () => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     home: true,
     music: true,
+    band: true,
     performance: true,
     world: true,
     social: true,
-    community: true,
     business: true,
+    media: true,
     admin: true,
   });
 
@@ -137,8 +138,15 @@ const Navigation = () => {
         { icon: Music4, labelKey: "nav.releaseManager", path: "/release-manager" },
         { icon: Radio, labelKey: "nav.streaming", path: "/streaming" },
         { icon: Video, labelKey: "nav.musicVideos", path: "/music-videos" },
-        { icon: Radio, labelKey: "nav.radio", path: "/radio" },
         { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
+      ],
+    },
+    {
+      titleKey: "nav.band",
+      items: [
+        { icon: Users, labelKey: "nav.bandManager", path: "/band" },
+        { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry" },
+        { icon: UserPlus, labelKey: "nav.bandCrew", path: "/band-crew" },
       ],
     },
     {
@@ -167,17 +175,9 @@ const Navigation = () => {
     {
       titleKey: "nav.social",
       items: [
-        { icon: Users, labelKey: "nav.band", path: "/band" },
-        { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry" },
-        { icon: UserPlus, labelKey: "nav.bandCrew", path: "/band-crew" },
         { icon: Twitter, labelKey: "nav.twaater", path: "/twaater" },
         { icon: Video, labelKey: "nav.dikcok", path: "/dikcok" },
         { icon: Heart, labelKey: "nav.relationships", path: "/relationships" },
-      ],
-    },
-    {
-      titleKey: "nav.community",
-      items: [
         { icon: HandHeart, labelKey: "nav.communityFeed", path: "/community/feed" },
       ],
     },
@@ -192,6 +192,18 @@ const Navigation = () => {
         { icon: Building2, labelKey: "nav.venues", path: "/venues" },
         { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
         { icon: Building, labelKey: "nav.recordLabels", path: "/labels" },
+      ],
+    },
+    {
+      titleKey: "nav.media",
+      items: [
+        { icon: Radio, labelKey: "nav.radio", path: "/radio" },
+        { icon: Radio, labelKey: "nav.radioStations", path: "/radio-stations" },
+        { icon: Tv, labelKey: "nav.tvShows", path: "/media/tv-shows" },
+        { icon: Newspaper, labelKey: "nav.newspapers", path: "/media/newspapers" },
+        { icon: BookOpen, labelKey: "nav.magazines", path: "/media/magazines" },
+        { icon: Mic, labelKey: "nav.podcasts", path: "/media/podcasts" },
+        { icon: Film, labelKey: "nav.films", path: "/media/films" },
       ],
     },
     {
