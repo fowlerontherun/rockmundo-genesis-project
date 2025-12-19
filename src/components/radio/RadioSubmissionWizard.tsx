@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useVipStatus } from "@/hooks/useVipStatus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { 
   Radio, Music, Send, CheckCircle2, XCircle, 
-  AlertCircle, ChevronRight, Users, Star, MapPin 
+  AlertCircle, ChevronRight, Users, Star, MapPin, Crown, Lock
 } from "lucide-react";
 
 interface RadioSubmissionWizardProps {
@@ -44,6 +45,8 @@ interface Song {
 
 export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWizardProps) {
   const { user } = useAuth();
+  const { data: vipStatus } = useVipStatus();
+  const isVip = vipStatus?.isVip ?? false;
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
@@ -351,9 +354,22 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">Step 2: Select Stations</h3>
-              <Button variant="outline" size="sm" onClick={handleSelectAllEligible}>
-                Select All Eligible ({eligibleCount})
-              </Button>
+              {isVip ? (
+                <Button variant="default" size="sm" onClick={handleSelectAllEligible} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600">
+                  <Crown className="mr-2 h-4 w-4" />
+                  Select All Eligible ({eligibleCount})
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled className="opacity-60">
+                    <Lock className="mr-2 h-3 w-3" />
+                    Select All (VIP)
+                  </Button>
+                  <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                    <Crown className="mr-1 h-3 w-3" /> VIP Feature
+                  </Badge>
+                </div>
+              )}
             </div>
             
             <div className="text-sm text-muted-foreground">
