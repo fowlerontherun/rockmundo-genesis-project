@@ -10843,6 +10843,7 @@ export type Database = {
           fame: number | null
           fans: number | null
           gender: string | null
+          has_active_lawyer: boolean | null
           health: number
           id: string
           is_imprisoned: boolean
@@ -10852,6 +10853,8 @@ export type Database = {
           last_health_update: string | null
           last_retirement_prompt_age: number | null
           last_weekly_bonus_at: string | null
+          lawyer_expires_at: string | null
+          lawyer_hired_at: string | null
           level: number | null
           rest_required_until: string | null
           rpm_avatar_url: string | null
@@ -10885,6 +10888,7 @@ export type Database = {
           fame?: number | null
           fans?: number | null
           gender?: string | null
+          has_active_lawyer?: boolean | null
           health?: number
           id?: string
           is_imprisoned?: boolean
@@ -10894,6 +10898,8 @@ export type Database = {
           last_health_update?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
+          lawyer_expires_at?: string | null
+          lawyer_hired_at?: string | null
           level?: number | null
           rest_required_until?: string | null
           rpm_avatar_url?: string | null
@@ -10927,6 +10933,7 @@ export type Database = {
           fame?: number | null
           fans?: number | null
           gender?: string | null
+          has_active_lawyer?: boolean | null
           health?: number
           id?: string
           is_imprisoned?: boolean
@@ -10936,6 +10943,8 @@ export type Database = {
           last_health_update?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
+          lawyer_expires_at?: string | null
+          lawyer_hired_at?: string | null
           level?: number | null
           rest_required_until?: string | null
           rpm_avatar_url?: string | null
