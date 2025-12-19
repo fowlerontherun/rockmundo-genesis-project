@@ -13616,6 +13616,241 @@ export type Database = {
           },
         ]
       }
+      sponsorship_brands: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          min_fame_required: number
+          name: string
+          region: string
+          size: string
+          updated_at: string
+          wealth_tier: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          min_fame_required?: number
+          name: string
+          region?: string
+          size?: string
+          updated_at?: string
+          wealth_tier?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          min_fame_required?: number
+          name?: string
+          region?: string
+          size?: string
+          updated_at?: string
+          wealth_tier?: number
+        }
+        Relationships: []
+      }
+      sponsorship_contracts: {
+        Row: {
+          band_id: string
+          brand_id: string
+          created_at: string
+          deliverables: string[] | null
+          end_date: string | null
+          exclusivity: boolean
+          health: number
+          id: string
+          last_payment_at: string | null
+          offer_id: string | null
+          start_date: string
+          status: string
+          term_weeks: number
+          total_paid: number
+          total_value: number
+          updated_at: string
+          weekly_payment: number
+          weeks_paid: number
+        }
+        Insert: {
+          band_id: string
+          brand_id: string
+          created_at?: string
+          deliverables?: string[] | null
+          end_date?: string | null
+          exclusivity?: boolean
+          health?: number
+          id?: string
+          last_payment_at?: string | null
+          offer_id?: string | null
+          start_date?: string
+          status?: string
+          term_weeks: number
+          total_paid?: number
+          total_value: number
+          updated_at?: string
+          weekly_payment: number
+          weeks_paid?: number
+        }
+        Update: {
+          band_id?: string
+          brand_id?: string
+          created_at?: string
+          deliverables?: string[] | null
+          end_date?: string | null
+          exclusivity?: boolean
+          health?: number
+          id?: string
+          last_payment_at?: string | null
+          offer_id?: string | null
+          start_date?: string
+          status?: string
+          term_weeks?: number
+          total_paid?: number
+          total_value?: number
+          updated_at?: string
+          weekly_payment?: number
+          weeks_paid?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_contracts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_contracts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_contracts_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_offers: {
+        Row: {
+          band_id: string
+          brand_id: string
+          created_at: string
+          exclusivity: boolean
+          expires_at: string
+          fit_score: number
+          id: string
+          notes: string | null
+          status: string
+          term_weeks: number
+          total_value: number
+        }
+        Insert: {
+          band_id: string
+          brand_id: string
+          created_at?: string
+          exclusivity?: boolean
+          expires_at: string
+          fit_score?: number
+          id?: string
+          notes?: string | null
+          status?: string
+          term_weeks?: number
+          total_value: number
+        }
+        Update: {
+          band_id?: string
+          brand_id?: string
+          created_at?: string
+          exclusivity?: boolean
+          expires_at?: string
+          fit_score?: number
+          id?: string
+          notes?: string | null
+          status?: string
+          term_weeks?: number
+          total_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_offers_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_payments: {
+        Row: {
+          amount: number
+          band_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          scheduled_at: string | null
+          status: string | null
+          week_number: number
+        }
+        Insert: {
+          amount: number
+          band_id: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          week_number: number
+        }
+        Update: {
+          amount?: number
+          band_id?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_payments_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_equipment_catalog: {
         Row: {
           amount_available: number
