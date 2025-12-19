@@ -16564,7 +16564,7 @@ export type Database = {
     Functions: {
       admin_force_complete_release: {
         Args: { p_release_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       admin_get_cron_job_runs: {
         Args: { _limit?: number }
