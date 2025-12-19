@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { GENRE_LIST } from "@/data/skillTree";
 import type { TerritoryRow } from "./types";
 
 interface CreateLabelDialogProps {
@@ -84,10 +86,7 @@ export function CreateLabelDialog({
     }
 
     setIsSubmitting(true);
-    const parsedGenres = genreFocus
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const parsedGenres = genreFocus ? [genreFocus] : [];
 
     const { data, error } = await supabase
       .from("labels")
@@ -196,13 +195,19 @@ export function CreateLabelDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="label-genres">Genre focus (comma separated)</Label>
-              <Input
-                id="label-genres"
-                value={genreFocus}
-                onChange={(event) => setGenreFocus(event.target.value)}
-                placeholder="Indie Rock, Synthwave"
-              />
+              <Label htmlFor="label-genres">Genre focus</Label>
+              <Select value={genreFocus} onValueChange={setGenreFocus}>
+                <SelectTrigger id="label-genres" className="bg-background">
+                  <SelectValue placeholder="Select a genre" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  {GENRE_LIST.map((genre) => (
+                    <SelectItem key={genre} value={genre}>
+                      {genre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

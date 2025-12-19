@@ -392,7 +392,7 @@ const songwritingProductionConfigs: TieredSkillConfig[] = [
 // ============================================================================
 // GENRE SKILLS
 // ============================================================================
-const genreTracks = [
+export const GENRE_LIST = [
   "Rock", "Pop", "Hip Hop", "Jazz", "Blues", "Country", "Reggae", "Heavy Metal",
   "Classical", "Electronica", "Latin", "World Music", "R&B", "Punk Rock", "Flamenco",
   "African Music", "Modern Rock", "EDM", "Trap", "Drill", "Lo-Fi Hip Hop",
@@ -400,7 +400,9 @@ const genreTracks = [
   "Metalcore/Djent", "Alt R&B/Neo-Soul", "Funk", "Soul", "Gospel", "Folk",
   "Bluegrass", "Celtic", "Ska", "Grunge", "Progressive Rock", "Ambient",
   "Industrial", "Dubstep", "House", "Techno", "Trance", "Drum and Bass"
-];
+] as const;
+
+const genreTracks = [...GENRE_LIST];
 
 const genreConfigs: TieredSkillConfig[] = genreTracks.map(track => {
   const slugBase = sanitizeSlug(track);
