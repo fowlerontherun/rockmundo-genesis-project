@@ -6,7 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Users, Music, Mic2, BarChart3, DollarSign, Activity, 
-  AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles
+  AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
+  Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
+  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -65,12 +67,44 @@ const AdminDashboard = () => {
   });
 
   const quickActions = [
+    // Core Admin
     { label: "Game Balance", path: "/admin/game-balance", icon: Settings },
     { label: "Player Management", path: "/admin/players", icon: Users },
     { label: "Release Admin", path: "/admin/releases", icon: Music },
     { label: "Cron Monitor", path: "/admin/cron-monitor", icon: Clock },
+    // Content Management
+    { label: "AI Song Generation", path: "/admin/ai-song-generation", icon: Headphones },
+    { label: "Songwriting", path: "/admin/songwriting", icon: Mic2 },
+    { label: "Charts Admin", path: "/admin/charts", icon: BarChart3 },
+    { label: "Gigs Admin", path: "/admin/gigs", icon: Star },
+    // Labels & Bands
+    { label: "Labels Admin", path: "/admin/labels", icon: Building2 },
+    { label: "Band Admin", path: "/admin/bands", icon: Users },
+    { label: "Fame & Fans Gifting", path: "/admin/fame-fans-gifting", icon: Gift },
+    // Social & PR
+    { label: "Public Relations", path: "/admin/pr", icon: Megaphone },
+    { label: "Twaater Admin", path: "/admin/twaater", icon: MessageSquare },
+    { label: "Twaater Moderation", path: "/admin/twaater-moderation", icon: MessageSquare },
+    // Economy & Equipment
+    { label: "Gear Items", path: "/admin/gear-items", icon: Guitar },
+    { label: "Marketplace", path: "/admin/marketplace", icon: ShoppingBag },
+    { label: "Producers", path: "/admin/producers", icon: Disc3 },
+    // Media & Streaming
+    { label: "Radio Stations", path: "/admin/radio-stations", icon: Radio },
+    { label: "Streaming Platforms", path: "/admin/streaming-platforms", icon: Headphones },
+    { label: "YouTube Videos", path: "/admin/youtube-videos", icon: Video },
+    // Events & Customization
+    { label: "Random Events", path: "/admin/random-events", icon: Zap },
     { label: "Tutorials", path: "/admin/tutorials", icon: Wrench },
     { label: "Skin Collections", path: "/admin/skin-collections", icon: Sparkles },
+    // Advanced
+    { label: "Brands Admin", path: "/admin/brands", icon: Briefcase },
+    { label: "Crew Catalog", path: "/admin/crew", icon: Users },
+    { label: "Stage Equipment", path: "/admin/stage-equipment", icon: Package },
+    { label: "Offer Automation", path: "/admin/offer-automation", icon: Gauge },
+    { label: "Release Config", path: "/admin/release-config", icon: Settings },
+    { label: "Experience Rewards", path: "/admin/experience-rewards", icon: Star },
+    { label: "VIP Management", path: "/admin/vip", icon: Star },
   ];
 
   const statCards = [

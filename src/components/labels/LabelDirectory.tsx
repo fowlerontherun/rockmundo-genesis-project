@@ -34,12 +34,8 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
   const [selectedLabel, setSelectedLabel] = useState<LabelWithRelations | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
 
-  // Default city filter to user's current city
-  useEffect(() => {
-    if (currentCity?.name && cityFilter === "all") {
-      setCityFilter(currentCity.name);
-    }
-  }, [currentCity?.name]);
+  // Removed auto-filter by city to show all labels by default
+  // Users can manually filter by city if needed
 
   const { data: labels, isLoading } = useQuery<LabelWithRelations[]>({
     queryKey: ["labels-directory"],
