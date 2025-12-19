@@ -3,20 +3,25 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@/hooks/useTranslation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useVipStatus } from "@/hooks/useVipStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Scale, Crown, Lock } from "lucide-react";
 import { LabelDirectory } from "@/components/labels/LabelDirectory";
 import { MyContractsTab } from "@/components/labels/MyContractsTab";
 import { ReleasePipelineTab } from "@/components/labels/ReleasePipelineTab";
 import { RoyaltyStatementsTab } from "@/components/labels/RoyaltyStatementsTab";
 import { CreateLabelDialog } from "@/components/labels/CreateLabelDialog";
+import { HireLawyerDialog } from "@/components/labels/HireLawyerDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { ArtistEntity, DealTypeRow, TerritoryRow } from "@/components/labels/types";
 
 interface ArtistEntitiesResult {
   entities: ArtistEntity[];
   personalBalance: number;
+  hasActiveLawyer: boolean;
 }
 
 const defaultTabs = ["directory", "contracts", "releases", "royalties"] as const;
@@ -26,8 +31,11 @@ type RecordLabelTab = (typeof defaultTabs)[number];
 const RecordLabel = () => {
   const { user } = useAuth();
   const userId = user?.id;
+  const { data: vipStatus } = useVipStatus();
+  const isVip = vipStatus?.isVip ?? false;
   const [activeTab, setActiveTab] = useState<RecordLabelTab>("directory");
   const [isCreateLabelOpen, setIsCreateLabelOpen] = useState(false);
+  const [isHireLawyerOpen, setIsHireLawyerOpen] = useState(false);
 
   const {
     data: artistData,
@@ -41,13 +49,14 @@ const RecordLabel = () => {
         return {
           entities: [],
           personalBalance: 0,
+          hasActiveLawyer: false,
         } satisfies ArtistEntitiesResult;
       }
 
       const [{ data: profile }, { data: memberships }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, display_name, cash")
+          .select("id, display_name, cash, has_active_lawyer")
           .eq("user_id", userId)
           .maybeSingle(),
         supabase
@@ -82,14 +91,16 @@ const RecordLabel = () => {
       return {
         entities,
         personalBalance: Number(profile?.cash ?? 0),
+        hasActiveLawyer: profile?.has_active_lawyer ?? false,
       } satisfies ArtistEntitiesResult;
     },
   });
 
   const artistEntities = artistData?.entities ?? [];
   const personalBalance = artistData?.personalBalance ?? 0;
+  const hasActiveLawyer = artistData?.hasActiveLawyer ?? false;
   const minimumLabelBalance = 1_000_000;
-  const canCreateLabel = personalBalance >= minimumLabelBalance;
+  const canCreateLabel = personalBalance >= minimumLabelBalance && isVip;
   const formattedPersonalBalance = useMemo(
     () => personalBalance.toLocaleString("en-US"),
     [personalBalance],
@@ -144,7 +155,7 @@ const RecordLabel = () => {
 
   return (
     <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold">Record label hub</h1>
           <p className="text-muted-foreground">
@@ -154,13 +165,81 @@ const RecordLabel = () => {
             Launching a label requires at least ${formattedMinimumBalance} in personal funds. Current balance: ${formattedPersonalBalance}.
           </p>
         </div>
-        <Button
-          onClick={() => setIsCreateLabelOpen(true)}
-          className="self-start md:self-auto"
-          disabled={!canCreateLabel}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Launch new label
-        </Button>
+        
+        <div className="flex flex-col sm:flex-row gap-2 self-start">
+          {/* Hire Lawyer Button - VIP only */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setIsHireLawyerOpen(true)}
+                  disabled={!isVip}
+                  className={cn(
+                    "relative overflow-hidden",
+                    isVip 
+                      ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-600 hover:via-yellow-500 hover:to-amber-600 text-amber-950 font-semibold shadow-lg"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {isVip && (
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      style={{ animation: "shimmer 2s infinite linear" }}
+                    />
+                  )}
+                  <Scale className="mr-2 h-4 w-4 relative z-10" />
+                  <span className="relative z-10">
+                    {hasActiveLawyer ? "Lawyer Active" : "Hire Lawyer"}
+                  </span>
+                  <Crown className="ml-2 h-3 w-3 relative z-10" />
+                </Button>
+              </TooltipTrigger>
+              {!isVip && (
+                <TooltipContent className="bg-gradient-to-r from-amber-900 to-yellow-900 border-amber-500/50">
+                  <p className="text-amber-100">VIP feature - Upgrade to hire a lawyer</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Launch Label Button - VIP only */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setIsCreateLabelOpen(true)}
+                  disabled={!canCreateLabel}
+                  className={cn(
+                    "relative overflow-hidden",
+                    isVip 
+                      ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-600 hover:via-yellow-500 hover:to-amber-600 text-amber-950 font-semibold shadow-lg"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {isVip && (
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      style={{ animation: "shimmer 2s infinite linear" }}
+                    />
+                  )}
+                  <Plus className="mr-2 h-4 w-4 relative z-10" />
+                  <span className="relative z-10">Launch new label</span>
+                  <Crown className="ml-2 h-3 w-3 relative z-10" />
+                  {!isVip && <Lock className="ml-1 h-3 w-3 relative z-10" />}
+                </Button>
+              </TooltipTrigger>
+              {!isVip ? (
+                <TooltipContent className="bg-gradient-to-r from-amber-900 to-yellow-900 border-amber-500/50">
+                  <p className="text-amber-100">VIP feature - Upgrade to launch your own label</p>
+                </TooltipContent>
+              ) : !canCreateLabel && personalBalance < minimumLabelBalance ? (
+                <TooltipContent>
+                  <p>Need ${formattedMinimumBalance} to launch a label</p>
+                </TooltipContent>
+              ) : null}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       {hasError ? (
@@ -208,6 +287,14 @@ const RecordLabel = () => {
         territories={territories}
         personalBalance={personalBalance}
         minimumBalance={minimumLabelBalance}
+      />
+
+      <HireLawyerDialog
+        open={isHireLawyerOpen}
+        onOpenChange={setIsHireLawyerOpen}
+        userId={userId}
+        currentBalance={personalBalance}
+        hasActiveLawyer={hasActiveLawyer}
       />
     </div>
   );
