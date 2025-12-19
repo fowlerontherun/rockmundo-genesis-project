@@ -159,9 +159,8 @@ const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/Collectio
 const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
-const Radio = lazyWithRetry(() => import("./pages/Radio"));
+const RadioBrowser = lazyWithRetry(() => import("./pages/media/RadioBrowser"));
 const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
-const RadioStations = lazyWithRetry(() => import("./pages/RadioStations"));
 const RadioStationDetail = lazyWithRetry(() => import("./pages/RadioStationDetail"));
 const TVShowsBrowser = lazyWithRetry(() => import("./pages/media/TVShowsBrowser"));
 const NewspapersBrowser = lazyWithRetry(() => import("./pages/media/NewspapersBrowser"));
@@ -266,8 +265,9 @@ function App() {
                     <Route path="open-mic" element={<OpenMicNights />} />
                     <Route path="open-mic/perform/:performanceId" element={<PerformOpenMic />} />
                     <Route path="band-riders" element={<BandRiders />} />
-                    <Route path="radio" element={<Radio />} />
-                    <Route path="radio-stations" element={<RadioStations />} />
+                    <Route path="radio" element={<Navigate to="/media/radio" replace />} />
+                    <Route path="radio-stations" element={<Navigate to="/media/radio" replace />} />
+                    <Route path="media/radio" element={<RadioBrowser />} />
                     <Route path="radio/:stationId" element={<RadioStationDetail />} />
                     <Route path="music-videos" element={<MusicVideos />} />
                     <Route path="media/tv-shows" element={<TVShowsBrowser />} />
@@ -395,9 +395,7 @@ function App() {
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/3d-gig-demo" element={<Admin3DGigDemo />} />
                     <Route path="employment" element={<Employment />} />
-                    <Route path="radio" element={<Radio />} />
                     <Route path="music-videos" element={<MusicVideos />} />
-                    <Route path="radio-stations" element={<RadioStations />} />
                     <Route path="gig-booking" element={<GigBooking />} />
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
