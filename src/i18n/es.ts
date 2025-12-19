@@ -138,6 +138,14 @@ export const es: TranslationKeys = {
     more: "Más",
     openMenu: "Abrir menú de navegación",
     toggleMenu: "Alternar menú de navegación",
+    media: "Medios",
+    bandManager: "Gestor de Banda",
+    radioStations: "Estaciones de Radio",
+    tvShows: "Programas de TV",
+    newspapers: "Periódicos",
+    magazines: "Revistas",
+    podcasts: "Podcasts",
+    films: "Películas",
   },
   
   todaysNews: {
