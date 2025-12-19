@@ -14,6 +14,7 @@ import { ReleasePipelineTab } from "@/components/labels/ReleasePipelineTab";
 import { RoyaltyStatementsTab } from "@/components/labels/RoyaltyStatementsTab";
 import { CreateLabelDialog } from "@/components/labels/CreateLabelDialog";
 import { HireLawyerDialog } from "@/components/labels/HireLawyerDialog";
+import { MyLabelsTab } from "@/components/labels/MyLabelsTab";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ArtistEntity, DealTypeRow, TerritoryRow } from "@/components/labels/types";
@@ -24,7 +25,7 @@ interface ArtistEntitiesResult {
   hasActiveLawyer: boolean;
 }
 
-const defaultTabs = ["directory", "contracts", "releases", "royalties"] as const;
+const defaultTabs = ["my-labels", "directory", "contracts", "releases", "royalties"] as const;
 
 type RecordLabelTab = (typeof defaultTabs)[number];
 
@@ -33,7 +34,7 @@ const RecordLabel = () => {
   const userId = user?.id;
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip ?? false;
-  const [activeTab, setActiveTab] = useState<RecordLabelTab>("directory");
+  const [activeTab, setActiveTab] = useState<RecordLabelTab>("my-labels");
   const [isCreateLabelOpen, setIsCreateLabelOpen] = useState(false);
   const [isHireLawyerOpen, setIsHireLawyerOpen] = useState(false);
 
@@ -256,12 +257,17 @@ const RecordLabel = () => {
         </Card>
       ) : (
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as RecordLabelTab)}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="directory">Labels</TabsTrigger>
-            <TabsTrigger value="contracts">My contracts</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="my-labels">My Labels</TabsTrigger>
+            <TabsTrigger value="directory">Browse</TabsTrigger>
+            <TabsTrigger value="contracts">Contracts</TabsTrigger>
             <TabsTrigger value="releases">Releases</TabsTrigger>
             <TabsTrigger value="royalties">Royalties</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="my-labels" className="mt-6">
+            <MyLabelsTab />
+          </TabsContent>
 
           <TabsContent value="directory" className="mt-6">
             <LabelDirectory artistEntities={artistEntities} dealTypes={dealTypes} territories={territories} />

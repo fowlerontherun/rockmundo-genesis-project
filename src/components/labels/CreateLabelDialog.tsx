@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth-context";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { GENRE_LIST } from "@/data/skillTree";
+import { LabelLogoUpload } from "./LabelLogoUpload";
 import type { TerritoryRow } from "./types";
 
 interface CreateLabelDialogProps {
@@ -23,6 +25,12 @@ interface CreateLabelDialogProps {
   minimumBalance: number;
 }
 
+interface City {
+  id: string;
+  name: string;
+  country: string;
+}
+
 export function CreateLabelDialog({
   open,
   onOpenChange,
@@ -30,34 +38,73 @@ export function CreateLabelDialog({
   personalBalance,
   minimumBalance,
 }: CreateLabelDialogProps) {
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [headquartersCity, setHeadquartersCity] = useState("");
+  const [headquartersCityId, setHeadquartersCityId] = useState("");
   const [genreFocus, setGenreFocus] = useState("");
   const [rosterCapacity, setRosterCapacity] = useState(5);
   const [marketingBudget, setMarketingBudget] = useState(0);
   const [selectedTerritories, setSelectedTerritories] = useState<string[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const insufficientFunds = personalBalance < minimumBalance;
-  const formattedPersonalBalance = useMemo(
-    () => personalBalance.toLocaleString("en-US"),
-    [personalBalance],
-  );
-  const formattedMinimumBalance = useMemo(
-    () => minimumBalance.toLocaleString("en-US"),
-    [minimumBalance],
-  );
+  const formattedPersonalBalance = useMemo(() => personalBalance.toLocaleString("en-US"), [personalBalance]);
+  const formattedMinimumBalance = useMemo(() => minimumBalance.toLocaleString("en-US"), [minimumBalance]);
+
+  // Fetch cities
+  const { data: cities = [] } = useQuery<City[]>({
+    queryKey: ["cities-list"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id, name, country")
+        .order("country")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch user's profile ID
+  const { data: profile } = useQuery({
+    queryKey: ["profile-for-label", user?.id],
+    enabled: open && !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Group cities by country
+  const citiesByCountry = useMemo(() => {
+    const grouped: Record<string, City[]> = {};
+    cities.forEach((city) => {
+      if (!grouped[city.country]) grouped[city.country] = [];
+      grouped[city.country].push(city);
+    });
+    return grouped;
+  }, [cities]);
+
+  const selectedCity = cities.find((c) => c.id === headquartersCityId);
 
   const resetState = () => {
     setName("");
     setDescription("");
-    setHeadquartersCity("");
+    setHeadquartersCityId("");
     setGenreFocus("");
     setRosterCapacity(5);
     setMarketingBudget(0);
     setSelectedTerritories([]);
+    setLogoUrl(null);
   };
 
   const toggleTerritory = (code: string) => {
@@ -68,20 +115,11 @@ export function CreateLabelDialog({
 
   const handleSubmit = async () => {
     if (insufficientFunds) {
-      toast({
-        title: "Insufficient personal funds",
-        description: `You need at least $${formattedMinimumBalance} in your personal balance to launch a label.`,
-        variant: "destructive",
-      });
+      toast({ title: "Insufficient personal funds", description: `You need at least $${formattedMinimumBalance}.`, variant: "destructive" });
       return;
     }
-
     if (!name.trim()) {
-      toast({
-        title: "Name is required",
-        description: "Please provide a name for your label before saving.",
-        variant: "destructive",
-      });
+      toast({ title: "Name is required", variant: "destructive" });
       return;
     }
 
@@ -93,47 +131,44 @@ export function CreateLabelDialog({
       .insert({
         name: name.trim(),
         description: description.trim() || null,
-        headquarters_city: headquartersCity.trim() || null,
+        headquarters_city: selectedCity?.name || null,
+        headquarters_city_id: headquartersCityId || null,
         roster_slot_capacity: rosterCapacity,
         marketing_budget: marketingBudget,
         genre_focus: parsedGenres.length ? parsedGenres : null,
+        logo_url: logoUrl,
+        owner_id: profile?.id || null,
+        balance: 1_000_000, // Starting balance
       })
       .select("id")
       .single();
 
     if (error) {
-      toast({
-        title: "Unable to create label",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Unable to create label", description: error.message, variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
 
     if (data?.id && selectedTerritories.length > 0) {
-      const { error: territoryError } = await supabase.from("label_territories").insert(
-        selectedTerritories.map((code) => ({
-          label_id: data.id,
-          territory_code: code,
-        }))
+      await supabase.from("label_territories").insert(
+        selectedTerritories.map((code) => ({ label_id: data.id, territory_code: code }))
       );
-
-      if (territoryError) {
-        toast({
-          title: "Label created but territories failed",
-          description: territoryError.message,
-          variant: "destructive",
-        });
-      }
     }
 
-    toast({
-      title: "Label created",
-      description: "Your label is ready to start signing artists.",
-    });
+    // Record initial transaction
+    if (data?.id && profile?.id) {
+      await supabase.from("label_transactions").insert({
+        label_id: data.id,
+        transaction_type: "deposit",
+        amount: 1_000_000,
+        description: "Initial label funding",
+        initiated_by: profile.id,
+      });
+    }
 
+    toast({ title: "Label created", description: "Your label is ready with $1,000,000 starting balance." });
     await queryClient.invalidateQueries({ queryKey: ["labels-directory"] });
+    await queryClient.invalidateQueries({ queryKey: ["my-labels"] });
     resetState();
     onOpenChange(false);
     setIsSubmitting(false);
@@ -175,6 +210,11 @@ export function CreateLabelDialog({
           </Alert>
 
           <div className="space-y-2">
+            <Label>Label Logo</Label>
+            <LabelLogoUpload logoUrl={logoUrl} onLogoChange={setLogoUrl} labelName={name} />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="label-name">Label name</Label>
             <Input
               id="label-name"
@@ -187,12 +227,21 @@ export function CreateLabelDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="label-city">Headquarters city</Label>
-              <Input
-                id="label-city"
-                value={headquartersCity}
-                onChange={(event) => setHeadquartersCity(event.target.value)}
-                placeholder="Stockholm"
-              />
+              <Select value={headquartersCityId} onValueChange={setHeadquartersCityId}>
+                <SelectTrigger id="label-city" className="bg-background">
+                  <SelectValue placeholder="Select a city" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50 max-h-60">
+                  {Object.entries(citiesByCountry).map(([country, countryCities]) => (
+                    <div key={country}>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">{country}</div>
+                      {countryCities.map((city) => (
+                        <SelectItem key={city.id} value={city.id}>{city.name}</SelectItem>
+                      ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="label-genres">Genre focus</Label>
