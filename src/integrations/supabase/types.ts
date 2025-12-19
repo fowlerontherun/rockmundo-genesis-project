@@ -16829,6 +16829,7 @@ export type Database = {
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
+      get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
