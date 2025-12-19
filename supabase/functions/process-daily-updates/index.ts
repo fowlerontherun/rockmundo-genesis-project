@@ -63,12 +63,17 @@ Deno.serve(async (req) => {
 
         const dailyXp = recentXp?.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0) || 0
         
-        // Base daily fame is 1, plus 1 fame per 100 XP earned yesterday
-        const fameGain = Math.max(1, Math.floor(1 + dailyXp / 100))
+        // Base passive daily fame gain: random 1-5
+        const passiveFameGain = Math.floor(Math.random() * 5) + 1
+        
+        // Bonus fame from XP activity: 1 fame per 100 XP earned yesterday
+        const activityBonus = Math.floor(dailyXp / 100)
+        
+        const totalFameGain = passiveFameGain + activityBonus
 
         await supabase
           .from('profiles')
-          .update({ fame: (profile.fame || 0) + fameGain })
+          .update({ fame: (profile.fame || 0) + totalFameGain })
           .eq('id', profile.id)
 
         processedProfiles++
@@ -96,15 +101,19 @@ Deno.serve(async (req) => {
 
         const gigsCount = recentGigs?.length || 0
         
-        // Base daily fame/fans for active bands
-        const baseFameGain = 1
-        const baseFansGain = Math.floor((band.fame || 0) * 0.001) // 0.1% of current fame
-
+        // Base passive daily fame/fans gain: random 1-5 each
+        const passiveFameGain = Math.floor(Math.random() * 5) + 1
+        const passiveFansGain = Math.floor(Math.random() * 5) + 1
+        
         // Bonus from recent activity
-        const activityBonus = gigsCount * 10
+        const activityFameBonus = gigsCount * 10
+        const activityFansBonus = gigsCount * 5
+        
+        // Additional fans based on current fame (0.1% of fame)
+        const fameBasedFansBonus = Math.floor((band.fame || 0) * 0.001)
 
-        const totalFameGain = baseFameGain + activityBonus
-        const totalFansGain = baseFansGain + (gigsCount * 5)
+        const totalFameGain = passiveFameGain + activityFameBonus
+        const totalFansGain = passiveFansGain + activityFansBonus + fameBasedFansBonus
 
         await supabase
           .from('bands')
@@ -123,6 +132,8 @@ Deno.serve(async (req) => {
             fame_gained: totalFameGain,
             event_data: {
               fans_gained: totalFansGain,
+              passive_fame: passiveFameGain,
+              passive_fans: passiveFansGain,
               gigs_count: gigsCount,
               date: today
             }
