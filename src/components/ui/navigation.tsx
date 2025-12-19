@@ -186,6 +186,7 @@ const Navigation = () => {
       items: [
         { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
         { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
+        { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
         { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
         { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
         { icon: Building2, labelKey: "nav.venues", path: "/venues" },
