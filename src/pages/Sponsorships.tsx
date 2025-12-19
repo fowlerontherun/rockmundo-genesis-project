@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { CheckCircle2, HandCoins, Info, ShieldOff, Calendar, DollarSign } from "lucide-react";
-import { useBandContext } from "@/contexts/BandContext";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import {
   fetchSponsorshipOffers,
   fetchSponsorshipContracts,
@@ -39,7 +39,8 @@ const statusBadge = {
 } as const;
 
 const Sponsorships = () => {
-  const { activeBand } = useBandContext();
+  const { data: primaryBandRecord } = usePrimaryBand();
+  const activeBand = primaryBandRecord?.bands;
   const queryClient = useQueryClient();
   
   const [offerFilters, setOfferFilters] = useState({ search: "", status: "all" });
