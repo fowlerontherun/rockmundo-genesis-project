@@ -199,8 +199,7 @@ const Navigation = () => {
     {
       titleKey: "nav.media",
       items: [
-        { icon: Radio, labelKey: "nav.radio", path: "/radio" },
-        { icon: Radio, labelKey: "nav.radioStations", path: "/radio-stations" },
+        { icon: Radio, labelKey: "nav.radio", path: "/media/radio" },
         { icon: Tv, labelKey: "nav.tvShows", path: "/media/tv-shows" },
         { icon: Newspaper, labelKey: "nav.newspapers", path: "/media/newspapers" },
         { icon: BookOpen, labelKey: "nav.magazines", path: "/media/magazines" },
