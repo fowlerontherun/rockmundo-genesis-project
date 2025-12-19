@@ -188,7 +188,7 @@ export const useFinances = () => {
       if (!user?.id) return [];
       const { data: memberships, error: memberError } = await supabase
         .from("band_members")
-        .select("band_id, bands(id, name, band_balance)")
+        .select("band_id, bands!band_members_band_id_fkey(id, name, band_balance)")
         .eq("user_id", user.id);
       
       if (memberError) throw memberError;
