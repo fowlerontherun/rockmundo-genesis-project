@@ -240,6 +240,54 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       }
       break;
 
+    case 'pr_appearance':
+      // Complete PR appearance and apply rewards
+      if (activity.metadata?.offer_id) {
+        await supabase.functions.invoke('process-pr-activity', {
+          body: { 
+            action: 'complete',
+            offerId: activity.metadata.offer_id 
+          }
+        });
+      }
+      break;
+
+    case 'film_production':
+      // Complete film production and apply rewards
+      if (activity.metadata?.contract_id) {
+        // Update film contract to completed
+        await supabase
+          .from('player_film_contracts')
+          .update({ status: 'completed' })
+          .eq('id', activity.metadata.contract_id);
+        
+        // Get film details and award rewards
+        const { data: contract } = await supabase
+          .from('player_film_contracts')
+          .select('*, film_productions(*)')
+          .eq('id', activity.metadata.contract_id)
+          .single();
+        
+        if (contract?.film_productions) {
+          const film = contract.film_productions;
+          
+          // Award cash
+          await supabase.rpc('increment_user_cash', {
+            p_user_id: activity.user_id,
+            p_amount: film.compensation || 0
+          });
+          
+          // Award fame
+          await supabase.rpc('increment_user_fame', {
+            p_user_id: activity.user_id,
+            p_amount: film.fame_boost || 0
+          });
+          
+          console.log(`Film production completed: ${film.title}, awarded $${film.compensation}`);
+        }
+      }
+      break;
+
     default:
       console.log(`No specific processing for activity type: ${activity.activity_type}`);
   }
