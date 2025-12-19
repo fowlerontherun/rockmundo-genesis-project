@@ -10,10 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Disc, Plus, Edit, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, Disc, Plus, Edit, Trash2, FileText, Building2, Send, Users, Star, MapPin, TrendingUp, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const LabelsAdmin = () => {
   const navigate = useNavigate();
@@ -23,14 +25,18 @@ const LabelsAdmin = () => {
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
   const [editingLabel, setEditingLabel] = useState<any>(null);
   const [editingDeal, setEditingDeal] = useState<any>(null);
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [labelForm, setLabelForm] = useState({
     name: "",
     description: "",
+    headquarters_city: "",
     genre_focus: [] as string[],
     roster_slot_capacity: 10,
     marketing_budget: 100000,
     reputation_score: 50,
+    market_share: 0,
   });
 
   const [dealForm, setDealForm] = useState({
@@ -43,13 +49,37 @@ const LabelsAdmin = () => {
     default_release_quota: 2,
   });
 
+  // Fetch labels with contract counts
   const { data: labels, isLoading: labelsLoading } = useQuery({
-    queryKey: ["labels"],
+    queryKey: ["admin-labels"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("labels")
-        .select("*")
-        .order("prestige_tier", { ascending: false });
+        .select(`
+          *,
+          artist_label_contracts(id, status)
+        `)
+        .order("reputation_score", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch demo submissions
+  const { data: demoSubmissions } = useQuery({
+    queryKey: ["admin-demo-submissions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("demo_submissions")
+        .select(`
+          *,
+          labels(name),
+          songs(title, quality_score),
+          bands(name),
+          profiles(display_name)
+        `)
+        .order("submitted_at", { ascending: false })
+        .limit(50);
       if (error) throw error;
       return data;
     },
@@ -67,13 +97,30 @@ const LabelsAdmin = () => {
     },
   });
 
+  // Get unique cities
+  const uniqueCities = [...new Set(labels?.map(l => l.headquarters_city).filter(Boolean) || [])].sort();
+
+  // Filter labels
+  const filteredLabels = labels?.filter(label => {
+    const matchesSearch = label.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      label.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCity = cityFilter === "all" || label.headquarters_city === cityFilter;
+    return matchesSearch && matchesCity;
+  });
+
+  // Stats
+  const totalLabels = labels?.length || 0;
+  const totalContracts = labels?.reduce((sum, l) => sum + (l.artist_label_contracts?.length || 0), 0) || 0;
+  const pendingDemos = demoSubmissions?.filter(d => d.status === "pending").length || 0;
+  const avgReputation = labels?.length ? Math.round(labels.reduce((sum, l) => sum + (l.reputation_score || 0), 0) / labels.length) : 0;
+
   const createLabelMutation = useMutation({
     mutationFn: async (data: typeof labelForm) => {
       const { error } = await supabase.from("labels").insert([data]);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-labels"] });
       toast({ title: "Label created successfully" });
       setLabelDialogOpen(false);
       resetLabelForm();
@@ -86,7 +133,7 @@ const LabelsAdmin = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-labels"] });
       toast({ title: "Label updated successfully" });
       setLabelDialogOpen(false);
       resetLabelForm();
@@ -99,8 +146,26 @@ const LabelsAdmin = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-labels"] });
       toast({ title: "Label deleted successfully" });
+    },
+  });
+
+  const updateDemoStatusMutation = useMutation({
+    mutationFn: async ({ id, status, rejection_reason }: { id: string; status: string; rejection_reason?: string }) => {
+      const { error } = await supabase
+        .from("demo_submissions")
+        .update({ 
+          status, 
+          reviewed_at: new Date().toISOString(),
+          rejection_reason 
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-demo-submissions"] });
+      toast({ title: "Demo status updated" });
     },
   });
 
@@ -145,10 +210,12 @@ const LabelsAdmin = () => {
     setLabelForm({
       name: "",
       description: "",
+      headquarters_city: "",
       genre_focus: [],
       roster_slot_capacity: 10,
       marketing_budget: 100000,
       reputation_score: 50,
+      market_share: 0,
     });
     setEditingLabel(null);
   };
@@ -172,10 +239,12 @@ const LabelsAdmin = () => {
       setLabelForm({
         name: label.name || "",
         description: label.description || "",
+        headquarters_city: label.headquarters_city || "",
         genre_focus: label.genre_focus || [],
         roster_slot_capacity: label.roster_slot_capacity || 10,
         marketing_budget: label.marketing_budget || 100000,
         reputation_score: label.reputation_score || 50,
+        market_share: label.market_share || 0,
       });
     } else {
       resetLabelForm();
@@ -217,6 +286,21 @@ const LabelsAdmin = () => {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" /> Pending</Badge>;
+      case "under_review":
+        return <Badge variant="secondary" className="gap-1"><Eye className="h-3 w-3" /> Reviewing</Badge>;
+      case "accepted":
+        return <Badge className="gap-1 bg-green-500"><CheckCircle className="h-3 w-3" /> Accepted</Badge>;
+      case "rejected":
+        return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
     <AdminRoute>
       <div className="container mx-auto py-8 space-y-6">
@@ -226,19 +310,60 @@ const LabelsAdmin = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Record Labels Administration</h1>
-            <p className="text-muted-foreground">Manage record labels and deal structures</p>
+            <p className="text-muted-foreground">Manage record labels, deals, and demo submissions</p>
           </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Building2 className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-2xl font-bold">{totalLabels}</p>
+                <p className="text-sm text-muted-foreground">Total Labels</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Users className="h-8 w-8 text-green-500" />
+              <div>
+                <p className="text-2xl font-bold">{totalContracts}</p>
+                <p className="text-sm text-muted-foreground">Active Contracts</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Send className="h-8 w-8 text-amber-500" />
+              <div>
+                <p className="text-2xl font-bold">{pendingDemos}</p>
+                <p className="text-sm text-muted-foreground">Pending Demos</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Star className="h-8 w-8 text-yellow-500" />
+              <div>
+                <p className="text-2xl font-bold">{avgReputation}</p>
+                <p className="text-sm text-muted-foreground">Avg Reputation</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="labels" className="w-full">
           <TabsList>
-            <TabsTrigger value="labels">Labels</TabsTrigger>
+            <TabsTrigger value="labels">Labels ({totalLabels})</TabsTrigger>
+            <TabsTrigger value="demos">Demo Submissions ({demoSubmissions?.length || 0})</TabsTrigger>
             <TabsTrigger value="deals">Deal Types</TabsTrigger>
           </TabsList>
 
           <TabsContent value="labels">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Disc className="h-5 w-5" />
@@ -246,123 +371,293 @@ const LabelsAdmin = () => {
                   </CardTitle>
                   <CardDescription>Manage record labels and their rosters</CardDescription>
                 </div>
-                <Dialog open={labelDialogOpen} onOpenChange={setLabelDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => openLabelDialog()}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Label
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>{editingLabel ? "Edit Label" : "Add Label"}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Name</Label>
-                        <Input
-                          value={labelForm.name}
-                          onChange={(e) => setLabelForm({ ...labelForm, name: e.target.value })}
-                          placeholder="e.g., Indie Records"
-                        />
-                      </div>
-                      <div>
-                        <Label>Description</Label>
-                        <Textarea
-                          value={labelForm.description}
-                          onChange={(e) => setLabelForm({ ...labelForm, description: e.target.value })}
-                          placeholder="Label description..."
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Genre Focus (comma-separated)</Label>
-                          <Input
-                            value={labelForm.genre_focus.join(", ")}
-                            onChange={(e) => setLabelForm({ ...labelForm, genre_focus: e.target.value.split(",").map(s => s.trim()) })}
-                            placeholder="e.g., Rock, Metal"
-                          />
-                        </div>
-                        <div>
-                          <Label>Reputation Score (0-100)</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={labelForm.reputation_score}
-                            onChange={(e) => setLabelForm({ ...labelForm, reputation_score: parseInt(e.target.value) || 0 })}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Marketing Budget ($)</Label>
-                          <Input
-                            type="number"
-                            value={labelForm.marketing_budget}
-                            onChange={(e) => setLabelForm({ ...labelForm, marketing_budget: parseInt(e.target.value) || 0 })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Roster Capacity</Label>
-                          <Input
-                            type="number"
-                            value={labelForm.roster_slot_capacity}
-                            onChange={(e) => setLabelForm({ ...labelForm, roster_slot_capacity: parseInt(e.target.value) || 10 })}
-                          />
-                        </div>
-                      </div>
-                      <Button onClick={handleLabelSubmit} className="w-full">
-                        {editingLabel ? "Update" : "Create"}
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Search labels..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-48"
+                  />
+                  <Select value={cityFilter} onValueChange={setCityFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Filter by city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Cities</SelectItem>
+                      {uniqueCities.map((city) => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={labelDialogOpen} onOpenChange={setLabelDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => openLabelDialog()}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Label
                       </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>{editingLabel ? "Edit Label" : "Add Label"}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Name</Label>
+                            <Input
+                              value={labelForm.name}
+                              onChange={(e) => setLabelForm({ ...labelForm, name: e.target.value })}
+                              placeholder="e.g., Indie Records"
+                            />
+                          </div>
+                          <div>
+                            <Label>Headquarters City</Label>
+                            <Input
+                              value={labelForm.headquarters_city}
+                              onChange={(e) => setLabelForm({ ...labelForm, headquarters_city: e.target.value })}
+                              placeholder="e.g., Los Angeles"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Description</Label>
+                          <Textarea
+                            value={labelForm.description}
+                            onChange={(e) => setLabelForm({ ...labelForm, description: e.target.value })}
+                            placeholder="Label description..."
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Genre Focus (comma-separated)</Label>
+                            <Input
+                              value={labelForm.genre_focus.join(", ")}
+                              onChange={(e) => setLabelForm({ ...labelForm, genre_focus: e.target.value.split(",").map(s => s.trim()) })}
+                              placeholder="e.g., Rock, Metal"
+                            />
+                          </div>
+                          <div>
+                            <Label>Reputation Score (0-100)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={labelForm.reputation_score}
+                              onChange={(e) => setLabelForm({ ...labelForm, reputation_score: parseInt(e.target.value) || 0 })}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label>Marketing Budget ($)</Label>
+                            <Input
+                              type="number"
+                              value={labelForm.marketing_budget}
+                              onChange={(e) => setLabelForm({ ...labelForm, marketing_budget: parseInt(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Roster Capacity</Label>
+                            <Input
+                              type="number"
+                              value={labelForm.roster_slot_capacity}
+                              onChange={(e) => setLabelForm({ ...labelForm, roster_slot_capacity: parseInt(e.target.value) || 10 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Market Share (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={labelForm.market_share}
+                              onChange={(e) => setLabelForm({ ...labelForm, market_share: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                        </div>
+                        <Button onClick={handleLabelSubmit} className="w-full">
+                          {editingLabel ? "Update" : "Create"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {labelsLoading ? (
                   <p>Loading...</p>
                 ) : (
+                  <ScrollArea className="h-[600px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>City</TableHead>
+                          <TableHead>Genres</TableHead>
+                          <TableHead>Reputation</TableHead>
+                          <TableHead>Budget</TableHead>
+                          <TableHead>Roster</TableHead>
+                          <TableHead>Contracts</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLabels?.map((label) => {
+                          const activeContracts = label.artist_label_contracts?.filter((c: any) => c.status === "active").length || 0;
+                          return (
+                            <TableRow key={label.id}>
+                              <TableCell className="font-medium">{label.name}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  {label.headquarters_city || "—"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {label.genre_focus?.slice(0, 2).map((genre: string) => (
+                                    <Badge key={genre} variant="outline" className="text-xs">{genre}</Badge>
+                                  ))}
+                                  {(label.genre_focus?.length || 0) > 2 && (
+                                    <Badge variant="outline" className="text-xs">+{label.genre_focus.length - 2}</Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-3 w-3 text-yellow-500" />
+                                  {label.reputation_score || 0}
+                                </div>
+                              </TableCell>
+                              <TableCell>${((label.marketing_budget || 0) / 1000000).toFixed(1)}M</TableCell>
+                              <TableCell>{label.roster_slot_capacity || 0}</TableCell>
+                              <TableCell>
+                                <Badge variant={activeContracts > 0 ? "default" : "secondary"}>
+                                  {activeContracts}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => openLabelDialog(label)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => deleteLabelMutation.mutate(label.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="demos">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="h-5 w-5" />
+                  Demo Submissions
+                </CardTitle>
+                <CardDescription>Review and manage artist demo submissions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[600px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Genres</TableHead>
-                        <TableHead>Reputation</TableHead>
-                        <TableHead>Budget</TableHead>
-                        <TableHead>Capacity</TableHead>
+                        <TableHead>Artist/Band</TableHead>
+                        <TableHead>Song</TableHead>
+                        <TableHead>Quality</TableHead>
+                        <TableHead>Label</TableHead>
+                        <TableHead>Submitted</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {labels?.map((label) => (
-                        <TableRow key={label.id}>
-                          <TableCell className="font-medium">{label.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{label.genre_focus?.join(", ") || "Any"}</Badge>
+                      {demoSubmissions?.map((demo) => (
+                        <TableRow key={demo.id}>
+                          <TableCell className="font-medium">
+                            {(demo.bands as any)?.name || (demo.profiles as any)?.display_name || "Unknown"}
                           </TableCell>
-                          <TableCell>{label.reputation_score || 0}</TableCell>
-                          <TableCell>${label.marketing_budget?.toLocaleString() || 0}</TableCell>
-                          <TableCell>{label.roster_slot_capacity || 0}</TableCell>
+                          <TableCell>{(demo.songs as any)?.title || "—"}</TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => openLabelDialog(label)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deleteLabelMutation.mutate(label.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <Badge variant="outline" className="gap-1">
+                              <TrendingUp className="h-3 w-3" />
+                              {(demo.songs as any)?.quality_score || 0}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{(demo.labels as any)?.name || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {demo.submitted_at ? new Date(demo.submitted_at).toLocaleDateString() : "—"}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(demo.status)}</TableCell>
+                          <TableCell>
+                            {demo.status === "pending" && (
+                              <div className="flex gap-1">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => updateDemoStatusMutation.mutate({ id: demo.id, status: "under_review" })}
+                                >
+                                  Review
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => updateDemoStatusMutation.mutate({ id: demo.id, status: "accepted" })}
+                                >
+                                  Accept
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => updateDemoStatusMutation.mutate({ id: demo.id, status: "rejected", rejection_reason: "Does not fit our roster" })}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                            {demo.status === "under_review" && (
+                              <div className="flex gap-1">
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => updateDemoStatusMutation.mutate({ id: demo.id, status: "accepted" })}
+                                >
+                                  Accept
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => updateDemoStatusMutation.mutate({ id: demo.id, status: "rejected", rejection_reason: "Does not fit our roster" })}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
+                      {(!demoSubmissions || demoSubmissions.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            No demo submissions yet
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
