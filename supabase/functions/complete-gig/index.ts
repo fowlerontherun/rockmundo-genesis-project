@@ -59,7 +59,7 @@ serve(async (req) => {
       throw new Error('No song performances found - gig may not have been processed');
     }
 
-    // Calculate overall rating (average of all songs)
+    // Calculate overall rating (average of all songs) - max is 25
     const avgRating = performances.reduce((sum, p) => sum + (p.performance_score || 0), 0) / performances.length;
 
     // Calculate averages for each factor
@@ -69,11 +69,12 @@ serve(async (req) => {
     const avgMemberSkill = performances.reduce((sum, p) => sum + (p.member_skill_contrib || 0), 0) / performances.length;
 
     // Calculate merchandise sales (based on attendance and performance)
-    const merchMultiplier = Math.max(0.05, Math.min(0.25, avgRating / 100));
+    // Rating is 0-25, so divide by 25 to get 0-1 range, then scale to 5%-25% purchase rate
+    const merchMultiplier = Math.max(0.05, Math.min(0.25, (avgRating / 25) * 0.25));
     const merchItemsSold = Math.floor(outcome.actual_attendance * merchMultiplier);
     const merchRevenue = merchItemsSold * 25; // $25 average per item
 
-    // Calculate costs
+    // Calculate costs (ensure integers for database)
     const crewCost = Math.floor(avgCrew * 5); // Crew cost based on skill
     const equipmentCost = Math.floor(avgEquipment * 2); // Wear and tear
     const totalCosts = crewCost + equipmentCost;
@@ -82,12 +83,13 @@ serve(async (req) => {
     const totalRevenue = outcome.ticket_revenue + merchRevenue;
     const netProfit = totalRevenue - totalCosts;
 
-    // Calculate fame gained - improved formula
-    // Base: rating/25 * 200 (max 200 for perfect show)
-    // Attendance multiplier: 0.5 to 2.0 based on attendance
-    const attendanceMultiplier = 0.5 + (outcome.actual_attendance / 100) * 1.5;
+    // Calculate fame gained - balanced formula
+    // Base: rating/25 * 200 (max 200 for perfect show at small venue)
+    // Attendance multiplier: scales logarithmically with venue size (1.0 to 3.0)
+    // Small venue (100): ~1.0x, Medium (1000): ~1.5x, Large (10000): ~2.0x, Arena (25000): ~2.5x
+    const attendanceMultiplier = 1.0 + Math.log10(Math.max(1, outcome.actual_attendance / 100)) * 0.5;
     const baseFame = (avgRating / 25) * 200;
-    const fameGained = Math.floor(baseFame * attendanceMultiplier);
+    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier));
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5); // Members get 1.5x fame as XP
@@ -100,11 +102,21 @@ serve(async (req) => {
     else if (avgRating < 10) chemistryChange = -2;
     else if (avgRating < 13) chemistryChange = -1;
 
+    // Get performance grade
+    let performanceGrade = 'C';
+    if (avgRating >= 23) performanceGrade = 'S';
+    else if (avgRating >= 20) performanceGrade = 'A';
+    else if (avgRating >= 16) performanceGrade = 'B';
+    else if (avgRating >= 12) performanceGrade = 'C';
+    else if (avgRating >= 8) performanceGrade = 'D';
+    else performanceGrade = 'F';
+
     // Update outcome with final calculations
     const { error: updateError } = await supabaseClient
       .from('gig_outcomes')
       .update({
         overall_rating: avgRating,
+        performance_grade: performanceGrade,
         merch_revenue: merchRevenue,
         merch_items_sold: merchItemsSold,
         total_revenue: totalRevenue,
@@ -114,10 +126,10 @@ serve(async (req) => {
         net_profit: netProfit,
         fame_gained: fameGained,
         chemistry_change: chemistryChange,
-        equipment_quality_avg: avgEquipment,
-        crew_skill_avg: avgCrew,
-        band_chemistry_level: avgChemistry,
-        member_skill_avg: avgMemberSkill,
+        equipment_quality_avg: Math.round(avgEquipment),
+        crew_skill_avg: Math.round(avgCrew),
+        band_chemistry_level: Math.round(avgChemistry),
+        member_skill_avg: Math.round(avgMemberSkill * 100) / 100,
         completed_at: new Date().toISOString()
       })
       .eq('id', outcome.id);
