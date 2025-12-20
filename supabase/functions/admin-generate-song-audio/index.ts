@@ -433,6 +433,62 @@ function getGenderVocalStyle(gender: string | null): string {
   return 'clear vocals'
 }
 
+// Swear words to filter out before sending to AI (will be replaced with clean alternatives)
+const PROFANITY_REPLACEMENTS: Record<string, string> = {
+  'fuck': 'frick',
+  'fuckin': 'frickin',
+  'fucking': 'frickin',
+  'fucked': 'messed',
+  'fucker': 'jerk',
+  'shit': 'crap',
+  'shitting': 'crapping',
+  'shitty': 'crappy',
+  'bitch': 'witch',
+  'bitches': 'witches',
+  'ass': 'butt',
+  'asshole': 'jerk',
+  'damn': 'darn',
+  'damned': 'darned',
+  'goddamn': 'goshdarn',
+  'hell': 'heck',
+  'cunt': 'jerk',
+  'dick': 'jerk',
+  'cock': 'rooster',
+  'pussy': 'wimp',
+  'whore': 'witch',
+  'slut': 'witch',
+  'bastard': 'jerk',
+  'motherfucker': 'motherfluffer',
+  'motherfucking': 'motherfluffing',
+  'bullshit': 'nonsense',
+  'nigga': 'homie',
+  'nigger': 'homie',
+  'fag': 'fool',
+  'faggot': 'fool',
+}
+
+// Clean profanity from lyrics while preserving meaning
+function cleanProfanity(text: string): string {
+  let cleaned = text
+  
+  // Sort by length descending to replace longer phrases first
+  const sortedWords = Object.keys(PROFANITY_REPLACEMENTS).sort((a, b) => b.length - a.length)
+  
+  for (const word of sortedWords) {
+    const replacement = PROFANITY_REPLACEMENTS[word]
+    // Case-insensitive replacement preserving original case pattern
+    const regex = new RegExp(`\\b${word}\\b`, 'gi')
+    cleaned = cleaned.replace(regex, (match) => {
+      // Preserve capitalization
+      if (match === match.toUpperCase()) return replacement.toUpperCase()
+      if (match[0] === match[0].toUpperCase()) return replacement.charAt(0).toUpperCase() + replacement.slice(1)
+      return replacement
+    })
+  }
+  
+  return cleaned
+}
+
 // Format lyrics with section markers for MiniMax Music-1.5
 // ONLY includes essential sections: Intro (if exists), first Verse, Chorus, Bridge
 function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
@@ -441,8 +497,11 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
+  // Clean profanity first before any processing
+  const cleanedLyrics = cleanProfanity(rawLyrics)
+
   // Format full lyrics preserving song structure
-  return formatFullLyrics(rawLyrics, songTitle, genre)
+  return formatFullLyrics(cleanedLyrics, songTitle, genre)
 }
 
 // Format full lyrics preserving song structure
@@ -511,12 +570,22 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
                            result.some(s => s.toLowerCase().includes('[chorus'))
       if (hasEssentials) break
       
-      // Otherwise, truncate this section to fit
+      // Otherwise, truncate this section at a COMPLETE LINE boundary (not mid-word)
       const remaining = MAX_CHARS - totalChars - 50 // Buffer for section header
       if (remaining > 100) {
-        const truncatedContent = section.content.substring(0, remaining).split('\n').slice(0, -1).join('\n')
-        if (truncatedContent.trim()) {
-          result.push(`[${section.type}]\n${truncatedContent}`)
+        const lines = section.content.split('\n')
+        let truncatedLines: string[] = []
+        let charCount = 0
+        
+        // Add complete lines until we exceed the limit
+        for (const line of lines) {
+          if (charCount + line.length + 1 > remaining) break
+          truncatedLines.push(line)
+          charCount += line.length + 1
+        }
+        
+        if (truncatedLines.length > 0) {
+          result.push(`[${section.type}]\n${truncatedLines.join('\n')}`)
         }
       }
       break
