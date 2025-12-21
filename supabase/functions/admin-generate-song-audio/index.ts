@@ -148,7 +148,8 @@ serve(async (req) => {
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
     
     // Build comprehensive prompt for MiniMax Music-1.5
-    const songTitle = project?.title || song.title || 'Untitled'
+    const rawSongTitle = project?.title || song.title || 'Untitled'
+    const cleanedSongTitle = cleanProfanity(rawSongTitle)
     const primaryGenre = song.genre || project?.genres?.[0] || 'pop'
     const chordProgression = project?.chord_progressions?.progression || null
     const chordName = project?.chord_progressions?.name || null
@@ -164,7 +165,7 @@ serve(async (req) => {
     const moodPalette = creativeBrief?.moodPalette || creativeBrief?.mood_palette || []
 
     addLog(`Song metadata extracted:`)
-    addLog(`  - Title: ${songTitle}`)
+    addLog(`  - Title: ${cleanedSongTitle}${rawSongTitle !== cleanedSongTitle ? ' (cleaned)' : ''}`)
     addLog(`  - Genre: ${primaryGenre}`)
     addLog(`  - Chord Progression: ${chordProgression || 'None'}`)
     addLog(`  - Theme: ${themeName || 'None'} (${themeMood || 'N/A'})`)
@@ -251,7 +252,7 @@ serve(async (req) => {
 
     // Format lyrics with section markers for MiniMax - preserve full structure
     addLog('Formatting lyrics for MiniMax Music-1.5 (full structure)...')
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, songTitle, primaryGenre)
+    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
     addLog(`Formatted lyrics (${formattedLyrics.length} chars, preserving all sections)`)
 
     // Combine for full prompt reference

@@ -204,7 +204,10 @@ serve(async (req) => {
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
     const moodPalette = creativeBrief?.moodPalette || creativeBrief?.mood_palette || []
 
-    console.log(`[generate-song-audio] Building MiniMax prompt for "${songTitle}"`)
+    // Clean profanity from song title before using in prompt
+    const cleanedSongTitle = cleanProfanity(songTitle)
+    
+    console.log(`[generate-song-audio] Building MiniMax prompt for "${cleanedSongTitle}"`)
     console.log(`[generate-song-audio] Genre: ${primaryGenre}`)
     console.log(`[generate-song-audio] Has Lyrics: ${!!rawLyrics}`)
 
@@ -275,7 +278,7 @@ serve(async (req) => {
     console.log(`[generate-song-audio] Style prompt: "${stylePrompt}"`)
 
     // Format lyrics with section markers for MiniMax - ONLY essential sections
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, songTitle, primaryGenre)
+    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
     console.log(`[generate-song-audio] Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
