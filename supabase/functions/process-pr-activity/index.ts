@@ -89,7 +89,10 @@ serve(async (req) => {
       // Mark as accepted and create scheduled activity
       await supabaseClient
         .from('pr_media_offers')
-        .update({ status: 'accepted' })
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
         .eq('id', offerId);
 
       // Get user's profile_id
@@ -157,6 +160,7 @@ serve(async (req) => {
       const fameBoost = offer.fame_boost || 0;
       const fanBoost = offer.fan_boost || 0;
       const compensation = offer.compensation || 0;
+      const outletName = offer.outlet_name || offer.show_name || `${offer.media_type?.toUpperCase() || 'Media'} Outlet`;
 
       // Update band fame and fans
       if (bandId) {
@@ -188,6 +192,7 @@ serve(async (req) => {
                 offer_id: offerId,
                 compensation,
                 fan_boost: fanBoost,
+                outlet_name: outletName,
               },
             });
 
@@ -198,31 +203,37 @@ serve(async (req) => {
               band_id: bandId,
               amount: compensation,
               source: 'pr_appearance',
-              description: `${offer.media_type.toUpperCase()} appearance`,
+              description: `${offer.media_type?.toUpperCase() || 'PR'} appearance on ${outletName}`,
               metadata: { offer_id: offerId, media_type: offer.media_type },
             });
         }
       }
 
-      // Create media appearance record
-      await supabaseClient
+      // Create media appearance record - using correct schema columns
+      const { error: appearanceError } = await supabaseClient
         .from('media_appearances')
         .insert({
           band_id: bandId,
           media_type: offer.media_type,
-          title: `${offer.media_type.toUpperCase()} Appearance`,
+          program_name: outletName,
+          network: offer.show_name || outletName,
           air_date: offer.proposed_date,
-          reach: fanBoost,
-          status: 'completed',
-          compensation,
-          fame_gained: fameBoost,
-          fans_gained: fanBoost,
+          audience_reach: fanBoost * 100, // Multiply for realistic reach numbers
+          sentiment: 'positive',
+          highlight: `Successful ${offer.media_type} appearance`,
         });
+
+      if (appearanceError) {
+        console.error('Failed to create media appearance:', appearanceError);
+      }
 
       // Mark offer as completed
       await supabaseClient
         .from('pr_media_offers')
-        .update({ status: 'completed' })
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
         .eq('id', offerId);
 
       await completeJobRun({

@@ -151,18 +151,23 @@ serve(async (req) => {
           let fanBoost = 0;
 
           // Select appropriate outlet based on media type and fame level
+          let outletName = '';
+          let showName: string | null = null;
+          
           switch (mediaType) {
             case 'tv': {
               const eligible = (tvNetworks.data || []).filter((n: any) => fame >= (n.min_fame_required || 0));
               if (eligible.length === 0) continue;
               const network = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = network.id;
+              outletName = network.name || 'TV Network';
               
               // Find a show on this network
               const networkShows = (tvShows || []).filter((s: any) => s.network_id === network.id);
               if (networkShows.length > 0) {
                 const show = networkShows[Math.floor(Math.random() * networkShows.length)];
                 showId = show.id;
+                showName = show.show_name;
                 compensation = getRandomInt(show.compensation_range_min || 500, show.compensation_range_max || 5000);
                 fameBoost = Math.floor(getRandomInt(200, 1500) * (show.fame_boost_multiplier || 1));
                 fanBoost = Math.floor(getRandomInt(500, 5000) * (show.fan_boost_multiplier || 1));
@@ -178,6 +183,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const station = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = station.id;
+              outletName = station.name || 'Radio Station';
               compensation = getRandomInt(200, 2000);
               fameBoost = getRandomInt(100, 600);
               fanBoost = getRandomInt(200, 2000);
@@ -188,6 +194,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const podcast = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = podcast.id;
+              outletName = podcast.name || podcast.podcast_name || 'Podcast';
               compensation = getRandomInt(300, 1500);
               fameBoost = getRandomInt(150, 400);
               fanBoost = getRandomInt(400, 1000);
@@ -198,6 +205,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const paper = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = paper.id;
+              outletName = paper.name || 'Newspaper';
               compensation = getRandomInt(100, 1000);
               fameBoost = getRandomInt(50, 500);
               fanBoost = getRandomInt(100, 1500);
@@ -208,6 +216,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const mag = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = mag.id;
+              outletName = mag.name || 'Magazine';
               compensation = getRandomInt(200, 1500);
               fameBoost = getRandomInt(100, 300);
               fanBoost = getRandomInt(300, 800);
@@ -218,6 +227,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const channel = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = channel.id;
+              outletName = channel.name || 'YouTube Channel';
               compensation = getRandomInt(400, 2500);
               fameBoost = getRandomInt(200, 600);
               fanBoost = getRandomInt(600, 2000);
@@ -228,6 +238,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const film = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = film.id;
+              outletName = film.title || 'Film Production';
               compensation = film.compensation || 50000;
               fameBoost = film.fame_boost || 5000;
               fanBoost = film.fan_boost || 20000;
@@ -257,6 +268,8 @@ serve(async (req) => {
               media_type: mediaType,
               media_outlet_id: mediaOutletId,
               show_id: showId,
+              outlet_name: outletName,
+              show_name: showName,
               offer_type: offerType,
               proposed_date: proposedDate.toISOString().split('T')[0],
               compensation,

@@ -65,7 +65,7 @@ export default function PublicRelations() {
     queryFn: async () => {
       if (!userBand?.id) return null;
       
-      const [offersResult, appearancesResult] = await Promise.all([
+      const [offersResult, appearancesResult, fameEventsResult, earningsResult] = await Promise.all([
         supabase
           .from("pr_media_offers")
           .select("id, status", { count: "exact" })
@@ -75,12 +75,22 @@ export default function PublicRelations() {
           .from("media_appearances")
           .select("audience_reach")
           .eq("band_id", userBand.id),
+        supabase
+          .from("band_fame_events")
+          .select("fame_gained")
+          .eq("band_id", userBand.id)
+          .eq("event_type", "pr_appearance"),
+        supabase
+          .from("band_earnings")
+          .select("amount")
+          .eq("band_id", userBand.id)
+          .eq("source", "pr_appearance"),
       ]);
 
       const appearances = appearancesResult.data || [];
       const totalReach = appearances.reduce((sum, a) => sum + (a.audience_reach || 0), 0);
-      const totalFameGained = 0;
-      const totalEarnings = 0;
+      const totalFameGained = (fameEventsResult.data || []).reduce((sum, e) => sum + (e.fame_gained || 0), 0);
+      const totalEarnings = (earningsResult.data || []).reduce((sum, e) => sum + (e.amount || 0), 0);
 
       return {
         pendingOffers: offersResult.count || 0,
