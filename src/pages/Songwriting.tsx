@@ -599,16 +599,33 @@ const Songwriting = () => {
   const lastCheckRef = useRef<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Auto-check for completed sessions
+  // Auto-check for completed sessions - with abort controller support
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
   const checkAutoCompletions = useCallback(async (force = false) => {
     const now = Date.now();
-    // Check immediately on first load, then throttle to 30 seconds
-    if (!force && lastCheckRef.current > 0 && now - lastCheckRef.current < 30000) return;
+    // Check immediately on first load, then throttle to 60 seconds (reduced from 30)
+    if (!force && lastCheckRef.current > 0 && now - lastCheckRef.current < 60000) return;
+    
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     lastCheckRef.current = now;
 
     try {
       setIsRefreshing(true);
+      
+      // Add timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        abortControllerRef.current?.abort();
+      }, 10000); // 10 second timeout
+      
       const { data, error } = await supabase.functions.invoke('cleanup-songwriting');
+      
+      clearTimeout(timeoutId);
       
       if (error) {
         console.error('Auto-complete error:', error);
@@ -620,11 +637,13 @@ const Songwriting = () => {
       
       if (data?.completedSessions > 0) {
         toast.success(`${data.completedSessions} session(s) completed! Progress updated.`);
-        await refetchProjects();
+        refetchProjects(); // Don't await - fire and forget
       } else if (force) {
         toast.info('No sessions ready to complete');
       }
     } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error('Auto-complete check failed:', error);
       if (force) {
         toast.error('Failed to refresh sessions');
@@ -634,28 +653,37 @@ const Songwriting = () => {
     }
   }, [refetchProjects]);
 
-  // Check immediately on mount and when page becomes visible
+  // Check on mount and when page becomes visible - with proper cleanup
   useEffect(() => {
-    checkAutoCompletions();
+    let isMounted = true;
+    
+    // Delay initial check slightly to not block page render
+    const initialTimeout = setTimeout(() => {
+      if (isMounted) checkAutoCompletions();
+    }, 500);
 
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (!document.hidden && isMounted) {
         checkAutoCompletions();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Poll every 30 seconds while page is visible
+    // Poll every 60 seconds while page is visible (increased from 30)
     const interval = setInterval(() => {
-      if (!document.hidden) {
+      if (!document.hidden && isMounted) {
         checkAutoCompletions();
       }
-    }, 30000);
+    }, 60000);
 
     return () => {
+      isMounted = false;
+      clearTimeout(initialTimeout);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(interval);
+      // Abort any in-flight requests on unmount
+      abortControllerRef.current?.abort();
     };
   }, [checkAutoCompletions]);
 

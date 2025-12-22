@@ -169,32 +169,36 @@ export const useSongwritingData = (userId?: string | null) => {
       
       if (error) throw error;
       
-      // Auto-unlock expired projects
+      // Auto-unlock expired projects - do this in background, don't block the query
       const now = new Date().toISOString();
       const needsUnlock = (data || []).filter(p => 
         p.is_locked && p.locked_until && p.locked_until < now
       );
       
+      // Fire and forget - don't await, just update in background
       if (needsUnlock.length > 0) {
-        await Promise.all(
+        Promise.all(
           needsUnlock.map(p =>
             supabase
               .from('songwriting_projects')
               .update({ is_locked: false, locked_until: null })
               .eq('id', p.id)
           )
-        );
+        ).catch(err => console.error('Background unlock failed:', err));
       }
       
-      // Order sessions by created_at DESC
-      const projectsWithSessions = (data || []).map(project => ({
-        ...project,
-        songwriting_sessions: (project.songwriting_sessions || []).sort(
-          (a: any, b: any) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime()
-        ),
-        is_locked: needsUnlock.some(p => p.id === project.id) ? false : project.is_locked,
-        locked_until: needsUnlock.some(p => p.id === project.id) ? null : project.locked_until,
-      }));
+      // Order sessions by created_at DESC - mark expired locks as unlocked in UI immediately
+      const projectsWithSessions = (data || []).map(project => {
+        const isExpired = project.is_locked && project.locked_until && project.locked_until < now;
+        return {
+          ...project,
+          songwriting_sessions: (project.songwriting_sessions || []).sort(
+            (a: any, b: any) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime()
+          ),
+          is_locked: isExpired ? false : project.is_locked,
+          locked_until: isExpired ? null : project.locked_until,
+        };
+      });
       
       return projectsWithSessions as SongwritingProject[];
     }
