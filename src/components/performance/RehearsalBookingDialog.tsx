@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { DollarSign, Clock, TrendingUp, Music2, Zap, AlertCircle, CheckCircle } from 'lucide-react';
+import { DollarSign, Clock, TrendingUp, Music2, Zap, AlertCircle, CheckCircle, MapPin } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
@@ -18,18 +18,24 @@ import { getRehearsalLevel, formatRehearsalTime } from '@/utils/rehearsalLevels'
 import { REHEARSAL_SLOTS, getSlotTimeRange, FacilitySlot } from '@/utils/facilitySlots';
 import { useRehearsalRoomAvailability } from '@/hooks/useRehearsalRoomAvailability';
 
-type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
+type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'] & {
+  city?: { id: string; name: string } | null;
+};
 type Band = Database['public']['Tables']['bands']['Row'];
+type City = { id: string; name: string };
 
 interface RehearsalBookingDialogProps {
   rooms: RehearsalRoom[];
+  cities: City[];
+  currentCityId: string | null;
   band: Band;
   songs: any[];
   onConfirm: (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date) => Promise<string | void>;
   onClose: () => void;
 }
 
-export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose }: RehearsalBookingDialogProps) => {
+export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, songs, onConfirm, onClose }: RehearsalBookingDialogProps) => {
+  const [selectedCityId, setSelectedCityId] = useState<string>(currentCityId || 'all');
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
   const [selectedDuration, setSelectedDuration] = useState<number>(2);
   const [practiceType, setPracticeType] = useState<'song' | 'setlist'>('song');
@@ -40,6 +46,11 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
   const [booking, setBooking] = useState(false);
   const [setlists, setSetlists] = useState<any[]>([]);
   const [songFamiliarity, setSongFamiliarity] = useState<Record<string, number>>({});
+
+  // Filter rooms by selected city
+  const filteredRooms = selectedCityId === 'all' 
+    ? rooms 
+    : rooms.filter(room => room.city_id === selectedCityId);
 
   // Fetch slot availability for the selected room and date
   const { data: slotAvailability, isLoading: loadingSlots } = useRehearsalRoomAvailability(
@@ -161,42 +172,69 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* City Filter */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Filter by City
+            </Label>
+            <Select value={selectedCityId} onValueChange={(v) => { setSelectedCityId(v); setSelectedRoomId(''); setSelectedSlotId(''); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a city..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city.id} value={city.id}>
+                    {city.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Room Selection */}
           <div className="space-y-2">
             <Label>Select Rehearsal Room</Label>
-            <RadioGroup value={selectedRoomId} onValueChange={(v) => { setSelectedRoomId(v); setSelectedSlotId(''); }}>
-              {rooms.map((room) => (
-                <div
-                  key={room.id}
-                  className={cn(
-                    'flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer',
-                    selectedRoomId === room.id && 'border-primary bg-primary/5'
-                  )}
-                  onClick={() => { setSelectedRoomId(room.id); setSelectedSlotId(''); }}
-                >
-                  <RadioGroupItem value={room.id} />
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-semibold cursor-pointer">{room.name}</Label>
-                      <Badge variant="outline">${room.hourly_rate}/hr</Badge>
-                    </div>
-                    {room.description && (
-                      <p className="text-sm text-muted-foreground">{room.description}</p>
+            {filteredRooms.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No rehearsal rooms available in this city.
+              </p>
+            ) : (
+              <RadioGroup value={selectedRoomId} onValueChange={(v) => { setSelectedRoomId(v); setSelectedSlotId(''); }}>
+                {filteredRooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className={cn(
+                      'flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer',
+                      selectedRoomId === room.id && 'border-primary bg-primary/5'
                     )}
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      <span>Quality: {room.quality_rating}/100</span>
-                      <span>Equipment: {room.equipment_quality}/100</span>
-                      <span>Capacity: {room.capacity}</span>
+                    onClick={() => { setSelectedRoomId(room.id); setSelectedSlotId(''); }}
+                  >
+                    <RadioGroupItem value={room.id} />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold cursor-pointer">{room.name}</Label>
+                        <Badge variant="outline">${room.hourly_rate}/hr</Badge>
+                      </div>
+                      {room.city && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {room.city.name}
+                        </p>
+                      )}
+                      {room.description && (
+                        <p className="text-sm text-muted-foreground">{room.description}</p>
+                      )}
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span>Quality: {room.quality_rating}/100</span>
+                        <span>Equipment: {room.equipment_quality}/100</span>
+                        <span>Capacity: {room.capacity}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </RadioGroup>
-
-            {rooms.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No rehearsal rooms available. Contact an admin.
-              </p>
+                ))}
+              </RadioGroup>
             )}
           </div>
 
