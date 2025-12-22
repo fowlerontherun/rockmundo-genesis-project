@@ -38,22 +38,32 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
 
     setLoading(true);
     try {
-      // Check if user is already in a band
+      // Check if user is already in an active band (not a touring member)
       const { data: existingBands } = await supabase
         .from('band_members')
-        .select('band_id, bands(name)')
+        .select('band_id, is_touring_member, bands!inner(name, status)')
         .eq('user_id', user.id)
+        .eq('is_touring_member', false)
+        .eq('bands.status', 'active')
         .limit(1);
 
       if (existingBands && existingBands.length > 0) {
+        const bandName = (existingBands[0].bands as any)?.name || 'a band';
         toast({
           title: 'Already in a band',
-          description: `You're already a member of a band. Leave your current band first to create a new one.`,
+          description: `You're already a member of ${bandName}. Leave your current band first to create a new one.`,
           variant: 'destructive',
         });
         setLoading(false);
         return;
       }
+
+      // Clean up any orphaned band_member records for disbanded bands
+      await supabase
+        .from('band_members')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('is_touring_member', false);
 
       const isSolo = creationMode === 'solo';
       const bandName = isSolo ? (artistName || `${user.email?.split('@')[0]} (Solo)`) : name;
