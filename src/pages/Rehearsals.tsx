@@ -94,14 +94,28 @@ const Rehearsals = () => {
 
   const bandIds = userBands.map((b: any) => b.id);
 
-  // Fetch rehearsal rooms
+  // Fetch rehearsal rooms with city info
   const { data: rooms = [] } = useQuery({
-    queryKey: ["rehearsal-rooms"],
+    queryKey: ["rehearsal-rooms-with-cities"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rehearsal_rooms")
-        .select("*")
+        .select("*, city:cities(id, name)")
         .order("quality_rating", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch all cities for the filter dropdown
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities-for-rehearsal-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id, name")
+        .order("name");
       
       if (error) throw error;
       return data || [];
@@ -562,6 +576,8 @@ const Rehearsals = () => {
       {showBookingDialog && selectedBand && (
         <RehearsalBookingDialog
           rooms={rooms}
+          cities={cities}
+          currentCityId={profile?.current_city_id || null}
           band={selectedBand}
           songs={bandSongs}
           onConfirm={handleBookRehearsal}

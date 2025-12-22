@@ -11,7 +11,10 @@ import { RehearsalBookingDialog } from './RehearsalBookingDialog';
 import { format } from 'date-fns';
 import { useRehearsalBooking } from '@/hooks/useRehearsalBooking';
 
-type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
+type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'] & {
+  city?: { id: string; name: string } | null;
+};
+type City = { id: string; name: string };
 type BandRehearsal = Database['public']['Tables']['band_rehearsals']['Row'] & {
   rehearsal_rooms?: RehearsalRoom | null;
   songs?: { title: string } | null;
@@ -27,6 +30,8 @@ export function RehearsalsTab() {
   const [rehearsals, setRehearsals] = useState<BandRehearsal[]>([]);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [rooms, setRooms] = useState<RehearsalRoom[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [currentCityId, setCurrentCityId] = useState<string | null>(null);
   const [bandSongs, setBandSongs] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
@@ -70,14 +75,32 @@ export function RehearsalsTab() {
         if (rehearsalError) throw rehearsalError;
         setRehearsals(rehearsalData || []);
 
-        // Load rehearsal rooms
+        // Load rehearsal rooms with city info
         const { data: roomsData, error: roomsError } = await supabase
           .from('rehearsal_rooms')
-          .select('*')
+          .select('*, city:cities(id, name)')
           .order('quality_rating', { ascending: false });
 
         if (roomsError) throw roomsError;
         setRooms(roomsData || []);
+
+        // Load cities for filter
+        const { data: citiesData, error: citiesError } = await supabase
+          .from('cities')
+          .select('id, name')
+          .order('name');
+
+        if (citiesError) throw citiesError;
+        setCities(citiesData || []);
+
+        // Get user's current city
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('current_city_id')
+          .eq('user_id', user.id)
+          .single();
+
+        setCurrentCityId(profileData?.current_city_id || null);
 
         // Load band songs from setlists and member songs
         const { data: setlistSongs, error: setlistSongsError } = await supabase
@@ -473,6 +496,8 @@ export function RehearsalsTab() {
       {showBookingDialog && (
         <RehearsalBookingDialog
           rooms={rooms}
+          cities={cities}
+          currentCityId={currentCityId}
           band={userBand}
           songs={bandSongs}
           onConfirm={handleBookRehearsal}
