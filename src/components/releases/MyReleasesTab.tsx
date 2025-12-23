@@ -236,6 +236,10 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
+            onReorder={(format) => {
+              // TODO: Implement reorder dialog - for now show toast
+              console.log('Reorder requested for format:', format);
+            }}
           />
         ))}
       </div>
@@ -268,9 +272,10 @@ interface ReleaseCardProps {
   onEdit: () => void;
   onCancel: () => void;
   onViewDetails: () => void;
+  onReorder?: (format: any) => void;
 }
 
-function ReleaseCard({ release, onEdit, onCancel, onViewDetails }: ReleaseCardProps) {
+function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onReorder }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -396,36 +401,52 @@ function ReleaseCard({ release, onEdit, onCancel, onViewDetails }: ReleaseCardPr
           </h4>
           <div className="flex flex-wrap gap-2">
             {release.release_formats?.length > 0 ? (
-              release.release_formats.map((fmt: any) => (
-                <div 
-                  key={fmt.id} 
-                  className="bg-muted/50 rounded-lg px-3 py-2 text-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    {fmt.format_type === "vinyl" && <Disc className="h-4 w-4" />}
-                    {fmt.format_type === "cd" && <Disc className="h-4 w-4" />}
-                    {fmt.format_type === "digital" && <Music className="h-4 w-4" />}
-                    {fmt.format_type === "streaming" && <Radio className="h-4 w-4" />}
-                    {fmt.format_type === "cassette" && <Music className="h-4 w-4" />}
-                    <span className="capitalize font-medium">{fmt.format_type}</span>
+              release.release_formats.map((fmt: any) => {
+                const isLowStock = fmt.format_type !== 'digital' && fmt.format_type !== 'streaming' && fmt.quantity < 50;
+                const isSoldOut = fmt.format_type !== 'digital' && fmt.format_type !== 'streaming' && fmt.quantity <= 0;
+                
+                return (
+                  <div 
+                    key={fmt.id} 
+                    className={`bg-muted/50 rounded-lg px-3 py-2 text-sm ${isSoldOut ? 'border border-destructive/50' : isLowStock ? 'border border-warning/50' : ''}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {fmt.format_type === "vinyl" && <Disc className="h-4 w-4" />}
+                      {fmt.format_type === "cd" && <Disc className="h-4 w-4" />}
+                      {fmt.format_type === "digital" && <Music className="h-4 w-4" />}
+                      {fmt.format_type === "streaming" && <Radio className="h-4 w-4" />}
+                      {fmt.format_type === "cassette" && <Music className="h-4 w-4" />}
+                      <span className="capitalize font-medium">{fmt.format_type}</span>
+                    </div>
+                    {fmt.quantity !== undefined && fmt.format_type !== 'digital' && fmt.format_type !== 'streaming' && (
+                      <p className={`text-xs mt-1 ${isSoldOut ? 'text-destructive font-medium' : isLowStock ? 'text-warning' : 'text-muted-foreground'}`}>
+                        {isSoldOut ? 'SOLD OUT' : `${fmt.quantity} units remaining`}
+                      </p>
+                    )}
+                    {fmt.release_date && (
+                      <p className="text-xs text-muted-foreground">
+                        Release: {formatDate(new Date(fmt.release_date), "MMM d, yyyy")}
+                      </p>
+                    )}
+                    {fmt.manufacturing_status && (
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        {fmt.manufacturing_status}
+                      </Badge>
+                    )}
+                    {release.release_status === "released" && (isSoldOut || isLowStock) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full text-xs"
+                        onClick={() => onReorder?.(fmt)}
+                      >
+                        <Package className="h-3 w-3 mr-1" />
+                        Reorder Stock
+                      </Button>
+                    )}
                   </div>
-                  {fmt.quantity && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {fmt.quantity} units @ ${fmt.manufacturing_cost}/unit
-                    </p>
-                  )}
-                  {fmt.release_date && (
-                    <p className="text-xs text-muted-foreground">
-                      Release: {formatDate(new Date(fmt.release_date), "MMM d, yyyy")}
-                    </p>
-                  )}
-                  {fmt.manufacturing_status && (
-                    <Badge variant="outline" className="mt-1 text-xs">
-                      {fmt.manufacturing_status}
-                    </Badge>
-                  )}
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-sm text-muted-foreground">No formats selected</p>
             )}

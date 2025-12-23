@@ -14,12 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.314",
+    version: "1.0.315",
     date: "2025-12-23",
     changes: [
       { type: 'feature', description: "Added Version History page" },
+      { type: 'feature', description: "Added reorder button for sold out/low stock releases" },
       { type: 'fix', description: "Fixed songwriting cleanup cron job failing due to missing column" },
-      { type: 'fix', description: "Fixed stuck songwriting sessions not completing properly" },
+      { type: 'fix', description: "Fixed digital sales not generating (unlimited stock)" },
+      { type: 'fix', description: "Fixed streaming distribution not triggering after manufacturing" },
+      { type: 'improvement', description: "Charts now use dynamic genres and countries from database" },
     ]
   },
   {

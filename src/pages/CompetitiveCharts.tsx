@@ -14,6 +14,32 @@ const CompetitiveCharts = () => {
   const [country, setCountry] = useState("all");
   const [genre, setGenre] = useState("all");
 
+  // Fetch genres from database
+  const { data: genres } = useQuery({
+    queryKey: ["chart-genres"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("songs")
+        .select("genre")
+        .not("genre", "is", null);
+      const uniqueGenres = [...new Set(data?.map(s => s.genre).filter(Boolean))];
+      return uniqueGenres.sort();
+    },
+  });
+
+  // Fetch countries from database
+  const { data: countries } = useQuery({
+    queryKey: ["chart-countries"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cities")
+        .select("country")
+        .not("country", "is", null);
+      const uniqueCountries = [...new Set(data?.map(c => c.country).filter(Boolean))];
+      return uniqueCountries.sort();
+    },
+  });
+
   // Fetch chart entries for today
   const { data: chartEntries, isLoading } = useQuery({
     queryKey: ["chart-entries", country, genre],
@@ -195,10 +221,9 @@ const CompetitiveCharts = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Countries</SelectItem>
-                  <SelectItem value="us">United States</SelectItem>
-                  <SelectItem value="uk">United Kingdom</SelectItem>
-                  <SelectItem value="jp">Japan</SelectItem>
-                  <SelectItem value="de">Germany</SelectItem>
+                  {countries?.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -211,13 +236,9 @@ const CompetitiveCharts = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Genres</SelectItem>
-                  <SelectItem value="Rock">Rock</SelectItem>
-                  <SelectItem value="Pop">Pop</SelectItem>
-                  <SelectItem value="Electronic">Electronic</SelectItem>
-                  <SelectItem value="Hip Hop">Hip Hop</SelectItem>
-                  <SelectItem value="Jazz">Jazz</SelectItem>
-                  <SelectItem value="Metal">Metal</SelectItem>
-                  <SelectItem value="Indie/Bedroom Pop">Indie/Bedroom Pop</SelectItem>
+                  {genres?.map((g) => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

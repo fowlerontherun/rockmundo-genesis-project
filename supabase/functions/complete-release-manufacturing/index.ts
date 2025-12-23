@@ -52,6 +52,17 @@ serve(async (req) => {
     
     console.log(`[complete-release-manufacturing] Completed ${completedCount} releases in ${duration}ms`);
 
+    // Trigger auto-distribute-streaming to handle streaming platform distribution
+    if (completedCount > 0) {
+      try {
+        console.log('[complete-release-manufacturing] Triggering auto-distribute-streaming...');
+        await supabaseClient.functions.invoke('auto-distribute-streaming');
+        console.log('[complete-release-manufacturing] Successfully triggered auto-distribute-streaming');
+      } catch (distributeError) {
+        console.error('[complete-release-manufacturing] Failed to trigger auto-distribute-streaming:', distributeError);
+      }
+    }
+
     // Log to cron_job_runs if table exists
     try {
       await supabaseClient.from("cron_job_runs").insert({
