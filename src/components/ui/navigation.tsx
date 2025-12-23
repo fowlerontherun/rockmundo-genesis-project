@@ -48,6 +48,7 @@ import {
   Briefcase,
   Newspaper,
   Radio,
+  History,
   Video,
   Disc,
   Target,
@@ -393,6 +394,14 @@ const Navigation = () => {
             <NotificationBell />
             <ThemeSwitcher />
             <LanguageSwitcher />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              title="Version History"
+              onClick={() => navigate('/version-history')}
+            >
+              <History className="h-5 w-5" />
+            </Button>
             <HowToPlayDialog />
           </div>
         </div>
@@ -417,6 +426,14 @@ const Navigation = () => {
               <NotificationBell />
               <ThemeSwitcher />
               <LanguageSwitcher />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                title="Version History"
+                onClick={() => navigate('/version-history')}
+              >
+                <History className="h-5 w-5" />
+              </Button>
               <HowToPlayDialog />
             </div>
           )}
