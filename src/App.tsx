@@ -202,6 +202,7 @@ const BandVehicles = lazyWithRetry(() => import("./pages/BandVehicles"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const Prison = lazyWithRetry(() => import("./pages/Prison"));
+const VersionHistory = lazyWithRetry(() => import("./pages/VersionHistory"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -287,6 +288,7 @@ function App() {
                     <Route path="public-relations" element={<PublicRelations />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
+                    <Route path="version-history" element={<VersionHistory />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
                     <Route path="festivals" element={<FestivalBrowser />} />
