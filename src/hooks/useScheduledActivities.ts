@@ -6,7 +6,8 @@ import { startOfDay, endOfDay, addDays } from "date-fns";
 export type ActivityType = 
   | 'songwriting' | 'gig' | 'rehearsal' | 'busking' | 'recording' 
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
-  | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' | 'other';
+  | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
+  | 'pr_appearance' | 'film_production' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 

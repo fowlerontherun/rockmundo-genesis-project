@@ -86,16 +86,7 @@ serve(async (req) => {
     }
 
     if (action === 'accept') {
-      // Mark as accepted and create scheduled activity
-      await supabaseClient
-        .from('pr_media_offers')
-        .update({ 
-          status: 'accepted',
-          accepted_at: new Date().toISOString(),
-        })
-        .eq('id', offerId);
-
-      // Get user's profile_id
+      // Get user's profile_id first
       const { data: profile } = await supabaseClient
         .from('profiles')
         .select('id')
@@ -110,10 +101,45 @@ serve(async (req) => {
       const isFilm = offer.media_type === 'film';
       const durationMinutes = isFilm ? 7 * 24 * 60 : 60;
 
-      // Create scheduled activity
+      // Create scheduled activity times
       const startTime = new Date(`${offer.proposed_date}T10:00:00Z`);
       const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
+      // Check for scheduling conflicts before accepting
+      const { data: hasConflict } = await supabaseClient.rpc('check_scheduling_conflict', {
+        p_user_id: offer.user_id,
+        p_start: startTime.toISOString(),
+        p_end: endTime.toISOString(),
+        p_exclude_id: null,
+      });
+
+      if (hasConflict) {
+        // Get conflicting activity details for error message
+        const { data: conflict } = await supabaseClient
+          .from('player_scheduled_activities')
+          .select('title')
+          .eq('user_id', offer.user_id)
+          .in('status', ['scheduled', 'in_progress'])
+          .lte('scheduled_start', endTime.toISOString())
+          .gte('scheduled_end', startTime.toISOString())
+          .limit(1)
+          .single();
+
+        throw new Error(
+          `Cannot accept PR offer: You have "${conflict?.title || 'another activity'}" scheduled at this time. Please decline or reschedule.`
+        );
+      }
+
+      // Mark as accepted
+      await supabaseClient
+        .from('pr_media_offers')
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
+        .eq('id', offerId);
+
+      // Create scheduled activity
       const { error: activityError } = await supabaseClient
         .from('player_scheduled_activities')
         .insert({
