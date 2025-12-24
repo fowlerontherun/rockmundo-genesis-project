@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { type ActivityType } from "@/hooks/useScheduledActivities";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Music, Guitar, Users, Headphones, MapPin, Briefcase, GraduationCap, BookOpen, Video, Heart, Calendar, Target, Mic } from "lucide-react";
+import { Music, Guitar, Users, Headphones, MapPin, Briefcase, GraduationCap, BookOpen, Video, Heart, Calendar, Target, Mic, Star, Clapperboard } from "lucide-react";
 
 interface ScheduleActivityDialogProps {
   open: boolean;
@@ -28,6 +28,8 @@ const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: st
   health: { path: '/my-character/edit', icon: Heart, label: 'Health Activity', description: 'Rest and recover health' },
   skill_practice: { path: '/skills', icon: Target, label: 'Skill Practice', description: 'Practice individual skills' },
   open_mic: { path: '/open-mic', icon: Mic, label: 'Open Mic Night', description: 'Perform at open mic venues' },
+  pr_appearance: { path: '/pr', icon: Star, label: 'PR Appearance', description: 'Media and PR appearances (booked via offers)' },
+  film_production: { path: '/pr', icon: Clapperboard, label: 'Film Production', description: 'Film and movie appearances (booked via offers)' },
   other: { path: '/schedule', icon: Calendar, label: 'Other Activity', description: 'Schedule a custom activity' },
 };
 

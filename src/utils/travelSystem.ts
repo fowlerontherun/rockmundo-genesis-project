@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-
+import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 export interface TravelRoute {
   id: string;
   from_city_id: string;
@@ -49,6 +49,24 @@ export async function bookTravel(bookingData: TravelBookingData) {
   // Validate eligibility
   await validateTravelEligibility(userId, cost);
 
+  // Calculate times first for conflict check
+  const departureTime = scheduledDepartureTime || new Date().toISOString();
+  const departureDate = new Date(departureTime);
+  const arrivalTimeCalc = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
+
+  // Check for scheduling conflicts before booking
+  const { available, conflictingActivity } = await checkTimeSlotAvailable(
+    userId,
+    departureDate,
+    arrivalTimeCalc
+  );
+
+  if (!available) {
+    throw new Error(
+      `Time slot conflict: You have "${conflictingActivity?.title}" scheduled during this travel time.`
+    );
+  }
+
   // Start transaction-like operations
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -58,11 +76,6 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   if (profileError) throw profileError;
 
-  // Calculate arrival time for setting travel status
-  const departureTime = scheduledDepartureTime || new Date().toISOString();
-  const departureDate = new Date(departureTime);
-  const arrivalTimeCalc = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000).toISOString();
-  
   // Determine if travel starts immediately or is scheduled for later
   const now = new Date();
   const startsImmediately = departureDate <= now;
@@ -73,7 +86,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
     .update({ 
       cash: (profile.cash || 0) - cost,
       is_traveling: startsImmediately,
-      travel_arrives_at: startsImmediately ? arrivalTimeCalc : null,
+      travel_arrives_at: startsImmediately ? arrivalTimeCalc.toISOString() : null,
     })
     .eq("user_id", userId);
 
@@ -92,11 +105,13 @@ export async function bookTravel(bookingData: TravelBookingData) {
     .eq("id", toCityId)
     .single();
 
+  const fromCityName = fromCity ? `${fromCity.name}, ${fromCity.country}` : "Unknown";
+  const toCityName = toCity ? `${toCity.name}, ${toCity.country}` : "Unknown";
+
   // Create travel history entry
-  const arrivalTime = arrivalTimeCalc;
   const status = startsImmediately ? 'in_progress' : 'scheduled';
   
-  const { error: historyError } = await supabase
+  const { data: travelHistory, error: historyError } = await supabase
     .from("player_travel_history")
     .insert({
       user_id: userId,
@@ -107,15 +122,40 @@ export async function bookTravel(bookingData: TravelBookingData) {
       travel_duration_hours: durationHours,
       departure_time: departureTime,
       scheduled_departure_time: departureTime,
-      arrival_time: arrivalTime,
+      arrival_time: arrivalTimeCalc.toISOString(),
       status,
-    });
+    })
+    .select()
+    .single();
 
   if (historyError) throw historyError;
 
+  // Create scheduled activity to block the time slot
+  const { error: activityError } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .insert({
+      user_id: userId,
+      profile_id: profile.id,
+      activity_type: 'travel',
+      status: startsImmediately ? 'in_progress' : 'scheduled',
+      scheduled_start: departureDate.toISOString(),
+      scheduled_end: arrivalTimeCalc.toISOString(),
+      title: `Travel: ${fromCityName} → ${toCityName}`,
+      description: `${transportType} journey (${durationHours}h)`,
+      location: toCityName,
+      metadata: {
+        travel_history_id: travelHistory.id,
+        from_city_id: fromCityId,
+        to_city_id: toCityId,
+        transport_type: transportType,
+      },
+    });
+
+  if (activityError) {
+    console.warn('Failed to create scheduled activity for travel:', activityError);
+  }
+
   // Log activity
-  const fromCityName = fromCity ? `${fromCity.name}, ${fromCity.country}` : "Unknown";
-  const toCityName = toCity ? `${toCity.name}, ${toCity.country}` : "Unknown";
   
   await supabase.from("activity_feed").insert({
     user_id: userId,

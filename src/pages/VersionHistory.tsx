@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.317",
+    date: "2025-12-24",
+    changes: [
+      { type: 'feature', description: "Travel now blocks schedule and checks for conflicts before booking" },
+      { type: 'feature', description: "PR appearances now check for scheduling conflicts before accepting" },
+      { type: 'improvement', description: "Added pr_appearance and film_production activity types to schedule display" },
+      { type: 'fix', description: "Double-booking prevention now applies to all activity types" },
+    ]
+  },
+  {
     version: "1.0.316",
     date: "2025-12-24",
     changes: [
