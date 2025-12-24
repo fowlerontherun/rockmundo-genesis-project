@@ -284,14 +284,14 @@ export const useCreateRecordingSession = () => {
           .eq('user_id', input.user_id);
       }
 
-      // Create recording session
+      // Create recording session - use null for self-produce since producer_id is a uuid column
       const { data: session, error: sessionError } = await supabase
         .from('recording_sessions')
         .insert({
           user_id: input.user_id,
           band_id: input.band_id || null,
           studio_id: input.studio_id,
-          producer_id: input.producer_id,
+          producer_id: input.producer_id === 'self-produce' ? null : input.producer_id,
           song_id: input.song_id,
           recording_version: input.recording_version || null,
           duration_hours: input.duration_hours,
