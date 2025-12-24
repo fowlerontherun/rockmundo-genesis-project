@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.316",
+    date: "2025-12-24",
+    changes: [
+      { type: 'fix', description: "Fixed completed songs not appearing in recording song selector" },
+      { type: 'fix', description: "Fixed self-produce recording option causing database error" },
+      { type: 'improvement', description: "Auto-completed songwriting projects now automatically create song records" },
+    ]
+  },
+  {
     version: "1.0.315",
     date: "2025-12-23",
     changes: [

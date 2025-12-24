@@ -11942,7 +11942,7 @@ export type Database = {
           created_at: string | null
           duration_hours: number
           id: string
-          producer_id: string
+          producer_id: string | null
           quality_improvement: number | null
           recording_version: string | null
           scheduled_end: string
@@ -11960,7 +11960,7 @@ export type Database = {
           created_at?: string | null
           duration_hours?: number
           id?: string
-          producer_id: string
+          producer_id?: string | null
           quality_improvement?: number | null
           recording_version?: string | null
           scheduled_end: string
@@ -11978,7 +11978,7 @@ export type Database = {
           created_at?: string | null
           duration_hours?: number
           id?: string
-          producer_id?: string
+          producer_id?: string | null
           quality_improvement?: number | null
           recording_version?: string | null
           scheduled_end?: string
