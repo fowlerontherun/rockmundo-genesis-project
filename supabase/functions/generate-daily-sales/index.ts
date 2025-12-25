@@ -52,7 +52,7 @@ serve(async (req) => {
         release_type,
         bands(fame, popularity, chemistry_level),
         release_formats(id, format_type, retail_price, quantity),
-        release_songs!release_songs_release_id_fkey(song:songs(quality_score))
+        release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
       .eq("release_status", "released");
 
@@ -174,6 +174,21 @@ serve(async (req) => {
                 description: `Daily sales revenue`,
                 metadata: { format: format.format_type, units: actualSales },
               });
+            }
+
+            // Update song fame based on sales (1 fame per 5 physical sales, 1 per 10 digital)
+            const famePerSale = isDigital ? 0.1 : 0.2;
+            for (const rs of release.release_songs || []) {
+              if (rs.song_id) {
+                const fameGain = Math.floor(actualSales * famePerSale);
+                if (fameGain > 0) {
+                  await supabaseClient.rpc('update_song_fame', {
+                    p_song_id: rs.song_id,
+                    p_fame_amount: fameGain,
+                    p_source: 'sales'
+                  });
+                }
+              }
             }
 
             totalSales += actualSales;

@@ -19,7 +19,8 @@ Deno.serve(async (req) => {
     console.log('Starting auto-distribute-streaming function...');
 
     // Find releases that completed manufacturing and have streaming platforms
-    const { data: releases, error: releasesError } = await supabase
+    // Use raw query to properly check for non-empty arrays
+    const { data: allReleases, error: releasesError } = await supabase
       .from('releases')
       .select(`
         id,
@@ -28,18 +29,25 @@ Deno.serve(async (req) => {
         streaming_platforms,
         release_songs!release_songs_release_id_fkey(id, song_id)
       `)
-      .eq('release_status', 'released')
-      .not('streaming_platforms', 'is', null)
-      .filter('streaming_platforms', 'neq', '{}');
+      .eq('release_status', 'released');
 
     if (releasesError) {
       console.error('Error fetching releases:', releasesError);
       throw releasesError;
     }
 
-    if (!releases || releases.length === 0) {
+    // Filter to only releases with non-empty streaming_platforms arrays
+    const releases = (allReleases || []).filter(r => 
+      r.streaming_platforms && 
+      Array.isArray(r.streaming_platforms) && 
+      r.streaming_platforms.length > 0
+    );
+
+    console.log(`Found ${allReleases?.length || 0} total released, ${releases.length} with streaming platforms`);
+
+    if (releases.length === 0) {
       console.log('No releases to distribute');
-      return new Response(JSON.stringify({ message: 'No releases to distribute' }), {
+      return new Response(JSON.stringify({ message: 'No releases to distribute', checked: allReleases?.length || 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -69,6 +77,17 @@ Deno.serve(async (req) => {
             .single();
 
           if (!existing) {
+            // Get user_id from release or band leader
+            let userId = release.user_id;
+            if (!userId && release.band_id) {
+              const { data: band } = await supabase
+                .from('bands')
+                .select('leader_id')
+                .eq('id', release.band_id)
+                .single();
+              userId = band?.leader_id;
+            }
+            
             // Create song release with all required fields
             const { error: insertError } = await supabase
               .from('song_releases')
@@ -77,7 +96,7 @@ Deno.serve(async (req) => {
                 platform_id: platformId,
                 platform_name: platform?.platform_name,
                 release_id: release.id,
-                user_id: release.user_id,
+                user_id: userId,
                 band_id: release.band_id,
                 release_date: new Date().toISOString(),
                 release_type: 'streaming',

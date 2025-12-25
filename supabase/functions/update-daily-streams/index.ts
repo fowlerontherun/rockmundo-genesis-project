@@ -89,6 +89,25 @@ Deno.serve(async (req) => {
           platform_id: release.platform_id,
         });
 
+        // Update song fame based on streams (1 fame per 1000 streams)
+        if (release.song_id) {
+          const fameGain = Math.floor(dailyStreams / 1000);
+          if (fameGain > 0) {
+            await supabase.rpc('update_song_fame', {
+              p_song_id: release.song_id,
+              p_fame_amount: fameGain,
+              p_source: 'streaming'
+            });
+          }
+          
+          // Hype decays slightly each day but streams boost it
+          const hypeChange = Math.floor(dailyStreams / 5000) - 1; // Net change
+          await supabase.rpc('update_song_hype', {
+            p_song_id: release.song_id,
+            p_hype_change: hypeChange
+          });
+        }
+
         streamUpdates++;
       } catch (streamError) {
         errorCount += 1;

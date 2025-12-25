@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.318",
+    date: "2025-12-25",
+    changes: [
+      { type: 'feature', description: "Added song fame rating that grows with sales, streams, radio plays and PR" },
+      { type: 'fix', description: "Fixed streaming distribution not creating song_releases for released albums" },
+      { type: 'fix', description: "Fixed array filter for streaming_platforms not working correctly" },
+      { type: 'improvement', description: "Streams now update song fame (1 per 1000 streams) and hype" },
+      { type: 'improvement', description: "Sales now update song fame (1 per 5 physical, 1 per 10 digital)" },
+    ]
+  },
+  {
     version: "1.0.317",
     date: "2025-12-24",
     changes: [
