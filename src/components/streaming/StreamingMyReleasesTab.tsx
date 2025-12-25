@@ -64,6 +64,7 @@ export const StreamingMyReleasesTab = ({ userId }: StreamingMyReleasesTabProps) 
             base_payout_per_stream
           )
         `)
+        .eq("release_type", "streaming")
         .eq("is_active", true)
         .order("release_date", { ascending: false });
 
