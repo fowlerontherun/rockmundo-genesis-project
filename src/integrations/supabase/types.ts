@@ -13511,7 +13511,7 @@ export type Database = {
           total_revenue: number
           total_streams: number
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           band_id?: string | null
@@ -13528,7 +13528,7 @@ export type Database = {
           total_revenue?: number
           total_streams?: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           band_id?: string | null
@@ -13545,7 +13545,7 @@ export type Database = {
           total_revenue?: number
           total_streams?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -13762,6 +13762,7 @@ export type Database = {
           duration_seconds: number | null
           extended_audio_generated_at: string | null
           extended_audio_url: string | null
+          fame: number | null
           genre: string
           hype: number | null
           id: string
@@ -13812,6 +13813,7 @@ export type Database = {
           duration_seconds?: number | null
           extended_audio_generated_at?: string | null
           extended_audio_url?: string | null
+          fame?: number | null
           genre: string
           hype?: number | null
           id?: string
@@ -13862,6 +13864,7 @@ export type Database = {
           duration_seconds?: number | null
           extended_audio_generated_at?: string | null
           extended_audio_url?: string | null
+          fame?: number | null
           genre?: string
           hype?: number | null
           id?: string
@@ -17093,6 +17096,14 @@ export type Database = {
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
+      update_song_fame: {
+        Args: { p_fame_amount: number; p_song_id: string; p_source: string }
+        Returns: undefined
+      }
+      update_song_hype: {
+        Args: { p_hype_change: number; p_song_id: string }
+        Returns: undefined
+      }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
