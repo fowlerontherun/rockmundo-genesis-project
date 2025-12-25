@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.319",
+    date: "2025-12-25",
+    changes: [
+      { type: 'fix', description: "Fixed streaming releases not showing in My Releases tab (missing release_type filter)" },
+    ]
+  },
+  {
     version: "1.0.318",
     date: "2025-12-25",
     changes: [
