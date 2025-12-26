@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.320",
+    date: "2025-12-26",
+    changes: [
+      { type: 'fix', description: "Fixed broken streaming navigation links (/streaming → /streaming-platforms)" },
+      { type: 'fix', description: "Fixed streaming revenue rounding to $0 (now uses decimal calculation)" },
+      { type: 'fix', description: "Fixed platform stats showing no data (now queries song_releases correctly)" },
+      { type: 'fix', description: "Platform charts now show real stream data instead of random simulated numbers" },
+      { type: 'improvement', description: "Added redirect from /streaming to /streaming-platforms for old links" },
+    ]
+  },
+  {
     version: "1.0.319",
     date: "2025-12-25",
     changes: [

@@ -62,7 +62,7 @@ const StreamingPlatformDetail = () => {
   if (!platform) {
     return (
       <div className="container mx-auto py-8">
-        <Button variant="ghost" onClick={() => navigate("/streaming")}>
+        <Button variant="ghost" onClick={() => navigate("/streaming-platforms")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Streaming
         </Button>
@@ -75,7 +75,7 @@ const StreamingPlatformDetail = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <Button variant="ghost" onClick={() => navigate("/streaming")}>
+      <Button variant="ghost" onClick={() => navigate("/streaming-platforms")}>
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Streaming
       </Button>
@@ -202,7 +202,7 @@ const StreamingPlatformDetail = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     You haven't released any songs to {platform.platform_name} yet.
                   </p>
-                  <Button onClick={() => navigate("/streaming")} style={{ backgroundColor: brandColor }}>
+                  <Button onClick={() => navigate("/streaming-platforms")} style={{ backgroundColor: brandColor }}>
                     Release a Song
                   </Button>
                 </div>

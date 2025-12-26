@@ -50,29 +50,42 @@ export function StreamingChartList({ platformId, brandColor = "#6366f1" }: Strea
   const { data: chartData, isLoading } = useQuery<ChartEntry[]>({
     queryKey: ["streaming-chart", platformId, chartType, region],
     queryFn: async (): Promise<ChartEntry[]> => {
-      // Generate simulated chart data from released songs
-      const { data: songs } = await supabase
-        .from("songs")
-        .select("id, title, quality_score, audio_url, audio_generation_status, band_id")
-        .eq("status", "released")
-        .order("quality_score", { ascending: false })
+      // Get real chart data from song_releases for this platform
+      const { data: releases } = await supabase
+        .from("song_releases")
+        .select(`
+          id,
+          total_streams,
+          song:songs(id, title, audio_url, audio_generation_status, band_id)
+        `)
+        .eq("platform_id", platformId)
+        .eq("release_type", "streaming")
+        .eq("is_active", true)
+        .order("total_streams", { ascending: false })
         .limit(40);
 
-      if (!songs?.length) return [];
+      if (!releases?.length) return [];
 
-      // Get band names
-      const bandIds = songs.filter(s => s.band_id).map(s => s.band_id) as string[];
+      // Get band names for all songs
+      const bandIds = releases
+        .filter((r: any) => r.song?.band_id)
+        .map((r: any) => r.song.band_id) as string[];
+      
       let bands: any[] = [];
       if (bandIds.length > 0) {
         const { data: bandData } = await supabase
           .from("bands")
           .select("id, name")
-          .in("id", bandIds);
+          .in("id", [...new Set(bandIds)]);
         bands = bandData || [];
       }
 
-      return songs.map((song, index) => {
+      return releases.map((release: any, index: number) => {
+        const song = release.song;
+        if (!song) return null;
+        
         const band = bands.find(b => b.id === song.band_id);
+        // Simulate movement for visual interest (could be computed from historical data later)
         const movements: ("up" | "down" | "same" | "new")[] = ["up", "down", "same", "new"];
         const movement = movements[Math.floor(Math.random() * movements.length)];
         
@@ -81,13 +94,13 @@ export function StreamingChartList({ platformId, brandColor = "#6366f1" }: Strea
           song_id: song.id,
           song_title: song.title,
           artist_name: band?.name || "Unknown Artist",
-          streams: Math.floor(Math.random() * 10000000) + 100000,
+          streams: release.total_streams || 0,
           movement,
-          movement_value: movement === "same" ? 0 : Math.floor(Math.random() * 10) + 1,
+          movement_value: movement === "same" ? 0 : Math.floor(Math.random() * 5) + 1,
           audio_url: song.audio_url || undefined,
           audio_status: song.audio_generation_status || undefined,
         };
-      });
+      }).filter(Boolean) as ChartEntry[];
     },
     enabled: !!platformId,
   });

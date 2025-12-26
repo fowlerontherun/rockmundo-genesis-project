@@ -139,7 +139,7 @@ const Navigation = () => {
         { icon: GraduationCap, labelKey: "nav.education", path: "/education" },
         { icon: Disc, labelKey: "nav.recording", path: "/recording-studio" },
         { icon: Music4, labelKey: "nav.releaseManager", path: "/release-manager" },
-        { icon: Radio, labelKey: "nav.streaming", path: "/streaming" },
+        { icon: Radio, labelKey: "nav.streaming", path: "/streaming-platforms" },
         { icon: Video, labelKey: "nav.musicVideos", path: "/music-videos" },
         { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
       ],

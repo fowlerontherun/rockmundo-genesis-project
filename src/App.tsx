@@ -235,7 +235,7 @@ function App() {
                     <Route path="underworld" element={<UnderworldNew />} />
                     <Route path="dikcok" element={<DikCok />} />
                     <Route path="tour-manager" element={<TourManager />} />
-                    <Route path="streaming" element={<StreamingNew />} />
+                    <Route path="streaming" element={<Navigate to="/streaming-platforms" replace />} />
                     <Route path="music/charts" element={<ChartsPage />} />
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
                     <Route path="dashboard" element={<Dashboard />} />

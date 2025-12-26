@@ -32,7 +32,7 @@ const MusicHub = () => {
       title: "Streaming",
       description: "Distribute music to streaming platforms",
       icon: TrendingUp,
-      path: "/streaming",
+      path: "/streaming-platforms",
       color: "text-orange-500",
     },
     {

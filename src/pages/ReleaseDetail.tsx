@@ -158,7 +158,7 @@ export default function ReleaseDetail() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Streaming Platforms</CardTitle>
-                <Button onClick={() => navigate("/streaming")}>Manage Streaming</Button>
+                <Button onClick={() => navigate("/streaming-platforms")}>Manage Streaming</Button>
               </div>
             </CardHeader>
             <CardContent>

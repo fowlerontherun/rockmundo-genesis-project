@@ -35,28 +35,52 @@ const StreamingPlatforms = () => {
     },
   });
 
-  // Fetch user stats per platform
+  // Fetch user's band IDs first
+  const { data: userBandIds = [] } = useQuery({
+    queryKey: ["user-band-ids", userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data: members } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("user_id", userId);
+      return members?.map(m => m.band_id) || [];
+    },
+    enabled: !!userId,
+  });
+
+  // Fetch user stats per platform from song_releases (correct source)
   const { data: userStats = {} } = useQuery<Record<string, { totalStreams: number; totalRevenue: number; releaseCount: number }>>({
-    queryKey: ["user-streaming-stats", userId],
+    queryKey: ["user-streaming-stats", userId, userBandIds],
     queryFn: async (): Promise<Record<string, { totalStreams: number; totalRevenue: number; releaseCount: number }>> => {
       if (!userId) return {};
       
-      const { data: distributions } = await supabase
-        .from("streaming_analytics_daily" as any)
-        .select("platform_id, streams, revenue")
-        .eq("user_id", userId);
+      // Get all streaming releases for user or their bands
+      const { data: releases } = await supabase
+        .from("song_releases")
+        .select("platform_id, total_streams, total_revenue, song:songs(user_id, band_id)")
+        .eq("release_type", "streaming")
+        .eq("is_active", true);
 
-      if (!distributions?.length) return {};
+      if (!releases?.length) return {};
+
+      // Filter to user's releases
+      const userReleases = releases.filter((r: any) => {
+        const song = r.song;
+        if (!song) return false;
+        return song.user_id === userId || userBandIds.includes(song.band_id);
+      });
 
       const stats: Record<string, { totalStreams: number; totalRevenue: number; releaseCount: number }> = {};
       
-      (distributions as any[]).forEach((d) => {
-        if (!stats[d.platform_id]) {
-          stats[d.platform_id] = { totalStreams: 0, totalRevenue: 0, releaseCount: 0 };
+      userReleases.forEach((r: any) => {
+        if (!r.platform_id) return;
+        if (!stats[r.platform_id]) {
+          stats[r.platform_id] = { totalStreams: 0, totalRevenue: 0, releaseCount: 0 };
         }
-        stats[d.platform_id].totalStreams += d.streams || 0;
-        stats[d.platform_id].totalRevenue += d.revenue || 0;
-        stats[d.platform_id].releaseCount += 1;
+        stats[r.platform_id].totalStreams += r.total_streams || 0;
+        stats[r.platform_id].totalRevenue += r.total_revenue || 0;
+        stats[r.platform_id].releaseCount += 1;
       });
 
       return stats;
