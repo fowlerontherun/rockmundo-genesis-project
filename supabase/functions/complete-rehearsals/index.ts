@@ -172,6 +172,20 @@ Deno.serve(async (req) => {
 
           const currentMinutes = existingFamiliarity?.familiarity_minutes || 0
           const newMinutes = currentMinutes + minutesPerSong
+          
+          // Calculate percentage for determining stage (600 minutes = 100%)
+          // Note: familiarity_percentage is a generated column in DB
+          const calculatedPercentage = Math.min(100, Math.floor((newMinutes / 600) * 100))
+          
+          // Determine rehearsal stage based on percentage
+          let rehearsalStage = 'learning'
+          if (calculatedPercentage >= 90) {
+            rehearsalStage = 'mastered'
+          } else if (calculatedPercentage >= 60) {
+            rehearsalStage = 'familiar'
+          } else if (calculatedPercentage >= 30) {
+            rehearsalStage = 'practicing'
+          }
 
           await supabase
             .from('band_song_familiarity')
@@ -180,6 +194,7 @@ Deno.serve(async (req) => {
                 band_id: rehearsal.band_id,
                 song_id: songId,
                 familiarity_minutes: newMinutes,
+                rehearsal_stage: rehearsalStage,
                 last_rehearsed_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },

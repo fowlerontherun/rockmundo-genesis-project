@@ -266,14 +266,27 @@ export function RehearsalsTab() {
           .maybeSingle();
 
         const newMinutes = (existing?.familiarity_minutes || 0) + familiarityGained;
-        const newPercentage = Math.min(100, Math.floor(newMinutes / 10));
+        
+        // Calculate percentage for determining stage (600 minutes = 100%)
+        // Note: familiarity_percentage is a generated column in DB, so we don't write it
+        const calculatedPercentage = Math.min(100, Math.floor((newMinutes / 600) * 100));
+        
+        // Determine rehearsal stage based on percentage
+        let rehearsalStage = 'learning';
+        if (calculatedPercentage >= 90) {
+          rehearsalStage = 'mastered';
+        } else if (calculatedPercentage >= 60) {
+          rehearsalStage = 'familiar';
+        } else if (calculatedPercentage >= 30) {
+          rehearsalStage = 'practicing';
+        }
         
         if (existing) {
           await supabase
             .from('band_song_familiarity')
             .update({
               familiarity_minutes: newMinutes,
-              familiarity_percentage: newPercentage,
+              rehearsal_stage: rehearsalStage,
               last_rehearsed_at: new Date().toISOString(),
             })
             .eq('id', existing.id);
@@ -284,7 +297,7 @@ export function RehearsalsTab() {
               band_id: userBand.id,
               song_id: rehearsal.selected_song_id,
               familiarity_minutes: newMinutes,
-              familiarity_percentage: newPercentage,
+              rehearsal_stage: rehearsalStage,
               last_rehearsed_at: new Date().toISOString(),
             });
         }
