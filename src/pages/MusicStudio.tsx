@@ -58,7 +58,7 @@ const MusicStudio = () => {
       title: "Streaming Platforms",
       description: "Release your music on streaming platforms, track plays, build playlists, and grow your audience.",
       icon: Disc,
-      path: "/streaming",
+      path: "/streaming-platforms",
       color: "bg-indigo-500/10 text-indigo-500",
       highlights: ["Platform Release", "Play Tracking", "Audience Growth"],
     },

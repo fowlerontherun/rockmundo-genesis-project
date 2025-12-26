@@ -67,7 +67,8 @@ Deno.serve(async (req) => {
       try {
         const baseStreams = Math.floor(Math.random() * 4900) + 100;
         const dailyStreams = Math.floor(baseStreams * marketMultiplier);
-        const dailyRevenue = Math.floor(dailyStreams * 0.004);
+        // Use decimal revenue instead of floor to avoid $0 at low stream counts
+        const dailyRevenue = Number((dailyStreams * 0.004).toFixed(2));
 
         const { error: updateError } = await supabase
           .from('song_releases')
