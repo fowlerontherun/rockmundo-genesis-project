@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.321",
+    date: "2025-12-26",
+    changes: [
+      { type: 'fix', description: "Fixed rehearsals not updating familiarity_percentage and rehearsal_stage" },
+      { type: 'improvement', description: "Rehearsal familiarity now requires 10 hours (600 min) for 100% instead of 16+ hours" },
+      { type: 'improvement', description: "Rehearsal stages now progress: learning → practicing (30%) → familiar (60%) → mastered (90%)" },
+    ]
+  },
+  {
     version: "1.0.320",
     date: "2025-12-26",
     changes: [
