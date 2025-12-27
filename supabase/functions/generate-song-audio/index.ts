@@ -530,20 +530,25 @@ function cleanProfanity(text: string): string {
 }
 
 // Format lyrics with section markers for MiniMax Music-1.5
-// Includes full song structure with proper sections
+// FIXED: Now properly uses actual lyrics instead of generating placeholders
 function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
+  // Only use placeholder if lyrics are truly empty/null
   if (!rawLyrics || rawLyrics.trim().length === 0) {
-    return generatePlaceholderLyrics(songTitle, genre)
+    console.log('[generate-song-audio] No lyrics provided, using varied placeholder')
+    return generateVariedPlaceholderLyrics(songTitle, genre)
   }
 
   // Clean profanity first before any processing
-  const cleanedLyrics = cleanProfanity(rawLyrics)
+  const cleanedLyrics = cleanProfanity(rawLyrics.trim())
+  
+  console.log(`[generate-song-audio] Using actual lyrics: ${cleanedLyrics.length} chars`)
+  console.log(`[generate-song-audio] Lyrics preview: ${cleanedLyrics.substring(0, 100)}...`)
 
   return formatFullLyrics(cleanedLyrics, songTitle, genre)
 }
 
 // Format full lyrics preserving song structure
-// MiniMax handles longer lyrics well - we preserve as much as possible
+// FIXED: Preserves actual lyrics even if short, doesn't default to placeholder
 function formatFullLyrics(lyrics: string, songTitle: string, genre: string): string {
   // Normalize section markers to consistent format
   let normalizedLyrics = lyrics
@@ -559,14 +564,23 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
   const hasMarkers = /\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)\]/i.test(normalizedLyrics)
   
   if (!hasMarkers) {
-    // No markers - intelligently structure the lyrics
+    // No markers - intelligently structure the actual lyrics (don't replace with placeholder!)
     const lines = lyrics.split('\n').filter(l => l.trim())
-    if (lines.length === 0) return generatePlaceholderLyrics(songTitle, genre)
     
-    // Try to create a proper song structure from unmarked lyrics
+    // Even if short, use the actual lyrics
+    if (lines.length === 0) {
+      // Only fallback if truly empty after splitting
+      return generateVariedPlaceholderLyrics(songTitle, genre)
+    }
+    
+    if (lines.length <= 4) {
+      // Very short lyrics - use as verse and repeat for chorus
+      return `[Verse]\n${lines.join('\n')}\n\n[Chorus]\n${lines.join('\n')}`
+    }
+    
     if (lines.length <= 8) {
       const verse = lines.slice(0, Math.ceil(lines.length / 2)).join('\n')
-      const chorus = lines.slice(Math.ceil(lines.length / 2)).join('\n') || lines.slice(0, 2).join('\n')
+      const chorus = lines.slice(Math.ceil(lines.length / 2)).join('\n')
       return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
     }
     
@@ -588,12 +602,16 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
     }
   }
 
+  // If no sections extracted but we have lyrics, use raw lyrics with basic structure
   if (sections.length === 0) {
-    return generatePlaceholderLyrics(songTitle, genre)
+    const lines = lyrics.split('\n').filter(l => l.trim())
+    if (lines.length > 0) {
+      return `[Verse]\n${lines.join('\n')}`
+    }
+    return generateVariedPlaceholderLyrics(songTitle, genre)
   }
 
   // Build output preserving full structure
-  // Limit to ~3000 chars total to stay reasonable for the model
   const MAX_CHARS = 3000
   let totalChars = 0
   const result: string[] = []
@@ -601,21 +619,17 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
   for (const section of sections) {
     const sectionText = `[${section.type}]\n${section.content}`
     
-    // Check if adding this section would exceed limit
     if (totalChars + sectionText.length > MAX_CHARS) {
-      // If we have at least verse and chorus, we can stop
       const hasEssentials = result.some(s => s.toLowerCase().includes('[verse')) && 
                            result.some(s => s.toLowerCase().includes('[chorus'))
       if (hasEssentials) break
       
-      // Otherwise, truncate this section at a COMPLETE LINE boundary (not mid-word)
-      const remaining = MAX_CHARS - totalChars - 50 // Buffer for section header
+      const remaining = MAX_CHARS - totalChars - 50
       if (remaining > 100) {
         const lines = section.content.split('\n')
         let truncatedLines: string[] = []
         let charCount = 0
         
-        // Add complete lines until we exceed the limit
         for (const line of lines) {
           if (charCount + line.length + 1 > remaining) break
           truncatedLines.push(line)
@@ -630,30 +644,108 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
     }
     
     result.push(sectionText)
-    totalChars += sectionText.length + 2 // +2 for newlines
+    totalChars += sectionText.length + 2
   }
 
-  // Ensure we have at least a verse and chorus
   if (result.length === 0) {
-    return generatePlaceholderLyrics(songTitle, genre)
+    // Last resort - use raw lyrics without sections
+    const lines = lyrics.split('\n').filter(l => l.trim())
+    if (lines.length > 0) {
+      return `[Verse]\n${lines.slice(0, 20).join('\n')}`
+    }
+    return generateVariedPlaceholderLyrics(songTitle, genre)
   }
 
   const output = result.join('\n\n')
-  console.log(`[generate-song-audio] Formatted lyrics: ${output.length} chars, ${result.length} sections`)
+  console.log(`[generate-song-audio] Final lyrics: ${output.length} chars, ${result.length} sections`)
   return output
 }
 
-function generatePlaceholderLyrics(songTitle: string, genre: string): string {
-  // Use full title, not truncated
-  const title = songTitle || 'This song'
+// FIXED: Generate more varied placeholder lyrics that don't just repeat the title
+function generateVariedPlaceholderLyrics(songTitle: string, genre: string): string {
+  const title = songTitle || 'My song'
   
-  return `[Verse]
-${title}
-Feel the rhythm tonight
-${title}
-Everything feels right
+  // Genre-specific placeholder templates
+  const templates: Record<string, string> = {
+    rock: `[Verse]
+Standing on the edge of tomorrow
+Chasing dreams through the night
+${title} running through my veins
+Nothing's gonna stop us now
 
 [Chorus]
-${title}
-${title}`
+We're alive, we're on fire
+${title} takes us higher
+Breaking free from all the chains
+Nothing's ever gonna be the same`,
+
+    pop: `[Verse]
+Lights are flashing all around
+Dancing to the rhythm of the sound
+${title} playing on repeat
+Got me moving to the beat
+
+[Chorus]
+Oh we're shining bright tonight
+${title} feels so right
+Every moment crystallized
+Living for the spotlight`,
+
+    electronic: `[Verse]
+Synthesizers in the dark
+Digital dreams leave their mark
+${title} pulses through the air
+Electric vibes everywhere
+
+[Chorus]
+Drop the bass and let it flow
+${title} stealing the show
+Frequencies align tonight
+Dancing in the neon light`,
+
+    country: `[Verse]
+Down that old dusty road
+${title} where the river flows
+Sunset painting the sky
+Memories of days gone by
+
+[Chorus]
+This is where I belong
+${title} is my song
+Simple life and starlit nights
+Everything feels just right`,
+
+    hiphop: `[Verse]
+Coming up from the bottom now
+${title} showing them how
+Every word I speak is true
+Built this dream from nothing new
+
+[Chorus]
+Yeah we made it to the top
+${title} we don't stop
+Started from the ground floor
+Now we're reaching for more`,
+  }
+
+  // Find matching genre or use default
+  const genreLower = genre?.toLowerCase() || 'pop'
+  for (const [key, template] of Object.entries(templates)) {
+    if (genreLower.includes(key)) {
+      return template
+    }
+  }
+  
+  // Default varied placeholder
+  return `[Verse]
+Walking through the moments of my life
+${title} guiding me through the night
+Every step I take leads me here
+Finding strength and losing fear
+
+[Chorus]
+This is ${title}
+This is where we shine
+Breaking through the darkness
+One moment at a time`
 }
