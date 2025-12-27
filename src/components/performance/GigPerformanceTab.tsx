@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Music, MapPin, DollarSign, Users } from 'lucide-react';
+import { Calendar, Music, MapPin, DollarSign, Users, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from '@/hooks/use-auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { useGigCancellation } from '@/hooks/useGigCancellation';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 
@@ -21,6 +33,7 @@ export function GigPerformanceTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [scheduledGigs, setScheduledGigs] = useState<GigWithVenue[]>([]);
+  const { isLoading: isCancelling, calculateCancellationDetails, cancelGig } = useGigCancellation();
 
   const loadScheduledGigs = useCallback(async () => {
     if (!user?.id) return;
@@ -177,6 +190,73 @@ export function GigPerformanceTab() {
                   {isPast && (
                     <Badge variant="secondary">Ready</Badge>
                   )}
+                  
+                  {/* Cancel Gig Button */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                        disabled={isCancelling}
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Cancel
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Gig?</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                          {(() => {
+                            const details = calculateCancellationDetails(
+                              gig.id,
+                              gig.band_id,
+                              gig.scheduled_date,
+                              gig.payment || 0
+                            );
+                            return (
+                              <>
+                                <p>Are you sure you want to cancel this gig at <strong>{venue?.name}</strong>?</p>
+                                <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-1 text-sm">
+                                  <p><strong>Days until gig:</strong> {details.daysUntilGig}</p>
+                                  <p><strong>Booking fee:</strong> ${details.bookingFee.toLocaleString()}</p>
+                                  <p><strong>Refund amount:</strong> ${details.refundAmount.toLocaleString()} ({Math.round(details.refundPercentage * 100)}%)</p>
+                                  {details.famePenalty > 0 && (
+                                    <p className="text-destructive"><strong>Fame penalty:</strong> -{details.famePenalty}</p>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Earlier cancellations receive better refunds and lower penalties.
+                                </p>
+                              </>
+                            );
+                          })()}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Gig</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={async () => {
+                            const details = calculateCancellationDetails(
+                              gig.id,
+                              gig.band_id,
+                              gig.scheduled_date,
+                              gig.payment || 0
+                            );
+                            const success = await cancelGig(details);
+                            if (success) {
+                              loadScheduledGigs();
+                            }
+                          }}
+                        >
+                          Cancel Gig
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
                   <Button asChild size="sm">
                     <Link to={`/performance/gig/${gig.id}`}>
                       Perform Now

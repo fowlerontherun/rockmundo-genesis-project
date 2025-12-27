@@ -146,19 +146,124 @@ Deno.serve(async (req) => {
       }
     }
 
+    // === TICKET SALES SIMULATION ===
+    console.log('=== Simulating Ticket Sales ===')
+    let ticketSalesUpdated = 0
+    
+    try {
+      // Get all scheduled gigs
+      const { data: scheduledGigs, error: gigsError } = await supabase
+        .from('gigs')
+        .select(`
+          id,
+          band_id,
+          venue_id,
+          scheduled_date,
+          tickets_sold,
+          predicted_tickets,
+          ticket_price,
+          created_at,
+          venues!gigs_venue_id_fkey (capacity)
+        `)
+        .eq('status', 'scheduled')
+
+      if (gigsError) {
+        console.error('Error fetching gigs for ticket sales:', gigsError)
+      } else if (scheduledGigs && scheduledGigs.length > 0) {
+        console.log(`Processing ticket sales for ${scheduledGigs.length} gigs`)
+        
+        for (const gig of scheduledGigs) {
+          try {
+            const { data: band } = await supabase
+              .from('bands')
+              .select('fame, total_fans')
+              .eq('id', gig.band_id)
+              .single()
+
+            if (!band) continue
+
+            const venueCapacity = (gig.venues as any)?.capacity || 100
+            const currentTicketsSold = gig.tickets_sold || 0
+            const scheduledDate = new Date(gig.scheduled_date)
+            const createdAt = new Date(gig.created_at)
+            const now = new Date()
+            
+            const daysUntilGig = Math.max(0, Math.ceil((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+            const daysBooked = Math.max(1, Math.ceil((scheduledDate.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
+
+            // Skip if already sold out
+            if (currentTicketsSold >= venueCapacity) continue
+
+            // Calculate draw power
+            const fameDrawBase = Math.min(1, (band.fame || 0) / 5000)
+            const fanDrawBase = Math.min(1, (band.total_fans || 0) / (venueCapacity * 3))
+            const combinedDraw = (fameDrawBase * 0.6) + (fanDrawBase * 0.4)
+            const venueSizeModifier = Math.max(0.3, 1 - (venueCapacity / 10000) * 0.5)
+            const drawPower = Math.min(1.2, combinedDraw * venueSizeModifier)
+
+            // Calculate daily sales
+            const advanceBookingBonus = Math.min(0.3, (daysBooked / 14) * 0.3)
+            const priceSensitivity = Math.max(0.5, 1 - ((gig.ticket_price || 20) / 100) * 0.3)
+            
+            let baseDailyRate: number
+            if (drawPower >= 1.0) baseDailyRate = 0.25 + (drawPower - 1) * 0.5
+            else if (drawPower >= 0.7) baseDailyRate = 0.12 + (drawPower - 0.7) * 0.4
+            else if (drawPower >= 0.4) baseDailyRate = 0.05 + (drawPower - 0.4) * 0.2
+            else baseDailyRate = 0.02 + drawPower * 0.08
+            
+            const dailySaleRate = baseDailyRate * priceSensitivity * (1 + advanceBookingBonus)
+            let ticketsToday = Math.round(venueCapacity * dailySaleRate)
+            
+            // Urgency bonus as gig approaches
+            const urgencyMultiplier = daysUntilGig <= 3 ? 1.5 : daysUntilGig <= 7 ? 1.2 : 1.0
+            ticketsToday = Math.round(ticketsToday * urgencyMultiplier)
+            
+            // Add randomness (±20%)
+            const randomFactor = 0.8 + Math.random() * 0.4
+            ticketsToday = Math.round(ticketsToday * randomFactor)
+            
+            const remainingTickets = venueCapacity - currentTicketsSold
+            ticketsToday = Math.min(ticketsToday, remainingTickets)
+
+            if (ticketsToday > 0) {
+              const newTotal = Math.min(currentTicketsSold + ticketsToday, venueCapacity)
+              
+              const { error: updateError } = await supabase
+                .from('gigs')
+                .update({
+                  tickets_sold: newTotal,
+                  last_ticket_update: now.toISOString()
+                })
+                .eq('id', gig.id)
+
+              if (!updateError) {
+                console.log(`Gig ${gig.id}: sold ${ticketsToday} tickets (${currentTicketsSold} -> ${newTotal})`)
+                ticketSalesUpdated++
+              }
+            }
+          } catch (gigError) {
+            console.error(`Error processing gig ${gig.id} for tickets:`, gigError)
+          }
+        }
+      }
+    } catch (ticketError) {
+      console.error('Error in ticket sales simulation:', ticketError)
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Ticket Sales: ${ticketSalesUpdated}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: processedProfiles + processedBands,
+      processedCount: processedProfiles + processedBands + ticketSalesUpdated,
       errorCount,
       resultSummary: {
         profiles_processed: processedProfiles,
         bands_processed: processedBands,
+        ticket_sales_updated: ticketSalesUpdated,
       },
     })
 
@@ -167,6 +272,7 @@ Deno.serve(async (req) => {
         success: true,
         profiles_processed: processedProfiles,
         bands_processed: processedBands,
+        ticket_sales_updated: ticketSalesUpdated,
         errors: errorCount,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

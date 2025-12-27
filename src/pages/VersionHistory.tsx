@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.322",
+    date: "2025-12-27",
+    changes: [
+      { type: 'feature', description: "Added gig cancellation with refund calculator and fame penalties" },
+      { type: 'fix', description: "Fixed ticket sales not generating in advance (now runs daily)" },
+      { type: 'fix', description: "Fixed gigs not awarding fans to band (fan conversion now integrated)" },
+      { type: 'fix', description: "Fixed merchandise sales using hardcoded prices (now uses actual inventory)" },
+      { type: 'fix', description: "Fixed AI song generation duplicating placeholder lyrics instead of using written lyrics" },
+      { type: 'improvement', description: "Merch sales now decrement stock and use real item prices" },
+    ]
+  },
+  {
     version: "1.0.321",
     date: "2025-12-26",
     changes: [
