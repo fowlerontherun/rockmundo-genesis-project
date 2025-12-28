@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, Info, ListPlus, Clock } from "lucide-react";
+import { Music, Info, ListPlus, Clock, Flame, Star } from "lucide-react";
 import { SongRehearsalStatus } from "./SongRehearsalStatus";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,8 @@ interface SongCardProps {
     status?: string;
     user_id?: string;
     band_id?: string | null;
+    hype?: number | null;
+    fame?: number | null;
     bands?: {
       name: string;
     } | null;
@@ -81,6 +83,18 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
           <Badge className={getQualityColor(song.quality_score)}>
             {getQualityLabel(song.quality_score)} ({song.quality_score})
           </Badge>
+          {(song.hype ?? 0) > 0 && (
+            <Badge variant="outline" className="gap-1 bg-orange-500/10 text-orange-500 border-orange-500/20">
+              <Flame className="h-3 w-3" />
+              {song.hype} Hype
+            </Badge>
+          )}
+          {(song.fame ?? 0) > 0 && (
+            <Badge variant="outline" className="gap-1 bg-purple-500/10 text-purple-500 border-purple-500/20">
+              <Star className="h-3 w-3" />
+              {song.fame} Fame
+            </Badge>
+          )}
           {song.status && (
             <Badge variant={song.status === "recorded" ? "default" : song.status === "draft" ? "secondary" : "outline"}>
               {song.status === "recorded" ? "Recorded" : song.status === "draft" ? "Draft" : song.status}

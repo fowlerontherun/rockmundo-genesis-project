@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.324",
+    date: "2025-12-28",
+    changes: [
+      { type: 'feature', description: "Added search, genre filter, and sort options to Recording Studio recorded songs tab" },
+      { type: 'feature', description: "Song Hype and Fame now visible on all song views (cards, details, streaming, manager)" },
+      { type: 'improvement', description: "Song Detail Dialog now shows Performance Metrics section with Hype and Fame" },
+    ]
+  },
+  {
     version: "1.0.323",
     date: "2025-12-28",
     changes: [

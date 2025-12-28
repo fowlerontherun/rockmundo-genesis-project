@@ -18,6 +18,8 @@ import {
   TrendingUp,
   Sparkles,
   Headphones,
+  Flame,
+  Star,
 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
@@ -127,6 +129,42 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Arrangement
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Hype & Fame */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Performance Metrics
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Flame className="h-4 w-4 text-orange-500" />
+                      <span className="text-xs text-muted-foreground">Hype</span>
+                    </div>
+                    <div className="text-2xl font-bold text-orange-500">
+                      {song.hype || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Buzz & anticipation
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Star className="h-4 w-4 text-purple-500" />
+                      <span className="text-xs text-muted-foreground">Fame</span>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-500">
+                      {song.fame || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      From sales, streams & radio
                     </div>
                   </div>
                 </div>
