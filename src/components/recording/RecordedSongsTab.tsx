@@ -1,8 +1,11 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Music, Calendar, Star, Clock, Disc3, Volume2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongShareButtons } from "@/components/audio/SongShareButtons";
@@ -12,7 +15,13 @@ interface RecordedSongsTabProps {
   bandId?: string | null;
 }
 
+type SortOption = "newest" | "oldest" | "quality_high" | "quality_low" | "hype" | "fame" | "title";
+
 export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [genreFilter, setGenreFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+
   const { data: recordedSongs, isLoading } = useQuery({
     queryKey: ["recorded-songs-list", userId, bandId],
     queryFn: async () => {
@@ -71,6 +80,61 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
     enabled: !!userId
   });
 
+  // Extract unique genres for filter dropdown
+  const availableGenres = useMemo(() => {
+    if (!recordedSongs) return [];
+    const genres = new Set(recordedSongs.map(item => item.song.genre).filter(Boolean));
+    return Array.from(genres).sort();
+  }, [recordedSongs]);
+
+  // Filter and sort songs
+  const filteredSongs = useMemo(() => {
+    if (!recordedSongs) return [];
+
+    let filtered = [...recordedSongs];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(item =>
+        item.song.title.toLowerCase().includes(query) ||
+        (item.song.bands?.name || "").toLowerCase().includes(query)
+      );
+    }
+
+    // Genre filter
+    if (genreFilter !== "all") {
+      filtered = filtered.filter(item => item.song.genre === genreFilter);
+    }
+
+    // Sort
+    switch (sortBy) {
+      case "newest":
+        filtered.sort((a, b) => new Date(b.latestRecording).getTime() - new Date(a.latestRecording).getTime());
+        break;
+      case "oldest":
+        filtered.sort((a, b) => new Date(a.latestRecording).getTime() - new Date(b.latestRecording).getTime());
+        break;
+      case "quality_high":
+        filtered.sort((a, b) => (b.song.quality_score || 0) - (a.song.quality_score || 0));
+        break;
+      case "quality_low":
+        filtered.sort((a, b) => (a.song.quality_score || 0) - (b.song.quality_score || 0));
+        break;
+      case "hype":
+        filtered.sort((a, b) => (b.song.hype || 0) - (a.song.hype || 0));
+        break;
+      case "fame":
+        filtered.sort((a, b) => (b.song.fame || 0) - (a.song.fame || 0));
+        break;
+      case "title":
+        filtered.sort((a, b) => a.song.title.localeCompare(b.song.title));
+        break;
+    }
+
+    return filtered;
+  }, [recordedSongs, searchQuery, genreFilter, sortBy]);
+
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading recorded songs...</div>;
   }
@@ -91,12 +155,54 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''} recorded
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by title or artist..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={genreFilter} onValueChange={setGenreFilter}>
+            <SelectTrigger className="w-[140px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Genre" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Genres</SelectItem>
+              {availableGenres.map(genre => (
+                <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-[160px]">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
+              <SelectItem value="quality_high">Quality (High)</SelectItem>
+              <SelectItem value="quality_low">Quality (Low)</SelectItem>
+              <SelectItem value="hype">Most Hype</SelectItem>
+              <SelectItem value="fame">Most Fame</SelectItem>
+              <SelectItem value="title">Title A-Z</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        {filteredSongs.length} of {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''} shown
       </div>
 
       <div className="grid gap-4">
-        {recordedSongs.map((item) => {
+        {filteredSongs.map((item) => {
           const hasAudio = item.song.audio_url && item.song.audio_generation_status === 'completed';
           const artistName = item.song.bands?.artist_name || item.song.bands?.name || 'Unknown Artist';
           
@@ -105,7 +211,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <Music className="h-4 w-4 text-primary" />
                       <h3 className="font-semibold truncate">{item.song.title}</h3>
                       <Badge variant="secondary" className="text-xs">{item.song.genre}</Badge>
@@ -113,6 +219,18 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
                         <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
                           <Volume2 className="h-3 w-3 mr-1" />
                           AI Audio
+                        </Badge>
+                      )}
+                      {(item.song.hype || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
+                          <Flame className="h-3 w-3 mr-1" />
+                          {item.song.hype} Hype
+                        </Badge>
+                      )}
+                      {(item.song.fame || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-500 border-purple-500/20">
+                          <Star className="h-3 w-3 mr-1" />
+                          {item.song.fame} Fame
                         </Badge>
                       )}
                     </div>

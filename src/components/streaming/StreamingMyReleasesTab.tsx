@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, TrendingUp, DollarSign, Trash2, Play, Pause } from "lucide-react";
+import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
@@ -56,7 +56,9 @@ export const StreamingMyReleasesTab = ({ userId }: StreamingMyReleasesTabProps) 
             audio_url,
             audio_generation_status,
             user_id,
-            band_id
+            band_id,
+            hype,
+            fame
           ),
           platform:streaming_platforms(
             id,
@@ -163,14 +165,26 @@ export const StreamingMyReleasesTab = ({ userId }: StreamingMyReleasesTabProps) 
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg">{data.song?.title || "Unknown Song"}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {data.song?.genre}
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-sm text-muted-foreground">{data.song?.genre}</span>
                     {data.song?.quality_score && (
-                      <Badge variant="outline" className="ml-2 text-xs">
+                      <Badge variant="outline" className="text-xs">
                         Quality: {data.song.quality_score}
                       </Badge>
                     )}
-                  </p>
+                    {(data.song?.hype || 0) > 0 && (
+                      <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
+                        <Flame className="h-3 w-3 mr-1" />
+                        {data.song.hype} Hype
+                      </Badge>
+                    )}
+                    {(data.song?.fame || 0) > 0 && (
+                      <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-500 border-purple-500/20">
+                        <Star className="h-3 w-3 mr-1" />
+                        {data.song.fame} Fame
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <Badge variant="secondary">
                   {data.platforms.length} Platform{data.platforms.length !== 1 ? "s" : ""}

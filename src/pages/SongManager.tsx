@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SongFilters } from "@/components/songs/SongFilters";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
-import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones } from "lucide-react";
+import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { SongArchiveButton } from "@/components/song/SongArchiveButton";
@@ -273,7 +273,7 @@ const SongManager = () => {
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3" />
+                      <Star className="h-3 w-3 text-yellow-500" />
                       <span>Quality: {song.quality_score || 0}</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -285,6 +285,18 @@ const SongManager = () => {
                         }
                       </span>
                     </div>
+                    {(song.hype || 0) > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Flame className="h-3 w-3 text-orange-500" />
+                        <span className="text-orange-500">{song.hype} Hype</span>
+                      </div>
+                    )}
+                    {(song.fame || 0) > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 text-purple-500" />
+                        <span className="text-purple-500">{song.fame} Fame</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 col-span-2">
                       <Calendar className="h-3 w-3" />
                       <span>{format(new Date(song.created_at), "MMM d, yyyy")}</span>
