@@ -57,11 +57,12 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
       {/* Header */}
       <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
         <div className="col-span-1">#</div>
-        <div className="col-span-5 sm:col-span-4">Song</div>
-        <div className="col-span-3 sm:col-span-2 hidden sm:block">Genre</div>
-        <div className="col-span-3 sm:col-span-2 text-right">Plays</div>
-        <div className="col-span-2 text-center hidden sm:block">Trend</div>
-        <div className="col-span-3 sm:col-span-1 text-right">Weeks</div>
+        <div className="col-span-4 sm:col-span-3">Song</div>
+        <div className="col-span-2 hidden sm:block">Genre</div>
+        <div className="col-span-2 text-right">Weekly</div>
+        <div className="col-span-2 text-right">Total</div>
+        <div className="col-span-1 text-center hidden sm:block">Trend</div>
+        <div className="col-span-1 text-right hidden sm:block">Wks</div>
       </div>
 
       {/* Entries */}
@@ -89,7 +90,7 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
           </div>
 
           {/* Song & Artist */}
-          <div className="col-span-5 sm:col-span-4 min-w-0">
+          <div className="col-span-4 sm:col-span-3 min-w-0">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate text-sm">{entry.title}</p>
@@ -118,39 +119,29 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
           </div>
 
           {/* Genre */}
-          <div className="col-span-3 sm:col-span-2 hidden sm:block">
+          <div className="col-span-2 hidden sm:block">
             <Badge variant="secondary" className="text-xs">
               {entry.genre}
             </Badge>
           </div>
 
-          {/* Plays */}
-          <div className="col-span-3 sm:col-span-2 text-right">
-            <span className="font-mono text-sm">{formatNumber(entry.plays_count)}</span>
+          {/* Weekly Sales */}
+          <div className="col-span-2 text-right">
+            <span className="font-mono text-sm">{formatNumber(entry.weekly_sales)}</span>
+          </div>
+
+          {/* Total Sales */}
+          <div className="col-span-2 text-right">
+            <span className="font-mono text-sm">{formatNumber(entry.total_sales)}</span>
           </div>
 
           {/* Trend */}
-          <div className="col-span-2 hidden sm:flex items-center justify-center gap-1">
+          <div className="col-span-1 hidden sm:flex items-center justify-center gap-1">
             {getTrendIcon(entry.trend)}
-            {entry.trend !== "new" && entry.trend_change !== 0 && (
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  entry.trend_change > 0 && "text-green-500",
-                  entry.trend_change < 0 && "text-red-500"
-                )}
-              >
-                {entry.trend_change > 0 ? "+" : ""}
-                {entry.trend_change}
-              </span>
-            )}
-            {entry.trend === "new" && (
-              <span className="text-xs text-yellow-500 font-medium">NEW</span>
-            )}
           </div>
 
           {/* Weeks */}
-          <div className="col-span-3 sm:col-span-1 text-right">
+          <div className="col-span-1 text-right hidden sm:block">
             <span className="text-sm text-muted-foreground">{entry.weeks_on_chart}</span>
           </div>
         </div>
@@ -177,10 +168,10 @@ export default function CountryCharts() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Music className="h-8 w-8 text-primary" />
-            Country Charts
+            Charts
           </h1>
           <p className="text-muted-foreground mt-1">
-            Top 50 songs by country, genre, and sales type
+            Top 50 songs by region, genre, and sales type
           </p>
         </div>
 

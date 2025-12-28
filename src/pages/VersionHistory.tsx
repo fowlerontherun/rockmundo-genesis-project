@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.323",
+    date: "2025-12-28",
+    changes: [
+      { type: 'improvement', description: "Renamed 'Country Charts' to 'Charts' in navigation and all languages" },
+      { type: 'fix', description: "Fixed 'Unknown Artist' display - now properly shows band artist_name or profile stage_name" },
+      { type: 'feature', description: "Charts now display weekly sales and total sales columns" },
+    ]
+  },
+  {
     version: "1.0.322",
     date: "2025-12-27",
     changes: [

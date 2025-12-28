@@ -124,7 +124,7 @@ export const tr: TranslationKeys = {
     skinStore: "Kostüm Mağazası",
     releaseManager: "Yayın Yöneticisi",
     musicVideos: "Müzik Videoları",
-    countryCharts: "Ülke Listeleri",
+    countryCharts: "Listeler",
     jamSessions: "Jam Oturumları",
     busking: "Sokak Müzisyenliği",
     eurovision: "Eurovision",

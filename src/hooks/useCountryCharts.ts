@@ -13,6 +13,8 @@ export interface ChartEntry {
   genre: string;
   country: string;
   plays_count: number;
+  weekly_sales: number;
+  total_sales: number;
   trend: "up" | "down" | "stable" | "new";
   trend_change: number;
   weeks_on_chart: number;
@@ -58,6 +60,8 @@ const generateFakeEntry = (rank: number, genre: string, country: string, chartTy
   const basePlays = Math.floor(1000000 / (rank * 0.8 + 1));
   const trendOptions: ("up" | "down" | "stable" | "new")[] = ["up", "down", "stable", "new"];
   const trendIndex = (rank + genre.charCodeAt(0)) % 4;
+  const weeklySales = Math.floor(basePlays * 0.1);
+  const totalSales = weeklySales * (Math.floor(Math.random() * 10) + 1);
   
   return {
     id: `fake-${chartType}-${genre}-${country}-${rank}`,
@@ -68,6 +72,8 @@ const generateFakeEntry = (rank: number, genre: string, country: string, chartTy
     genre,
     country,
     plays_count: basePlays + Math.floor(Math.random() * 100000),
+    weekly_sales: weeklySales,
+    total_sales: totalSales,
     trend: trendOptions[trendIndex],
     trend_change: trendIndex === 3 ? 0 : Math.floor(Math.random() * 10) - 3,
     weeks_on_chart: trendIndex === 3 ? 1 : Math.floor(Math.random() * 20) + 1,
@@ -109,7 +115,9 @@ export const useCountryCharts = (
             genre,
             audio_url,
             audio_generation_status,
-            bands(name)
+            user_id,
+            bands(name, artist_name),
+            profiles:user_id(stage_name)
           )
         `)
         .in("chart_type", chartTypeFilter)
@@ -131,22 +139,34 @@ export const useCountryCharts = (
       }
 
       // Transform real data
-      const realEntries: ChartEntry[] = (data || []).map((entry, index) => ({
-        id: entry.id,
-        rank: index + 1,
-        song_id: entry.song_id,
-        title: entry.songs?.title || "Unknown Song",
-        artist: entry.songs?.bands?.name || "Unknown Artist",
-        genre: entry.genre || entry.songs?.genre || "Unknown",
-        country: entry.country || "Global",
-        plays_count: entry.plays_count || 0,
-        trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
-        trend_change: entry.trend_change || 0,
-        weeks_on_chart: entry.weeks_on_chart || 1,
-        is_fake: false,
-        audio_url: entry.songs?.audio_url || null,
-        audio_generation_status: entry.songs?.audio_generation_status || null,
-      }));
+      const realEntries: ChartEntry[] = (data || []).map((entry, index) => {
+        // Get artist name from band (artist_name or name) or profile stage_name
+        const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
+        const profileStageName = (entry.songs?.profiles as any)?.stage_name;
+        const artistName = bandArtistName || profileStageName || "Unknown Artist";
+        
+        const playsCount = entry.plays_count || 0;
+        const weeksOnChart = entry.weeks_on_chart || 1;
+        
+        return {
+          id: entry.id,
+          rank: index + 1,
+          song_id: entry.song_id,
+          title: entry.songs?.title || "Unknown Song",
+          artist: artistName,
+          genre: entry.genre || entry.songs?.genre || "Unknown",
+          country: entry.country || "Global",
+          plays_count: playsCount,
+          weekly_sales: Math.floor(playsCount / weeksOnChart),
+          total_sales: playsCount,
+          trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
+          trend_change: entry.trend_change || 0,
+          weeks_on_chart: weeksOnChart,
+          is_fake: false,
+          audio_url: entry.songs?.audio_url || null,
+          audio_generation_status: entry.songs?.audio_generation_status || null,
+        };
+      });
 
       // Fill remaining spots with fake data up to 50
       const targetGenre = genre === "All" ? "Pop" : genre;
