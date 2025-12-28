@@ -122,7 +122,7 @@ export const es: TranslationKeys = {
     skinStore: "Tienda de Skins",
     releaseManager: "Gestor de Lanzamientos",
     musicVideos: "Videos Musicales",
-    countryCharts: "Charts por País",
+    countryCharts: "Charts",
     jamSessions: "Sesiones de Jam",
     busking: "Música Callejera",
     eurovision: "Eurovisión",

@@ -122,7 +122,7 @@ export const pt = {
     skinStore: "Loja de Skins",
     releaseManager: "Gerenciador de Lançamentos",
     musicVideos: "Clipes",
-    countryCharts: "Paradas por País",
+    countryCharts: "Charts",
     jamSessions: "Jam Sessions",
     busking: "Música de Rua",
     eurovision: "Eurovision",
