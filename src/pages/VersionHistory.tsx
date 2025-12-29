@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.325",
+    date: "2025-12-29",
+    changes: [
+      { type: 'fix', description: "Gig start now validates player is in correct city before performing" },
+      { type: 'fix', description: "Fix Stuck Gigs now creates missing outcomes and awards fame/fans to bands" },
+      { type: 'fix', description: "Stage equipment purchases now deduct cost from band balance" },
+      { type: 'improvement', description: "Travel works dynamically to all 79 cities via plane, train, bus, or ship" },
+      { type: 'improvement', description: "Radio submission available on Radio page > Submit tab with batch submission wizard" },
+    ]
+  },
+  {
     version: "1.0.324",
     date: "2025-12-28",
     changes: [

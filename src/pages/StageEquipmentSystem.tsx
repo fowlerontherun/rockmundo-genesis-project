@@ -291,6 +291,26 @@ const StageEquipmentSystem = () => {
         throw new Error("Join a band to purchase equipment");
       }
 
+      // Check band balance first
+      const { data: band, error: bandError } = await supabase
+        .from("bands")
+        .select("band_balance")
+        .eq("id", bandId)
+        .single();
+
+      if (bandError) throw bandError;
+      if (!band || (band.band_balance || 0) < item.cost) {
+        throw new Error(`Insufficient band funds. Need $${item.cost.toLocaleString()}`);
+      }
+
+      // Deduct cost from band balance
+      const { error: balanceError } = await supabase
+        .from("bands")
+        .update({ band_balance: (band.band_balance || 0) - item.cost })
+        .eq("id", bandId);
+
+      if (balanceError) throw balanceError;
+
       const metadata: EquipmentMetadata = {
         weight: item.weight,
         size: item.size,
@@ -322,10 +342,13 @@ const StageEquipmentSystem = () => {
       });
 
       if (error) throw error;
+      
+      return { cost: item.cost };
     },
-    onSuccess: (_, item) => {
-      toast.success(`${item.name} added to your stage inventory`);
+    onSuccess: (data, item) => {
+      toast.success(`${item.name} purchased for $${item.cost.toLocaleString()}`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["band", bandId] });
       setCatalog((prev) =>
         prev.map((entry) =>
           entry.id === item.id

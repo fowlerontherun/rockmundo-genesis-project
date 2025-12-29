@@ -85,10 +85,10 @@ serve(async (req) => {
 
     for (const gigId of gigIds) {
       try {
-        // Get gig details
+        // Get gig details with band info
         const { data: gig, error: gigError } = await supabase
           .from('gigs')
-          .select('id, setlist_id, band_id, status')
+          .select('id, setlist_id, band_id, status, venue_id, ticket_price, venues!gigs_venue_id_fkey(capacity, name)')
           .eq('id', gigId)
           .single();
 
@@ -101,6 +101,67 @@ serve(async (req) => {
         let newStatus = 'completed';
         if (!gig.setlist_id) {
           newStatus = 'cancelled';
+        }
+
+        // If completing, ensure outcome exists and update band stats
+        if (newStatus === 'completed') {
+          // Check if outcome exists
+          const { data: existingOutcome } = await supabase
+            .from('gig_outcomes')
+            .select('id')
+            .eq('gig_id', gigId)
+            .single();
+
+          if (!existingOutcome) {
+            // Create a basic outcome
+            const venueCapacity = (gig.venues as any)?.capacity || 500;
+            const actualAttendance = Math.floor(venueCapacity * (0.4 + Math.random() * 0.4));
+            const ticketRevenue = actualAttendance * (gig.ticket_price || 20);
+
+            await supabase
+              .from('gig_outcomes')
+              .insert({
+                gig_id: gigId,
+                actual_attendance: actualAttendance,
+                attendance_percentage: (actualAttendance / venueCapacity) * 100,
+                ticket_revenue: ticketRevenue,
+                merch_revenue: 0,
+                total_revenue: ticketRevenue,
+                venue_cost: 0,
+                crew_cost: 0,
+                equipment_cost: 0,
+                total_costs: 0,
+                net_profit: ticketRevenue,
+                overall_rating: 15 + Math.random() * 5,
+                performance_grade: 'B',
+                venue_name: (gig.venues as any)?.name || 'Unknown Venue',
+                venue_capacity: venueCapacity,
+                fame_gained: Math.floor(actualAttendance * 0.1),
+                new_fans_gained: Math.floor(actualAttendance * 0.05),
+                completed_at: new Date().toISOString()
+              });
+          }
+
+          // Get band and update stats
+          const { data: band } = await supabase
+            .from('bands')
+            .select('fame, total_fans, band_balance')
+            .eq('id', gig.band_id)
+            .single();
+
+          if (band) {
+            const fameGain = 50 + Math.floor(Math.random() * 50);
+            const newFans = 10 + Math.floor(Math.random() * 40);
+            
+            await supabase
+              .from('bands')
+              .update({
+                fame: (band.fame || 0) + fameGain,
+                total_fans: (band.total_fans || 0) + newFans,
+                performance_count: supabase.rpc('increment_performance_count', { band_id: gig.band_id })
+              })
+              .eq('id', gig.band_id);
+          }
         }
 
         // Update the gig
@@ -118,6 +179,7 @@ serve(async (req) => {
           results.push({ gigId, success: true, newStatus });
         }
       } catch (error: any) {
+        console.error('Error fixing gig:', gigId, error);
         results.push({ gigId, success: false, error: error.message });
       }
     }
