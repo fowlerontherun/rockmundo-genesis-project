@@ -14629,9 +14629,11 @@ export type Database = {
           id: string
           is_active: boolean
           min_quality_requirement: number
+          monthly_active_users: number | null
           platform_icon_url: string | null
           platform_name: string
           quality_multiplier: number
+          total_users: number | null
           updated_at: string
         }
         Insert: {
@@ -14641,9 +14643,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           min_quality_requirement?: number
+          monthly_active_users?: number | null
           platform_icon_url?: string | null
           platform_name: string
           quality_multiplier?: number
+          total_users?: number | null
           updated_at?: string
         }
         Update: {
@@ -14653,9 +14657,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           min_quality_requirement?: number
+          monthly_active_users?: number | null
           platform_icon_url?: string | null
           platform_name?: string
           quality_multiplier?: number
+          total_users?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -17040,6 +17046,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      decay_unreleased_song_hype: { Args: never; Returns: undefined }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
@@ -17102,6 +17109,10 @@ export type Database = {
       }
       update_song_hype: {
         Args: { p_hype_change: number; p_song_id: string }
+        Returns: undefined
+      }
+      update_song_hype_for_pr: {
+        Args: { p_hype_boost: number; p_song_id: string }
         Returns: undefined
       }
       validate_setlist_for_slot: {

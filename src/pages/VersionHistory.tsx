@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.326",
+    date: "2025-12-29",
+    changes: [
+      { type: 'fix', description: "Streaming platforms now display realistic user counts (Spotify 600M, Apple Music 100M, etc.)" },
+      { type: 'fix', description: "PR offers now generate daily via process-daily-updates cron job" },
+      { type: 'feature', description: "Song hype decays by 1 per day for unreleased songs (pre-release countdown)" },
+      { type: 'feature', description: "Added decay_unreleased_song_hype database function for daily hype management" },
+      { type: 'improvement', description: "PR activities boost song hype through update_song_hype_for_pr function" },
+    ]
+  },
+  {
     version: "1.0.325",
     date: "2025-12-29",
     changes: [
