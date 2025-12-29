@@ -250,20 +250,62 @@ Deno.serve(async (req) => {
       console.error('Error in ticket sales simulation:', ticketError)
     }
 
+    // === HYPE DECAY FOR UNRELEASED SONGS ===
+    console.log('=== Decaying hype for unreleased songs ===')
+    let hypeDecayCount = 0
+    try {
+      const { data, error } = await supabase.rpc('decay_unreleased_song_hype')
+      if (error) {
+        console.error('Error decaying hype:', error)
+      } else {
+        // Count affected songs
+        const { count } = await supabase
+          .from('songs')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['written', 'recorded', 'mixing', 'mastering'])
+          .gt('hype', 0)
+        hypeDecayCount = count || 0
+        console.log(`Decayed hype for unreleased songs`)
+      }
+    } catch (hypeError) {
+      console.error('Error in hype decay:', hypeError)
+    }
+
+    // === GENERATE PR OFFERS ===
+    console.log('=== Generating PR offers ===')
+    let prOffersGenerated = 0
+    try {
+      // Call the generate-pr-offers function
+      const { data, error } = await supabase.functions.invoke('generate-pr-offers', {
+        body: { triggeredBy: 'daily-updates' }
+      })
+      
+      if (error) {
+        console.error('Error generating PR offers:', error)
+      } else {
+        prOffersGenerated = data?.offersCreated || 0
+        console.log(`Generated ${prOffersGenerated} PR offers`)
+      }
+    } catch (prError) {
+      console.error('Error calling generate-pr-offers:', prError)
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Ticket Sales: ${ticketSalesUpdated}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: processedProfiles + processedBands + ticketSalesUpdated,
+      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated,
       errorCount,
       resultSummary: {
         profiles_processed: processedProfiles,
         bands_processed: processedBands,
         ticket_sales_updated: ticketSalesUpdated,
+        hype_decayed: hypeDecayCount,
+        pr_offers_generated: prOffersGenerated,
       },
     })
 
@@ -273,6 +315,7 @@ Deno.serve(async (req) => {
         profiles_processed: processedProfiles,
         bands_processed: processedBands,
         ticket_sales_updated: ticketSalesUpdated,
+        pr_offers_generated: prOffersGenerated,
         errors: errorCount,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
