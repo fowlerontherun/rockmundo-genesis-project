@@ -315,6 +315,33 @@ export default function PerformGig() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Check if player is in the correct city for the gig
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('current_city_id')
+      .eq('user_id', user.id)
+      .single();
+
+    const venueCityId = gig?.venues?.city_id;
+
+    if (profile?.current_city_id && venueCityId && profile.current_city_id !== venueCityId) {
+      // Get city names for better error message
+      const { data: cities } = await supabase
+        .from('cities')
+        .select('id, name')
+        .in('id', [profile.current_city_id, venueCityId]);
+      
+      const playerCity = cities?.find(c => c.id === profile.current_city_id)?.name || 'your current city';
+      const venueCity = cities?.find(c => c.id === venueCityId)?.name || 'the venue city';
+
+      toast({
+        title: 'Wrong Location',
+        description: `You are in ${playerCity} but the gig is in ${venueCity}. Travel to the correct city first.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (gig) {
       const gigStart = new Date(gig.scheduled_date);
       const gigEnd = new Date(gigStart.getTime() + 2 * 60 * 60 * 1000); // Assume 2 hour gig
