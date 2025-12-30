@@ -14,14 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.326",
-    date: "2025-12-29",
+    version: "1.0.327",
+    date: "2025-12-30",
     changes: [
-      { type: 'fix', description: "Streaming platforms now display realistic user counts (Spotify 600M, Apple Music 100M, etc.)" },
-      { type: 'fix', description: "PR offers now generate daily via process-daily-updates cron job" },
-      { type: 'feature', description: "Song hype decays by 1 per day for unreleased songs (pre-release countdown)" },
-      { type: 'feature', description: "Added decay_unreleased_song_hype database function for daily hype management" },
-      { type: 'improvement', description: "PR activities boost song hype through update_song_hype_for_pr function" },
+      { type: 'fix', description: "Charts now only show songs from real player bands (removed non-player songs)" },
+      { type: 'fix', description: "Fixed radio submit button visibility - now shows for all active stations" },
+      { type: 'fix', description: "Fixed chart notification links (now navigate to /country-charts)" },
+      { type: 'feature', description: "Added Stream Multiplier admin tool - boost streams based on active band count" },
+      { type: 'feature', description: "Added About page with beta info and Discord bug-log instructions" },
+      { type: 'feature', description: "Added BETA badge to login page with link to About page" },
     ]
   },
   {
