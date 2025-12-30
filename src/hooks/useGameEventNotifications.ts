@@ -466,7 +466,7 @@ export const useGameEventNotifications = () => {
                 message: `"${song.title}" is #${entry.rank} on the ${chartName}!`,
                 action: {
                   label: 'View Charts',
-                  onClick: () => navigate('/charts'),
+                  onClick: () => navigate('/country-charts'),
                 },
               });
             } else {
@@ -476,7 +476,7 @@ export const useGameEventNotifications = () => {
                 message: `"${song.title}" entered the ${chartName} at #${entry.rank}!`,
                 action: {
                   label: 'View Charts',
-                  onClick: () => navigate('/charts'),
+                  onClick: () => navigate('/country-charts'),
                 },
               });
             }

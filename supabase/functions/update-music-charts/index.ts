@@ -49,7 +49,7 @@ serve(async (req) => {
       .delete()
       .eq("chart_date", chartDate);
 
-    // === STREAMING CHARTS ===
+    // === STREAMING CHARTS (player songs only) ===
     const { data: streamingData } = await supabaseClient
       .from("song_releases")
       .select(`
@@ -64,6 +64,7 @@ serve(async (req) => {
         )
       `)
       .eq("is_active", true)
+      .not("songs.band_id", "is", null) // Only player band songs
       .gte("total_streams", 100) // Minimum streams to chart
       .order("total_streams", { ascending: false })
       .limit(100);
@@ -313,7 +314,7 @@ serve(async (req) => {
       chartsUpdated += radioEntries.length;
     }
 
-    // === VIDEO VIEWS CHARTS ===
+    // === VIDEO VIEWS CHARTS (player songs only) ===
     const { data: videoData } = await supabaseClient
       .from("music_videos")
       .select(`
@@ -329,6 +330,7 @@ serve(async (req) => {
         )
       `)
       .eq("status", "released")
+      .not("songs.band_id", "is", null) // Only player band songs
       .gte("views_count", 100)
       .order("views_count", { ascending: false })
       .limit(100);

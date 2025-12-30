@@ -46,6 +46,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/song-gifts", label: "Song Gifts", description: "Gift songs to bands" },
       { path: "/admin/skill-definitions", label: "Skill Definitions", description: "Configure skills" },
       { path: "/admin/charts", label: "Charts", description: "Music chart management" },
+      { path: "/admin/stream-multiplier", label: "Stream Multiplier", description: "Boost streams based on active bands" },
       { path: "/admin/streaming-platforms", label: "Streaming Platforms", description: "Manage platforms" },
       { path: "/admin/radio-stations", label: "Radio Stations", description: "Radio network" },
     ],
