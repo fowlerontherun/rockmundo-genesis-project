@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Mail, Lock, AlertCircle, Users, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -433,9 +434,20 @@ const Auth = () => {
       <div className="w-full max-w-sm sm:max-w-md">
         {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-4">
             <img src={logo} alt="RockMundo - Live The Dream" className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl" />
           </div>
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-sm px-3 py-1 mb-2">
+            BETA
+          </Badge>
+          <Button
+            variant="link"
+            size="sm"
+            className="text-muted-foreground hover:text-primary"
+            onClick={() => navigate("/about")}
+          >
+            What is RockMundo?
+          </Button>
         </div>
 
         <Card className="bg-card/90 backdrop-blur-sm border-border/40 shadow-2xl">

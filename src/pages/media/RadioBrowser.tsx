@@ -347,7 +347,7 @@ const RadioBrowser = () => {
                       >
                         View Details
                       </Button>
-                      {station.accepts_submissions && (
+                      {station.is_active && (
                         <Button
                           size="sm"
                           className="flex-1"

@@ -158,6 +158,8 @@ const AISongGeneration = lazyWithRetry(() => import("./pages/admin/AISongGenerat
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
 const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/CollectionItemsAdmin"));
 const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
+const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultiplier"));
+const About = lazyWithRetry(() => import("./pages/About"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const RadioBrowser = lazyWithRetry(() => import("./pages/media/RadioBrowser"));
@@ -227,6 +229,7 @@ function App() {
               >
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/about" element={<About />} />
                   <Route path="/song/:songId" element={<PublicSong />} />
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
@@ -394,6 +397,7 @@ function App() {
                     <Route path="admin/skin-collections/:collectionId/items" element={<CollectionItemsAdmin />} />
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
+                    <Route path="admin/stream-multiplier" element={<StreamMultiplier />} />
                     {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
