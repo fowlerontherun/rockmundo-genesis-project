@@ -19,22 +19,57 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
   const [selectedSongId, setSelectedSongId] = useState<string>("");
   const { submitToStation, isSubmitting } = useRadioStations();
 
-  // Fetch user's released songs
+  // Fetch user's released songs AND songs with upcoming releases
   const { data: songs = [], isLoading } = useQuery({
-    queryKey: ["user-released-songs"],
+    queryKey: ["user-songs-for-radio"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      const { data, error } = await supabase
+      // Get released songs
+      const { data: releasedSongs, error: releasedError } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score")
+        .select("id, title, genre, quality_score, status")
         .eq("user_id", user.id)
         .eq("status", "released")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (releasedError) throw releasedError;
+
+      // Get songs with upcoming releases (status: manufacturing, released)
+      const { data: releaseSongs, error: releaseError } = await supabase
+        .from("release_songs")
+        .select(`
+          song:songs!inner(id, title, genre, quality_score, status, user_id)
+        `)
+        .eq("song.user_id", user.id);
+
+      if (releaseError) throw releaseError;
+
+      // Combine and deduplicate by song ID
+      const songMap = new Map<string, any>();
+      
+      for (const song of releasedSongs || []) {
+        songMap.set(song.id, { ...song, hasRelease: false });
+      }
+      
+      for (const rs of releaseSongs || []) {
+        const song = rs.song as any;
+        if (song && !songMap.has(song.id)) {
+          songMap.set(song.id, { 
+            id: song.id, 
+            title: song.title, 
+            genre: song.genre, 
+            quality_score: song.quality_score,
+            status: song.status,
+            hasRelease: true 
+          });
+        } else if (song && songMap.has(song.id)) {
+          songMap.get(song.id).hasRelease = true;
+        }
+      }
+
+      return Array.from(songMap.values());
     },
     enabled: open,
   });
@@ -77,7 +112,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
           <div className="py-8 text-center text-muted-foreground">Loading songs...</div>
         ) : songs.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
-            No released songs available. Record and release a song first!
+            No songs available. You need a released song or a song with an upcoming release to submit to radio.
           </div>
         ) : (
           <RadioGroup value={selectedSongId} onValueChange={setSelectedSongId}>

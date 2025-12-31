@@ -63,13 +63,14 @@ export default function AISongGeneration() {
   const { data: songs, isLoading, refetch } = useQuery({
     queryKey: ["admin-songs-for-generation"],
     queryFn: async () => {
-      // Get songs
+      // Get ALL songs from ALL bands (not just current user's)
       const { data: songsData, error: songsError } = await supabase
         .from("songs")
         .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, created_at, band_id, bands(name)")
         .in("status", ["recorded", "released"])
+        .not("band_id", "is", null) // Only songs with bands
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (songsError) throw songsError;
 
