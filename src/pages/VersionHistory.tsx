@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.328",
+    date: "2025-12-31",
+    changes: [
+      { type: 'fix', description: "Radio song submission now shows released songs AND songs with upcoming releases" },
+      { type: 'fix', description: "Charts now filter only player band songs (removed all simulated/NPC songs)" },
+      { type: 'fix', description: "Streaming revenue now pays daily to band_earnings" },
+      { type: 'feature', description: "Added Release Sales tab showing combined streaming and physical/digital revenue" },
+      { type: 'fix', description: "Admin AI Songs page now shows all player band songs (up to 500)" },
+    ]
+  },
+  {
     version: "1.0.327",
     date: "2025-12-30",
     changes: [
