@@ -44,7 +44,16 @@ Deno.serve(async (req) => {
 
     const { data: streamingReleases, error: streamingError } = await supabase
       .from('song_releases')
-      .select('id, song_id, platform_id, total_streams, total_revenue')
+      .select(`
+        id, 
+        song_id, 
+        platform_id, 
+        total_streams, 
+        total_revenue,
+        band_id,
+        user_id,
+        songs!inner(band_id)
+      `)
       .eq('is_active', true)
       .eq('release_type', 'streaming');
 
@@ -106,6 +115,22 @@ Deno.serve(async (req) => {
           await supabase.rpc('update_song_hype', {
             p_song_id: release.song_id,
             p_hype_change: hypeChange
+          });
+        }
+
+        // Pay band daily streaming revenue
+        const bandId = release.band_id || (release.songs as any)?.band_id;
+        if (bandId && dailyRevenue > 0) {
+          await supabase.from('band_earnings').insert({
+            band_id: bandId,
+            amount: dailyRevenue,
+            source: 'streaming',
+            description: `Daily streaming revenue`,
+            metadata: { 
+              song_release_id: release.id, 
+              streams: dailyStreams,
+              platform_id: release.platform_id 
+            },
           });
         }
 

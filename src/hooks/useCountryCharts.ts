@@ -168,16 +168,9 @@ export const useCountryCharts = (
         };
       });
 
-      // Fill remaining spots with fake data up to 50
-      const targetGenre = genre === "All" ? "Pop" : genre;
-      const entries = [...realEntries];
-      
-      for (let i = realEntries.length; i < 50; i++) {
-        entries.push(generateFakeEntry(i + 1, targetGenre, country, chartType));
-      }
-
+      // Only return real entries - no fake data
       // Re-rank entries
-      return entries.map((entry, index) => ({
+      return realEntries.map((entry, index) => ({
         ...entry,
         rank: index + 1,
       }));

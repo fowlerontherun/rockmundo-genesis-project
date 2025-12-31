@@ -149,7 +149,8 @@ serve(async (req) => {
 
         for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
-          if (!song) continue;
+          // Only include player band songs
+          if (!song || !song.band_id) continue;
 
           const currentSales = songSales.get(song.id) || 0;
           songSales.set(song.id, currentSales + sale.quantity_sold);
@@ -225,7 +226,8 @@ serve(async (req) => {
 
       for (const releaseSong of release.release_songs) {
         const song = releaseSong.song;
-        if (!song) continue;
+        // Only include player band songs
+        if (!song || !song.band_id) continue;
 
         const currentSales = recordSongSales.get(song.id) || 0;
         recordSongSales.set(song.id, currentSales + sale.quantity_sold);
@@ -279,9 +281,12 @@ serve(async (req) => {
       `)
       .gte("played_at", sevenDaysAgo.toISOString());
 
-    // Aggregate by song
+    // Aggregate by song - only player songs
     const radioAggregated = new Map<string, any>();
     for (const play of radioPlays || []) {
+      // Only include player band songs
+      if (!play.songs?.band_id) continue;
+      
       const existing = radioAggregated.get(play.song_id);
       if (existing) {
         existing.total_listeners += play.listeners || 0;
