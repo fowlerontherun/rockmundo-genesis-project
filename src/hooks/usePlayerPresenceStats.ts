@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimePresence } from "./useRealtimePresence";
+import { usePublicPresence } from "./usePublicPresence";
 
 interface UsePlayerPresenceStatsOptions {
   refreshInterval?: number | null;
+  /** Use public presence (doesn't require auth) - for login page */
+  publicMode?: boolean;
 }
 
 interface PlayerPresenceStats {
@@ -45,13 +48,17 @@ export const usePlayerPresenceStats = (
   options: UsePlayerPresenceStatsOptions = {},
 ): PlayerPresenceStats => {
   const refreshInterval = options.refreshInterval ?? DEFAULT_REFRESH_INTERVAL;
+  const publicMode = options.publicMode ?? false;
   const mountedRef = useRef(true);
   const [totalPlayers, setTotalPlayers] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { onlineCount } = useRealtimePresence();
-
+  
+  // Use public presence for unauthenticated pages (login), otherwise use authenticated presence
+  const { onlineCount: authOnlineCount } = useRealtimePresence();
+  const { onlineCount: publicOnlineCount } = usePublicPresence();
+  const onlineCount = publicMode ? publicOnlineCount : authOnlineCount;
   useEffect(() => {
     mountedRef.current = true;
 
