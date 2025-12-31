@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.329",
+    date: "2025-12-31",
+    changes: [
+      { type: 'fix', description: "Login page now correctly shows online player count (uses public presence)" },
+    ]
+  },
+  {
     version: "1.0.328",
     date: "2025-12-31",
     changes: [

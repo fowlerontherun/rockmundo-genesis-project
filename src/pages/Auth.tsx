@@ -50,7 +50,8 @@ const Auth = () => {
     loading: presenceLoading,
     error: presenceError
   } = usePlayerPresenceStats({
-    refreshInterval: 45_000
+    refreshInterval: 45_000,
+    publicMode: true // Use public presence since user isn't logged in yet
   });
 
   const formatPresenceValue = (value: number | null) => {
