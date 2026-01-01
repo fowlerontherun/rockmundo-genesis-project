@@ -2,7 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MUSIC_GENRES } from "@/data/genres";
 
-export type ChartType = "streaming" | "cd_sales" | "vinyl_sales" | "digital_sales" | "cassette_sales" | "combined";
+export type ChartType =
+  | "streaming"
+  | "cd_sales"
+  | "vinyl_sales"
+  | "digital_sales"
+  | "cassette_sales"
+  | "combined";
+
+export type ReleaseCategory = "all" | "single" | "ep" | "album";
 
 export interface ChartEntry {
   id: string;
@@ -84,26 +92,35 @@ const generateFakeEntry = (rank: number, genre: string, country: string, chartTy
 export const useCountryCharts = (
   country: string,
   genre: string,
-  chartType: ChartType
+  chartType: ChartType,
+  releaseCategory: ReleaseCategory = "all",
 ) => {
   return useQuery({
-    queryKey: ["country-charts", country, genre, chartType],
+    queryKey: ["country-charts", country, genre, chartType, releaseCategory],
     queryFn: async (): Promise<ChartEntry[]> => {
+      const scopeSuffix = releaseCategory !== "all" ? `_${releaseCategory}` : "";
+
       // Determine which chart_type values to query
       let chartTypeFilter: string[] = [];
       if (chartType === "streaming") {
-        chartTypeFilter = ["streaming"];
+        chartTypeFilter = [`streaming${scopeSuffix}`];
       } else if (chartType === "cd_sales") {
-        chartTypeFilter = ["cd_sales"];
+        chartTypeFilter = [`cd_sales${scopeSuffix}`];
       } else if (chartType === "vinyl_sales") {
-        chartTypeFilter = ["vinyl_sales"];
+        chartTypeFilter = [`vinyl_sales${scopeSuffix}`];
       } else if (chartType === "digital_sales") {
-        chartTypeFilter = ["digital_sales"];
+        chartTypeFilter = [`digital_sales${scopeSuffix}`];
       } else if (chartType === "cassette_sales") {
-        chartTypeFilter = ["cassette_sales"];
+        chartTypeFilter = [`cassette_sales${scopeSuffix}`];
       } else {
         // combined - get all types
-        chartTypeFilter = ["streaming", "cd_sales", "vinyl_sales", "digital_sales", "cassette_sales"];
+        chartTypeFilter = [
+          `streaming${scopeSuffix}`,
+          `cd_sales${scopeSuffix}`,
+          `vinyl_sales${scopeSuffix}`,
+          `digital_sales${scopeSuffix}`,
+          `cassette_sales${scopeSuffix}`,
+        ];
       }
 
       let query = supabase

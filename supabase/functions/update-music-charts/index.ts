@@ -43,6 +43,17 @@ serve(async (req) => {
 
     const chartDate = new Date().toISOString().split("T")[0];
 
+    const RELEASE_SCOPES = ["single", "ep", "album"] as const;
+    type ReleaseScope = (typeof RELEASE_SCOPES)[number];
+
+    const toReleaseScope = (value: unknown): ReleaseScope => {
+      return RELEASE_SCOPES.includes(value as ReleaseScope)
+        ? (value as ReleaseScope)
+        : "single";
+    };
+
+    const scopedType = (base: string, scope: ReleaseScope) => `${base}_${scope}`;
+
     // Clear today's chart entries
     await supabaseClient
       .from("chart_entries")
@@ -55,6 +66,9 @@ serve(async (req) => {
       .select(`
         song_id,
         total_streams,
+        release:releases(
+          release_type
+        ),
         songs!inner(
           id,
           title,
@@ -65,12 +79,14 @@ serve(async (req) => {
       `)
       .eq("is_active", true)
       .not("songs.band_id", "is", null) // Only player band songs
-      .gte("total_streams", 100) // Minimum streams to chart
+      .gte("total_streams", 0)
       .order("total_streams", { ascending: false })
-      .limit(100);
+      .limit(500);
 
-    // Aggregate by song (multiple platforms)
+    // Aggregate by song (multiple platforms) and also by release scope (single/ep/album)
     const streamingAggregated = new Map<string, any>();
+    const streamingAggregatedByScope = new Map<string, any>();
+
     for (const entry of streamingData || []) {
       const existing = streamingAggregated.get(entry.song_id);
       if (existing) {
@@ -78,6 +94,20 @@ serve(async (req) => {
       } else {
         streamingAggregated.set(entry.song_id, {
           song_id: entry.song_id,
+          total_streams: entry.total_streams,
+          song: entry.songs,
+        });
+      }
+
+      const scope = toReleaseScope((entry as any)?.release?.release_type);
+      const scopedKey = `${entry.song_id}:${scope}`;
+      const existingScoped = streamingAggregatedByScope.get(scopedKey);
+      if (existingScoped) {
+        existingScoped.total_streams += entry.total_streams;
+      } else {
+        streamingAggregatedByScope.set(scopedKey, {
+          song_id: entry.song_id,
+          scope,
           total_streams: entry.total_streams,
           song: entry.songs,
         });
@@ -97,9 +127,27 @@ serve(async (req) => {
         country: "all",
       }));
 
+    const streamingScopedEntries = Array.from(streamingAggregatedByScope.values())
+      .sort((a, b) => b.total_streams - a.total_streams)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.song_id,
+        chart_type: scopedType("streaming", entry.scope),
+        rank: index + 1,
+        plays_count: entry.total_streams,
+        chart_date: chartDate,
+        genre: entry.song?.genre,
+        country: "all",
+      }));
+
     if (streamingEntries.length > 0) {
       await supabaseClient.from("chart_entries").insert(streamingEntries);
       chartsUpdated += streamingEntries.length;
+    }
+
+    if (streamingScopedEntries.length > 0) {
+      await supabaseClient.from("chart_entries").insert(streamingScopedEntries);
+      chartsUpdated += streamingScopedEntries.length;
     }
 
     // === SALES CHARTS ===
@@ -114,38 +162,43 @@ serve(async (req) => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const { data: salesData } = await supabaseClient
-        .from("release_sales")
-        .select(`
-          release_format_id,
-          quantity_sold,
-          release_formats!inner(
-            format_type,
-            release:releases!inner(
-              id,
-              release_songs!inner(
-                song:songs!inner(
-                  id,
-                  title,
-                  genre,
-                  user_id,
-                  band_id
+        const { data: salesData } = await supabaseClient
+          .from("release_sales")
+          .select(`
+            release_format_id,
+            quantity_sold,
+            release_formats!inner(
+              format_type,
+              release:releases!inner(
+                id,
+                release_type,
+                release_songs!inner(
+                  song:songs!inner(
+                    id,
+                    title,
+                    genre,
+                    user_id,
+                    band_id
+                  )
                 )
               )
             )
-          )
-        `)
-        .eq("release_formats.format_type", salesType.format)
-        .gte("sale_date", sevenDaysAgo.toISOString())
-        .order("quantity_sold", { ascending: false });
+          `)
+          .eq("release_formats.format_type", salesType.format)
+          .gte("sale_date", sevenDaysAgo.toISOString())
+          .order("quantity_sold", { ascending: false });
 
-      // Aggregate by song
+      // Aggregate by song + also by scope
       const songSales = new Map<string, number>();
       const songInfo = new Map<string, any>();
+      const songSalesByScope = new Map<string, number>();
+      const songInfoByScope = new Map<string, any>();
 
       for (const sale of salesData || []) {
         const release = sale.release_formats?.release;
         if (!release || !release.release_songs) continue;
+
+        const scope = toReleaseScope((release as any)?.release_type);
 
         for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
@@ -161,6 +214,18 @@ serve(async (req) => {
               genre: song.genre,
               user_id: song.user_id,
               band_id: song.band_id,
+            });
+          }
+
+          const scopedKey = `${song.id}:${scope}`;
+          const currentScopedSales = songSalesByScope.get(scopedKey) || 0;
+          songSalesByScope.set(scopedKey, currentScopedSales + sale.quantity_sold);
+
+          if (!songInfoByScope.has(scopedKey)) {
+            songInfoByScope.set(scopedKey, {
+              title: song.title,
+              genre: song.genre,
+              scope,
             });
           }
         }
@@ -183,9 +248,32 @@ serve(async (req) => {
           };
         });
 
+      const scopedSalesEntries = Array.from(songSalesByScope.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 100)
+        .map(([scopedKey, sales], index) => {
+          const [songId] = scopedKey.split(":");
+          const info = songInfoByScope.get(scopedKey);
+          return {
+            song_id: songId,
+            chart_type: scopedType(salesType.type, info?.scope),
+            rank: index + 1,
+            plays_count: sales,
+            chart_date: chartDate,
+            genre: info?.genre,
+            country: "all",
+            sale_type: salesType.format,
+          };
+        });
+
       if (salesEntries.length > 0) {
         await supabaseClient.from("chart_entries").insert(salesEntries);
         chartsUpdated += salesEntries.length;
+      }
+
+      if (scopedSalesEntries.length > 0) {
+        await supabaseClient.from("chart_entries").insert(scopedSalesEntries);
+        chartsUpdated += scopedSalesEntries.length;
       }
     }
 
@@ -198,31 +286,36 @@ serve(async (req) => {
       .select(`
         release_format_id,
         quantity_sold,
-        release_formats!inner(
-          format_type,
-          release:releases!inner(
-            id,
-            release_songs!inner(
-              song:songs!inner(
-                id,
-                title,
-                genre,
-                user_id,
-                band_id
+          release_formats!inner(
+            format_type,
+            release:releases!inner(
+              id,
+              release_type,
+              release_songs!inner(
+                song:songs!inner(
+                  id,
+                  title,
+                  genre,
+                  user_id,
+                  band_id
+                )
               )
             )
           )
-        )
       `)
       .in("release_formats.format_type", ["cd", "vinyl", "cassette"])
       .gte("sale_date", sevenDaysAgo.toISOString());
 
     const recordSongSales = new Map<string, number>();
     const recordSongInfo = new Map<string, any>();
+    const recordSongSalesByScope = new Map<string, number>();
+    const recordSongInfoByScope = new Map<string, any>();
 
     for (const sale of recordSales || []) {
       const release = sale.release_formats?.release;
       if (!release || !release.release_songs) continue;
+
+      const scope = toReleaseScope((release as any)?.release_type);
 
       for (const releaseSong of release.release_songs) {
         const song = releaseSong.song;
@@ -238,6 +331,18 @@ serve(async (req) => {
             genre: song.genre,
             user_id: song.user_id,
             band_id: song.band_id,
+          });
+        }
+
+        const scopedKey = `${song.id}:${scope}`;
+        const currentScopedSales = recordSongSalesByScope.get(scopedKey) || 0;
+        recordSongSalesByScope.set(scopedKey, currentScopedSales + sale.quantity_sold);
+
+        if (!recordSongInfoByScope.has(scopedKey)) {
+          recordSongInfoByScope.set(scopedKey, {
+            title: song.title,
+            genre: song.genre,
+            scope,
           });
         }
       }
@@ -260,9 +365,32 @@ serve(async (req) => {
         };
       });
 
+    const recordScopedEntries = Array.from(recordSongSalesByScope.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 100)
+      .map(([scopedKey, sales], index) => {
+        const [songId] = scopedKey.split(":");
+        const info = recordSongInfoByScope.get(scopedKey);
+        return {
+          song_id: songId,
+          chart_type: scopedType("record_sales", info?.scope),
+          rank: index + 1,
+          plays_count: sales,
+          chart_date: chartDate,
+          genre: info?.genre,
+          country: "all",
+          sale_type: "physical",
+        };
+      });
+
     if (recordEntries.length > 0) {
       await supabaseClient.from("chart_entries").insert(recordEntries);
       chartsUpdated += recordEntries.length;
+    }
+
+    if (recordScopedEntries.length > 0) {
+      await supabaseClient.from("chart_entries").insert(recordScopedEntries);
+      chartsUpdated += recordScopedEntries.length;
     }
 
     // === RADIO AIRPLAY CHARTS ===
@@ -336,7 +464,7 @@ serve(async (req) => {
       `)
       .eq("status", "released")
       .not("songs.band_id", "is", null) // Only player band songs
-      .gte("views_count", 100)
+      .gte("views_count", 0)
       .order("views_count", { ascending: false })
       .limit(100);
 
