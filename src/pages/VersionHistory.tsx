@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.330",
+    date: "2026-01-01",
+    changes: [
+      { type: 'feature', description: "Charts now support release-type filtering: Singles / EPs / Albums" },
+      { type: 'fix', description: "Charts generation no longer requires 100+ streams/views to appear" },
+    ]
+  },
+  {
     version: "1.0.329",
     date: "2025-12-31",
     changes: [

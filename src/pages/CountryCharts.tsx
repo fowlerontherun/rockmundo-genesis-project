@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter } from "lucide-react";
-import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES } from "@/hooks/useCountryCharts";
+import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory } from "@/hooks/useCountryCharts";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
@@ -154,8 +154,9 @@ export default function CountryCharts() {
   const [country, setCountry] = useState("Global");
   const [genre, setGenre] = useState("All");
   const [chartType, setChartType] = useState<ChartType>("combined");
+  const [releaseCategory, setReleaseCategory] = useState<ReleaseCategory>("all");
 
-  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType);
+  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType, releaseCategory);
   const { data: genres = ["All", ...GENRES] } = useAvailableGenres();
   const { data: countries = COUNTRIES } = useAvailableCountries();
 
@@ -205,6 +206,21 @@ export default function CountryCharts() {
                     {g}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Disc className="h-4 w-4 text-muted-foreground" />
+            <Select value={releaseCategory} onValueChange={(v) => setReleaseCategory(v as ReleaseCategory)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Release type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="single">Singles</SelectItem>
+                <SelectItem value="ep">EPs</SelectItem>
+                <SelectItem value="album">Albums</SelectItem>
               </SelectContent>
             </Select>
           </div>
