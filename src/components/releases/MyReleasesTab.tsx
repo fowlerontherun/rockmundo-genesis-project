@@ -9,13 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3, XCircle
+  Play, Users, BarChart3, XCircle, Plus
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { ManufacturingProgress } from "./ManufacturingProgress";
 import { EditReleaseDialog } from "./EditReleaseDialog";
 import { CancelReleaseDialog } from "./CancelReleaseDialog";
 import { ReleaseTracklistWithAudio } from "./ReleaseTracklistWithAudio";
+import { AddPhysicalFormatDialog } from "./AddPhysicalFormatDialog";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 
 interface MyReleasesTabProps {
@@ -40,6 +41,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const navigate = useNavigate();
   const [editingRelease, setEditingRelease] = useState<any>(null);
   const [cancellingRelease, setCancellingRelease] = useState<any>(null);
+  const [addPhysicalRelease, setAddPhysicalRelease] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: releases, isLoading, error } = useQuery({
@@ -236,6 +238,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
+            onAddPhysical={() => setAddPhysicalRelease(release)}
             onReorder={(format) => {
               // TODO: Implement reorder dialog - for now show toast
               console.log('Reorder requested for format:', format);
@@ -263,6 +266,12 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         onOpenChange={(open) => !open && setCancellingRelease(null)}
         release={cancellingRelease}
       />
+
+      <AddPhysicalFormatDialog
+        open={!!addPhysicalRelease}
+        onOpenChange={(open) => !open && setAddPhysicalRelease(null)}
+        release={addPhysicalRelease}
+      />
     </div>
   );
 }
@@ -272,10 +281,11 @@ interface ReleaseCardProps {
   onEdit: () => void;
   onCancel: () => void;
   onViewDetails: () => void;
+  onAddPhysical?: () => void;
   onReorder?: (format: any) => void;
 }
 
-function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onReorder }: ReleaseCardProps) {
+function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onAddPhysical, onReorder }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -532,14 +542,37 @@ function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onReorder }: Re
             </>
           )}
           {release.release_status === "released" && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {}}
-            >
-              <BarChart3 className="h-4 w-4 mr-1" />
-              Analytics
-            </Button>
+            <>
+              {/* Check if physical formats can still be added */}
+              {(() => {
+                const existingPhysical = release.release_formats?.filter((f: any) => 
+                  ["cd", "vinyl", "cassette"].includes(f.format_type)
+                ) || [];
+                const hasAllPhysical = existingPhysical.length >= 3;
+                
+                if (!hasAllPhysical) {
+                  return (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={onAddPhysical}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Physical
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {}}
+              >
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Analytics
+              </Button>
+            </>
           )}
         </div>
       </CardContent>

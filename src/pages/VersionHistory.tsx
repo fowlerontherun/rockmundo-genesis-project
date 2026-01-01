@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.331",
+    date: "2026-01-01",
+    changes: [
+      { type: 'feature', description: "Players can now add physical formats (CD, Vinyl, Cassette) to already-released digital/streaming releases" },
+    ]
+  },
+  {
     version: "1.0.330",
     date: "2026-01-01",
     changes: [
