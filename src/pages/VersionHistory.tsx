@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.332",
+    date: "2026-01-02",
+    changes: [
+      { type: 'fix', description: "Fixed songs changing genre to Rock after recording - now preserves original genre" },
+      { type: 'fix', description: "Fixed charts showing blank - now queries all chart type variations correctly" },
+      { type: 'fix', description: "Fixed Analytics button not working - now opens analytics dialog" },
+      { type: 'feature', description: "Charts now filter by all 43 game countries instead of 10" },
+      { type: 'feature', description: "Release Manager now has search, type, and genre filters" },
+      { type: 'feature', description: "Added Release Analytics dialog with streaming, sales, and chart data" },
+    ]
+  },
+  {
     version: "1.0.331",
     date: "2026-01-01",
     changes: [
