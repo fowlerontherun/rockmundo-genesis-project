@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MUSIC_GENRES } from "@/data/genres";
+import { countryData } from "@/data/countryData";
 
 export type ChartType =
   | "streaming"
@@ -33,61 +34,8 @@ export interface ChartEntry {
 
 const GENRES = [...MUSIC_GENRES];
 
-const COUNTRIES = [
-  "Global", "United States", "United Kingdom", "Germany", "France", 
-  "Japan", "Australia", "Canada", "Brazil", "Mexico"
-];
-
-const FAKE_ARTISTS = [
-  "The Midnight Echo", "Nova Dreams", "Electric Pulse", "Shadow Valley",
-  "Crystal Waves", "Neon Horizon", "Velvet Storm", "Arctic Fire",
-  "Golden Frequency", "Lunar Drift", "Crimson Sky", "Silent Thunder",
-  "Emerald Coast", "Phantom Groove", "Solar Wind", "Ocean Drive",
-  "Desert Rain", "Mountain High", "City Lights", "Starlight Express"
-];
-
-const FAKE_SONG_TITLES = [
-  "Midnight Run", "Electric Dreams", "Fading Light", "Summer Nights",
-  "Heart of Gold", "Breaking Through", "Lost in Time", "Rising Sun",
-  "Endless Road", "Dancing Shadows", "Fire and Ice", "Whispered Secrets",
-  "Chasing Stars", "Broken Wings", "Northern Lights", "Ocean Waves",
-  "City Streets", "Mountain Song", "Desert Wind", "Rainy Days",
-  "Golden Hour", "Silver Moon", "Crystal Clear", "Thunder Road",
-  "Lightning Strike", "Peaceful Morning", "Wild Heart", "Gentle Storm",
-  "Burning Bright", "Frozen Dreams", "Autumn Leaves", "Spring Rain",
-  "Winter Frost", "Summer Haze", "Twilight Zone", "Daybreak",
-  "Sunset Boulevard", "Moonlit Path", "Starry Night", "Cloudy Skies",
-  "Rainbow Bridge", "Diamond Eyes", "Ruby Red", "Sapphire Blue",
-  "Emerald Green", "Amber Glow", "Pearl White", "Onyx Black",
-  "Ivory Tower", "Bronze Age"
-];
-
-const generateFakeEntry = (rank: number, genre: string, country: string, chartType: ChartType): ChartEntry => {
-  const artistIndex = (rank * 7 + genre.length) % FAKE_ARTISTS.length;
-  const titleIndex = (rank * 13 + country.length) % FAKE_SONG_TITLES.length;
-  const basePlays = Math.floor(1000000 / (rank * 0.8 + 1));
-  const trendOptions: ("up" | "down" | "stable" | "new")[] = ["up", "down", "stable", "new"];
-  const trendIndex = (rank + genre.charCodeAt(0)) % 4;
-  const weeklySales = Math.floor(basePlays * 0.1);
-  const totalSales = weeklySales * (Math.floor(Math.random() * 10) + 1);
-  
-  return {
-    id: `fake-${chartType}-${genre}-${country}-${rank}`,
-    rank,
-    song_id: `fake-song-${rank}`,
-    title: FAKE_SONG_TITLES[titleIndex],
-    artist: FAKE_ARTISTS[artistIndex],
-    genre,
-    country,
-    plays_count: basePlays + Math.floor(Math.random() * 100000),
-    weekly_sales: weeklySales,
-    total_sales: totalSales,
-    trend: trendOptions[trendIndex],
-    trend_change: trendIndex === 3 ? 0 : Math.floor(Math.random() * 10) - 3,
-    weeks_on_chart: trendIndex === 3 ? 1 : Math.floor(Math.random() * 20) + 1,
-    is_fake: true,
-  };
-};
+// Use all countries from countryData (43 countries + Global)
+const COUNTRIES = ["Global", ...Object.keys(countryData).sort()];
 
 export const useCountryCharts = (
   country: string,
@@ -98,30 +46,30 @@ export const useCountryCharts = (
   return useQuery({
     queryKey: ["country-charts", country, genre, chartType, releaseCategory],
     queryFn: async (): Promise<ChartEntry[]> => {
-      const scopeSuffix = releaseCategory !== "all" ? `_${releaseCategory}` : "";
-
-      // Determine which chart_type values to query
+      // Build all possible chart_type values to query
       let chartTypeFilter: string[] = [];
-      if (chartType === "streaming") {
-        chartTypeFilter = [`streaming${scopeSuffix}`];
-      } else if (chartType === "cd_sales") {
-        chartTypeFilter = [`cd_sales${scopeSuffix}`];
-      } else if (chartType === "vinyl_sales") {
-        chartTypeFilter = [`vinyl_sales${scopeSuffix}`];
-      } else if (chartType === "digital_sales") {
-        chartTypeFilter = [`digital_sales${scopeSuffix}`];
-      } else if (chartType === "cassette_sales") {
-        chartTypeFilter = [`cassette_sales${scopeSuffix}`];
+      
+      // Release category suffixes to check
+      const suffixes = releaseCategory === "all" 
+        ? ["", "_single", "_ep", "_album"]  // Query all variations when "all"
+        : [`_${releaseCategory}`];          // Query specific category
+
+      if (chartType === "combined") {
+        // Combined: query all chart types with all relevant suffixes
+        const baseTypes = ["streaming", "cd_sales", "vinyl_sales", "digital_sales", "cassette_sales"];
+        for (const baseType of baseTypes) {
+          for (const suffix of suffixes) {
+            chartTypeFilter.push(`${baseType}${suffix}`);
+          }
+        }
       } else {
-        // combined - get all types
-        chartTypeFilter = [
-          `streaming${scopeSuffix}`,
-          `cd_sales${scopeSuffix}`,
-          `vinyl_sales${scopeSuffix}`,
-          `digital_sales${scopeSuffix}`,
-          `cassette_sales${scopeSuffix}`,
-        ];
+        // Specific chart type with all relevant suffixes
+        for (const suffix of suffixes) {
+          chartTypeFilter.push(`${chartType}${suffix}`);
+        }
       }
+
+      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter);
 
       let query = supabase
         .from("chart_entries")
@@ -152,8 +100,11 @@ export const useCountryCharts = (
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching chart entries:", error);
+        console.error("[useCountryCharts] Error fetching chart entries:", error);
+        return [];
       }
+
+      console.log("[useCountryCharts] Found entries:", data?.length || 0);
 
       // Transform real data
       const realEntries: ChartEntry[] = (data || []).map((entry, index) => {
@@ -185,12 +136,13 @@ export const useCountryCharts = (
         };
       });
 
-      // Only return real entries - no fake data
-      // Re-rank entries
-      return realEntries.map((entry, index) => ({
-        ...entry,
-        rank: index + 1,
-      }));
+      // Re-rank entries by plays_count
+      return realEntries
+        .sort((a, b) => b.plays_count - a.plays_count)
+        .map((entry, index) => ({
+          ...entry,
+          rank: index + 1,
+        }));
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -225,22 +177,9 @@ export const useAvailableCountries = () => {
   return useQuery({
     queryKey: ["chart-countries"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("chart_entries")
-        .select("country")
-        .not("country", "is", null);
-
-      const uniqueCountries = new Set<string>();
-      data?.forEach((entry) => {
-        if (entry.country) uniqueCountries.add(entry.country);
-      });
-
-      // Add default countries if none found
-      if (uniqueCountries.size === 0) {
-        return COUNTRIES;
-      }
-
-      return ["Global", ...Array.from(uniqueCountries).filter(c => c !== "Global").sort()];
+      // Return all game countries from countryData
+      // This ensures charts can filter by any country in the game
+      return COUNTRIES;
     },
     staleTime: 10 * 60 * 1000,
   });

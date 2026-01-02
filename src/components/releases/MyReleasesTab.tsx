@@ -6,10 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3, XCircle, Plus
+  Play, Users, BarChart3, XCircle, Plus, Search, Filter
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { ManufacturingProgress } from "./ManufacturingProgress";
@@ -17,6 +25,8 @@ import { EditReleaseDialog } from "./EditReleaseDialog";
 import { CancelReleaseDialog } from "./CancelReleaseDialog";
 import { ReleaseTracklistWithAudio } from "./ReleaseTracklistWithAudio";
 import { AddPhysicalFormatDialog } from "./AddPhysicalFormatDialog";
+import { ReleaseAnalyticsDialog } from "./ReleaseAnalyticsDialog";
+import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 
 interface MyReleasesTabProps {
@@ -42,7 +52,11 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const [editingRelease, setEditingRelease] = useState<any>(null);
   const [cancellingRelease, setCancellingRelease] = useState<any>(null);
   const [addPhysicalRelease, setAddPhysicalRelease] = useState<any>(null);
+  const [analyticsRelease, setAnalyticsRelease] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [genreFilter, setGenreFilter] = useState<string>("all");
 
   const { data: releases, isLoading, error } = useQuery({
     queryKey: ["releases", userId],
@@ -105,10 +119,29 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   });
 
   const filteredReleases = releases?.filter(r => {
-    if (statusFilter === "all") return r.release_status !== "cancelled"; // Exclude cancelled from "all"
-    if (statusFilter === "released") return r.release_status === "released";
-    if (statusFilter === "upcoming") return ["manufacturing", "planned", "draft"].includes(r.release_status);
-    if (statusFilter === "cancelled") return r.release_status === "cancelled";
+    // Status filter
+    if (statusFilter === "all" && r.release_status === "cancelled") return false;
+    if (statusFilter === "released" && r.release_status !== "released") return false;
+    if (statusFilter === "upcoming" && !["manufacturing", "planned", "draft"].includes(r.release_status)) return false;
+    if (statusFilter === "cancelled" && r.release_status !== "cancelled") return false;
+    
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const titleMatch = r.title?.toLowerCase().includes(query);
+      const artistMatch = r.artist_name?.toLowerCase().includes(query);
+      if (!titleMatch && !artistMatch) return false;
+    }
+    
+    // Type filter
+    if (typeFilter !== "all" && r.release_type !== typeFilter) return false;
+    
+    // Genre filter
+    if (genreFilter !== "all") {
+      const releaseGenres = r.release_songs?.map((rs: any) => rs.song?.genre).filter(Boolean) || [];
+      if (!releaseGenres.includes(genreFilter)) return false;
+    }
+    
     return true;
   }) || [];
 
@@ -213,6 +246,41 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         </Card>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search releases..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="single">Single</SelectItem>
+            <SelectItem value="ep">EP</SelectItem>
+            <SelectItem value="album">Album</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={genreFilter} onValueChange={setGenreFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Genre" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Genres</SelectItem>
+            {MUSIC_GENRES.slice(0, 15).map((genre) => (
+              <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Filter Tabs */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
         <TabsList>
@@ -239,8 +307,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
             onAddPhysical={() => setAddPhysicalRelease(release)}
+            onAnalytics={() => setAnalyticsRelease(release)}
             onReorder={(format) => {
-              // TODO: Implement reorder dialog - for now show toast
               console.log('Reorder requested for format:', format);
             }}
           />
@@ -272,6 +340,12 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         onOpenChange={(open) => !open && setAddPhysicalRelease(null)}
         release={addPhysicalRelease}
       />
+
+      <ReleaseAnalyticsDialog
+        open={!!analyticsRelease}
+        onOpenChange={(open) => !open && setAnalyticsRelease(null)}
+        release={analyticsRelease}
+      />
     </div>
   );
 }
@@ -282,10 +356,11 @@ interface ReleaseCardProps {
   onCancel: () => void;
   onViewDetails: () => void;
   onAddPhysical?: () => void;
+  onAnalytics?: () => void;
   onReorder?: (format: any) => void;
 }
 
-function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onAddPhysical, onReorder }: ReleaseCardProps) {
+function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onAddPhysical, onAnalytics, onReorder }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -567,7 +642,7 @@ function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onAddPhysical, 
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => {}}
+                onClick={onAnalytics}
               >
                 <BarChart3 className="h-4 w-4 mr-1" />
                 Analytics
