@@ -178,7 +178,7 @@ export const GigOutcomeReport = ({
       breakdown: outcome.gear_effects?.breakdown ?? [],
     };
 
-    if (!derived.breakdown.length) {
+    if (!derived.breakdown || derived.breakdown.length === 0) {
       const fallbackBreakdown: GearEffectBreakdown[] = [];
 
       if (equipmentBonus > 0.25) {
@@ -248,7 +248,7 @@ export const GigOutcomeReport = ({
     setlistLength: songs.length,
   });
   const hasGearImpact =
-    effectiveGearEffects.breakdown.length > 0 ||
+    (effectiveGearEffects.breakdown?.length ?? 0) > 0 ||
     effectiveGearEffects.attendanceBonusPercent !== 0 ||
     effectiveGearEffects.revenueBonusPercent !== 0 ||
     effectiveGearEffects.fameBonusPercent !== 0 ||
