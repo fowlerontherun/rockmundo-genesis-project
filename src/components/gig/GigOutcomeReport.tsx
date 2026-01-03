@@ -241,7 +241,12 @@ export const GigOutcomeReport = ({
     return derived;
   };
 
-  const effectiveGearEffects = gearEffects ?? buildFallbackGearEffects();
+  const rawGearEffects = gearEffects ?? buildFallbackGearEffects();
+  const effectiveGearEffects: GearModifierEffects = {
+    ...rawGearEffects,
+    breakdown: rawGearEffects.breakdown ?? [],
+    breakdownRiskPercent: rawGearEffects.breakdownRiskPercent ?? 0,
+  };
   const narrative = gearNarrative ?? buildGearOutcomeNarrative({
     outcome,
     gearEffects: effectiveGearEffects,
@@ -459,11 +464,11 @@ export const GigOutcomeReport = ({
                   </div>
                 </div>
 
-                {effectiveGearEffects.breakdown.length > 0 && (
+                {(effectiveGearEffects.breakdown?.length ?? 0) > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-semibold">Breakdown</p>
                     <div className="space-y-1 pl-2">
-                      {effectiveGearEffects.breakdown.map((entry) => (
+                      {(effectiveGearEffects.breakdown ?? []).map((entry) => (
                         <div key={entry.key} className="flex flex-col text-xs">
                           <span className="flex items-center gap-2 font-medium text-sm">
                             <CheckCircle2 className="h-3 w-3 text-primary" />
