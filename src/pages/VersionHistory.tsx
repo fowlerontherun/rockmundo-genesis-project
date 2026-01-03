@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.338",
+    date: "2026-01-03",
+    changes: [
+      { type: 'fix', description: "Fixed Country Charts query by removing invalid profiles join (schema cache PGRST200)" },
+    ]
+  },
+  {
     version: "1.0.337",
     date: "2026-01-03",
     changes: [
