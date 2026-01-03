@@ -80,9 +80,7 @@ export const useCountryCharts = (
             genre,
             audio_url,
             audio_generation_status,
-            user_id,
-            bands(name, artist_name),
-            profiles:user_id(stage_name)
+            bands(name, artist_name)
           )
         `)
         .in("chart_type", chartTypeFilter)
@@ -112,10 +110,9 @@ export const useCountryCharts = (
 
       // Transform real data
       const realEntries: ChartEntry[] = (data || []).map((entry, index) => {
-        // Get artist name from band (artist_name or name) or profile stage_name
+        // Get artist name from band (artist_name or name)
         const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
-        const profileStageName = (entry.songs?.profiles as any)?.stage_name;
-        const artistName = bandArtistName || profileStageName || "Unknown Artist";
+        const artistName = bandArtistName || "Unknown Artist";
         
         const playsCount = entry.plays_count || 0;
         const weeksOnChart = entry.weeks_on_chart || 1;
