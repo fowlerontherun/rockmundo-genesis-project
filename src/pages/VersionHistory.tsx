@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.334",
+    date: "2026-01-03",
+    changes: [
+      { type: 'fix', description: "Fixed complete-gig edge function using wrong column names for fan conversion" },
+    ]
+  },
+  {
     version: "1.0.333",
     date: "2026-01-03",
     changes: [

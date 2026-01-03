@@ -237,10 +237,10 @@ serve(async (req) => {
         crew_skill_avg: Math.round(avgCrew),
         band_chemistry_level: Math.round(avgChemistry),
         member_skill_avg: Math.round(avgMemberSkill * 100) / 100,
-        new_fans_gained: newFansTotal,
-        new_casual_fans: casualFans,
-        new_dedicated_fans: dedicatedFans,
-        new_superfans: superfans,
+        new_followers: newFansTotal,
+        casual_fans_gained: casualFans,
+        dedicated_fans_gained: dedicatedFans,
+        superfans_gained: superfans,
         completed_at: new Date().toISOString()
       })
       .eq('id', outcome.id);
