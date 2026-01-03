@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.335",
+    date: "2026-01-03",
+    changes: [
+      { type: 'fix', description: "Fixed GigOutcomeReport crash when gear_effects.breakdown is undefined" },
+    ]
+  },
+  {
     version: "1.0.334",
     date: "2026-01-03",
     changes: [
