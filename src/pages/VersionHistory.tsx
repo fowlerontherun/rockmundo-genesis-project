@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.333",
+    date: "2026-01-03",
+    changes: [
+      { type: 'fix', description: "Fixed charts showing blank - country filter now correctly handles 'all' vs 'Global'" },
+      { type: 'feature', description: "Added Gig Review mode - watch completed gigs with live commentary" },
+      { type: 'feature', description: "VIP players can hear song audio during gig review playback" },
+      { type: 'feature', description: "Gig History now has 'Review Gig' and 'Full Report' options" },
+      { type: 'improvement', description: "Enhanced gig metrics with song-by-song playback and progress tracking" },
+    ]
+  },
+  {
     version: "1.0.332",
     date: "2026-01-02",
     changes: [
