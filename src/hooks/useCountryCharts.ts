@@ -89,9 +89,13 @@ export const useCountryCharts = (
         .order("plays_count", { ascending: false })
         .limit(50);
 
+      // Handle country filter - database uses "all" but UI uses "Global"
       if (country !== "Global") {
-        query = query.eq("country", country);
+        // Query for both the specific country AND entries marked as "all" (global)
+        query = query.or(`country.eq.${country},country.eq.all`);
       }
+      // When "Global" is selected, we want ALL entries (no country filter needed)
+      // since we want to see global charts
 
       if (genre !== "All") {
         query = query.eq("genre", genre);

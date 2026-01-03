@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award } from "lucide-react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
+import { GigReviewViewer } from "@/components/gig/GigReviewViewer";
 import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
 import { buildGearOutcomeNarrative } from "@/utils/gigNarrative";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface GigHistoryTabProps {
   bandId: string;
@@ -58,7 +60,11 @@ type GigOutcomeWithDetails = GigHistoryOutcome & {
 export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [selectedOutcome, setSelectedOutcome] = useState<GigOutcomeWithDetails | null>(null);
   const [showReport, setShowReport] = useState(false);
-
+  const [showReviewViewer, setShowReviewViewer] = useState(false);
+  const [reviewGigId, setReviewGigId] = useState<string | null>(null);
+  const [reviewOutcomeId, setReviewOutcomeId] = useState<string | null>(null);
+  const [showReviewChoice, setShowReviewChoice] = useState(false);
+  const [pendingOutcome, setPendingOutcome] = useState<GigHistoryOutcome | null>(null);
   const { data: selectedGearData } = useBandGearEffects(selectedOutcome?.gigs?.band_id ?? bandId, {
     enabled: showReport && Boolean(selectedOutcome?.gigs?.band_id ?? bandId),
   });
@@ -130,6 +136,25 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     );
   }
 
+  const handleReviewGig = (outcome: GigHistoryOutcome) => {
+    setPendingOutcome(outcome);
+    setShowReviewChoice(true);
+  };
+
+  const handleWatchWithCommentary = async () => {
+    if (!pendingOutcome?.gigs?.id) return;
+    setReviewGigId(pendingOutcome.gigs.id);
+    setReviewOutcomeId(pendingOutcome.id);
+    setShowReviewChoice(false);
+    setShowReviewViewer(true);
+  };
+
+  const handleInstantOutcome = async () => {
+    if (!pendingOutcome) return;
+    setShowReviewChoice(false);
+    await handleViewDetails(pendingOutcome);
+  };
+
   const handleViewDetails = async (outcome: GigHistoryOutcome) => {
     // Fetch song performances for this gig
     const { data: songPerfs } = await supabase
@@ -138,7 +163,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
       .eq('gig_outcome_id', outcome.id)
       .order('position');
 
-    setSelectedOutcome({
+    const fullOutcome = {
       ...outcome,
       gig_song_performances: (songPerfs ?? []) as GigSongPerformanceRow[],
       breakdown_data: {
@@ -160,7 +185,9 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         fameBonusPercent: outcome.venue_loyalty_bonus || 0,
         breakdown: (outcome as any).gear_effects?.breakdown,
       }
-    } as GigOutcomeWithDetails);
+    } as GigOutcomeWithDetails;
+    
+    setSelectedOutcome(fullOutcome);
     setShowReport(true);
   };
 
@@ -283,19 +310,90 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                     </div>
                   </div>
                 </div>
-                <Button
-                  onClick={() => handleViewDetails(outcome)}
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                >
-                  View Full Report
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleReviewGig(outcome)}
+                    variant="default"
+                    size="sm"
+                    className="flex-1 gap-2"
+                  >
+                    <Play className="h-4 w-4" />
+                    Review Gig
+                  </Button>
+                  <Button
+                    onClick={() => handleViewDetails(outcome)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-2"
+                  >
+                    <Award className="h-4 w-4" />
+                    Full Report
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           );
         })}
         </div>
+
+        {/* Review Choice Dialog */}
+        <Dialog open={showReviewChoice} onOpenChange={setShowReviewChoice}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Music className="h-5 w-5" />
+                How would you like to view this gig?
+              </DialogTitle>
+              <DialogDescription>
+                Choose to watch the gig with live commentary or skip straight to the outcome report.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <Button
+                onClick={handleWatchWithCommentary}
+                size="lg"
+                className="h-auto flex-col gap-2 py-4"
+              >
+                <Play className="h-6 w-6" />
+                <span className="font-semibold">Watch with Commentary</span>
+                <span className="text-xs opacity-80">Experience the gig song by song</span>
+              </Button>
+              <Button
+                onClick={handleInstantOutcome}
+                variant="outline"
+                size="lg"
+                className="h-auto flex-col gap-2 py-4"
+              >
+                <FastForward className="h-6 w-6" />
+                <span className="font-semibold">Instant Outcome</span>
+                <span className="text-xs opacity-80">Skip to the full report</span>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Gig Review Viewer */}
+        {showReviewViewer && reviewGigId && reviewOutcomeId && (
+          <Dialog open={showReviewViewer} onOpenChange={setShowReviewViewer}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <GigReviewViewer
+                gigId={reviewGigId}
+                gigOutcomeId={reviewOutcomeId}
+                onClose={() => {
+                  setShowReviewViewer(false);
+                  setReviewGigId(null);
+                  setReviewOutcomeId(null);
+                }}
+                onInstantOutcome={() => {
+                  setShowReviewViewer(false);
+                  if (pendingOutcome) {
+                    handleViewDetails(pendingOutcome);
+                  }
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
 
         {selectedOutcome && (
           <GigOutcomeReport
