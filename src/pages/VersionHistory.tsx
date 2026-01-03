@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.337",
+    date: "2026-01-03",
+    changes: [
+      { type: 'fix', description: "Normalized gear effects in GigOutcomeReport to prevent undefined breakdown crashes" },
+    ]
+  },
+  {
+    version: "1.0.336",
+    date: "2026-01-03",
+    changes: [
+      { type: 'fix', description: "Fixed GigOutcomeReport crash when gear breakdown array is missing" },
+    ]
+  },
+  {
     version: "1.0.335",
     date: "2026-01-03",
     changes: [
