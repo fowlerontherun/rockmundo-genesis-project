@@ -134,12 +134,12 @@ export default function WellnessPage() {
 
       if (error) throw error;
 
-      // Update mental focus attribute
+      // Update mental focus attribute (max is 1000, not 100!)
       if (mentalFocusGain > 0) {
         const currentFocus = attributes?.mental_focus || 10;
         await supabase
           .from("player_attributes")
-          .update({ mental_focus: Math.min(100, currentFocus + mentalFocusGain) })
+          .update({ mental_focus: Math.min(1000, currentFocus + mentalFocusGain) })
           .eq("profile_id", profile.id);
       }
 
@@ -185,11 +185,11 @@ export default function WellnessPage() {
 
       if (error) throw error;
 
-      // Update physical endurance
+      // Update physical endurance (max is 1000, not 100!)
       const currentEndurance = attributes?.physical_endurance || 10;
       await supabase
         .from("player_attributes")
-        .update({ physical_endurance: Math.min(100, currentEndurance + enduranceGains[intensity]) })
+        .update({ physical_endurance: Math.min(1000, currentEndurance + enduranceGains[intensity]) })
         .eq("profile_id", profile.id);
 
       return { health: newHealth, energy: newEnergy, intensity };
@@ -227,11 +227,11 @@ export default function WellnessPage() {
 
       if (error) throw error;
 
-      // Boost mental focus
+      // Boost mental focus (max is 1000, not 100!)
       const currentFocus = attributes?.mental_focus || 10;
       await supabase
         .from("player_attributes")
-        .update({ mental_focus: Math.min(100, currentFocus + 5) })
+        .update({ mental_focus: Math.min(1000, currentFocus + 5) })
         .eq("profile_id", profile.id);
 
       return { cash: newCash };

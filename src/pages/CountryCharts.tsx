@@ -52,6 +52,18 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
     );
   }
 
+  if (entries.length === 0 && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Music className="h-12 w-12 text-muted-foreground/50 mb-4" />
+        <h3 className="text-lg font-semibold text-muted-foreground">No Chart Data Available</h3>
+        <p className="text-sm text-muted-foreground/70 max-w-md mt-2">
+          No songs are currently charting for the selected filters. This may happen for physical formats like vinyl or cassette if there haven't been recent sales.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1">
       {/* Header */}

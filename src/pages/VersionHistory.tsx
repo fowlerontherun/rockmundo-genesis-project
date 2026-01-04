@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.339",
+    date: "2026-01-04",
+    changes: [
+      { type: 'fix', description: "Charts now show songs from all bands (added public RLS policy for released songs)" },
+      { type: 'fix', description: "Charts show proper empty state message for physical formats with no sales" },
+      { type: 'fix', description: "Mental Focus attribute no longer incorrectly capped at 100 (now uses 1000 max)" },
+      { type: 'fix', description: "Physical Endurance attribute no longer incorrectly capped at 100 (now uses 1000 max)" },
+      { type: 'feature', description: "Added Band Finder page under Band Chemistry to search and view any band" },
+    ]
+  },
+  {
     version: "1.0.338",
     date: "2026-01-03",
     changes: [
