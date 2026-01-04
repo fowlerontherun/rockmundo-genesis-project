@@ -44,7 +44,7 @@ export default function BandFinder() {
           chemistry_level,
           description,
           total_fans,
-          band_members(id)
+          band_members!band_members_band_id_fkey(id)
         `)
         .eq("status", "active")
         .order("fame", { ascending: false })
@@ -93,10 +93,10 @@ export default function BandFinder() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Search className="h-8 w-8 text-primary" />
-          Band Finder
+          {t("bandFinder.title", "Band Finder")}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Search and explore bands in the game
+          {t("bandFinder.description", "Search and explore bands in the game")}
         </p>
       </div>
 

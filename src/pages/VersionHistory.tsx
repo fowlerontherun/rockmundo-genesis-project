@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.340",
+    date: "2026-01-04",
+    changes: [
+      { type: 'fix', description: "Fixed Band Finder query by specifying explicit FK relationship for band_members" },
+    ]
+  },
+  {
     version: "1.0.339",
     date: "2026-01-04",
     changes: [
