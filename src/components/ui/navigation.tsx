@@ -149,6 +149,7 @@ const Navigation = () => {
       items: [
         { icon: Users, labelKey: "nav.bandManager", path: "/band" },
         { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry" },
+        { icon: Globe, labelKey: "nav.bandFinder", path: "/bands/finder" },
         { icon: UserPlus, labelKey: "nav.bandCrew", path: "/band-crew" },
       ],
     },
