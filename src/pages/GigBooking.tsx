@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Flag, MapPin, Music, PlayCircle, Star, Ticket, Users } from 'lucide-react';
+import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { useToast } from '@/hooks/use-toast';
@@ -21,33 +22,49 @@ import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
-import { formatDistanceToNow, differenceInDays } from 'date-fns';
+import { formatDistanceToNow, differenceInDays, startOfDay, endOfDay } from 'date-fns';
 import { predictTotalTicketSales } from '@/utils/ticketSalesSimulation';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
 type BandRow = Database['public']['Tables']['bands']['Row'];
+type CityRow = Database['public']['Tables']['cities']['Row'];
 
+type VenueWithCity = VenueRow & { cities?: CityRow | null };
 type GigWithVenue = GigRow & { venues: VenueRow | null };
 
 const DEFAULT_GIG_OFFSET_DAYS = 7;
 
+const VENUE_SIZE_FILTERS = [
+  { label: 'All Sizes', value: 'all', min: 0, max: Infinity },
+  { label: 'Small (<200)', value: 'small', min: 0, max: 199 },
+  { label: 'Medium (200-1000)', value: 'medium', min: 200, max: 999 },
+  { label: 'Large (1000-5000)', value: 'large', min: 1000, max: 4999 },
+  { label: 'Arena (5000+)', value: 'arena', min: 5000, max: Infinity }
+];
+
 const GigBooking = () => {
   const { user } = useAuth();
-  const { profile, skills, attributes, addActivity } = useGameData();
+  const { profile, skills, attributes, addActivity, currentCity } = useGameData();
   const { toast } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [venues, setVenues] = useState<VenueRow[]>([]);
+  const [venues, setVenues] = useState<VenueWithCity[]>([]);
   const [band, setBand] = useState<BandRow | null>(null);
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
   const [isBooking, setIsBooking] = useState(false);
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
   const [venueCooldowns, setVenueCooldowns] = useState<Map<string, VenueCooldownResult>>(new Map());
+  
+  // Filter state
+  const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedVenueSize, setSelectedVenueSize] = useState<string>('all');
+  const [countries, setCountries] = useState<string[]>([]);
+  const [playerCountry, setPlayerCountry] = useState<string | null>(null);
 
   const { data: setlists } = useSetlists(band?.id || null);
   const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
@@ -74,10 +91,21 @@ const GigBooking = () => {
     return Math.max(0, Math.min(100, Math.round(combined)));
   }, [performanceSkill, stagePresence, crowdEngagement, fame]);
 
+  // Set player's country as default filter when currentCity loads
+  useEffect(() => {
+    if (currentCity?.country && !playerCountry) {
+      setPlayerCountry(currentCity.country);
+      setSelectedCountry(currentCity.country);
+    }
+  }, [currentCity, playerCountry]);
+
   const loadVenues = useCallback(async () => {
     const { data, error } = await supabase
       .from('venues')
-      .select('*')
+      .select(`
+        *,
+        cities!city_id (id, name, country)
+      `)
       .order('prestige_level', { ascending: true });
 
     if (error) {
@@ -90,8 +118,38 @@ const GigBooking = () => {
       return;
     }
 
-    setVenues(data ?? []);
+    const venueData = (data ?? []) as VenueWithCity[];
+    setVenues(venueData);
+    
+    // Extract unique countries from venues
+    const uniqueCountries = [...new Set(
+      venueData
+        .map(v => v.cities?.country)
+        .filter((c): c is string => !!c)
+    )].sort();
+    setCountries(uniqueCountries);
   }, [toast]);
+
+  // Filter venues based on selected country and size
+  const filteredVenues = useMemo(() => {
+    return venues.filter(venue => {
+      // Country filter
+      if (selectedCountry !== 'all') {
+        const venueCountry = venue.cities?.country;
+        if (venueCountry !== selectedCountry) return false;
+      }
+      
+      // Size filter
+      if (selectedVenueSize !== 'all') {
+        const sizeFilter = VENUE_SIZE_FILTERS.find(s => s.value === selectedVenueSize);
+        if (sizeFilter && venue.capacity) {
+          if (venue.capacity < sizeFilter.min || venue.capacity > sizeFilter.max) return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [venues, selectedCountry, selectedVenueSize]);
 
   const resolveBand = useCallback(async (): Promise<BandRow | null> => {
     if (!user?.id) {
@@ -211,6 +269,7 @@ const GigBooking = () => {
       updateVenueCooldowns(band.id, venues);
     }
   }, [band?.id, venues, updateVenueCooldowns]);
+  
   const getNextAvailableDateForVenue = useCallback((venueId: string) => {
     const now = new Date();
     const candidateTimes: number[] = [now.getTime()];
@@ -297,6 +356,28 @@ const GigBooking = () => {
       const scheduledDateTime = new Date(selectedDate);
       const [hours, minutes] = slot.startTime.split(':');
       scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      // Check for double-booking: ensure band doesn't have another gig at the same date/time
+      const { data: conflictingGig } = await supabase
+        .from('gigs')
+        .select('id, time_slot, venues(name)')
+        .eq('band_id', band.id)
+        .eq('time_slot', selectedSlot)
+        .in('status', ['scheduled', 'in_progress'])
+        .gte('scheduled_date', startOfDay(scheduledDateTime).toISOString())
+        .lt('scheduled_date', endOfDay(scheduledDateTime).toISOString())
+        .maybeSingle();
+
+      if (conflictingGig) {
+        const venueName = (conflictingGig.venues as any)?.name || 'another venue';
+        toast({
+          title: 'Scheduling Conflict',
+          description: `Your band already has a gig at ${venueName} during this time slot on this date.`,
+          variant: 'destructive'
+        });
+        setIsBooking(false);
+        return;
+      }
 
       // Calculate adjusted estimates with slot multiplier
       const venueCapacity = bookingVenue.capacity ?? attendanceForecast.realistic;
@@ -490,144 +571,117 @@ const GigBooking = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Star className="h-5 w-5 text-primary" />
-              Performance Readiness
-            </CardTitle>
-            <CardDescription>
-              Track how prepared your act is for upcoming shows.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-sm font-medium">
-                <span>Overall readiness</span>
-                <span>{readinessScore}%</span>
-              </div>
-              <Progress value={readinessScore} className="mt-2 h-2" />
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Music className="h-4 w-4" />
-                Performance skill: {skills?.performance ?? 0}
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Crowd engagement: {attributes?.crowd_engagement ?? 0}
-              </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4" />
-                Stage presence: {attributes?.stage_presence ?? 0}
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Fame: {profile?.fame ?? 0}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-primary" />
-              Upcoming Gigs
-            </CardTitle>
-            <CardDescription>
-              Manage your scheduled performances and head to the stage when ready.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {band ? (
-              <div className="space-y-4">
-                {upcomingGigs.length ? (
-                  upcomingGigs.map((gig) => {
-                    const venue = gig.venues;
-                    const scheduledDate = new Date(gig.scheduled_date);
-                    const status = gig.status ?? 'scheduled';
-                    const statusConfig = getGigStatusConfig(status);
-
-                    return (
-                      <div
-                        key={gig.id}
-                        className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm font-semibold">
-                            <Music className="h-4 w-4 text-primary" />
-                            {venue?.name ?? 'Unassigned Venue'}
-                            {gig.time_slot && (
-                              <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
-                                {getSlotById(gig.time_slot)?.name || gig.time_slot}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            {scheduledDate.toLocaleDateString()}
-                          </div>
-                          {gig.slot_start_time && gig.slot_end_time && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Clock className="h-4 w-4" />
-                              {gig.slot_start_time} - {gig.slot_end_time}
-                            </div>
-                          )}
-                          {venue?.location ? (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <MapPin className="h-4 w-4" />
-                              {venue.location}
-                            </div>
-                          ) : null}
-                          {gig.status === 'scheduled' && gig.predicted_tickets && gig.venues?.capacity && (
-                            <TicketSalesDisplay
-                              ticketsSold={gig.tickets_sold || 0}
-                              predictedTickets={gig.predicted_tickets}
-                              venueCapacity={gig.venues.capacity}
-                            />
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge variant={statusConfig.badgeVariant} className="flex items-center gap-1 capitalize">
-                            {statusConfig.icon}
-                            {statusConfig.badgeLabel}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant={statusConfig.buttonVariant}
-                            onClick={() => navigate(`/gigs/perform/${gig.id}`)}
-                          >
-                            {statusConfig.buttonLabel}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                    No gigs scheduled yet. Book a venue below to get started.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Join or create a band to start booking gigs.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="venues" className="space-y-4">
+      <Tabs defaultValue="book" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="venues">Available Venues</TabsTrigger>
-          <TabsTrigger value="history">Gig History</TabsTrigger>
+          <TabsTrigger value="book">
+            <MapPin className="h-4 w-4 mr-1" />
+            Book
+          </TabsTrigger>
+          <TabsTrigger value="upcoming">
+            <Calendar className="h-4 w-4 mr-1" />
+            Upcoming Gigs
+            {upcomingGigs.length > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 min-w-5 rounded-full px-1">
+                {upcomingGigs.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Gig History
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="venues">
+        <TabsContent value="book" className="space-y-4">
+          {/* Performance Readiness Card */}
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Star className="h-5 w-5 text-primary" />
+                Performance Readiness
+              </CardTitle>
+              <CardDescription>
+                Track how prepared your act is for upcoming shows.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between text-sm font-medium">
+                  <span>Overall readiness</span>
+                  <span>{readinessScore}%</span>
+                </div>
+                <Progress value={readinessScore} className="mt-2 h-2" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Music className="h-4 w-4" />
+                  Performance skill: {skills?.performance ?? 0}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Crowd engagement: {attributes?.crowd_engagement ?? 0}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  Stage presence: {attributes?.stage_presence ?? 0}
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Fame: {profile?.fame ?? 0}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Venue Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Filter className="h-5 w-5 text-primary" />
+                Filter Venues
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">Country</label>
+                  <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {countries.map(country => (
+                        <SelectItem key={country} value={country}>
+                          {country} {country === playerCountry && '(Your Location)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">Venue Size</label>
+                  <Select value={selectedVenueSize} onValueChange={setSelectedVenueSize}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VENUE_SIZE_FILTERS.map(size => (
+                        <SelectItem key={size.value} value={size.value}>
+                          {size.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Showing {filteredVenues.length} of {venues.length} venues
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Available Venues */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -650,9 +704,9 @@ const GigBooking = () => {
                   </AlertDescription>
                 </Alert>
               )}
-              {venues.length ? (
+              {filteredVenues.length ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {venues.map((venue) => {
+                  {filteredVenues.map((venue) => {
                     const nextSlotDate = getNextAvailableDateForVenue(venue.id);
                     const cooldownLabel = bandLockout.isLocked && bandLockout.lockedUntil
                       ? formatDistanceToNow(bandLockout.lockedUntil, { addSuffix: true })
@@ -666,10 +720,12 @@ const GigBooking = () => {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <CardTitle className="text-base">{venue.name}</CardTitle>
-                              {venue.location ? (
+                              {(venue.location || venue.cities?.name) ? (
                                 <CardDescription className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
-                                  {venue.location}
+                                  {venue.cities?.name && venue.cities?.country 
+                                    ? `${venue.cities.name}, ${venue.cities.country}`
+                                    : venue.location}
                                 </CardDescription>
                               ) : null}
                             </div>
@@ -723,7 +779,124 @@ const GigBooking = () => {
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  No venues are currently available. Check back soon.
+                  No venues match your current filters. Try adjusting your filters above.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="upcoming">
+          <Card>
+            <CardHeader className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Upcoming Gigs
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your scheduled performances and head to the stage when ready.
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => band?.id && loadUpcomingGigs(band.id)}
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {band ? (
+                <div className="space-y-4">
+                  {upcomingGigs.length ? (
+                    upcomingGigs.map((gig) => {
+                      const venue = gig.venues;
+                      const scheduledDate = new Date(gig.scheduled_date);
+                      const status = gig.status ?? 'scheduled';
+                      const statusConfig = getGigStatusConfig(status);
+
+                      return (
+                        <div
+                          key={gig.id}
+                          className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2 text-sm font-semibold">
+                              <Music className="h-4 w-4 text-primary" />
+                              {venue?.name ?? 'Unassigned Venue'}
+                              {gig.time_slot && (
+                                <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
+                                  {getSlotById(gig.time_slot)?.name || gig.time_slot}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              {scheduledDate.toLocaleDateString()}
+                            </div>
+                            {gig.slot_start_time && gig.slot_end_time && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                {gig.slot_start_time} - {gig.slot_end_time}
+                              </div>
+                            )}
+                            {venue?.location ? (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="h-4 w-4" />
+                                {venue.location}
+                              </div>
+                            ) : null}
+                            
+                            {/* Ticket Sales Display - Prominent */}
+                            {gig.status === 'scheduled' && gig.predicted_tickets && venue?.capacity && (
+                              <div className="mt-3 p-3 bg-card rounded-lg border">
+                                <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                                  <Ticket className="h-4 w-4 text-primary" />
+                                  Ticket Sales
+                                </div>
+                                <TicketSalesDisplay
+                                  ticketsSold={gig.tickets_sold || 0}
+                                  predictedTickets={gig.predicted_tickets}
+                                  venueCapacity={venue.capacity}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 sm:items-end">
+                            <Badge variant={statusConfig.badgeVariant} className="flex items-center gap-1 capitalize w-fit">
+                              {statusConfig.icon}
+                              {statusConfig.badgeLabel}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant={statusConfig.buttonVariant}
+                              onClick={() => navigate(`/gigs/perform/${gig.id}`)}
+                            >
+                              {statusConfig.buttonLabel}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                      No gigs scheduled yet. Book a venue to get started.
+                      <Button asChild size="sm" className="mt-2">
+                        <Link to="#" onClick={() => document.querySelector('[value="book"]')?.dispatchEvent(new MouseEvent('click'))}>
+                          Browse Venues
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  Join or create a band to start booking gigs.
                 </div>
               )}
             </CardContent>
@@ -743,17 +916,17 @@ const GigBooking = () => {
         </TabsContent>
       </Tabs>
 
-        {bookingVenue && setlists && band && (
-          <GigBookingDialog
-            venue={bookingVenue}
-            band={band}
-            setlists={setlists.map(s => ({ id: s.id, name: s.name, song_count: s.song_count || 0 }))}
-            onConfirm={handleBookingDialogConfirm}
-            onClose={() => setBookingVenue(null)}
-            isBooking={isBooking}
-            initialDate={getNextAvailableDateForVenue(bookingVenue.id)}
-          />
-        )}
+      {bookingVenue && setlists && band && (
+        <GigBookingDialog
+          venue={bookingVenue}
+          band={band}
+          setlists={setlists.map(s => ({ id: s.id, name: s.name, song_count: s.song_count || 0 }))}
+          onConfirm={handleBookingDialogConfirm}
+          onClose={() => setBookingVenue(null)}
+          isBooking={isBooking}
+          initialDate={getNextAvailableDateForVenue(bookingVenue.id)}
+        />
+      )}
     </div>
   );
 };
