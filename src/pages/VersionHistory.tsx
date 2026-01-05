@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.341",
+    date: "2026-01-05",
+    changes: [
+      { type: 'feature', description: "Restructured Gig page with Book, Upcoming Gigs, and Gig History tabs" },
+      { type: 'feature', description: "Added venue filters by country and size (defaults to player's country)" },
+      { type: 'fix', description: "Added double-booking prevention - can't book same band at same date/time slot" },
+      { type: 'improvement', description: "Enhanced ticket sales display in Upcoming Gigs tab" },
+      { type: 'improvement', description: "Venue cards now show city and country information" },
+    ]
+  },
+  {
     version: "1.0.340",
     date: "2026-01-04",
     changes: [
