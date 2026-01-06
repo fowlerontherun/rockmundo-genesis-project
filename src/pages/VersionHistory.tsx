@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.342",
+    date: "2026-01-06",
+    changes: [
+      { type: 'fix', description: "Fixed songwriting trigger using wrong column name (recording_project_id → songwriting_project_id)" },
+      { type: 'fix', description: "Fixed songwriting trigger missing user_id causing song creation to fail" },
+      { type: 'fix', description: "Charts now include ALL released songs, not just player band songs" },
+      { type: 'fix', description: "Charts generation now collects all entries before delete/insert (more robust)" },
+      { type: 'fix', description: "Added missing cron jobs for auto-distribute-streaming, update-daily-streams, update-music-charts" },
+      { type: 'fix', description: "Fixed Band Finder nav label showing translation key instead of 'Band Finder'" },
+      { type: 'improvement', description: "Added better logging to update-music-charts for debugging" },
+    ]
+  },
+  {
     version: "1.0.341",
     date: "2026-01-05",
     changes: [

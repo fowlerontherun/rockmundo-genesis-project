@@ -128,6 +128,8 @@ export const de = {
     eurovision: "Eurovision",
     openMic: "Open Mic",
     bandChemistry: "Band-Chemie",
+    bandFinder: "Band-Finder",
+    bandfinder: "Band-Finder",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Community",

@@ -128,6 +128,8 @@ export const es: TranslationKeys = {
     eurovision: "Eurovisión",
     openMic: "Noche de Micrófono Abierto",
     bandChemistry: "Química de Banda",
+    bandFinder: "Buscador de Bandas",
+    bandfinder: "Buscador de Bandas",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Comunidad",
