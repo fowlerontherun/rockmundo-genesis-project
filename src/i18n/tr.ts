@@ -130,6 +130,8 @@ export const tr: TranslationKeys = {
     eurovision: "Eurovision",
     openMic: "Açık Mikrofon Geceleri",
     bandChemistry: "Grup Uyumu",
+    bandFinder: "Grup Bulucu",
+    bandfinder: "Grup Bulucu",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Topluluk",
