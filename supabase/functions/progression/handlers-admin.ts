@@ -32,20 +32,33 @@ export const handleAdminAwardSpecialXp = async (
   }
 
   let targetProfileIds: string[] = [];
+  let profileUserMap = new Map<string, string | null>();
 
   if (applyToAll) {
-    // Get all profile IDs
+    // Get all profile IDs (+ user IDs for ledger)
     const { data: allProfiles, error: profilesError } = await client
       .from("profiles")
-      .select("id");
+      .select("id, user_id");
 
     if (profilesError) {
       throw new Error("Failed to fetch profiles");
     }
 
     targetProfileIds = (allProfiles || []).map((p) => p.id);
+    profileUserMap = new Map((allProfiles || []).map((p) => [p.id, p.user_id]));
   } else {
     targetProfileIds = profileIds;
+
+    const { data: targetProfiles, error: targetProfilesError } = await client
+      .from("profiles")
+      .select("id, user_id")
+      .in("id", targetProfileIds);
+
+    if (targetProfilesError) {
+      throw new Error("Failed to fetch target profiles");
+    }
+
+    profileUserMap = new Map((targetProfiles || []).map((p) => [p.id, p.user_id]));
   }
 
   if (targetProfileIds.length === 0) {
@@ -66,7 +79,6 @@ export const handleAdminAwardSpecialXp = async (
       const currentBalance = existingWallet?.xp_balance ?? 0;
       const currentLifetime = existingWallet?.lifetime_xp ?? 0;
 
-      // Update or insert wallet - use explicit conflict handling
       const walletData = {
         profile_id: profileId,
         xp_balance: currentBalance + amount,
@@ -75,9 +87,8 @@ export const handleAdminAwardSpecialXp = async (
       };
 
       let walletSuccess = false;
-      
+
       if (existingWallet) {
-        // Update existing wallet
         const { error: updateError } = await client
           .from("player_xp_wallet")
           .update({
@@ -93,7 +104,6 @@ export const handleAdminAwardSpecialXp = async (
           walletSuccess = true;
         }
       } else {
-        // Insert new wallet
         const { error: insertError } = await client
           .from("player_xp_wallet")
           .insert(walletData);
@@ -110,10 +120,21 @@ export const handleAdminAwardSpecialXp = async (
         continue;
       }
 
-      // Log the grant
-      await client.from("experience_ledger").insert({
+      // Count as rewarded once wallet update succeeded.
+      updatedCount++;
+
+      // Log the grant (best-effort; do not fail the reward if ledger insert fails)
+      const targetUserId = profileUserMap.get(profileId) ?? null;
+      if (!targetUserId) {
+        console.warn(
+          `Skipping experience_ledger insert for profile ${profileId}: missing user_id on profiles row`,
+        );
+        continue;
+      }
+
+      const { error: ledgerError } = await client.from("experience_ledger").insert({
         profile_id: profileId,
-        user_id: (await client.from("profiles").select("user_id").eq("id", profileId).single()).data?.user_id,
+        user_id: targetUserId,
         activity_type: "admin_grant",
         xp_amount: amount,
         metadata: {
@@ -123,7 +144,9 @@ export const handleAdminAwardSpecialXp = async (
         },
       });
 
-      updatedCount++;
+      if (ledgerError) {
+        console.error(`Failed to insert experience_ledger for profile ${profileId}:`, ledgerError);
+      }
     } catch (error) {
       console.error(`Failed to award XP to profile ${profileId}:`, error);
     }
