@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.344",
+    date: "2026-01-07",
+    changes: [
+      { type: 'fix', description: "Fixed Admin XP Rewards failing for other players (ledger insert no longer blocks wallet award; user_id resolved in bulk)" },
+    ]
+  },
+  {
     version: "1.0.343",
     date: "2026-01-07",
     changes: [
