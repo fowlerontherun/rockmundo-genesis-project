@@ -66,18 +66,47 @@ export const handleAdminAwardSpecialXp = async (
       const currentBalance = existingWallet?.xp_balance ?? 0;
       const currentLifetime = existingWallet?.lifetime_xp ?? 0;
 
-      // Update wallet
-      const { error: walletError } = await client
-        .from("player_xp_wallet")
-        .upsert({
-          profile_id: profileId,
-          xp_balance: currentBalance + amount,
-          lifetime_xp: currentLifetime + amount,
-          last_recalculated: new Date().toISOString(),
-        });
+      // Update or insert wallet - use explicit conflict handling
+      const walletData = {
+        profile_id: profileId,
+        xp_balance: currentBalance + amount,
+        lifetime_xp: currentLifetime + amount,
+        last_recalculated: new Date().toISOString(),
+      };
 
-      if (walletError) {
-        console.error(`Failed to update wallet for profile ${profileId}:`, walletError);
+      let walletSuccess = false;
+      
+      if (existingWallet) {
+        // Update existing wallet
+        const { error: updateError } = await client
+          .from("player_xp_wallet")
+          .update({
+            xp_balance: currentBalance + amount,
+            lifetime_xp: currentLifetime + amount,
+            last_recalculated: new Date().toISOString(),
+          })
+          .eq("profile_id", profileId);
+
+        if (updateError) {
+          console.error(`Failed to update wallet for profile ${profileId}:`, updateError);
+        } else {
+          walletSuccess = true;
+        }
+      } else {
+        // Insert new wallet
+        const { error: insertError } = await client
+          .from("player_xp_wallet")
+          .insert(walletData);
+
+        if (insertError) {
+          console.error(`Failed to insert wallet for profile ${profileId}:`, insertError);
+        } else {
+          walletSuccess = true;
+        }
+      }
+
+      if (!walletSuccess) {
+        console.error(`Wallet operation failed for profile ${profileId}, skipping`);
         continue;
       }
 
