@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
           song_release_id: release.id,
           analytics_date: new Date().toISOString().split('T')[0],
           daily_streams: dailyStreams,
-          daily_revenue: dailyRevenue,
+          daily_revenue: Math.floor(dailyRevenue), // Convert to integer for DB column
           platform_id: release.platform_id,
         });
 

@@ -156,7 +156,8 @@ serve(async (req) => {
     const themeName = project?.song_themes?.name || null
     const themeMood = project?.song_themes?.mood || null
     const themeDescription = project?.song_themes?.description || null
-    const rawLyrics = project?.lyrics || null
+    // Prefer song lyrics, fallback to project lyrics
+    const rawLyrics = song.lyrics || project?.lyrics || null
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
 
