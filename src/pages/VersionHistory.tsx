@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.346",
+    date: "2026-01-08",
+    changes: [
+      { type: 'feature', description: "Added RM Radio - popup player that plays all AI-generated songs in random loop order" },
+      { type: 'feature', description: "RM Radio shows Now Playing with song title, band name, and genre" },
+      { type: 'feature', description: "RM Radio includes shuffle, skip, play/pause, and volume controls" },
+    ]
+  },
+  {
     version: "1.0.345",
     date: "2026-01-08",
     changes: [

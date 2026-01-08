@@ -15,6 +15,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
+import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home,
   Users,
@@ -392,6 +393,7 @@ const Navigation = () => {
           <div className="flex items-center gap-1">
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
+            <RMRadioButton />
             <NotificationBell />
             <ThemeSwitcher />
             <LanguageSwitcher />
@@ -424,6 +426,7 @@ const Navigation = () => {
           {!isDesktopCollapsed && (
             <div className="flex items-center gap-1">
               <PrisonStatusIndicator />
+              <RMRadioButton />
               <NotificationBell />
               <ThemeSwitcher />
               <LanguageSwitcher />
