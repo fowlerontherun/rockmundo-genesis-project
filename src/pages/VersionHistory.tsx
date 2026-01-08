@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.345",
+    date: "2026-01-08",
+    changes: [
+      { type: 'feature', description: "Auto-generate unique AI lyrics when songs have no lyrics during audio generation" },
+      { type: 'improvement', description: "Generated lyrics are saved to song and project records for future use" },
+      { type: 'fix', description: "Eliminated duplicate/generic placeholder lyrics - every song now gets unique lyrics" },
+    ]
+  },
+  {
     version: "1.0.344",
     date: "2026-01-07",
     changes: [
