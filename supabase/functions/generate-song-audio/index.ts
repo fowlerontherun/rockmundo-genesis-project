@@ -196,7 +196,7 @@ serve(async (req) => {
     const chordName = project?.chord_progressions?.name || null
     const themeName = project?.song_themes?.name || null
     const themeMood = project?.song_themes?.mood || null
-    const rawLyrics = project?.lyrics || null
+    let rawLyrics = song.lyrics || project?.lyrics || null
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
 
@@ -209,7 +209,70 @@ serve(async (req) => {
     
     console.log(`[generate-song-audio] Building MiniMax prompt for "${cleanedSongTitle}"`)
     console.log(`[generate-song-audio] Genre: ${primaryGenre}`)
-    console.log(`[generate-song-audio] Has Lyrics: ${!!rawLyrics}`)
+    console.log(`[generate-song-audio] Initial Lyrics Check: ${rawLyrics ? rawLyrics.length + ' chars' : 'NONE'}`)
+
+    // AUTO-GENERATE LYRICS if missing - ensures every song has unique lyrics
+    if (!rawLyrics || rawLyrics.trim().length === 0) {
+      console.log(`[generate-song-audio] No lyrics found - auto-generating unique AI lyrics...`)
+      
+      try {
+        const lyricsResponse = await fetch(
+          `${supabaseUrl}/functions/v1/generate-song-lyrics`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`
+            },
+            body: JSON.stringify({
+              title: cleanedSongTitle,
+              theme: themeName ? { name: themeName, mood: themeMood } : 'universal',
+              genre: primaryGenre,
+              chordProgression: chordProgression ? { name: chordName, progression: chordProgression } : null,
+              creativeBrief: creativeBrief
+            })
+          }
+        )
+        
+        if (lyricsResponse.ok) {
+          const lyricsResult = await lyricsResponse.json()
+          if (lyricsResult?.lyrics) {
+            rawLyrics = lyricsResult.lyrics
+            console.log(`[generate-song-audio] Successfully generated ${rawLyrics.length} chars of unique lyrics`)
+            
+            // Save generated lyrics to song record for future use
+            const { error: lyricsUpdateError } = await supabase
+              .from('songs')
+              .update({ lyrics: rawLyrics })
+              .eq('id', songId)
+            
+            if (lyricsUpdateError) {
+              console.error('[generate-song-audio] Failed to save lyrics to song:', lyricsUpdateError)
+            } else {
+              console.log('[generate-song-audio] Saved auto-generated lyrics to song record')
+            }
+            
+            // Also save to project if exists
+            if (song.songwriting_project_id) {
+              await supabase
+                .from('songwriting_projects')
+                .update({ lyrics: rawLyrics })
+                .eq('id', song.songwriting_project_id)
+              console.log('[generate-song-audio] Saved auto-generated lyrics to project record')
+            }
+          } else {
+            console.error('[generate-song-audio] Lyrics response missing lyrics field:', lyricsResult)
+          }
+        } else {
+          const errorText = await lyricsResponse.text()
+          console.error('[generate-song-audio] Lyrics generation failed:', lyricsResponse.status, errorText)
+        }
+      } catch (lyricsError) {
+        console.error('[generate-song-audio] Exception during lyrics generation:', lyricsError)
+      }
+    }
+    
+    console.log(`[generate-song-audio] Final Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'using placeholder'}`)
 
     // Build the style prompt for MiniMax
     let styleParts: string[] = []

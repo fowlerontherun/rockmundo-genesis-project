@@ -157,7 +157,7 @@ serve(async (req) => {
     const themeMood = project?.song_themes?.mood || null
     const themeDescription = project?.song_themes?.description || null
     // Prefer song lyrics, fallback to project lyrics
-    const rawLyrics = song.lyrics || project?.lyrics || null
+    let rawLyrics = song.lyrics || project?.lyrics || null
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
 
@@ -172,9 +172,72 @@ serve(async (req) => {
     addLog(`  - Theme: ${themeName || 'None'} (${themeMood || 'N/A'})`)
     addLog(`  - Inspiration: ${inspirationAnchor || 'None'}`)
     addLog(`  - Mood Palette: ${Array.isArray(moodPalette) && moodPalette.length > 0 ? moodPalette.join(', ') : 'None'}`)
-    addLog(`  - Has Lyrics: ${!!rawLyrics}`)
+    addLog(`  - Initial Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'NONE'}`)
     addLog(`  - Quality Score: ${quality}`)
     addLog(`  - Duration: ${durationSeconds}s`)
+
+    // AUTO-GENERATE LYRICS if missing - ensures every song has unique lyrics
+    if (!rawLyrics || rawLyrics.trim().length === 0) {
+      addLog('No lyrics found - auto-generating unique AI lyrics...')
+      
+      try {
+        const lyricsResponse = await fetch(
+          `${supabaseUrl}/functions/v1/generate-song-lyrics`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`
+            },
+            body: JSON.stringify({
+              title: cleanedSongTitle,
+              theme: themeName ? { name: themeName, mood: themeMood, description: themeDescription } : 'universal',
+              genre: primaryGenre,
+              chordProgression: chordProgression ? { name: chordName, progression: chordProgression } : null,
+              creativeBrief: creativeBrief
+            })
+          }
+        )
+        
+        if (lyricsResponse.ok) {
+          const lyricsResult = await lyricsResponse.json()
+          if (lyricsResult?.lyrics) {
+            rawLyrics = lyricsResult.lyrics
+            addLog(`Successfully auto-generated ${rawLyrics.length} chars of unique lyrics`)
+            
+            // Save generated lyrics to song record for future use
+            const { error: lyricsUpdateError } = await supabase
+              .from('songs')
+              .update({ lyrics: rawLyrics })
+              .eq('id', songId)
+            
+            if (lyricsUpdateError) {
+              addLog(`WARNING: Failed to save lyrics to song: ${lyricsUpdateError.message}`)
+            } else {
+              addLog('Saved auto-generated lyrics to song record')
+            }
+            
+            // Also save to project if exists
+            if (song.songwriting_project_id) {
+              await supabase
+                .from('songwriting_projects')
+                .update({ lyrics: rawLyrics })
+                .eq('id', song.songwriting_project_id)
+              addLog('Saved auto-generated lyrics to project record')
+            }
+          } else {
+            addLog(`WARNING: Lyrics response missing lyrics field`)
+          }
+        } else {
+          const errorText = await lyricsResponse.text()
+          addLog(`WARNING: Lyrics generation failed: ${lyricsResponse.status} - ${errorText}`)
+        }
+      } catch (lyricsError) {
+        addLog(`WARNING: Exception during lyrics generation: ${lyricsError.message}`)
+      }
+    }
+    
+    addLog(`Final Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'using placeholder (fallback)'}`)
 
     // Build the style prompt for MiniMax
     let styleParts: string[] = []
