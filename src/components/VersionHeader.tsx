@@ -1,10 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";
 import { VipBadge } from "@/components/VipBadge";
+import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
-  const version = "1.0.346";
+  const version = "1.0.347";
   
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card/50">
@@ -15,6 +16,7 @@ export const VersionHeader = () => {
         {t('nav.version')}: {version}
       </span>
       <VipBadge size="sm" />
+      <RMRadioButton />
     </div>
   );
 };
