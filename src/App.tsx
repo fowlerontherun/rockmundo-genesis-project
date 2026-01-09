@@ -10,6 +10,7 @@ import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalo
 import { BandCrewCatalogProvider } from "./features/band-crew/catalog-context";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
+import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 
@@ -215,12 +216,13 @@ function App() {
         <GameDataProvider>
           <NotificationProvider>
             <TutorialProvider>
-              <StageEquipmentCatalogProvider>
-                <BandCrewCatalogProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
+              <RadioProvider>
+                <StageEquipmentCatalogProvider>
+                  <BandCrewCatalogProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <BrowserRouter>
               <Suspense
                 fallback={
                   <div className="flex h-screen w-full items-center justify-center">
@@ -424,9 +426,10 @@ function App() {
                 </Routes>
               </Suspense>
                 </BrowserRouter>
-                  </TooltipProvider>
-                </BandCrewCatalogProvider>
-              </StageEquipmentCatalogProvider>
+                    </TooltipProvider>
+                  </BandCrewCatalogProvider>
+                </StageEquipmentCatalogProvider>
+              </RadioProvider>
             </TutorialProvider>
           </NotificationProvider>
         </GameDataProvider>
