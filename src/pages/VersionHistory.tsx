@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.347",
+    date: "2026-01-09",
+    changes: [
+      { type: 'feature', description: "RM Radio now continues playing when popup is closed" },
+      { type: 'improvement', description: "Moved RM Radio button to top banner next to VIP badge" },
+      { type: 'improvement', description: "Attribute training now costs 50 XP (was 10)" },
+      { type: 'improvement', description: "Skill training now costs 10 × current level XP (min 10)" },
+      { type: 'fix', description: "Fixed songwriting not progressing - DB function was reading non-existent columns" },
+    ]
+  },
+  {
     version: "1.0.346",
     date: "2026-01-08",
     changes: [
