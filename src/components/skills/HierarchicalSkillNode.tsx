@@ -36,12 +36,9 @@ const getTierColor = (tier: 'basic' | 'professional' | 'mastery') => {
   }
 };
 
-const getTrainingCost = (tier: 'basic' | 'professional' | 'mastery') => {
-  switch (tier) {
-    case 'basic': return 10;
-    case 'professional': return 25;
-    case 'mastery': return 50;
-  }
+// Skills cost 10 * current level (min 10)
+const getTrainingCost = (level: number) => {
+  return Math.max(10, level * 10);
 };
 
 export const HierarchicalSkillNode = ({ 
@@ -62,10 +59,9 @@ export const HierarchicalSkillNode = ({
   const requiredXp = progress?.required_xp || 100;
   const progressPercent = (xp / requiredXp) * 100;
   
-  const standardCost = getTrainingCost(tier);
-  // Allow spending whatever XP they have left if less than standard cost
+  const standardCost = getTrainingCost(level);
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
-  const canAfford = xpBalance > 0;
+  const canAfford = xpBalance >= cost;
   const maxLevel = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
   const isMaxed = level >= maxLevel;
 

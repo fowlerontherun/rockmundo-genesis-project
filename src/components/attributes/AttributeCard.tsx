@@ -28,11 +28,10 @@ export const AttributeCard = ({
   onXpSpent
 }: AttributeCardProps) => {
   const queryClient = useQueryClient();
-  const standardCost = 10;
-  // Allow spending whatever XP they have left if less than standard cost
+  const standardCost = 50; // Attributes cost 50 XP
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
   const progress = currentValue / ATTRIBUTE_MAX_VALUE * 100;
-  const canAfford = xpBalance > 0;
+  const canAfford = xpBalance >= cost;
   const isMaxed = currentValue >= ATTRIBUTE_MAX_VALUE;
 
   const trainMutation = useMutation({

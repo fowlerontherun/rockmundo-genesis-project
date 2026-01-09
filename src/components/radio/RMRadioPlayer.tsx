@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -26,11 +26,6 @@ interface Song {
   genre: string | null;
 }
 
-interface RMRadioPlayerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
 // Shuffle array using Fisher-Yates algorithm
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
@@ -41,17 +36,211 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
+// Global radio state context
+interface RadioState {
+  isPlaying: boolean;
+  currentSong: Song | null;
+  playlist: Song[];
+  currentIndex: number;
+  volume: number;
+  isMuted: boolean;
+}
+
+interface RadioContextValue {
+  state: RadioState;
+  audioRef: React.RefObject<HTMLAudioElement>;
+  togglePlay: () => void;
+  playNext: () => void;
+  reshufflePlaylist: () => void;
+  setVolume: (v: number) => void;
+  setMuted: (m: boolean) => void;
+  initializePlaylist: (songs: Song[]) => void;
+  isInitialized: boolean;
+}
+
+const RadioContext = createContext<RadioContextValue | null>(null);
+
+export const useRadio = () => {
+  const ctx = useContext(RadioContext);
+  if (!ctx) throw new Error("useRadio must be used within RadioProvider");
+  return ctx;
+};
+
+// Global audio element that persists
+let globalAudio: HTMLAudioElement | null = null;
+let globalState: RadioState = {
+  isPlaying: false,
+  currentSong: null,
+  playlist: [],
+  currentIndex: 0,
+  volume: 0.7,
+  isMuted: false,
+};
+let stateListeners: Set<() => void> = new Set();
+
+const notifyListeners = () => {
+  stateListeners.forEach(l => l());
+};
+
+export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
+  const [, forceUpdate] = useState({});
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    // Create global audio if not exists
+    if (!globalAudio) {
+      globalAudio = new Audio();
+      globalAudio.volume = globalState.volume;
+    }
+
+    const listener = () => forceUpdate({});
+    stateListeners.add(listener);
+    
+    return () => {
+      stateListeners.delete(listener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!globalAudio) return;
+
+    const handleEnded = () => {
+      playNext();
+    };
+
+    const handleError = () => {
+      playNext();
+    };
+
+    globalAudio.addEventListener("ended", handleEnded);
+    globalAudio.addEventListener("error", handleError);
+
+    return () => {
+      globalAudio?.removeEventListener("ended", handleEnded);
+      globalAudio?.removeEventListener("error", handleError);
+    };
+  }, []);
+
+  const initializePlaylist = useCallback((songs: Song[]) => {
+    if (songs.length === 0) return;
+    if (globalState.playlist.length > 0) return; // Already initialized
+    
+    const shuffled = shuffleArray(songs);
+    globalState = {
+      ...globalState,
+      playlist: shuffled,
+      currentIndex: 0,
+      currentSong: shuffled[0],
+    };
+    if (globalAudio && shuffled[0]) {
+      globalAudio.src = shuffled[0].audio_url;
+    }
+    notifyListeners();
+  }, []);
+
+  const togglePlay = useCallback(async () => {
+    if (!globalAudio || !globalState.currentSong) return;
+
+    if (globalState.isPlaying) {
+      globalAudio.pause();
+      globalState = { ...globalState, isPlaying: false };
+    } else {
+      try {
+        await globalAudio.play();
+        globalState = { ...globalState, isPlaying: true };
+      } catch (error) {
+        console.error("[RMRadio] Error playing:", error);
+      }
+    }
+    notifyListeners();
+  }, []);
+
+  const playNext = useCallback(() => {
+    if (globalState.playlist.length === 0) return;
+    
+    const nextIndex = (globalState.currentIndex + 1) % globalState.playlist.length;
+    const nextSong = globalState.playlist[nextIndex];
+    
+    globalState = {
+      ...globalState,
+      currentIndex: nextIndex,
+      currentSong: nextSong,
+    };
+
+    if (globalAudio && nextSong) {
+      globalAudio.src = nextSong.audio_url;
+      if (globalState.isPlaying) {
+        globalAudio.play().catch(console.error);
+      }
+    }
+    notifyListeners();
+  }, []);
+
+  const reshufflePlaylist = useCallback(() => {
+    if (globalState.playlist.length === 0) return;
+    
+    const shuffled = shuffleArray(globalState.playlist);
+    globalState = {
+      ...globalState,
+      playlist: shuffled,
+      currentIndex: 0,
+      currentSong: shuffled[0],
+    };
+
+    if (globalAudio && shuffled[0]) {
+      globalAudio.src = shuffled[0].audio_url;
+      if (globalState.isPlaying) {
+        globalAudio.play().catch(console.error);
+      }
+    }
+    notifyListeners();
+  }, []);
+
+  const setVolume = useCallback((v: number) => {
+    globalState = { ...globalState, volume: v, isMuted: v === 0 };
+    if (globalAudio) {
+      globalAudio.volume = v;
+    }
+    notifyListeners();
+  }, []);
+
+  const setMuted = useCallback((m: boolean) => {
+    globalState = { ...globalState, isMuted: m };
+    if (globalAudio) {
+      globalAudio.volume = m ? 0 : globalState.volume;
+    }
+    notifyListeners();
+  }, []);
+
+  return (
+    <RadioContext.Provider
+      value={{
+        state: globalState,
+        audioRef,
+        togglePlay,
+        playNext,
+        reshufflePlaylist,
+        setVolume,
+        setMuted,
+        initializePlaylist,
+        isInitialized: globalState.playlist.length > 0,
+      }}
+    >
+      {children}
+    </RadioContext.Provider>
+  );
+};
+
+interface RMRadioPlayerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
+  const radio = useRadio();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
-  const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [playlist, setPlaylist] = useState<Song[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Fetch all songs with audio
   const { data: allSongs, isLoading: songsLoading } = useQuery({
@@ -84,132 +273,47 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         genre: song.genre,
       })) as Song[];
     },
-    enabled: open,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Initialize shuffled playlist when songs load
+  // Initialize playlist when songs load
   useEffect(() => {
-    if (allSongs && allSongs.length > 0 && !hasInitialized) {
-      const shuffled = shuffleArray(allSongs);
-      setPlaylist(shuffled);
-      setCurrentIndex(0);
-      setHasInitialized(true);
+    if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
+      radio.initializePlaylist(allSongs);
     }
-  }, [allSongs, hasInitialized]);
+  }, [allSongs, radio.isInitialized]);
 
-  // Reset when dialog closes
+  // Audio time tracking
   useEffect(() => {
-    if (!open) {
-      setIsPlaying(false);
-      setHasInitialized(false);
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    }
-  }, [open]);
+    if (!globalAudio) return;
 
-  const currentSong = playlist[currentIndex];
-
-  // Audio event handlers
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleDurationChange = () => setDuration(audio.duration);
-    const handleEnded = () => playNext();
+    const handleTimeUpdate = () => setCurrentTime(globalAudio?.currentTime || 0);
+    const handleDurationChange = () => setDuration(globalAudio?.duration || 0);
     const handleWaiting = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);
-    const handleError = (e: Event) => {
-      console.error("[RMRadio] Audio error:", e);
-      playNext(); // Skip to next on error
-    };
 
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("durationchange", handleDurationChange);
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("waiting", handleWaiting);
-    audio.addEventListener("canplay", handleCanPlay);
-    audio.addEventListener("error", handleError);
+    globalAudio.addEventListener("timeupdate", handleTimeUpdate);
+    globalAudio.addEventListener("durationchange", handleDurationChange);
+    globalAudio.addEventListener("waiting", handleWaiting);
+    globalAudio.addEventListener("canplay", handleCanPlay);
 
     return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("durationchange", handleDurationChange);
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("waiting", handleWaiting);
-      audio.removeEventListener("canplay", handleCanPlay);
-      audio.removeEventListener("error", handleError);
+      globalAudio?.removeEventListener("timeupdate", handleTimeUpdate);
+      globalAudio?.removeEventListener("durationchange", handleDurationChange);
+      globalAudio?.removeEventListener("waiting", handleWaiting);
+      globalAudio?.removeEventListener("canplay", handleCanPlay);
     };
-  }, [currentIndex, playlist.length]);
-
-  // Update volume
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
-
-  // Auto-play when song changes and radio is playing
-  useEffect(() => {
-    if (isPlaying && currentSong && audioRef.current) {
-      audioRef.current.load();
-      audioRef.current.play().catch(console.error);
-    }
-  }, [currentIndex, currentSong?.id]);
-
-  const playNext = useCallback(() => {
-    if (playlist.length === 0) return;
-    
-    const nextIndex = (currentIndex + 1) % playlist.length;
-    setCurrentIndex(nextIndex);
-    setCurrentTime(0);
-    setDuration(0);
-  }, [currentIndex, playlist.length]);
-
-  const reshufflePlaylist = () => {
-    if (allSongs && allSongs.length > 0) {
-      const shuffled = shuffleArray(allSongs);
-      setPlaylist(shuffled);
-      setCurrentIndex(0);
-      setCurrentTime(0);
-      setDuration(0);
-      if (audioRef.current && isPlaying) {
-        audioRef.current.load();
-        audioRef.current.play().catch(console.error);
-      }
-    }
-  };
-
-  const togglePlay = async () => {
-    if (!audioRef.current || !currentSong) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      setIsLoading(true);
-      try {
-        await audioRef.current.play();
-        setIsPlaying(true);
-      } catch (error) {
-        console.error("[RMRadio] Error playing:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
+  }, []);
 
   const handleSeek = (value: number[]) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
+    if (globalAudio) {
+      globalAudio.currentTime = value[0];
       setCurrentTime(value[0]);
     }
   };
 
   const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0]);
-    setIsMuted(value[0] === 0);
+    radio.setVolume(value[0]);
   };
 
   const formatTime = (time: number) => {
@@ -219,54 +323,48 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const { state } = radio;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Radio className="h-5 w-5 text-primary animate-pulse" />
+            <Radio className={cn("h-5 w-5 text-primary", state.isPlaying && "animate-pulse")} />
             RM Radio
             <Badge variant="outline" className="ml-2">
-              {playlist.length} songs
+              {state.playlist.length} songs
             </Badge>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Loading State */}
           {songsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2 text-muted-foreground">Loading songs...</span>
             </div>
-          ) : playlist.length === 0 ? (
+          ) : state.playlist.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Music className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No AI-generated songs available yet</p>
             </div>
           ) : (
             <>
-              {/* Hidden Audio Element */}
-              <audio 
-                ref={audioRef} 
-                src={currentSong?.audio_url} 
-                preload="metadata"
-              />
-
               {/* Now Playing */}
               <div className="bg-gradient-to-br from-primary/10 to-secondary/20 rounded-lg p-4 border">
                 <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Now Playing
                 </div>
                 <div className="text-lg font-semibold truncate">
-                  {currentSong?.title || "---"}
+                  {state.currentSong?.title || "---"}
                 </div>
                 <div className="text-sm text-muted-foreground truncate">
-                  {currentSong?.band_name || "---"}
+                  {state.currentSong?.band_name || "---"}
                 </div>
-                {currentSong?.genre && (
+                {state.currentSong?.genre && (
                   <Badge variant="secondary" className="mt-2 text-xs">
-                    {currentSong.genre}
+                    {state.currentSong.genre}
                   </Badge>
                 )}
               </div>
@@ -291,7 +389,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={reshufflePlaylist}
+                  onClick={radio.reshufflePlaylist}
                   title="Shuffle playlist"
                 >
                   <Shuffle className="h-5 w-5" />
@@ -301,12 +399,12 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
                   size="icon"
                   variant="default"
                   className="h-12 w-12"
-                  onClick={togglePlay}
-                  disabled={isLoading || !currentSong}
+                  onClick={radio.togglePlay}
+                  disabled={isLoading || !state.currentSong}
                 >
                   {isLoading ? (
                     <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : isPlaying ? (
+                  ) : state.isPlaying ? (
                     <Pause className="h-6 w-6" />
                   ) : (
                     <Play className="h-6 w-6 ml-0.5" />
@@ -316,7 +414,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={playNext}
+                  onClick={radio.playNext}
                   title="Next song"
                 >
                   <SkipForward className="h-5 w-5" />
@@ -329,16 +427,16 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
-                  onClick={() => setIsMuted(!isMuted)}
+                  onClick={() => radio.setMuted(!state.isMuted)}
                 >
-                  {isMuted || volume === 0 ? (
+                  {state.isMuted || state.volume === 0 ? (
                     <VolumeX className="h-4 w-4" />
                   ) : (
                     <Volume2 className="h-4 w-4" />
                   )}
                 </Button>
                 <Slider
-                  value={[isMuted ? 0 : volume]}
+                  value={[state.isMuted ? 0 : state.volume]}
                   max={1}
                   step={0.1}
                   onValueChange={handleVolumeChange}
@@ -348,7 +446,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
 
               {/* Queue Info */}
               <div className="text-center text-xs text-muted-foreground">
-                Song {currentIndex + 1} of {playlist.length} • Continuous play
+                Song {state.currentIndex + 1} of {state.playlist.length} • Continuous play
               </div>
             </>
           )}
@@ -358,25 +456,37 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   );
 };
 
-// Button to trigger the radio player
+// Button to trigger the radio player - for header
 interface RMRadioButtonProps {
   className?: string;
 }
 
 export const RMRadioButton = ({ className }: RMRadioButtonProps) => {
   const [open, setOpen] = useState(false);
+  
+  // Try to use radio context if available
+  let isPlaying = false;
+  try {
+    const radio = useRadio();
+    isPlaying = radio.state.isPlaying;
+  } catch {
+    // Not in provider context, that's ok
+  }
 
   return (
     <>
       <Button
-        variant="outline"
-        size="icon"
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen(true)}
         title="RM Radio"
-        className={cn("relative", className)}
+        className={cn("relative gap-1.5 h-7 px-2", className)}
       >
-        <Radio className="h-5 w-5" />
-        <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse" />
+        <Radio className={cn("h-4 w-4", isPlaying && "text-primary animate-pulse")} />
+        <span className="text-xs hidden sm:inline">Radio</span>
+        {isPlaying && (
+          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-primary rounded-full animate-pulse" />
+        )}
       </Button>
       <RMRadioPlayer open={open} onOpenChange={setOpen} />
     </>
