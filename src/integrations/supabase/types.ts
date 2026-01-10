@@ -2056,10 +2056,12 @@ export type Database = {
           chart_type: string
           country: string | null
           created_at: string | null
+          entry_type: string | null
           genre: string | null
           id: string
           plays_count: number | null
           rank: number
+          release_id: string | null
           sale_type: string | null
           song_id: string
           trend: string | null
@@ -2071,10 +2073,12 @@ export type Database = {
           chart_type: string
           country?: string | null
           created_at?: string | null
+          entry_type?: string | null
           genre?: string | null
           id?: string
           plays_count?: number | null
           rank: number
+          release_id?: string | null
           sale_type?: string | null
           song_id: string
           trend?: string | null
@@ -2086,10 +2090,12 @@ export type Database = {
           chart_type?: string
           country?: string | null
           created_at?: string | null
+          entry_type?: string | null
           genre?: string | null
           id?: string
           plays_count?: number | null
           rank?: number
+          release_id?: string | null
           sale_type?: string | null
           song_id?: string
           trend?: string | null
@@ -2097,6 +2103,20 @@ export type Database = {
           weeks_on_chart?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "chart_entries_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "chart_entries_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chart_entries_song_id_fkey"
             columns: ["song_id"]

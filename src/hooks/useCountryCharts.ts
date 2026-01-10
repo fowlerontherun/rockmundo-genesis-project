@@ -30,6 +30,10 @@ export interface ChartEntry {
   is_fake: boolean;
   audio_url?: string | null;
   audio_generation_status?: string | null;
+  entry_type?: "song" | "album";
+  release_id?: string | null;
+  release_title?: string | null;
+  song_count?: number;
 }
 
 const GENRES = [...MUSIC_GENRES];
@@ -46,6 +50,21 @@ export const useCountryCharts = (
   return useQuery({
     queryKey: ["country-charts", country, genre, chartType, releaseCategory],
     queryFn: async (): Promise<ChartEntry[]> => {
+      // First, get the latest chart_date to avoid duplicates
+      const { data: latestDateData } = await supabase
+        .from("chart_entries")
+        .select("chart_date")
+        .order("chart_date", { ascending: false })
+        .limit(1)
+        .single();
+
+      const latestChartDate = latestDateData?.chart_date;
+
+      if (!latestChartDate) {
+        console.log("[useCountryCharts] No chart data available");
+        return [];
+      }
+
       // Build all possible chart_type values to query
       let chartTypeFilter: string[] = [];
       
@@ -69,7 +88,7 @@ export const useCountryCharts = (
         }
       }
 
-      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter);
+      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "date:", latestChartDate);
 
       let query = supabase
         .from("chart_entries")
@@ -84,8 +103,9 @@ export const useCountryCharts = (
           )
         `)
         .in("chart_type", chartTypeFilter)
+        .eq("chart_date", latestChartDate)  // Only get latest date to prevent duplicates
         .order("plays_count", { ascending: false })
-        .limit(50);
+        .limit(100);  // Get more to allow for deduplication
 
       // Handle country filter - database uses "all" but UI uses "Global"
       if (country !== "Global") {
@@ -108,8 +128,21 @@ export const useCountryCharts = (
 
       console.log("[useCountryCharts] Found entries:", data?.length || 0);
 
+      // Deduplicate by song_id - keep the entry with highest plays_count
+      const songMap = new Map<string, any>();
+      for (const entry of data || []) {
+        const key = entry.song_id;
+        const existing = songMap.get(key);
+        if (!existing || (entry.plays_count || 0) > (existing.plays_count || 0)) {
+          songMap.set(key, entry);
+        }
+      }
+
+      const deduplicatedData = Array.from(songMap.values());
+      console.log("[useCountryCharts] After deduplication:", deduplicatedData.length);
+
       // Transform real data
-      const realEntries: ChartEntry[] = (data || []).map((entry, index) => {
+      const realEntries: ChartEntry[] = deduplicatedData.map((entry, index) => {
         // Get artist name from band (artist_name or name)
         const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
         const artistName = bandArtistName || "Unknown Artist";
@@ -134,12 +167,15 @@ export const useCountryCharts = (
           is_fake: false,
           audio_url: entry.songs?.audio_url || null,
           audio_generation_status: entry.songs?.audio_generation_status || null,
+          entry_type: entry.entry_type || "song",
+          release_id: entry.release_id || null,
         };
       });
 
       // Re-rank entries by plays_count
       return realEntries
         .sort((a, b) => b.plays_count - a.plays_count)
+        .slice(0, 50)  // Limit to top 50
         .map((entry, index) => ({
           ...entry,
           rank: index + 1,

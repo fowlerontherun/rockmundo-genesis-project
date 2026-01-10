@@ -489,6 +489,89 @@ serve(async (req) => {
     chartEntries.push(...videoEntries);
     console.log(`Generated ${videoEntries.length} video views entries`);
 
+    // === ALBUM CHARTS (aggregate all songs per album) ===
+    // Fetch streaming data with release info for album aggregation
+    const { data: albumStreamingData, error: albumStreamingError } = await supabaseClient
+      .from("song_releases")
+      .select(`
+        song_id,
+        total_streams,
+        release_id,
+        release:releases!inner(
+          id,
+          title,
+          release_type,
+          band_id,
+          bands(name, artist_name)
+        ),
+        songs!inner(
+          id,
+          title,
+          genre,
+          status
+        )
+      `)
+      .eq("is_active", true)
+      .eq("songs.status", "released")
+      .eq("release.release_type", "album")
+      .gte("total_streams", 0);
+
+    if (albumStreamingError) {
+      console.error("Error fetching album streaming data:", albumStreamingError);
+    }
+
+    console.log(`Fetched ${albumStreamingData?.length || 0} album song entries for aggregation`);
+
+    // Aggregate streams by release_id (album)
+    const albumAggregated = new Map<string, {
+      release_id: string;
+      release_title: string;
+      band_name: string;
+      total_streams: number;
+      genre: string;
+      song_count: number;
+    }>();
+
+    for (const entry of albumStreamingData || []) {
+      const releaseId = entry.release?.id;
+      if (!releaseId) continue;
+
+      const existing = albumAggregated.get(releaseId);
+      if (existing) {
+        existing.total_streams += entry.total_streams || 0;
+        existing.song_count += 1;
+      } else {
+        const bandName = entry.release?.bands?.artist_name || entry.release?.bands?.name || "Unknown Artist";
+        albumAggregated.set(releaseId, {
+          release_id: releaseId,
+          release_title: entry.release?.title || "Unknown Album",
+          band_name: bandName,
+          total_streams: entry.total_streams || 0,
+          genre: entry.songs?.genre || "Unknown",
+          song_count: 1,
+        });
+      }
+    }
+
+    // Create album chart entries
+    const albumEntries = Array.from(albumAggregated.values())
+      .sort((a, b) => b.total_streams - a.total_streams)
+      .slice(0, 50)
+      .map((entry, index) => ({
+        release_id: entry.release_id,
+        song_id: null, // Album entries don't have a single song_id
+        chart_type: "streaming_album",
+        rank: index + 1,
+        plays_count: entry.total_streams,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "album",
+      }));
+
+    chartEntries.push(...albumEntries);
+    console.log(`Generated ${albumEntries.length} album chart entries`);
+
     // NOW: Delete old entries and insert new ones (atomic operation)
     if (chartEntries.length > 0) {
       // Delete today's chart entries
@@ -502,10 +585,13 @@ serve(async (req) => {
         throw deleteError;
       }
 
-      // Insert all new entries
+      // Insert all new entries using upsert to handle unique constraints
       const { error: insertError } = await supabaseClient
         .from("chart_entries")
-        .insert(chartEntries);
+        .upsert(chartEntries, { 
+          onConflict: "song_id,chart_type,chart_date",
+          ignoreDuplicates: true 
+        });
 
       if (insertError) {
         console.error("Error inserting chart entries:", insertError);
