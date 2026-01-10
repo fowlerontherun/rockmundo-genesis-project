@@ -91,6 +91,28 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       )
     }
+
+    // Race condition guard: prevent duplicate generation attempts (admins can override after 15 mins)
+    if (song.audio_generation_status === 'generating') {
+      const startedAt = song.audio_generation_started_at 
+        ? new Date(song.audio_generation_started_at) 
+        : new Date()
+      const elapsed = Date.now() - startedAt.getTime()
+      
+      if (elapsed < 15 * 60 * 1000) {
+        addLog(`WARNING: Generation already in progress, started ${Math.round(elapsed / 1000)}s ago`)
+        return new Response(
+          JSON.stringify({ 
+            error: "Generation already in progress", 
+            startedAt: song.audio_generation_started_at,
+            message: "Please wait for the current generation to complete or wait 15 minutes to retry",
+            logs
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+        )
+      }
+      addLog(`Previous generation appears stuck (${Math.round(elapsed / 60000)} mins), allowing restart`)
+    }
     
     // Then get the songwriting project if it exists
     let project: any = null
@@ -156,8 +178,8 @@ serve(async (req) => {
     const themeName = project?.song_themes?.name || null
     const themeMood = project?.song_themes?.mood || null
     const themeDescription = project?.song_themes?.description || null
-    // Prefer song lyrics, fallback to project lyrics
-    let rawLyrics = song.lyrics || project?.lyrics || null
+    // Prefer song lyrics, fallback to project lyrics - sanitize to remove any prompt contamination
+    let rawLyrics = sanitizeLyrics(song.lyrics) || sanitizeLyrics(project?.lyrics) || null
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
 
@@ -554,6 +576,47 @@ function cleanProfanity(text: string): string {
   return cleaned
 }
 
+// Sanitize lyrics to remove any prompt contamination (Style: or Lyrics: prefixes)
+function sanitizeLyrics(lyrics: string | null): string | null {
+  if (!lyrics) return null
+  
+  let cleaned = lyrics.trim()
+  
+  // If lyrics start with "Style:" they contain the full prompt - extract just the lyrics part
+  if (cleaned.toLowerCase().startsWith('style:')) {
+    console.log('[sanitizeLyrics] Detected Style: prefix in lyrics, extracting actual lyrics')
+    
+    // Find the Lyrics: section and extract from there
+    const lyricsMatch = cleaned.match(/Lyrics:\s*([\s\S]*?)(?=\n\nLyrics:|$)/i)
+    if (lyricsMatch && lyricsMatch[1]) {
+      cleaned = lyricsMatch[1].trim()
+    } else {
+      // Try to find section markers directly
+      const sectionMatch = cleaned.match(/(\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)[\s\S]*$)/i)
+      if (sectionMatch) {
+        cleaned = sectionMatch[1].trim()
+      } else {
+        // Can't extract, return null to trigger regeneration
+        console.warn('[sanitizeLyrics] Could not extract lyrics from corrupted prompt')
+        return null
+      }
+    }
+  }
+  
+  // Also check if lyrics start with "Lyrics:" header
+  if (cleaned.toLowerCase().startsWith('lyrics:')) {
+    cleaned = cleaned.replace(/^lyrics:\s*/i, '').trim()
+  }
+  
+  // Remove any duplicate Lyrics: sections (take first one only)
+  if (cleaned.split(/\n\nLyrics:/i).length > 1) {
+    console.log('[sanitizeLyrics] Detected duplicate Lyrics: sections, keeping first')
+    cleaned = cleaned.split(/\n\nLyrics:/i)[0].trim()
+  }
+  
+  return cleaned || null
+}
+
 // Format lyrics with section markers for MiniMax Music-1.5
 // ONLY includes essential sections: Intro (if exists), first Verse, Chorus, Bridge
 function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
@@ -562,8 +625,21 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
+  // Safety check: if lyrics somehow still contain prompt markers, extract just the content
+  let processedLyrics = rawLyrics.trim()
+  if (processedLyrics.toLowerCase().includes('style:') || processedLyrics.toLowerCase().startsWith('lyrics:')) {
+    console.warn('[formatLyricsForMiniMax] Detected corrupted lyrics input, sanitizing...')
+    const sectionMatch = processedLyrics.match(/\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)[\s\S]*/i)
+    if (sectionMatch) {
+      processedLyrics = sectionMatch[0]
+    } else {
+      // Can't extract, use placeholder
+      return generatePlaceholderLyrics(songTitle, genre)
+    }
+  }
+
   // Clean profanity first before any processing
-  const cleanedLyrics = cleanProfanity(rawLyrics)
+  const cleanedLyrics = cleanProfanity(processedLyrics)
 
   // Format full lyrics preserving song structure
   return formatFullLyrics(cleanedLyrics, songTitle, genre)
