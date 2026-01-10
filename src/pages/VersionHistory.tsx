@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.348",
+    date: "2026-01-10",
+    changes: [
+      { type: 'fix', description: "Fixed AI song generation prompt corruption (Style:/Lyrics: prefix stacking)" },
+      { type: 'fix', description: "Added input sanitization to prevent malformed prompts from corrupted lyrics" },
+      { type: 'fix', description: "Added race condition guard to prevent duplicate generation attempts" },
+      { type: 'fix', description: "Fixed placeholder lyrics being appended to real lyrics" },
+    ]
+  },
+  {
     version: "1.0.347",
     date: "2026-01-09",
     changes: [
