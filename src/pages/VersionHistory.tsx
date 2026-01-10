@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.349",
+    date: "2026-01-10",
+    changes: [
+      { type: 'fix', description: "Fixed duplicate songs appearing in charts by filtering to latest chart date" },
+      { type: 'fix', description: "Added deduplication to prevent same song showing multiple times" },
+      { type: 'improvement', description: "Added database constraints to prevent duplicate chart entries" },
+      { type: 'improvement', description: "Added album chart support with release_id tracking" },
+    ]
+  },
+  {
     version: "1.0.348",
     date: "2026-01-10",
     changes: [
