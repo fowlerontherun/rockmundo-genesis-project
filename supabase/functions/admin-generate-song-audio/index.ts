@@ -758,59 +758,6 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
   }
   
   return output
-  let totalChars = 0
-  const result: string[] = []
-
-  for (const section of sections) {
-    const sectionText = `[${section.type}]\n${section.content}`
-    
-    // Check if adding this section would exceed limit
-    if (totalChars + sectionText.length > MAX_CHARS) {
-      // If we have at least verse and chorus, we can stop
-      const hasEssentials = result.some(s => s.toLowerCase().includes('[verse')) && 
-                           result.some(s => s.toLowerCase().includes('[chorus'))
-      if (hasEssentials) break
-      
-      // Otherwise, truncate this section at a COMPLETE LINE boundary (not mid-word)
-      const remaining = MAX_CHARS - totalChars - 50 // Buffer for section header
-      if (remaining > 50) {
-        const lines = section.content.split('\n')
-        let truncatedLines: string[] = []
-        let charCount = 0
-        
-        // Add complete lines until we exceed the limit
-        for (const line of lines) {
-          if (charCount + line.length + 1 > remaining) break
-          truncatedLines.push(line)
-          charCount += line.length + 1
-        }
-        
-        if (truncatedLines.length > 0) {
-          result.push(`[${section.type}]\n${truncatedLines.join('\n')}`)
-        }
-      }
-      break
-    }
-    
-    result.push(sectionText)
-    totalChars += sectionText.length + 2 // +2 for newlines
-  }
-
-  // Ensure we have at least a verse and chorus
-  if (result.length === 0) {
-    return generatePlaceholderLyrics(songTitle, genre)
-  }
-
-  const output = result.join('\n\n')
-  console.log(`[admin-generate-song-audio] Formatted lyrics: ${output.length} chars (limit: ${MAX_CHARS})`)
-  
-  // Final safety check
-  if (output.length > 600) {
-    console.warn(`[admin-generate-song-audio] Lyrics still too long (${output.length}), truncating...`)
-    return output.substring(0, 595)
-  }
-  
-  return output
 }
 
 // Generate placeholder lyrics when none exist
