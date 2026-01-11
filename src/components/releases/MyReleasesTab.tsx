@@ -26,6 +26,7 @@ import { CancelReleaseDialog } from "./CancelReleaseDialog";
 import { ReleaseTracklistWithAudio } from "./ReleaseTracklistWithAudio";
 import { AddPhysicalFormatDialog } from "./AddPhysicalFormatDialog";
 import { ReleaseAnalyticsDialog } from "./ReleaseAnalyticsDialog";
+import { ReorderStockDialog } from "./ReorderStockDialog";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 
@@ -53,6 +54,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const [cancellingRelease, setCancellingRelease] = useState<any>(null);
   const [addPhysicalRelease, setAddPhysicalRelease] = useState<any>(null);
   const [analyticsRelease, setAnalyticsRelease] = useState<any>(null);
+  const [reorderFormat, setReorderFormat] = useState<{ format: any; release: any } | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -309,7 +311,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             onAddPhysical={() => setAddPhysicalRelease(release)}
             onAnalytics={() => setAnalyticsRelease(release)}
             onReorder={(format) => {
-              console.log('Reorder requested for format:', format);
+              setReorderFormat({ format, release });
             }}
           />
         ))}
@@ -345,6 +347,13 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         open={!!analyticsRelease}
         onOpenChange={(open) => !open && setAnalyticsRelease(null)}
         release={analyticsRelease}
+      />
+
+      <ReorderStockDialog
+        open={!!reorderFormat}
+        onOpenChange={(open) => !open && setReorderFormat(null)}
+        format={reorderFormat?.format}
+        release={reorderFormat?.release}
       />
     </div>
   );

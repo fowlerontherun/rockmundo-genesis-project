@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.351",
+    date: "2026-01-11",
+    changes: [
+      { type: 'fix', description: "Fixed Restock/Reorder Stock button - now opens dialog to order additional physical units" },
+      { type: 'fix', description: "Fixed Add Physical Release dialog with fallback costs and better error handling" },
+      { type: 'feature', description: "Added ReorderStockDialog component for restocking sold-out or low-stock physical formats" },
+    ]
+  },
+  {
     version: "1.0.350",
     date: "2026-01-11",
     changes: [
