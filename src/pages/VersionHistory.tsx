@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.350",
+    date: "2026-01-11",
+    changes: [
+      { type: 'fix', description: "Fixed AI song generation failing due to lyrics exceeding MiniMax 600-char limit" },
+      { type: 'fix', description: "Lyrics now properly truncated to 580 chars with verse+chorus priority" },
+      { type: 'fix', description: "Removed chord annotations (Am-F-C-G) and dialog markers (She/He) from lyrics" },
+    ]
+  },
+  {
     version: "1.0.349",
     date: "2026-01-10",
     changes: [
