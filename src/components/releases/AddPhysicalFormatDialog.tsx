@@ -54,25 +54,43 @@ export function AddPhysicalFormatDialog({ open, onOpenChange, release }: AddPhys
   const availableFormats = PHYSICAL_FORMATS.filter(f => !existingFormats.includes(f.type));
 
   // Fetch manufacturing costs
-  const { data: manufacturingCosts } = useQuery({
+  const { data: manufacturingCosts, isLoading: costsLoading, error: costsError } = useQuery({
     queryKey: ["manufacturing-costs"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("manufacturing_costs")
         .select("*")
         .order("format_type")
         .order("min_quantity");
+      if (error) {
+        console.error("Error fetching manufacturing costs:", error);
+        throw error;
+      }
       return data || [];
     },
+    enabled: open, // Only fetch when dialog is open
   });
 
   const calculateManufacturingCost = (formatType: string, qty: number) => {
-    const costs = manufacturingCosts?.filter(c => c.format_type === formatType) || [];
+    if (!manufacturingCosts || manufacturingCosts.length === 0) {
+      console.warn("No manufacturing costs data available");
+      // Use fallback costs
+      const fallbackCosts: Record<string, number> = { cd: 20, vinyl: 80, cassette: 15 };
+      return (fallbackCosts[formatType] || 20) * qty;
+    }
+    
+    const costs = manufacturingCosts.filter(c => c.format_type === formatType);
     const tier = costs.find(c =>
       qty >= c.min_quantity && (c.max_quantity === null || qty <= c.max_quantity)
     );
     
     let baseCost = tier ? tier.cost_per_unit * qty : 0;
+    
+    // If no tier found, use the highest tier (lowest per-unit cost)
+    if (baseCost === 0 && costs.length > 0) {
+      const highestTier = costs[costs.length - 1];
+      baseCost = highestTier.cost_per_unit * qty;
+    }
     
     if (revenueShareEnabled) {
       baseCost = Math.round(baseCost * 0.5);
