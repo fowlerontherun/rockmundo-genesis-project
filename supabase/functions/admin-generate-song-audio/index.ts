@@ -646,8 +646,11 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
 }
 
 // Format full lyrics preserving song structure
-// MiniMax handles longer lyrics well - we preserve as much as possible
+// MiniMax Music-1.5 REQUIRES lyrics between 10-600 characters
 function formatFullLyrics(lyrics: string, songTitle: string, genre: string): string {
+  // MiniMax HARD LIMIT: 10-600 characters for lyrics
+  const MAX_CHARS = 580 // Leave buffer for section markers
+  
   // Normalize section markers to consistent format
   let normalizedLyrics = lyrics
     .replace(/\[verse\s*(\d*)\]/gi, (_, num) => `[Verse${num ? ' ' + num : ''}]`)
@@ -658,24 +661,25 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
     .replace(/\[intro\s*\d*\]/gi, '[Intro]')
     .replace(/\[hook\s*\d*\]/gi, '[Hook]')
     .replace(/\[post-?chorus\s*\d*\]/gi, '[Post-Chorus]')
+    // Remove chord annotations like (Am-F-C-G) or (She) (He) - these waste character space
+    .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
+    .replace(/\((She|He|Both)\)\s*/gi, '')
 
   const hasMarkers = /\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)\]/i.test(normalizedLyrics)
   
   if (!hasMarkers) {
-    // No markers - intelligently structure the lyrics
-    const lines = lyrics.split('\n').filter(l => l.trim())
+    // No markers - create minimal structure that fits in 600 chars
+    const lines = lyrics.split('\n').filter(l => l.trim() && !l.match(/^\([^)]+\)$/))
     if (lines.length === 0) return generatePlaceholderLyrics(songTitle, genre)
     
-    // Try to create a proper song structure from unmarked lyrics
-    if (lines.length <= 8) {
-      const verse = lines.slice(0, Math.ceil(lines.length / 2)).join('\n')
-      const chorus = lines.slice(Math.ceil(lines.length / 2)).join('\n') || lines.slice(0, 2).join('\n')
-      return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
-    }
+    // Take just first 4 lines for verse, 2 for chorus
+    const verse = lines.slice(0, Math.min(4, lines.length)).join('\n')
+    const chorusStart = Math.min(4, lines.length)
+    const chorus = lines.slice(chorusStart, chorusStart + 2).join('\n') || lines.slice(0, 2).join('\n')
+    const result = `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
     
-    // Longer unmarked lyrics - create verse-chorus-verse-chorus structure
-    const quarterLength = Math.floor(lines.length / 4)
-    return `[Verse 1]\n${lines.slice(0, quarterLength).join('\n')}\n\n[Chorus]\n${lines.slice(quarterLength, quarterLength * 2).join('\n')}\n\n[Verse 2]\n${lines.slice(quarterLength * 2, quarterLength * 3).join('\n')}\n\n[Chorus]\n${lines.slice(quarterLength * 3).join('\n')}`
+    if (result.length <= MAX_CHARS) return result
+    return result.substring(0, MAX_CHARS)
   }
 
   // Extract all sections maintaining order
@@ -685,7 +689,14 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
 
   while ((match = sectionRegex.exec(normalizedLyrics)) !== null) {
     const type = match[1].trim()
-    const content = match[2].trim()
+    // Clean content: remove chord annotations and extra whitespace
+    let content = match[2].trim()
+      .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
+      .replace(/\((She|He|Both)\)\s*/gi, '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .join('\n')
     if (content) {
       sections.push({ type, content })
     }
@@ -695,9 +706,58 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
-  // Build output preserving full structure
-  // Limit to ~3000 chars total to stay reasonable for the model
-  const MAX_CHARS = 3000
+  // Priority: First Verse + First Chorus (essential), then maybe Bridge
+  // Build output with strict character limit
+  let totalChars = 0
+  const result: string[] = []
+  
+  // Get first verse
+  const firstVerse = sections.find(s => s.type.toLowerCase().includes('verse'))
+  // Get first chorus
+  const firstChorus = sections.find(s => s.type.toLowerCase().includes('chorus'))
+  
+  if (firstVerse) {
+    const verseLines = firstVerse.content.split('\n').slice(0, 4) // Max 4 lines per section
+    const sectionText = `[Verse]\n${verseLines.join('\n')}`
+    if (totalChars + sectionText.length <= MAX_CHARS) {
+      result.push(sectionText)
+      totalChars += sectionText.length + 2
+    }
+  }
+  
+  if (firstChorus) {
+    const chorusLines = firstChorus.content.split('\n').slice(0, 4) // Max 4 lines
+    const sectionText = `[Chorus]\n${chorusLines.join('\n')}`
+    if (totalChars + sectionText.length <= MAX_CHARS) {
+      result.push(sectionText)
+      totalChars += sectionText.length + 2
+    }
+  }
+  
+  // Add bridge if we have room
+  const bridge = sections.find(s => s.type.toLowerCase().includes('bridge'))
+  if (bridge && totalChars + 100 < MAX_CHARS) {
+    const bridgeLines = bridge.content.split('\n').slice(0, 2) // Max 2 lines for bridge
+    const sectionText = `[Bridge]\n${bridgeLines.join('\n')}`
+    if (totalChars + sectionText.length <= MAX_CHARS) {
+      result.push(sectionText)
+    }
+  }
+
+  if (result.length === 0) {
+    return generatePlaceholderLyrics(songTitle, genre)
+  }
+
+  const output = result.join('\n\n')
+  console.log(`[admin-generate-song-audio] Formatted lyrics: ${output.length} chars (limit: ${MAX_CHARS})`)
+  
+  // Final safety check
+  if (output.length > 600) {
+    console.warn(`[admin-generate-song-audio] Lyrics still too long (${output.length}), truncating...`)
+    return output.substring(0, 595)
+  }
+  
+  return output
   let totalChars = 0
   const result: string[] = []
 
@@ -713,7 +773,7 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
       
       // Otherwise, truncate this section at a COMPLETE LINE boundary (not mid-word)
       const remaining = MAX_CHARS - totalChars - 50 // Buffer for section header
-      if (remaining > 100) {
+      if (remaining > 50) {
         const lines = section.content.split('\n')
         let truncatedLines: string[] = []
         let charCount = 0
@@ -741,7 +801,16 @@ function formatFullLyrics(lyrics: string, songTitle: string, genre: string): str
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
-  return result.join('\n\n')
+  const output = result.join('\n\n')
+  console.log(`[admin-generate-song-audio] Formatted lyrics: ${output.length} chars (limit: ${MAX_CHARS})`)
+  
+  // Final safety check
+  if (output.length > 600) {
+    console.warn(`[admin-generate-song-audio] Lyrics still too long (${output.length}), truncating...`)
+    return output.substring(0, 595)
+  }
+  
+  return output
 }
 
 // Generate placeholder lyrics when none exist
