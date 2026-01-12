@@ -11434,6 +11434,60 @@ export type Database = {
           },
         ]
       }
+      radio_content: {
+        Row: {
+          audio_status: string | null
+          audio_url: string | null
+          brand_name: string | null
+          category: string | null
+          content_type: string
+          created_at: string | null
+          duration_seconds: number | null
+          humor_style: string | null
+          id: string
+          is_active: boolean | null
+          play_weight: number | null
+          script: string
+          title: string
+          updated_at: string | null
+          voice_id: string | null
+        }
+        Insert: {
+          audio_status?: string | null
+          audio_url?: string | null
+          brand_name?: string | null
+          category?: string | null
+          content_type: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          humor_style?: string | null
+          id?: string
+          is_active?: boolean | null
+          play_weight?: number | null
+          script: string
+          title: string
+          updated_at?: string | null
+          voice_id?: string | null
+        }
+        Update: {
+          audio_status?: string | null
+          audio_url?: string | null
+          brand_name?: string | null
+          category?: string | null
+          content_type?: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          humor_style?: string | null
+          id?: string
+          is_active?: boolean | null
+          play_weight?: number | null
+          script?: string
+          title?: string
+          updated_at?: string | null
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
       radio_playlists: {
         Row: {
           added_at: string | null

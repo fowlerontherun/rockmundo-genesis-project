@@ -149,3 +149,6 @@ verify_jwt = false
 
 [functions.process-media-submissions]
 verify_jwt = false
+
+[functions.generate-radio-content-audio]
+verify_jwt = false
