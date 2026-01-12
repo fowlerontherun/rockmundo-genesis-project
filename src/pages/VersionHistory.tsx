@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.352",
+    date: "2026-01-12",
+    changes: [
+      { type: 'feature', description: "Added AI jingles and joke fake adverts to RM Radio" },
+      { type: 'feature', description: "Radio now plays station breaks and sponsor messages between songs" },
+      { type: 'feature', description: "New admin panel for managing radio content (Radio Content Manager)" },
+      { type: 'feature', description: "Pre-loaded 15+ humorous fake adverts and jingles" },
+    ]
+  },
+  {
     version: "1.0.351",
     date: "2026-01-11",
     changes: [

@@ -12,11 +12,13 @@ import {
   Loader2, 
   Radio,
   Music,
-  Shuffle
+  Shuffle,
+  Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useRadioContent, RadioContent, getRandomContent } from "@/hooks/useRadioContent";
 
 interface Song {
   id: string;
@@ -24,6 +26,12 @@ interface Song {
   audio_url: string;
   band_name: string;
   genre: string | null;
+}
+
+interface PlaylistItem {
+  type: 'song' | 'content';
+  song?: Song;
+  content?: RadioContent;
 }
 
 // Shuffle array using Fisher-Yates algorithm
@@ -36,11 +44,31 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+// Build playlist with interleaved content
+function buildPlaylistWithContent(songs: Song[], content: RadioContent[]): PlaylistItem[] {
+  const result: PlaylistItem[] = [];
+  const songsBetweenContent = 3 + Math.floor(Math.random() * 3); // 3-5 songs between content
+  
+  songs.forEach((song, index) => {
+    result.push({ type: 'song', song });
+    
+    // Add random content every X songs
+    if ((index + 1) % songsBetweenContent === 0 && content.length > 0) {
+      const randomContent = getRandomContent(content);
+      if (randomContent) {
+        result.push({ type: 'content', content: randomContent });
+      }
+    }
+  });
+  
+  return result;
+}
+
 // Global radio state context
 interface RadioState {
   isPlaying: boolean;
-  currentSong: Song | null;
-  playlist: Song[];
+  currentItem: PlaylistItem | null;
+  playlist: PlaylistItem[];
   currentIndex: number;
   volume: number;
   isMuted: boolean;
@@ -54,7 +82,7 @@ interface RadioContextValue {
   reshufflePlaylist: () => void;
   setVolume: (v: number) => void;
   setMuted: (m: boolean) => void;
-  initializePlaylist: (songs: Song[]) => void;
+  initializePlaylist: (songs: Song[], content: RadioContent[]) => void;
   isInitialized: boolean;
 }
 
@@ -66,11 +94,22 @@ export const useRadio = () => {
   return ctx;
 };
 
+// Helper to get audio URL from playlist item
+function getAudioUrl(item: PlaylistItem): string | null {
+  if (item.type === 'song' && item.song) {
+    return item.song.audio_url;
+  }
+  if (item.type === 'content' && item.content) {
+    return item.content.audio_url;
+  }
+  return null;
+}
+
 // Global audio element that persists
 let globalAudio: HTMLAudioElement | null = null;
 let globalState: RadioState = {
   isPlaying: false,
-  currentSong: null,
+  currentItem: null,
   playlist: [],
   currentIndex: 0,
   volume: 0.7,
@@ -121,25 +160,29 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const initializePlaylist = useCallback((songs: Song[]) => {
+  const initializePlaylist = useCallback((songs: Song[], content: RadioContent[]) => {
     if (songs.length === 0) return;
     if (globalState.playlist.length > 0) return; // Already initialized
     
-    const shuffled = shuffleArray(songs);
+    const shuffledSongs = shuffleArray(songs);
+    const playlist = buildPlaylistWithContent(shuffledSongs, content);
+    
     globalState = {
       ...globalState,
-      playlist: shuffled,
+      playlist,
       currentIndex: 0,
-      currentSong: shuffled[0],
+      currentItem: playlist[0] || null,
     };
-    if (globalAudio && shuffled[0]) {
-      globalAudio.src = shuffled[0].audio_url;
+    
+    const audioUrl = playlist[0] ? getAudioUrl(playlist[0]) : null;
+    if (globalAudio && audioUrl) {
+      globalAudio.src = audioUrl;
     }
     notifyListeners();
   }, []);
 
   const togglePlay = useCallback(async () => {
-    if (!globalAudio || !globalState.currentSong) return;
+    if (!globalAudio || !globalState.currentItem) return;
 
     if (globalState.isPlaying) {
       globalAudio.pause();
@@ -159,16 +202,17 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
     if (globalState.playlist.length === 0) return;
     
     const nextIndex = (globalState.currentIndex + 1) % globalState.playlist.length;
-    const nextSong = globalState.playlist[nextIndex];
+    const nextItem = globalState.playlist[nextIndex];
     
     globalState = {
       ...globalState,
       currentIndex: nextIndex,
-      currentSong: nextSong,
+      currentItem: nextItem,
     };
 
-    if (globalAudio && nextSong) {
-      globalAudio.src = nextSong.audio_url;
+    const audioUrl = nextItem ? getAudioUrl(nextItem) : null;
+    if (globalAudio && audioUrl) {
+      globalAudio.src = audioUrl;
       if (globalState.isPlaying) {
         globalAudio.play().catch(console.error);
       }
@@ -184,11 +228,12 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
       ...globalState,
       playlist: shuffled,
       currentIndex: 0,
-      currentSong: shuffled[0],
+      currentItem: shuffled[0] || null,
     };
 
-    if (globalAudio && shuffled[0]) {
-      globalAudio.src = shuffled[0].audio_url;
+    const audioUrl = shuffled[0] ? getAudioUrl(shuffled[0]) : null;
+    if (globalAudio && audioUrl) {
+      globalAudio.src = audioUrl;
       if (globalState.isPlaying) {
         globalAudio.play().catch(console.error);
       }
@@ -242,6 +287,9 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fetch radio content (jingles and adverts)
+  const { data: radioContent } = useRadioContent();
+
   // Fetch all songs with audio
   const { data: allSongs, isLoading: songsLoading } = useQuery({
     queryKey: ["rm-radio-songs"],
@@ -276,12 +324,12 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Initialize playlist when songs load
+  // Initialize playlist when songs and content load
   useEffect(() => {
     if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
-      radio.initializePlaylist(allSongs);
+      radio.initializePlaylist(allSongs, radioContent || []);
     }
-  }, [allSongs, radio.isInitialized]);
+  }, [allSongs, radioContent, radio.isInitialized]);
 
   // Audio time tracking
   useEffect(() => {
@@ -352,22 +400,37 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
           ) : (
             <>
               {/* Now Playing */}
-              <div className="bg-gradient-to-br from-primary/10 to-secondary/20 rounded-lg p-4 border">
-                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                  Now Playing
+              {state.currentItem?.type === 'content' ? (
+                <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/30">
+                  <div className="text-xs text-amber-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Megaphone className="h-3 w-3" />
+                    {state.currentItem.content?.content_type === 'jingle' ? 'Station Break' : 'Message from our Sponsors'}
+                  </div>
+                  <div className="text-lg font-semibold truncate">
+                    {state.currentItem.content?.title || "---"}
+                  </div>
+                  {state.currentItem.content?.brand_name && (
+                    <div className="text-sm text-muted-foreground">by {state.currentItem.content.brand_name}</div>
+                  )}
                 </div>
-                <div className="text-lg font-semibold truncate">
-                  {state.currentSong?.title || "---"}
+              ) : (
+                <div className="bg-gradient-to-br from-primary/10 to-secondary/20 rounded-lg p-4 border">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                    Now Playing
+                  </div>
+                  <div className="text-lg font-semibold truncate">
+                    {state.currentItem?.song?.title || "---"}
+                  </div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    {state.currentItem?.song?.band_name || "---"}
+                  </div>
+                  {state.currentItem?.song?.genre && (
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      {state.currentItem.song.genre}
+                    </Badge>
+                  )}
                 </div>
-                <div className="text-sm text-muted-foreground truncate">
-                  {state.currentSong?.band_name || "---"}
-                </div>
-                {state.currentSong?.genre && (
-                  <Badge variant="secondary" className="mt-2 text-xs">
-                    {state.currentSong.genre}
-                  </Badge>
-                )}
-              </div>
+              )}
 
               {/* Progress Bar */}
               <div className="space-y-2">
@@ -400,7 +463,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
                   variant="default"
                   className="h-12 w-12"
                   onClick={radio.togglePlay}
-                  disabled={isLoading || !state.currentSong}
+                  disabled={isLoading || !state.currentItem}
                 >
                   {isLoading ? (
                     <Loader2 className="h-6 w-6 animate-spin" />
