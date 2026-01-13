@@ -129,6 +129,7 @@ const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor")
 const AdminOfferAutomation = lazyWithRetry(() => import("./pages/admin/OfferAutomation"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
+const AdminRadioContent = lazyWithRetry(() => import("./pages/admin/RadioContent"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
@@ -379,6 +380,7 @@ function App() {
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
+                    <Route path="admin/radio-content" element={<AdminRadioContent />} />
                     <Route path="admin/experience-rewards" element={<AdminExperienceRewards />} />
                     <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
                     
