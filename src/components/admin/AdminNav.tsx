@@ -49,6 +49,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/stream-multiplier", label: "Stream Multiplier", description: "Boost streams based on active bands" },
       { path: "/admin/streaming-platforms", label: "Streaming Platforms", description: "Manage platforms" },
       { path: "/admin/radio-stations", label: "Radio Stations", description: "Radio network" },
+      { path: "/admin/radio-content", label: "Radio Content", description: "Jingles & fake adverts" },
     ],
   },
   {
