@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.353",
+    date: "2026-01-13",
+    changes: [
+      { type: 'fix', description: "Fixed charts not showing physical sales - disambiguated release_songs FK relationship" },
+      { type: 'fix', description: "Added cassette_sales to chart generation (was missing)" },
+      { type: 'fix', description: "Fixed ReorderStockDialog manufacturing cost calculation with fallback costs" },
+      { type: 'fix', description: "Improved error reporting in Release Manager dialogs (shows full Supabase error details)" },
+      { type: 'improvement', description: "Better logging in update-music-charts for debugging" },
+    ]
+  },
+  {
     version: "1.0.352",
     date: "2026-01-12",
     changes: [

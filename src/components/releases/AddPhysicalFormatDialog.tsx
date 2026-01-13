@@ -165,12 +165,16 @@ export function AddPhysicalFormatDialog({ open, onOpenChange, release }: AddPhys
       onOpenChange(false);
       resetForm();
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      // Surface more error details from Supabase
+      const message = error?.message || "Unknown error";
+      const details = error?.details || error?.hint || "";
       toast({
         title: "Error adding format",
-        description: error.message,
+        description: details ? `${message} - ${details}` : message,
         variant: "destructive",
       });
+      console.error("Add format error:", error);
     },
   });
 
