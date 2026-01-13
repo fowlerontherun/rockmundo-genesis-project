@@ -37,26 +37,52 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
   const [quantity, setQuantity] = useState(100);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
 
-  // Fetch manufacturing costs
+  // Fetch manufacturing costs - only when dialog is open
   const { data: manufacturingCosts } = useQuery({
     queryKey: ["manufacturing-costs"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("manufacturing_costs")
         .select("*")
         .order("format_type")
         .order("min_quantity");
+      if (error) {
+        console.error("Error fetching manufacturing costs:", error);
+      }
       return data || [];
     },
+    enabled: open, // Only fetch when dialog is open
   });
 
+  // Fallback costs per unit (in cents) if no manufacturing costs data
+  const FALLBACK_COSTS: Record<string, number> = {
+    cd: 20,      // $0.20 per unit
+    vinyl: 80,   // $0.80 per unit
+    cassette: 15 // $0.15 per unit
+  };
+
   const calculateManufacturingCost = (formatType: string, qty: number) => {
-    const costs = manufacturingCosts?.filter(c => c.format_type === formatType) || [];
-    const tier = costs.find(c =>
+    if (!manufacturingCosts || manufacturingCosts.length === 0) {
+      // Use fallback costs
+      const perUnit = FALLBACK_COSTS[formatType] || 20;
+      let baseCost = perUnit * qty;
+      if (revenueShareEnabled) {
+        baseCost = Math.round(baseCost * 0.5);
+      }
+      return baseCost;
+    }
+
+    const costs = manufacturingCosts.filter(c => c.format_type === formatType);
+    let tier = costs.find(c =>
       qty >= c.min_quantity && (c.max_quantity === null || qty <= c.max_quantity)
     );
     
-    let baseCost = tier ? tier.cost_per_unit * qty : 0;
+    // If no tier found, use the highest tier (lowest per-unit cost for large quantities)
+    if (!tier && costs.length > 0) {
+      tier = costs[costs.length - 1];
+    }
+
+    let baseCost = tier ? tier.cost_per_unit * qty : (FALLBACK_COSTS[formatType] || 20) * qty;
     
     if (revenueShareEnabled) {
       baseCost = Math.round(baseCost * 0.5);
@@ -125,12 +151,16 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
       setQuantity(100);
       setRevenueShareEnabled(false);
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      // Surface more error details from Supabase
+      const message = error?.message || "Unknown error";
+      const details = error?.details || error?.hint || "";
       toast({
         title: "Error placing reorder",
-        description: error.message,
+        description: details ? `${message} - ${details}` : message,
         variant: "destructive",
       });
+      console.error("Reorder error:", error);
     },
   });
 
