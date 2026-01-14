@@ -4,6 +4,7 @@ import { ProducerCard } from "./ProducerCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Music } from "lucide-react";
 import type { RecordingProducer } from "@/hooks/useRecordingData";
+import { MUSIC_GENRES } from "@/data/genres";
 
 interface ProducerSelectorProps {
   selectedProducer: RecordingProducer | null;
@@ -60,15 +61,11 @@ export const ProducerSelector = ({ selectedProducer, onSelect, songGenre }: Prod
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Genres" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-[300px]">
             <SelectItem value="all">All Genres</SelectItem>
-            <SelectItem value="Rock">Rock</SelectItem>
-            <SelectItem value="Pop">Pop</SelectItem>
-            <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
-            <SelectItem value="Jazz">Jazz</SelectItem>
-            <SelectItem value="Electronic">Electronic</SelectItem>
-            <SelectItem value="R&B">R&B</SelectItem>
-            <SelectItem value="Country">Country</SelectItem>
+            {MUSIC_GENRES.map((genre) => (
+              <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

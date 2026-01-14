@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.355",
+    date: "2026-01-14",
+    changes: [
+      { type: 'feature', description: "Added 27 new recording producers covering all skill tree genres" },
+      { type: 'fix', description: "Updated existing producers to use valid skill tree genres (Alternative→Rock, Metal→Heavy Metal, etc.)" },
+      { type: 'improvement', description: "Producer genre filter now uses full skill tree genre list (28 genres)" },
+    ]
+  },
+  {
     version: "1.0.354",
     date: "2026-01-14",
     changes: [
