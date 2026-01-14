@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth-context";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ const MANUFACTURING_DAYS: Record<string, number> = {
 export function ReorderStockDialog({ open, onOpenChange, format, release }: ReorderStockDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [quantity, setQuantity] = useState(100);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
@@ -127,19 +129,21 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
 
       if (releaseError) throw releaseError;
 
-      // Log the activity
-      await supabase.from("activity_feed").insert({
-        user_id: release.user_id,
-        activity_type: "physical_format_reordered",
-        message: `Reordered ${quantity} additional ${formatType.toUpperCase()} units for "${release.title}"`,
-        metadata: {
-          release_id: release.id,
-          format_id: format.id,
-          format_type: formatType,
-          quantity_ordered: quantity,
-          manufacturing_cost: manufacturingCost,
-        },
-      });
+      // Log the activity - use current user's ID for RLS compliance
+      if (user?.id) {
+        await supabase.from("activity_feed").insert({
+          user_id: user.id,
+          activity_type: "physical_format_reordered",
+          message: `Reordered ${quantity} additional ${formatType.toUpperCase()} units for "${release.title}"`,
+          metadata: {
+            release_id: release.id,
+            format_id: format.id,
+            format_type: formatType,
+            quantity_ordered: quantity,
+            manufacturing_cost: manufacturingCost,
+          },
+        });
+      }
     },
     onSuccess: () => {
       toast({

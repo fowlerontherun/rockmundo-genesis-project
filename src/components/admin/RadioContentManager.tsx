@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,9 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  Upload,
+  AlertCircle
 } from "lucide-react";
 
 export const RadioContentManager = () => {
@@ -34,6 +36,8 @@ export const RadioContentManager = () => {
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [generatingAll, setGeneratingAll] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Form state
   const [newContent, setNewContent] = useState({
@@ -64,9 +68,11 @@ export const RadioContentManager = () => {
   // Generate audio for single item
   const generateAudioMutation = useMutation({
     mutationFn: async (contentId: string) => {
+      console.log('[RadioContentManager] Generating audio for:', contentId);
       const { data, error } = await supabase.functions.invoke('generate-radio-content-audio', {
         body: { contentId },
       });
+      console.log('[RadioContentManager] Generation response:', { data, error });
       if (error) throw error;
       return data;
     },
@@ -75,10 +81,72 @@ export const RadioContentManager = () => {
       queryClient.invalidateQueries({ queryKey: ["rm-radio-content"] });
       toast({ title: "Audio generation started" });
     },
-    onError: (error) => {
-      toast({ title: "Generation failed", description: error.message, variant: "destructive" });
+    onError: (error: any) => {
+      console.error('[RadioContentManager] Generation error:', error);
+      const message = error?.message || error?.error || "Unknown error";
+      toast({ title: "Generation failed", description: message, variant: "destructive" });
     },
   });
+
+  // Upload audio file for an item
+  const handleFileUpload = async (item: RadioContent, file: File) => {
+    if (!file || !file.type.startsWith('audio/')) {
+      toast({ title: "Invalid file", description: "Please select an audio file (MP3, WAV, etc.)", variant: "destructive" });
+      return;
+    }
+
+    setUploadingId(item.id);
+
+    try {
+      // Upload to Supabase Storage
+      const fileName = `radio-content/${item.content_type}/${item.id}.mp3`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('music')
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('music')
+        .getPublicUrl(fileName);
+
+      const audioUrl = publicUrlData.publicUrl;
+
+      // Estimate duration (audio will be analyzed when played)
+      const estimatedSeconds = 15; // Default estimate
+
+      // Update record with audio URL
+      const { error: updateError } = await supabase
+        .from('radio_content')
+        .update({
+          audio_url: audioUrl,
+          audio_status: 'completed',
+          duration_seconds: estimatedSeconds,
+        })
+        .eq('id', item.id);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["rm-radio-content-all"] });
+      queryClient.invalidateQueries({ queryKey: ["rm-radio-content"] });
+      toast({ title: "Audio uploaded successfully!" });
+
+    } catch (error: any) {
+      console.error('[RadioContentManager] Upload error:', error);
+      toast({ 
+        title: "Upload failed", 
+        description: error?.message || "Unknown error", 
+        variant: "destructive" 
+      });
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   // Generate all pending audio
   const generateAllAudio = async () => {
@@ -333,15 +401,39 @@ export const RadioContentManager = () => {
                               {playingId === item.id ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                             </Button>
                           )}
-                          {item.audio_status === 'pending' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => generateAudioMutation.mutate(item.id)}
-                              disabled={generateAudioMutation.isPending}
-                            >
-                              Generate
-                            </Button>
+                          {(item.audio_status === 'pending' || item.audio_status === 'failed') && (
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => generateAudioMutation.mutate(item.id)}
+                                disabled={generateAudioMutation.isPending}
+                              >
+                                Generate
+                              </Button>
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                className="hidden"
+                                ref={(el) => { fileInputRefs.current[item.id] = el; }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(item, file);
+                                }}
+                              />
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => fileInputRefs.current[item.id]?.click()}
+                                disabled={uploadingId === item.id}
+                              >
+                                {uploadingId === item.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Upload className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </>
                           )}
                         </div>
                         <Switch
@@ -384,15 +476,39 @@ export const RadioContentManager = () => {
                               {playingId === item.id ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                             </Button>
                           )}
-                          {item.audio_status === 'pending' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => generateAudioMutation.mutate(item.id)}
-                              disabled={generateAudioMutation.isPending}
-                            >
-                              Generate
-                            </Button>
+                          {(item.audio_status === 'pending' || item.audio_status === 'failed') && (
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => generateAudioMutation.mutate(item.id)}
+                                disabled={generateAudioMutation.isPending}
+                              >
+                                Generate
+                              </Button>
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                className="hidden"
+                                ref={(el) => { fileInputRefs.current[item.id] = el; }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(item, file);
+                                }}
+                              />
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => fileInputRefs.current[item.id]?.click()}
+                                disabled={uploadingId === item.id}
+                              >
+                                {uploadingId === item.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Upload className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </>
                           )}
                         </div>
                         <Switch
