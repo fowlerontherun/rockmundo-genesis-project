@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.354",
+    date: "2026-01-14",
+    changes: [
+      { type: 'feature', description: "Added manual audio upload for radio jingles/adverts (when AI generation fails)" },
+      { type: 'fix', description: "Fixed Add Physical Format and Reorder Stock database errors (was using wrong user_id for RLS)" },
+      { type: 'improvement', description: "Better error logging for radio content generation" },
+      { type: 'fix', description: "Upload button now shows for failed items too, not just pending" },
+    ]
+  },
+  {
     version: "1.0.353",
     date: "2026-01-13",
     changes: [
