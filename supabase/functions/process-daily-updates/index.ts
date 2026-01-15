@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
   const startedAt = Date.now()
   let processedProfiles = 0
   let processedBands = 0
+  let playerSyncs = 0
   let errorCount = 0
 
   try {
@@ -44,6 +45,33 @@ Deno.serve(async (req) => {
     })
 
     const today = new Date().toISOString().split('T')[0]
+
+    // Fetch band growth config values
+    console.log('Fetching band growth config...')
+    const { data: growthConfig } = await supabase
+      .from('game_balance_config')
+      .select('key, value')
+      .in('key', [
+        'band_daily_fame_min', 'band_daily_fame_max',
+        'band_daily_fans_min', 'band_daily_fans_max',
+        'band_fame_to_fans_rate',
+        'band_player_fame_share', 'band_player_fans_share'
+      ])
+
+    const getConfig = (key: string, defaultVal: number): number => {
+      const item = growthConfig?.find(c => c.key === key)
+      return item ? Number(item.value) : defaultVal
+    }
+
+    const fameMin = getConfig('band_daily_fame_min', 5)
+    const fameMax = getConfig('band_daily_fame_max', 15)
+    const fansMin = getConfig('band_daily_fans_min', 5)
+    const fansMax = getConfig('band_daily_fans_max', 20)
+    const fameToFansRate = getConfig('band_fame_to_fans_rate', 0.5)
+    const playerFameShare = getConfig('band_player_fame_share', 92) / 100
+    const playerFansShare = getConfig('band_player_fans_share', 92) / 100
+
+    console.log(`Growth config: fame ${fameMin}-${fameMax}, fans ${fansMin}-${fansMax}, fameToFans ${fameToFansRate}%, playerShare fame ${playerFameShare * 100}% fans ${playerFansShare * 100}%`)
 
     // Process profiles - award daily fame based on activity
     const { data: profiles, error: profilesError } = await supabase
@@ -83,10 +111,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Process bands - award daily fame and fans
+    // Process bands - award daily fame and fans with configurable rates
     const { data: bands, error: bandsError } = await supabase
       .from('bands')
-      .select('id, fame, weekly_fans')
+      .select('id, fame, weekly_fans, total_fans')
 
     if (bandsError) throw bandsError
 
@@ -101,16 +129,16 @@ Deno.serve(async (req) => {
 
         const gigsCount = recentGigs?.length || 0
         
-        // Base passive daily fame/fans gain: random 1-5 each
-        const passiveFameGain = Math.floor(Math.random() * 5) + 1
-        const passiveFansGain = Math.floor(Math.random() * 5) + 1
+        // Base passive daily fame/fans gain: configurable range
+        const passiveFameGain = fameMin + Math.floor(Math.random() * (fameMax - fameMin + 1))
+        const passiveFansGain = fansMin + Math.floor(Math.random() * (fansMax - fansMin + 1))
         
         // Bonus from recent activity
         const activityFameBonus = gigsCount * 10
         const activityFansBonus = gigsCount * 5
         
-        // Additional fans based on current fame (0.1% of fame)
-        const fameBasedFansBonus = Math.floor((band.fame || 0) * 0.001)
+        // Additional fans based on current fame (configurable rate, default 0.5%)
+        const fameBasedFansBonus = Math.floor((band.fame || 0) * (fameToFansRate / 100))
 
         const totalFameGain = passiveFameGain + activityFameBonus
         const totalFansGain = passiveFansGain + activityFansBonus + fameBasedFansBonus
@@ -119,11 +147,56 @@ Deno.serve(async (req) => {
           .from('bands')
           .update({
             fame: (band.fame || 0) + totalFameGain,
-            weekly_fans: (band.weekly_fans || 0) + totalFansGain
+            weekly_fans: (band.weekly_fans || 0) + totalFansGain,
+            total_fans: (band.total_fans || 0) + totalFansGain
           })
           .eq('id', band.id)
 
-        // Log the fame event
+        // === SYNC BAND GAINS TO PLAYER CHARACTERS ===
+        // Get active band members (non-touring, with user_id)
+        const { data: members } = await supabase
+          .from('band_members')
+          .select('user_id')
+          .eq('band_id', band.id)
+          .eq('is_touring_member', false)
+          .not('user_id', 'is', null)
+
+        let membersSynced = 0
+        if (members && members.length > 0) {
+          // Calculate player share (with 5-10% deduction built into config)
+          const playerFameGain = Math.floor(totalFameGain * playerFameShare)
+          const playerFansGain = Math.floor(totalFansGain * playerFansShare)
+
+          for (const member of members) {
+            if (!member.user_id) continue
+
+            try {
+              // Get current profile by user_id
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, fame, fans')
+                .eq('user_id', member.user_id)
+                .single()
+
+              if (profile) {
+                await supabase
+                  .from('profiles')
+                  .update({
+                    fame: (profile.fame || 0) + playerFameGain,
+                    fans: (profile.fans || 0) + playerFansGain
+                  })
+                  .eq('id', profile.id)
+                
+                membersSynced++
+                playerSyncs++
+              }
+            } catch (memberError) {
+              console.error(`Error syncing member ${member.user_id}:`, memberError)
+            }
+          }
+        }
+
+        // Log the fame event with player sync data
         await supabase
           .from('band_fame_events')
           .insert({
@@ -134,7 +207,11 @@ Deno.serve(async (req) => {
               fans_gained: totalFansGain,
               passive_fame: passiveFameGain,
               passive_fans: passiveFansGain,
+              fame_based_fans: fameBasedFansBonus,
               gigs_count: gigsCount,
+              player_fame_synced: Math.floor(totalFameGain * playerFameShare),
+              player_fans_synced: Math.floor(totalFansGain * playerFansShare),
+              members_synced: membersSynced,
               date: today
             }
           })
@@ -291,18 +368,19 @@ Deno.serve(async (req) => {
     }
 
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated,
+      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs,
       errorCount,
       resultSummary: {
         profiles_processed: processedProfiles,
         bands_processed: processedBands,
+        player_syncs: playerSyncs,
         ticket_sales_updated: ticketSalesUpdated,
         hype_decayed: hypeDecayCount,
         pr_offers_generated: prOffersGenerated,
@@ -314,6 +392,7 @@ Deno.serve(async (req) => {
         success: true,
         profiles_processed: processedProfiles,
         bands_processed: processedBands,
+        player_syncs: playerSyncs,
         ticket_sales_updated: ticketSalesUpdated,
         pr_offers_generated: prOffersGenerated,
         errors: errorCount,

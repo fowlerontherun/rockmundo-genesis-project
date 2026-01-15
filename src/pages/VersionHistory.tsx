@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.356",
+    date: "2026-01-15",
+    changes: [
+      { type: 'feature', description: "Band fame/fan gains now sync to player characters (configurable 85-100% share)" },
+      { type: 'feature', description: "Added admin-configurable band daily fame/fans growth rates (Admin > Bands > Growth tab)" },
+      { type: 'improvement', description: "Increased default daily band growth from 1-5 to 5-15 fame and 5-20 fans" },
+      { type: 'improvement', description: "Fame-to-fans conversion rate increased from 0.1% to 0.5% daily" },
+    ]
+  },
+  {
     version: "1.0.355",
     date: "2026-01-14",
     changes: [

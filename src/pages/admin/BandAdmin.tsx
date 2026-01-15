@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Users, Heart, Shield, TrendingUp, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, Heart, Shield, TrendingUp, Save, Loader2, Sprout } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,6 +43,15 @@ const BandAdmin = () => {
   const [performanceChemistryBonus, setPerformanceChemistryBonus] = useState(25);
   const [rehearsalChemistryBonus, setRehearsalChemistryBonus] = useState(15);
 
+  // Growth settings (NEW)
+  const [dailyFameMin, setDailyFameMin] = useState(5);
+  const [dailyFameMax, setDailyFameMax] = useState(15);
+  const [dailyFansMin, setDailyFansMin] = useState(5);
+  const [dailyFansMax, setDailyFansMax] = useState(20);
+  const [fameToFansRate, setFameToFansRate] = useState(0.5);
+  const [playerFameShare, setPlayerFameShare] = useState(92);
+  const [playerFansShare, setPlayerFansShare] = useState(92);
+
   // Fetch existing config
   const { data: config, isLoading } = useQuery({
     queryKey: ["band-balance-config"],
@@ -63,18 +72,30 @@ const BandAdmin = () => {
         const item = config.find((c: any) => c.key === key);
         return item ? Number(item.value) : defaultVal;
       };
+      // Chemistry
       setChemistryGainPerRehearsal(getVal("band_chemistry_gain_rehearsal", 5));
       setChemistryGainPerGig(getVal("band_chemistry_gain_gig", 10));
       setChemistryDecayPerWeek(getVal("band_chemistry_decay_week", 2));
       setMaxChemistry(getVal("band_max_chemistry", 100));
+      // Limits
       setMaxBandMembers(getVal("band_max_members", 6));
       setMaxTouringMembers(getVal("band_max_touring_members", 3));
       setMinMembersForGig(getVal("band_min_members_gig", 2));
+      // Leadership
       setVotingFrequencyDays(getVal("band_voting_frequency_days", 30));
       setLeaderDecisionWeight(getVal("band_leader_decision_weight", 2));
+      // Bonuses
       setSongwritingChemistryBonus(getVal("band_songwriting_chemistry_bonus", 20));
       setPerformanceChemistryBonus(getVal("band_performance_chemistry_bonus", 25));
       setRehearsalChemistryBonus(getVal("band_rehearsal_chemistry_bonus", 15));
+      // Growth (NEW)
+      setDailyFameMin(getVal("band_daily_fame_min", 5));
+      setDailyFameMax(getVal("band_daily_fame_max", 15));
+      setDailyFansMin(getVal("band_daily_fans_min", 5));
+      setDailyFansMax(getVal("band_daily_fans_max", 20));
+      setFameToFansRate(getVal("band_fame_to_fans_rate", 0.5));
+      setPlayerFameShare(getVal("band_player_fame_share", 92));
+      setPlayerFansShare(getVal("band_player_fans_share", 92));
     }
   }, [config]);
 
@@ -103,18 +124,30 @@ const BandAdmin = () => {
 
   const saveAllSettings = () => {
     saveMutation.mutate([
+      // Chemistry
       { key: "band_chemistry_gain_rehearsal", value: chemistryGainPerRehearsal, category: "band_chemistry", description: "Chemistry points gained per rehearsal" },
       { key: "band_chemistry_gain_gig", value: chemistryGainPerGig, category: "band_chemistry", description: "Chemistry points gained per gig" },
       { key: "band_chemistry_decay_week", value: chemistryDecayPerWeek, category: "band_chemistry", description: "Chemistry points lost per week of inactivity" },
       { key: "band_max_chemistry", value: maxChemistry, category: "band_chemistry", description: "Maximum chemistry level" },
+      // Limits
       { key: "band_max_members", value: maxBandMembers, category: "band_limits", description: "Maximum band members" },
       { key: "band_max_touring_members", value: maxTouringMembers, category: "band_limits", description: "Maximum touring/session members" },
       { key: "band_min_members_gig", value: minMembersForGig, category: "band_limits", description: "Minimum members required for a gig" },
+      // Leadership
       { key: "band_voting_frequency_days", value: votingFrequencyDays, category: "band_leadership", description: "Days between leadership votes" },
       { key: "band_leader_decision_weight", value: leaderDecisionWeight, category: "band_leadership", description: "Leader vote weight multiplier" },
+      // Bonuses
       { key: "band_songwriting_chemistry_bonus", value: songwritingChemistryBonus, category: "band_bonuses", description: "Max % bonus to songwriting from chemistry" },
       { key: "band_performance_chemistry_bonus", value: performanceChemistryBonus, category: "band_bonuses", description: "Max % bonus to performance from chemistry" },
       { key: "band_rehearsal_chemistry_bonus", value: rehearsalChemistryBonus, category: "band_bonuses", description: "Max % bonus to rehearsal effectiveness from chemistry" },
+      // Growth (NEW)
+      { key: "band_daily_fame_min", value: dailyFameMin, category: "band_growth", description: "Minimum daily passive fame gain for bands" },
+      { key: "band_daily_fame_max", value: dailyFameMax, category: "band_growth", description: "Maximum daily passive fame gain for bands" },
+      { key: "band_daily_fans_min", value: dailyFansMin, category: "band_growth", description: "Minimum daily passive fans gain for bands" },
+      { key: "band_daily_fans_max", value: dailyFansMax, category: "band_growth", description: "Maximum daily passive fans gain for bands" },
+      { key: "band_fame_to_fans_rate", value: fameToFansRate, category: "band_growth", description: "Percentage of band fame added as bonus fans daily" },
+      { key: "band_player_fame_share", value: playerFameShare, category: "band_growth", description: "Percentage of band fame gain given to player character" },
+      { key: "band_player_fans_share", value: playerFansShare, category: "band_growth", description: "Percentage of band fans gain given to player character" },
     ]);
   };
 
@@ -148,7 +181,7 @@ const BandAdmin = () => {
         </div>
 
         <Tabs defaultValue="chemistry" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="chemistry" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">Chemistry</span>
@@ -164,6 +197,10 @@ const BandAdmin = () => {
             <TabsTrigger value="bonuses" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Bonuses</span>
+            </TabsTrigger>
+            <TabsTrigger value="growth" className="flex items-center gap-2">
+              <Sprout className="h-4 w-4" />
+              <span className="hidden sm:inline">Growth</span>
             </TabsTrigger>
           </TabsList>
 
@@ -274,6 +311,77 @@ const BandAdmin = () => {
                     <Slider value={[rehearsalChemistryBonus]} onValueChange={([v]) => setRehearsalChemistryBonus(v)} min={0} max={50} step={5} />
                     <p className="text-xs text-muted-foreground">Max bonus to rehearsal effectiveness from 100% chemistry</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="growth">
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Growth Rates</CardTitle>
+                <CardDescription>
+                  Configure how bands passively gain fame and fans each day, and how much is shared with player characters.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Daily Fame Range: {dailyFameMin} - {dailyFameMax}</Label>
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <Slider value={[dailyFameMin]} onValueChange={([v]) => setDailyFameMin(Math.min(v, dailyFameMax))} min={1} max={50} step={1} />
+                        <p className="text-xs text-muted-foreground mt-1">Min</p>
+                      </div>
+                      <div className="flex-1">
+                        <Slider value={[dailyFameMax]} onValueChange={([v]) => setDailyFameMax(Math.max(v, dailyFameMin))} min={1} max={50} step={1} />
+                        <p className="text-xs text-muted-foreground mt-1">Max</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Random passive fame gained by bands each day</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Daily Fans Range: {dailyFansMin} - {dailyFansMax}</Label>
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <Slider value={[dailyFansMin]} onValueChange={([v]) => setDailyFansMin(Math.min(v, dailyFansMax))} min={1} max={100} step={1} />
+                        <p className="text-xs text-muted-foreground mt-1">Min</p>
+                      </div>
+                      <div className="flex-1">
+                        <Slider value={[dailyFansMax]} onValueChange={([v]) => setDailyFansMax(Math.max(v, dailyFansMin))} min={1} max={100} step={1} />
+                        <p className="text-xs text-muted-foreground mt-1">Max</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Random passive fans gained by bands each day</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label>Fame to Fans Rate: {fameToFansRate}%</Label>
+                    <Slider value={[fameToFansRate]} onValueChange={([v]) => setFameToFansRate(v)} min={0.1} max={2} step={0.1} />
+                    <p className="text-xs text-muted-foreground">% of band's fame added as bonus fans daily</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Player Fame Share: {playerFameShare}%</Label>
+                    <Slider value={[playerFameShare]} onValueChange={([v]) => setPlayerFameShare(v)} min={85} max={100} step={1} />
+                    <p className="text-xs text-muted-foreground">% of band fame gain given to player character</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Player Fans Share: {playerFansShare}%</Label>
+                    <Slider value={[playerFansShare]} onValueChange={([v]) => setPlayerFansShare(v)} min={85} max={100} step={1} />
+                    <p className="text-xs text-muted-foreground">% of band fans gain given to player character</p>
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 p-4 rounded-lg mt-4">
+                  <h4 className="font-medium mb-2">How it works</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Every day, bands passively gain fame ({dailyFameMin}-{dailyFameMax}) and fans ({dailyFansMin}-{dailyFansMax}), 
+                    plus an additional {fameToFansRate}% of their current fame as bonus fans. When bands gain fame/fans, 
+                    each player character in the band also receives {playerFameShare}% of the fame and {playerFansShare}% of the fans 
+                    (a {100 - playerFameShare}-{100 - playerFansShare}% deduction to represent the band taking some credit).
+                  </p>
                 </div>
               </CardContent>
             </Card>
