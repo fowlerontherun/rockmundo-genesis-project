@@ -20,6 +20,7 @@ import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
 import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
 import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
+import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
 
 // Advisor imports
 import { Link } from "react-router-dom";
@@ -253,6 +254,7 @@ const Dashboard = () => {
       </div>
 
       <DebtWarningBanner />
+      <GigLocationWarning />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">

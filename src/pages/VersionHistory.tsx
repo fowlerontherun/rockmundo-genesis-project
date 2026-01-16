@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.396",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Band Rankings 404 error - route now matches navigation" },
+      { type: 'fix', description: "Tour gigs now show in schedule (added 'confirmed' status)" },
+      { type: 'feature', description: "Gig location warning when you're in wrong city within 6 hours of show" },
+      { type: 'feature', description: "VIP charter flight option ($40k) - arrives 1 hour before show" },
+      { type: 'feature', description: "Today's News shows your XP gains and skill improvements" },
+      { type: 'feature', description: "Today's News shows band fame and fan gains" },
+      { type: 'feature', description: "Today's News shows other bands' gig outcomes" },
+    ],
+  },
+  {
     version: "1.0.395",
     date: "2026-01-16",
     changes: [
