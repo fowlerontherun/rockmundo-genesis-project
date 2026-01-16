@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.408",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added dedicated Self-Promotion page (/media/self-promotion) with full activity browser" },
+      { type: 'feature', description: "Added dedicated Websites page (/media/websites) for music publication submissions" },
+      { type: 'feature', description: "Added website submission system with pitch messages and tracking" },
+      { type: 'improvement', description: "Navigation now links directly to new pages in Media section" },
+    ],
+  },
+  {
     version: "1.0.407",
     date: "2026-01-16",
     changes: [

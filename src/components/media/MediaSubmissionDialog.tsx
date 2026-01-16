@@ -19,9 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Newspaper, BookOpen, Podcast, Star, Users, DollarSign, TrendingUp, Send, Loader2 } from "lucide-react";
+import { Newspaper, BookOpen, Podcast, Globe, Star, Users, DollarSign, TrendingUp, Send, Loader2 } from "lucide-react";
 
-export type MediaType = "newspaper" | "magazine" | "podcast";
+export type MediaType = "newspaper" | "magazine" | "podcast" | "website";
 
 interface MediaSubmissionDialogProps {
   open: boolean;
@@ -80,6 +80,18 @@ const mediaConfig = {
       { value: "industry_insights", label: "Industry Insights", description: "Share music industry knowledge" },
     ],
   },
+  website: {
+    icon: Globe,
+    title: "Request Feature",
+    table: "website_submissions",
+    idField: "website_id",
+    typeField: "pitch_message",
+    types: [
+      { value: "artist_spotlight", label: "Artist Spotlight", description: "Featured artist profile" },
+      { value: "new_release", label: "New Release Coverage", description: "Promote your latest release" },
+      { value: "interview", label: "Interview", description: "Q&A interview feature" },
+    ],
+  },
 };
 
 export function MediaSubmissionDialog({
@@ -111,7 +123,7 @@ export function MediaSubmissionDialog({
       };
 
       const { error } = await supabase
-        .from(config.table as "newspaper_submissions" | "magazine_submissions" | "podcast_submissions")
+        .from(config.table as "newspaper_submissions" | "magazine_submissions" | "podcast_submissions" | "website_submissions")
         .insert(submission as never);
 
       if (error) {
