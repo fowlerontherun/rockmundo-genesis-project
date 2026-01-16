@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Clock, CalendarIcon, CheckCircle, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Clock, CalendarIcon, CheckCircle, AlertCircle, Ban } from 'lucide-react';
+import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { STUDIO_SLOTS, FacilitySlot, getSlotTimeRange } from '@/utils/facilitySlots';
 import { useStudioAvailability } from '@/hooks/useStudioAvailability';
+import { isSlotInPast } from '@/utils/timeSlotValidation';
 
 interface StudioSlotSelectorProps {
   studioId: string;
@@ -91,12 +92,13 @@ export const StudioSlotSelector = ({
           ) : (
             <RadioGroup value={selectedSlotId} onValueChange={onSlotChange}>
               <div className="grid grid-cols-2 gap-2">
-                {STUDIO_SLOTS.map((slot) => {
+              {STUDIO_SLOTS.map((slot) => {
                   const slotData = slotAvailability?.find(s => s.slot.id === slot.id);
                   const isBooked = slotData?.isBooked || false;
                   const isYourBooking = slotData?.isYourBooking || false;
                   const bookedBy = slotData?.bookedByBand;
-                  const canSelect = !isBooked;
+                  const isPast = selectedDate && isSlotInPast(slot, selectedDate);
+                  const canSelect = !isBooked && !isPast;
 
                   return (
                     <div
@@ -104,9 +106,10 @@ export const StudioSlotSelector = ({
                       className={cn(
                         'flex items-center space-x-2 rounded-lg border p-3 transition-colors',
                         selectedSlotId === slot.id && 'border-primary bg-primary/5',
-                        isBooked && !isYourBooking && 'bg-red-500/10 border-red-500/30',
-                        isYourBooking && 'bg-blue-500/10 border-blue-500/30',
-                        !canSelect && 'opacity-50 cursor-not-allowed',
+                        isPast && 'bg-muted/50 border-muted opacity-60 cursor-not-allowed',
+                        isBooked && !isYourBooking && !isPast && 'bg-red-500/10 border-red-500/30',
+                        isYourBooking && !isPast && 'bg-blue-500/10 border-blue-500/30',
+                        !canSelect && !isPast && 'opacity-50 cursor-not-allowed',
                         canSelect && 'cursor-pointer hover:bg-accent/50'
                       )}
                       onClick={() => canSelect && onSlotChange(slot.id)}
@@ -114,8 +117,17 @@ export const StudioSlotSelector = ({
                       <RadioGroupItem value={slot.id} disabled={!canSelect} />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium cursor-pointer">{slot.name}</Label>
-                          {isBooked ? (
+                          <Label className={cn(
+                            "text-sm font-medium",
+                            canSelect && "cursor-pointer",
+                            isPast && "text-muted-foreground"
+                          )}>{slot.name}</Label>
+                          {isPast ? (
+                            <Badge variant="secondary" className="text-xs">
+                              <Ban className="h-3 w-3 mr-1" />
+                              Passed
+                            </Badge>
+                          ) : isBooked ? (
                             <Badge variant="destructive" className="text-xs">
                               {isYourBooking ? 'Your session' : 'Booked'}
                             </Badge>
@@ -130,7 +142,7 @@ export const StudioSlotSelector = ({
                           <Clock className="h-3 w-3" />
                           {slot.startTime} - {slot.endTime} ({slot.duration}h)
                         </div>
-                        {bookedBy && !isYourBooking && (
+                        {bookedBy && !isYourBooking && !isPast && (
                           <p className="text-xs text-destructive mt-1">{bookedBy}</p>
                         )}
                       </div>

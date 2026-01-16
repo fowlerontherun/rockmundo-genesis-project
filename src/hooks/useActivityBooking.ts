@@ -56,6 +56,12 @@ export async function checkTimeSlotAvailable(
  * Create a scheduled activity entry
  */
 export async function createScheduledActivity(params: BookingParams): Promise<string> {
+  // Validate that the scheduled start is in the future
+  const now = new Date();
+  if (params.scheduledStart <= now) {
+    throw new Error('Cannot book activities in the past. Please select a future time slot.');
+  }
+
   let userId = params.userId;
   
   if (!userId) {
