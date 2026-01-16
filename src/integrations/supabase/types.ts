@@ -18391,6 +18391,14 @@ export type Database = {
         Returns: undefined
       }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
+      decrement_gettit_comment_vote: {
+        Args: { comment_id: string; vote_field: string }
+        Returns: undefined
+      }
+      decrement_gettit_vote: {
+        Args: { post_id: string; vote_field: string }
+        Returns: undefined
+      }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
       get_band_country_fame: {
@@ -18444,6 +18452,14 @@ export type Database = {
         Args: { p_video_id: string }
         Returns: undefined
       }
+      increment_gettit_comment_vote: {
+        Args: { comment_id: string; vote_field: string }
+        Returns: undefined
+      }
+      increment_gettit_vote: {
+        Args: { post_id: string; vote_field: string }
+        Returns: undefined
+      }
       increment_release_revenue: {
         Args: { amount: number; release_id: string }
         Returns: undefined
@@ -18457,6 +18473,14 @@ export type Database = {
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
+      swap_gettit_comment_vote: {
+        Args: { comment_id: string; new_field: string; old_field: string }
+        Returns: undefined
+      }
+      swap_gettit_vote: {
+        Args: { new_field: string; old_field: string; post_id: string }
+        Returns: undefined
+      }
       sync_job_employee_counts: { Args: never; Returns: undefined }
       sync_twaater_fame_scores: { Args: never; Returns: undefined }
       update_song_fame: {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ArrowUp, ArrowDown, MessageSquare, Plus, TrendingUp, Clock, Flame } from "lucide-react";
+import { ArrowUp, ArrowDown, MessageSquare, Plus, TrendingUp, Clock, Flame, Send, X } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,23 @@ interface GettitPost {
   userVote?: 'up' | 'down' | null;
 }
 
+interface GettitComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  parent_id: string | null;
+  upvotes: number;
+  downvotes: number;
+  created_at: string;
+  author?: {
+    display_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  };
+  userVote?: 'up' | 'down' | null;
+}
+
 type SortType = 'hot' | 'new' | 'top';
 
 const GettitPage = () => {
@@ -68,6 +86,10 @@ const GettitPage = () => {
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostSubreddit, setNewPostSubreddit] = useState('');
+  
+  // Comments state
+  const [selectedPost, setSelectedPost] = useState<GettitPost | null>(null);
+  const [newComment, setNewComment] = useState('');
 
   // Fetch subreddits
   const { data: subreddits = [] } = useQuery({
@@ -131,6 +153,45 @@ const GettitPage = () => {
     },
   });
 
+  // Fetch comments for selected post
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['gettit-comments', selectedPost?.id],
+    queryFn: async () => {
+      if (!selectedPost) return [];
+      
+      const { data, error } = await supabase
+        .from('gettit_comments')
+        .select(`
+          *,
+          author:profiles!gettit_comments_author_id_fkey(display_name, username, avatar_url)
+        `)
+        .eq('post_id', selectedPost.id)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+
+      // Fetch user's comment votes if logged in
+      if (profile?.id && data) {
+        const commentIds = data.map(c => c.id);
+        const { data: votes } = await supabase
+          .from('gettit_comment_votes')
+          .select('comment_id, vote_type')
+          .eq('user_id', profile.id)
+          .in('comment_id', commentIds);
+
+        const voteMap = new Map(votes?.map(v => [v.comment_id, v.vote_type]) || []);
+        
+        return data.map(comment => ({
+          ...comment,
+          userVote: voteMap.get(comment.id) || null,
+        })) as GettitComment[];
+      }
+
+      return data as GettitComment[];
+    },
+    enabled: !!selectedPost,
+  });
+
   // Create post mutation
   const createPostMutation = useMutation({
     mutationFn: async () => {
@@ -180,18 +241,16 @@ const GettitPage = () => {
         if (existingVote.vote_type === voteType) {
           // Remove vote
           await supabase.from('gettit_post_votes').delete().eq('id', existingVote.id);
-          // Update post counts
           const field = voteType === 'up' ? 'upvotes' : 'downvotes';
-          await supabase.rpc('decrement_gettit_vote' as any, { post_id: postId, vote_field: field });
+          await supabase.rpc('decrement_gettit_vote', { post_id: postId, vote_field: field });
         } else {
           // Change vote
           await supabase.from('gettit_post_votes')
             .update({ vote_type: voteType })
             .eq('id', existingVote.id);
-          // Update both fields
           const oldField = existingVote.vote_type === 'up' ? 'upvotes' : 'downvotes';
           const newField = voteType === 'up' ? 'upvotes' : 'downvotes';
-          await supabase.rpc('swap_gettit_vote' as any, { 
+          await supabase.rpc('swap_gettit_vote', { 
             post_id: postId, 
             old_field: oldField, 
             new_field: newField 
@@ -205,19 +264,112 @@ const GettitPage = () => {
           vote_type: voteType,
         });
         const field = voteType === 'up' ? 'upvotes' : 'downvotes';
-        await supabase.rpc('increment_gettit_vote' as any, { post_id: postId, vote_field: field });
+        await supabase.rpc('increment_gettit_vote', { post_id: postId, vote_field: field });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gettit-posts'] });
     },
+    onError: (error) => {
+      toast({ 
+        title: 'Vote failed', 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async () => {
+      if (!profile?.id) throw new Error('Must be logged in');
+      if (!selectedPost) throw new Error('No post selected');
+      if (!newComment.trim()) throw new Error('Comment cannot be empty');
+
+      const { error } = await supabase.from('gettit_comments').insert({
+        post_id: selectedPost.id,
+        author_id: profile.id,
+        content: newComment.trim(),
+      });
+      if (error) throw error;
+
+      // Update comment count
+      await supabase
+        .from('gettit_posts')
+        .update({ comment_count: (selectedPost.comment_count || 0) + 1 })
+        .eq('id', selectedPost.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gettit-comments', selectedPost?.id] });
+      queryClient.invalidateQueries({ queryKey: ['gettit-posts'] });
+      setNewComment('');
+      toast({ title: 'Comment added!' });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Failed to add comment', 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  // Comment vote mutation
+  const commentVoteMutation = useMutation({
+    mutationFn: async ({ commentId, voteType }: { commentId: string; voteType: 'up' | 'down' }) => {
+      if (!profile?.id) throw new Error('Must be logged in');
+
+      const { data: existingVote } = await supabase
+        .from('gettit_comment_votes')
+        .select('id, vote_type')
+        .eq('comment_id', commentId)
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (existingVote) {
+        if (existingVote.vote_type === voteType) {
+          await supabase.from('gettit_comment_votes').delete().eq('id', existingVote.id);
+          const field = voteType === 'up' ? 'upvotes' : 'downvotes';
+          await supabase.rpc('decrement_gettit_comment_vote', { comment_id: commentId, vote_field: field });
+        } else {
+          await supabase.from('gettit_comment_votes')
+            .update({ vote_type: voteType })
+            .eq('id', existingVote.id);
+          const oldField = existingVote.vote_type === 'up' ? 'upvotes' : 'downvotes';
+          const newField = voteType === 'up' ? 'upvotes' : 'downvotes';
+          await supabase.rpc('swap_gettit_comment_vote', { 
+            comment_id: commentId, 
+            old_field: oldField, 
+            new_field: newField 
+          });
+        }
+      } else {
+        await supabase.from('gettit_comment_votes').insert({
+          comment_id: commentId,
+          user_id: profile.id,
+          vote_type: voteType,
+        });
+        const field = voteType === 'up' ? 'upvotes' : 'downvotes';
+        await supabase.rpc('increment_gettit_comment_vote', { comment_id: commentId, vote_field: field });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gettit-comments', selectedPost?.id] });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Vote failed', 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive' 
+      });
+    },
   });
 
   const getScore = (post: GettitPost) => post.upvotes - post.downvotes;
+  const getCommentScore = (comment: GettitComment) => comment.upvotes - comment.downvotes;
 
   const sortedPosts = [...posts].sort((a, b) => {
     if (sortBy === 'hot') {
-      // Simple hot algorithm: score + time decay
       const aScore = getScore(a) + (new Date(a.created_at).getTime() / (1000 * 60 * 60));
       const bScore = getScore(b) + (new Date(b.created_at).getTime() / (1000 * 60 * 60));
       return bScore - aScore;
@@ -424,7 +576,12 @@ const GettitPage = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <Button variant="ghost" size="sm" className="gap-1 h-7">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="gap-1 h-7"
+                          onClick={() => setSelectedPost(post)}
+                        >
                           <MessageSquare className="h-4 w-4" />
                           {post.comment_count} Comments
                         </Button>
@@ -437,6 +594,102 @@ const GettitPage = () => {
           )}
         </div>
       </div>
+
+      {/* Comments Dialog */}
+      <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              {selectedPost?.title}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            {selectedPost?.content && (
+              <div className="mb-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm">{selectedPost.content}</p>
+              </div>
+            )}
+            
+            <Separator className="my-4" />
+            
+            {/* Add comment */}
+            {profile && (
+              <div className="flex gap-2 mb-4">
+                <Textarea
+                  placeholder="Write a comment..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  rows={2}
+                  className="flex-1"
+                />
+                <Button 
+                  size="icon"
+                  onClick={() => createCommentMutation.mutate()}
+                  disabled={createCommentMutation.isPending || !newComment.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            {/* Comments list */}
+            <div className="space-y-3">
+              {commentsLoading ? (
+                <div className="py-8 text-center text-muted-foreground">Loading comments...</div>
+              ) : comments.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  No comments yet. Be the first to comment!
+                </div>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-accent/30">
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-5 w-5 ${comment.userVote === 'up' ? 'text-orange-500' : ''}`}
+                        onClick={() => commentVoteMutation.mutate({ commentId: comment.id, voteType: 'up' })}
+                        disabled={!profile}
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <span className={`text-xs font-medium ${
+                        getCommentScore(comment) > 0 ? 'text-orange-500' : 
+                        getCommentScore(comment) < 0 ? 'text-blue-500' : ''
+                      }`}>
+                        {getCommentScore(comment)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-5 w-5 ${comment.userVote === 'down' ? 'text-blue-500' : ''}`}
+                        onClick={() => commentVoteMutation.mutate({ commentId: comment.id, voteType: 'down' })}
+                        disabled={!profile}
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={comment.author?.avatar_url || ''} />
+                          <AvatarFallback>{comment.author?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">u/{comment.author?.username || 'anonymous'}</span>
+                        <span>•</span>
+                        <span>{formatDistanceToNowStrict(new Date(comment.created_at), { addSuffix: true })}</span>
+                      </div>
+                      <p className="text-sm">{comment.content}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

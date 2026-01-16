@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.406",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Gettit upvoting/downvoting - added missing RPC functions for vote management" },
+      { type: 'feature', description: "Added full Gettit comments system with voting and real-time updates" },
+      { type: 'feature', description: "Music Videos: Added manual 'Release to PooTube' button when production is complete" },
+      { type: 'feature', description: "Music Videos: Added TV Show placement feature (MTV, VH1, BET, etc.) for view/hype boosts" },
+      { type: 'feature', description: "Music Videos: Added Promote feature with social ads, influencer campaigns, billboards" },
+      { type: 'feature', description: "Music Videos: Added detailed analytics dialog with ROI, CPM, and performance metrics" },
+      { type: 'feature', description: "Music Videos: Song preview playback on released video cards" },
+    ],
+  },
+  {
     version: "1.0.405",
     date: "2026-01-16",
     changes: [
