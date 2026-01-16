@@ -87,6 +87,7 @@ const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"
 const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
 const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentSystem"));
 const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagement"));
+const BandRepertoire = lazyWithRetry(() => import("./pages/BandRepertoire"));
 const BandManagementPage = lazyWithRetry(() => import("./pages/bands/[bandId]/management"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const CountryCharts = lazyWithRetry(() => import("./pages/CountryCharts"));
@@ -249,6 +250,7 @@ function App() {
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
+                    <Route path="band/repertoire" element={<BandRepertoire />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="jams" element={<JamSessions />} />

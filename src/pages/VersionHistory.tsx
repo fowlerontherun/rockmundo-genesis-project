@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.359",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added dedicated Band Repertoire page with tabs for Songs, Recordings, Streaming, Radio, and Gigs" },
+      { type: 'feature', description: "Implemented song ownership tracking with band_song_ownership table" },
+      { type: 'feature', description: "Added ownership rules: former members retain 30% royalty share, restored on rejoin" },
+      { type: 'feature', description: "Added AddToRepertoireDialog for adding songs to band catalog from songwriting" },
+      { type: 'feature', description: "Created royalty distribution utilities in bandRoyalties.ts" },
+    ]
+  },
+  {
     version: "1.0.358",
     date: "2026-01-16",
     changes: [
