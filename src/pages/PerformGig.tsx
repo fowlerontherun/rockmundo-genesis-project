@@ -15,7 +15,7 @@ import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklis
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
-import { GigViewer3D } from '@/components/gig-viewer/GigViewer3D';
+import { ParallaxGigViewer } from '@/components/gig-viewer/ParallaxGigViewer';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';

@@ -140,7 +140,7 @@ const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphics
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
 const CrowdSoundsAdmin = lazyWithRetry(() => import("./pages/admin/CrowdSoundsAdmin"));
-const Admin3DGigDemo = lazyWithRetry(() => import("./pages/admin/Admin3DGigDemo"));
+// const Admin3DGigDemo = lazyWithRetry(() => import("./pages/admin/Admin3DGigDemo")); // Removed - replaced with parallax viewer
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
