@@ -57,6 +57,8 @@ import { SongPlayer } from "@/components/audio/SongPlayer";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
 import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
+import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
+import { SongsInRotation } from "@/components/radio/SongsInRotation";
 
 import type { Database } from "@/lib/supabase-types";
 
@@ -787,60 +789,12 @@ export default function Radio() {
             </Card>
           </TabsContent>
 
-          {/* Submissions Tab - Card-based for mobile */}
+          {/* Submissions Tab - Compact with filters */}
           <TabsContent value="submissions" className="mt-4 space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{t('radio.submissionHistory')}</CardTitle>
-                <CardDescription className="text-sm">{t('radio.trackPitches')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {submissionsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 w-full" />
-                    ))}
-                  </div>
-                ) : !submissions?.length ? (
-                  <Alert>
-                    <AlertTitle>{t('radio.noSubmissionsYet')}</AlertTitle>
-                    <AlertDescription>{t('radio.submitToSeeHere')}</AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="space-y-3">
-                    {submissions.map((sub: any) => (
-                      <div
-                        key={sub.id}
-                        className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5">{getStatusIcon(sub.status)}</div>
-                          <div>
-                            <p className="font-medium">{sub.songs?.title ?? "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {sub.radio_stations?.name ?? "Unknown Station"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDateTime(sub.submitted_at)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={sub.status === "accepted" ? "default" : sub.status === "rejected" ? "destructive" : "secondary"}
-                          >
-                            {sub.status ?? "pending"}
-                          </Badge>
-                        </div>
-                        {sub.rejection_reason && (
-                          <p className="text-xs text-muted-foreground sm:hidden">{sub.rejection_reason}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <CompactSubmissions 
+              submissions={submissions || []} 
+              isLoading={submissionsLoading} 
+            />
           </TabsContent>
 
           {/* Analytics Tab */}
@@ -1040,6 +994,9 @@ export default function Radio() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Songs in Rotation */}
+                {user && <SongsInRotation userId={user.id} />}
               </>
             )}
           </TabsContent>
