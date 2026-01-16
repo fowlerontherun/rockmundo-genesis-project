@@ -33,8 +33,9 @@ import { PROffersList } from "@/components/pr/PROffersList";
 import { PRAppearanceHistory } from "@/components/pr/PRAppearanceHistory";
 import { FilmOffersPanel } from "@/components/pr/FilmOffersPanel";
 import { PRConsultantPanel } from "@/components/pr/PRConsultantPanel";
+import { SelfPromotionPanel } from "@/components/pr/SelfPromotionPanel";
 
-type TabValue = "offers" | "appearances" | "film" | "consultant";
+type TabValue = "offers" | "appearances" | "self-promo" | "film" | "consultant";
 
 export default function PublicRelations() {
   const { user } = useAuth();
@@ -218,10 +219,14 @@ export default function PublicRelations() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="offers" className="flex items-center gap-1">
               <Megaphone className="h-4 w-4" />
               <span className="hidden sm:inline">Offers</span>
+            </TabsTrigger>
+            <TabsTrigger value="self-promo" className="flex items-center gap-1">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">DIY</span>
             </TabsTrigger>
             <TabsTrigger value="appearances" className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
@@ -233,12 +238,16 @@ export default function PublicRelations() {
             </TabsTrigger>
             <TabsTrigger value="consultant" className="flex items-center gap-1">
               <Briefcase className="h-4 w-4" />
-              <span className="hidden sm:inline">PR Agent</span>
+              <span className="hidden sm:inline">Agent</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="offers" className="mt-4">
             <PROffersList bandId={userBand.id} bandFame={userBand.fame || 0} />
+          </TabsContent>
+
+          <TabsContent value="self-promo" className="mt-4">
+            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={user.id} />
           </TabsContent>
 
           <TabsContent value="appearances" className="mt-4">

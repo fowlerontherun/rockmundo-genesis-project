@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.397",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "New Self-Promotion (DIY) tab - Reddit AMA, Twitch listening parties, Instagram Live, and more" },
+      { type: 'feature', description: "Websites added as new PR media type (Pitchfork, BuzzFeed, music blogs)" },
+      { type: 'feature', description: "Media outlet cooldowns - can't appear on same show/outlet too frequently" },
+      { type: 'feature', description: "Radio shows now have individual offers with compensation ranges" },
+      { type: 'feature', description: "More low-fame PR options for emerging artists" },
+      { type: 'improvement', description: "PR page now has 5 tabs: Offers, DIY, History, Film, Agent" },
+    ],
+  },
+  {
     version: "1.0.396",
     date: "2026-01-16",
     changes: [
