@@ -18,10 +18,15 @@ const versionHistory: VersionEntry[] = [
     date: "2026-01-16",
     changes: [
       { type: 'fix', description: "Fixed Tour Manager 'New Tour' button - auto-selects starting city" },
+      { type: 'fix', description: "Fixed flight booking error on Travel page" },
       { type: 'feature', description: "Added equipment stock levels based on rarity (legendary=3, epic=10, rare=20)" },
+      { type: 'feature', description: "Stock decreases when equipment is purchased" },
       { type: 'feature', description: "Added brand/make filter to Gear shop" },
       { type: 'feature', description: "Added 12 new self-promotion activities (TikTok, Discord, Patreon, etc.)" },
       { type: 'feature', description: "Added 25+ new music websites (Billboard, XXL, Metal Hammer, etc.)" },
+      { type: 'feature', description: "Added 75+ new gear items (guitars, basses, drums, keyboards, mics, amps, effects, stage gear)" },
+      { type: 'feature', description: "Added low stock and out-of-stock indicators on gear cards" },
+      { type: 'feature', description: "Added 'Sold Out' button state for out-of-stock items" },
     ],
   },
   {
