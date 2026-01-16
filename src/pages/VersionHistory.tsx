@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.357",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Acoustic and remix recordings now create separate song entries" },
+      { type: 'feature', description: "Each song version has its own quality, audio, and play statistics" },
+      { type: 'feature', description: "Version songs can be independently added to setlists" },
+      { type: 'feature', description: "Added version filter in setlist manager for building acoustic/remix setlists" },
+      { type: 'improvement', description: "Song cards and setlist items now display version badges (🎸 Acoustic, 🎧 Remix)" },
+    ]
+  },
+  {
     version: "1.0.356",
     date: "2026-01-15",
     changes: [

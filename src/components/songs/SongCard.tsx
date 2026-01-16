@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, Info, ListPlus, Clock, Flame, Star } from "lucide-react";
+import { Music, Info, ListPlus, Clock, Flame, Star, Guitar, Disc } from "lucide-react";
 import { SongRehearsalStatus } from "./SongRehearsalStatus";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,8 @@ interface SongCardProps {
     band_id?: string | null;
     hype?: number | null;
     fame?: number | null;
+    version?: string | null;
+    parent_song_id?: string | null;
     bands?: {
       name: string;
     } | null;
@@ -83,6 +85,12 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
           <Badge className={getQualityColor(song.quality_score)}>
             {getQualityLabel(song.quality_score)} ({song.quality_score})
           </Badge>
+          {song.version && song.version !== 'standard' && (
+            <Badge variant="outline" className={`gap-1 ${song.version === 'acoustic' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20'}`}>
+              {song.version === 'acoustic' ? <Guitar className="h-3 w-3" /> : <Disc className="h-3 w-3" />}
+              {song.version === 'acoustic' ? 'Acoustic' : 'Remix'}
+            </Badge>
+          )}
           {(song.hype ?? 0) > 0 && (
             <Badge variant="outline" className="gap-1 bg-orange-500/10 text-orange-500 border-orange-500/20">
               <Flame className="h-3 w-3" />

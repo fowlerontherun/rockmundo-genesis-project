@@ -69,7 +69,7 @@ export const SetlistSongManager = ({
       // Fetch both band songs and user songs that belong to band members
       const { data: bandSongs, error: bandError } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score, duration_seconds, duration_display")
+        .select("id, title, genre, quality_score, duration_seconds, duration_display, version, parent_song_id")
         .eq("band_id", bandId)
         .in("status", ["draft", "recorded"])
         .order("title");
@@ -86,7 +86,7 @@ export const SetlistSongManager = ({
         const memberUserIds = bandMembers.map(m => m.user_id);
         const { data: memberSongs, error: memberError } = await supabase
           .from("songs")
-          .select("id, title, genre, quality_score, duration_seconds, duration_display")
+          .select("id, title, genre, quality_score, duration_seconds, duration_display, version, parent_song_id")
           .in("user_id", memberUserIds)
           .is("band_id", null)
           .in("status", ["draft", "recorded"])

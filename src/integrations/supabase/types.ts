@@ -13850,6 +13850,7 @@ export type Database = {
           music_progress: number | null
           original_writer_id: string | null
           ownership_type: string | null
+          parent_song_id: string | null
           production_potential: number | null
           profile_id: string | null
           quality_score: number
@@ -13867,6 +13868,7 @@ export type Database = {
           total_sessions: number | null
           updated_at: string
           user_id: string
+          version: string | null
         }
         Insert: {
           ai_generated_lyrics?: boolean | null
@@ -13901,6 +13903,7 @@ export type Database = {
           music_progress?: number | null
           original_writer_id?: string | null
           ownership_type?: string | null
+          parent_song_id?: string | null
           production_potential?: number | null
           profile_id?: string | null
           quality_score?: number
@@ -13918,6 +13921,7 @@ export type Database = {
           total_sessions?: number | null
           updated_at?: string
           user_id: string
+          version?: string | null
         }
         Update: {
           ai_generated_lyrics?: boolean | null
@@ -13952,6 +13956,7 @@ export type Database = {
           music_progress?: number | null
           original_writer_id?: string | null
           ownership_type?: string | null
+          parent_song_id?: string | null
           production_potential?: number | null
           profile_id?: string | null
           quality_score?: number
@@ -13969,6 +13974,7 @@ export type Database = {
           total_sessions?: number | null
           updated_at?: string
           user_id?: string
+          version?: string | null
         }
         Relationships: [
           {
@@ -13983,6 +13989,34 @@ export type Database = {
             columns: ["chord_progression_id"]
             isOneToOne: false
             referencedRelation: "chord_progressions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_parent_song_id_fkey"
+            columns: ["parent_song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "songs_parent_song_id_fkey"
+            columns: ["parent_song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "songs_parent_song_id_fkey"
+            columns: ["parent_song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_parent_song_id_fkey"
+            columns: ["parent_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
             referencedColumns: ["id"]
           },
           {
