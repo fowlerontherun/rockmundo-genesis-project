@@ -47,7 +47,7 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
         transition: {
           duration: baseSpeed,
           repeat: Infinity,
-          ease: "easeInOut",
+          ease: "easeInOut" as const,
         }
       };
     case 'guitarist':
@@ -60,7 +60,7 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
         transition: {
           duration: baseSpeed * 1.2,
           repeat: Infinity,
-          ease: "easeInOut",
+          ease: "easeInOut" as const,
         }
       };
     case 'bassist':
@@ -72,7 +72,7 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
         transition: {
           duration: baseSpeed * 1.5,
           repeat: Infinity,
-          ease: "easeInOut",
+          ease: "easeInOut" as const,
         }
       };
     case 'drummer':
@@ -84,7 +84,7 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
         transition: {
           duration: baseSpeed * 0.5,
           repeat: Infinity,
-          ease: "linear",
+          ease: "linear" as const,
         }
       };
     case 'keyboardist':
@@ -96,7 +96,7 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
         transition: {
           duration: baseSpeed * 1.8,
           repeat: Infinity,
-          ease: "easeInOut",
+          ease: "easeInOut" as const,
         }
       };
     default:

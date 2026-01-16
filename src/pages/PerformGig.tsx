@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
+// RealtimeGigViewer removed - using ParallaxGigViewer instead
 import { TextGigViewer } from '@/components/gig/TextGigViewer';
 import { GigViewerModeSelector } from '@/components/gig/GigViewerModeSelector';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+// Alert removed - unused
 import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
 import { ParallaxGigViewer } from '@/components/gig-viewer/ParallaxGigViewer';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
@@ -40,7 +40,7 @@ export default function PerformGig() {
   const [crewCount, setCrewCount] = useState(0);
   const [bandChemistry, setBandChemistry] = useState(0);
   const [showOutcome, setShowOutcome] = useState(false);
-  const [show3DViewer, setShow3DViewer] = useState(false);
+  // const [show3DViewer, setShow3DViewer] = useState(false); // Removed - using inline viewer
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
@@ -592,7 +592,7 @@ export default function PerformGig() {
           
           {/* Conditional Viewer based on mode */}
           {viewerMode === '3d' ? (
-            <GigViewer3D
+            <ParallaxGigViewer
               gigId={gig.id}
               onClose={() => setViewerMode('text')}
             />
@@ -676,7 +676,7 @@ export default function PerformGig() {
             
             {/* Show selected viewer for completed gigs */}
             {viewerMode === '3d' ? (
-              <GigViewer3D
+              <ParallaxGigViewer
                 gigId={gig.id}
                 onClose={() => setViewerMode('text')}
               />
