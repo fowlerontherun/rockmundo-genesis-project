@@ -55,7 +55,7 @@ serve(async (req) => {
         band_id,
         user_id,
         songs(id, title, genre, quality_score, hype),
-        radio_stations(id, name, quality_level, accepted_genres, listener_base)
+        radio_stations(id, name, quality_level, accepted_genres, listener_base, country, min_fame_required)
       `)
       .eq("status", "pending")
       .lt("submitted_at", oneHourAgo)
@@ -84,11 +84,39 @@ serve(async (req) => {
         continue;
       }
 
+      // Check country fame requirement
+      const stationCountry = station.country;
+      const minFameRequired = station.min_fame_required || 0;
+      let bandCountryFame = 0;
+      
+      if (minFameRequired > 0 && submission.band_id && stationCountry) {
+        const { data: fameData } = await supabaseClient.rpc("get_band_country_fame", {
+          p_band_id: submission.band_id,
+          p_country: stationCountry,
+        });
+        bandCountryFame = fameData || 0;
+        
+        if (bandCountryFame < minFameRequired) {
+          // Reject - insufficient fame in country
+          await supabaseClient
+            .from("radio_submissions")
+            .update({
+              status: "rejected",
+              rejection_reason: `Insufficient fame in ${stationCountry}. Required: ${minFameRequired}, Your fame: ${bandCountryFame}`,
+              reviewed_at: new Date().toISOString(),
+            })
+            .eq("id", submission.id);
+          rejected++;
+          processed++;
+          continue;
+        }
+      }
+
       // Check quality threshold (station quality * 0.6 = minimum song quality)
       const minQuality = Math.max(20, (station.quality_level || 50) * 0.6);
       const songQuality = song.quality_score || 0;
       
-      // Check genre match
+      // Check genre match - case insensitive comparison
       const acceptedGenres = (station.accepted_genres || []).map((g: string) => g.toLowerCase());
       const songGenre = (song.genre || "").toLowerCase();
       const genreMatch = acceptedGenres.length === 0 || acceptedGenres.includes(songGenre);
@@ -104,6 +132,10 @@ serve(async (req) => {
       }
       if (song.hype >= 100) {
         acceptProbability += 0.2; // +20% for hype
+      }
+      // Bonus for having fame in the country
+      if (bandCountryFame >= 500) {
+        acceptProbability += 0.1; // +10% for established presence
       }
 
       const isAccepted = Math.random() < acceptProbability;

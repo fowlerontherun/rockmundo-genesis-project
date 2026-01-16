@@ -5,7 +5,7 @@ import { toast } from "sonner";
 export interface RadioStation {
   id: string;
   name: string;
-  city_id: string;
+  city_id: string | null;
   country: string;
   station_type: string;
   quality_level: number;
@@ -21,6 +21,7 @@ export interface RadioStation {
   min_fame_required?: number;
   requires_local_presence?: boolean;
   auto_accept_threshold?: number;
+  city?: { name: string; country: string } | null;
 }
 
 export interface RadioSubmission {
@@ -41,13 +42,13 @@ export interface RadioSubmission {
 export const useRadioStations = () => {
   const queryClient = useQueryClient();
 
-  // Fetch all stations
+  // Fetch all stations with city info
   const { data: stations = [], isLoading: stationsLoading } = useQuery({
     queryKey: ["radio-stations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("radio_stations")
-        .select("*")
+        .select("*, city:cities(name, country)")
         .order("listener_base", { ascending: false });
 
       if (error) throw error;

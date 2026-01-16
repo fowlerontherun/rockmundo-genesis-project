@@ -26,6 +26,7 @@ export interface RadioFilters {
   acceptsSubmissions: boolean | null;
   genre: string;
   country: string;
+  city: string;
 }
 
 interface RadioStationFiltersProps {
@@ -33,6 +34,7 @@ interface RadioStationFiltersProps {
   onFiltersChange: (filters: RadioFilters) => void;
   genres: string[];
   countries: string[];
+  cities: string[];
   stationTypes: string[];
 }
 
@@ -44,6 +46,7 @@ export const defaultFilters: RadioFilters = {
   acceptsSubmissions: null,
   genre: "all",
   country: "all",
+  city: "all",
 };
 
 export function RadioStationFilters({
@@ -51,6 +54,7 @@ export function RadioStationFilters({
   onFiltersChange,
   genres,
   countries,
+  cities,
   stationTypes,
 }: RadioStationFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,6 +65,7 @@ export function RadioStationFilters({
     filters.acceptsSubmissions !== null,
     filters.genre !== "all",
     filters.country !== "all",
+    filters.city !== "all",
   ].filter(Boolean).length;
 
   const handleReset = () => {
@@ -167,6 +172,28 @@ export function RadioStationFilters({
                   {countries.map((country) => (
                     <SelectItem key={country} value={country}>
                       {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>City</Label>
+              <Select
+                value={filters.city}
+                onValueChange={(v) =>
+                  onFiltersChange({ ...filters, city: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All cities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {cities.map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
                     </SelectItem>
                   ))}
                 </SelectContent>

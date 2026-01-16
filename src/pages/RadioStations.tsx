@@ -24,17 +24,20 @@ const RadioStations = () => {
   const filterOptions = useMemo(() => {
     const genres = new Set<string>();
     const countries = new Set<string>();
+    const cities = new Set<string>();
     const types = new Set<string>();
 
     stations.forEach((station) => {
       if (station.station_type) types.add(station.station_type);
       if (station.country) countries.add(station.country);
+      if (station.city?.name) cities.add(station.city.name);
       station.accepted_genres?.forEach((g) => genres.add(g));
     });
 
     return {
       genres: Array.from(genres).sort(),
       countries: Array.from(countries).sort(),
+      cities: Array.from(cities).sort(),
       stationTypes: Array.from(types).sort(),
     };
   }, [stations]);
@@ -59,6 +62,11 @@ const RadioStations = () => {
 
       // Country filter
       if (filters.country !== "all" && station.country !== filters.country) {
+        return false;
+      }
+
+      // City filter
+      if (filters.city !== "all" && station.city?.name !== filters.city) {
         return false;
       }
 
@@ -161,6 +169,7 @@ const RadioStations = () => {
             onFiltersChange={setFilters}
             genres={filterOptions.genres}
             countries={filterOptions.countries}
+            cities={filterOptions.cities}
             stationTypes={filterOptions.stationTypes}
           />
 
