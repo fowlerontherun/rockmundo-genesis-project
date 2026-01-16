@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.366",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added Batch Submit button to Radio Browser Stations tab with wizard" },
+      { type: 'feature', description: "Added My Airplay Stats and Songs in Rotation to Airplay Stats tab" },
+      { type: 'improvement', description: "Replaced My Submissions with compact filterable view" },
+      { type: 'fix', description: "Fixed missing features on /media/radio page (RadioBrowser)" },
+    ],
+  },
+  {
     version: "1.0.365",
     date: "2026-01-16",
     changes: [
