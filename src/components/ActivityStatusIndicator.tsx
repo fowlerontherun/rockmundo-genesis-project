@@ -16,11 +16,13 @@ export function ActivityStatusIndicator() {
     const fetchCurrentActivity = async () => {
       const now = new Date().toISOString();
       
+      // Find activities happening NOW based on time, not status
+      // Activities may still be 'scheduled' even when they should be active
       const { data } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', user.id)
-        .eq('status', 'in_progress')
+        .in('status', ['scheduled', 'in_progress'])
         .lte('scheduled_start', now)
         .gte('scheduled_end', now)
         .order('scheduled_start', { ascending: false })

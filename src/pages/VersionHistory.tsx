@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.415",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed activity status indicator - now shows current activity based on time, not just 'in_progress' status" },
+    ],
+  },
+  {
     version: "1.0.414",
     date: "2026-01-16",
     changes: [
