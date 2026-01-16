@@ -10,23 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useRadioStations } from "@/hooks/useRadioStations";
-import { Radio, Users, MapPin, Star, Music, TrendingUp, Search, Filter, Globe } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth-context";
+import { Radio, Users, MapPin, Star, Music, TrendingUp, Search, Filter, Globe, Zap, Send } from "lucide-react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
-import { MyRadioSubmissions } from "@/components/radio/MyRadioSubmissions";
+import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
 import { AirplayDashboard } from "@/components/radio/AirplayDashboard";
+import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
+import { SongsInRotation } from "@/components/radio/SongsInRotation";
+import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
 import type { RadioStation } from "@/hooks/useRadioStations";
 
 const RadioBrowser = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { currentCity } = useGameData();
   const { stations, mySubmissions, isLoading } = useRadioStations();
   
   const [activeTab, setActiveTab] = useState<"stations" | "submissions" | "airplay">("stations");
   const [selectedStation, setSelectedStation] = useState<RadioStation | null>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showBatchSubmitWizard, setShowBatchSubmitWizard] = useState(false);
+
+  // Get user's primary band
+  const { data: primaryBand } = useQuery({
+    queryKey: ["primary-band-radio", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("bands")
+        .select("id, name, fame")
+        .eq("leader_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -205,6 +228,39 @@ const RadioBrowser = () => {
 
         {/* Stations Tab */}
         <TabsContent value="stations" className="mt-6 space-y-4">
+          {/* Batch Submit Card */}
+          {primaryBand && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Submit to All Eligible Stations</p>
+                    <p className="text-sm text-muted-foreground">
+                      Batch submit your songs to matching stations
+                    </p>
+                  </div>
+                </div>
+                <Dialog open={showBatchSubmitWizard} onOpenChange={setShowBatchSubmitWizard}>
+                  <DialogTrigger asChild>
+                    <Button variant="default" className="w-full sm:w-auto">
+                      <Send className="mr-2 h-4 w-4" />
+                      Batch Submit
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <RadioSubmissionWizard 
+                      bandId={primaryBand.id} 
+                      onComplete={() => {
+                        setShowBatchSubmitWizard(false);
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Filters */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -367,13 +423,23 @@ const RadioBrowser = () => {
           )}
         </TabsContent>
 
-        {/* My Submissions Tab */}
+        {/* My Submissions Tab - Compact with filters */}
         <TabsContent value="submissions" className="mt-6">
-          <MyRadioSubmissions />
+          <CompactSubmissions 
+            submissions={mySubmissions} 
+            isLoading={isLoading} 
+          />
         </TabsContent>
 
         {/* Airplay Stats Tab */}
-        <TabsContent value="airplay" className="mt-6">
+        <TabsContent value="airplay" className="mt-6 space-y-6">
+          {/* My Airplay Stats */}
+          {user && <MyAirplayStats userId={user.id} />}
+          
+          {/* Songs in Rotation */}
+          {user && <SongsInRotation userId={user.id} />}
+          
+          {/* Submission Breakdown */}
           <AirplayDashboard stats={airplayStats} submissions={mySubmissions} />
         </TabsContent>
       </Tabs>
