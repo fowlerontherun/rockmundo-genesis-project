@@ -2,10 +2,55 @@
 
 export type TourScope = 'country' | 'continent' | 'world';
 export type TravelMode = 'manual' | 'auto' | 'tour_bus';
+export type StageSetupTier = 'basic' | 'enhanced' | 'professional' | 'premium' | 'spectacular';
+
+export const STAGE_SETUP_TIERS = {
+  basic: { 
+    label: 'Basic', 
+    costPerShow: 0, 
+    description: 'Standard venue equipment only',
+    merchBoost: 1.0,
+    fameBoost: 1.0,
+    minFame: 0,
+  },
+  enhanced: { 
+    label: 'Enhanced', 
+    costPerShow: 500, 
+    description: 'Additional lighting + backdrop',
+    merchBoost: 1.1,
+    fameBoost: 1.05,
+    minFame: 0,
+  },
+  professional: { 
+    label: 'Professional', 
+    costPerShow: 2000, 
+    description: 'Full light show + video screens',
+    merchBoost: 1.25,
+    fameBoost: 1.15,
+    minFame: 2000,
+  },
+  premium: { 
+    label: 'Premium', 
+    costPerShow: 5000, 
+    description: 'Pyrotechnics + custom stage design',
+    merchBoost: 1.5,
+    fameBoost: 1.3,
+    minFame: 10000,
+  },
+  spectacular: { 
+    label: 'Spectacular', 
+    costPerShow: 15000, 
+    description: 'Arena-level production with all effects',
+    merchBoost: 2.0,
+    fameBoost: 1.5,
+    minFame: 50000,
+  },
+} as const;
 
 export interface TourWizardState {
   // Step 1: Basics
   name: string;
+  startingCityId: string | null;
   startDate: string;
   durationDays: number | null;
   targetShowCount: number | null;
@@ -22,10 +67,32 @@ export interface TourWizardState {
   // Step 4: Venues
   venueTypes: string[];
   maxVenueCapacity: number;
+  selectedVenueIds: string[];
+  venueGenreFilter: string | null;
+  venueCityFilter: string | null;
+  venueCountryFilter: string | null;
   
-  // Step 5: Travel
+  // Step 5: Ticket Pricing
+  customTicketPrice: number | null;
+  
+  // Step 6: Stage Setup
+  stageSetupTier: StageSetupTier;
+  
+  // Step 7: Travel (tour bus cost now static)
   travelMode: TravelMode;
   tourBusDailyCost: number;
+  
+  // Step 8: Support Artist
+  supportBandId: string | null;
+  supportBandName: string | null;
+  supportRevenueShare: number;
+  
+  // Step 9: Sponsorship
+  selectedSponsorOfferId: string | null;
+  sponsorName: string | null;
+  sponsorCashValue: number;
+  sponsorTicketPenalty: number;
+  sponsorFamePenalty: number;
   
   // Calculated
   bandId: string | null;
@@ -61,10 +128,13 @@ export const CANCELLATION_REFUND_SCALE = [
   { daysBeforeStart: 0, refundPercent: 0 },
 ] as const;
 
-export const TOUR_BUS_DAILY_COST = 150; // Default daily rental (reduced from $500)
+export const TOUR_BUS_DAILY_COST = 150; // Static daily rental cost
+
+export const TOUR_MERCH_BOOST = 1.3; // Tours get 30% boost on merch sales
 
 export const DEFAULT_WIZARD_STATE: TourWizardState = {
   name: '',
+  startingCityId: null,
   startDate: '',
   durationDays: 30,
   targetShowCount: null,
@@ -75,8 +145,22 @@ export const DEFAULT_WIZARD_STATE: TourWizardState = {
   selectedContinents: [],
   venueTypes: ['club', 'bar', 'theater'],
   maxVenueCapacity: 500,
+  selectedVenueIds: [],
+  venueGenreFilter: null,
+  venueCityFilter: null,
+  venueCountryFilter: null,
+  customTicketPrice: null,
+  stageSetupTier: 'basic',
   travelMode: 'auto',
   tourBusDailyCost: TOUR_BUS_DAILY_COST,
+  supportBandId: null,
+  supportBandName: null,
+  supportRevenueShare: 0.1,
+  selectedSponsorOfferId: null,
+  sponsorName: null,
+  sponsorCashValue: 0,
+  sponsorTicketPenalty: 0,
+  sponsorFamePenalty: 0,
   bandId: null,
 };
 
@@ -85,9 +169,13 @@ export interface TourCostEstimate {
   bookingFees: number;
   travelCosts: number;
   tourBusCosts: number;
+  stageSetupCosts: number;
   totalUpfrontCost: number;
+  sponsorCashIncome: number;
+  netUpfrontCost: number;
   estimatedTicketRevenue: number;
   estimatedMerchRevenue: number;
+  supportArtistShare: number;
   estimatedRevenue: number;
   estimatedProfit: number;
   showCount: number;
@@ -105,4 +193,18 @@ export interface VenueMatch {
   bookingFee: number;
   estimatedTicketRevenue: number;
   date: string;
+  genre?: string;
+}
+
+// Support artist split calculation based on fame ratio
+export function calculateSupportArtistSplit(
+  headlinerFame: number,
+  supportFame: number
+): { headlinerPercent: number; supportPercent: number } {
+  const fameRatio = headlinerFame / Math.max(supportFame, 1);
+  
+  if (fameRatio > 10) return { headlinerPercent: 90, supportPercent: 10 };
+  if (fameRatio > 5) return { headlinerPercent: 85, supportPercent: 15 };
+  if (fameRatio > 2) return { headlinerPercent: 80, supportPercent: 20 };
+  return { headlinerPercent: 75, supportPercent: 25 };
 }

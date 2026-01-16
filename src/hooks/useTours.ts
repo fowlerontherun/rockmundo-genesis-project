@@ -94,7 +94,7 @@ export const useTours = (bandId?: string) => {
       // Fetch tour details
       const { data: tour, error: fetchError } = await supabase
         .from("tours")
-        .select("*, bands:band_id(band_balance)")
+        .select("*, bands!tours_band_id_fkey(band_balance)")
         .eq("id", tourId)
         .single();
 
