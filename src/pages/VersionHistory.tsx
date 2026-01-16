@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.416",
+    date: "2026-01-16",
+    changes: [
+      { type: 'improvement', description: "Replaced complex 3D gig viewer with lightweight 2D parallax stage using Ready Player Me avatar images" },
+      { type: 'improvement', description: "Deleted 40+ unused 3D components (crowd, effects, camera, environments) - major codebase cleanup" },
+      { type: 'feature', description: "New ParallaxGigViewer with CSS animations for band members playing instruments" },
+      { type: 'feature', description: "RPM 2D Render API integration - displays player's actual avatars on stage" },
+    ],
+  },
+  {
     version: "1.0.415",
     date: "2026-01-16",
     changes: [

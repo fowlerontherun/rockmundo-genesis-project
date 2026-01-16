@@ -419,7 +419,7 @@ function App() {
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
-                    <Route path="admin/3d-gig-demo" element={<Admin3DGigDemo />} />
+                    {/* <Route path="admin/3d-gig-demo" element={<Admin3DGigDemo />} /> Removed - replaced with parallax viewer */}
                     <Route path="employment" element={<Employment />} />
                     <Route path="music-videos" element={<MusicVideos />} />
                     <Route path="gig-booking" element={<GigBooking />} />
