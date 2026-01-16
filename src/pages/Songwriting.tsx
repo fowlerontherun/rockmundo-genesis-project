@@ -497,9 +497,12 @@ const Songwriting = () => {
     void fetchSongs();
   }, [fetchSongs]);
 
+  // Only refresh activity status once on mount - refreshActivityStatus changes when profile changes
+  // which would cause an infinite loop if we put it in dependencies
   useEffect(() => {
     void refreshActivityStatus();
-  }, [refreshActivityStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (convertToSong.isSuccess || createProject.isSuccess || updateProject.isSuccess) {

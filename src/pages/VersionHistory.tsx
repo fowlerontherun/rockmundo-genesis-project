@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.381",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed songwriting page freeze that prevented navigation - removed infinite loop in refreshActivityStatus useEffect" },
+    ],
+  },
+  {
     version: "1.0.380",
     date: "2026-01-16",
     changes: [
