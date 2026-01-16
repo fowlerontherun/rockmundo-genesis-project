@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.407",
+    date: "2026-01-16",
+    changes: [
+      { type: 'improvement', description: "Moved Websites navigation link to Media section" },
+    ],
+  },
+  {
     version: "1.0.406",
     date: "2026-01-16",
     changes: [
