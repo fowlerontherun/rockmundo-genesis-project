@@ -12,6 +12,7 @@ import {
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCrowdSounds } from "@/hooks/useCrowdSounds";
 
 interface GigReviewViewerProps {
   gigId: string;
@@ -22,12 +23,15 @@ interface GigReviewViewerProps {
 
 interface SongPerformance {
   id: string;
-  song_id: string;
+  song_id: string | null;
+  performance_item_id?: string | null;
+  item_type?: string;
   position: number;
   performance_score: number;
   crowd_response: string;
   song_title?: string;
   audio_url?: string | null;
+  duration_seconds?: number;
 }
 
 interface CommentaryEntry {
@@ -141,10 +145,10 @@ export const GigReviewViewer = ({
       
       if (gigData) setGig(gigData);
 
-      // Load performances with song audio
+      // Load performances with song audio and duration
       const { data: perfs } = await supabase
         .from('gig_song_performances')
-        .select('*, songs(title, audio_url)')
+        .select('*, songs(title, audio_url, duration_seconds)')
         .eq('gig_outcome_id', gigOutcomeId)
         .order('position');
 
@@ -152,11 +156,14 @@ export const GigReviewViewer = ({
         setPerformances(perfs.map(p => ({
           id: p.id,
           song_id: p.song_id,
+          performance_item_id: p.performance_item_id,
+          item_type: p.item_type || 'song',
           position: p.position,
           performance_score: p.performance_score,
           crowd_response: p.crowd_response,
-          song_title: p.songs?.title || 'Unknown Song',
+          song_title: p.song_title || p.songs?.title || 'Unknown',
           audio_url: p.songs?.audio_url,
+          duration_seconds: p.songs?.duration_seconds || 180, // Default 3 min
         })));
       }
     };
@@ -274,10 +281,11 @@ export const GigReviewViewer = ({
       playCurrentSong();
       
       if (isAutoPlay) {
-        // Auto-advance after 8 seconds per song
+        // Use actual song duration (capped at 5 minutes for review mode)
+        const durationMs = Math.min((perf.duration_seconds || 180) * 1000, 300000);
         timeoutRef.current = setTimeout(() => {
           advanceToNext();
-        }, 8000);
+        }, durationMs);
       }
     }
 
