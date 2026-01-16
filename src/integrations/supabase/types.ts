@@ -1980,6 +1980,7 @@ export type Database = {
           hiatus_reason: string | null
           hiatus_started_at: string | null
           hidden_skill_rating: number | null
+          home_city_id: string | null
           id: string
           is_solo_artist: boolean | null
           jam_count: number | null
@@ -2022,6 +2023,7 @@ export type Database = {
           hiatus_reason?: string | null
           hiatus_started_at?: string | null
           hidden_skill_rating?: number | null
+          home_city_id?: string | null
           id?: string
           is_solo_artist?: boolean | null
           jam_count?: number | null
@@ -2064,6 +2066,7 @@ export type Database = {
           hiatus_reason?: string | null
           hiatus_started_at?: string | null
           hidden_skill_rating?: number | null
+          home_city_id?: string | null
           id?: string
           is_solo_artist?: boolean | null
           jam_count?: number | null
@@ -2085,7 +2088,15 @@ export type Database = {
           updated_at?: string | null
           weekly_fans?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bands_home_city_id_fkey"
+            columns: ["home_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       character_generations: {
         Row: {
