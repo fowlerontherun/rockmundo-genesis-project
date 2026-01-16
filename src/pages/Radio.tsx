@@ -52,6 +52,7 @@ import {
   History,
   Flame,
   Zap,
+  Gift,
 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
@@ -59,6 +60,7 @@ import { SongVoting } from "@/components/audio/SongVoting";
 import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
 import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
 import { SongsInRotation } from "@/components/radio/SongsInRotation";
+import { RadioInvitations } from "@/components/radio/RadioInvitations";
 
 import type { Database } from "@/lib/supabase-types";
 
@@ -104,7 +106,7 @@ const FILTERS = [
 ];
 
 type StationFilter = (typeof FILTERS)[number]["value"];
-type TabValue = "submit" | "submissions" | "analytics" | "history" | "trending";
+type TabValue = "submit" | "submissions" | "invitations" | "analytics" | "history" | "trending";
 
 const formatDateTime = (value: string | null) => {
   if (!value) return "–";
@@ -498,7 +500,7 @@ export default function Radio() {
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
           {/* Mobile-optimized tabs with horizontal scroll */}
           <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-max min-w-full gap-1 sm:grid sm:w-full sm:grid-cols-5">
+            <TabsList className="inline-flex w-max min-w-full gap-1 sm:grid sm:w-full sm:grid-cols-6">
               <TabsTrigger value="submit" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <Send className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('radio.submit')}</span>
@@ -506,6 +508,10 @@ export default function Radio() {
               <TabsTrigger value="submissions" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <ListMusic className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('radio.submissions')}</span>
+              </TabsTrigger>
+              <TabsTrigger value="invitations" className="flex items-center gap-1.5 px-3 sm:px-4">
+                <Gift className="h-4 w-4" />
+                <span className="hidden sm:inline">Invitations</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-3 sm:px-4">
                 <BarChart3 className="h-4 w-4" />
@@ -795,6 +801,21 @@ export default function Radio() {
               submissions={submissions || []} 
               isLoading={submissionsLoading} 
             />
+          </TabsContent>
+
+          {/* Invitations Tab */}
+          <TabsContent value="invitations" className="mt-4 space-y-4">
+            {primaryBand ? (
+              <RadioInvitations bandId={primaryBand.id} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Gift className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No band found</p>
+                  <p className="text-sm">Create or join a band to receive radio invitations</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Analytics Tab */}

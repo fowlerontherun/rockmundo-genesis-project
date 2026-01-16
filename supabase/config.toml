@@ -152,3 +152,6 @@ verify_jwt = false
 
 [functions.generate-radio-content-audio]
 verify_jwt = false
+
+[functions.generate-radio-invitations]
+verify_jwt = false
