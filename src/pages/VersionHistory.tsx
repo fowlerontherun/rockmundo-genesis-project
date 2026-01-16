@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.367",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed My Submissions showing 'Unknown Song/Station' - now handles both data formats" },
+      { type: 'improvement', description: "CompactSubmissions now works with useRadioStations hook data structure" },
+    ],
+  },
+  {
     version: "1.0.366",
     date: "2026-01-16",
     changes: [
