@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.377",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Jam sessions now require being in the same city as the session location" },
+      { type: 'feature', description: "Jam sessions now create scheduled activities that appear in your schedule" },
+      { type: 'feature', description: "Players can only participate in one jam session at a time" },
+      { type: 'feature', description: "Activity blocking prevents joining jam sessions during other scheduled activities" },
+      { type: 'improvement', description: "Leaving a jam session now cancels the scheduled activity" },
+    ],
+  },
+  {
     version: "1.0.376",
     date: "2026-01-16",
     changes: [
