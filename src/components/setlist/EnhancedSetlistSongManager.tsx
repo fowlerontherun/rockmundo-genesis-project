@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, Trash2, Music, Clock, Star, Sparkles } from "lucide-react";
+import { Plus, GripVertical, Trash2, Music, Clock, Star, Sparkles, Guitar, Disc } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { calculateSetlistDuration, formatDuration } from "@/utils/setlistDuration";
 import {
@@ -210,6 +210,8 @@ export const EnhancedSetlistSongManager = ({
     },
   });
 
+  const [versionFilter, setVersionFilter] = useState<string>("all");
+
   const { data: availableSongs } = useQuery({
     queryKey: ["band-songs", bandId],
     queryFn: async () => {
@@ -217,7 +219,7 @@ export const EnhancedSetlistSongManager = ({
       
       const { data: bandSongs, error: bandError } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id")
+        .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id, version, parent_song_id")
         .eq("band_id", bandId)
         .eq("archived", false)
         .order("title");
@@ -240,7 +242,7 @@ export const EnhancedSetlistSongManager = ({
         
         const { data: memberSongs, error: memberError } = await supabase
           .from("songs")
-          .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id")
+          .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id, version, parent_song_id")
           .in("user_id", memberUserIds)
           .is("band_id", null)
           .eq("archived", false)
@@ -259,12 +261,18 @@ export const EnhancedSetlistSongManager = ({
     },
   });
 
+  const filteredAvailableSongs = useMemo(() => {
+    if (!availableSongs) return [];
+    if (versionFilter === "all") return availableSongs;
+    return availableSongs.filter(song => (song.version || 'standard') === versionFilter);
+  }, [availableSongs, versionFilter]);
+
   const songsInSetlist = new Set(
     (setlistSongs ?? [])
       .map((ss) => ss.song_id)
       .filter((id): id is string => Boolean(id))
   );
-  const unaddedSongs = availableSongs?.filter((song) => !songsInSetlist.has(song.id));
+  const unaddedSongs = filteredAvailableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
   const getNextPosition = () =>
     Math.max(0, ...(setlistSongs?.map(song => song.position || 0) || [])) + 1;
@@ -304,6 +312,7 @@ export const EnhancedSetlistSongManager = ({
 
   const renderSetlistItem = (ss: any, index: number, section: 'main' | 'encore') => {
     const isPerformanceItem = ss.item_type === 'performance_item';
+    const songVersion = ss.songs?.version;
     
     return (
       <div
@@ -312,7 +321,7 @@ export const EnhancedSetlistSongManager = ({
       >
         <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
         <div className="flex-1">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span className="font-medium">{index + 1}.</span>
             <span className="font-medium">
               {isPerformanceItem ? ss.performance_items?.name : ss.songs?.title || "Unknown"}
@@ -321,6 +330,12 @@ export const EnhancedSetlistSongManager = ({
               <Badge variant="secondary" className="text-xs">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Performance
+              </Badge>
+            )}
+            {!isPerformanceItem && songVersion && songVersion !== 'standard' && (
+              <Badge variant="outline" className={`text-xs ${songVersion === 'acoustic' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20'}`}>
+                {songVersion === 'acoustic' ? <Guitar className="h-3 w-3 mr-1" /> : <Disc className="h-3 w-3 mr-1" />}
+                {songVersion === 'acoustic' ? 'Acoustic' : 'Remix'}
               </Badge>
             )}
           </div>
@@ -398,9 +413,20 @@ export const EnhancedSetlistSongManager = ({
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Select value={versionFilter} onValueChange={setVersionFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Version" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Versions</SelectItem>
+                  <SelectItem value="standard">Original</SelectItem>
+                  <SelectItem value="acoustic">🎸 Acoustic</SelectItem>
+                  <SelectItem value="remix">🎧 Remix</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={selectedSongId} onValueChange={setSelectedSongId}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 min-w-[200px]">
                   <SelectValue placeholder="Select a song to add..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -412,6 +438,7 @@ export const EnhancedSetlistSongManager = ({
                     unaddedSongs?.map((song) => (
                       <SelectItem key={song.id} value={song.id}>
                         {song.title} ({song.genre})
+                        {song.version && song.version !== 'standard' && ` [${song.version === 'acoustic' ? '🎸' : '🎧'}]`}
                       </SelectItem>
                     ))
                   )}

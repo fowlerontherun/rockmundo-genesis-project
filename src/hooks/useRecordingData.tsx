@@ -334,28 +334,30 @@ export const useCompleteRecordingSession = () => {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      // Get session data
+      // Get session data with full song details for version handling
       const { data: session, error: fetchError } = await supabase
         .from('recording_sessions')
-        .select('song_id, quality_improvement')
+        .select('song_id, quality_improvement, recording_version, band_id, user_id')
         .eq('id', sessionId)
         .single();
 
       if (fetchError) throw fetchError;
       if (!session) throw new Error('Session not found');
 
-      // Get current song quality
+      // Get current song with all needed fields
       const { data: song, error: songFetchError } = await supabase
         .from('songs')
-        .select('quality_score')
+        .select('id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id')
         .eq('id', session.song_id)
         .single();
 
       if (songFetchError) throw songFetchError;
+      if (!song) throw new Error('Song not found');
 
-      const currentQuality = song?.quality_score || 0;
+      const currentQuality = song.quality_score || 0;
       const qualityImprovement = session.quality_improvement || 0;
       const newQuality = currentQuality + qualityImprovement;
+      const recordingVersion = session.recording_version || 'standard';
 
       // Update session status
       const { error: updateError } = await supabase
@@ -368,16 +370,77 @@ export const useCompleteRecordingSession = () => {
 
       if (updateError) throw updateError;
 
-      // Update song quality and status to 'recorded'
-      const { error: songError } = await supabase
-        .from('songs')
-        .update({ 
-          quality_score: newQuality,
-          status: 'recorded'
-        })
-        .eq('id', session.song_id);
+      let finalSongId = session.song_id;
 
-      if (songError) throw songError;
+      // Handle acoustic/remix versions - create new song entry
+      if (recordingVersion !== 'standard') {
+        // Check if this version already exists
+        const { data: existingVersion } = await supabase
+          .from('songs')
+          .select('id')
+          .eq('parent_song_id', session.song_id)
+          .eq('version', recordingVersion)
+          .single();
+        
+        if (existingVersion) {
+          // Update existing version
+          finalSongId = existingVersion.id;
+          const { error: versionError } = await supabase
+            .from('songs')
+            .update({ 
+              quality_score: newQuality,
+              status: 'recorded'
+            })
+            .eq('id', existingVersion.id);
+          
+          if (versionError) throw versionError;
+        } else {
+          // Create new version song
+          const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix';
+          const newTitle = `${song.title} (${versionLabel})`;
+          
+          const { data: newSong, error: createError } = await supabase
+            .from('songs')
+            .insert({
+              user_id: song.user_id,
+              band_id: session.band_id || song.band_id,
+              title: newTitle,
+              genre: song.genre,
+              lyrics: song.lyrics,
+              quality_score: newQuality,
+              status: 'recorded',
+              parent_song_id: session.song_id,
+              version: recordingVersion,
+              duration_seconds: song.duration_seconds,
+              duration_display: song.duration_display,
+              songwriting_project_id: song.songwriting_project_id,
+            })
+            .select('id')
+            .single();
+          
+          if (createError) throw createError;
+          if (newSong) {
+            finalSongId = newSong.id;
+            
+            // Update session to point to new song
+            await supabase
+              .from('recording_sessions')
+              .update({ song_id: newSong.id })
+              .eq('id', sessionId);
+          }
+        }
+      } else {
+        // Standard recording - update existing song
+        const { error: songError } = await supabase
+          .from('songs')
+          .update({ 
+            quality_score: newQuality,
+            status: 'recorded'
+          })
+          .eq('id', session.song_id);
+
+        if (songError) throw songError;
+      }
 
       // Log the activity and award XP
       const { data: userData } = await supabase.auth.getUser();

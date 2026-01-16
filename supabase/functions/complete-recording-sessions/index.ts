@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Find in_progress sessions that have passed their scheduled_end time
     const { data: sessions, error: sessionsError } = await supabase
       .from('recording_sessions')
-      .select('*, songs(quality_score)')
+      .select('*, songs(id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id)')
       .eq('status', 'in_progress')
       .lt('scheduled_end', new Date().toISOString())
 
@@ -110,70 +110,182 @@ Deno.serve(async (req) => {
           throw updateError
         }
 
-        // Update the song's quality score, status, and band_id
-        if (session.song_id) {
-          const songUpdate: Record<string, unknown> = {
-            quality_score: newQuality,
-            status: 'recorded',
-            updated_at: new Date().toISOString(),
-          }
+        // Handle song update based on recording version
+        if (session.song_id && session.songs) {
+          const originalSong = session.songs
+          const recordingVersion = session.recording_version || 'standard'
           
-          // Also link song to band if recording session has band_id
-          if (session.band_id) {
-            songUpdate.band_id = session.band_id
-          }
-          
-          const { error: songUpdateError } = await supabase
-            .from('songs')
-            .update(songUpdate)
-            .eq('id', session.song_id)
+          // For acoustic/remix versions, create a new song entry
+          if (recordingVersion !== 'standard') {
+            console.log(`Recording version is ${recordingVersion}, checking for existing version...`)
             
-          if (songUpdateError) {
-            console.error(`Failed to update song ${session.song_id}:`, songUpdateError)
-          } else {
-            console.log(`Updated song ${session.song_id}: status=recorded, quality=${newQuality}, band_id=${session.band_id || 'unchanged'}`)
+            // Check if this version already exists
+            const { data: existingVersion } = await supabase
+              .from('songs')
+              .select('id')
+              .eq('parent_song_id', session.song_id)
+              .eq('version', recordingVersion)
+              .single()
             
-            // Trigger auto song audio generation if quality is good enough (≥60)
-            // and song has lyrics (check via songwriting project)
-            if (newQuality >= 60) {
-              try {
-                console.log(`Song ${session.song_id} quality ${newQuality} >= 60, triggering auto audio generation...`)
+            let targetSongId = session.song_id
+            
+            if (existingVersion) {
+              // Update existing version song's quality
+              console.log(`Found existing ${recordingVersion} version, updating quality...`)
+              targetSongId = existingVersion.id
+              
+              const { error: versionUpdateError } = await supabase
+                .from('songs')
+                .update({
+                  quality_score: newQuality,
+                  status: 'recorded',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingVersion.id)
+              
+              if (versionUpdateError) {
+                console.error(`Failed to update version song ${existingVersion.id}:`, versionUpdateError)
+              } else {
+                console.log(`Updated ${recordingVersion} version song ${existingVersion.id}: quality=${newQuality}`)
+              }
+            } else {
+              // Create a new version song
+              const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix'
+              const newTitle = `${originalSong.title} (${versionLabel})`
+              
+              console.log(`Creating new ${recordingVersion} version: "${newTitle}"`)
+              
+              const { data: newSong, error: createError } = await supabase
+                .from('songs')
+                .insert({
+                  user_id: originalSong.user_id,
+                  band_id: session.band_id || originalSong.band_id,
+                  title: newTitle,
+                  genre: originalSong.genre,
+                  lyrics: originalSong.lyrics,
+                  quality_score: newQuality,
+                  status: 'recorded',
+                  parent_song_id: session.song_id,
+                  version: recordingVersion,
+                  duration_seconds: originalSong.duration_seconds,
+                  duration_display: originalSong.duration_display,
+                  songwriting_project_id: originalSong.songwriting_project_id,
+                })
+                .select('id')
+                .single()
+              
+              if (createError) {
+                console.error(`Failed to create ${recordingVersion} version:`, createError)
+              } else if (newSong) {
+                targetSongId = newSong.id
+                console.log(`✓ Created ${recordingVersion} version song ${newSong.id}: "${newTitle}" quality=${newQuality}`)
                 
-                // Get the song to check if it has lyrics and a user
-                const { data: songData } = await supabase
+                // Update session to point to new song
+                await supabase
+                  .from('recording_sessions')
+                  .update({ song_id: newSong.id })
+                  .eq('id', session.id)
+              }
+            }
+            
+            // Trigger audio generation for the version song if quality is good enough
+            if (newQuality >= 60 && targetSongId) {
+              try {
+                const { data: versionSongData } = await supabase
                   .from('songs')
                   .select('user_id, audio_url, audio_generation_status, songwriting_project_id')
-                  .eq('id', session.song_id)
+                  .eq('id', targetSongId)
                   .single()
                 
-                // Only generate if: has user, no existing audio, has a songwriting project
-                if (songData?.user_id && 
-                    !songData?.audio_url && 
-                    songData?.audio_generation_status !== 'generating' &&
-                    songData?.audio_generation_status !== 'completed' &&
-                    songData?.songwriting_project_id) {
+                if (versionSongData?.user_id && 
+                    !versionSongData?.audio_url && 
+                    versionSongData?.audio_generation_status !== 'generating' &&
+                    versionSongData?.audio_generation_status !== 'completed' &&
+                    versionSongData?.songwriting_project_id) {
                   
-                  console.log(`Invoking generate-song-audio for song ${session.song_id}`)
+                  console.log(`Invoking generate-song-audio for version song ${targetSongId}`)
                   
                   const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
                     body: { 
-                      songId: session.song_id, 
-                      userId: songData.user_id 
+                      songId: targetSongId, 
+                      userId: versionSongData.user_id 
                     }
                   })
                   
                   if (genError) {
-                    console.error(`Failed to trigger audio generation for song ${session.song_id}:`, genError)
+                    console.error(`Failed to trigger audio generation for version song ${targetSongId}:`, genError)
                   } else {
-                    console.log(`✓ Audio generation triggered for song ${session.song_id}`)
+                    console.log(`✓ Audio generation triggered for version song ${targetSongId}`)
                   }
-                } else {
-                  console.log(`Skipping audio generation for song ${session.song_id}: ` +
-                    `has_user=${!!songData?.user_id}, has_audio=${!!songData?.audio_url}, ` +
-                    `status=${songData?.audio_generation_status}, has_project=${!!songData?.songwriting_project_id}`)
                 }
               } catch (genTriggerError) {
-                console.error(`Error triggering audio generation for song ${session.song_id}:`, genTriggerError)
+                console.error(`Error triggering audio generation for version song ${targetSongId}:`, genTriggerError)
+              }
+            }
+          } else {
+            // Standard recording - update existing song as before
+            const songUpdate: Record<string, unknown> = {
+              quality_score: newQuality,
+              status: 'recorded',
+              updated_at: new Date().toISOString(),
+            }
+            
+            // Also link song to band if recording session has band_id
+            if (session.band_id) {
+              songUpdate.band_id = session.band_id
+            }
+            
+            const { error: songUpdateError } = await supabase
+              .from('songs')
+              .update(songUpdate)
+              .eq('id', session.song_id)
+              
+            if (songUpdateError) {
+              console.error(`Failed to update song ${session.song_id}:`, songUpdateError)
+            } else {
+              console.log(`Updated song ${session.song_id}: status=recorded, quality=${newQuality}, band_id=${session.band_id || 'unchanged'}`)
+              
+              // Trigger auto song audio generation if quality is good enough (≥60)
+              if (newQuality >= 60) {
+                try {
+                  console.log(`Song ${session.song_id} quality ${newQuality} >= 60, triggering auto audio generation...`)
+                  
+                  if (originalSong.user_id && originalSong.songwriting_project_id) {
+                    const { data: songData } = await supabase
+                      .from('songs')
+                      .select('audio_url, audio_generation_status')
+                      .eq('id', session.song_id)
+                      .single()
+                    
+                    if (!songData?.audio_url && 
+                        songData?.audio_generation_status !== 'generating' &&
+                        songData?.audio_generation_status !== 'completed') {
+                      
+                      console.log(`Invoking generate-song-audio for song ${session.song_id}`)
+                      
+                      const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
+                        body: { 
+                          songId: session.song_id, 
+                          userId: originalSong.user_id 
+                        }
+                      })
+                      
+                      if (genError) {
+                        console.error(`Failed to trigger audio generation for song ${session.song_id}:`, genError)
+                      } else {
+                        console.log(`✓ Audio generation triggered for song ${session.song_id}`)
+                      }
+                    } else {
+                      console.log(`Skipping audio generation for song ${session.song_id}: ` +
+                        `has_audio=${!!songData?.audio_url}, status=${songData?.audio_generation_status}`)
+                    }
+                  } else {
+                    console.log(`Skipping audio generation for song ${session.song_id}: ` +
+                      `has_user=${!!originalSong.user_id}, has_project=${!!originalSong.songwriting_project_id}`)
+                  }
+                } catch (genTriggerError) {
+                  console.error(`Error triggering audio generation for song ${session.song_id}:`, genTriggerError)
+                }
               }
             }
           }
