@@ -66,6 +66,7 @@ export default function Gear() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [rarityFilter, setRarityFilter] = useState<string>("all");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name");
   const [compareItems, setCompareItems] = useState<string[]>([]);
 
@@ -75,14 +76,22 @@ export default function Gear() {
     return ["all", ...Array.from(cats)];
   }, [catalog]);
 
+  // Get brands from catalog
+  const brands = useMemo(() => {
+    const brandSet = new Set(catalog.map(item => item.brand).filter(Boolean));
+    return ["all", ...Array.from(brandSet).sort()];
+  }, [catalog]);
+
   // Filter and sort catalog
   const filteredCatalog = useMemo(() => {
     let filtered = catalog.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+                           item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           item.brand?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
       const matchesRarity = rarityFilter === "all" || item.rarity?.toLowerCase() === rarityFilter;
-      return matchesSearch && matchesCategory && matchesRarity;
+      const matchesBrand = brandFilter === "all" || item.brand === brandFilter;
+      return matchesSearch && matchesCategory && matchesRarity && matchesBrand;
     });
 
     // Sort
@@ -97,7 +106,7 @@ export default function Gear() {
     });
 
     return filtered;
-  }, [catalog, searchQuery, categoryFilter, rarityFilter, sortBy]);
+  }, [catalog, searchQuery, categoryFilter, rarityFilter, brandFilter, sortBy]);
 
   // Equipped items
   const equippedItems = useMemo(() => 
@@ -224,6 +233,21 @@ export default function Gear() {
                       {categories.map(cat => (
                         <SelectItem key={cat} value={cat} className="capitalize">
                           {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Brand</Label>
+                  <Select value={brandFilter} onValueChange={setBrandFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brands.map(brand => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand === "all" ? "All Brands" : brand}
                         </SelectItem>
                       ))}
                     </SelectContent>

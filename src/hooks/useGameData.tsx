@@ -386,8 +386,8 @@ const useProvideGameData = (): UseGameDataReturn => {
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [supportsActivityProfileFilter, setSupportsActivityProfileFilter] = useState(true);
-  const [activityFeedSupportsProfileId, setActivityFeedSupportsProfileId] = useState(true);
+  const [supportsActivityProfileFilter, setSupportsActivityProfileFilter] = useState(false);
+  const [activityFeedSupportsProfileId, setActivityFeedSupportsProfileId] = useState(false);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantTableAvailableRef = useRef(true);
