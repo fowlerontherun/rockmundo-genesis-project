@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.363",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Compact submissions view with status/station/search filters" },
+      { type: 'feature', description: "Songs in Rotation section showing total plays, weekly plays with clickable details" },
+      { type: 'feature', description: "Song airplay breakdown by station, country, and city" },
+      { type: 'improvement', description: "Batch submit only shows genre-matching stations" },
+    ],
+  },
+  {
     version: "1.0.362",
     date: "2026-01-16",
     changes: [
