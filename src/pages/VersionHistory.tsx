@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.376",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed jam session booking dialog layout - now properly scrolls to show all fields including rehearsal room and time slots" },
+    ],
+  },
+  {
     version: "1.0.375",
     date: "2026-01-16",
     changes: [

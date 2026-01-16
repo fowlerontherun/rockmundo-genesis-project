@@ -176,8 +176,8 @@ export const JamSessionBookingDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Music className="h-5 w-5" />
             Book a Jam Session
@@ -187,7 +187,7 @@ export const JamSessionBookingDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Session Details */}
             <div className="space-y-4">
@@ -459,7 +459,7 @@ export const JamSessionBookingDialog = ({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
