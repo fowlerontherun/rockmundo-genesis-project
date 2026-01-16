@@ -167,3 +167,6 @@ verify_jwt = false
 
 [functions.calculate-organic-followers]
 verify_jwt = false
+
+[functions.process-self-promotion]
+verify_jwt = false

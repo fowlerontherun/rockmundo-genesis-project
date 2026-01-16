@@ -43,12 +43,6 @@ const PodcastsBrowser = () => {
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
 
-  useEffect(() => {
-    if (currentCity?.country && countryFilter === "all") {
-      setCountryFilter(currentCity.country);
-    }
-  }, [currentCity]);
-
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ['podcasts-browser'],
     queryFn: async () => {
@@ -61,6 +55,16 @@ const PodcastsBrowser = () => {
       return data as unknown as PodcastShow[];
     }
   });
+
+  // Auto-set country filter only if podcasts exist in that country
+  useEffect(() => {
+    if (currentCity?.country && countryFilter === "all" && podcasts) {
+      const hasPodsInCountry = podcasts.some(p => p.country === currentCity.country);
+      if (hasPodsInCountry) {
+        setCountryFilter(currentCity.country);
+      }
+    }
+  }, [currentCity, podcasts, countryFilter]);
 
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ['podcast-submissions', userBand?.id],
