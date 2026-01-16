@@ -118,6 +118,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   // Create travel history entry
   const status = startsImmediately ? 'in_progress' : 'scheduled';
+  const travelDurationHoursStored = Math.max(1, Math.ceil(durationHours));
   
   const { data: travelHistory, error: historyError } = await supabase
     .from("player_travel_history")
@@ -127,7 +128,8 @@ export async function bookTravel(bookingData: TravelBookingData) {
       to_city_id: toCityId,
       transport_type: transportType,
       cost_paid: cost,
-      travel_duration_hours: durationHours,
+      // DB column is integer; durationHours can be fractional (e.g. 3.9)
+      travel_duration_hours: travelDurationHoursStored,
       departure_time: departureTime,
       scheduled_departure_time: departureTime,
       arrival_time: arrivalTimeCalc.toISOString(),
