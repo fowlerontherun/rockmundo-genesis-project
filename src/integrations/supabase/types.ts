@@ -3740,16 +3740,19 @@ export type Database = {
       education_mentors: {
         Row: {
           attribute_keys: Json
+          available_seasons: string[] | null
           base_xp: number
-          bonus_description: string
+          bonus_description: string | null
           cooldown_hours: number
           cost: number
           created_at: string
+          current_students: number | null
           description: string
           difficulty: string
           focus_skill: string
           id: string
           is_active: boolean
+          max_students: number | null
           name: string
           required_skill_value: number
           skill_gain_ratio: number
@@ -3758,16 +3761,19 @@ export type Database = {
         }
         Insert: {
           attribute_keys?: Json
+          available_seasons?: string[] | null
           base_xp?: number
-          bonus_description: string
+          bonus_description?: string | null
           cooldown_hours?: number
           cost?: number
           created_at?: string
+          current_students?: number | null
           description: string
           difficulty?: string
           focus_skill: string
           id?: string
           is_active?: boolean
+          max_students?: number | null
           name: string
           required_skill_value?: number
           skill_gain_ratio?: number
@@ -3776,16 +3782,19 @@ export type Database = {
         }
         Update: {
           attribute_keys?: Json
+          available_seasons?: string[] | null
           base_xp?: number
-          bonus_description?: string
+          bonus_description?: string | null
           cooldown_hours?: number
           cost?: number
           created_at?: string
+          current_students?: number | null
           description?: string
           difficulty?: string
           focus_skill?: string
           id?: string
           is_active?: boolean
+          max_students?: number | null
           name?: string
           required_skill_value?: number
           skill_gain_ratio?: number
