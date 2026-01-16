@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.389",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Complete 9-step tour wizard with full booking integration" },
+      { type: 'feature', description: "Tour gigs now automatically scheduled for all band members" },
+      { type: 'feature', description: "Support artist schedule blocking - avoids conflicts for both bands" },
+      { type: 'improvement', description: "Enhanced venue matching with capacity and genre filters" },
+      { type: 'improvement', description: "Improved cost estimation with real-time budget preview" },
+    ],
+  },
+  {
     version: "1.0.388",
     date: "2026-01-16",
     changes: [
