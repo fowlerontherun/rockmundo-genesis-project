@@ -150,6 +150,8 @@ export const en = {
     magazines: "Magazines",
     podcasts: "Podcasts",
     films: "Films",
+    selfPr: "Self-PR",
+    websites: "Websites",
   },
   
   // Today's News Page

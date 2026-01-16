@@ -150,6 +150,8 @@ export const es: TranslationKeys = {
     magazines: "Revistas",
     podcasts: "Podcasts",
     films: "Películas",
+    selfPr: "Auto-Promoción",
+    websites: "Sitios Web",
   },
   
   todaysNews: {

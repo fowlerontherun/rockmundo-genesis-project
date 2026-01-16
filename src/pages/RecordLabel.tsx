@@ -166,81 +166,144 @@ const RecordLabel = () => {
             Launching a label requires at least ${formattedMinimumBalance} in personal funds. Current balance: ${formattedPersonalBalance}.
           </p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2 self-start">
-          {/* Hire Lawyer Button - VIP only */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => setIsHireLawyerOpen(true)}
-                  disabled={!isVip}
-                  className={cn(
-                    "relative overflow-hidden",
-                    isVip 
-                      ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-600 hover:via-yellow-500 hover:to-amber-600 text-amber-950 font-semibold shadow-lg"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {isVip && (
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                      style={{ animation: "shimmer 2s infinite linear" }}
-                    />
-                  )}
-                  <Scale className="mr-2 h-4 w-4 relative z-10" />
-                  <span className="relative z-10">
-                    {hasActiveLawyer ? "Lawyer Active" : "Hire Lawyer"}
-                  </span>
-                  <Crown className="ml-2 h-3 w-3 relative z-10" />
-                </Button>
-              </TooltipTrigger>
-              {!isVip && (
-                <TooltipContent className="bg-gradient-to-r from-amber-900 to-yellow-900 border-amber-500/50">
-                  <p className="text-amber-100">VIP feature - Upgrade to hire a lawyer</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+      </div>
 
-          {/* Launch Label Button - VIP only */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => setIsCreateLabelOpen(true)}
-                  disabled={!canCreateLabel}
-                  className={cn(
-                    "relative overflow-hidden",
-                    isVip 
-                      ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-600 hover:via-yellow-500 hover:to-amber-600 text-amber-950 font-semibold shadow-lg"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {isVip && (
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                      style={{ animation: "shimmer 2s infinite linear" }}
-                    />
-                  )}
-                  <Plus className="mr-2 h-4 w-4 relative z-10" />
-                  <span className="relative z-10">Launch new label</span>
-                  <Crown className="ml-2 h-3 w-3 relative z-10" />
-                  {!isVip && <Lock className="ml-1 h-3 w-3 relative z-10" />}
-                </Button>
-              </TooltipTrigger>
-              {!isVip ? (
-                <TooltipContent className="bg-gradient-to-r from-amber-900 to-yellow-900 border-amber-500/50">
-                  <p className="text-amber-100">VIP feature - Upgrade to launch your own label</p>
-                </TooltipContent>
-              ) : !canCreateLabel && personalBalance < minimumLabelBalance ? (
-                <TooltipContent>
-                  <p>Need ${formattedMinimumBalance} to launch a label</p>
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+      {/* Deal Types Explained */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Understanding Record Deal Types</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <h3 className="font-semibold text-primary mb-2">🎯 360 Deal</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                The label takes a cut of <strong>everything</strong> — music, merch, tours, endorsements.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <strong>Best for:</strong> New artists needing major investment<br/>
+                <strong>Artist cut:</strong> 10-20% | <strong>Advance:</strong> $50K-500K+
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <h3 className="font-semibold text-primary mb-2">📦 Distribution Deal</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                Label just gets your music into stores/streaming. You keep more royalties but handle your own marketing.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <strong>Best for:</strong> Independent artists with existing fanbase<br/>
+                <strong>Artist cut:</strong> 70-85% | <strong>Advance:</strong> $0-50K
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <h3 className="font-semibold text-primary mb-2">📝 Licensing Deal</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                You license specific songs for a set period. You keep ownership and get the masters back later.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <strong>Best for:</strong> Testing the waters with a label<br/>
+                <strong>Artist cut:</strong> 40-60% | <strong>Advance:</strong> $10K-100K
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <h3 className="font-semibold text-primary mb-2">🎛️ Production Deal</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                Label helps make your music (studio time, producers) and distributes it. Middle ground between full label and DIY.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <strong>Best for:</strong> Artists needing production support<br/>
+                <strong>Artist cut:</strong> 30-50% | <strong>Advance:</strong> $20K-150K
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <h3 className="font-semibold text-primary mb-2">📀 Standard Deal</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                Traditional record deal — they fund recording, own the masters, handle distribution. Classic artist-label relationship.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <strong>Best for:</strong> Artists wanting label resources<br/>
+                <strong>Artist cut:</strong> 15-25% | <strong>Advance:</strong> $25K-300K
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        {/* Hire Lawyer Button - VIP only */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setIsHireLawyerOpen(true)}
+                disabled={!isVip}
+                className={cn(
+                  "relative overflow-hidden",
+                  isVip 
+                    ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-600 hover:via-yellow-500 hover:to-amber-600 text-amber-950 font-semibold shadow-lg"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {isVip && (
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                    style={{ animation: "shimmer 2s infinite linear" }}
+                  />
+                )}
+                <Scale className="mr-2 h-4 w-4 relative z-10" />
+                <span className="relative z-10">
+                  {hasActiveLawyer ? "Lawyer Active" : "Hire Lawyer"}
+                </span>
+                <Crown className="ml-2 h-3 w-3 relative z-10" />
+              </Button>
+            </TooltipTrigger>
+            {!isVip && (
+              <TooltipContent className="bg-gradient-to-r from-amber-900 to-yellow-900 border-amber-500/50">
+                <p className="text-amber-100">VIP feature - Upgrade to hire a lawyer</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Launch Label Button - VIP only */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setIsCreateLabelOpen(true)}
+                disabled={!canCreateLabel}
+                className={cn(
+                  "relative overflow-hidden",
+                  isVip 
+                    ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-600 hover:via-yellow-500 hover:to-amber-600 text-amber-950 font-semibold shadow-lg"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {isVip && (
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                    style={{ animation: "shimmer 2s infinite linear" }}
+                  />
+                )}
+                <Plus className="mr-2 h-4 w-4 relative z-10" />
+                <span className="relative z-10">Launch new label</span>
+                <Crown className="ml-2 h-3 w-3 relative z-10" />
+                {!isVip && <Lock className="ml-1 h-3 w-3 relative z-10" />}
+              </Button>
+            </TooltipTrigger>
+            {!isVip ? (
+              <TooltipContent className="bg-gradient-to-r from-amber-900 to-yellow-900 border-amber-500/50">
+                <p className="text-amber-100">VIP feature - Upgrade to launch your own label</p>
+              </TooltipContent>
+            ) : !canCreateLabel && personalBalance < minimumLabelBalance ? (
+              <TooltipContent>
+                <p>Need ${formattedMinimumBalance} to launch a label</p>
+              </TooltipContent>
+            ) : null}
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {hasError ? (

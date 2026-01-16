@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
 import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star } from "lucide-react";
@@ -55,6 +56,7 @@ const Dashboard = () => {
     toast
   } = useToast();
   const { t } = useTranslation();
+  const { data: vipStatus } = useVipStatus();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
@@ -493,7 +495,7 @@ const Dashboard = () => {
                 <CardTitle>{t('dashboard.chatChannels', 'Chat Channels')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChatChannelSelector isVip={(profile as any)?.is_vip || false} />
+                <ChatChannelSelector isVip={vipStatus?.isVip || false} />
               </CardContent>
             </Card>
           </div>
