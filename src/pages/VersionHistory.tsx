@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.394",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Relationships page now uses tabbed layout (Friends, Pending, Find Friends)" },
+      { type: 'feature', description: "Tour Manager reorganized with 5 tabs: Current Tour, Upcoming, Historic, Getting Started, Other Bands" },
+      { type: 'feature', description: "Other Bands Tours now has fame and genre filters with pagination (10 per page)" },
+      { type: 'feature', description: "New Band Rankings page - view all bands ranked by fame/fans with country/city/genre filters" },
+      { type: 'feature', description: "Bands can now set home city for regional rankings (one-time setting)" },
+      { type: 'improvement', description: "Inline friend search on Relationships page instead of dialog" },
+    ],
+  },
+  {
     version: "1.0.393",
     date: "2026-01-16",
     changes: [

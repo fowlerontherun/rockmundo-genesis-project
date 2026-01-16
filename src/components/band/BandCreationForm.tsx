@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth-context';
-import { Users, User } from 'lucide-react';
+import { Users, User, MapPin } from 'lucide-react';
 import { INSTRUMENT_ROLES, VOCAL_ROLES } from '@/utils/touringMembers';
 import { MUSIC_GENRES } from '@/data/genres';
 
@@ -30,7 +31,32 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
   const [maxMembers, setMaxMembers] = useState(4);
   const [instrumentRole, setInstrumentRole] = useState('Guitar');
   const [vocalRole, setVocalRole] = useState('None');
+  const [homeCityId, setHomeCityId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  // Fetch cities for home city selector
+  const { data: cities } = useQuery({
+    queryKey: ['creation-cities'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cities')
+        .select('id, name, country')
+        .order('country')
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Group cities by country
+  const citiesByCountry = cities?.reduce((acc, city) => {
+    const country = city.country || 'Unknown';
+    if (!acc[country]) acc[country] = [];
+    acc[country].push(city);
+    return acc;
+  }, {} as Record<string, typeof cities>) || {};
+
+  const sortedCountries = Object.keys(citiesByCountry).sort();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +105,7 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
           is_solo_artist: isSolo,
           artist_name: isSolo ? artistName : null,
           chemistry_level: 100,
+          home_city_id: homeCityId || null,
         })
         .select()
         .single();
@@ -198,6 +225,33 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="homeCity" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Home City
+            </Label>
+            <Select value={homeCityId} onValueChange={setHomeCityId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select your band's home city" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {sortedCountries.map(country => (
+                  <div key={country}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                      {country}
+                    </div>
+                    {citiesByCountry[country]?.map(city => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">This helps with regional rankings and can only be set once</p>
           </div>
 
           <div className="space-y-2">

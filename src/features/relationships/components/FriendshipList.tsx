@@ -15,6 +15,7 @@ interface FriendshipListProps {
   onAccept: (friendshipId: string) => void;
   onDecline: (friendshipId: string) => void;
   onRemove: (friendshipId: string) => void;
+  filter?: 'accepted' | 'pending' | 'all';
 }
 
 export function FriendshipList({
@@ -25,6 +26,7 @@ export function FriendshipList({
   onAccept,
   onDecline,
   onRemove,
+  filter = 'all',
 }: FriendshipListProps) {
   const { incoming, outgoing, accepted } = useMemo(() => {
     const grouped = {
