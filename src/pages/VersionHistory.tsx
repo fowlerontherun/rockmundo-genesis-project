@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.380",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed performance items FK to reference performance_items_catalog (resolves setlist add error)" },
+      { type: 'feature', description: "Added crowd sounds system with admin interface for managing gig audio effects" },
+      { type: 'feature', description: "Performance items now processed in gig outcomes with dedicated commentary" },
+      { type: 'improvement', description: "Gig review now plays songs for their actual duration (capped at 5 min)" },
+      { type: 'feature', description: "Added new commentary types for performance items, band entrance/exit, and more" },
+      { type: 'fix', description: "Fixed DOM nesting error in RehearsalWarningDialog (div inside p tag)" },
+    ],
+  },
+  {
     version: "1.0.379",
     date: "2026-01-16",
     changes: [

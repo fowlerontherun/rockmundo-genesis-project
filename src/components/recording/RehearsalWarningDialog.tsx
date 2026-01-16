@@ -104,45 +104,47 @@ export function RehearsalWarningDialog({
             <Icon className={`h-5 w-5 ${config.color}`} />
             {config.title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-4">
-            <div className={`p-4 rounded-lg ${config.bgColor}`}>
-              <p className="font-medium mb-2">Song: {songTitle}</p>
-              <p className="text-sm">{config.description}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="p-3 rounded-lg border bg-card">
-                <p className="text-muted-foreground mb-1">Rehearsal Time</p>
-                <p className="font-bold">{familiarityMinutes} minutes</p>
+          <AlertDialogDescription asChild>
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <div className={`p-4 rounded-lg ${config.bgColor}`}>
+                <span className="font-medium block mb-2">Song: {songTitle}</span>
+                <span className="text-sm">{config.description}</span>
               </div>
-              <div className="p-3 rounded-lg border bg-card">
-                <p className="text-muted-foreground mb-1">Quality Impact</p>
-                <p className={`font-bold ${qualityPenalty < 0 ? 'text-destructive' : qualityPenalty > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {qualityPenalty > 0 ? '+' : ''}{qualityPenalty}%
-                </p>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="p-3 rounded-lg border bg-card">
+                  <span className="text-muted-foreground block mb-1">Rehearsal Time</span>
+                  <span className="font-bold block">{familiarityMinutes} minutes</span>
+                </div>
+                <div className="p-3 rounded-lg border bg-card">
+                  <span className="text-muted-foreground block mb-1">Quality Impact</span>
+                  <span className={`font-bold block ${qualityPenalty < 0 ? 'text-destructive' : qualityPenalty > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {qualityPenalty > 0 ? '+' : ''}{qualityPenalty}%
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2 text-sm">
-              <p className="font-medium">Rehearsal Stages:</p>
-              <ul className="space-y-1 ml-4">
-                <li className={rehearsalStage === 'unrehearsed' ? 'font-bold text-destructive' : 'text-muted-foreground'}>
-                  • 0-20 min: <Badge variant="destructive">Unrehearsed</Badge> -20% quality
-                </li>
-                <li className={rehearsalStage === 'tight' ? 'font-bold text-yellow-600' : 'text-muted-foreground'}>
-                  • 21-40 min: <Badge variant="outline">Tight</Badge> No penalty
-                </li>
-                <li className={rehearsalStage === 'perfect' ? 'font-bold text-primary' : 'text-muted-foreground'}>
-                  • 41-60 min: <Badge variant="default">Perfect</Badge> +10% quality
-                </li>
-              </ul>
-            </div>
+              <div className="space-y-2 text-sm">
+                <span className="font-medium block">Rehearsal Stages:</span>
+                <ul className="space-y-1 ml-4">
+                  <li className={rehearsalStage === 'unrehearsed' ? 'font-bold text-destructive' : 'text-muted-foreground'}>
+                    • 0-20 min: <Badge variant="destructive">Unrehearsed</Badge> -20% quality
+                  </li>
+                  <li className={rehearsalStage === 'tight' ? 'font-bold text-yellow-600' : 'text-muted-foreground'}>
+                    • 21-40 min: <Badge variant="outline">Tight</Badge> No penalty
+                  </li>
+                  <li className={rehearsalStage === 'perfect' ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                    • 41-60 min: <Badge variant="default">Perfect</Badge> +10% quality
+                  </li>
+                </ul>
+              </div>
 
-            {shouldWarn && (
-              <p className="text-xs text-muted-foreground">
-                💡 Tip: Book a rehearsal session first to improve recording quality!
-              </p>
-            )}
+              {shouldWarn && (
+                <span className="text-xs text-muted-foreground block">
+                  💡 Tip: Book a rehearsal session first to improve recording quality!
+                </span>
+              )}
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
