@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.365",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed analytics tab hiding Songs in Rotation behind station selection" },
+      { type: 'feature', description: "Added My Airplay Stats card to analytics showing total plays, listeners, hype earned, and top song" },
+      { type: 'improvement', description: "Songs in Rotation and My Airplay Stats now always visible in analytics tab" },
+    ],
+  },
+  {
     version: "1.0.364",
     date: "2026-01-16",
     changes: [
