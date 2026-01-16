@@ -130,6 +130,7 @@ export const de = {
     bandChemistry: "Band-Chemie",
     bandFinder: "Band-Finder",
     bandfinder: "Band-Finder",
+    bandRankings: "Band-Ranglisten",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Community",

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.395",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added Band Rankings link to main navigation menu under Band section" },
+    ],
+  },
+  {
     version: "1.0.394",
     date: "2026-01-16",
     changes: [

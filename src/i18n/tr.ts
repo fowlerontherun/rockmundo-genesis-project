@@ -132,6 +132,7 @@ export const tr: TranslationKeys = {
     bandChemistry: "Grup Uyumu",
     bandFinder: "Grup Bulucu",
     bandfinder: "Grup Bulucu",
+    bandRankings: "Grup Sıralamaları",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Topluluk",

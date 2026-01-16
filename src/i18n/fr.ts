@@ -130,6 +130,7 @@ export const fr = {
     bandChemistry: "Alchimie du groupe",
     bandFinder: "Recherche de groupes",
     bandfinder: "Recherche de groupes",
+    bandRankings: "Classement des groupes",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Communauté",
