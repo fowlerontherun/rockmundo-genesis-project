@@ -28,14 +28,14 @@ export const useJamSessionBooking = () => {
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);
 
-  // Fetch user profile
+  // Fetch user profile with current city
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, cash")
+        .select("id, cash, current_city_id, user_id")
         .eq("user_id", user.id)
         .single();
       if (error) throw error;
@@ -43,6 +43,68 @@ export const useJamSessionBooking = () => {
     },
     enabled: !!user?.id,
   });
+
+  // Check if user has conflicting activities during a time range
+  const checkActivityConflict = async (
+    userId: string,
+    startTime: Date,
+    endTime: Date
+  ): Promise<{ hasConflict: boolean; conflictTitle?: string }> => {
+    const { data: conflicts } = await supabase
+      .from("player_scheduled_activities")
+      .select("title")
+      .eq("user_id", userId)
+      .in("status", ["scheduled", "in_progress"])
+      .lte("scheduled_start", endTime.toISOString())
+      .gte("scheduled_end", startTime.toISOString())
+      .limit(1);
+
+    if (conflicts && conflicts.length > 0) {
+      return { hasConflict: true, conflictTitle: conflicts[0].title };
+    }
+    return { hasConflict: false };
+  };
+
+  // Check if user is already in an active/waiting jam session
+  const checkExistingJamParticipation = async (profileId: string): Promise<boolean> => {
+    const { data: existing } = await supabase
+      .from("jam_session_participants")
+      .select("jam_session_id, jam_sessions!inner(status)")
+      .eq("profile_id", profileId)
+      .is("left_at", null);
+
+    // Filter to only waiting/active sessions
+    const activeParticipations = (existing || []).filter((p: any) => 
+      p.jam_sessions?.status === "waiting" || p.jam_sessions?.status === "active"
+    );
+
+    return activeParticipations.length > 0;
+  };
+
+  // Create scheduled activity for jam session
+  const createScheduledActivity = async (
+    userId: string,
+    profileId: string,
+    sessionId: string,
+    sessionName: string,
+    scheduledStart: Date,
+    scheduledEnd: Date,
+    cityName?: string
+  ) => {
+    await (supabase as any).from("player_scheduled_activities").insert({
+      user_id: userId,
+      profile_id: profileId,
+      activity_type: "jam_session",
+      scheduled_start: scheduledStart.toISOString(),
+      scheduled_end: scheduledEnd.toISOString(),
+      duration_minutes: Math.round((scheduledEnd.getTime() - scheduledStart.getTime()) / 60000),
+      status: "scheduled",
+      title: `Jam Session: ${sessionName}`,
+      location: cityName || "Rehearsal Room",
+      linked_jam_session_id: sessionId,
+      metadata: { jam_session_id: sessionId },
+    });
+  };
 
   // Check jam session availability for a room and date
   const checkAvailability = async (roomId: string, date: Date) => {
@@ -64,6 +126,7 @@ export const useJamSessionBooking = () => {
 
   const bookJamSession = async (params: BookJamSessionParams): Promise<string> => {
     if (!profile) throw new Error("Profile not found");
+    if (!user) throw new Error("User not found");
 
     setIsBooking(true);
 
@@ -72,8 +135,24 @@ export const useJamSessionBooking = () => {
       const slot = REHEARSAL_SLOTS.find(s => s.id === params.slotId);
       if (!slot) throw new Error("Invalid slot selected");
 
-      const { start: scheduledStart, end: slotEnd } = getSlotTimeRange(slot, params.selectedDate);
+      const { start: scheduledStart } = getSlotTimeRange(slot, params.selectedDate);
       const scheduledEnd = new Date(scheduledStart.getTime() + params.durationHours * 60 * 60 * 1000);
+
+      // Check for activity conflicts
+      const { hasConflict, conflictTitle } = await checkActivityConflict(
+        user.id,
+        scheduledStart,
+        scheduledEnd
+      );
+      if (hasConflict) {
+        throw new Error(`You have a scheduling conflict with "${conflictTitle}". Cancel that activity first.`);
+      }
+
+      // Check if already in a jam session
+      const alreadyInJam = await checkExistingJamParticipation(profile.id);
+      if (alreadyInJam) {
+        throw new Error("You're already participating in another jam session. Leave that session first.");
+      }
 
       // Cost per participant estimate (will be recalculated as people join)
       const costPerParticipant = Math.ceil(params.totalCost / params.maxParticipants);
@@ -82,6 +161,13 @@ export const useJamSessionBooking = () => {
       if ((profile.cash || 0) < params.totalCost) {
         throw new Error("Insufficient funds to book this session");
       }
+
+      // Get city name for the activity
+      const { data: cityData } = await supabase
+        .from("cities")
+        .select("name")
+        .eq("id", params.cityId)
+        .maybeSingle();
 
       // Create the jam session with venue booking
       const { data: session, error: sessionError } = await supabase
@@ -127,6 +213,17 @@ export const useJamSessionBooking = () => {
           joined_at: new Date().toISOString(),
         });
 
+      // Create scheduled activity for the creator
+      await createScheduledActivity(
+        user.id,
+        profile.id,
+        session.id,
+        params.name,
+        scheduledStart,
+        scheduledEnd,
+        cityData?.name
+      );
+
       // Add system message to chat
       await supabase
         .from("jam_session_chat")
@@ -144,6 +241,7 @@ export const useJamSessionBooking = () => {
 
       queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
 
       return session.id;
     } finally {
@@ -153,16 +251,41 @@ export const useJamSessionBooking = () => {
 
   const joinJamSession = async (sessionId: string): Promise<void> => {
     if (!profile) throw new Error("Profile not found");
+    if (!user) throw new Error("User not found");
 
-    // Get session details
+    // Get session details with city info
     const { data: session } = await supabase
       .from("jam_sessions")
-      .select("*, current_participants:jam_session_participants(count)")
+      .select("*, current_participants:jam_session_participants(count), city:cities(id, name)")
       .eq("id", sessionId)
       .single();
 
     if (!session) throw new Error("Session not found");
     if (session.status !== "waiting") throw new Error("Session is not accepting participants");
+
+    // Check if user is in the same city as the session
+    if (session.city_id && profile.current_city_id !== session.city_id) {
+      const cityName = (session.city as any)?.name || "the session city";
+      throw new Error(`You must be in ${cityName} to join this jam session. Travel there first!`);
+    }
+
+    // Check for activity conflicts during the session time
+    if (session.scheduled_start && session.scheduled_end) {
+      const { hasConflict, conflictTitle } = await checkActivityConflict(
+        user.id,
+        new Date(session.scheduled_start),
+        new Date(session.scheduled_end)
+      );
+      if (hasConflict) {
+        throw new Error(`You have a scheduling conflict with "${conflictTitle}". Cancel that activity first.`);
+      }
+    }
+
+    // Check if already in a jam session
+    const alreadyInJam = await checkExistingJamParticipation(profile.id);
+    if (alreadyInJam) {
+      throw new Error("You're already participating in another jam session. Leave that session first.");
+    }
 
     // Calculate new cost per person
     const currentCount = session.current_participants?.[0]?.count || 1;
@@ -196,6 +319,19 @@ export const useJamSessionBooking = () => {
       .update({ cost_per_participant: newCostPerPerson })
       .eq("id", sessionId);
 
+    // Create scheduled activity for the joiner
+    if (session.scheduled_start && session.scheduled_end) {
+      await createScheduledActivity(
+        user.id,
+        profile.id,
+        sessionId,
+        session.name,
+        new Date(session.scheduled_start),
+        new Date(session.scheduled_end),
+        (session.city as any)?.name
+      );
+    }
+
     // Add join message to chat
     const { data: profileData } = await supabase
       .from("profiles")
@@ -215,10 +351,12 @@ export const useJamSessionBooking = () => {
     toast({ title: "Joined session!" });
     queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
     queryClient.invalidateQueries({ queryKey: ["profile"] });
+    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
   };
 
   const leaveJamSession = async (sessionId: string): Promise<void> => {
     if (!profile) throw new Error("Profile not found");
+    if (!user) throw new Error("User not found");
 
     // Get session details
     const { data: session } = await supabase
@@ -257,6 +395,13 @@ export const useJamSessionBooking = () => {
       .eq("jam_session_id", sessionId)
       .eq("profile_id", profile.id);
 
+    // Cancel the scheduled activity
+    await (supabase as any)
+      .from("player_scheduled_activities")
+      .update({ status: "cancelled" })
+      .eq("user_id", user.id)
+      .eq("linked_jam_session_id", sessionId);
+
     // Add leave message
     const { data: profileData } = await supabase
       .from("profiles")
@@ -280,6 +425,7 @@ export const useJamSessionBooking = () => {
     });
 
     queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
+    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
   };
 
   return {

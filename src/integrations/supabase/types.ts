@@ -10297,6 +10297,7 @@ export type Database = {
           duration_minutes: number | null
           id: string
           linked_gig_id: string | null
+          linked_jam_session_id: string | null
           linked_job_shift_id: string | null
           linked_recording_id: string | null
           linked_rehearsal_id: string | null
@@ -10321,6 +10322,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           linked_gig_id?: string | null
+          linked_jam_session_id?: string | null
           linked_job_shift_id?: string | null
           linked_recording_id?: string | null
           linked_rehearsal_id?: string | null
@@ -10345,6 +10347,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           linked_gig_id?: string | null
+          linked_jam_session_id?: string | null
           linked_job_shift_id?: string | null
           linked_recording_id?: string | null
           linked_rehearsal_id?: string | null
@@ -10367,6 +10370,13 @@ export type Database = {
             columns: ["linked_gig_id"]
             isOneToOne: false
             referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_scheduled_activities_linked_jam_session_id_fkey"
+            columns: ["linked_jam_session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
             referencedColumns: ["id"]
           },
           {
