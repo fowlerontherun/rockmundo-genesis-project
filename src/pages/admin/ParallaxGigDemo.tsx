@@ -5,13 +5,14 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Music, Users, Sparkles, RefreshCw } from "lucide-react";
-import { motion } from "framer-motion";
+import { Music, Users, Sparkles, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { RpmAvatarImage } from "@/components/gig-viewer/RpmAvatarImage";
 import { InstrumentOverlay } from "@/components/gig-viewer/InstrumentOverlay";
 import { SimpleStageBackground } from "@/components/gig-viewer/SimpleStageBackground";
 import { StageSpotlights } from "@/components/gig-viewer/StageSpotlights";
 import { RPM_BAND_AVATARS } from "@/data/rpmAvatarPool";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SongSection = 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 
@@ -28,6 +29,8 @@ export default function ParallaxGigDemo() {
   const [songSection, setSongSection] = useState<SongSection>('chorus');
   const [isAutoProgressing, setIsAutoProgressing] = useState(false);
   const [useSessionMusicians, setUseSessionMusicians] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const isMobile = useIsMobile();
 
   const intensity = crowdMood / 100;
 
@@ -70,20 +73,36 @@ export default function ParallaxGigDemo() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between">
+      <div className="border-b border-border p-4 flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bebas text-foreground">Parallax Stage Demo</h1>
-          <p className="text-sm text-muted-foreground">Test and preview the 2D parallax gig viewer</p>
+          <h1 className="text-xl lg:text-2xl font-bebas text-foreground">Parallax Stage Demo</h1>
+          <p className="text-xs lg:text-sm text-muted-foreground">Test the 2D parallax gig viewer</p>
         </div>
-        <Button variant="outline" size="sm" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <Button variant="outline" size="sm" onClick={() => setShowControls(!showControls)}>
+              {showControls ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <span className="ml-1">Controls</span>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 lg:mr-2" />
+            <span className="hidden lg:inline">Reset</span>
+          </Button>
+        </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Control Panel */}
-        <div className="lg:w-80 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* Control Panel - Collapsible on mobile */}
+        <AnimatePresence>
+          {(!isMobile || showControls) && (
+            <motion.div 
+              className="lg:w-80 border-b lg:border-b-0 lg:border-r border-border overflow-y-auto p-4 space-y-4 shrink-0 max-h-[40vh] lg:max-h-none"
+              initial={isMobile ? { height: 0, opacity: 0 } : false}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={isMobile ? { height: 0, opacity: 0 } : undefined}
+              transition={{ duration: 0.2 }}
+            >
           {/* Crowd Controls */}
           <Card className="p-4 space-y-4">
             <div className="flex items-center gap-2">
@@ -178,10 +197,12 @@ export default function ParallaxGigDemo() {
               <li>• Session musicians get gradient fallbacks</li>
             </ul>
           </Card>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Stage Preview */}
-        <div className="flex-1 relative bg-black overflow-hidden">
+        {/* Stage Preview - Takes remaining space, min height on mobile */}
+        <div className="flex-1 relative bg-black overflow-hidden min-h-[50vh] lg:min-h-0">
           {/* Stage Background */}
           <SimpleStageBackground crowdMood={crowdMood} songSection={songSection} />
           
@@ -189,8 +210,8 @@ export default function ParallaxGigDemo() {
           <StageSpotlights crowdMood={crowdMood} songSection={songSection} />
           
           {/* Band Members on Stage */}
-          <div className="absolute inset-0 flex items-end justify-center pb-8">
-            <div className="relative w-full max-w-4xl h-[60vh]">
+          <div className="absolute inset-0 flex items-end justify-center pb-4 lg:pb-8">
+            <div className="relative w-full max-w-4xl h-[50vh] lg:h-[60vh]">
               {/* Drummer (back center) */}
               <motion.div
                 className="absolute bottom-[30%] left-1/2 -translate-x-1/2 z-10"

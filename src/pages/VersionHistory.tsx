@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.419",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Stage View Demo not showing on mobile - added collapsible controls panel and minimum height for stage preview" },
+    ],
+  },
+  {
     version: "1.0.418",
     date: "2026-01-16",
     changes: [
