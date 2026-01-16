@@ -140,7 +140,7 @@ const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphics
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
 const CrowdSoundsAdmin = lazyWithRetry(() => import("./pages/admin/CrowdSoundsAdmin"));
-// const Admin3DGigDemo = lazyWithRetry(() => import("./pages/admin/Admin3DGigDemo")); // Removed - replaced with parallax viewer
+const ParallaxGigDemo = lazyWithRetry(() => import("./pages/admin/ParallaxGigDemo"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
@@ -419,7 +419,7 @@ function App() {
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
-                    {/* <Route path="admin/3d-gig-demo" element={<Admin3DGigDemo />} /> Removed - replaced with parallax viewer */}
+                    <Route path="admin/parallax-gig-demo" element={<ParallaxGigDemo />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="music-videos" element={<MusicVideos />} />
                     <Route path="gig-booking" element={<GigBooking />} />

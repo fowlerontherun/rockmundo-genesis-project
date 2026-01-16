@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.417",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added admin Parallax Gig Demo page at /admin/parallax-gig-demo for testing the new stage viewer" },
+      { type: 'improvement', description: "Enhanced session musician fallback avatars with human silhouettes and role labels" },
+    ],
+  },
+  {
     version: "1.0.416",
     date: "2026-01-16",
     changes: [
