@@ -193,7 +193,6 @@ const Navigation = () => {
         { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
         { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
         { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
-        { icon: Share2, labelKey: "nav.selfPr", path: "/pr", search: "?tab=self-promo" },
         { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
         { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
         { icon: Building2, labelKey: "nav.venues", path: "/venues" },
@@ -210,7 +209,8 @@ const Navigation = () => {
         { icon: BookOpen, labelKey: "nav.magazines", path: "/media/magazines" },
         { icon: Mic, labelKey: "nav.podcasts", path: "/media/podcasts" },
         { icon: Film, labelKey: "nav.films", path: "/media/films" },
-        { icon: Globe, labelKey: "nav.websites", path: "/pr", search: "?tab=offers" },
+        { icon: Globe, labelKey: "nav.websites", path: "/media/websites" },
+        { icon: Share2, labelKey: "nav.selfPr", path: "/media/self-promotion" },
       ],
     },
     {

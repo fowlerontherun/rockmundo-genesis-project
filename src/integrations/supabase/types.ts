@@ -17912,6 +17912,97 @@ export type Database = {
         }
         Relationships: []
       }
+      website_submissions: {
+        Row: {
+          band_id: string
+          compensation_earned: number | null
+          created_at: string | null
+          fame_gained: number | null
+          fans_gained: number | null
+          id: string
+          pitch_message: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          song_id: string | null
+          status: string | null
+          submitted_at: string | null
+          website_id: string
+        }
+        Insert: {
+          band_id: string
+          compensation_earned?: number | null
+          created_at?: string | null
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          pitch_message?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          song_id?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          website_id: string
+        }
+        Update: {
+          band_id?: string
+          compensation_earned?: number | null
+          created_at?: string | null
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          pitch_message?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          song_id?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_submissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "website_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "website_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       websites: {
         Row: {
           compensation_max: number | null
@@ -17923,6 +18014,7 @@ export type Database = {
           fame_boost_min: number | null
           fan_boost_max: number | null
           fan_boost_min: number | null
+          genres: string[] | null
           id: string
           is_active: boolean | null
           min_fame_required: number | null
@@ -17940,6 +18032,7 @@ export type Database = {
           fame_boost_min?: number | null
           fan_boost_max?: number | null
           fan_boost_min?: number | null
+          genres?: string[] | null
           id?: string
           is_active?: boolean | null
           min_fame_required?: number | null
@@ -17957,6 +18050,7 @@ export type Database = {
           fame_boost_min?: number | null
           fan_boost_max?: number | null
           fan_boost_min?: number | null
+          genres?: string[] | null
           id?: string
           is_active?: boolean | null
           min_fame_required?: number | null
