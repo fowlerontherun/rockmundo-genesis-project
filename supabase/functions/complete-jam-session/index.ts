@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
     const { data: participants, error: participantsError } = await supabase
       .from('jam_session_participants')
       .select('profile_id, instrument_skill_slug')
-      .eq('session_id', session_id);
+      .eq('jam_session_id', session_id);
 
     if (participantsError) {
       console.error('Error fetching participants:', participantsError);
