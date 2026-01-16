@@ -107,27 +107,51 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
   }
 };
 
-// Fallback avatar for when no RPM avatar is available
+// Fallback avatar for session musicians (no RPM avatar available)
 const FallbackAvatar = ({ role, size }: { role: string; size: string }) => {
   const roleColors: Record<string, string> = {
-    vocalist: 'from-purple-500 to-pink-500',
-    guitarist: 'from-orange-500 to-red-500',
-    bassist: 'from-blue-500 to-indigo-500',
-    drummer: 'from-green-500 to-teal-500',
-    keyboardist: 'from-yellow-500 to-orange-500',
+    vocalist: 'from-purple-600/80 to-purple-900/90',
+    guitarist: 'from-orange-600/80 to-red-900/90',
+    bassist: 'from-blue-600/80 to-indigo-900/90',
+    drummer: 'from-emerald-600/80 to-teal-900/90',
+    keyboardist: 'from-amber-600/80 to-orange-900/90',
   };
   
-  const roleEmojis: Record<string, string> = {
-    vocalist: '🎤',
-    guitarist: '🎸',
-    bassist: '🎸',
-    drummer: '🥁',
-    keyboardist: '🎹',
+  const roleLabels: Record<string, string> = {
+    vocalist: 'Session Vocalist',
+    guitarist: 'Session Guitarist',
+    bassist: 'Session Bassist',
+    drummer: 'Session Drummer',
+    keyboardist: 'Session Keys',
   };
 
+  // Human silhouette SVG for session musicians
   return (
-    <div className={`${sizeClasses[size as keyof typeof sizeClasses]} bg-gradient-to-b ${roleColors[role] || 'from-gray-500 to-gray-700'} rounded-lg flex items-center justify-center text-3xl shadow-lg`}>
-      {roleEmojis[role] || '🎵'}
+    <div className={`${sizeClasses[size as keyof typeof sizeClasses]} relative`}>
+      {/* Silhouette background */}
+      <div className={`absolute inset-0 bg-gradient-to-b ${roleColors[role] || 'from-gray-600/80 to-gray-900/90'} rounded-lg shadow-lg overflow-hidden`}>
+        {/* Human silhouette shape */}
+        <svg 
+          viewBox="0 0 100 150" 
+          className="w-full h-full opacity-60"
+          preserveAspectRatio="xMidYMax meet"
+        >
+          {/* Head */}
+          <circle cx="50" cy="25" r="18" fill="black" />
+          {/* Body */}
+          <ellipse cx="50" cy="75" rx="25" ry="35" fill="black" />
+          {/* Shoulders */}
+          <rect x="15" y="50" width="70" height="20" rx="10" fill="black" />
+        </svg>
+      </div>
+      {/* Role label */}
+      <div className="absolute bottom-1 left-0 right-0 text-center">
+        <span className="text-[8px] text-white/70 font-medium bg-black/40 px-1 rounded">
+          {roleLabels[role] || 'Session'}
+        </span>
+      </div>
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-white/5 rounded-lg" />
     </div>
   );
 };
