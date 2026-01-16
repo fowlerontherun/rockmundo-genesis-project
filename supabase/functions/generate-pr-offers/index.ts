@@ -24,6 +24,7 @@ interface MediaOutlet {
   fame_boost_max?: number;
   fan_boost_min?: number;
   fan_boost_max?: number;
+  cooldown_days?: number;
 }
 
 interface Band {
@@ -33,10 +34,37 @@ interface Band {
   total_fans: number;
 }
 
-const MEDIA_TYPES = ['tv', 'radio', 'podcast', 'newspaper', 'magazine', 'youtube', 'film'] as const;
+// Added 'website' to media types
+const MEDIA_TYPES = ['tv', 'radio', 'podcast', 'newspaper', 'magazine', 'youtube', 'website', 'film'] as const;
 const OFFER_TYPES = ['general_promo', 'tour_promo', 'release_promo', 'personal_promo'] as const;
 
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+// Check if a specific outlet is on cooldown for a band
+async function isOnCooldown(
+  supabaseClient: any,
+  bandId: string,
+  mediaType: string,
+  outletId: string,
+  showId?: string | null
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  
+  let query = supabaseClient
+    .from('band_media_cooldowns')
+    .select('id')
+    .eq('band_id', bandId)
+    .eq('media_type', mediaType)
+    .eq('outlet_id', outletId)
+    .gt('cooldown_expires_at', now);
+  
+  if (showId) {
+    query = query.eq('show_id', showId);
+  }
+  
+  const { data } = await query.limit(1);
+  return (data && data.length > 0);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -56,6 +84,7 @@ serve(async (req) => {
   let offersCreated = 0;
   let bandsProcessed = 0;
   let errorCount = 0;
+  let skippedCooldown = 0;
 
   try {
     runId = await startJobRun({
@@ -101,21 +130,33 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all media outlets
-    const [tvNetworks, radioStations, podcasts, newspapers, magazines, youtubeChannels, filmProductions] = await Promise.all([
+    // Fetch all media outlets including websites and radio shows
+    const [
+      tvNetworks, 
+      radioStations, 
+      radioShows,
+      podcasts, 
+      newspapers, 
+      magazines, 
+      youtubeChannels, 
+      websites,
+      filmProductions
+    ] = await Promise.all([
       supabaseClient.from('tv_networks').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
       supabaseClient.from('radio_stations').select('id, name, min_fame_required').eq('is_active', true),
-      supabaseClient.from('podcasts').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
-      supabaseClient.from('newspapers').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
-      supabaseClient.from('magazines').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
+      supabaseClient.from('radio_shows').select('id, station_id, show_name, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, cooldown_days').eq('is_active', true),
+      supabaseClient.from('podcasts').select('id, name, min_fame_required, min_fans_required, cooldown_days').eq('is_active', true),
+      supabaseClient.from('newspapers').select('id, name, min_fame_required, min_fans_required, cooldown_days').eq('is_active', true),
+      supabaseClient.from('magazines').select('id, name, min_fame_required, min_fans_required, cooldown_days').eq('is_active', true),
       supabaseClient.from('youtube_channels').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
+      supabaseClient.from('websites').select('id, name, website_url, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max').eq('is_active', true),
       supabaseClient.from('film_productions').select('id, title, min_fame_required, compensation, fame_boost, fan_boost, film_type').eq('is_active', true),
     ]);
 
     // Fetch TV shows with compensation info
     const { data: tvShows } = await supabaseClient
       .from('tv_shows')
-      .select('id, network_id, show_name, fame_boost_multiplier, fan_boost_multiplier, compensation_range_min, compensation_range_max')
+      .select('id, network_id, show_name, fame_boost_multiplier, fan_boost_multiplier, compensation_range_min, compensation_range_max, cooldown_days')
       .eq('is_active', true);
 
     for (const band of bands as Band[]) {
@@ -136,9 +177,10 @@ serve(async (req) => {
         // Determine how many offers to generate (1-3 based on fame)
         const numOffers = fame > 10000 ? 3 : fame > 5000 ? 2 : 1;
         
-        // Randomly select media types for this band
+        // Randomly select media types for this band (weighted toward lower-fame outlets for new bands)
         const availableTypes = MEDIA_TYPES.filter(type => {
           if (type === 'film') return fame >= 25000; // Film requires high fame
+          if (type === 'tv' && fame < 1000) return Math.random() < 0.3; // TV less likely for low fame
           return true;
         });
 
@@ -149,6 +191,7 @@ serve(async (req) => {
           let compensation = 0;
           let fameBoost = 0;
           let fanBoost = 0;
+          let cooldownDays = 30; // Default cooldown
 
           // Select appropriate outlet based on media type and fame level
           let outletName = '';
@@ -168,6 +211,14 @@ serve(async (req) => {
                 const show = networkShows[Math.floor(Math.random() * networkShows.length)];
                 showId = show.id;
                 showName = show.show_name;
+                cooldownDays = show.cooldown_days || 30;
+                
+                // Check cooldown
+                if (await isOnCooldown(supabaseClient, band.id, 'tv', mediaOutletId, showId)) {
+                  skippedCooldown++;
+                  continue;
+                }
+                
                 compensation = getRandomInt(show.compensation_range_min || 500, show.compensation_range_max || 5000);
                 fameBoost = Math.floor(getRandomInt(200, 1500) * (show.fame_boost_multiplier || 1));
                 fanBoost = Math.floor(getRandomInt(500, 5000) * (show.fan_boost_multiplier || 1));
@@ -179,14 +230,46 @@ serve(async (req) => {
               break;
             }
             case 'radio': {
-              const eligible = (radioStations.data || []).filter((s: any) => fame >= (s.min_fame_required || 0));
-              if (eligible.length === 0) continue;
-              const station = eligible[Math.floor(Math.random() * eligible.length)];
-              mediaOutletId = station.id;
-              outletName = station.name || 'Radio Station';
-              compensation = getRandomInt(200, 2000);
-              fameBoost = getRandomInt(100, 600);
-              fanBoost = getRandomInt(200, 2000);
+              // First try radio shows with full compensation data
+              const eligibleShows = (radioShows.data || []).filter((s: any) => fame >= (s.min_fame_required || 0));
+              
+              if (eligibleShows.length > 0) {
+                const show = eligibleShows[Math.floor(Math.random() * eligibleShows.length)];
+                mediaOutletId = show.station_id;
+                showId = show.id;
+                showName = show.show_name;
+                cooldownDays = show.cooldown_days || 14;
+                
+                // Get station name
+                const station = (radioStations.data || []).find((s: any) => s.id === show.station_id);
+                outletName = station?.name || 'Radio Station';
+                
+                // Check cooldown
+                if (await isOnCooldown(supabaseClient, band.id, 'radio', mediaOutletId, showId)) {
+                  skippedCooldown++;
+                  continue;
+                }
+                
+                compensation = getRandomInt(show.compensation_min || 100, show.compensation_max || 1000);
+                fameBoost = getRandomInt(show.fame_boost_min || 50, show.fame_boost_max || 400);
+                fanBoost = getRandomInt(show.fan_boost_min || 100, show.fan_boost_max || 1500);
+              } else {
+                // Fallback to radio stations
+                const eligible = (radioStations.data || []).filter((s: any) => fame >= (s.min_fame_required || 0));
+                if (eligible.length === 0) continue;
+                const station = eligible[Math.floor(Math.random() * eligible.length)];
+                mediaOutletId = station.id;
+                outletName = station.name || 'Radio Station';
+                
+                if (await isOnCooldown(supabaseClient, band.id, 'radio', mediaOutletId)) {
+                  skippedCooldown++;
+                  continue;
+                }
+                
+                compensation = getRandomInt(200, 2000);
+                fameBoost = getRandomInt(100, 600);
+                fanBoost = getRandomInt(200, 2000);
+              }
               break;
             }
             case 'podcast': {
@@ -195,6 +278,13 @@ serve(async (req) => {
               const podcast = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = podcast.id;
               outletName = podcast.name || podcast.podcast_name || 'Podcast';
+              cooldownDays = podcast.cooldown_days || 30;
+              
+              if (await isOnCooldown(supabaseClient, band.id, 'podcast', mediaOutletId)) {
+                skippedCooldown++;
+                continue;
+              }
+              
               compensation = getRandomInt(300, 1500);
               fameBoost = getRandomInt(150, 400);
               fanBoost = getRandomInt(400, 1000);
@@ -206,6 +296,13 @@ serve(async (req) => {
               const paper = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = paper.id;
               outletName = paper.name || 'Newspaper';
+              cooldownDays = paper.cooldown_days || 30;
+              
+              if (await isOnCooldown(supabaseClient, band.id, 'newspaper', mediaOutletId)) {
+                skippedCooldown++;
+                continue;
+              }
+              
               compensation = getRandomInt(100, 1000);
               fameBoost = getRandomInt(50, 500);
               fanBoost = getRandomInt(100, 1500);
@@ -217,6 +314,13 @@ serve(async (req) => {
               const mag = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = mag.id;
               outletName = mag.name || 'Magazine';
+              cooldownDays = mag.cooldown_days || 60;
+              
+              if (await isOnCooldown(supabaseClient, band.id, 'magazine', mediaOutletId)) {
+                skippedCooldown++;
+                continue;
+              }
+              
               compensation = getRandomInt(200, 1500);
               fameBoost = getRandomInt(100, 300);
               fanBoost = getRandomInt(300, 800);
@@ -228,9 +332,32 @@ serve(async (req) => {
               const channel = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = channel.id;
               outletName = channel.name || 'YouTube Channel';
+              
+              if (await isOnCooldown(supabaseClient, band.id, 'youtube', mediaOutletId)) {
+                skippedCooldown++;
+                continue;
+              }
+              
               compensation = getRandomInt(400, 2500);
               fameBoost = getRandomInt(200, 600);
               fanBoost = getRandomInt(600, 2000);
+              break;
+            }
+            case 'website': {
+              const eligible = (websites.data || []).filter((w: any) => fame >= (w.min_fame_required || 0));
+              if (eligible.length === 0) continue;
+              const website = eligible[Math.floor(Math.random() * eligible.length)];
+              mediaOutletId = website.id;
+              outletName = website.name || 'Website';
+              
+              if (await isOnCooldown(supabaseClient, band.id, 'website', mediaOutletId)) {
+                skippedCooldown++;
+                continue;
+              }
+              
+              compensation = getRandomInt(website.compensation_min || 50, website.compensation_max || 500);
+              fameBoost = getRandomInt(website.fame_boost_min || 20, website.fame_boost_max || 200);
+              fanBoost = getRandomInt(website.fan_boost_min || 50, website.fan_boost_max || 500);
               break;
             }
             case 'film': {
@@ -242,6 +369,7 @@ serve(async (req) => {
               compensation = film.compensation || 50000;
               fameBoost = film.fame_boost || 5000;
               fanBoost = film.fan_boost || 20000;
+              cooldownDays = 365; // Films have very long cooldowns
               break;
             }
           }
@@ -259,7 +387,7 @@ serve(async (req) => {
           const expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + 7);
 
-          // Create the offer
+          // Create the offer with cooldown info
           const { error: insertError } = await supabaseClient
             .from('pr_media_offers')
             .insert({
@@ -277,6 +405,7 @@ serve(async (req) => {
               fan_boost: fanBoost,
               status: 'pending',
               expires_at: expiresAt.toISOString(),
+              cooldown_days: cooldownDays,
             });
 
           if (!insertError) {
@@ -298,11 +427,11 @@ serve(async (req) => {
       durationMs: Date.now() - startedAt,
       processedCount: bandsProcessed,
       errorCount,
-      resultSummary: { offersCreated, bandsProcessed, errorCount },
+      resultSummary: { offersCreated, bandsProcessed, errorCount, skippedCooldown },
     });
 
     return new Response(
-      JSON.stringify({ success: true, offers_created: offersCreated, bands_processed: bandsProcessed }),
+      JSON.stringify({ success: true, offers_created: offersCreated, bands_processed: bandsProcessed, skipped_cooldown: skippedCooldown }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {

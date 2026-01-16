@@ -187,6 +187,7 @@ serve(async (req) => {
       const fanBoost = offer.fan_boost || 0;
       const compensation = offer.compensation || 0;
       const outletName = offer.outlet_name || offer.show_name || `${offer.media_type?.toUpperCase() || 'Media'} Outlet`;
+      const cooldownDays = offer.cooldown_days || 30;
 
       // Update band fame and fans
       if (bandId) {
@@ -232,10 +233,29 @@ serve(async (req) => {
               description: `${offer.media_type?.toUpperCase() || 'PR'} appearance on ${outletName}`,
               metadata: { offer_id: offerId, media_type: offer.media_type },
             });
+
+          // Create cooldown record for this outlet
+          if (offer.media_outlet_id && cooldownDays > 0) {
+            const cooldownExpiresAt = new Date();
+            cooldownExpiresAt.setDate(cooldownExpiresAt.getDate() + cooldownDays);
+
+            await supabaseClient
+              .from('band_media_cooldowns')
+              .upsert({
+                band_id: bandId,
+                media_type: offer.media_type,
+                outlet_id: offer.media_outlet_id,
+                show_id: offer.show_id || null,
+                last_appearance_at: new Date().toISOString(),
+                cooldown_expires_at: cooldownExpiresAt.toISOString(),
+              }, {
+                onConflict: 'band_id,media_type,outlet_id,show_id',
+              });
+          }
         }
       }
 
-      // Create media appearance record - using correct schema columns
+      // Create media appearance record
       const { error: appearanceError } = await supabaseClient
         .from('media_appearances')
         .insert({
@@ -272,7 +292,8 @@ serve(async (req) => {
         resultSummary: { 
           action: 'completed', 
           offerId, 
-          rewards: { fameBoost, fanBoost, compensation } 
+          rewards: { fameBoost, fanBoost, compensation },
+          cooldownDays,
         },
       });
 
