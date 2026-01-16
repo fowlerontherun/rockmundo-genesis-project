@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.418",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Implemented Underworld Store with consumable products affecting player stats (health, energy, XP, fame, skills)" },
+      { type: 'feature', description: "Added timed boost system for temporary stat multipliers" },
+      { type: 'feature', description: "Added Underworld Products admin panel for CRUD operations" },
+      { type: 'improvement', description: "Restored Underworld to navigation menu" },
+      { type: 'fix', description: "Fixed Stage View Demo admin link and renamed from '3D Gig Demo'" },
+    ],
+  },
+  {
     version: "1.0.417",
     date: "2026-01-16",
     changes: [
