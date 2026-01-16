@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.398",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Twaater bot posting frequency increased - 20+ posts daily guaranteed" },
+      { type: 'feature', description: "Fame-based organic followers - bots follow you based on your fame/fans" },
+      { type: 'feature', description: "Fame scores now sync from profiles to Twaater accounts automatically" },
+      { type: 'feature', description: "Increased bot engagement - higher like/reply/follow rates" },
+      { type: 'feature', description: "New sync-twaater-fame and calculate-organic-followers edge functions" },
+      { type: 'improvement', description: "Bot posting templates expanded with more variety" },
+      { type: 'improvement', description: "Empty feed detection forces bot posts when needed" },
+    ],
+  },
+  {
     version: "1.0.397",
     date: "2026-01-16",
     changes: [

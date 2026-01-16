@@ -17796,6 +17796,7 @@ export type Database = {
         Args: { p_account_id: string; p_posts_today: number }
         Returns: number
       }
+      calculate_twaater_organic_followers: { Args: never; Returns: undefined }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
         Returns: Json
@@ -17830,6 +17831,7 @@ export type Database = {
         Returns: number
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
+      get_recent_twaat_count: { Args: never; Returns: number }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
@@ -17889,6 +17891,7 @@ export type Database = {
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       sync_job_employee_counts: { Args: never; Returns: undefined }
+      sync_twaater_fame_scores: { Args: never; Returns: undefined }
       update_song_fame: {
         Args: { p_fame_amount: number; p_song_id: string; p_source: string }
         Returns: undefined

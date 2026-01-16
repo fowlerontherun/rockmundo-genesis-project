@@ -161,3 +161,9 @@ verify_jwt = false
 
 [functions.generate-radio-invitations]
 verify_jwt = false
+
+[functions.sync-twaater-fame]
+verify_jwt = false
+
+[functions.calculate-organic-followers]
+verify_jwt = false
