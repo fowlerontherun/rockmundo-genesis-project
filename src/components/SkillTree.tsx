@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useGameData } from '@/hooks/useGameData';
-import { Star, Music, Users, Mic, Zap } from 'lucide-react';
+import { Star, Music, Users, Mic, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { HierarchicalSkillNode } from './skills/HierarchicalSkillNode';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
 type SkillProgress = Database['public']['Tables']['skill_progress']['Row'];
@@ -22,6 +25,10 @@ interface SkillTreeProps {
 }
 
 const getSkillTier = (slug: string): 'basic' | 'professional' | 'mastery' => {
+  if (slug.includes('_basic_')) return 'basic';
+  if (slug.includes('_professional_')) return 'professional';
+  if (slug.includes('_mastery_')) return 'mastery';
+  // Fallback for old pattern
   if (slug.startsWith('basic_')) return 'basic';
   if (slug.startsWith('professional_') || slug.includes('professional')) return 'professional';
   return 'mastery';
@@ -34,6 +41,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('songwriting');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showUnlocked, setShowUnlocked] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -180,6 +188,15 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
   const getSkillProgress = (skillSlug: string): SkillProgress | null => {
     return progress.find(p => p.skill_slug === skillSlug) || null;
   };
+
+  // Get set of learned skill slugs
+  const learnedSlugs = useMemo(() => new Set(progress.map(p => p.skill_slug)), [progress]);
+
+  // Get skills the player hasn't learned yet
+  const unlockedSkills = useMemo(() => 
+    skills.filter(s => !learnedSlugs.has(s.slug)),
+    [skills, learnedSlugs]
+  );
 
   // Group skills by tier within each category
   const groupSkillsByTier = (skills: SkillDefinition[]) => {
@@ -357,6 +374,53 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
         <div className="text-center p-8">
           <p className="text-muted-foreground">No skills found in this category.</p>
         </div>
+      )}
+
+      {/* Skills Not Unlocked Section */}
+      {unlockedSkills.length > 0 && (
+        <Card className="border-muted bg-muted/20">
+          <Collapsible open={showUnlocked} onOpenChange={setShowUnlocked}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors">
+                <CardTitle className="flex items-center justify-between text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    <span>Skills Not Unlocked</span>
+                    <Badge variant="secondary" className="ml-2">
+                      {unlockedSkills.length}
+                    </Badge>
+                  </div>
+                  {showUnlocked ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  These skills haven't been started yet. Learn them through University courses, Books, Mentors, or YouTube videos.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {unlockedSkills.slice(0, 30).map((skill) => (
+                    <div 
+                      key={skill.id} 
+                      className="p-2 rounded border border-muted bg-background/50 opacity-60"
+                    >
+                      <p className="text-sm font-medium truncate">{skill.display_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {getSkillTier(skill.slug).charAt(0).toUpperCase() + getSkillTier(skill.slug).slice(1)} tier
+                      </p>
+                    </div>
+                  ))}
+                  {unlockedSkills.length > 30 && (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      ...and {unlockedSkills.length - 30} more
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
       )}
     </div>
   );

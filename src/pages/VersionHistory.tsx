@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.385",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Skill hierarchy cleanup - removed legacy skills (guitar, bass, drums, etc.) in favor of new hierarchy system" },
+      { type: 'feature', description: "Attribute-based learning speed - player attributes now affect skill XP gains (up to 50% bonus)" },
+      { type: 'feature', description: "Added 'Skills Not Unlocked' section to SkillTree showing skills available to learn" },
+      { type: 'feature', description: "Mentor seasonal availability - some mentors only available in specific seasons" },
+      { type: 'feature', description: "Mentor capacity limits - mentors can now have max student caps" },
+      { type: 'improvement', description: "University and book learning now apply attribute-based XP multipliers" },
+      { type: 'improvement', description: "Improved skill tier detection for proper hierarchy display" },
+    ],
+  },
+  {
     version: "1.0.384",
     date: "2026-01-16",
     changes: [

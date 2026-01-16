@@ -11,6 +11,35 @@ import {
 // Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
 const MAX_SKILL_LEVEL = 100;
 
+// Attribute-based learning speed multiplier
+const MAX_ATTRIBUTE_VALUE = 1000;
+const MAX_BONUS_MULTIPLIER = 0.5;
+
+function calculateLearningMultiplier(skillSlug: string, attributes: Record<string, number> | null): number {
+  if (!attributes) return 1.0;
+  
+  let relevantAttribute = 0;
+  
+  if (skillSlug.includes('instruments_') || skillSlug.includes('guitar') || skillSlug.includes('bass') || skillSlug.includes('keyboard')) {
+    relevantAttribute = attributes.musical_ability ?? 0;
+  } else if (skillSlug.includes('singing') || skillSlug.includes('vocal') || skillSlug.includes('rapping')) {
+    relevantAttribute = attributes.vocal_talent ?? 0;
+  } else if (skillSlug.includes('drums') || skillSlug.includes('percussion') || skillSlug.includes('beatmaking')) {
+    relevantAttribute = attributes.rhythm_sense ?? 0;
+  } else if (skillSlug.includes('songwriting_') || skillSlug.includes('lyrics') || skillSlug.includes('composing')) {
+    relevantAttribute = attributes.creative_insight ?? 0;
+  } else if (skillSlug.includes('production') || skillSlug.includes('mixing') || skillSlug.includes('daw')) {
+    relevantAttribute = attributes.technical_mastery ?? 0;
+  } else if (skillSlug.includes('stage_') || skillSlug.includes('showmanship') || skillSlug.includes('crowd')) {
+    relevantAttribute = attributes.stage_presence ?? 0;
+  } else if (skillSlug.includes('genres_')) {
+    relevantAttribute = Math.max(attributes.musical_ability ?? 0, attributes.creative_insight ?? 0);
+  }
+  
+  const bonus = (Math.min(relevantAttribute, MAX_ATTRIBUTE_VALUE) / MAX_ATTRIBUTE_VALUE) * MAX_BONUS_MULTIPLIER;
+  return 1.0 + bonus;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -118,15 +147,26 @@ serve(async (req) => {
         continue;
       }
 
+      // Fetch player attributes for learning speed bonus
+      const { data: playerAttrs } = await supabaseClient
+        .from("player_attributes")
+        .select("musical_ability, vocal_talent, rhythm_sense, creative_insight, technical_mastery, stage_presence")
+        .eq("profile_id", enrollment.profile_id)
+        .single();
+
+      const learningMultiplier = calculateLearningMultiplier(course.skill_slug, playerAttrs);
+      console.log(`Learning multiplier for ${course.skill_slug}: ${learningMultiplier.toFixed(2)}x`);
+
       console.log(`Course XP range: ${course.xp_per_day_min}-${course.xp_per_day_max}`);
 
-      // Random XP between min and max
-      const xpEarned = Math.floor(
+      // Random XP between min and max, then apply learning multiplier
+      const baseXp = Math.floor(
         Math.random() * (course.xp_per_day_max - course.xp_per_day_min + 1) +
           course.xp_per_day_min
       );
+      const xpEarned = Math.floor(baseXp * learningMultiplier);
 
-      console.log(`Generated XP: ${xpEarned}`);
+      console.log(`Generated XP: ${baseXp} base * ${learningMultiplier.toFixed(2)} = ${xpEarned}`);
       totalXpAwarded += xpEarned;
 
       // Create attendance record - set was_locked_out to false so activity feed logs it
