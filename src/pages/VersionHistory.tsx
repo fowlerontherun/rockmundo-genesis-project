@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.378",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Increased maximum setlists per band from 3 to 5" },
+      { type: 'fix', description: "Fixed performance items causing errors when added to setlists (song_id now explicitly null)" },
+      { type: 'fix', description: "Fixed full setlist rehearsals - now updates familiarity for all songs in the setlist" },
+      { type: 'fix', description: "Fixed tour booking setting ticket_price to 0 - now calculates proper prices based on venue/fame" },
+      { type: 'fix', description: "Fixed ticket sales mismatch - gig outcomes now use actual tickets_sold when available" },
+      { type: 'feature', description: "Gigs now create scheduled activities that appear on your calendar" },
+      { type: 'feature', description: "Added linked_gig_id to player_scheduled_activities for gig tracking" },
+      { type: 'feature', description: "Added failure_reason column to gigs table for tracking failed performances" },
+    ],
+  },
+  {
     version: "1.0.377",
     date: "2026-01-16",
     changes: [

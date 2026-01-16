@@ -18,6 +18,7 @@ import {
   canAccessScope,
   generateTourSchedule,
   calculateTourEndDate,
+  calculateTicketPrice,
 } from '@/utils/tourCalculations';
 
 export interface UseTourWizardOptions {
@@ -302,7 +303,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         if (venuesError) throw venuesError;
       }
 
-      // Create actual gigs for each venue
+      // Create actual gigs for each venue with proper ticket prices
       const gigsToCreate = venueMatches.map(v => ({
         venue_id: v.venueId,
         band_id: state.bandId,
@@ -310,7 +311,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         tour_id: tour.id,
         setlist_id: state.setlistId || null,
         status: 'scheduled',
-        ticket_price: 0, // Will be auto-calculated
+        ticket_price: calculateTicketPrice(v.capacity, band?.fame || 0),
         booking_fee: v.bookingFee,
         estimated_revenue: v.estimatedTicketRevenue,
       }));

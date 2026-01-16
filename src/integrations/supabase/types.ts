@@ -5354,6 +5354,7 @@ export type Database = {
           current_song_position: number | null
           estimated_attendance: number | null
           estimated_revenue: number | null
+          failure_reason: string | null
           fan_gain: number | null
           id: string
           last_ticket_update: string | null
@@ -5391,6 +5392,7 @@ export type Database = {
           current_song_position?: number | null
           estimated_attendance?: number | null
           estimated_revenue?: number | null
+          failure_reason?: string | null
           fan_gain?: number | null
           id?: string
           last_ticket_update?: string | null
@@ -5428,6 +5430,7 @@ export type Database = {
           current_song_position?: number | null
           estimated_attendance?: number | null
           estimated_revenue?: number | null
+          failure_reason?: string | null
           fan_gain?: number | null
           id?: string
           last_ticket_update?: string | null
