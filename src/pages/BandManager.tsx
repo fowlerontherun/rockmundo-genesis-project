@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { BandCreationForm } from '@/components/band/BandCreationForm';
@@ -21,9 +22,9 @@ import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { BandSongGifts } from '@/components/band/BandSongGifts';
 import { BandSongsTab } from '@/components/band/BandSongsTab';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
-import { BandProfileEdit } from '@/components/band/BandProfileEdit';
+import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
 import { FameFansOverview } from '@/components/fame/FameFansOverview';
-import { Users, Music, User, Star, Library } from 'lucide-react';
+import { Users, Music, Star, Library } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
@@ -225,23 +226,26 @@ export default function BandManager() {
     <div className="container mx-auto p-6">
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Music className="h-8 w-8" />
-              {selectedBand.is_solo_artist ? (selectedBand.artist_name || selectedBand.name) : selectedBand.name}
-            </h1>
-            <p className="text-muted-foreground">
-              {selectedBand.genre} • {selectedBand.is_solo_artist ? 'Solo Artist' : 'Band'}
-            </p>
+          {/* Band Info with Logo */}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-14 w-14 border-2 border-primary/20">
+              <AvatarImage src={selectedBand.logo_url} alt={selectedBand.name} />
+              <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                {selectedBand.name?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Music className="h-7 w-7" />
+                {selectedBand.is_solo_artist ? (selectedBand.artist_name || selectedBand.name) : selectedBand.name}
+              </h1>
+              <p className="text-muted-foreground">
+                {selectedBand.genre} • {selectedBand.is_solo_artist ? 'Solo Artist' : 'Band'}
+              </p>
+            </div>
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Repertoire Button */}
-            <Button variant="outline" onClick={() => navigate('/band/repertoire')}>
-              <Library className="h-4 w-4 mr-2" />
-              Repertoire
-            </Button>
-
             {/* Band Selector (if user has multiple bands) */}
             {userBands.length > 1 && (
               <Select value={selectedBandId || ''} onValueChange={setSelectedBandId}>
@@ -283,9 +287,12 @@ export default function BandManager() {
               <Star className="h-3 w-3" />
               Fame & Fans
             </TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="songs">Songs</TabsTrigger>
+            <TabsTrigger value="repertoire" className="flex items-center gap-1">
+              <Library className="h-3 w-3" />
+              Repertoire
+            </TabsTrigger>
             <TabsTrigger value="history">Gig History</TabsTrigger>
             <TabsTrigger value="chat">Chat</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
@@ -295,22 +302,18 @@ export default function BandManager() {
 
         <TabsContent value="overview" className="space-y-4">
           <BandSongGifts bandId={selectedBand.id} />
-          <BandOverview bandId={selectedBand.id} />
+          <BandOverview 
+            bandId={selectedBand.id} 
+            isLeader={isLeader}
+            logoUrl={selectedBand.logo_url}
+            soundDescription={selectedBand.sound_description}
+            bandName={selectedBand.name}
+            onBandUpdate={() => loadBandDetails(selectedBand.id)}
+          />
         </TabsContent>
 
         <TabsContent value="fame" className="space-y-4">
           <FameFansOverview bandId={selectedBand.id} />
-        </TabsContent>
-
-        <TabsContent value="profile" className="space-y-4">
-          <BandProfileEdit
-            bandId={selectedBand.id}
-            bandName={selectedBand.name}
-            logoUrl={selectedBand.logo_url}
-            soundDescription={selectedBand.sound_description}
-            isLeader={isLeader}
-            onUpdate={() => loadBandDetails(selectedBand.id)}
-          />
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
@@ -358,6 +361,10 @@ export default function BandManager() {
 
         <TabsContent value="songs" className="space-y-4">
           <BandSongsTab bandId={selectedBand.id} />
+        </TabsContent>
+
+        <TabsContent value="repertoire" className="space-y-4">
+          <BandRepertoireTab bandId={selectedBand.id} bandName={selectedBand.name} />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">

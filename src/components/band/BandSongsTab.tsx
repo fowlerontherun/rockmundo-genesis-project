@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { Music, Calendar, Search, Filter } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { SongDetailDialog } from '@/components/songs/SongDetailDialog';
 
 interface BandSongsTabProps {
   bandId: string;
@@ -32,6 +33,7 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [genreFilter, setGenreFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   useEffect(() => {
     loadBandSongs();
@@ -202,7 +204,11 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
       <CardContent className="pt-0">
         <div className="divide-y divide-border">
           {filteredSongs.map((song) => (
-            <div key={song.id} className="py-2.5 first:pt-0 last:pb-0">
+            <div 
+              key={song.id} 
+              className="py-2.5 first:pt-0 last:pb-0 cursor-pointer hover:bg-accent/50 rounded-md transition-colors -mx-2 px-2"
+              onClick={() => setSelectedSongId(song.id)}
+            >
               <div className="flex items-center gap-3">
                 {/* Song Info */}
                 <div className="flex-1 min-w-0">
@@ -247,6 +253,12 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
           <p className="text-center text-sm text-muted-foreground py-4">No songs match your filters</p>
         )}
       </CardContent>
+
+      {/* Song Detail Dialog */}
+      <SongDetailDialog 
+        songId={selectedSongId} 
+        onClose={() => setSelectedSongId(null)} 
+      />
     </Card>
   );
 }

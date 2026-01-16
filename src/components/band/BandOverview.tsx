@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Star, TrendingUp, Activity, Users, PiggyBank, BarChart3, Music, Calendar } from 'lucide-react';
+import { Star, TrendingUp, Activity, Users, PiggyBank, BarChart3, Music, Calendar, Settings2 } from 'lucide-react';
 import { getBandFameTitle } from '@/utils/bandFame';
 import { getChemistryLabel, getChemistryColor } from '@/utils/bandChemistry';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { differenceInDays } from 'date-fns';
+import { BandProfileEdit } from '@/components/band/BandProfileEdit';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Area,
   AreaChart,
@@ -29,13 +32,19 @@ type BandRow = Database['public']['Tables']['bands']['Row'];
 
 interface BandOverviewProps {
   bandId: string;
+  isLeader?: boolean;
+  logoUrl?: string | null;
+  soundDescription?: string | null;
+  bandName?: string;
+  onBandUpdate?: () => void;
 }
 
-export function BandOverview({ bandId }: BandOverviewProps) {
+export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, bandName, onBandUpdate }: BandOverviewProps) {
   const [band, setBand] = useState<BandRow | null>(null);
   const [memberCount, setMemberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [calculatedSkillRating, setCalculatedSkillRating] = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const fetchBand = async () => {
@@ -171,7 +180,38 @@ export function BandOverview({ bandId }: BandOverviewProps) {
 
   return (
     <div className="space-y-4">
-      {/* Top Row - Key Stats */}
+      {/* Profile Edit Section (Leaders Only) */}
+      {isLeader && (
+        <Collapsible open={profileOpen} onOpenChange={setProfileOpen}>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Band Profile
+                </CardTitle>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {profileOpen ? 'Close' : 'Edit Profile'}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="pt-2">
+                <BandProfileEdit
+                  bandId={bandId}
+                  bandName={bandName || ''}
+                  logoUrl={logoUrl}
+                  soundDescription={soundDescription}
+                  isLeader={isLeader}
+                  onUpdate={onBandUpdate}
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Band Fame */}
         <Card>

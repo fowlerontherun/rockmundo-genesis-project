@@ -216,3 +216,84 @@ export async function addCoWriterOwnership(
     throw error;
   }
 }
+
+/**
+ * Remove a song from the band's repertoire
+ * - Removes all ownership records for the song
+ * - Clears band_id from the song
+ */
+export async function removeFromRepertoire(
+  songId: string,
+  bandId: string
+): Promise<void> {
+  try {
+    // Remove ownership records
+    await supabase
+      .from("band_song_ownership")
+      .delete()
+      .eq("song_id", songId)
+      .eq("band_id", bandId);
+
+    // Clear band association from song
+    await supabase
+      .from("songs")
+      .update({
+        band_id: null,
+        ownership_type: "personal",
+        added_to_repertoire_at: null,
+        added_to_repertoire_by: null,
+      })
+      .eq("id", songId);
+
+    // Log the removal
+    await supabase.from("band_history").insert({
+      band_id: bandId,
+      event_type: "song_removed",
+      event_data: {
+        song_id: songId,
+        action: "removed_from_repertoire",
+      },
+    });
+  } catch (error) {
+    console.error("Error removing song from repertoire:", error);
+    throw error;
+  }
+}
+
+/**
+ * Backfill ownership records for songs that have a band_id but no ownership records
+ */
+export async function backfillSongOwnership(bandId: string): Promise<void> {
+  try {
+    // Find songs with band_id but no ownership records
+    const { data: songs } = await supabase
+      .from("songs")
+      .select("id, user_id")
+      .eq("band_id", bandId);
+
+    if (!songs || songs.length === 0) return;
+
+    for (const song of songs) {
+      // Check if ownership record already exists
+      const { data: existing } = await supabase
+        .from("band_song_ownership")
+        .select("id")
+        .eq("song_id", song.id)
+        .maybeSingle();
+
+      if (!existing && song.user_id) {
+        await supabase.from("band_song_ownership").insert({
+          song_id: song.id,
+          band_id: bandId,
+          user_id: song.user_id,
+          ownership_percentage: 100,
+          original_percentage: 100,
+          role: "writer",
+          is_active_member: true,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error backfilling song ownership:", error);
+  }
+}
