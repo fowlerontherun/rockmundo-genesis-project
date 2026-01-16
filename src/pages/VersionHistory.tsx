@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.382",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Blocked past-time booking - slots that have already passed are now greyed out with 'Passed' badge" },
+      { type: 'feature', description: "Recording & rehearsal sessions now block ALL band members on their schedules, not just the booker" },
+      { type: 'improvement', description: "Band activities now visible on every band member's scheduler dashboard" },
+      { type: 'fix', description: "Added server-side validation to prevent booking activities in the past" },
+      { type: 'feature', description: "Added band availability checking - shows conflicts with specific band member names" },
+    ],
+  },
+  {
     version: "1.0.381",
     date: "2026-01-16",
     changes: [

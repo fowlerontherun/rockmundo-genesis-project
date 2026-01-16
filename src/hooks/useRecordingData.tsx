@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { RecordingStage, RecordingStatus } from "@/lib/workflows/recording";
 import { logGameActivity } from "./useGameActivityLog";
+import { createScheduledActivity } from "./useActivityBooking";
+import { 
+  createBandScheduledActivities, 
+  checkBandAvailability, 
+  formatConflictMessage 
+} from "@/utils/bandActivityScheduling";
 
 export interface RecordingProducer {
   id: string;
@@ -180,15 +186,29 @@ export const useCreateRecordingSession = () => {
       const now = new Date();
       const sessionEnd = new Date(now.getTime() + input.duration_hours * 60 * 60 * 1000);
 
-      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
-        p_user_id: user.id,
-        p_start: now.toISOString(),
-        p_end: sessionEnd.toISOString(),
-        p_exclude_id: null,
-      });
+      // If band session, check availability for ALL band members first
+      if (input.band_id) {
+        const { available, conflicts } = await checkBandAvailability(
+          input.band_id,
+          now,
+          sessionEnd
+        );
 
-      if (hasConflict) {
-        throw new Error('You have another activity scheduled during this time. Please check your schedule.');
+        if (!available) {
+          throw new Error(formatConflictMessage(conflicts));
+        }
+      } else {
+        // Solo artist - just check the user's schedule
+        const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+          p_user_id: user.id,
+          p_start: now.toISOString(),
+          p_end: sessionEnd.toISOString(),
+          p_exclude_id: null,
+        });
+
+        if (hasConflict) {
+          throw new Error('You have another activity scheduled during this time. Please check your schedule.');
+        }
       }
       
       // Fetch required data
@@ -314,6 +334,51 @@ export const useCreateRecordingSession = () => {
           orchestra_size: orchestraOption.size,
           orchestra_cost: orchestraOption.cost,
           quality_bonus: orchestraOption.bonus,
+        });
+      }
+
+      // Schedule activity for all band members or just the user
+      const { data: studioData } = await supabase
+        .from('city_studios')
+        .select('name')
+        .eq('id', input.studio_id)
+        .single();
+      
+      const studioName = studioData?.name || 'Recording Studio';
+
+      if (input.band_id) {
+        // Band session - schedule for ALL band members
+        await createBandScheduledActivities({
+          bandId: input.band_id,
+          activityType: 'recording',
+          scheduledStart: now,
+          scheduledEnd: sessionEnd,
+          title: 'Recording Session',
+          description: `Recording at ${studioName}`,
+          location: studioName,
+          linkedRecordingId: sessionData.id,
+          metadata: {
+            sessionId: sessionData.id,
+            studioId: input.studio_id,
+            songId: input.song_id,
+          },
+        });
+      } else {
+        // Solo artist - schedule just for the user
+        await createScheduledActivity({
+          userId: input.user_id,
+          activityType: 'recording',
+          scheduledStart: now,
+          scheduledEnd: sessionEnd,
+          title: 'Recording Session',
+          description: `Recording at ${studioName}`,
+          location: studioName,
+          linkedRecordingId: sessionData.id,
+          metadata: {
+            sessionId: sessionData.id,
+            studioId: input.studio_id,
+            songId: input.song_id,
+          },
         });
       }
 

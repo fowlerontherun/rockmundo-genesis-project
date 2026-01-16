@@ -7,9 +7,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { DollarSign, Clock, TrendingUp, Music2, Zap, AlertCircle, CheckCircle, MapPin } from 'lucide-react';
+import { DollarSign, Clock, TrendingUp, Music2, Zap, AlertCircle, CheckCircle, MapPin, Ban } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getRehearsalLevel, formatRehearsalTime } from '@/utils/rehearsalLevels';
 import { REHEARSAL_SLOTS, getSlotTimeRange, FacilitySlot } from '@/utils/facilitySlots';
 import { useRehearsalRoomAvailability } from '@/hooks/useRehearsalRoomAvailability';
+import { isSlotInPast } from '@/utils/timeSlotValidation';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'] & {
   city?: { id: string; name: string } | null;
@@ -105,12 +106,23 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
   const xpGain = selectedRoom ? Math.floor(50 * selectedDuration * (selectedRoom.equipment_quality / 100)) : 0;
   const familiarityGain = selectedDuration * 60;
 
+  // Check if a slot has passed (for today only)
+  const isSlotPast = (slotId: string): boolean => {
+    const slot = REHEARSAL_SLOTS.find(s => s.id === slotId);
+    if (!slot) return false;
+    return isSlotInPast(slot, selectedDate);
+  };
+
   // Check if consecutive slots are available for the selected duration
   const canBookSlot = (slotId: string): boolean => {
     if (!slotAvailability) return false;
     
     const slotIndex = REHEARSAL_SLOTS.findIndex(s => s.id === slotId);
     if (slotIndex === -1) return false;
+
+    // Check if the first slot has already passed
+    const firstSlot = REHEARSAL_SLOTS[slotIndex];
+    if (isSlotInPast(firstSlot, selectedDate)) return false;
 
     // Check if we have enough consecutive available slots
     for (let i = 0; i < slotsNeeded; i++) {
@@ -301,11 +313,12 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
               ) : (
                 <RadioGroup value={selectedSlotId} onValueChange={setSelectedSlotId}>
                   <div className="grid grid-cols-2 gap-2">
-                    {REHEARSAL_SLOTS.map((slot) => {
+                  {REHEARSAL_SLOTS.map((slot) => {
                       const slotData = slotAvailability?.find(s => s.slot.id === slot.id);
                       const isBooked = slotData?.isBooked || false;
                       const isYourBooking = slotData?.isYourBooking || false;
                       const bookedBy = slotData?.bookedByBand;
+                      const isPast = isSlotPast(slot.id);
                       const canSelect = canBookSlot(slot.id);
 
                       return (
@@ -314,9 +327,10 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
                           className={cn(
                             'flex items-center space-x-2 rounded-lg border p-3 transition-colors',
                             selectedSlotId === slot.id && 'border-primary bg-primary/5',
-                            isBooked && !isYourBooking && 'bg-red-500/10 border-red-500/30',
-                            isYourBooking && 'bg-blue-500/10 border-blue-500/30',
-                            !canSelect && 'opacity-50 cursor-not-allowed',
+                            isPast && 'bg-muted/50 border-muted opacity-60 cursor-not-allowed',
+                            isBooked && !isYourBooking && !isPast && 'bg-red-500/10 border-red-500/30',
+                            isYourBooking && !isPast && 'bg-blue-500/10 border-blue-500/30',
+                            !canSelect && !isPast && 'opacity-50 cursor-not-allowed',
                             canSelect && 'cursor-pointer hover:bg-accent/50'
                           )}
                           onClick={() => canSelect && setSelectedSlotId(slot.id)}
@@ -324,8 +338,17 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
                           <RadioGroupItem value={slot.id} disabled={!canSelect} />
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm font-medium cursor-pointer">{slot.name}</Label>
-                              {isBooked ? (
+                              <Label className={cn(
+                                "text-sm font-medium",
+                                canSelect && "cursor-pointer",
+                                isPast && "text-muted-foreground"
+                              )}>{slot.name}</Label>
+                              {isPast ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Ban className="h-3 w-3 mr-1" />
+                                  Passed
+                                </Badge>
+                              ) : isBooked ? (
                                 <Badge variant="destructive" className="text-xs">
                                   {isYourBooking ? 'Your booking' : 'Booked'}
                                 </Badge>
@@ -344,7 +367,7 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
                               <Clock className="h-3 w-3" />
                               {slot.startTime} - {slot.endTime}
                             </div>
-                            {bookedBy && !isYourBooking && (
+                            {bookedBy && !isYourBooking && !isPast && (
                               <p className="text-xs text-destructive mt-1">{bookedBy}</p>
                             )}
                           </div>

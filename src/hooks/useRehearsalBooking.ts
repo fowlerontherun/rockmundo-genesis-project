@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { createScheduledActivity } from '@/hooks/useActivityBooking';
 import { useQueryClient } from '@tanstack/react-query';
 import { logGameActivity } from '@/hooks/useGameActivityLog';
+import { 
+  createBandScheduledActivities, 
+  checkBandAvailability, 
+  formatConflictMessage 
+} from '@/utils/bandActivityScheduling';
+import { validateFutureTime } from '@/utils/timeSlotValidation';
 
 interface BookRehearsalParams {
   bandId: string;
@@ -65,8 +70,25 @@ export function useRehearsalBooking() {
     setIsBooking(true);
     
     try {
+      // Validate that the time is in the future
+      const timeValidation = validateFutureTime(params.scheduledStart);
+      if (!timeValidation.valid) {
+        throw new Error(timeValidation.message);
+      }
+
       const scheduledEnd = new Date(params.scheduledStart);
       scheduledEnd.setHours(scheduledEnd.getHours() + params.duration);
+
+      // Check availability for ALL band members before booking
+      const { available, conflicts } = await checkBandAvailability(
+        params.bandId,
+        params.scheduledStart,
+        scheduledEnd
+      );
+
+      if (!available) {
+        throw new Error(formatConflictMessage(conflicts));
+      }
 
       // Create rehearsal record
       const { data: rehearsalData, error: rehearsalError } = await supabase
@@ -103,8 +125,9 @@ export function useRehearsalBooking() {
           .eq('id', params.bandId);
       }
 
-      // Create scheduled activity entry
-      await createScheduledActivity({
+      // Create scheduled activity entries for ALL band members
+      await createBandScheduledActivities({
+        bandId: params.bandId,
         activityType: 'rehearsal',
         scheduledStart: params.scheduledStart,
         scheduledEnd,
@@ -113,7 +136,6 @@ export function useRehearsalBooking() {
         linkedRehearsalId: rehearsalData.id,
         metadata: {
           rehearsalId: rehearsalData.id,
-          bandId: params.bandId,
           roomId: params.roomId,
           songId: params.songId,
           setlistId: params.setlistId,
