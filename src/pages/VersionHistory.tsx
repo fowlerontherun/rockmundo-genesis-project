@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.386",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Split lyrics and song notes into separate sections in songwriting" },
+      { type: 'feature', description: "Structured lyrics editor with verse/chorus/bridge tabs and add/remove/reorder sections" },
+      { type: 'feature', description: "Auto-populated song notes from genre, theme, mood, collaborators, and creative choices" },
+      { type: 'feature', description: "Session luck system - 5% chance of 'Lightning Strike' (+20-30%) or 'Terrible Day' (-15-20%)" },
+      { type: 'improvement', description: "Increased skill impact on song quality - tier-based scaling with higher caps" },
+      { type: 'improvement', description: "AI lyrics penalty increased from 10% to 15% to encourage original writing" },
+      { type: 'improvement', description: "Song quality breakdown now shows session luck factor with percentage" },
+      { type: 'improvement', description: "Quality variance creates meaningful differences between songs written same day" },
+    ],
+  },
+  {
     version: "1.0.385",
     date: "2026-01-16",
     changes: [

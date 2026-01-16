@@ -22,7 +22,18 @@ export interface SongQualityResult {
   productionPotential: number;
   genreMultiplier: number;
   skillCeiling: number;
+  sessionLuckLabel: string;
+  sessionLuckMultiplier: number;
 }
+
+// Session luck labels for display
+const SESSION_LUCK_LABELS: Record<string, { min: number; max: number; label: string; emoji: string }> = {
+  terrible: { min: 0.80, max: 0.85, label: "Terrible Day", emoji: "😰" },
+  off: { min: 0.85, max: 0.90, label: "Off Day", emoji: "😐" },
+  normal: { min: 0.90, max: 1.10, label: "Normal Session", emoji: "🎵" },
+  inspired: { min: 1.10, max: 1.20, label: "Inspired!", emoji: "✨" },
+  lightning: { min: 1.20, max: 1.30, label: "Lightning Strike!", emoji: "⚡" }
+};
 
 // Check if player can start songwriting - now always returns true
 export function canStartSongwriting(skillLevels: Record<string, number>): boolean {
@@ -49,7 +60,36 @@ export function getSkillCeiling(skillLevels: Record<string, number>): number {
   return 500;
 }
 
-// Calculate melody strength (0-200)
+// Session-wide luck factor - affects ALL components together
+function getSessionLuck(): { multiplier: number; label: string; emoji: string } {
+  const roll = Math.random();
+  
+  if (roll < 0.05) {
+    // 5% - Terrible day (-15-20%)
+    const multiplier = 0.80 + Math.random() * 0.05;
+    return { multiplier, label: "Terrible Day", emoji: "😰" };
+  }
+  if (roll < 0.15) {
+    // 10% - Off day (-10-15%)
+    const multiplier = 0.85 + Math.random() * 0.05;
+    return { multiplier, label: "Off Day", emoji: "😐" };
+  }
+  if (roll < 0.85) {
+    // 70% - Normal (-5% to +5%)
+    const multiplier = 0.95 + Math.random() * 0.10;
+    return { multiplier, label: "Normal Session", emoji: "🎵" };
+  }
+  if (roll < 0.95) {
+    // 10% - Inspired (+10-20%)
+    const multiplier = 1.10 + Math.random() * 0.10;
+    return { multiplier, label: "Inspired!", emoji: "✨" };
+  }
+  // 5% - Lightning strike (+20-30%)
+  const multiplier = 1.20 + Math.random() * 0.10;
+  return { multiplier, label: "Lightning Strike!", emoji: "⚡" };
+}
+
+// Calculate melody strength (0-280) - ENHANCED
 function calculateMelodyStrength(
   skillLevels: Record<string, number>,
   musicalAbility: number
@@ -58,16 +98,21 @@ function calculateMelodyStrength(
   const proSkill = skillLevels['songwriting_professional_composing'] || 0;
   const masterySkill = skillLevels['songwriting_mastery_composing_anthems'] || 0;
   
-  // Base from skills (max 150)
-  const skillBase = Math.min(150, (basicSkill + proSkill * 1.5 + masterySkill * 2) / 3);
+  // Tier-based scaling (each tier unlocks higher potential)
+  const basicContribution = Math.min(60, basicSkill * 0.6);
+  const proContribution = Math.min(70, proSkill * 0.9);
+  const masteryContribution = Math.min(90, masterySkill * 1.1);
   
-  // Attribute bonus (max 50)
-  const attrBonus = Math.min(50, musicalAbility / 2);
+  // Skills can now contribute up to 220 (60+70+90)
+  const skillBase = basicContribution + proContribution + masteryContribution;
   
-  return Math.round(skillBase + attrBonus);
+  // Attribute bonus scaled higher (max 80)
+  const attrBonus = Math.min(80, musicalAbility * 0.08);
+  
+  return skillBase + attrBonus;
 }
 
-// Calculate lyrics strength (0-200)
+// Calculate lyrics strength (0-280) - ENHANCED
 function calculateLyricsStrength(
   skillLevels: Record<string, number>,
   creativeInsight: number,
@@ -77,23 +122,32 @@ function calculateLyricsStrength(
   const proSkill = skillLevels['songwriting_professional_lyrics'] || 0;
   const masterySkill = skillLevels['songwriting_mastery_lyrics'] || 0;
   
-  const skillBase = Math.min(150, (basicSkill + proSkill * 1.5 + masterySkill * 2) / 3);
-  const attrBonus = Math.min(50, creativeInsight / 2);
+  // More pronounced tier scaling
+  const basicContribution = Math.min(50, basicSkill * 0.5);
+  const proContribution = Math.min(80, proSkill * 1.0);
+  const masteryContribution = Math.min(90, masterySkill * 1.1);
+  
+  const skillBase = basicContribution + proContribution + masteryContribution;
+  const attrBonus = Math.min(80, creativeInsight * 0.08);
   
   const total = skillBase + attrBonus;
-  return Math.round(aiPenalty ? total * 0.9 : total); // -10% for AI
+  return aiPenalty ? total * 0.85 : total; // Increase AI penalty to 15%
 }
 
-// Calculate rhythm strength (0-200)
+// Calculate rhythm strength (0-220)
 function calculateRhythmStrength(skillLevels: Record<string, number>): number {
   const basicSkill = skillLevels['songwriting_basic_beatmaking'] || 0;
   const proSkill = skillLevels['songwriting_professional_beatmaking'] || 0;
   const masterySkill = skillLevels['songwriting_mastery_beatmaking'] || 0;
   
-  return Math.round(Math.min(200, (basicSkill + proSkill * 1.5 + masterySkill * 2) / 3));
+  const basicContribution = Math.min(60, basicSkill * 0.6);
+  const proContribution = Math.min(70, proSkill * 0.9);
+  const masteryContribution = Math.min(90, masterySkill * 1.1);
+  
+  return basicContribution + proContribution + masteryContribution;
 }
 
-// Calculate arrangement strength (0-200)
+// Calculate arrangement strength (0-250) - ENHANCED
 function calculateArrangementStrength(
   skillLevels: Record<string, number>,
   coWriters: number
@@ -102,15 +156,19 @@ function calculateArrangementStrength(
   const proSkill = skillLevels['songwriting_professional_record_production'] || 0;
   const masterySkill = skillLevels['songwriting_mastery_record_production'] || 0;
   
-  const skillBase = Math.min(180, (basicSkill + proSkill * 1.5 + masterySkill * 2) / 3);
+  const basicContribution = Math.min(50, basicSkill * 0.5);
+  const proContribution = Math.min(70, proSkill * 0.9);
+  const masteryContribution = Math.min(100, masterySkill * 1.2);
   
-  // Collaboration bonus (max +20)
-  const collabBonus = Math.min(20, coWriters * 5);
+  const skillBase = basicContribution + proContribution + masteryContribution;
   
-  return Math.round(skillBase + collabBonus);
+  // Collaboration bonus (max +30)
+  const collabBonus = Math.min(30, coWriters * 7);
+  
+  return skillBase + collabBonus;
 }
 
-// Calculate production potential (0-200)
+// Calculate production potential (0-280) - ENHANCED
 function calculateProductionPotential(
   skillLevels: Record<string, number>,
   technicalMastery: number
@@ -123,61 +181,58 @@ function calculateProductionPotential(
   const dawPro = skillLevels['songwriting_professional_daw'] || 0;
   const dawMastery = skillLevels['songwriting_mastery_daw'] || 0;
   
-  const mixingScore = (mixingBasic + mixingPro * 1.5 + mixingMastery * 2) / 3;
-  const dawScore = (dawBasic + dawPro * 1.5 + dawMastery * 2) / 3;
+  // Calculate mixing contribution
+  const mixingBase = Math.min(50, mixingBasic * 0.5);
+  const mixingProC = Math.min(40, mixingPro * 0.5);
+  const mixingMastC = Math.min(50, mixingMastery * 0.6);
   
-  const skillBase = Math.min(150, (mixingScore + dawScore) / 2);
-  const attrBonus = Math.min(50, technicalMastery / 2);
+  // Calculate DAW contribution  
+  const dawBase = Math.min(40, dawBasic * 0.4);
+  const dawProC = Math.min(30, dawPro * 0.4);
+  const dawMastC = Math.min(40, dawMastery * 0.5);
   
-  return Math.round(skillBase + attrBonus);
+  const skillBase = mixingBase + mixingProC + mixingMastC + dawBase + dawProC + dawMastC;
+  const attrBonus = Math.min(80, technicalMastery * 0.08);
+  
+  return skillBase + attrBonus;
 }
 
-// Random variance function for songwriting inspiration/blocks
-function getRandomVariance(): number {
-  // Returns a multiplier between 0.85 and 1.20
-  // 70% chance of small variance (-5% to +10%)
-  // 20% chance of inspiration buff (+10% to +20%)
-  // 10% chance of creative block (-15% to -5%)
-  const roll = Math.random();
-  if (roll < 0.1) {
-    // Creative block
-    return 0.85 + Math.random() * 0.10; // 0.85 to 0.95
-  } else if (roll < 0.3) {
-    // Inspiration buff
-    return 1.10 + Math.random() * 0.10; // 1.10 to 1.20
-  } else {
-    // Normal variance
-    return 0.95 + Math.random() * 0.15; // 0.95 to 1.10
-  }
+// Component-level variance (small adjustments per area)
+function getComponentVariance(): number {
+  // Smaller variance per component: 0.92 to 1.08
+  return 0.92 + Math.random() * 0.16;
 }
 
-// Apply random variance to a strength value
-function applyVariance(baseValue: number): number {
-  return Math.round(baseValue * getRandomVariance());
+// Apply component variance to a strength value
+function applyComponentVariance(baseValue: number): number {
+  return Math.round(baseValue * getComponentVariance());
 }
 
 // Main quality calculation function
 export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResult {
-  // Calculate base strengths then apply random variance
-  const melodyStrength = applyVariance(calculateMelodyStrength(
+  // Get session-wide luck factor (affects final score)
+  const sessionLuck = getSessionLuck();
+  
+  // Calculate base strengths with small component variance
+  const melodyStrength = applyComponentVariance(calculateMelodyStrength(
     inputs.skillLevels,
     inputs.attributes.musical_ability
   ));
   
-  const lyricsStrength = applyVariance(calculateLyricsStrength(
+  const lyricsStrength = applyComponentVariance(calculateLyricsStrength(
     inputs.skillLevels,
     inputs.attributes.creative_insight,
     inputs.aiLyrics
   ));
   
-  const rhythmStrength = applyVariance(calculateRhythmStrength(inputs.skillLevels));
+  const rhythmStrength = applyComponentVariance(calculateRhythmStrength(inputs.skillLevels));
   
-  const arrangementStrength = applyVariance(calculateArrangementStrength(
+  const arrangementStrength = applyComponentVariance(calculateArrangementStrength(
     inputs.skillLevels,
     inputs.coWriters
   ));
   
-  const productionPotential = applyVariance(calculateProductionPotential(
+  const productionPotential = applyComponentVariance(calculateProductionPotential(
     inputs.skillLevels,
     inputs.attributes.technical_mastery
   ));
@@ -194,9 +249,12 @@ export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResu
   // Apply genre multiplier
   const withGenreBonus = rawTotal * genreMultiplier;
   
+  // Apply session luck to final score (the big swing)
+  const withLuck = withGenreBonus * sessionLuck.multiplier;
+  
   // Apply skill ceiling
   const skillCeiling = getSkillCeiling(inputs.skillLevels);
-  const totalQuality = Math.min(skillCeiling, Math.round(withGenreBonus));
+  const totalQuality = Math.min(skillCeiling, Math.round(withLuck));
   
   return {
     totalQuality,
@@ -206,6 +264,8 @@ export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResu
     arrangementStrength,
     productionPotential,
     genreMultiplier,
-    skillCeiling
+    skillCeiling,
+    sessionLuckLabel: `${sessionLuck.emoji} ${sessionLuck.label}`,
+    sessionLuckMultiplier: sessionLuck.multiplier
   };
 }

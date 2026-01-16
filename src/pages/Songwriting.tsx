@@ -28,6 +28,8 @@ import { calculateSongQuality, canStartSongwriting, canWriteGenre } from "@/util
 import { getSongRating } from "@/data/songRatings";
 import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
 import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
+import { LyricsEditor, parseLyricsToSections, sectionsToLyrics, type LyricsSection } from "@/components/songwriting/LyricsEditor";
+import { SongNotesDisplay, generateSongNotesForAI } from "@/components/songwriting/SongNotesDisplay";
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
 import { AddToRepertoireDialog } from "@/components/band/AddToRepertoireDialog";
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
@@ -99,6 +101,8 @@ interface ProjectFormState {
   theme_id: string;
   chord_progression_id: string;
   initial_lyrics: string;
+  lyricsSections: LyricsSection[];
+  additionalNotes: string;
   genre: string;
   writingMode: string;
   coWriters: string[];
@@ -138,6 +142,8 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   theme_id: "",
   chord_progression_id: "",
   initial_lyrics: "",
+  lyricsSections: parseLyricsToSections(""),
+  additionalNotes: "",
   genre: "",
   writingMode: "",
   coWriters: [],
@@ -916,11 +922,14 @@ const Songwriting = () => {
   const handleEdit = (project: SongwritingProject) => {
     setSelectedProject(project);
     const creativeBrief = project.creative_brief ?? null;
+    const existingLyrics = project.lyrics ?? project.initial_lyrics ?? "";
     setFormState({
       title: project.title,
       theme_id: project.theme_id ?? "",
       chord_progression_id: project.chord_progression_id ?? "",
-      initial_lyrics: project.lyrics ?? project.initial_lyrics ?? "",
+      initial_lyrics: existingLyrics,
+      lyricsSections: parseLyricsToSections(existingLyrics),
+      additionalNotes: (creativeBrief as any)?.additional_notes ?? "",
       genre: creativeBrief?.genre ?? "",
       writingMode: creativeBrief?.writing_mode ?? "",
       coWriters: creativeBrief?.co_writers?.map((writer) => writer.id) ?? [],
@@ -1446,39 +1455,63 @@ const Songwriting = () => {
 
                   {/* Tab 2: Creative Brief */}
                   <TabsContent value="creative" className="space-y-4 mt-0">
-                    <div className="space-y-2">
-                      <Label htmlFor="project-lyrics">Lyrics & Song Notes</Label>
-                      <Textarea
-                        id="project-lyrics"
-                        value={formState.initial_lyrics}
-                        onChange={(event) =>
-                          setFormState((previous) => ({ ...previous, initial_lyrics: event.target.value }))
-                        }
-                        placeholder="Capture the core concept, lyric fragments, or production notes."
-                        className="min-h-32"
-                      />
-                      <p className="text-right text-xs text-muted-foreground">{formatWordCount(formState.initial_lyrics)}</p>
-                    </div>
+                    {/* Song Notes - Auto-populated */}
+                    <SongNotesDisplay
+                      genre={formState.genre}
+                      theme={selectedProject?.song_themes}
+                      chordProgression={selectedProject?.chord_progressions}
+                      creativeBrief={{
+                        genre: formState.genre,
+                        writing_mode: formState.writingMode,
+                        co_writers: formState.coWriters.map(id => {
+                          const opt = CO_WRITER_OPTIONS.find(o => o.id === id);
+                          return { id, name: opt?.label || id, role: opt?.role };
+                        }),
+                        producers: formState.producers,
+                        session_musicians: formState.sessionMusicians,
+                        inspiration_modifiers: formState.inspirationModifiers,
+                        mood_modifiers: formState.moodModifiers,
+                      }}
+                      additionalNotes={formState.additionalNotes}
+                      onAdditionalNotesChange={(notes) =>
+                        setFormState((prev) => ({ ...prev, additionalNotes: notes }))
+                      }
+                    />
+
+                    <Separator />
+
+                    {/* Structured Lyrics Editor */}
+                    <LyricsEditor
+                      sections={formState.lyricsSections}
+                      onChange={(sections) => {
+                        setFormState((prev) => ({
+                          ...prev,
+                          lyricsSections: sections,
+                          initial_lyrics: sectionsToLyrics(sections)
+                        }));
+                      }}
+                    />
                     
-                    {/* AI Lyrics Generator - Collapsible */}
+                    {/* AI Lyrics Generator */}
                     <div className="pt-2">
                       <AILyricsGenerator
                         title={selectedProject?.title || formState.title}
                         theme={selectedProject?.song_themes?.name || ''}
                         genre={formState.genre}
                         chordProgression={selectedProject?.chord_progressions?.progression || ''}
+                        creativeBrief={{
+                          inspirationModifiers: formState.inspirationModifiers,
+                          moodModifiers: formState.moodModifiers,
+                          writingMode: formState.writingMode,
+                        }}
+                        existingLyrics={formState.additionalNotes}
                         onLyricsGenerated={(lyrics) => {
+                          const newSections = parseLyricsToSections(lyrics);
                           setFormState(prev => ({
                             ...prev,
-                            initial_lyrics: prev.initial_lyrics ? `${prev.initial_lyrics}\n\n[AI Generated]\n${lyrics}` : `[AI Generated]\n${lyrics}`
+                            lyricsSections: newSections,
+                            initial_lyrics: lyrics
                           }));
-                          if (selectedProject) {
-                            updateProject.mutate({
-                              id: selectedProject.id,
-                              initial_lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`,
-                              lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`
-                            });
-                          }
                         }}
                       />
                     </div>
