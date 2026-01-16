@@ -63,20 +63,34 @@ export const JamSessionBookingDialog = ({
   });
 
   // Fetch rehearsal rooms (filtered by city)
-  const { data: rooms = [] } = useQuery({
+  interface RoomWithCity {
+    id: string;
+    name: string;
+    hourly_rate: number;
+    quality_rating: number;
+    equipment_quality: number;
+    capacity: number;
+    city_id: string | null;
+    city: { id: string; name: string } | null;
+  }
+
+  const { data: rooms = [] } = useQuery<RoomWithCity[]>({
     queryKey: ["rehearsal-rooms", selectedCityId],
-    queryFn: async () => {
-      let query = supabase
+    queryFn: async (): Promise<RoomWithCity[]> => {
+      const client = supabase as any;
+      const { data, error } = await client
         .from("rehearsal_rooms")
         .select("id, name, hourly_rate, quality_rating, equipment_quality, capacity, city_id, city:cities(id, name)")
         .eq("is_available", true);
       
+      if (error) throw error;
+      
+      let filtered = data || [];
       if (selectedCityId && selectedCityId !== "all") {
-        query = query.eq("city_id", selectedCityId);
+        filtered = filtered.filter((r: any) => r.city_id === selectedCityId);
       }
       
-      const { data } = await query.order("name");
-      return data || [];
+      return filtered as RoomWithCity[];
     },
     enabled: open,
   });

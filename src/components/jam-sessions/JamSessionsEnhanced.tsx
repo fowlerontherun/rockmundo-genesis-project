@@ -1,21 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useJamSessions } from "@/hooks/useJamSessions";
 import { JamSessionCard } from "./JamSessionCard";
 import { JamSessionHistory } from "./JamSessionHistory";
-import { supabase } from "@/integrations/supabase/client";
+import { JamSessionBookingDialog } from "./JamSessionBookingDialog";
+import { JamSessionChat } from "./JamSessionChat";
+import { JamCommentaryFeed } from "./JamCommentaryFeed";
+import { JamOutcomeReportDialog } from "./JamOutcomeReportDialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Music4, Zap, Users, Play } from "lucide-react";
-import { MUSIC_GENRES } from "@/data/genres";
+import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, MessageCircle } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
   const { user } = useAuth();
@@ -30,113 +27,60 @@ export const JamSessionsEnhanced = () => {
     completeSession,
     isStarting,
     isCompleting,
+    lastResults,
+    clearResults,
   } = useJamSessions();
 
-  const [formState, setFormState] = useState({
-    name: "",
-    description: "",
-    genre: "",
-    tempo: 120,
-    maxParticipants: 4,
-    skillRequirement: 0,
-    isPrivate: false,
-    accessCode: "",
-  });
-  const [isCreating, setIsCreating] = useState(false);
-  const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
-  const [joinAccessCodes, setJoinAccessCodes] = useState<Record<string, string>>({});
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
 
-  const handleCreateSession = async () => {
-    if (!user?.id) {
-      toast({ title: "Sign in required", variant: "destructive" });
-      return;
-    }
-
-    if (!formState.name || !formState.genre) {
-      toast({ title: "Please provide session name and genre" });
-      return;
-    }
-
-    setIsCreating(true);
-
-    // Get profile ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!profile) {
-      toast({ title: "Profile not found", variant: "destructive" });
-      setIsCreating(false);
-      return;
-    }
-
-    const { error } = await supabase.from("jam_sessions").insert({
-      host_id: profile.id,
-      name: formState.name.trim(),
-      description: formState.description.trim() || null,
-      genre: formState.genre,
-      tempo: formState.tempo,
-      max_participants: formState.maxParticipants,
-      skill_requirement: formState.skillRequirement,
-      is_private: formState.isPrivate,
-      access_code: formState.isPrivate ? formState.accessCode.trim() : null,
-      status: "waiting",
-    });
-
-    if (error) {
-      toast({ title: "Failed to create session", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Jam session created!" });
-      setFormState({
-        name: "",
-        description: "",
-        genre: "",
-        tempo: 120,
-        maxParticipants: 4,
-        skillRequirement: 0,
-        isPrivate: false,
-        accessCode: "",
-      });
-    }
-    setIsCreating(false);
-  };
-
-  const handleJoinSession = async (sessionId: string, isPrivate: boolean, accessCode: string | null) => {
+  // Find user's active session for chat/commentary
+  useEffect(() => {
     if (!user?.id) return;
-
-    if (isPrivate) {
-      const codeAttempt = joinAccessCodes[sessionId]?.trim();
-      if (!codeAttempt || codeAttempt !== accessCode) {
-        toast({ title: "Incorrect access code", variant: "destructive" });
-        return;
-      }
-    }
-
-    setJoiningSessionId(sessionId);
-    const { error } = await (supabase.rpc as any)("join_jam_session", { p_session_id: sessionId });
     
-    if (error) {
-      toast({ title: "Failed to join session", description: error.message, variant: "destructive" });
+    const myActiveSession = activeSessions.find(s => 
+      s.status === 'active' && 
+      (s.host?.user_id === user.id || s.participant_ids?.includes(user.id))
+    );
+    
+    if (myActiveSession) {
+      setActiveSessionId(myActiveSession.id);
     } else {
-      toast({ title: "Joined session!" });
+      setActiveSessionId(null);
     }
-    setJoiningSessionId(null);
-  };
+  }, [activeSessions, user?.id]);
+
+  // Show results dialog when session completes
+  useEffect(() => {
+    if (lastResults) {
+      setShowResultsDialog(true);
+    }
+  }, [lastResults]);
 
   const totalXpEarned = myOutcomes.reduce((sum, o) => sum + o.xp_earned, 0);
   const sessionsCompleted = myOutcomes.length;
 
+  const handleJoinSession = async (sessionId: string) => {
+    // This will be handled by the JamSessionCard which will call the booking hook
+    toast({ title: "Use the booking dialog to join sessions" });
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Music4 className="h-8 w-8" /> Jam Sessions
-        </h1>
-        <p className="text-muted-foreground">
-          Collaborate with other musicians, build chemistry, and earn XP rewards.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Music4 className="h-8 w-8" /> Jam Sessions
+          </h1>
+          <p className="text-muted-foreground">
+            Book rehearsal rooms, collaborate with musicians, and earn XP rewards.
+          </p>
+        </div>
+        <Button onClick={() => setIsBookingOpen(true)} size="lg">
+          <Plus className="h-5 w-5 mr-2" />
+          Book Session
+        </Button>
       </div>
 
       {/* Stats Overview */}
@@ -170,7 +114,7 @@ export const JamSessionsEnhanced = () => {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <Music4 className="h-8 w-8 text-purple-500" />
+            <CalendarDays className="h-8 w-8 text-purple-500" />
             <div>
               <p className="text-2xl font-bold">{completedSessions.length}</p>
               <p className="text-sm text-muted-foreground">All Completed</p>
@@ -179,10 +123,43 @@ export const JamSessionsEnhanced = () => {
         </Card>
       </div>
 
+      {/* Active Session Panel with Chat & Commentary */}
+      {activeSessionId && (
+        <Card className="border-2 border-primary/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                Active Jam Session
+              </CardTitle>
+              <Badge variant="default" className="bg-green-500">LIVE</Badge>
+            </div>
+            <CardDescription>
+              You're currently in a jam session. Chat with other musicians and watch the live commentary!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="h-[400px]">
+                <JamSessionChat 
+                  sessionId={activeSessionId} 
+                  sessionName="Active Session" 
+                />
+              </div>
+              <div className="h-[400px]">
+                <JamCommentaryFeed 
+                  sessionId={activeSessionId} 
+                  isActive={true} 
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="lobby" className="space-y-4">
         <TabsList>
           <TabsTrigger value="lobby">Session Lobby</TabsTrigger>
-          <TabsTrigger value="create">Create Session</TabsTrigger>
           <TabsTrigger value="history">My History</TabsTrigger>
         </TabsList>
 
@@ -196,9 +173,12 @@ export const JamSessionsEnhanced = () => {
               <CardContent className="p-12 text-center">
                 <Music4 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold">No active sessions</h3>
-                <p className="text-muted-foreground mb-4">Be the first to start a jam!</p>
-                <Button onClick={() => document.querySelector('[value="create"]')?.dispatchEvent(new Event('click'))}>
-                  Create Session
+                <p className="text-muted-foreground mb-4">
+                  Book a rehearsal room and start jamming!
+                </p>
+                <Button onClick={() => setIsBookingOpen(true)}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Book a Session
                 </Button>
               </CardContent>
             </Card>
@@ -214,10 +194,10 @@ export const JamSessionsEnhanced = () => {
                     session={session}
                     isHost={isHost}
                     isParticipant={isParticipant || isHost}
-                    onJoin={() => handleJoinSession(session.id, session.is_private, session.access_code)}
+                    onJoin={() => handleJoinSession(session.id)}
                     onStart={() => startSession(session.id)}
                     onComplete={() => completeSession({ sessionId: session.id, participants: session.participant_ids || [] })}
-                    isJoining={joiningSessionId === session.id}
+                    isJoining={false}
                     isStarting={isStarting}
                     isCompleting={isCompleting}
                   />
@@ -227,113 +207,32 @@ export const JamSessionsEnhanced = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="create">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create a Jam Session</CardTitle>
-              <CardDescription>Set up a session and invite musicians to collaborate</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Session Name</Label>
-                  <Input
-                    placeholder="Late Night Groove"
-                    value={formState.name}
-                    onChange={(e) => setFormState(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Genre</Label>
-                  <Select value={formState.genre} onValueChange={(v) => setFormState(prev => ({ ...prev, genre: v }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MUSIC_GENRES.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  placeholder="Share your vision for this jam..."
-                  value={formState.description}
-                  onChange={(e) => setFormState(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Tempo (BPM)</Label>
-                  <Input
-                    type="number"
-                    min={40}
-                    max={240}
-                    value={formState.tempo}
-                    onChange={(e) => setFormState(prev => ({ ...prev, tempo: Number(e.target.value) }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Participants</Label>
-                  <Input
-                    type="number"
-                    min={2}
-                    max={8}
-                    value={formState.maxParticipants}
-                    onChange={(e) => setFormState(prev => ({ ...prev, maxParticipants: Number(e.target.value) }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Skill Requirement</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={formState.skillRequirement}
-                    onChange={(e) => setFormState(prev => ({ ...prev, skillRequirement: Number(e.target.value) }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <Label>Private Session</Label>
-                  <p className="text-sm text-muted-foreground">Require access code to join</p>
-                </div>
-                <Switch
-                  checked={formState.isPrivate}
-                  onCheckedChange={(v) => setFormState(prev => ({ ...prev, isPrivate: v }))}
-                />
-              </div>
-
-              {formState.isPrivate && (
-                <div className="space-y-2">
-                  <Label>Access Code</Label>
-                  <Input
-                    placeholder="e.g. GROOVE2025"
-                    value={formState.accessCode}
-                    onChange={(e) => setFormState(prev => ({ ...prev, accessCode: e.target.value }))}
-                  />
-                </div>
-              )}
-
-              <Button onClick={handleCreateSession} disabled={isCreating} className="w-full">
-                {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : "Launch Jam Session"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="history">
           <JamSessionHistory outcomes={myOutcomes} />
         </TabsContent>
       </Tabs>
+
+      {/* Booking Dialog */}
+      <JamSessionBookingDialog
+        open={isBookingOpen}
+        onOpenChange={setIsBookingOpen}
+        onSuccess={(sessionId) => {
+          toast({
+            title: "Session booked!",
+            description: "Your jam session has been scheduled.",
+          });
+        }}
+      />
+
+      {/* Results Dialog */}
+      <JamOutcomeReportDialog
+        open={showResultsDialog}
+        onOpenChange={(open) => {
+          setShowResultsDialog(open);
+          if (!open) clearResults();
+        }}
+        results={lastResults}
+      />
     </div>
   );
 };

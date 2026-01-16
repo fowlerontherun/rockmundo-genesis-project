@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.369",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Major Jam Sessions overhaul - now requires booking a rehearsal room with venue, date, and time" },
+      { type: 'feature', description: "Jam session cost splitting - creator pays upfront, cost is shared as participants join" },
+      { type: 'feature', description: "Dedicated real-time chat for each jam session with presence indicators" },
+      { type: 'feature', description: "Live commentary feed during active jam sessions with dynamic events" },
+      { type: 'feature', description: "Comprehensive Jam Outcome Report dialog showing detailed results for all participants" },
+      { type: 'feature', description: "Early leave penalty system - reduced rewards based on time remaining when leaving" },
+      { type: 'feature', description: "New JamSessionBookingDialog with city/room/slot selection similar to rehearsal booking" },
+      { type: 'feature', description: "generate-jam-commentary edge function for live session commentary" },
+      { type: 'improvement', description: "Jam sessions now integrate with rehearsal rooms and scheduled activities" },
+    ],
+  },
+  {
     version: "1.0.368",
     date: "2026-01-16",
     changes: [
