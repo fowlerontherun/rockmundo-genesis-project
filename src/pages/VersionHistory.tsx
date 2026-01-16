@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.383",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added 14 new job types per city - low-prestige jobs (Cleaner, Dishwasher, Garbage Collector, etc.) and music industry jobs (Session Musician, Roadie, etc.)" },
+      { type: 'feature', description: "Dynamic fame impact - famous artists lose MORE fame working low-prestige jobs (up to 5x multiplier for major stars)" },
+      { type: 'feature', description: "Band leaders receive extra fame penalty for menial work" },
+      { type: 'feature', description: "Work shifts now appear on dashboard schedule and block other activities" },
+      { type: 'feature', description: "Music industry jobs (Session Musician, Venue Sound Tech, Radio Station Intern) boost fame" },
+      { type: 'improvement', description: "Auto-clock-in now checks for scheduled activity conflicts before starting shift" },
+      { type: 'improvement', description: "Jobs properly impact health, energy, and fame with different severity tiers" },
+    ],
+  },
+  {
     version: "1.0.382",
     date: "2026-01-16",
     changes: [

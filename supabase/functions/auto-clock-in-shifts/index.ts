@@ -26,6 +26,7 @@ interface Employment {
   jobs: {
     id: string;
     title: string;
+    company_name: string;
     city_id: string | null;
     work_days: string[];
     start_time: string;
@@ -34,6 +35,8 @@ interface Employment {
     health_impact_per_shift: number;
     fame_impact_per_shift: number;
     energy_cost_per_shift: number;
+    fame_penalty_tier: string | null;
+    base_fame_impact: number | null;
   };
 }
 
@@ -90,6 +93,7 @@ Deno.serve(async (req) => {
         jobs (
           id,
           title,
+          company_name,
           city_id,
           work_days,
           start_time,
@@ -97,7 +101,9 @@ Deno.serve(async (req) => {
           hourly_wage,
           health_impact_per_shift,
           fame_impact_per_shift,
-          energy_cost_per_shift
+          energy_cost_per_shift,
+          fame_penalty_tier,
+          base_fame_impact
         )
       `)
       .eq("status", "employed")
@@ -156,7 +162,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Check for conflicting activities
+        // Check for conflicting activities in profile_activity_statuses
         const { data: activeActivities } = await supabase
           .from("profile_activity_statuses")
           .select("id, activity_type")
@@ -167,6 +173,26 @@ Deno.serve(async (req) => {
         if (activeActivities && activeActivities.length > 0) {
           console.log(`[${jobName}] ${profile.id}: Has active activity (${activeActivities[0].activity_type})`);
           results.push({ profile_id: profile.id, status: "skipped", reason: "conflicting_activity" });
+          continue;
+        }
+
+        // Check for conflicting scheduled activities
+        const [endHour, endMin] = job.end_time.split(":").map(Number);
+        const endTime = new Date(now);
+        endTime.setHours(endHour, endMin, 0, 0);
+
+        const { data: scheduledConflicts } = await supabase
+          .from("player_scheduled_activities")
+          .select("id, title")
+          .eq("user_id", profile.user_id)
+          .in("status", ["scheduled", "in_progress"])
+          .lte("scheduled_start", endTime.toISOString())
+          .gte("scheduled_end", now.toISOString())
+          .limit(1);
+
+        if (scheduledConflicts && scheduledConflicts.length > 0) {
+          console.log(`[${jobName}] ${profile.id}: Has scheduled conflict (${scheduledConflicts[0].title})`);
+          results.push({ profile_id: profile.id, status: "skipped", reason: "scheduled_conflict", conflict: scheduledConflicts[0].title });
           continue;
         }
 
@@ -187,7 +213,6 @@ Deno.serve(async (req) => {
         }
 
         // All checks passed - clock in the player
-        const [endHour, endMin] = job.end_time.split(":").map(Number);
         const hours = (endHour + endMin / 60) - (startHour + startMin / 60);
         const earnings = Math.round(job.hourly_wage * hours);
 
@@ -202,7 +227,7 @@ Deno.serve(async (req) => {
             clock_in_time: now.toISOString(),
             earnings: earnings,
             health_impact: job.health_impact_per_shift,
-            fame_impact: job.fame_impact_per_shift,
+            fame_impact: job.fame_impact_per_shift, // Base fame impact, will be recalculated on clock-out
             xp_earned: Math.round(earnings / 10),
             status: "in_progress",
           })
@@ -213,10 +238,7 @@ Deno.serve(async (req) => {
           throw new Error(`Failed to create shift: ${shiftError.message}`);
         }
 
-        // Create activity status
-        const endTime = new Date(now);
-        endTime.setHours(endHour, endMin, 0, 0);
-
+        // Create activity status for blocking
         const { error: statusError } = await supabase
           .from("profile_activity_statuses")
           .insert({
@@ -230,11 +252,44 @@ Deno.serve(async (req) => {
               shift_history_id: shift.id,
               earnings_pending: earnings,
               auto_clocked_in: true,
+              job_title: job.title,
+              company_name: job.company_name,
             },
           });
 
         if (statusError) {
           throw new Error(`Failed to create activity status: ${statusError.message}`);
+        }
+
+        // Create scheduled activity for dashboard visibility
+        const { error: scheduleError } = await supabase
+          .from("player_scheduled_activities")
+          .insert({
+            user_id: profile.user_id,
+            profile_id: profile.id,
+            activity_type: "work",
+            scheduled_start: now.toISOString(),
+            scheduled_end: endTime.toISOString(),
+            status: "in_progress",
+            started_at: now.toISOString(),
+            title: `Work: ${job.title}`,
+            description: `Working at ${job.company_name}`,
+            location: null, // City location can be added if needed
+            linked_job_shift_id: shift.id,
+            metadata: {
+              job_id: job.id,
+              auto_scheduled: true,
+              earnings_pending: earnings,
+              company_name: job.company_name,
+              fame_penalty_tier: job.fame_penalty_tier,
+            },
+          });
+
+        if (scheduleError) {
+          console.warn(`[${jobName}] Warning creating scheduled activity: ${scheduleError.message}`);
+          // Don't fail the whole process if scheduled activity creation fails
+        } else {
+          console.log(`[${jobName}] Created scheduled activity for dashboard visibility`);
         }
 
         // Apply health/energy drain
@@ -252,6 +307,7 @@ Deno.serve(async (req) => {
           status: "clocked_in",
           job: job.title,
           earnings: earnings,
+          fame_penalty_tier: job.fame_penalty_tier,
         });
         processedCount++;
       } catch (empErr) {

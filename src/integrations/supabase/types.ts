@@ -6236,6 +6236,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          base_fame_impact: number | null
           category: string
           city_id: string | null
           company_name: string
@@ -6245,6 +6246,7 @@ export type Database = {
           end_time: string
           energy_cost_per_shift: number | null
           fame_impact_per_shift: number | null
+          fame_penalty_tier: string | null
           health_impact_per_shift: number | null
           hourly_wage: number
           id: string
@@ -6258,6 +6260,7 @@ export type Database = {
           work_days: Json
         }
         Insert: {
+          base_fame_impact?: number | null
           category: string
           city_id?: string | null
           company_name: string
@@ -6267,6 +6270,7 @@ export type Database = {
           end_time: string
           energy_cost_per_shift?: number | null
           fame_impact_per_shift?: number | null
+          fame_penalty_tier?: string | null
           health_impact_per_shift?: number | null
           hourly_wage: number
           id?: string
@@ -6280,6 +6284,7 @@ export type Database = {
           work_days: Json
         }
         Update: {
+          base_fame_impact?: number | null
           category?: string
           city_id?: string | null
           company_name?: string
@@ -6289,6 +6294,7 @@ export type Database = {
           end_time?: string
           energy_cost_per_shift?: number | null
           fame_impact_per_shift?: number | null
+          fame_penalty_tier?: string | null
           health_impact_per_shift?: number | null
           hourly_wage?: number
           id?: string

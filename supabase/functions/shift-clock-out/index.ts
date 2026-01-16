@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import {
   completeJobRun,
   failJobRun,
@@ -12,6 +12,78 @@ const corsHeaders = {
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type, x-triggered-by',
 };
+
+/**
+ * Calculate dynamic fame impact based on band popularity and job prestige tier
+ * Famous artists working low-prestige jobs lose more fame
+ */
+async function calculateDynamicFameImpact(
+  profileId: string,
+  baseFameImpact: number,
+  famePenaltyTier: string | null,
+  supabaseClient: SupabaseClient
+): Promise<{ fameImpact: number; bandName: string | null }> {
+  // If no penalty tier or positive fame impact, return base value
+  if (!famePenaltyTier || famePenaltyTier === 'none' || baseFameImpact >= 0) {
+    return { fameImpact: baseFameImpact, bandName: null };
+  }
+
+  // Get player's band info
+  const { data: bandMember } = await supabaseClient
+    .from('band_members')
+    .select('band_id, role, bands(name, popularity, weekly_fans, fame)')
+    .eq('user_id', profileId)
+    .eq('member_status', 'active')
+    .limit(1)
+    .single();
+
+  if (!bandMember?.bands) {
+    return { fameImpact: baseFameImpact, bandName: null };
+  }
+
+  const band = bandMember.bands as { name: string; popularity: number; weekly_fans: number; fame: number };
+  const bandPopularity = band.popularity || band.fame || 0;
+  const isLeader = bandMember.role === 'leader';
+
+  // Fame penalty multiplier based on popularity tiers
+  let multiplier = 1;
+  if (bandPopularity >= 100000) {
+    multiplier = 5; // Major star - maximum shame
+  } else if (bandPopularity >= 50000) {
+    multiplier = 4; // Famous - very embarrassing
+  } else if (bandPopularity >= 10000) {
+    multiplier = 3; // Well-known - quite embarrassing
+  } else if (bandPopularity >= 1000) {
+    multiplier = 2; // Known locally - somewhat embarrassing
+  } else {
+    multiplier = 1; // Unknown - no shame multiplier
+  }
+
+  // Extra penalty based on tier
+  let tierMultiplier = 1;
+  switch (famePenaltyTier) {
+    case 'severe':
+      tierMultiplier = 1.5;
+      break;
+    case 'moderate':
+      tierMultiplier = 1.25;
+      break;
+    case 'minor':
+      tierMultiplier = 1.0;
+      break;
+    default:
+      tierMultiplier = 1.0;
+  }
+
+  // Extra penalty for band leaders doing menial jobs
+  const leaderPenalty = isLeader ? 1.5 : 1;
+
+  const finalFameImpact = Math.floor(baseFameImpact * multiplier * tierMultiplier * leaderPenalty);
+
+  console.log(`[shift-clock-out] Dynamic fame calculation: base=${baseFameImpact}, popularity=${bandPopularity}, tier=${famePenaltyTier}, isLeader=${isLeader}, final=${finalFameImpact}`);
+
+  return { fameImpact: finalFameImpact, bandName: band.name };
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,6 +104,7 @@ Deno.serve(async (req) => {
   let errorCount = 0;
   let totalXpAwarded = 0;
   let totalEarnings = 0;
+  let totalFameChange = 0;
 
   try {
     runId = await startJobRun({
@@ -63,6 +136,7 @@ Deno.serve(async (req) => {
       if (!shiftId) continue;
 
       try {
+        // Fetch shift with job details including new columns
         const { data: shift, error: shiftFetchError } = await supabaseClient
           .from('shift_history')
           .select('*, player_employment(*)')
@@ -73,11 +147,27 @@ Deno.serve(async (req) => {
           throw shiftFetchError ?? new Error('Shift not found');
         }
 
+        // Fetch job details for fame penalty tier
+        const { data: job } = await supabaseClient
+          .from('jobs')
+          .select('title, category, fame_penalty_tier, base_fame_impact')
+          .eq('id', shift.job_id)
+          .single();
+
+        // Calculate dynamic fame impact
+        const { fameImpact: dynamicFameImpact, bandName } = await calculateDynamicFameImpact(
+          activity.profile_id,
+          job?.base_fame_impact ?? shift.fame_impact ?? 0,
+          job?.fame_penalty_tier ?? null,
+          supabaseClient
+        );
+
         const { error: updateShiftError } = await supabaseClient
           .from('shift_history')
           .update({
             clock_out_time: nowIso,
             status: 'completed',
+            fame_impact: dynamicFameImpact, // Store actual fame impact
           })
           .eq('id', shiftId);
 
@@ -113,7 +203,7 @@ Deno.serve(async (req) => {
           0,
           Math.min(100, (profile?.health || 100) + (shift.health_impact || 0))
         );
-        const updatedFame = Math.max(0, (profile?.fame || 0) + (shift.fame_impact || 0));
+        const updatedFame = Math.max(0, (profile?.fame || 0) + dynamicFameImpact);
 
         const { error: profileUpdateError } = await supabaseClient
           .from('profiles')
@@ -135,11 +225,30 @@ Deno.serve(async (req) => {
             profile_id: shift.profile_id,
             activity_type: 'work_shift',
             xp_amount: shift.xp_earned,
-            metadata: { job_id: shift.job_id, shift_id: shiftId },
+            metadata: { 
+              job_id: shift.job_id, 
+              shift_id: shiftId,
+              fame_change: dynamicFameImpact,
+              job_title: job?.title,
+              band_name: bandName,
+            },
           });
 
         if (ledgerError) {
           throw ledgerError;
+        }
+
+        // Update scheduled activity to completed (if exists)
+        const { error: scheduleUpdateError } = await supabaseClient
+          .from('player_scheduled_activities')
+          .update({
+            status: 'completed',
+            completed_at: nowIso,
+          })
+          .eq('linked_job_shift_id', shiftId);
+
+        if (scheduleUpdateError) {
+          console.warn(`Warning updating scheduled activity: ${scheduleUpdateError.message}`);
         }
 
         const { error: activityDeleteError } = await supabaseClient
@@ -154,9 +263,10 @@ Deno.serve(async (req) => {
         processedCount += 1;
         totalEarnings += shift.earnings || 0;
         totalXpAwarded += shift.xp_earned || 0;
+        totalFameChange += dynamicFameImpact;
 
         console.log(
-          `Clocked out shift ${shiftId}, awarded ${shift.earnings} cash and ${shift.xp_earned} XP`
+          `Clocked out shift ${shiftId}, awarded ${shift.earnings} cash, ${shift.xp_earned} XP, fame change: ${dynamicFameImpact}`
         );
       } catch (shiftError) {
         errorCount += 1;
@@ -176,6 +286,7 @@ Deno.serve(async (req) => {
         errorCount,
         totalEarnings,
         totalXpAwarded,
+        totalFameChange,
       },
     });
 
@@ -186,6 +297,7 @@ Deno.serve(async (req) => {
         errors: errorCount,
         totalEarnings,
         totalXpAwarded,
+        totalFameChange,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -201,6 +313,7 @@ Deno.serve(async (req) => {
         errorCount,
         totalEarnings,
         totalXpAwarded,
+        totalFameChange,
       },
     });
 

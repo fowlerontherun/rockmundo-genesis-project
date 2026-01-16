@@ -65,6 +65,42 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
+      // Fetch active work shifts from profile_activity_statuses
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      
+      let workShifts: any[] = [];
+      if (profile) {
+        const { data: activeWorkShifts } = await supabase
+          .from('profile_activity_statuses')
+          .select('*, metadata')
+          .eq('profile_id', profile.id)
+          .eq('activity_type', 'work_shift')
+          .gte('ends_at', dayStart.toISOString())
+          .lte('started_at', dayEnd.toISOString());
+        
+        // Convert to scheduled activity format (for any that don't have a player_scheduled_activities entry)
+        workShifts = (activeWorkShifts || []).map((shift: any) => ({
+          id: `work_${shift.id}`,
+          user_id: userId,
+          profile_id: shift.profile_id,
+          activity_type: 'work' as const,
+          scheduled_start: shift.started_at,
+          scheduled_end: shift.ends_at,
+          status: shift.status === 'active' ? 'in_progress' : shift.status,
+          title: `Work: ${shift.metadata?.job_title || 'Job'}`,
+          description: shift.metadata?.company_name ? `Working at ${shift.metadata.company_name}` : undefined,
+          metadata: {
+            ...shift.metadata,
+            auto_scheduled: true,
+            from_activity_status: true,
+          },
+        }));
+      }
+
       // Get user's band IDs for filtering
       const { data: userBands } = await supabase
         .from('band_members')
@@ -154,8 +190,19 @@ export function useScheduledActivities(date: Date, userId?: string) {
           metadata: { tour_travel_leg: true, tour_name: t.tours?.name },
         })),
       ];
+      
+      // Merge work shifts from profile_activity_statuses (exclude duplicates already in scheduled activities)
+      const existingWorkIds = new Set(
+        activities.filter(a => a.activity_type === 'work' && a.linked_job_shift_id)
+          .map(a => a.linked_job_shift_id)
+      );
+      const uniqueWorkShifts = workShifts.filter(
+        (ws: any) => !existingWorkIds.has(ws.metadata?.shift_history_id)
+      );
+      
+      const allActivities = [...activities, ...uniqueWorkShifts];
 
-      return activities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
+      return allActivities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
     },
     enabled: !!userId,
     staleTime: 60000,
