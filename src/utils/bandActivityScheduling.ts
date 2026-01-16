@@ -49,33 +49,47 @@ export async function getBandMemberUserIds(bandId: string): Promise<string[]> {
  * Get band member details including names for conflict reporting
  */
 export async function getBandMemberDetails(bandId: string): Promise<{ userId: string; name: string }[]> {
-  const { data: members, error } = await supabase
+  // First get band members
+  const { data: members, error: membersError } = await supabase
     .from('band_members')
-    .select(`
-      user_id,
-      profiles:user_id (stage_name, first_name, last_name)
-    `)
+    .select('user_id')
     .eq('band_id', bandId)
     .eq('member_status', 'active')
     .eq('is_touring_member', false);
   
-  if (error) {
-    console.error('Error fetching band member details:', error);
-    throw error;
+  if (membersError) {
+    console.error('Error fetching band members:', membersError);
+    throw membersError;
   }
   
-  return (members || [])
-    .filter(m => m.user_id)
-    .map(m => {
-      const profile = m.profiles as any;
-      const name = profile?.stage_name || 
-                   `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 
-                   'Band member';
-      return {
-        userId: m.user_id!,
-        name
-      };
-    });
+  const userIds = (members || [])
+    .map(m => m.user_id)
+    .filter((id): id is string => id !== null);
+  
+  if (userIds.length === 0) {
+    return [];
+  }
+  
+  // Then fetch profiles separately
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('user_id, display_name, username')
+    .in('user_id', userIds);
+  
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError);
+    // Don't throw - just use fallback names
+  }
+  
+  const profileMap = new Map(
+    (profiles || []).map(p => [p.user_id, p])
+  );
+  
+  return userIds.map(userId => {
+    const profile = profileMap.get(userId);
+    const name = profile?.display_name || profile?.username || 'Band member';
+    return { userId, name };
+  });
 }
 
 /**

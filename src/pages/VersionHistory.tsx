@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.402",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed rehearsal booking error - resolved Supabase join query issue in band member details lookup" },
+    ],
+  },
+  {
     version: "1.0.401",
     date: "2026-01-16",
     changes: [
