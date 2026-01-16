@@ -14,6 +14,7 @@ import {
   BookOpen,
   Youtube,
   Film,
+  Globe,
   Calendar,
   DollarSign,
   TrendingUp,
@@ -37,6 +38,7 @@ const mediaTypeConfig: Record<string, { icon: React.ElementType; label: string; 
   magazine: { icon: BookOpen, label: "Magazine", color: "text-pink-500" },
   youtube: { icon: Youtube, label: "YouTube", color: "text-red-500" },
   film: { icon: Film, label: "Film", color: "text-amber-600" },
+  website: { icon: Globe, label: "Website", color: "text-cyan-500" },
 };
 
 const offerTypeLabels: Record<string, string> = {

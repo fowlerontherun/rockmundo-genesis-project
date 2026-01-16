@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.399",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Self-Promotion (DIY) tab - database tables now created with 8 activity types" },
+      { type: 'fix', description: "Fixed Podcast Browser filters - podcasts now have proper country assignments" },
+      { type: 'feature', description: "Added Websites as PR media type - 15 music sites (Pitchfork, NME, Rolling Stone, etc.)" },
+      { type: 'feature', description: "Added process-self-promotion edge function to complete DIY activities" },
+      { type: 'feature', description: "Added band_media_cooldowns table for PR outlet cooldown tracking" },
+      { type: 'improvement', description: "PROffersList now supports website offers with proper icon" },
+    ],
+  },
+  {
     version: "1.0.398",
     date: "2026-01-16",
     changes: [

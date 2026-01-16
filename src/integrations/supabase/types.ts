@@ -1321,6 +1321,44 @@ export type Database = {
           },
         ]
       }
+      band_media_cooldowns: {
+        Row: {
+          band_id: string | null
+          cooldown_expires_at: string
+          created_at: string | null
+          id: string
+          media_type: string
+          outlet_id: string
+          show_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          cooldown_expires_at: string
+          created_at?: string | null
+          id?: string
+          media_type: string
+          outlet_id: string
+          show_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          cooldown_expires_at?: string
+          created_at?: string | null
+          id?: string
+          media_type?: string
+          outlet_id?: string
+          show_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_media_cooldowns_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_members: {
         Row: {
           band_id: string
@@ -13236,6 +13274,145 @@ export type Database = {
           },
         ]
       }
+      self_promotion_activities: {
+        Row: {
+          activity_type: string
+          band_id: string | null
+          cost_paid: number | null
+          created_at: string | null
+          fame_gained: number | null
+          fans_gained: number | null
+          id: string
+          promo_focus: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          band_id?: string | null
+          cost_paid?: number | null
+          created_at?: string | null
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          promo_focus?: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          band_id?: string | null
+          cost_paid?: number | null
+          created_at?: string | null
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          promo_focus?: string | null
+          scheduled_end?: string
+          scheduled_start?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_promotion_activities_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      self_promotion_catalog: {
+        Row: {
+          activity_type: string
+          base_cost: number | null
+          base_fame_max: number | null
+          base_fame_min: number | null
+          base_fan_max: number | null
+          base_fan_min: number | null
+          cooldown_days: number | null
+          created_at: string | null
+          description: string
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          min_fame_required: number | null
+          name: string
+          requires_release: boolean | null
+        }
+        Insert: {
+          activity_type: string
+          base_cost?: number | null
+          base_fame_max?: number | null
+          base_fame_min?: number | null
+          base_fan_max?: number | null
+          base_fan_min?: number | null
+          cooldown_days?: number | null
+          created_at?: string | null
+          description: string
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          name: string
+          requires_release?: boolean | null
+        }
+        Update: {
+          activity_type?: string
+          base_cost?: number | null
+          base_fame_max?: number | null
+          base_fame_min?: number | null
+          base_fan_max?: number | null
+          base_fan_min?: number | null
+          cooldown_days?: number | null
+          created_at?: string | null
+          description?: string
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          name?: string
+          requires_release?: boolean | null
+        }
+        Relationships: []
+      }
+      self_promotion_cooldowns: {
+        Row: {
+          activity_type: string
+          band_id: string | null
+          cooldown_expires_at: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          activity_type: string
+          band_id?: string | null
+          cooldown_expires_at: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          activity_type?: string
+          band_id?: string | null
+          cooldown_expires_at?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_promotion_cooldowns_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       setlist_performance_items: {
         Row: {
           created_at: string | null
@@ -17396,6 +17573,60 @@ export type Database = {
           subscription_type?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      websites: {
+        Row: {
+          compensation_max: number | null
+          compensation_min: number | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          fame_boost_max: number | null
+          fame_boost_min: number | null
+          fan_boost_max: number | null
+          fan_boost_min: number | null
+          id: string
+          is_active: boolean | null
+          min_fame_required: number | null
+          name: string
+          traffic_rank: number | null
+          website_url: string | null
+        }
+        Insert: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          name: string
+          traffic_rank?: number | null
+          website_url?: string | null
+        }
+        Update: {
+          compensation_max?: number | null
+          compensation_min?: number | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          fame_boost_max?: number | null
+          fame_boost_min?: number | null
+          fan_boost_max?: number | null
+          fan_boost_min?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          name?: string
+          traffic_rank?: number | null
+          website_url?: string | null
         }
         Relationships: []
       }
