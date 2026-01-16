@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.370",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added peer-to-peer voice chat for jam sessions using PeerJS WebRTC" },
+      { type: 'feature', description: "Voice chat uses Supabase Realtime for peer discovery (no external accounts needed)" },
+      { type: 'feature', description: "Mute/unmute controls with real-time status sync to other participants" },
+      { type: 'feature', description: "Speaking detection with audio level indicators for visual feedback" },
+      { type: 'feature', description: "Voice participant list shows who's in voice, muted status, and speaking activity" },
+      { type: 'improvement', description: "Voice chat is completely free with no usage limits (peer-to-peer)" },
+    ],
+  },
+  {
     version: "1.0.369",
     date: "2026-01-16",
     changes: [

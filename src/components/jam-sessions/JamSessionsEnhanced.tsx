@@ -10,9 +10,10 @@ import { JamSessionHistory } from "./JamSessionHistory";
 import { JamSessionBookingDialog } from "./JamSessionBookingDialog";
 import { JamSessionChat } from "./JamSessionChat";
 import { JamCommentaryFeed } from "./JamCommentaryFeed";
+import { JamVoiceChat } from "./JamVoiceChat";
 import { JamOutcomeReportDialog } from "./JamOutcomeReportDialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, MessageCircle } from "lucide-react";
+import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
   const { user } = useAuth();
@@ -138,7 +139,11 @@ export const JamSessionsEnhanced = () => {
               You're currently in a jam session. Chat with other musicians and watch the live commentary!
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Voice Chat */}
+            <JamVoiceChat sessionId={activeSessionId} />
+            
+            {/* Chat & Commentary */}
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="h-[400px]">
                 <JamSessionChat 
