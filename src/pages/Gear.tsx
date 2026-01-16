@@ -351,13 +351,28 @@ export default function Gear() {
                               {items.map((item) => {
                                 const isOwned = inventory.some(inv => inv.equipment_id === item.id);
                                 const canAfford = (profile?.cash || 0) >= item.base_price;
+                                const stockQty = (item as any).stock_quantity;
+                                const isOutOfStock = stockQty !== undefined && stockQty !== null && stockQty <= 0;
+                                const isLowStock = stockQty !== undefined && stockQty !== null && stockQty > 0 && stockQty <= 5;
                                 
                                 return (
-                                  <Card key={item.id} className="relative overflow-hidden">
+                                  <Card key={item.id} className={cn("relative overflow-hidden", isOutOfStock && "opacity-60")}>
                                     <div className={cn(
                                       "absolute top-0 right-0 w-20 h-20 opacity-10",
                                       rarityColors[item.rarity?.toLowerCase() || "common"]
                                     )} style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
+                                    
+                                    {/* Stock Badge */}
+                                    {isOutOfStock && (
+                                      <Badge className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px]">
+                                        Out of Stock
+                                      </Badge>
+                                    )}
+                                    {isLowStock && !isOutOfStock && (
+                                      <Badge className="absolute top-2 left-2 bg-amber-500 text-white text-[10px]">
+                                        Only {stockQty} left!
+                                      </Badge>
+                                    )}
                                     
                                     <CardHeader className="pb-2 pt-3">
                                       <div className="flex items-start justify-between gap-2">
@@ -389,6 +404,12 @@ export default function Gear() {
                                           <span className="text-muted-foreground">D:</span>
                                           <span className="font-semibold ml-0.5">{item.durability}</span>
                                         </span>
+                                        {stockQty !== undefined && stockQty !== null && (
+                                          <span>
+                                            <span className="text-muted-foreground">Stock:</span>
+                                            <span className={cn("font-semibold ml-0.5", isLowStock && "text-amber-500", isOutOfStock && "text-destructive")}>{stockQty}</span>
+                                          </span>
+                                        )}
                                       </div>
 
                                       {item.stat_boosts && Object.keys(item.stat_boosts).length > 0 && (
@@ -411,9 +432,9 @@ export default function Gear() {
                                           size="sm"
                                           className="h-6 text-xs"
                                           onClick={() => handlePurchase(item.id)}
-                                          disabled={!canAfford || isOwned || isPurchasing}
+                                          disabled={!canAfford || isOwned || isPurchasing || isOutOfStock}
                                         >
-                                          {isOwned ? "Owned" : canAfford ? "Buy" : "$$$"}
+                                          {isOutOfStock ? "Sold Out" : isOwned ? "Owned" : canAfford ? "Buy" : "$$$"}
                                         </Button>
                                       </div>
                                     </CardContent>

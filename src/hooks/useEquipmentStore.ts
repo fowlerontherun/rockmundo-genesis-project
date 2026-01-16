@@ -77,6 +77,12 @@ export const useEquipmentStore = (userId?: string) => {
       const equipment = catalog.find((e) => e.id === equipmentId);
       if (!equipment) throw new Error("Equipment not found");
 
+      // Check stock
+      const stockQty = (equipment as any).stock_quantity;
+      if (stockQty !== undefined && stockQty !== null && stockQty <= 0) {
+        throw new Error("Item is out of stock");
+      }
+
       // Check balance
       const { data: profile } = await supabase
         .from("profiles")
@@ -96,6 +102,14 @@ export const useEquipmentStore = (userId?: string) => {
 
       if (cashError) throw cashError;
 
+      // Decrease stock if stock tracking is enabled
+      if (stockQty !== undefined && stockQty !== null) {
+        await supabase
+          .from("equipment_catalog")
+          .update({ stock_quantity: stockQty - 1 })
+          .eq("id", equipmentId);
+      }
+
       // Add to inventory
       const { data, error } = await supabase
         .from("player_equipment_inventory")
@@ -111,6 +125,7 @@ export const useEquipmentStore = (userId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
+      queryClient.invalidateQueries({ queryKey: ["equipment-catalog"] });
       toast.success("Equipment purchased successfully");
     },
     onError: (error: any) => {
