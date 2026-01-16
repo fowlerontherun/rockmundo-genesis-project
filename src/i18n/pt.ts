@@ -130,6 +130,7 @@ export const pt = {
     bandChemistry: "Química da Banda",
     bandFinder: "Buscar Bandas",
     bandfinder: "Buscar Bandas",
+    bandRankings: "Rankings de Bandas",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Comunidade",
