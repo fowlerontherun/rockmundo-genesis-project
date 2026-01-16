@@ -197,19 +197,17 @@ export default function Employment() {
     mutationFn: async (jobId: string) => {
       if (!profile?.id) throw new Error("Profile not found");
 
-      await supabase.from("player_employment").delete().eq("profile_id", profile.id);
+      // Use atomic RPC function to prevent race conditions
+      const { data, error } = await supabase.rpc('hire_player', {
+        p_profile_id: profile.id,
+        p_job_id: jobId
+      });
 
-      const { data, error } = await supabase
-        .from("player_employment")
-        .insert([{ profile_id: profile.id, job_id: jobId, status: "employed", auto_clock_in: true }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const job = availableJobs?.find(j => j.id === jobId);
-      if (job) {
-        await supabase.from("jobs").update({ current_employees: (job.current_employees || 0) + 1 }).eq("id", jobId);
+      if (error) {
+        if (error.message.includes('Position is no longer available')) {
+          throw new Error('This position was just filled. Please try another job.');
+        }
+        throw error;
       }
 
       return data;
@@ -220,7 +218,7 @@ export default function Employment() {
       toast({ title: "Job accepted!", description: "Auto-attend is enabled by default. You'll clock in automatically when shifts start." });
     },
     onError: (error: any) => {
-      toast({ title: "Error applying for job", description: error.message, variant: "destructive" });
+      toast({ title: "Position Unavailable", description: error.message, variant: "destructive" });
     },
   });
 
@@ -228,17 +226,12 @@ export default function Employment() {
     mutationFn: async () => {
       if (!currentEmployment) throw new Error("No current employment");
 
-      const { error } = await supabase
-        .from("player_employment")
-        .update({ status: "quit", terminated_at: new Date().toISOString() })
-        .eq("id", currentEmployment.id);
+      // Use atomic RPC function to properly decrement employee count
+      const { error } = await supabase.rpc('quit_job', {
+        p_employment_id: currentEmployment.id
+      });
 
       if (error) throw error;
-
-      const job = currentEmployment.jobs;
-      if (job) {
-        await supabase.from("jobs").update({ current_employees: Math.max(0, (job.current_employees || 1) - 1) }).eq("id", job.id);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["current-employment"] });

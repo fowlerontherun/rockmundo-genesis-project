@@ -17800,6 +17800,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      hire_player: {
+        Args: { p_job_id: string; p_profile_id: string }
+        Returns: string
+      }
       increment_dikcok_video_views: {
         Args: { p_video_id: string }
         Returns: undefined
@@ -17814,8 +17818,10 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: Json
       }
+      quit_job: { Args: { p_employment_id: string }; Returns: undefined }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
+      sync_job_employee_counts: { Args: never; Returns: undefined }
       update_song_fame: {
         Args: { p_fame_amount: number; p_song_id: string; p_source: string }
         Returns: undefined
