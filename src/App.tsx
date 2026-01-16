@@ -47,6 +47,7 @@ const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
 const StreamingPlatformDetail = lazyWithRetry(() => import("./pages/StreamingPlatformDetail"));
 const AdvisorPage = lazyWithRetry(() => import("./pages/advisor"));
+const Gettit = lazyWithRetry(() => import("./pages/Gettit"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
@@ -271,7 +272,8 @@ function App() {
                     <Route path="booking/work" element={<WorkBooking />} />
                     <Route path="booking/songwriting" element={<SongwritingBooking />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
-                    <Route path="community/feed" element={<CommunityFeed />} />
+                    <Route path="gettit" element={<Gettit />} />
+                    <Route path="community/feed" element={<Navigate to="/gettit" replace />} />
                     <Route path="gig-booking" element={<GigBooking />} />
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />

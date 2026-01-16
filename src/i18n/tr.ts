@@ -137,6 +137,7 @@ export const tr: TranslationKeys = {
     dikcok: "DikCok",
     community: "Topluluk",
     communityFeed: "Topluluk Akışı",
+    gettit: "Gettit",
     sponsorships: "Sponsorluklar",
     recordLabels: "Plak Şirketleri",
     adminPanel: "Yönetici Paneli",

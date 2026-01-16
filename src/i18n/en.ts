@@ -135,6 +135,7 @@ export const en = {
     dikcok: "DikCok",
     community: "Community",
     communityFeed: "Community Feed",
+    gettit: "Gettit",
     sponsorships: "Sponsorships",
     recordLabels: "Record Labels",
     adminPanel: "Admin Panel",

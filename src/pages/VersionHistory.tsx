@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.403",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Gettit forum system - Reddit-style player community with subreddits, posts, upvotes/downvotes" },
+      { type: 'feature', description: "8 default communities: Rockmundo, Bands, Gig Stories, Songwriting, Newbies, Memes, Trading, Festivals" },
+      { type: 'improvement', description: "Community Feed renamed to Gettit with full forum functionality" },
+    ],
+  },
+  {
     version: "1.0.402",
     date: "2026-01-16",
     changes: [
