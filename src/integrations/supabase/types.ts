@@ -1731,6 +1731,81 @@ export type Database = {
           },
         ]
       }
+      band_song_ownership: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          id: string
+          is_active_member: boolean | null
+          original_percentage: number | null
+          ownership_percentage: number | null
+          role: string | null
+          song_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          id?: string
+          is_active_member?: boolean | null
+          original_percentage?: number | null
+          ownership_percentage?: number | null
+          role?: string | null
+          song_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          id?: string
+          is_active_member?: boolean | null
+          original_percentage?: number | null
+          ownership_percentage?: number | null
+          role?: string | null
+          song_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_song_ownership_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_song_ownership_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "band_song_ownership_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "band_song_ownership_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_song_ownership_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_stage_equipment: {
         Row: {
           band_id: string
@@ -13818,6 +13893,8 @@ export type Database = {
       }
       songs: {
         Row: {
+          added_to_repertoire_at: string | null
+          added_to_repertoire_by: string | null
           ai_generated_lyrics: boolean | null
           archived: boolean | null
           arrangement_strength: number | null
@@ -13871,6 +13948,8 @@ export type Database = {
           version: string | null
         }
         Insert: {
+          added_to_repertoire_at?: string | null
+          added_to_repertoire_by?: string | null
           ai_generated_lyrics?: boolean | null
           archived?: boolean | null
           arrangement_strength?: number | null
@@ -13924,6 +14003,8 @@ export type Database = {
           version?: string | null
         }
         Update: {
+          added_to_repertoire_at?: string | null
+          added_to_repertoire_by?: string | null
           ai_generated_lyrics?: boolean | null
           archived?: boolean | null
           arrangement_strength?: number | null

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { updateBandChemistry } from "./bandChemistry";
+import { handleMemberLeaveOwnership } from "./bandRoyalties";
 
 export async function leaveBand(userId: string, bandId: string) {
   try {
@@ -32,7 +33,10 @@ export async function leaveBand(userId: string, bandId: string) {
 
     if (deleteError) throw deleteError;
 
-    // 5. Update chemistry (-10 for member leaving)
+    // 5. Update song ownership (reduce to 30% retention)
+    await handleMemberLeaveOwnership(userId, bandId);
+
+    // 6. Update chemistry (-10 for member leaving)
     await updateBandChemistry(bandId, 'MEMBER_LEFT', { userId });
 
     // 6. Log event
