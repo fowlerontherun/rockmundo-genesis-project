@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.410",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Self-Promotion now correctly uses player's personal cash balance" },
+      { type: 'fix', description: "Self-PR deducts from player wallet instead of band balance" },
+    ],
+  },
+  {
     version: "1.0.409",
     date: "2026-01-16",
     changes: [

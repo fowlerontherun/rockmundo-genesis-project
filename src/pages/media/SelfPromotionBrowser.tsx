@@ -90,8 +90,25 @@ const SelfPromotionBrowser = () => {
 
   const bandId = userBand?.id;
   const bandFame = userBand?.fame || 0;
-  const bandBalance = (userBand as any)?.band_balance || 0;
   const userId = user?.id;
+
+  // Fetch player's personal cash balance from profiles
+  const { data: playerProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ["player-profile-cash", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, cash")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+
+  const playerCash = playerProfile?.cash || 0;
 
   // Fetch available promotion activities from catalog
   const { data: activities, isLoading: activitiesLoading } = useQuery({
@@ -153,8 +170,8 @@ const SelfPromotionBrowser = () => {
       const activity = activities?.find(a => a.activity_type === activityType);
       if (!activity) throw new Error("Activity not found");
 
-      if (bandBalance < activity.base_cost) {
-        throw new Error(`Insufficient funds. Need $${activity.base_cost.toLocaleString()}`);
+      if (playerCash < activity.base_cost) {
+        throw new Error(`Insufficient funds. Need $${activity.base_cost.toLocaleString()}, you have $${playerCash.toLocaleString()}`);
       }
 
       if (bandFame < activity.min_fame_required) {
@@ -177,10 +194,11 @@ const SelfPromotionBrowser = () => {
 
       if (!profile) throw new Error("Profile not found");
 
+      // Deduct from player's personal cash
       const { error: deductError } = await supabase
-        .from("bands")
-        .update({ band_balance: bandBalance - activity.base_cost })
-        .eq("id", bandId);
+        .from("profiles")
+        .update({ cash: playerCash - activity.base_cost })
+        .eq("user_id", userId);
 
       if (deductError) throw deductError;
 
@@ -238,6 +256,7 @@ const SelfPromotionBrowser = () => {
       queryClient.invalidateQueries({ queryKey: ["self-promotions-active", bandId] });
       queryClient.invalidateQueries({ queryKey: ["self-promotion-cooldowns", bandId] });
       queryClient.invalidateQueries({ queryKey: ["user-band-pr"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile-cash", userId] });
       
       toast.success("Promotion started!", {
         description: "Your self-promotion activity is now in progress.",
@@ -257,7 +276,7 @@ const SelfPromotionBrowser = () => {
     return null;
   };
 
-  const canAfford = (cost: number) => bandBalance >= cost;
+  const canAfford = (cost: number) => playerCash >= cost;
   const hasRequiredFame = (minFame: number) => bandFame >= minFame;
 
   const filteredActivities = activities?.filter(activity => {
@@ -343,7 +362,7 @@ const SelfPromotionBrowser = () => {
               <DollarSign className="h-4 w-4 text-amber-500" />
               <span className="text-sm text-muted-foreground">Balance</span>
             </div>
-            <p className="text-2xl font-bold">${bandBalance.toLocaleString()}</p>
+            <p className="text-2xl font-bold">${playerCash.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>
