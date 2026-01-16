@@ -534,6 +534,30 @@ export const useSongwritingData = (userId?: string | null) => {
       
       if (songError) throw songError;
       
+      // If adding to a band, create ownership record
+      if (bandId) {
+        await supabase
+          .from('band_song_ownership')
+          .insert({
+            song_id: song.id,
+            band_id: bandId,
+            user_id: userId,
+            ownership_percentage: 100,
+            original_percentage: 100,
+            role: 'writer',
+            is_active_member: true,
+          });
+        
+        // Update song with repertoire tracking
+        await supabase
+          .from('songs')
+          .update({
+            added_to_repertoire_at: new Date().toISOString(),
+            added_to_repertoire_by: userId,
+          })
+          .eq('id', song.id);
+      }
+      
       // Link song to project
       await supabase
         .from('songwriting_projects')
