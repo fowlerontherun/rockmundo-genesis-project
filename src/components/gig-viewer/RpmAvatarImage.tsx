@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, type Transition } from "framer-motion";
 
 interface RpmAvatarImageProps {
@@ -10,14 +11,14 @@ interface RpmAvatarImageProps {
 
 // Convert RPM .glb URL to 2D render URL
 function getRpm2DImageUrl(glbUrl: string): string {
-  // Extract avatar ID from URL
-  // URL format: https://models.readyplayer.me/{avatarId}.glb
-  const match = glbUrl.match(/models\.readyplayer\.me\/([^.]+)\.glb/);
+  // Extract avatar ID from URL - handles query params like ?textureAtlas=512
+  // URL format: https://models.readyplayer.me/{avatarId}.glb or .glb?params
+  const match = glbUrl.match(/models\.readyplayer\.me\/([a-f0-9]+)\.glb/i);
   if (!match) return glbUrl;
   
   const avatarId = match[1];
-  // Use RPM's 2D render API with fullbody pose
-  return `https://models.readyplayer.me/${avatarId}.png?camera=fullbody&quality=high&pose=power-stance`;
+  // Use RPM's 2D render API - use transparent background for layering
+  return `https://models.readyplayer.me/${avatarId}.png?scene=fullbody-portrait-v1&background=transparent`;
 }
 
 const sizeClasses = {
@@ -164,9 +165,13 @@ export const RpmAvatarImage = ({
   size = 'lg' 
 }: RpmAvatarImageProps) => {
   const { animate, transition } = getAnimationVariants(role, intensity, songSection);
+  const [imageError, setImageError] = useState(false);
   
   // Generate 2D image URL from RPM avatar
   const imageUrl = avatarUrl ? getRpm2DImageUrl(avatarUrl) : null;
+  
+  // Show fallback if no URL or image failed to load
+  const showFallback = !imageUrl || imageError;
 
   return (
     <motion.div
@@ -174,16 +179,13 @@ export const RpmAvatarImage = ({
       animate={animate}
       transition={transition}
     >
-      {imageUrl ? (
+      {!showFallback ? (
         <div className={`${sizeClasses[size]} relative`}>
           <img 
             src={imageUrl}
             alt={`${role} avatar`}
             className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-            onError={(e) => {
-              // If image fails to load, hide it (fallback will show)
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
+            onError={() => setImageError(true)}
           />
           {/* Glow effect during high intensity */}
           {intensity > 0.7 && (
