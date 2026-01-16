@@ -17,14 +17,27 @@ interface Submission {
   submitted_at: string;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  // Support both data formats
   songs?: { title: string } | null;
   radio_stations?: { name: string } | null;
+  song?: { title: string; genre?: string } | null;
+  station?: { name: string; station_type?: string; quality_level?: number } | null;
 }
 
 interface CompactSubmissionsProps {
   submissions: Submission[];
   isLoading: boolean;
 }
+
+// Helper to get song title from either format
+const getSongTitle = (sub: Submission): string => {
+  return sub.songs?.title || sub.song?.title || "Unknown Song";
+};
+
+// Helper to get station name from either format
+const getStationName = (sub: Submission): string => {
+  return sub.radio_stations?.name || sub.station?.name || "Unknown Station";
+};
 
 export function CompactSubmissions({ submissions, isLoading }: CompactSubmissionsProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -37,7 +50,8 @@ export function CompactSubmissions({ submissions, isLoading }: CompactSubmission
   const stationNames = useMemo(() => {
     const names = new Set<string>();
     submissions.forEach(s => {
-      if (s.radio_stations?.name) names.add(s.radio_stations.name);
+      const name = getStationName(s);
+      if (name !== "Unknown Station") names.add(name);
     });
     return Array.from(names).sort();
   }, [submissions]);
@@ -49,13 +63,13 @@ export function CompactSubmissions({ submissions, isLoading }: CompactSubmission
       if (statusFilter !== "all" && sub.status !== statusFilter) return false;
       
       // Station filter
-      if (stationFilter !== "all" && sub.radio_stations?.name !== stationFilter) return false;
+      if (stationFilter !== "all" && getStationName(sub) !== stationFilter) return false;
       
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const songMatch = sub.songs?.title?.toLowerCase().includes(query);
-        const stationMatch = sub.radio_stations?.name?.toLowerCase().includes(query);
+        const songMatch = getSongTitle(sub).toLowerCase().includes(query);
+        const stationMatch = getStationName(sub).toLowerCase().includes(query);
         if (!songMatch && !stationMatch) return false;
       }
       
@@ -194,7 +208,7 @@ export function CompactSubmissions({ submissions, isLoading }: CompactSubmission
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate text-sm">
-                          {sub.songs?.title || "Unknown Song"}
+                          {getSongTitle(sub)}
                         </span>
                         <Badge 
                           variant={getStatusBadgeVariant(sub.status)} 
@@ -204,7 +218,7 @@ export function CompactSubmissions({ submissions, isLoading }: CompactSubmission
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="truncate">{sub.radio_stations?.name || "Unknown Station"}</span>
+                        <span className="truncate">{getStationName(sub)}</span>
                         <span>•</span>
                         <span className="shrink-0">
                           {formatDistanceToNow(new Date(sub.submitted_at), { addSuffix: true })}
