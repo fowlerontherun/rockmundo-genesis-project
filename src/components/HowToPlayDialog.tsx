@@ -371,6 +371,27 @@ export const HowToPlayDialog = () => {
                 </CardContent>
               </Card>
 
+              <Card className="border-primary/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Gettit (Community Forum)
+                    <Badge variant="secondary" className="ml-2">New!</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p>Access from <strong>Social → Gettit</strong>:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
+                    <li>Reddit-style player community with subreddits</li>
+                    <li>Post and discuss in topic-specific communities</li>
+                    <li>Upvote/downvote posts and comments</li>
+                    <li>Create your own subreddits</li>
+                    <li>Sort by Hot, New, or Top posts</li>
+                    <li>Share tips, music, and connect with other players</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Twaater (Social Media)</CardTitle>
@@ -383,6 +404,22 @@ export const HowToPlayDialog = () => {
                     <li>Interact with other players</li>
                     <li>Earn XP from daily posts</li>
                     <li>Promote upcoming shows</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>DikCok (Short Videos)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p>Access from <strong>Social Media → DikCok</strong>:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
+                    <li>Create viral short-form videos</li>
+                    <li>Participate in trending challenges</li>
+                    <li>Generate hype and gain fans</li>
+                    <li>Track video analytics and performance</li>
+                    <li>Requires being in a band to participate</li>
                   </ul>
                 </CardContent>
               </Card>
