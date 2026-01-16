@@ -4790,6 +4790,45 @@ export type Database = {
           },
         ]
       }
+      gig_crowd_sounds: {
+        Row: {
+          audio_url: string
+          created_at: string | null
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          intensity_level: number | null
+          is_active: boolean | null
+          name: string
+          sound_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          intensity_level?: number | null
+          is_active?: boolean | null
+          name: string
+          sound_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          intensity_level?: number | null
+          is_active?: boolean | null
+          name?: string
+          sound_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       gig_fan_conversions: {
         Row: {
           attendance_count: number
@@ -13354,7 +13393,7 @@ export type Database = {
             foreignKeyName: "setlist_songs_performance_item_id_fkey"
             columns: ["performance_item_id"]
             isOneToOne: false
-            referencedRelation: "performance_items"
+            referencedRelation: "performance_items_catalog"
             referencedColumns: ["id"]
           },
           {
