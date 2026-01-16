@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.414",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added 15 automated cron jobs with correct authentication (gigs, travel, releases, PR, sponsorships, radio, video, prison)" },
+      { type: 'fix', description: "Fixed all existing cron jobs that had placeholder API keys - now fully functional" },
+    ],
+  },
+  {
     version: "1.0.413",
     date: "2026-01-16",
     changes: [
