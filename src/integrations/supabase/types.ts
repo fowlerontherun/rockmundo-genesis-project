@@ -5719,6 +5719,107 @@ export type Database = {
           },
         ]
       }
+      jam_session_chat: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          message_type: string | null
+          profile_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          message_type?: string | null
+          profile_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          message_type?: string | null
+          profile_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_chat_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_chat_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_chat_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_commentary: {
+        Row: {
+          commentary: string
+          created_at: string | null
+          event_type: string
+          id: string
+          is_important: boolean | null
+          participant_id: string | null
+          session_id: string
+        }
+        Insert: {
+          commentary: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          is_important?: boolean | null
+          participant_id?: string | null
+          session_id: string
+        }
+        Update: {
+          commentary?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          is_important?: boolean | null
+          participant_id?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_commentary_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_commentary_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_commentary_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_session_messages: {
         Row: {
           created_at: string | null
@@ -5857,34 +5958,46 @@ export type Database = {
       jam_session_participants: {
         Row: {
           co_play_count: number | null
+          cost_paid: number | null
           id: string
           instrument_skill_slug: string | null
           is_ready: boolean | null
           jam_session_id: string
           joined_at: string | null
+          left_at: string | null
+          participation_percentage: number | null
           profile_id: string
+          reward_multiplier: number | null
           skill_tier: string | null
           updated_at: string | null
         }
         Insert: {
           co_play_count?: number | null
+          cost_paid?: number | null
           id?: string
           instrument_skill_slug?: string | null
           is_ready?: boolean | null
           jam_session_id: string
           joined_at?: string | null
+          left_at?: string | null
+          participation_percentage?: number | null
           profile_id: string
+          reward_multiplier?: number | null
           skill_tier?: string | null
           updated_at?: string | null
         }
         Update: {
           co_play_count?: number | null
+          cost_paid?: number | null
           id?: string
           instrument_skill_slug?: string | null
           is_ready?: boolean | null
           jam_session_id?: string
           joined_at?: string | null
+          left_at?: string | null
+          participation_percentage?: number | null
           profile_id?: string
+          reward_multiplier?: number | null
           skill_tier?: string | null
           updated_at?: string | null
         }
@@ -5915,10 +6028,14 @@ export type Database = {
       jam_sessions: {
         Row: {
           access_code: string | null
+          city_id: string | null
           completed_at: string | null
+          cost_per_participant: number | null
           created_at: string | null
+          creator_profile_id: string | null
           current_participants: number
           description: string | null
+          duration_hours: number | null
           genre: string
           gifted_song_id: string | null
           host_id: string
@@ -5928,20 +6045,28 @@ export type Database = {
           mood_score: number | null
           name: string
           participant_ids: string[] | null
+          rehearsal_room_id: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
           skill_requirement: number
           started_at: string | null
           status: string
           synergy_score: number | null
           tempo: number
+          total_cost: number | null
           total_xp_awarded: number | null
           updated_at: string | null
         }
         Insert: {
           access_code?: string | null
+          city_id?: string | null
           completed_at?: string | null
+          cost_per_participant?: number | null
           created_at?: string | null
+          creator_profile_id?: string | null
           current_participants?: number
           description?: string | null
+          duration_hours?: number | null
           genre: string
           gifted_song_id?: string | null
           host_id: string
@@ -5951,20 +6076,28 @@ export type Database = {
           mood_score?: number | null
           name: string
           participant_ids?: string[] | null
+          rehearsal_room_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           skill_requirement?: number
           started_at?: string | null
           status?: string
           synergy_score?: number | null
           tempo?: number
+          total_cost?: number | null
           total_xp_awarded?: number | null
           updated_at?: string | null
         }
         Update: {
           access_code?: string | null
+          city_id?: string | null
           completed_at?: string | null
+          cost_per_participant?: number | null
           created_at?: string | null
+          creator_profile_id?: string | null
           current_participants?: number
           description?: string | null
+          duration_hours?: number | null
           genre?: string
           gifted_song_id?: string | null
           host_id?: string
@@ -5974,15 +6107,40 @@ export type Database = {
           mood_score?: number | null
           name?: string
           participant_ids?: string[] | null
+          rehearsal_room_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           skill_requirement?: number
           started_at?: string | null
           status?: string
           synergy_score?: number | null
           tempo?: number
+          total_cost?: number | null
           total_xp_awarded?: number | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "jam_sessions_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_creator_profile_id_fkey"
+            columns: ["creator_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_creator_profile_id_fkey"
+            columns: ["creator_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "jam_sessions_gifted_song_id_fkey"
             columns: ["gifted_song_id"]
@@ -6023,6 +6181,13 @@ export type Database = {
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_rehearsal_room_id_fkey"
+            columns: ["rehearsal_room_id"]
+            isOneToOne: false
+            referencedRelation: "rehearsal_rooms"
             referencedColumns: ["id"]
           },
         ]
