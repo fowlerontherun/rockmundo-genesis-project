@@ -18,11 +18,10 @@ serve(async (req) => {
 
     console.log("[sync-twaater-fame] Starting fame score sync...");
 
-    // Get all twaater accounts
+    // Get all twaater accounts (uses owner_type and owner_id)
     const { data: accounts, error: accountsError } = await supabase
       .from("twaater_accounts")
-      .select("id, owner_type, persona_id, band_id, fame_score")
-      .is("deleted_at", null);
+      .select("id, owner_type, owner_id, fame_score");
 
     if (accountsError) {
       throw accountsError;
@@ -34,19 +33,19 @@ serve(async (req) => {
     let bandUpdates = 0;
 
     // Get all profiles for persona accounts
-    const personaAccounts = accounts?.filter(a => a.owner_type === 'persona' && a.persona_id) || [];
+    const personaAccounts = accounts?.filter(a => a.owner_type === 'persona' && a.owner_id) || [];
     if (personaAccounts.length > 0) {
-      const personaIds = personaAccounts.map(a => a.persona_id);
+      const ownerIds = personaAccounts.map(a => a.owner_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, fame")
-        .in("id", personaIds);
+        .in("id", ownerIds);
 
-      const fameByPersonaId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
+      const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
 
       // Update each persona account
       for (const account of personaAccounts) {
-        const newFame = fameByPersonaId.get(account.persona_id) || 0;
+        const newFame = fameByOwnerId.get(account.owner_id) || 0;
         if (newFame !== account.fame_score) {
           const { error: updateError } = await supabase
             .from("twaater_accounts")
@@ -61,19 +60,19 @@ serve(async (req) => {
     }
 
     // Get all bands for band accounts
-    const bandAccounts = accounts?.filter(a => a.owner_type === 'band' && a.band_id) || [];
+    const bandAccounts = accounts?.filter(a => a.owner_type === 'band' && a.owner_id) || [];
     if (bandAccounts.length > 0) {
-      const bandIds = bandAccounts.map(a => a.band_id);
+      const ownerIds = bandAccounts.map(a => a.owner_id);
       const { data: bands } = await supabase
         .from("bands")
         .select("id, fame")
-        .in("id", bandIds);
+        .in("id", ownerIds);
 
-      const fameByBandId = new Map(bands?.map(b => [b.id, b.fame || 0]));
+      const fameByOwnerId = new Map(bands?.map(b => [b.id, b.fame || 0]));
 
       // Update each band account
       for (const account of bandAccounts) {
-        const newFame = fameByBandId.get(account.band_id) || 0;
+        const newFame = fameByOwnerId.get(account.owner_id) || 0;
         if (newFame !== account.fame_score) {
           const { error: updateError } = await supabase
             .from("twaater_accounts")

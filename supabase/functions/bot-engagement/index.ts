@@ -51,11 +51,11 @@ const REPLY_TEMPLATES = {
 
 // INCREASED like probabilities
 const LIKE_PROBABILITY: Record<string, number> = {
-  music_fan: 0.75,     // Was 0.6
-  influencer: 0.6,     // Was 0.4
-  critic: 0.4,         // Was 0.2
-  industry_insider: 0.5, // Was 0.3
-  venue_owner: 0.45,   // Was 0.25
+  music_fan: 0.75,
+  influencer: 0.6,
+  critic: 0.4,
+  industry_insider: 0.5,
+  venue_owner: 0.45,
 };
 
 // INCREASED reply probabilities
@@ -68,9 +68,7 @@ const REPLY_PROBABILITY: Record<string, number> = {
 };
 
 // MUCH HIGHER follow probability based on player fame
-// New players should get followers quickly to feel engaged
 function getFollowProbability(fame: number, fans: number = 0): number {
-  // Base probability from fame
   let prob = 0;
   if (fame >= 10000) prob = 0.7;
   else if (fame >= 5000) prob = 0.5;
@@ -78,14 +76,13 @@ function getFollowProbability(fame: number, fans: number = 0): number {
   else if (fame >= 500) prob = 0.25;
   else if (fame >= 100) prob = 0.18;
   else if (fame >= 50) prob = 0.12;
-  else prob = 0.08; // Even 0-fame accounts get some follows
+  else prob = 0.08;
   
-  // Bonus from fans
   if (fans >= 10000) prob += 0.15;
   else if (fans >= 5000) prob += 0.1;
   else if (fans >= 1000) prob += 0.05;
   
-  return Math.min(0.85, prob); // Cap at 85%
+  return Math.min(0.85, prob);
 }
 
 serve(async (req) => {
@@ -105,7 +102,7 @@ serve(async (req) => {
       .from("twaater_bot_accounts")
       .select(`
         *,
-        account:twaater_accounts(id, handle, display_name)
+        account:twaater_accounts!twaater_bot_accounts_account_id_fkey(id, handle, display_name)
       `)
       .eq("is_active", true);
 
@@ -113,21 +110,15 @@ serve(async (req) => {
 
     console.log(`[bot-engagement] Found ${bots?.length || 0} active bots`);
 
-    // Get recent player twaats (last 48 hours, not from bots) - increased window
+    // Get recent player twaats (last 48 hours, not from bots)
     const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
     const botAccountIds = bots?.map(b => b.account_id) || [];
     
+    // Fetch twaats separately without embedding account
     const { data: recentTwaats, error: twaatsError } = await supabase
       .from("twaats")
-      .select(`
-        id,
-        body,
-        account_id,
-        created_at,
-        account:twaater_accounts(id, handle, display_name, owner_type, persona_id, band_id)
-      `)
+      .select("id, body, account_id, created_at")
       .gte("created_at", twoDaysAgo)
-      .is("deleted_at", null)
       .eq("visibility", "public")
       .order("created_at", { ascending: false })
       .limit(100);
@@ -138,28 +129,29 @@ serve(async (req) => {
     const playerTwaats = recentTwaats?.filter(t => !botAccountIds.includes(t.account_id)) || [];
     console.log(`[bot-engagement] Found ${playerTwaats.length} recent player twaats`);
 
-    // Get ALL player accounts (not just those with recent twaats) for follows
+    // Get ALL player accounts for follows (uses owner_type and owner_id)
     const { data: allPlayerAccounts } = await supabase
       .from("twaater_accounts")
-      .select("id, persona_id, band_id, owner_type")
-      .is("deleted_at", null)
-      .not("id", "in", `(${botAccountIds.join(",")})`);
+      .select("id, owner_type, owner_id");
+
+    // Filter out bot accounts
+    const nonBotAccounts = allPlayerAccounts?.filter(a => !botAccountIds.includes(a.id)) || [];
 
     // Get fame data for all players
-    const personaIds = allPlayerAccounts?.filter(a => a.persona_id).map(a => a.persona_id) || [];
-    const bandIds = allPlayerAccounts?.filter(a => a.band_id).map(a => a.band_id) || [];
+    const personaOwnerIds = nonBotAccounts.filter(a => a.owner_type === 'persona' && a.owner_id).map(a => a.owner_id);
+    const bandOwnerIds = nonBotAccounts.filter(a => a.owner_type === 'band' && a.owner_id).map(a => a.owner_id);
     
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, fame")
-      .in("id", personaIds.length > 0 ? personaIds : ['none']);
+      .in("id", personaOwnerIds.length > 0 ? personaOwnerIds : ['none']);
 
     const { data: bands } = await supabase
       .from("bands")
       .select("id, fame, total_fans")
-      .in("id", bandIds.length > 0 ? bandIds : ['none']);
+      .in("id", bandOwnerIds.length > 0 ? bandOwnerIds : ['none']);
 
-    const fameByPersonaId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
+    const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
     const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0 }]));
 
     let repliesCreated = 0;
@@ -246,11 +238,10 @@ serve(async (req) => {
       }
 
       // IMPROVED: Follow logic for ALL player accounts based on fame/fans
-      // Each bot tries to follow 1-3 accounts per run
       let followsThisBot = 0;
       const maxFollowsPerBot = Math.floor(Math.random() * 3) + 1;
       
-      const shuffledAccounts = [...(allPlayerAccounts || [])].sort(() => Math.random() - 0.5);
+      const shuffledAccounts = [...nonBotAccounts].sort(() => Math.random() - 0.5);
       
       for (const playerAccount of shuffledAccounts) {
         if (followsThisBot >= maxFollowsPerBot) break;
@@ -270,10 +261,10 @@ serve(async (req) => {
         let fame = 0;
         let fans = 0;
         
-        if (playerAccount.owner_type === 'persona' && playerAccount.persona_id) {
-          fame = fameByPersonaId.get(playerAccount.persona_id) || 0;
-        } else if (playerAccount.owner_type === 'band' && playerAccount.band_id) {
-          const bandData = bandDataById.get(playerAccount.band_id);
+        if (playerAccount.owner_type === 'persona' && playerAccount.owner_id) {
+          fame = fameByOwnerId.get(playerAccount.owner_id) || 0;
+        } else if (playerAccount.owner_type === 'band' && playerAccount.owner_id) {
+          const bandData = bandDataById.get(playerAccount.owner_id);
           fame = bandData?.fame || 0;
           fans = bandData?.fans || 0;
         }

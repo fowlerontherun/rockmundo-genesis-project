@@ -21,7 +21,7 @@ serve(async (req) => {
     // Get active bot accounts
     const { data: bots, error: botsError } = await supabase
       .from("twaater_bot_accounts")
-      .select("account_id, account:twaater_accounts(handle)")
+      .select("account_id")
       .eq("is_active", true);
 
     if (botsError) throw botsError;
@@ -35,45 +35,54 @@ serve(async (req) => {
       );
     }
 
-    // Get all player accounts with their fame/fans data
+    // Get bot account handles for notifications
+    const { data: botHandles } = await supabase
+      .from("twaater_accounts")
+      .select("id, handle")
+      .in("id", botAccountIds);
+    
+    const handleById = new Map(botHandles?.map(b => [b.id, b.handle]) || []);
+
+    // Get all player accounts with their owner info (uses owner_type and owner_id)
     const { data: playerAccounts, error: accountsError } = await supabase
       .from("twaater_accounts")
-      .select("id, owner_type, persona_id, band_id")
-      .is("deleted_at", null)
-      .not("id", "in", `(${botAccountIds.join(",")})`);
+      .select("id, owner_type, owner_id");
 
     if (accountsError) throw accountsError;
 
-    console.log(`[calculate-organic-followers] Processing ${playerAccounts?.length || 0} player accounts`);
+    // Filter out bot accounts
+    const nonBotAccounts = playerAccounts?.filter(a => !botAccountIds.includes(a.id)) || [];
 
-    // Get fame data
-    const personaIds = playerAccounts?.filter(a => a.persona_id).map(a => a.persona_id) || [];
-    const bandIds = playerAccounts?.filter(a => a.band_id).map(a => a.band_id) || [];
+    console.log(`[calculate-organic-followers] Processing ${nonBotAccounts.length} player accounts`);
+
+    // Get fame data for personas
+    const personaOwnerIds = nonBotAccounts.filter(a => a.owner_type === 'persona' && a.owner_id).map(a => a.owner_id);
+    const bandOwnerIds = nonBotAccounts.filter(a => a.owner_type === 'band' && a.owner_id).map(a => a.owner_id);
 
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, fame")
-      .in("id", personaIds.length > 0 ? personaIds : ['none']);
+      .in("id", personaOwnerIds.length > 0 ? personaOwnerIds : ['none']);
 
     const { data: bands } = await supabase
       .from("bands")
       .select("id, fame, total_fans")
-      .in("id", bandIds.length > 0 ? bandIds : ['none']);
+      .in("id", bandOwnerIds.length > 0 ? bandOwnerIds : ['none']);
 
-    const fameByPersonaId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
+    const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
     const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0 }]));
 
     let totalFollowersAdded = 0;
 
-    for (const account of playerAccounts || []) {
+    for (const account of nonBotAccounts) {
       // Calculate target followers based on fame and fans
       let fame = 0;
       let fans = 0;
 
-      if (account.owner_type === 'persona' && account.persona_id) {
-        fame = fameByPersonaId.get(account.persona_id) || 0;
-      } else if (account.owner_type === 'band' && account.band_id) {
-        const bandData = bandDataById.get(account.band_id);
+      if (account.owner_type === 'persona' && account.owner_id) {
+        fame = fameByOwnerId.get(account.owner_id) || 0;
+      } else if (account.owner_type === 'band' && account.owner_id) {
+        const bandData = bandDataById.get(account.owner_id);
         fame = bandData?.fame || 0;
         fans = bandData?.fans || 0;
       }
@@ -97,19 +106,19 @@ serve(async (req) => {
 
       // Find bots not already following this account
       const currentFollowerIds = new Set(currentFollows?.map(f => f.follower_account_id) || []);
-      const availableBots = bots?.filter(b => !currentFollowerIds.has(b.account_id)) || [];
+      const availableBotIds = botAccountIds.filter(id => !currentFollowerIds.has(id));
 
-      if (availableBots.length === 0) continue;
+      if (availableBotIds.length === 0) continue;
 
       // Shuffle and pick random bots
-      const shuffledBots = [...availableBots].sort(() => Math.random() - 0.5);
-      const botsToFollow = shuffledBots.slice(0, followersToAdd);
+      const shuffledBotIds = [...availableBotIds].sort(() => Math.random() - 0.5);
+      const botsToFollow = shuffledBotIds.slice(0, followersToAdd);
 
-      for (const bot of botsToFollow) {
+      for (const botId of botsToFollow) {
         const { error: insertError } = await supabase
           .from("twaater_follows")
           .insert({
-            follower_account_id: bot.account_id,
+            follower_account_id: botId,
             followed_account_id: account.id,
           });
 
@@ -117,16 +126,17 @@ serve(async (req) => {
           totalFollowersAdded++;
 
           // Create notification
+          const botHandle = handleById.get(botId) || 'someone';
           await supabase
             .from("twaater_notifications")
             .insert({
               account_id: account.id,
               type: "follow",
-              actor_account_id: bot.account_id,
-              message: `@${bot.account?.handle || 'someone'} started following you`,
+              actor_account_id: botId,
+              message: `@${botHandle} started following you`,
             });
 
-          console.log(`[calculate-organic-followers] Bot ${bot.account_id} now follows account ${account.id} (fame: ${fame}, fans: ${fans})`);
+          console.log(`[calculate-organic-followers] Bot ${botId} now follows account ${account.id} (fame: ${fame}, fans: ${fans})`);
         }
       }
     }
@@ -137,7 +147,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         followersAdded: totalFollowersAdded,
-        accountsProcessed: playerAccounts?.length || 0,
+        accountsProcessed: nonBotAccounts.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
