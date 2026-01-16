@@ -173,18 +173,27 @@ export function calculateTourCostEstimate(
   // If using tour bus, travel costs are just fuel (already low in tour_bus mode)
   const totalTravelCosts = state.travelMode === 'tour_bus' ? travelCosts : travelCosts;
   
-  const totalUpfrontCost = venueCosts + bookingFees + totalTravelCosts + tourBusCosts;
-  const estimatedRevenue = estimatedTicketRevenue + estimatedMerchRevenue;
-  const estimatedProfit = estimatedRevenue - totalUpfrontCost;
+  const stageSetupCosts = 0; // Calculated by wizard
+  const sponsorCashIncome = 0; // From wizard
+  const supportArtistShare = 0; // From wizard
+  
+  const totalUpfrontCost = venueCosts + bookingFees + totalTravelCosts + tourBusCosts + stageSetupCosts;
+  const netUpfrontCost = totalUpfrontCost - sponsorCashIncome;
+  const estimatedRevenue = estimatedTicketRevenue + estimatedMerchRevenue - supportArtistShare;
+  const estimatedProfit = estimatedRevenue - totalUpfrontCost + sponsorCashIncome;
   
   return {
     venueCosts,
     bookingFees,
     travelCosts: totalTravelCosts,
     tourBusCosts,
+    stageSetupCosts,
     totalUpfrontCost,
+    sponsorCashIncome,
+    netUpfrontCost,
     estimatedTicketRevenue,
     estimatedMerchRevenue,
+    supportArtistShare,
     estimatedRevenue,
     estimatedProfit,
     showCount: venues.length,

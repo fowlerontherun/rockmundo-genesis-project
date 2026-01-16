@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.388",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Enhanced tour wizard with starting city selection" },
+      { type: 'feature', description: "Advanced venue filters - country, city, and genre preferences" },
+      { type: 'feature', description: "Custom ticket pricing with sales impact preview" },
+      { type: 'feature', description: "Stage setup tiers (Basic to Spectacular) with merch/fame boosts" },
+      { type: 'feature', description: "Support artist invitations with automatic revenue splitting" },
+      { type: 'feature', description: "Tour budget summary with detailed expense/revenue breakdown" },
+      { type: 'feature', description: "Tour merch boost (+30%) for all tour shows" },
+      { type: 'improvement', description: "Tour bus daily cost now static at $150/day" },
+    ],
+  },
+  {
     version: "1.0.386",
     date: "2026-01-16",
     changes: [

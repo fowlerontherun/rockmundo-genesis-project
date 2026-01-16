@@ -15676,18 +15676,29 @@ export type Database = {
           cancellation_refund_amount: number | null
           cancelled: boolean | null
           created_at: string | null
+          custom_ticket_price: number | null
           description: string | null
           end_date: string
           id: string
           max_venue_capacity: number | null
+          merch_boost_multiplier: number | null
           min_rest_days: number | null
           name: string
           scope: string | null
           selected_continents: string[] | null
           selected_countries: string[] | null
           setlist_id: string | null
+          sponsor_cash_value: number | null
+          sponsor_fame_penalty: number | null
+          sponsor_offer_id: string | null
+          sponsor_ticket_penalty: number | null
+          stage_setup_cost: number | null
+          stage_setup_tier: string | null
           start_date: string
+          starting_city_id: string | null
           status: string | null
+          support_band_id: string | null
+          support_revenue_share: number | null
           target_show_count: number | null
           total_accommodation_cost: number | null
           total_revenue: number | null
@@ -15707,18 +15718,29 @@ export type Database = {
           cancellation_refund_amount?: number | null
           cancelled?: boolean | null
           created_at?: string | null
+          custom_ticket_price?: number | null
           description?: string | null
           end_date: string
           id?: string
           max_venue_capacity?: number | null
+          merch_boost_multiplier?: number | null
           min_rest_days?: number | null
           name: string
           scope?: string | null
           selected_continents?: string[] | null
           selected_countries?: string[] | null
           setlist_id?: string | null
+          sponsor_cash_value?: number | null
+          sponsor_fame_penalty?: number | null
+          sponsor_offer_id?: string | null
+          sponsor_ticket_penalty?: number | null
+          stage_setup_cost?: number | null
+          stage_setup_tier?: string | null
           start_date: string
+          starting_city_id?: string | null
           status?: string | null
+          support_band_id?: string | null
+          support_revenue_share?: number | null
           target_show_count?: number | null
           total_accommodation_cost?: number | null
           total_revenue?: number | null
@@ -15738,18 +15760,29 @@ export type Database = {
           cancellation_refund_amount?: number | null
           cancelled?: boolean | null
           created_at?: string | null
+          custom_ticket_price?: number | null
           description?: string | null
           end_date?: string
           id?: string
           max_venue_capacity?: number | null
+          merch_boost_multiplier?: number | null
           min_rest_days?: number | null
           name?: string
           scope?: string | null
           selected_continents?: string[] | null
           selected_countries?: string[] | null
           setlist_id?: string | null
+          sponsor_cash_value?: number | null
+          sponsor_fame_penalty?: number | null
+          sponsor_offer_id?: string | null
+          sponsor_ticket_penalty?: number | null
+          stage_setup_cost?: number | null
+          stage_setup_tier?: string | null
           start_date?: string
+          starting_city_id?: string | null
           status?: string | null
+          support_band_id?: string | null
+          support_revenue_share?: number | null
           target_show_count?: number | null
           total_accommodation_cost?: number | null
           total_revenue?: number | null
@@ -15775,6 +15808,20 @@ export type Database = {
             columns: ["setlist_id"]
             isOneToOne: false
             referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tours_starting_city_id_fkey"
+            columns: ["starting_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tours_support_band_id_fkey"
+            columns: ["support_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
           {

@@ -65,7 +65,7 @@ const TourManager = () => {
         .from('tours')
         .select(`
           *,
-          band:bands(name)
+          band:bands!tours_band_id_fkey(name)
         `)
         .eq('band_id', currentBandId)
         .order('start_date', { ascending: false });
@@ -84,7 +84,7 @@ const TourManager = () => {
         .from('tours')
         .select(`
           *,
-          band:bands(name)
+          band:bands!tours_band_id_fkey(name)
         `)
         .order('start_date', { ascending: false })
         .limit(50);
