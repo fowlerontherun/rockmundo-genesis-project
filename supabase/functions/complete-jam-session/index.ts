@@ -350,10 +350,12 @@ Deno.serve(async (req) => {
       }
 
       // Award XP to profile
-      await supabase.rpc('increment_profile_xp', { 
+      const { error: rpcError } = await supabase.rpc('increment_profile_xp', { 
         profile_id_param: participantId, 
         xp_amount: totalXpPerPlayer 
-      }).catch(async () => {
+      });
+      
+      if (rpcError) {
         // Fallback: direct update
         const { data: profile } = await supabase
           .from('profiles')
@@ -367,7 +369,7 @@ Deno.serve(async (req) => {
             .update({ experience: (profile.experience || 0) + totalXpPerPlayer })
             .eq('id', participantId);
         }
-      });
+      }
 
       // Award skill XP
       await supabase

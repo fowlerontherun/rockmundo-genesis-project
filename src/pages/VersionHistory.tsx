@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.374",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed complete-jam-session edge function - replaced .catch() with proper error handling" },
+    ],
+  },
+  {
     version: "1.0.373",
     date: "2026-01-16",
     changes: [
