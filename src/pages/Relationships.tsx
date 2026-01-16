@@ -77,45 +77,12 @@ export default function RelationshipsPage() {
     <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Relationships & Social Hub</h1>
+          <h1 className="text-3xl font-bold">Relationships</h1>
           <p className="text-muted-foreground max-w-2xl">
-            Build dynamic friendships, track affinity growth, collaborate faster, and celebrate milestones together.
+            Build friendships, track affinity, and collaborate with other players.
           </p>
         </div>
         <Button onClick={() => setSearchOpen(true)}>Find friends</Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active friends</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalAccepted}</div>
-            <p className="text-xs text-muted-foreground">Legendary duos start with strong bonds.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending requests</CardTitle>
-            <HeartHandshake className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingCount}</div>
-            <p className="text-xs text-muted-foreground">Respond quickly to unlock milestone streaks.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current tier</CardTitle>
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.tierLabel}</div>
-            <p className="text-xs text-muted-foreground">Affinity score {summary.affinityScore}</p>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">

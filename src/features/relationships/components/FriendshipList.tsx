@@ -177,7 +177,7 @@ function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) 
         <div>
           <p className="text-sm font-semibold">{profile?.display_name ?? profile?.username ?? "Unknown artist"}</p>
           <p className="text-xs text-muted-foreground">
-            {profile?.fame ? `Fame ${profile.fame}` : "Fame TBD"}
+            Level {profile?.level ?? 1} • Fame {profile?.fame?.toLocaleString() ?? 0}
           </p>
         </div>
       </div>

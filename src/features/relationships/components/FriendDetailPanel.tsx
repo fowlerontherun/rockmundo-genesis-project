@@ -50,84 +50,32 @@ export function FriendDetailPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-semibold">{profile.display_name ?? profile.username}</CardTitle>
           <CardDescription>
-            Level {profile.level ?? "—"} • Fame {profile.fame ?? "—"} • Fans {profile.fans ?? "—"}
+            Level {profile.level ?? 1} • Fame {profile.fame?.toLocaleString() ?? 0} • {profile.fans?.toLocaleString() ?? 0} fans
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)]">
-          <div className="space-y-4">
-            <AffinityMeter summary={summary} />
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Relationship Status</CardTitle>
-                <CardDescription>Set the tone of your partnership.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                {RELATIONSHIP_STATUSES.map((status) => (
-                  <button
-                    key={status.id}
-                    type="button"
-                    onClick={() => setActiveStatus((prev) => (prev === status.id ? null : status.id))}
-                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition hover:border-primary ${
-                      activeStatus === status.id ? "border-primary bg-primary/5" : "border-muted"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl" aria-hidden>
-                        {status.emoji}
-                      </span>
-                      <p className="font-semibold">{status.label}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{status.reputation}</p>
-                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      {status.unlocks.map((unlock) => (
-                        <li key={unlock}>• {unlock}</li>
-                      ))}
-                    </ul>
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Permissions</CardTitle>
-                <CardDescription>Choose how much access this friend has.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {TRUST_PERMISSION_LEVELS.map((level) => (
-                  <div key={level.id} className="flex items-start gap-3 rounded-lg border p-3">
-                    <Shield className="mt-1 h-4 w-4" />
-                    <div>
-                      <p className="text-sm font-semibold">{level.label}</p>
-                      <p className="text-xs text-muted-foreground">{level.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Quick actions</CardTitle>
-                <CardDescription>Every action boosts affinity and unlocks perks.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <QuickActionButtons
-                  profileId={currentProfileId}
-                  userId={currentUserId}
-                  otherProfileId={profile.id}
-                  otherUserId={profile.user_id}
-                  otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
-                  onEventRecorded={onRefreshEvents}
-                />
-              </CardContent>
-            </Card>
-          </div>
+        <CardContent className="space-y-4">
+          <AffinityMeter summary={summary} />
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QuickActionButtons
+                profileId={currentProfileId}
+                userId={currentUserId}
+                otherProfileId={profile.id}
+                otherUserId={profile.user_id}
+                otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
+                onEventRecorded={onRefreshEvents}
+              />
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
 
