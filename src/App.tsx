@@ -138,6 +138,7 @@ const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphics
 // const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
+const CrowdSoundsAdmin = lazyWithRetry(() => import("./pages/admin/CrowdSoundsAdmin"));
 const Admin3DGigDemo = lazyWithRetry(() => import("./pages/admin/Admin3DGigDemo"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
@@ -409,6 +410,7 @@ function App() {
                     {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
+                    <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
                     <Route path="admin/3d-gig-demo" element={<Admin3DGigDemo />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="music-videos" element={<MusicVideos />} />
