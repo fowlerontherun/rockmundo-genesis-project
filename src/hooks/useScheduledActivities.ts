@@ -118,7 +118,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
           .in('band_id', userBandIds)
           .gte('scheduled_date', dayStart.toISOString())
           .lte('scheduled_date', dayEnd.toISOString())
-          .in('status', ['scheduled', 'in_progress', 'completed']);
+          .in('status', ['scheduled', 'in_progress', 'completed', 'confirmed']);
         gigs = bandGigs || [];
       }
 
