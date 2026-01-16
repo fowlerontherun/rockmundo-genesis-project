@@ -147,6 +147,7 @@ const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
 const BandProfile = lazyWithRetry(() => import("./pages/BandProfile"));
 const BandSearch = lazyWithRetry(() => import("./pages/BandSearch"));
 const BandFinder = lazyWithRetry(() => import("./pages/BandFinder"));
+const BandRankings = lazyWithRetry(() => import("./pages/BandRankings"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
@@ -334,6 +335,7 @@ function App() {
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
                     <Route path="bands/search" element={<BandSearch />} />
+                    <Route path="bands/rankings" element={<BandRankings />} />
                     <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="avatar-designer" element={<AvatarDesigner />} />

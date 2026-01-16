@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Star, TrendingUp, Activity, Users, PiggyBank, BarChart3, Music, Calendar, Settings2 } from 'lucide-react';
+import { Star, TrendingUp, Activity, Users, PiggyBank, BarChart3, Music, Calendar, Settings2, MapPin } from 'lucide-react';
 import { getBandFameTitle } from '@/utils/bandFame';
 import { getChemistryLabel, getChemistryColor } from '@/utils/bandChemistry';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { differenceInDays } from 'date-fns';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useToast } from '@/hooks/use-toast';
 import {
   Area,
   AreaChart,
@@ -40,11 +43,39 @@ interface BandOverviewProps {
 }
 
 export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, bandName, onBandUpdate }: BandOverviewProps) {
+  const { toast } = useToast();
   const [band, setBand] = useState<BandRow | null>(null);
   const [memberCount, setMemberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [calculatedSkillRating, setCalculatedSkillRating] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [homeCity, setHomeCity] = useState<{ name: string; country: string } | null>(null);
+  const [settingHomeCity, setSettingHomeCity] = useState(false);
+
+  // Fetch cities for home city selector
+  const { data: cities } = useQuery({
+    queryKey: ['band-overview-cities'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cities')
+        .select('id, name, country')
+        .order('country')
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: isLeader === true,
+  });
+
+  // Group cities by country
+  const citiesByCountry = cities?.reduce((acc, city) => {
+    const country = city.country || 'Unknown';
+    if (!acc[country]) acc[country] = [];
+    acc[country].push(city);
+    return acc;
+  }, {} as Record<string, typeof cities>) || {};
+
+  const sortedCountries = Object.keys(citiesByCountry).sort();
 
   useEffect(() => {
     const fetchBand = async () => {
@@ -63,6 +94,16 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
         setBand((bandData as BandRow) ?? null);
         setMemberCount(members?.length || 0);
+
+        // Fetch home city if set
+        if (bandData?.home_city_id) {
+          const { data: cityData } = await supabase
+            .from('cities')
+            .select('name, country')
+            .eq('id', bandData.home_city_id)
+            .single();
+          setHomeCity(cityData ?? null);
+        }
 
         // Calculate skill rating dynamically
         if (bandData) {
@@ -86,6 +127,46 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
     void fetchBand();
   }, [bandId]);
+
+  const handleSetHomeCity = async (cityId: string) => {
+    if (!cityId || !band || band.home_city_id) return;
+    
+    setSettingHomeCity(true);
+    try {
+      const { error } = await supabase
+        .from('bands')
+        .update({ home_city_id: cityId })
+        .eq('id', bandId);
+      
+      if (error) throw error;
+
+      // Fetch the city name
+      const { data: cityData } = await supabase
+        .from('cities')
+        .select('name, country')
+        .eq('id', cityId)
+        .single();
+      
+      setHomeCity(cityData ?? null);
+      setBand(prev => prev ? { ...prev, home_city_id: cityId } : null);
+      
+      toast({
+        title: 'Home city set!',
+        description: `${cityData?.name}, ${cityData?.country} is now your band's home base.`,
+      });
+      
+      onBandUpdate?.();
+    } catch (error) {
+      console.error('Error setting home city:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to set home city',
+        variant: 'destructive',
+      });
+    } finally {
+      setSettingHomeCity(false);
+    }
+  };
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }), []);
   const currencyFormatter = useMemo(
@@ -413,6 +494,41 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         </CardContent>
       </Card>
 
+      {/* Home City Card - for leaders who haven't set it yet */}
+      {isLeader && !band.home_city_id && (
+        <Card className="border-yellow-500/30 bg-yellow-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Set Home City
+            </CardTitle>
+            <CardDescription>Set your band's home city for regional rankings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select onValueChange={handleSetHomeCity} disabled={settingHomeCity}>
+              <SelectTrigger className="w-full md:w-[300px]">
+                <SelectValue placeholder={settingHomeCity ? "Setting..." : "Select home city"} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {sortedCountries.map(country => (
+                  <div key={country}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                      {country}
+                    </div>
+                    {citiesByCountry[country]?.map(city => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-2">This can only be set once</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Status Card */}
       <Card>
         <CardHeader className="pb-2">
@@ -437,6 +553,15 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
               <span className="font-medium">{numberFormatter.format(jamCount)}</span>
             </div>
           </div>
+          {homeCity && (
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                <span className="text-muted-foreground">Home City:</span>{' '}
+                <span className="font-medium">{homeCity.name}, {homeCity.country}</span>
+              </span>
+            </div>
+          )}
           {band.description && (
             <p className="text-muted-foreground mt-4 pt-4 border-t">{band.description}</p>
           )}
