@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.420",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Stage View Demo not displaying avatars - corrected RPM 2D render URL generation and added proper image error fallback handling" },
+    ],
+  },
+  {
     version: "1.0.419",
     date: "2026-01-16",
     changes: [
