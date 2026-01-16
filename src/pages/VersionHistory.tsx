@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.360",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Moved Repertoire to Band Manager as a dedicated tab" },
+      { type: 'feature', description: "Added band logo display next to band name in header" },
+      { type: 'feature', description: "Merged Profile editing into Overview section (collapsible for leaders)" },
+      { type: 'feature', description: "Added click-through song details on Songs tab" },
+      { type: 'feature', description: "Added remove from repertoire functionality" },
+      { type: 'fix', description: "Fixed repertoire data population with ownership backfill utility" },
+    ]
+  },
+  {
     version: "1.0.359",
     date: "2026-01-16",
     changes: [
