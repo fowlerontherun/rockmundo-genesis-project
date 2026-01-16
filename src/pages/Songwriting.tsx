@@ -5,6 +5,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import {
@@ -28,6 +29,7 @@ import { getSongRating } from "@/data/songRatings";
 import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
 import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
+import { AddToRepertoireDialog } from "@/components/band/AddToRepertoireDialog";
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
 import { SongwritingScheduleDialog } from "@/components/songwriting/SongwritingScheduleDialog";
 import {
@@ -385,6 +387,7 @@ const getProgressPercent = (value?: number | null) => {
 const Songwriting = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { data: primaryBand } = usePrimaryBand();
   const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
   const {
     themes,
@@ -438,6 +441,11 @@ const Songwriting = () => {
   const [completedProject, setCompletedProject] = useState<SongwritingProject | null>(null);
   const [completionQuality, setCompletionQuality] = useState<any>(null);
   const [completionXp, setCompletionXp] = useState(0);
+  
+  
+  // Add to repertoire dialog state
+  const [showRepertoireDialog, setShowRepertoireDialog] = useState(false);
+  const [repertoireProjectSongId, setRepertoireProjectSongId] = useState<string | null>(null);
   
   // Schedule dialog state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
@@ -1880,17 +1888,19 @@ const Songwriting = () => {
         }}
         quality={completionQuality}
         xpEarned={completionXp}
-        isInBand={false}
+        isInBand={!!primaryBand?.bands?.id}
         onKeepPrivate={() => {
           if (completedProject) {
             handleConvertProject(completedProject, 'private');
             setShowCompletionDialog(false);
           }
         }}
-        onAddToBand={() => {
-          if (completedProject) {
-            toast.info("Band catalog feature coming soon!");
+        onAddToBand={async () => {
+          if (completedProject && primaryBand?.bands?.id) {
+            // First convert the project to a song
+            await handleConvertProject(completedProject, 'private', primaryBand.bands.id);
             setShowCompletionDialog(false);
+            toast.success(`Song added to ${primaryBand.bands.name}'s repertoire!`);
           }
         }}
         onListForSale={() => {

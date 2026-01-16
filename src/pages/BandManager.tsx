@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +23,7 @@ import { BandSongsTab } from '@/components/band/BandSongsTab';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { FameFansOverview } from '@/components/fame/FameFansOverview';
-import { Users, Music, User, Star } from 'lucide-react';
+import { Users, Music, User, Star, Library } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
@@ -32,6 +33,7 @@ import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 export default function BandManager() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [userBands, setUserBands] = useState<any[]>([]);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<any>(null);
@@ -233,26 +235,34 @@ export default function BandManager() {
             </p>
           </div>
           
-          {/* Band Selector (if user has multiple bands) */}
-          {userBands.length > 1 && (
-            <Select value={selectedBandId || ''} onValueChange={setSelectedBandId}>
-              <SelectTrigger className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {userBands.map((band) => (
-                  <SelectItem key={band.band_id} value={band.band_id}>
-                    <div className="flex items-center gap-2">
-                      <span>{band.bands.name}</span>
-                      <Badge className={getBandStatusColor(band.bands.status)}>
-                        {getBandStatusLabel(band.bands.status)}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Repertoire Button */}
+            <Button variant="outline" onClick={() => navigate('/band/repertoire')}>
+              <Library className="h-4 w-4 mr-2" />
+              Repertoire
+            </Button>
+
+            {/* Band Selector (if user has multiple bands) */}
+            {userBands.length > 1 && (
+              <Select value={selectedBandId || ''} onValueChange={setSelectedBandId}>
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {userBands.map((band) => (
+                    <SelectItem key={band.band_id} value={band.band_id}>
+                      <div className="flex items-center gap-2">
+                        <span>{band.bands.name}</span>
+                        <Badge className={getBandStatusColor(band.bands.status)}>
+                          {getBandStatusLabel(band.bands.status)}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
 
         {/* Status Banner for Hiatus */}
