@@ -5,7 +5,7 @@ import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
-  const version = "1.0.389";
+  const version = "1.0.390";
   
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card/50">
