@@ -127,23 +127,61 @@ export default function OfferAutomation() {
     setHasUnsavedChanges(true);
   };
 
+  // Fetch real stats from database
+  const { data: offerCount24h } = useQuery({
+    queryKey: ["offer-stats-count"],
+    queryFn: async () => {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count, error } = await supabase
+        .from("pr_media_offers")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", oneDayAgo);
+      if (error) return 0;
+      return count || 0;
+    },
+  });
+
+  const { data: cronJobStats } = useQuery({
+    queryKey: ["offer-stats-cron"],
+    queryFn: async () => {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("cron_job_runs")
+        .select("status, duration_ms")
+        .like("job_name", "%offer%")
+        .gte("started_at", oneDayAgo);
+      if (error) return { errorRate: 0, avgLatency: 0 };
+      
+      const total = data?.length || 0;
+      const errors = data?.filter(r => r.status === "error").length || 0;
+      const avgLatency = total > 0 
+        ? Math.round(data.reduce((sum, r) => sum + (r.duration_ms || 0), 0) / total)
+        : 0;
+      
+      return { 
+        errorRate: total > 0 ? Math.round((errors / total) * 100) : 0, 
+        avgLatency 
+      };
+    },
+  });
+
   const offerStats: OfferStats[] = useMemo(
     () => [
       {
         label: "Offers Generated (24h)",
-        value: "—",
+        value: String(offerCount24h ?? "—"),
         helper: "Includes all bands and brands with cooldown applied",
         icon: <Activity className="h-4 w-4" />,
       },
       {
         label: "Average Queue Latency",
-        value: "—",
+        value: cronJobStats?.avgLatency ? `${cronJobStats.avgLatency}ms` : "—",
         helper: "Time between cron start and first insert",
         icon: <Clock className="h-4 w-4" />,
       },
       {
         label: "Error Rate",
-        value: "—",
+        value: cronJobStats?.errorRate !== undefined ? `${cronJobStats.errorRate}%` : "—",
         helper: "Failures recorded by job logger in the last day",
         icon: <AlertTriangle className="h-4 w-4 text-amber-600" />,
       },
@@ -154,7 +192,7 @@ export default function OfferAutomation() {
         icon: <Timer className="h-4 w-4" />,
       },
     ],
-    [],
+    [offerCount24h, cronJobStats],
   );
 
   const handleFameTierChange = (index: number, field: keyof FameTier, value: number) => {

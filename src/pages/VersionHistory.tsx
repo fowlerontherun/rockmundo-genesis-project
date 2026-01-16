@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.413",
+    date: "2026-01-16",
+    changes: [
+      { type: 'improvement', description: "Admin audit: OfferAutomation now shows real stats from database (offers generated, error rate, latency)" },
+      { type: 'improvement', description: "Admin audit: AdvisorAdmin now calculates real average response time from chat messages" },
+      { type: 'feature', description: "Identified 14 missing cron jobs for game automation (gigs, travel, releases, PR, radio, video, prison)" },
+    ],
+  },
+  {
     version: "1.0.412",
     date: "2026-01-16",
     changes: [
