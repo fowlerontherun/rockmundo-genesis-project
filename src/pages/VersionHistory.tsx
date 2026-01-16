@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.405",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Gettit forum posting error - corrected RLS policy to use profile.id instead of auth.uid()" },
+      { type: 'feature', description: "Added Self-PR and Websites direct navigation links in Business section" },
+      { type: 'feature', description: "Added Record Deal Types explanation section on Record Labels page" },
+      { type: 'fix', description: "Fixed VIP status checking - now uses vip_subscriptions table consistently" },
+    ],
+  },
+  {
     version: "1.0.404",
     date: "2026-01-16",
     changes: [

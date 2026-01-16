@@ -152,6 +152,8 @@ export const tr: TranslationKeys = {
     magazines: "Dergiler",
     podcasts: "Podcastler",
     films: "Filmler",
+    selfPr: "Kendi Tanıtımın",
+    websites: "Web Siteleri",
   },
   
   // Today's News Page
