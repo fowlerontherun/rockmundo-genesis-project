@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.393",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Band members now clickable - view skills, fame, schedule, and send friend requests" },
+      { type: 'fix', description: "Dashboard friends section now shows correct profiles with fame and level" },
+      { type: 'improvement', description: "Relationships page simplified - removed non-functional status/permissions cards" },
+      { type: 'improvement', description: "Friends list now shows actual fame and level instead of 'Fame TBD'" },
+      { type: 'feature', description: "Added 'View All' link from Dashboard friends to Relationships page" },
+    ],
+  },
+  {
     version: "1.0.392",
     date: "2026-01-16",
     changes: [

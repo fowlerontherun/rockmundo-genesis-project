@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Shield, Zap, Activity } from "lucide-react";
+import { BandMemberDetailDialog } from "./BandMemberDetailDialog";
+import { useGameData } from "@/hooks/useGameData";
 
 interface BandRosterTabProps {
   bandId: string;
@@ -66,9 +68,11 @@ function formatDate(value?: string | null) {
 }
 
 export function BandRosterTab({ bandId }: BandRosterTabProps) {
+  const { profile } = useGameData();
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [statusHistory, setStatusHistory] = useState<Record<string, BandMembershipStatusHistory[]>>({});
+  const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -282,7 +286,11 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                   return (
                     <TableRow key={member.id}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMember(member)}
+                          className="flex items-center gap-3 -m-2 p-2 rounded-lg hover:bg-accent/50 transition-colors w-full text-left"
+                        >
                           <Avatar>
                             {member.profiles?.avatar_url ? (
                               <AvatarImage src={member.profiles.avatar_url} alt={member.profiles.display_name ?? member.profiles.username} />
@@ -295,14 +303,14 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                             )}
                           </Avatar>
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium underline-offset-2 hover:underline">
                               {member.profiles?.display_name ?? member.profiles?.username ?? "Unassigned"}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {member.instrument_role || member.vocal_role || member.role}
                             </p>
                           </div>
-                        </div>
+                        </button>
                       </TableCell>
                       <TableCell className="align-middle">
                         <div className="flex flex-col gap-1">
@@ -337,6 +345,13 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
           )}
         </CardContent>
       </Card>
+
+      <BandMemberDetailDialog
+        open={!!selectedMember}
+        onOpenChange={(open) => !open && setSelectedMember(null)}
+        member={selectedMember}
+        currentProfileId={profile?.id ?? null}
+      />
     </div>
   );
 }

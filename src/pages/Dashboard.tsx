@@ -75,15 +75,42 @@ const Dashboard = () => {
   const {
     data: friendships
   } = useQuery({
-    queryKey: ["friendships", user?.id],
+    queryKey: ["dashboard-friendships", profile?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const {
-        data
-      } = await supabase.from("friendships").select("*, profiles!friendships_user_id_1_fkey(*), profiles!friendships_user_id_2_fkey(*)").or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`).eq("status", "accepted");
-      return data || [];
+      if (!profile?.id) return [];
+      
+      // Fetch friendships using profile IDs (requestor_id, addressee_id)
+      const { data: friendshipsData } = await supabase
+        .from("friendships")
+        .select("id, requestor_id, addressee_id, status")
+        .or(`requestor_id.eq.${profile.id},addressee_id.eq.${profile.id}`)
+        .eq("status", "accepted")
+        .limit(10);
+      
+      if (!friendshipsData || friendshipsData.length === 0) return [];
+      
+      // Get all other profile IDs
+      const otherProfileIds = friendshipsData.map(f => 
+        f.requestor_id === profile.id ? f.addressee_id : f.requestor_id
+      );
+      
+      // Fetch those profiles
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url, fame, level")
+        .in("id", otherProfileIds);
+      
+      // Map profiles to friendships
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      
+      return friendshipsData.map(f => ({
+        ...f,
+        friendProfile: profileMap.get(
+          f.requestor_id === profile.id ? f.addressee_id : f.requestor_id
+        ) ?? null
+      }));
     },
-    enabled: !!user?.id
+    enabled: !!profile?.id
   });
   const {
     data: achievements
@@ -413,11 +440,14 @@ const Dashboard = () => {
         <TabsContent value="friends" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-5">
             <Card className="lg:col-span-2">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
                   {t('dashboard.friendsList', 'Friends List')}
                 </CardTitle>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/relationships">{t('common.viewAll', 'View All')}</Link>
+                </Button>
               </CardHeader>
               <CardContent>
                 {!friendships || friendships.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
@@ -425,24 +455,32 @@ const Dashboard = () => {
                   </p> : <ScrollArea className="h-[500px]">
                     <div className="space-y-2">
                       {friendships.map((friendship: any) => {
-                    const friend = friendship.user_id_1 === user?.id ? friendship.profiles : friendship.profiles;
-                    return <div key={friendship.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-accent/50 transition-colors">
+                        const friend = friendship.friendProfile;
+                        if (!friend) return null;
+                        
+                        return (
+                          <Link 
+                            to="/relationships" 
+                            key={friendship.id} 
+                            className="flex items-center gap-3 p-2 rounded-lg border hover:bg-accent/50 transition-colors"
+                          >
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={friend?.avatar_url} />
+                              <AvatarImage src={friend.avatar_url} />
                               <AvatarFallback>
-                                {getInitials(friend?.display_name || friend?.username || "?")}
+                                {getInitials(friend.display_name || friend.username || "?")}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
-                                {friend?.display_name || friend?.username}
+                                {friend.display_name || friend.username}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                @{friend?.username}
+                                Level {friend.level || 1} • Fame {friend.fame?.toLocaleString() || 0}
                               </p>
                             </div>
-                          </div>;
-                  })}
+                          </Link>
+                        );
+                      })}
                     </div>
                   </ScrollArea>}
               </CardContent>
