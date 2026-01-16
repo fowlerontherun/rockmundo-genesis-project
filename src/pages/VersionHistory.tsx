@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.401",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed 8 sports entrance song events now properly added to database with correct schema" },
+    ],
+  },
+  {
     version: "1.0.400",
     date: "2026-01-16",
     changes: [
