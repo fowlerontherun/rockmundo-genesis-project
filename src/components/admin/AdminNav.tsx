@@ -69,7 +69,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/band-avatars", label: "Band Avatars", description: "Avatar presets" },
       { path: "/admin/crowd-behavior", label: "Crowd Behavior", description: "Audience animations" },
       { path: "/admin/crowd-sounds", label: "Crowd Sounds", description: "Gig audio effects" },
-      { path: "/admin/3d-gig-demo", label: "3D Gig Demo", description: "Preview & test 3D viewer" },
+      { path: "/admin/parallax-gig-demo", label: "Stage View Demo", description: "Preview & test parallax stage" },
     ],
   },
   {
