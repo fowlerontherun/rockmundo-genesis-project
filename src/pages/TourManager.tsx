@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
-import { TourCreationWizard } from "@/components/tour/TourCreationWizard";
+import { TourWizard } from "@/components/tours/TourWizard";
 
 interface Tour {
   id: string;
@@ -518,14 +518,20 @@ const TourManager = () => {
       </Dialog>
 
       {/* Tour Creation Wizard */}
-      {currentBandId && primaryBand?.bands?.name && (
-        <TourCreationWizard
-          isOpen={wizardOpen}
-          onClose={() => setWizardOpen(false)}
-          bandId={currentBandId}
-          bandName={primaryBand.bands.name}
-        />
-      )}
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Tour - {primaryBand?.bands?.name}</DialogTitle>
+          </DialogHeader>
+          {currentBandId && (
+            <TourWizard
+              bandId={currentBandId}
+              onComplete={() => setWizardOpen(false)}
+              onCancel={() => setWizardOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

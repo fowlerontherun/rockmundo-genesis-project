@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.390",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Tour Manager now uses the new 9-step wizard instead of old 4-step version" },
+    ],
+  },
+  {
     version: "1.0.389",
     date: "2026-01-16",
     changes: [
