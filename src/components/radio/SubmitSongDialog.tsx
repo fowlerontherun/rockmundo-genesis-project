@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Music, CheckCircle2, XCircle } from "lucide-react";
+import { Music, CheckCircle2, XCircle, AlertTriangle, Lock, MapPin } from "lucide-react";
 import { useRadioStations, type RadioStation } from "@/hooks/useRadioStations";
 
 interface SubmitSongDialogProps {
@@ -19,6 +20,51 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
   const [selectedSongId, setSelectedSongId] = useState<string>("");
   const { submitToStation, isSubmitting } = useRadioStations();
 
+  // Fetch user's band and country fame
+  const { data: bandData } = useQuery({
+    queryKey: ["user-band-for-radio"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!profile) return null;
+
+      const { data: band } = await supabase
+        .from("bands")
+        .select("id, name, fame")
+        .eq("leader_id", profile.id)
+        .maybeSingle();
+
+      return band;
+    },
+    enabled: open,
+  });
+
+  // Fetch band's fame in the station's country
+  const { data: countryFame = 0 } = useQuery({
+    queryKey: ["band-country-fame", bandData?.id, station.country],
+    queryFn: async () => {
+      if (!bandData?.id || !station.country) return 0;
+
+      const { data } = await supabase.rpc("get_band_country_fame", {
+        p_band_id: bandData.id,
+        p_country: station.country,
+      });
+
+      return data || 0;
+    },
+    enabled: !!bandData?.id && !!station.country && open,
+  });
+
+  const minFameRequired = station.min_fame_required || 0;
+  const hasEnoughFame = countryFame >= minFameRequired;
+
   // Fetch user's released songs AND songs with upcoming releases
   const { data: songs = [], isLoading } = useQuery({
     queryKey: ["user-songs-for-radio"],
@@ -29,7 +75,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
       // Get released songs
       const { data: releasedSongs, error: releasedError } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score, status")
+        .select("id, title, genre, quality_score, status, band_id")
         .eq("user_id", user.id)
         .eq("status", "released")
         .order("created_at", { ascending: false });
@@ -40,7 +86,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
       const { data: releaseSongs, error: releaseError } = await supabase
         .from("release_songs")
         .select(`
-          song:songs!inner(id, title, genre, quality_score, status, user_id)
+          song:songs!inner(id, title, genre, quality_score, status, user_id, band_id)
         `)
         .eq("song.user_id", user.id);
 
@@ -62,6 +108,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
             genre: song.genre, 
             quality_score: song.quality_score,
             status: song.status,
+            band_id: song.band_id,
             hasRelease: true 
           });
         } else if (song && songMap.has(song.id)) {
@@ -76,10 +123,12 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
 
   const handleSubmit = () => {
     if (!selectedSongId) return;
+    const song = songs.find(s => s.id === selectedSongId);
 
     submitToStation({
       stationId: station.id,
       songId: selectedSongId,
+      bandId: song?.band_id,
     });
 
     onOpenChange(false);
@@ -108,7 +157,30 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
+        {/* Country Fame Requirement Alert */}
+        {minFameRequired > 0 && (
+          <Alert variant={hasEnoughFame ? "default" : "destructive"} className="mb-4">
+            <MapPin className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                {station.country} fame required: <strong>{minFameRequired}</strong>
+              </span>
+              <Badge variant={hasEnoughFame ? "default" : "destructive"}>
+                Your fame: {countryFame}
+              </Badge>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!hasEnoughFame && minFameRequired > 0 ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="font-medium">Station Locked</p>
+            <p className="text-sm mt-2">
+              Build more fame in {station.country} through gigs, radio plays, and PR to unlock this station.
+            </p>
+          </div>
+        ) : isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Loading songs...</div>
         ) : songs.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
@@ -173,7 +245,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedSongId || isSubmitting}
+            disabled={!selectedSongId || isSubmitting || !hasEnoughFame}
           >
             {isSubmitting ? "Submitting..." : "Submit Song"}
           </Button>

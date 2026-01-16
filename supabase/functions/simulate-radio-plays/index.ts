@@ -43,7 +43,7 @@ serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    // Get active playlists with their songs
+    // Get active playlists with their songs and station country info
     const { data: playlists, error: playlistError } = await supabaseClient
       .from("radio_playlists")
       .select(`
@@ -55,7 +55,7 @@ serve(async (req) => {
           station_id,
           show_name,
           is_active,
-          radio_stations(id, name, listener_base, quality_level)
+          radio_stations(id, name, listener_base, quality_level, country)
         ),
         songs(id, title, band_id, user_id, hype, quality_score)
       `)
@@ -131,10 +131,23 @@ serve(async (req) => {
 
         if (band) {
           const fameGain = Math.round(hypeGained * 0.5 * voteMultiplier);
+          const fanGain = Math.round(hypeGained * 0.2);
+          
           await supabaseClient
             .from("bands")
             .update({ fame: (band.fame || 0) + fameGain })
             .eq("id", song.band_id);
+
+          // Add regional fame for the station's country
+          const stationCountry = station.country;
+          if (stationCountry) {
+            await supabaseClient.rpc("add_band_country_fame", {
+              p_band_id: song.band_id,
+              p_country: stationCountry,
+              p_fame_amount: fameGain,
+              p_fans_amount: fanGain,
+            });
+          }
         }
       }
 

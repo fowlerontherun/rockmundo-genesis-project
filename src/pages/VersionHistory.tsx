@@ -18,13 +18,14 @@ const versionHistory: VersionEntry[] = [
     date: "2026-01-16",
     changes: [
       { type: 'feature', description: "Added 130+ local radio stations for major cities worldwide" },
-      { type: 'feature', description: "Added 5 time-slot shows per station (Morning Drive, Midday Mix, Afternoon Drive, Evening Vibes, Late Night)" },
-      { type: 'feature', description: "Created radio_invitations table for interview/live lounge features (Phase 3)" },
-      { type: 'feature', description: "Added country-based fame requirements for radio submissions" },
-      { type: 'feature', description: "Created get_band_country_fame and add_band_country_fame utility functions" },
-      { type: 'improvement', description: "National stations now require fame based on quality level (100-5000)" },
+      { type: 'feature', description: "Added 5 time-slot shows per station (Morning Drive, Midday, Afternoon Drive, Evening, Late Night)" },
+      { type: 'feature', description: "Radio submissions now check country-specific fame requirements" },
+      { type: 'feature', description: "Gigs and radio plays now build regional fame in band_country_fans table" },
+      { type: 'feature', description: "Added city filter to radio station browser" },
+      { type: 'fix', description: "Fixed UK/United Kingdom country name inconsistency" },
+      { type: 'improvement', description: "Submit dialog shows country fame requirement and lock status" },
+      { type: 'improvement', description: "National stations require fame based on quality level (100-5000)" },
       { type: 'improvement', description: "Local stations accept region-specific genres (Latin in South America, K-Pop in Asia, etc.)" },
-      { type: 'improvement', description: "Added country column to release_sales for regional tracking" },
     ]
   },
   {

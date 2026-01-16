@@ -21,10 +21,10 @@ serve(async (req) => {
 
     console.log(`Completing gig ${gigId}`);
 
-    // Get gig and outcome
+    // Get gig and outcome with venue country info
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(city_id)')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(city_id, city, country)')
       .eq('id', gigId)
       .single();
 
@@ -271,6 +271,22 @@ serve(async (req) => {
       .eq('id', gig.band_id);
 
     if (bandError) throw bandError;
+
+    // Add regional fame for the gig's country
+    const venueCountry = gig.venues?.country;
+    if (venueCountry && gig.band_id) {
+      try {
+        await supabaseClient.rpc("add_band_country_fame", {
+          p_band_id: gig.band_id,
+          p_country: venueCountry,
+          p_fame_amount: fameGained,
+          p_fans_amount: newFansTotal,
+        });
+        console.log(`Added ${fameGained} fame and ${newFansTotal} fans to ${venueCountry} for band`);
+      } catch (e) {
+        console.log('add_band_country_fame RPC may not exist, skipping regional fame:', e);
+      }
+    }
 
     // Record fan conversion in gig_fan_conversions table if it exists
     try {
