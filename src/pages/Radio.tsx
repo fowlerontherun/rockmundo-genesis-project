@@ -61,6 +61,7 @@ import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard"
 import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
 import { SongsInRotation } from "@/components/radio/SongsInRotation";
 import { RadioInvitations } from "@/components/radio/RadioInvitations";
+import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
 
 import type { Database } from "@/lib/supabase-types";
 
@@ -820,10 +821,17 @@ export default function Radio() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="mt-4 space-y-4">
+            {/* My Airplay Stats - Always shown */}
+            {user && <MyAirplayStats userId={user.id} />}
+
+            {/* Songs in Rotation - Always shown */}
+            {user && <SongsInRotation userId={user.id} />}
+
+            {/* Station-specific analytics */}
             {!activeStation ? (
               <Alert>
                 <AlertTitle>Select a Station</AlertTitle>
-                <AlertDescription>Choose a station to view analytics.</AlertDescription>
+                <AlertDescription>Choose a station above to view station-specific analytics.</AlertDescription>
               </Alert>
             ) : (
               <>
@@ -1016,8 +1024,6 @@ export default function Radio() {
                   </Card>
                 )}
 
-                {/* Songs in Rotation */}
-                {user && <SongsInRotation userId={user.id} />}
               </>
             )}
           </TabsContent>
