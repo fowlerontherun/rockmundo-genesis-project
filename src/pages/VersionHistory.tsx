@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.404",
+    date: "2026-01-16",
+    changes: [
+      { type: 'improvement', description: "Updated How to Play guide with Gettit forum, DikCok videos, and recent features" },
+      { type: 'improvement', description: "Completed Spanish translations for all game features" },
+      { type: 'improvement', description: "Completed Turkish translations for all game features" },
+      { type: 'feature', description: "Added Gettit translation keys for Spanish and Turkish" },
+    ],
+  },
+  {
     version: "1.0.403",
     date: "2026-01-16",
     changes: [
