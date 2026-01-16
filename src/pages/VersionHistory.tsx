@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.411",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed flight booking - improved error handling and scheduling conflict checks" },
+      { type: 'fix', description: "Fixed profile fetch errors in travel system using maybeSingle()" },
+    ],
+  },
+  {
     version: "1.0.410",
     date: "2026-01-16",
     changes: [

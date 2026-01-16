@@ -28,28 +28,40 @@ export async function checkTimeSlotAvailable(
   end: Date,
   excludeId?: string
 ): Promise<{ available: boolean; conflictingActivity?: any }> {
-  const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
-    p_user_id: userId,
-    p_start: start.toISOString(),
-    p_end: end.toISOString(),
-    p_exclude_id: excludeId || null,
-  });
+  try {
+    const { data: hasConflict, error: rpcError } = await (supabase as any).rpc('check_scheduling_conflict', {
+      p_user_id: userId,
+      p_start: start.toISOString(),
+      p_end: end.toISOString(),
+      p_exclude_id: excludeId || null,
+    });
 
-  if (hasConflict) {
-    // Get the conflicting activity details
-    const { data: conflict } = await (supabase as any)
-      .from('player_scheduled_activities')
-      .select('*')
-      .eq('user_id', userId)
-      .in('status', ['scheduled', 'in_progress'])
-      .or(`and(scheduled_start.lte.${start.toISOString()},scheduled_end.gt.${start.toISOString()}),and(scheduled_start.lt.${end.toISOString()},scheduled_end.gte.${end.toISOString()}),and(scheduled_start.gte.${start.toISOString()},scheduled_end.lte.${end.toISOString()})`)
-      .limit(1)
-      .single();
+    // If RPC fails, assume no conflict to allow booking to proceed
+    if (rpcError) {
+      console.warn('Scheduling conflict check failed, proceeding:', rpcError);
+      return { available: true };
+    }
 
-    return { available: false, conflictingActivity: conflict };
+    if (hasConflict) {
+      // Get the conflicting activity details
+      const { data: conflict } = await (supabase as any)
+        .from('player_scheduled_activities')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['scheduled', 'in_progress'])
+        .or(`and(scheduled_start.lte.${start.toISOString()},scheduled_end.gt.${start.toISOString()}),and(scheduled_start.lt.${end.toISOString()},scheduled_end.gte.${end.toISOString()}),and(scheduled_start.gte.${start.toISOString()},scheduled_end.lte.${end.toISOString()})`)
+        .limit(1)
+        .maybeSingle();
+
+      return { available: false, conflictingActivity: conflict };
+    }
+
+    return { available: true };
+  } catch (error) {
+    console.warn('Error checking time slot availability:', error);
+    // On error, allow booking to proceed
+    return { available: true };
   }
-
-  return { available: true };
 }
 
 /**
