@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.358",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Tour Manager 'Create Tour' button not opening the tour wizard" },
+      { type: 'fix', description: "Fixed Songwriting page crash caused by infinite render loop in rehearsal unlocks" },
+      { type: 'fix', description: "Fixed 406 error when checking player activity status (used maybeSingle)" },
+    ]
+  },
+  {
     version: "1.0.357",
     date: "2026-01-16",
     changes: [
