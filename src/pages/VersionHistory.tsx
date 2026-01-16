@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.372",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'Could not find function public.join_jam_session' error - now uses direct DB insert" },
+      { type: 'fix', description: "Jam Sessions page now uses enhanced component with booking/scheduling features" },
+      { type: 'feature', description: "Jam sessions show scheduled start time, duration, and cost per participant" },
+      { type: 'improvement', description: "Join session now properly deducts cost and adds to participants table" },
+    ],
+  },
+  {
     version: "1.0.371",
     date: "2026-01-16",
     changes: [
