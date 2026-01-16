@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.412",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed flight booking failing when travel duration is fractional (e.g. 3.9h)" },
+    ],
+  },
+  {
     version: "1.0.411",
     date: "2026-01-16",
     changes: [
