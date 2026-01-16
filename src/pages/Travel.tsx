@@ -12,10 +12,13 @@ import { AuthContext } from "@/hooks/use-auth-context";
 import { useTranslation } from "@/hooks/useTranslation";
 import { TravelDestinationBrowser } from "@/components/travel/TravelDestinationBrowser";
 import { TransportComparison } from "@/components/travel/TransportComparison";
+import { DepartureTimePicker } from "@/components/travel/DepartureTimePicker";
 import { bookTravel } from "@/utils/travelSystem";
 import { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
+import { getNextAvailableDeparture, isValidDeparture, formatHourToTime, calculateArrivalTime } from "@/utils/transportSchedules";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 interface TravelHistoryEntry {
   id: string;
@@ -55,6 +58,10 @@ const Travel = () => {
   const [selectedDestination, setSelectedDestination] = useState<SelectedDestination | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
+  
+  // Departure scheduling state
+  const [departureDate, setDepartureDate] = useState<Date | null>(null);
+  const [departureHour, setDepartureHour] = useState<number | null>(null);
 
   useEffect(() => {
     const loadTravelData = async () => {
@@ -102,17 +109,41 @@ const Travel = () => {
 
   const handleSelectDestination = (destination: SelectedDestination) => {
     setSelectedDestination(destination);
+    // Reset mode and departure selection
+    setSelectedMode(null);
+    setDepartureDate(null);
+    setDepartureHour(null);
+    
     // Auto-select cheapest option
     if (destination.cheapestOption) {
       setSelectedMode(destination.cheapestOption.mode);
     }
   };
 
+  // Auto-set next available departure when mode changes
+  useEffect(() => {
+    if (selectedMode && !departureDate) {
+      const next = getNextAvailableDeparture(selectedMode);
+      setDepartureDate(next.date);
+      setDepartureHour(next.hour);
+    }
+  }, [selectedMode]);
+
   const handleBookTravel = async () => {
-    if (!user || !selectedDestination || !selectedMode || !currentCity) return;
+    if (!user || !selectedDestination || !selectedMode || !currentCity || !departureDate || departureHour === null) return;
 
     const selectedOption = selectedDestination.options.find(o => o.mode === selectedMode);
     if (!selectedOption) return;
+
+    // Validate departure
+    if (!isValidDeparture(departureDate, departureHour, selectedMode)) {
+      toast.error("Please select a valid departure time");
+      return;
+    }
+
+    // Create scheduled departure time
+    const scheduledDeparture = new Date(departureDate);
+    scheduledDeparture.setHours(departureHour, 0, 0, 0);
 
     setIsBooking(true);
     try {
@@ -125,9 +156,13 @@ const Travel = () => {
         cost: selectedOption.cost,
         durationHours: selectedOption.durationHours,
         comfortRating: selectedOption.comfort,
+        scheduledDepartureTime: scheduledDeparture.toISOString(),
       });
 
-      toast.success(`Travel booked! Arriving in ${selectedDestination.city.name} in ${formatDuration(selectedOption.durationHours)}`);
+      const arrivalTime = calculateArrivalTime(departureDate, departureHour, selectedOption.durationHours);
+      toast.success(
+        `Travel booked! Departing ${formatHourToTime(departureHour)}, arriving in ${selectedDestination.city.name} at ${format(arrivalTime, "h:mm a")}`
+      );
       
       // Refresh profile data
       queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -135,6 +170,8 @@ const Travel = () => {
       // Close dialog
       setSelectedDestination(null);
       setSelectedMode(null);
+      setDepartureDate(null);
+      setDepartureHour(null);
 
       // Reload page data
       window.location.reload();
@@ -165,6 +202,11 @@ const Travel = () => {
     }
     return `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
   };
+
+  // Get selected option for validation
+  const selectedOption = selectedDestination?.options.find(o => o.mode === selectedMode);
+  const hasValidDeparture = selectedMode && departureDate && departureHour !== null &&
+    isValidDeparture(departureDate, departureHour, selectedMode);
 
   if (loading) {
     return (
@@ -297,7 +339,7 @@ const Travel = () => {
 
       {/* Booking Dialog */}
       <Dialog open={!!selectedDestination} onOpenChange={(open) => !open && setSelectedDestination(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plane className="h-5 w-5" />
@@ -328,9 +370,26 @@ const Travel = () => {
               <TransportComparison
                 options={selectedDestination.options}
                 selectedMode={selectedMode}
-                onSelectMode={setSelectedMode}
+                onSelectMode={(mode) => {
+                  setSelectedMode(mode);
+                  // Reset departure when mode changes
+                  setDepartureDate(null);
+                  setDepartureHour(null);
+                }}
                 userCash={profile?.cash || 0}
               />
+
+              {/* Departure Time Picker - only show when mode is selected */}
+              {selectedMode && selectedOption && (
+                <DepartureTimePicker
+                  transportType={selectedMode}
+                  durationHours={selectedOption.durationHours}
+                  selectedDate={departureDate}
+                  selectedHour={departureHour}
+                  onDateChange={setDepartureDate}
+                  onHourChange={setDepartureHour}
+                />
+              )}
             </div>
           )}
 
@@ -340,12 +399,17 @@ const Travel = () => {
             </Button>
             <Button
               onClick={handleBookTravel}
-              disabled={!selectedMode || isBooking || !selectedDestination?.options.find(o => o.mode === selectedMode)?.available}
+              disabled={
+                !selectedMode || 
+                isBooking || 
+                !hasValidDeparture ||
+                !selectedOption?.available
+              }
             >
               {isBooking ? t('travel.booking') : t('travel.bookTravel')}
-              {selectedMode && selectedDestination?.options.find(o => o.mode === selectedMode) && (
+              {selectedOption && (
                 <span className="ml-2">
-                  (${selectedDestination.options.find(o => o.mode === selectedMode)?.cost})
+                  (${selectedOption.cost})
                 </span>
               )}
             </Button>
