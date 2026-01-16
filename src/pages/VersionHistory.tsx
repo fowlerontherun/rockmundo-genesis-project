@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.361",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed songs showing 0 streams/$0 - now aggregates from song_releases table" },
+      { type: 'fix', description: "Fixed recordings tab blank - now queries recording_sessions by band_id directly" },
+      { type: 'fix', description: "Fixed radio plays using wrong column (listener_count→listeners)" },
+      { type: 'fix', description: "Fixed gigs using wrong columns (gig_date→scheduled_date, actual_earnings→payment)" },
+      { type: 'feature', description: "Song detail dialog now shows streams and revenue from song_releases" },
+      { type: 'improvement', description: "Radio plays now show hype gained from airplay" },
+      { type: 'improvement', description: "Gigs now show tickets sold alongside attendance" },
+    ]
+  },
+  {
     version: "1.0.360",
     date: "2026-01-16",
     changes: [
