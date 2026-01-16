@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
+import { TourCreationWizard } from "@/components/tour/TourCreationWizard";
 
 interface Tour {
   id: string;
@@ -53,6 +54,7 @@ const TourManager = () => {
   const currentBandId = primaryBand?.bands?.id;
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Fetch user's band tours
   const { data: myTours = [], isLoading: loadingMyTours } = useQuery({
@@ -229,7 +231,7 @@ const TourManager = () => {
           <h1 className="text-3xl font-bold">Tour Manager</h1>
           <p className="text-muted-foreground">Plan and manage your band's tours</p>
         </div>
-        <Button>
+        <Button onClick={() => setWizardOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Tour
         </Button>
@@ -300,7 +302,7 @@ const TourManager = () => {
                 <p className="text-muted-foreground mb-4">
                   Start planning your first tour to grow your fanbase across different cities!
                 </p>
-                <Button>
+                <Button onClick={() => setWizardOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Tour
                 </Button>
@@ -514,6 +516,16 @@ const TourManager = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Tour Creation Wizard */}
+      {currentBandId && primaryBand?.bands?.name && (
+        <TourCreationWizard
+          isOpen={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          bandId={currentBandId}
+          bandName={primaryBand.bands.name}
+        />
+      )}
     </div>
   );
 };

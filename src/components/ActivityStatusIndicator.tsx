@@ -25,7 +25,7 @@ export function ActivityStatusIndicator() {
         .gte('scheduled_end', now)
         .order('scheduled_start', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       setCurrentActivity(data);
       setLoading(false);

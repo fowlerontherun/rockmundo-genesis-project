@@ -727,14 +727,16 @@ const Songwriting = () => {
 
   useEffect(() => {
     setRehearsalUnlocks((previous) => {
+      let hasChanges = false;
       const nextUnlocks = { ...previous };
       projectsList.forEach((project) => {
         if (!project.id) return;
-        if (project.creative_brief?.rating_revealed_at) {
+        if (project.creative_brief?.rating_revealed_at && !previous[project.id]) {
           nextUnlocks[project.id] = true;
+          hasChanges = true;
         }
       });
-      return nextUnlocks;
+      return hasChanges ? nextUnlocks : previous;
     });
   }, [projectsList]);
 
