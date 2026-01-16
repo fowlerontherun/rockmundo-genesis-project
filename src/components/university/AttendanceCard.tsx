@@ -1,11 +1,12 @@
 import { format } from "date-fns";
-import { CalendarCheck, Clock, TrendingUp } from "lucide-react";
+import { CalendarCheck, CheckCircle, Clock, TrendingUp, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 interface AttendanceCardProps {
   canAttendClass: boolean;
@@ -73,13 +74,26 @@ export function AttendanceCard({
           </Alert>
         )}
 
-        <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
+        {/* Enhanced auto-attend toggle with clear visual state */}
+        <div className={cn(
+          "flex items-center justify-between rounded-lg border p-4 transition-colors",
+          autoAttendEnabled 
+            ? "bg-green-500/10 border-green-500/30" 
+            : "bg-red-500/10 border-red-500/30"
+        )}>
           <div className="space-y-0.5">
-            <Label htmlFor="auto-attend" className="text-base font-medium">
+            <Label htmlFor="auto-attend" className="text-base font-medium flex items-center gap-2">
+              {autoAttendEnabled ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <XCircle className="h-4 w-4 text-red-500" />
+              )}
               Auto-attend classes
             </Label>
             <p className="text-sm text-muted-foreground">
-              Automatically attend when class opens each day
+              {autoAttendEnabled 
+                ? "Automatically attending class each day" 
+                : "Manual attendance required"}
             </p>
           </div>
           <Switch
@@ -87,6 +101,9 @@ export function AttendanceCard({
             checked={autoAttendEnabled}
             onCheckedChange={onToggleAutoAttend}
             disabled={isTogglingAuto}
+            className={cn(
+              autoAttendEnabled && "data-[state=checked]:bg-green-500"
+            )}
           />
         </div>
 
@@ -119,9 +136,9 @@ export function AttendanceCard({
         </Button>
 
         {autoAttendEnabled && (
-          <div className="rounded-lg bg-primary/5 p-3 text-sm text-muted-foreground">
+          <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">Auto</Badge>
+              <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-700 dark:text-green-300">Auto</Badge>
               Daily attendance will be automatically recorded at 10 AM
             </p>
           </div>

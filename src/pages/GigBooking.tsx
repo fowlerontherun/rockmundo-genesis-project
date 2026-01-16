@@ -449,32 +449,39 @@ const GigBooking = () => {
         throw error;
       }
 
-      // Create scheduled activity for the gig (blocks band during performance)
+      // Create scheduled activity for ALL band members (blocks everyone during performance)
       const gigEndTime = new Date(scheduledDateTime);
       const [endHours, endMinutes] = slot.endTime.split(':');
       gigEndTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
 
-      // Create activity for band leader - get profile first
-      if (user?.id) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileData) {
-          await supabase.from('player_scheduled_activities').insert({
-            user_id: user.id,
-            profile_id: profileData.id,
-            activity_type: 'gig',
-            title: `Gig at ${bookingVenue.name}`,
-            scheduled_start: scheduledDateTime.toISOString(),
-            scheduled_end: gigEndTime.toISOString(),
-            status: 'scheduled',
-            linked_gig_id: newGig.id,
-          });
-        }
-      }
+      // Fetch venue's city timezone for proper time display
+      const { data: venueWithCity } = await supabase
+        .from('venues')
+        .select('cities(timezone, name)')
+        .eq('id', bookingVenue.id)
+        .single();
+      
+      const venueTimezone = (venueWithCity?.cities as any)?.timezone;
+      const venueCityName = (venueWithCity?.cities as any)?.name;
+
+      // Import and use band-wide scheduling
+      const { createBandScheduledActivities } = await import('@/utils/bandActivityScheduling');
+      
+      await createBandScheduledActivities({
+        bandId: band.id,
+        activityType: 'gig',
+        scheduledStart: scheduledDateTime,
+        scheduledEnd: gigEndTime,
+        title: `Gig at ${bookingVenue.name}`,
+        location: bookingVenue.name,
+        linkedGigId: newGig.id,
+        metadata: {
+          venueId: bookingVenue.id,
+          slotId: selectedSlot,
+          venue_timezone: venueTimezone,
+          venue_city_name: venueCityName,
+        },
+      });
 
       toast({
         title: 'Gig booked!',

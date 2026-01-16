@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.391",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Activities now display across all hours they span (multi-hour support)" },
+      { type: 'feature', description: "Visual indicators (Starts/Continues/Ends) for multi-hour activities" },
+      { type: 'fix', description: "Band gigs now block ALL band members' schedules, not just leader" },
+      { type: 'fix', description: "University auto-attend now creates schedule entries for blocking" },
+      { type: 'improvement', description: "Enhanced auto-attend toggle with green (ON) / red (OFF) visual states" },
+      { type: 'feature', description: "Timezone support - gig times display in venue's local time" },
+    ],
+  },
+  {
     version: "1.0.390",
     date: "2026-01-16",
     changes: [
