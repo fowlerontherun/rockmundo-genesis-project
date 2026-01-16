@@ -2,8 +2,22 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Music, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, Music, Users, Trash2 } from "lucide-react";
 import { OwnershipBreakdown } from "./OwnershipBreakdown";
+import { removeFromRepertoire } from "@/utils/bandRoyalties";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SongOwnership {
   user_id: string;
@@ -48,6 +62,30 @@ const getStatusVariant = (status: string): "default" | "secondary" | "outline" =
 
 export const RepertoireSongCard = ({ song, bandId }: RepertoireSongCardProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const handleRemoveFromRepertoire = async () => {
+    setIsRemoving(true);
+    try {
+      await removeFromRepertoire(song.id, bandId);
+      toast({
+        title: "Removed from Repertoire",
+        description: `"${song.title}" has been removed from the band's repertoire`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["band-repertoire-songs", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["band-songs", bandId] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove song",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemoving(false);
+    }
+  };
 
   return (
     <Card>
@@ -94,6 +132,33 @@ export const RepertoireSongCard = ({ song, bandId }: RepertoireSongCardProps) =>
                 <ChevronDown className="h-4 w-4" />
               )}
             </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  disabled={isRemoving}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove from Repertoire?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove "{song.title}" from the band's repertoire. The song will return to being a personal song. This action can be undone by adding it back to the repertoire.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleRemoveFromRepertoire}>
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

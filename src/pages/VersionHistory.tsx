@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.379",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Added remove button to repertoire song cards with confirmation dialog" },
+    ],
+  },
+  {
     version: "1.0.378",
     date: "2026-01-16",
     changes: [
