@@ -177,7 +177,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
     enabled: !!bandId,
   });
 
-  // Fetch gig history - use correct column names
+  // Fetch gig history - use correct column names and disambiguate FK
   const { data: gigs = [], isLoading: loadingGigs } = useQuery({
     queryKey: ["band-gigs", bandId],
     queryFn: async () => {
@@ -193,7 +193,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           payment,
           attendance,
           tickets_sold,
-          venues(name, city)
+          venues!gigs_venue_id_fkey(name, city)
         `)
         .eq("band_id", bandId)
         .order("scheduled_date", { ascending: false })
