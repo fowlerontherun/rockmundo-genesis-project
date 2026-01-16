@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useState } from "react";
 
 export interface JamSession {
   id: string;
@@ -19,6 +20,9 @@ export interface JamSession {
   started_at?: string | null;
   completed_at?: string | null;
   total_xp_awarded?: number;
+  mood_score?: number;
+  synergy_score?: number;
+  gifted_song_id?: string | null;
   created_at: string;
   host?: {
     user_id: string;
@@ -35,16 +39,36 @@ export interface JamSessionOutcome {
   participant_id: string;
   xp_earned: number;
   chemistry_gained: number;
-  skill_improvement: number;
+  skill_slug: string | null;
+  skill_xp_gained: number;
   gifted_song_id: string | null;
   performance_rating: number;
   created_at: string;
+}
+
+export interface JamSessionResults {
+  session_id: string;
+  total_xp_awarded: number;
+  duration_minutes: number;
+  synergy_score: number;
+  mood_score: number;
+  gifted_song_id: string | null;
+  outcomes: {
+    participant_id: string;
+    xp_earned: number;
+    skill_slug: string;
+    skill_xp_gained: number;
+    chemistry_gained: number;
+    performance_rating: number;
+    received_song: boolean;
+  }[];
 }
 
 export const useJamSessions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [lastResults, setLastResults] = useState<JamSessionResults | null>(null);
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["jam-sessions"],
@@ -62,12 +86,38 @@ export const useJamSessions = () => {
     },
   });
 
+  const { data: myOutcomes = [] } = useQuery({
+    queryKey: ["jam-session-outcomes", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (!profile) return [];
+
+      const { data, error } = await supabase
+        .from("jam_session_outcomes")
+        .select("*")
+        .eq("participant_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as JamSessionOutcome[];
+    },
+    enabled: !!user?.id,
+  });
+
   const startSessionMutation = useMutation({
     mutationFn: async (sessionId: string) => {
       const { error } = await supabase
         .from("jam_sessions")
         .update({ 
           status: "active",
+          started_at: new Date().toISOString(),
         })
         .eq("id", sessionId);
 
@@ -91,22 +141,22 @@ export const useJamSessions = () => {
 
   const completeSessionMutation = useMutation({
     mutationFn: async ({ sessionId }: { sessionId: string; participants: string[] }) => {
-      // Update session status
-      const { error: sessionError } = await supabase
-        .from("jam_sessions")
-        .update({ 
-          status: "completed",
-        })
-        .eq("id", sessionId);
+      const { data, error } = await supabase.functions.invoke('complete-jam-session', {
+        body: { session_id: sessionId }
+      });
 
-      if (sessionError) throw sessionError;
-      return { totalXp: 50 };
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data as JamSessionResults;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setLastResults(data);
       queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["jam-session-outcomes"] });
       toast({
         title: "Session complete!",
-        description: "The jam session has ended.",
+        description: `${data.total_xp_awarded} XP awarded to all participants!`,
       });
     },
     onError: (error: any) => {
@@ -125,11 +175,13 @@ export const useJamSessions = () => {
     sessions,
     activeSessions,
     completedSessions,
-    myOutcomes: [] as JamSessionOutcome[],
+    myOutcomes,
     isLoading,
     startSession: startSessionMutation.mutate,
     completeSession: completeSessionMutation.mutate,
     isStarting: startSessionMutation.isPending,
     isCompleting: completeSessionMutation.isPending,
+    lastResults,
+    clearResults: () => setLastResults(null),
   };
 };

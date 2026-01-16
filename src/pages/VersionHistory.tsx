@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.368",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Complete Jam Sessions reward system with dynamic XP calculation" },
+      { type: 'feature', description: "Jam sessions now award XP to hierarchical skill tree (instruments_basic_guitar, etc.)" },
+      { type: 'feature', description: "Small chance (0.75-2.5%) to receive a 'gifted song' demo from jam sessions" },
+      { type: 'feature', description: "Weekly gifted song limit (1 per participant per week)" },
+      { type: 'feature', description: "New jam_session_outcomes table tracks detailed per-participant rewards" },
+      { type: 'feature', description: "JamSessionResultsDialog shows XP, skill gains, synergy, mood, and gifted songs" },
+      { type: 'feature', description: "InstrumentSelector component for choosing instruments when joining sessions" },
+      { type: 'improvement', description: "Session duration, synergy, and mood now affect XP rewards" },
+    ],
+  },
+  {
     version: "1.0.367",
     date: "2026-01-16",
     changes: [

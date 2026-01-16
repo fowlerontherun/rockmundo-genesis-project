@@ -5645,6 +5645,80 @@ export type Database = {
           },
         ]
       }
+      jam_gifted_song_log: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          session_id: string
+          song_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          session_id: string
+          song_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          session_id?: string
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_gifted_song_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_gifted_song_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_gifted_song_log_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_gifted_song_log_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_gifted_song_log_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_gifted_song_log_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_gifted_song_log_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_session_messages: {
         Row: {
           created_at: string | null
@@ -5691,10 +5765,100 @@ export type Database = {
           },
         ]
       }
+      jam_session_outcomes: {
+        Row: {
+          chemistry_gained: number
+          created_at: string
+          gifted_song_id: string | null
+          id: string
+          participant_id: string
+          performance_rating: number | null
+          session_id: string
+          skill_slug: string | null
+          skill_xp_gained: number
+          xp_earned: number
+        }
+        Insert: {
+          chemistry_gained?: number
+          created_at?: string
+          gifted_song_id?: string | null
+          id?: string
+          participant_id: string
+          performance_rating?: number | null
+          session_id: string
+          skill_slug?: string | null
+          skill_xp_gained?: number
+          xp_earned?: number
+        }
+        Update: {
+          chemistry_gained?: number
+          created_at?: string
+          gifted_song_id?: string | null
+          id?: string
+          participant_id?: string
+          performance_rating?: number | null
+          session_id?: string
+          skill_slug?: string | null
+          skill_xp_gained?: number
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_outcomes_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_session_outcomes_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_session_outcomes_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_outcomes_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_outcomes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_outcomes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_outcomes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_session_participants: {
         Row: {
           co_play_count: number | null
           id: string
+          instrument_skill_slug: string | null
           is_ready: boolean | null
           jam_session_id: string
           joined_at: string | null
@@ -5705,6 +5869,7 @@ export type Database = {
         Insert: {
           co_play_count?: number | null
           id?: string
+          instrument_skill_slug?: string | null
           is_ready?: boolean | null
           jam_session_id: string
           joined_at?: string | null
@@ -5715,6 +5880,7 @@ export type Database = {
         Update: {
           co_play_count?: number | null
           id?: string
+          instrument_skill_slug?: string | null
           is_ready?: boolean | null
           jam_session_id?: string
           joined_at?: string | null
@@ -5749,56 +5915,102 @@ export type Database = {
       jam_sessions: {
         Row: {
           access_code: string | null
+          completed_at: string | null
           created_at: string | null
           current_participants: number
           description: string | null
           genre: string
+          gifted_song_id: string | null
           host_id: string
           id: string
           is_private: boolean
           max_participants: number
+          mood_score: number | null
           name: string
           participant_ids: string[] | null
           skill_requirement: number
+          started_at: string | null
           status: string
+          synergy_score: number | null
           tempo: number
+          total_xp_awarded: number | null
           updated_at: string | null
         }
         Insert: {
           access_code?: string | null
+          completed_at?: string | null
           created_at?: string | null
           current_participants?: number
           description?: string | null
           genre: string
+          gifted_song_id?: string | null
           host_id: string
           id?: string
           is_private?: boolean
           max_participants?: number
+          mood_score?: number | null
           name: string
           participant_ids?: string[] | null
           skill_requirement?: number
+          started_at?: string | null
           status?: string
+          synergy_score?: number | null
           tempo?: number
+          total_xp_awarded?: number | null
           updated_at?: string | null
         }
         Update: {
           access_code?: string | null
+          completed_at?: string | null
           created_at?: string | null
           current_participants?: number
           description?: string | null
           genre?: string
+          gifted_song_id?: string | null
           host_id?: string
           id?: string
           is_private?: boolean
           max_participants?: number
+          mood_score?: number | null
           name?: string
           participant_ids?: string[] | null
           skill_requirement?: number
+          started_at?: string | null
           status?: string
+          synergy_score?: number | null
           tempo?: number
+          total_xp_awarded?: number | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "jam_sessions_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_gifted_song_id_fkey"
+            columns: ["gifted_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "jam_sessions_host_id_fkey"
             columns: ["host_id"]

@@ -1,5 +1,8 @@
 project_id = "yztogmdixmchsmimtent"
 
+[functions.complete-jam-session]
+verify_jwt = true
+
 [functions.promotions]
 verify_jwt = false
 
