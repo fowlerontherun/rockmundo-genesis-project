@@ -335,7 +335,7 @@ function App() {
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
                     <Route path="bands/search" element={<BandSearch />} />
-                    <Route path="bands/rankings" element={<BandRankings />} />
+                    <Route path="band-rankings" element={<BandRankings />} />
                     <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="avatar-designer" element={<AvatarDesigner />} />
