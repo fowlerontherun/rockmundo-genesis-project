@@ -458,26 +458,26 @@ serve(async (req) => {
     }
 
     // Create album physical sales chart entries (only for albums/EPs, not singles)
+    // Now that we have a partial unique index for album entries, we can insert these
     const albumPhysicalEntries = Array.from(albumPhysicalAggregated.values())
       .filter(entry => entry.release_type === "album" || entry.release_type === "ep")
       .sort((a, b) => b.total_sales - a.total_sales)
       .slice(0, 50)
       .map((entry, index) => ({
         release_id: entry.release_id,
-        song_id: null, // Album entries don't have a song_id - we'll use a placeholder
+        song_id: null, // Album entries use release_id instead
         chart_type: "record_sales_album",
         rank: index + 1,
         plays_count: entry.total_sales,
         chart_date: chartDate,
-        genre: null, // Could aggregate from songs if needed
+        genre: null,
         country: "all",
         sale_type: "physical",
         entry_type: "album",
       }));
 
-    // NOTE: We can't insert null song_id with the current unique constraint
-    // So we'll skip album entries for now and log it
-    console.log(`Would generate ${albumPhysicalEntries.length} album physical sales entries (skipped due to constraint)`);
+    chartEntries.push(...albumPhysicalEntries);
+    console.log(`Generated ${albumPhysicalEntries.length} album physical sales entries`);
 
     // === RADIO AIRPLAY CHARTS (ALL songs) ===
     const { data: radioPlays, error: radioError } = await supabaseClient
@@ -640,13 +640,24 @@ serve(async (req) => {
       }
     }
 
-    // NOTE: Album entries with null song_id can't be inserted with current unique constraint
-    // Log what we would generate
-    const albumEntries = Array.from(albumAggregated.values())
+    // Create album streaming chart entries - now possible with partial unique index
+    const albumStreamingEntries = Array.from(albumAggregated.values())
       .sort((a, b) => b.total_streams - a.total_streams)
-      .slice(0, 50);
-    
-    console.log(`Would generate ${albumEntries.length} album streaming chart entries (skipped due to constraint)`);
+      .slice(0, 50)
+      .map((entry, index) => ({
+        release_id: entry.release_id,
+        song_id: null, // Album entries use release_id instead
+        chart_type: "streaming_album",
+        rank: index + 1,
+        plays_count: entry.total_streams,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "album",
+      }));
+
+    chartEntries.push(...albumStreamingEntries);
+    console.log(`Generated ${albumStreamingEntries.length} album streaming chart entries`);
 
     // Log summary before insert
     console.log(`Total chart entries to insert: ${chartEntries.length}`);
