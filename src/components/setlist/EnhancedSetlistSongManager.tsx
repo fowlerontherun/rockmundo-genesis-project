@@ -100,6 +100,7 @@ export const EnhancedSetlistSongManager = ({
           setlist_id: setlistId,
           item_type: 'performance_item',
           performance_item_id: item.id,
+          song_id: null, // Explicitly set song_id to null for performance items
           position: nextPosition,
           section: 'main',
         });

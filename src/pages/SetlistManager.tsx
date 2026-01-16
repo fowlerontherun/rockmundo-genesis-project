@@ -63,7 +63,7 @@ const SetlistManager = () => {
   const { data: setlists, isLoading } = useSetlists(band?.id || null);
   const deleteSetlistMutation = useDeleteSetlist();
   
-  const canCreateSetlist = (setlists?.length || 0) < 3;
+  const canCreateSetlist = (setlists?.length || 0) < 5;
 
   const handleDelete = (setlistId: string) => {
     deleteSetlistMutation.mutate(setlistId);
@@ -95,7 +95,7 @@ const SetlistManager = () => {
               Create and manage setlists for {band.name}
             </p>
             <Badge variant="outline" className="mt-1">
-              {setlists?.length || 0}/3 Setlists
+              {setlists?.length || 0}/5 Setlists
             </Badge>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -127,7 +127,7 @@ const SetlistManager = () => {
         {!canCreateSetlist && (
           <Alert className="mb-6">
             <AlertDescription>
-              You've reached the maximum of 3 setlists. This limit helps you focus on perfecting your performances. Delete an existing setlist to create a new one.
+              You've reached the maximum of 5 setlists. This limit helps you focus on perfecting your performances. Delete an existing setlist to create a new one.
             </AlertDescription>
           </Alert>
         )}

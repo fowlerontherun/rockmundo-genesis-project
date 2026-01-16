@@ -422,7 +422,7 @@ const GigBooking = () => {
         ticketPrice: ticketPrice
       });
 
-      const { error } = await supabase.from('gigs').insert({
+      const { data: newGig, error } = await supabase.from('gigs').insert({
         band_id: band.id,
         venue_id: bookingVenue.id,
         scheduled_date: scheduledDateTime.toISOString(),
@@ -443,10 +443,37 @@ const GigBooking = () => {
         predicted_tickets: predictedTickets,
         tickets_sold: 0,
         last_ticket_update: new Date().toISOString(),
-      });
+      }).select().single();
 
       if (error) {
         throw error;
+      }
+
+      // Create scheduled activity for the gig (blocks band during performance)
+      const gigEndTime = new Date(scheduledDateTime);
+      const [endHours, endMinutes] = slot.endTime.split(':');
+      gigEndTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+      // Create activity for band leader - get profile first
+      if (user?.id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileData) {
+          await supabase.from('player_scheduled_activities').insert({
+            user_id: user.id,
+            profile_id: profileData.id,
+            activity_type: 'gig',
+            title: `Gig at ${bookingVenue.name}`,
+            scheduled_start: scheduledDateTime.toISOString(),
+            scheduled_end: gigEndTime.toISOString(),
+            status: 'scheduled',
+            linked_gig_id: newGig.id,
+          });
+        }
       }
 
       toast({
