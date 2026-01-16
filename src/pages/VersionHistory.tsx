@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.371",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed duplicate songs appearing in charts - now queries only base chart types when 'All' category selected" },
+      { type: 'fix', description: "Fixed album charts always empty - added partial unique index and enabled album chart entry insertion" },
+      { type: 'fix', description: "Fixed playlist submissions - now connects to real playlists table and inserts into playlist_submissions" },
+      { type: 'fix', description: "Playlists now deduct submission cost and record submissions properly" },
+      { type: 'improvement', description: "Seeded playlists and manufacturing costs tables with initial data" },
+      { type: 'improvement', description: "PlaylistsTab now shows streaming releases for submission instead of raw songs" },
+    ],
+  },
+  {
     version: "1.0.370",
     date: "2026-01-16",
     changes: [

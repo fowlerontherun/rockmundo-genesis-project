@@ -65,26 +65,26 @@ export const useCountryCharts = (
         return [];
       }
 
-      // Build all possible chart_type values to query
+      // Build chart_type values to query - FIXED: Only query base types when "all"
+      // to prevent duplicates from scoped variants
       let chartTypeFilter: string[] = [];
       
-      // Release category suffixes to check
-      const suffixes = releaseCategory === "all" 
-        ? ["", "_single", "_ep", "_album"]  // Query all variations when "all"
-        : [`_${releaseCategory}`];          // Query specific category
-
-      if (chartType === "combined") {
-        // Combined: query all chart types with all relevant suffixes
-        const baseTypes = ["streaming", "cd_sales", "vinyl_sales", "digital_sales", "cassette_sales"];
-        for (const baseType of baseTypes) {
-          for (const suffix of suffixes) {
-            chartTypeFilter.push(`${baseType}${suffix}`);
-          }
+      if (releaseCategory === "all") {
+        // When viewing all releases, query ONLY the base chart types
+        // This prevents duplicates from _single, _ep, _album variants
+        if (chartType === "combined") {
+          chartTypeFilter = ["streaming", "cd_sales", "vinyl_sales", "digital_sales", "cassette_sales"];
+        } else {
+          chartTypeFilter = [chartType];
         }
       } else {
-        // Specific chart type with all relevant suffixes
-        for (const suffix of suffixes) {
-          chartTypeFilter.push(`${chartType}${suffix}`);
+        // Query specific category suffix
+        const suffix = `_${releaseCategory}`;
+        if (chartType === "combined") {
+          const baseTypes = ["streaming", "cd_sales", "vinyl_sales", "digital_sales", "cassette_sales"];
+          chartTypeFilter = baseTypes.map(t => `${t}${suffix}`);
+        } else {
+          chartTypeFilter = [`${chartType}${suffix}`];
         }
       }
 
