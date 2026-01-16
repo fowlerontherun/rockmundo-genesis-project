@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.364",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Radio station invitations system - stations can now invite bands for interviews and live sessions" },
+      { type: 'feature', description: "New Invitations tab in Radio page with accept/decline/complete workflow" },
+      { type: 'feature', description: "Invitations reward fame, fans, and XP based on station size and invitation type" },
+      { type: 'feature', description: "Edge function to automatically generate invitations based on band fame and genre" },
+    ],
+  },
+  {
     version: "1.0.363",
     date: "2026-01-16",
     changes: [
