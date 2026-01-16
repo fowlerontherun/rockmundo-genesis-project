@@ -30,10 +30,11 @@ export async function validateTravelEligibility(userId: string, cost: number) {
     .from("profiles")
     .select("cash")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (profileError) {
-    throw new Error("Failed to fetch profile");
+    console.error('Travel eligibility check failed:', profileError);
+    throw new Error(`Failed to fetch profile: ${profileError.message}`);
   }
 
   if (!profile || (profile.cash || 0) < cost) {
@@ -72,9 +73,16 @@ export async function bookTravel(bookingData: TravelBookingData) {
     .from("profiles")
     .select("id, cash, display_name")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
-  if (profileError) throw profileError;
+  if (profileError) {
+    console.error('Profile fetch error:', profileError);
+    throw new Error(`Failed to fetch profile: ${profileError.message}`);
+  }
+  
+  if (!profile) {
+    throw new Error("Profile not found for this user");
+  }
 
   // Determine if travel starts immediately or is scheduled for later
   const now = new Date();
