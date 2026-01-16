@@ -16,10 +16,10 @@ export const PlayerGainsNews = () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("experience_ledger")
-        .select("xp_amount, source, recorded_at")
+        .select("xp_amount, activity_type, created_at")
         .eq("user_id", user.id)
-        .gte("recorded_at", `${today}T00:00:00`)
-        .order("recorded_at", { ascending: false });
+        .gte("created_at", `${today}T00:00:00`)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -66,7 +66,7 @@ export const PlayerGainsNews = () => {
             <div className="space-y-1 pl-6">
               {xpGains?.slice(0, 5).map((gain, index) => (
                 <div key={index} className="text-sm text-muted-foreground flex justify-between">
-                  <span>{gain.source}</span>
+                  <span className="capitalize">{gain.activity_type?.replace(/_/g, " ")}</span>
                   <Badge variant="outline" className="text-xs">+{gain.xp_amount}</Badge>
                 </div>
               ))}

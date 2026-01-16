@@ -7,6 +7,7 @@ import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/useTranslation";
+import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
 
 const Schedule = () => {
   const { t } = useTranslation();
@@ -41,6 +42,8 @@ const Schedule = () => {
           </Button>
         </div>
       </div>
+
+      <GigLocationWarning />
       
       <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
         <div className="flex items-center gap-2">

@@ -12,6 +12,9 @@ import { MilestoneNews } from "@/components/news/MilestoneNews";
 import { DealAnnouncements } from "@/components/news/DealAnnouncements";
 import { PersonalUpdates } from "@/components/news/PersonalUpdates";
 import { TopTracksNews } from "@/components/news/TopTracksNews";
+import { PlayerGainsNews } from "@/components/news/PlayerGainsNews";
+import { BandGainsNews } from "@/components/news/BandGainsNews";
+import { OtherBandsGigOutcomes } from "@/components/news/OtherBandsGigOutcomes";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function TodaysNewsPage() {
@@ -72,11 +75,20 @@ export default function TodaysNewsPage() {
       {/* Personal Updates - highlighted */}
       <PersonalUpdates />
 
+      {/* Player XP and Skill Gains */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <PlayerGainsNews />
+        <BandGainsNews />
+      </div>
+
       {/* Top Tracks - playable songs */}
       <TopTracksNews />
 
       {/* Last Night's Gigs - full width */}
       <LastNightGigs />
+
+      {/* Other Bands' Gig Outcomes */}
+      <OtherBandsGigOutcomes />
 
       {/* Band Invitations */}
       <BandInvitations />
