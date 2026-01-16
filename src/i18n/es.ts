@@ -135,6 +135,7 @@ export const es: TranslationKeys = {
     dikcok: "DikCok",
     community: "Comunidad",
     communityFeed: "Feed de Comunidad",
+    gettit: "Gettit",
     sponsorships: "Patrocinios",
     recordLabels: "Discográficas",
     adminPanel: "Panel de Admin",

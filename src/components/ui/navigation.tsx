@@ -184,7 +184,7 @@ const Navigation = () => {
         { icon: Twitter, labelKey: "nav.twaater", path: "/twaater" },
         { icon: Video, labelKey: "nav.dikcok", path: "/dikcok" },
         { icon: Heart, labelKey: "nav.relationships", path: "/relationships" },
-        { icon: HandHeart, labelKey: "nav.communityFeed", path: "/community/feed" },
+        { icon: HandHeart, labelKey: "nav.gettit", path: "/gettit" },
       ],
     },
     {
