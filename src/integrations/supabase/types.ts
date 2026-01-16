@@ -11563,6 +11563,79 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_invitations: {
+        Row: {
+          band_id: string
+          completed_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          fame_reward: number | null
+          fan_reward: number | null
+          id: string
+          invitation_type: string
+          responded_at: string | null
+          scheduled_at: string | null
+          show_id: string | null
+          station_id: string
+          status: string
+          xp_reward: number | null
+        }
+        Insert: {
+          band_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          fame_reward?: number | null
+          fan_reward?: number | null
+          id?: string
+          invitation_type: string
+          responded_at?: string | null
+          scheduled_at?: string | null
+          show_id?: string | null
+          station_id: string
+          status?: string
+          xp_reward?: number | null
+        }
+        Update: {
+          band_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          fame_reward?: number | null
+          fan_reward?: number | null
+          id?: string
+          invitation_type?: string
+          responded_at?: string | null
+          scheduled_at?: string | null
+          show_id?: string | null
+          station_id?: string
+          status?: string
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_invitations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_invitations_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "radio_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_invitations_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "radio_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_playlists: {
         Row: {
           added_at: string | null
@@ -12325,6 +12398,7 @@ export type Database = {
       }
       release_sales: {
         Row: {
+          country: string | null
           created_at: string
           id: string
           platform: string | null
@@ -12335,6 +12409,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          country?: string | null
           created_at?: string
           id?: string
           platform?: string | null
@@ -12345,6 +12420,7 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          country?: string | null
           created_at?: string
           id?: string
           platform?: string | null
@@ -17100,6 +17176,15 @@ export type Database = {
       }
     }
     Functions: {
+      add_band_country_fame: {
+        Args: {
+          p_band_id: string
+          p_country: string
+          p_fame_amount?: number
+          p_fans_amount?: number
+        }
+        Returns: undefined
+      }
       admin_force_complete_release: {
         Args: { p_release_id: string }
         Returns: undefined
@@ -17238,6 +17323,10 @@ export type Database = {
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
+      get_band_country_fame: {
+        Args: { p_band_id: string; p_country: string }
+        Returns: number
+      }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
