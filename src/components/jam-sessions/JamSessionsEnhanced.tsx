@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useJamSessions } from "@/hooks/useJamSessions";
+import { useJamSessionBooking } from "@/hooks/useJamSessionBooking";
 import { JamSessionCard } from "./JamSessionCard";
 import { JamSessionHistory } from "./JamSessionHistory";
 import { JamSessionBookingDialog } from "./JamSessionBookingDialog";
@@ -13,7 +14,7 @@ import { JamCommentaryFeed } from "./JamCommentaryFeed";
 import { JamVoiceChat } from "./JamVoiceChat";
 import { JamOutcomeReportDialog } from "./JamOutcomeReportDialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays } from "lucide-react";
+import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
   const { user } = useAuth();
@@ -31,18 +32,21 @@ export const JamSessionsEnhanced = () => {
     lastResults,
     clearResults,
   } = useJamSessions();
+  
+  const { joinJamSession, profile } = useJamSessionBooking();
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showResultsDialog, setShowResultsDialog] = useState(false);
+  const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
 
   // Find user's active session for chat/commentary
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !profile?.id) return;
     
     const myActiveSession = activeSessions.find(s => 
       s.status === 'active' && 
-      (s.host?.user_id === user.id || s.participant_ids?.includes(user.id))
+      (s.host_id === profile.id || s.participant_ids?.includes(profile.id))
     );
     
     if (myActiveSession) {
@@ -50,7 +54,7 @@ export const JamSessionsEnhanced = () => {
     } else {
       setActiveSessionId(null);
     }
-  }, [activeSessions, user?.id]);
+  }, [activeSessions, user?.id, profile?.id]);
 
   // Show results dialog when session completes
   useEffect(() => {
@@ -63,8 +67,28 @@ export const JamSessionsEnhanced = () => {
   const sessionsCompleted = myOutcomes.length;
 
   const handleJoinSession = async (sessionId: string) => {
-    // This will be handled by the JamSessionCard which will call the booking hook
-    toast({ title: "Use the booking dialog to join sessions" });
+    setJoiningSessionId(sessionId);
+    try {
+      await joinJamSession(sessionId);
+      toast({
+        title: "Joined session!",
+        description: "You're now part of this jam session.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Unable to join session",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setJoiningSessionId(null);
+    }
+  };
+
+  // Check if user is a participant of a session
+  const isUserParticipant = (session: any) => {
+    if (!profile?.id) return false;
+    return session.host_id === profile.id || session.participant_ids?.includes(profile.id);
   };
 
   return (
@@ -190,22 +214,42 @@ export const JamSessionsEnhanced = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {activeSessions.map((session) => {
-                const isHost = session.host?.user_id === user?.id;
-                const isParticipant = session.participant_ids?.includes(user?.id || "");
+                const isHost = session.host_id === profile?.id;
+                const isParticipant = isUserParticipant(session);
                 
                 return (
-                  <JamSessionCard
-                    key={session.id}
-                    session={session}
-                    isHost={isHost}
-                    isParticipant={isParticipant || isHost}
-                    onJoin={() => handleJoinSession(session.id)}
-                    onStart={() => startSession(session.id)}
-                    onComplete={() => completeSession({ sessionId: session.id, participants: session.participant_ids || [] })}
-                    isJoining={false}
-                    isStarting={isStarting}
-                    isCompleting={isCompleting}
-                  />
+                  <Card key={session.id} className="relative">
+                    <JamSessionCard
+                      session={session}
+                      isHost={isHost}
+                      isParticipant={isParticipant}
+                      onJoin={() => handleJoinSession(session.id)}
+                      onStart={() => startSession(session.id)}
+                      onComplete={() => completeSession({ sessionId: session.id, participants: session.participant_ids || [] })}
+                      isJoining={joiningSessionId === session.id}
+                      isStarting={isStarting}
+                      isCompleting={isCompleting}
+                    />
+                    
+                    {/* Show session details - scheduled time, cost, etc. */}
+                    {(session as any).scheduled_start && (
+                      <div className="px-4 pb-4 flex flex-wrap gap-2 text-xs text-muted-foreground border-t pt-3 mt-2">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date((session as any).scheduled_start).toLocaleString()}
+                        </span>
+                        {(session as any).duration_hours && (
+                          <span>• {(session as any).duration_hours}h duration</span>
+                        )}
+                        {(session as any).cost_per_participant && (
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            ${((session as any).cost_per_participant / 100).toFixed(2)}/person
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </Card>
                 );
               })}
             </div>

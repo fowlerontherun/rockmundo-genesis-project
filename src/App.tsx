@@ -178,7 +178,7 @@ const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
-const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
+const JamSessions = lazyWithRetry(() => import("./components/jam-sessions/JamSessionsEnhanced"));
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
 const OpenMicNights = lazyWithRetry(() => import("./pages/OpenMicNights"));
 const PerformOpenMic = lazyWithRetry(() => import("./pages/PerformOpenMic"));
