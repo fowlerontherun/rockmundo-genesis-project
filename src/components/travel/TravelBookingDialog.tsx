@@ -4,6 +4,8 @@ import { useTravelBooking } from "@/hooks/useTravelBooking";
 import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/travelSystem";
 import { checkTravelDisruptions } from "@/utils/gameCalendar";
 import { WeatherDisruptionAlert } from "@/components/travel/WeatherDisruptionAlert";
+import { DepartureTimePicker } from "@/components/travel/DepartureTimePicker";
+import { getNextAvailableDeparture, isValidDeparture } from "@/utils/transportSchedules";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { TravelDisruption } from "@/utils/gameCalendar";
@@ -18,9 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Train, Plane, Bus, Ship, Clock, DollarSign, Star, Loader2, Calendar } from "lucide-react";
+import { Train, Plane, Bus, Ship, Clock, DollarSign, Star, Loader2 } from "lucide-react";
 
 interface TravelBookingDialogProps {
   open: boolean;
@@ -51,17 +51,28 @@ export function TravelBookingDialog({
   const [playerMoney, setPlayerMoney] = useState(0);
   const [loading, setLoading] = useState(false);
   const [disruption, setDisruption] = useState<TravelDisruption | null>(null);
-  const [departureDate, setDepartureDate] = useState<string>("");
-  const [departureTime, setDepartureTime] = useState<string>("09:00");
+  
+  // Departure scheduling state
+  const [departureDate, setDepartureDate] = useState<Date | null>(null);
+  const [departureHour, setDepartureHour] = useState<number | null>(null);
 
   useEffect(() => {
     if (open && currentCityId) {
       loadRoutesAndMoney();
-      // Set default departure to today
-      const today = new Date().toISOString().split('T')[0];
-      setDepartureDate(today);
+      // Reset departure selection when opening
+      setDepartureDate(null);
+      setDepartureHour(null);
     }
   }, [open, currentCityId]);
+
+  // Auto-select next available departure when route is selected
+  useEffect(() => {
+    if (selectedRoute && !departureDate) {
+      const next = getNextAvailableDeparture(selectedRoute.transport_type);
+      setDepartureDate(next.date);
+      setDepartureHour(next.hour);
+    }
+  }, [selectedRoute]);
 
   useEffect(() => {
     if (preselectedDestinationId && routes.length > 0) {
@@ -102,22 +113,23 @@ export function TravelBookingDialog({
   };
 
   const handleBookTravel = async () => {
-    if (!selectedRoute || !user || !currentCityId || !departureDate || !departureTime) return;
+    if (!selectedRoute || !user || !currentCityId || !departureDate || departureHour === null) return;
 
-    const cost = calculateTravelCost(selectedRoute.base_cost, selectedRoute.comfort_rating || 50);
-    
-    // Combine date and time
-    const scheduledDeparture = new Date(`${departureDate}T${departureTime}`);
-    
-    // Validate departure is not in the past
-    if (scheduledDeparture < new Date()) {
+    // Validate departure is valid for transport type
+    if (!isValidDeparture(departureDate, departureHour, selectedRoute.transport_type)) {
       toast({
         title: "Invalid Departure Time",
-        description: "You cannot book travel in the past",
+        description: "Please select a valid departure time",
         variant: "destructive",
       });
       return;
     }
+
+    const cost = calculateTravelCost(selectedRoute.base_cost, selectedRoute.comfort_rating || 50);
+    
+    // Create departure datetime
+    const scheduledDeparture = new Date(departureDate);
+    scheduledDeparture.setHours(departureHour, 0, 0, 0);
 
     await travelMutation.mutateAsync({
       userId: user.id,
@@ -138,13 +150,16 @@ export function TravelBookingDialog({
     ? playerMoney >= calculateTravelCost(selectedRoute.base_cost, selectedRoute.comfort_rating || 50)
     : false;
 
+  const hasValidDeparture = selectedRoute && departureDate && departureHour !== null &&
+    isValidDeparture(departureDate, departureHour, selectedRoute.transport_type);
+
   const TransportIcon = selectedRoute 
     ? TRANSPORT_ICONS[selectedRoute.transport_type.toLowerCase() as keyof typeof TRANSPORT_ICONS] || Train
     : Train;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Book Travel</DialogTitle>
           <DialogDescription>
@@ -173,6 +188,9 @@ export function TravelBookingDialog({
                 onValueChange={(value) => {
                   const route = routes.find(r => r.id === value);
                   setSelectedRoute(route || null);
+                  // Reset departure when changing route
+                  setDepartureDate(null);
+                  setDepartureHour(null);
                 }}
               >
                 <SelectTrigger>
@@ -187,38 +205,6 @@ export function TravelBookingDialog({
                 </SelectContent>
               </Select>
             </div>
-
-            {selectedRoute && (
-              <>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="departure-date" className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Departure Date
-                    </Label>
-                    <Input
-                      id="departure-date"
-                      type="date"
-                      value={departureDate}
-                      onChange={(e) => setDepartureDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="departure-time" className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Departure Time
-                    </Label>
-                    <Input
-                      id="departure-time"
-                      type="time"
-                      value={departureTime}
-                      onChange={(e) => setDepartureTime(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
 
             {selectedRoute && (
               <>
@@ -238,45 +224,55 @@ export function TravelBookingDialog({
                       </div>
                     </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <DollarSign className="h-4 w-4" />
-                        <span className="text-xs">Cost</span>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <DollarSign className="h-4 w-4" />
+                          <span className="text-xs">Cost</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          ${calculateTravelCost(selectedRoute.base_cost, selectedRoute.comfort_rating || 50).toLocaleString()}
+                        </p>
                       </div>
-                      <p className="text-lg font-semibold">
-                        ${calculateTravelCost(selectedRoute.base_cost, selectedRoute.comfort_rating || 50).toLocaleString()}
-                      </p>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span className="text-xs">Duration</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          {selectedRoute.duration_hours}h
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Star className="h-4 w-4" />
+                          <span className="text-xs">Comfort</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          {selectedRoute.comfort_rating || 50}%
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span className="text-xs">Duration</span>
+                    {!canAfford && (
+                      <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                        Insufficient funds for this travel option
                       </div>
-                      <p className="text-lg font-semibold">
-                        {selectedRoute.duration_hours}h
-                      </p>
-                    </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Star className="h-4 w-4" />
-                        <span className="text-xs">Comfort</span>
-                      </div>
-                      <p className="text-lg font-semibold">
-                        {selectedRoute.comfort_rating || 50}%
-                      </p>
-                    </div>
-                  </div>
-
-                  {!canAfford && (
-                    <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                      Insufficient funds for this travel option
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                {/* Departure Time Picker */}
+                <DepartureTimePicker
+                  transportType={selectedRoute.transport_type}
+                  durationHours={selectedRoute.duration_hours}
+                  selectedDate={departureDate}
+                  selectedHour={departureHour}
+                  onDateChange={setDepartureDate}
+                  onHourChange={setDepartureHour}
+                />
               </>
             )}
 
@@ -290,13 +286,13 @@ export function TravelBookingDialog({
               </Button>
               <Button
                 onClick={handleBookTravel}
-                disabled={!selectedRoute || !canAfford || travelMutation.isPending}
+                disabled={!selectedRoute || !canAfford || !hasValidDeparture || travelMutation.isPending}
                 className="flex-1"
               >
                 {travelMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Traveling...
+                    Booking...
                   </>
                 ) : (
                   "Confirm Travel"

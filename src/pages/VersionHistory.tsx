@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.392",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Travel booking now supports scheduled departures - pick your date and time slot" },
+      { type: 'feature', description: "Flights run 5 times daily (6am, 10am, 2pm, 6pm, 10pm)" },
+      { type: 'feature', description: "Trains, buses, and ferries run hourly from 6am to 10pm" },
+      { type: 'feature', description: "Departure time picker with date selection (up to 14 days ahead)" },
+      { type: 'feature', description: "Journey summary shows departure and arrival times" },
+      { type: 'improvement', description: "Next Available quick-select button for fastest departure" },
+    ],
+  },
+  {
     version: "1.0.391",
     date: "2026-01-16",
     changes: [
