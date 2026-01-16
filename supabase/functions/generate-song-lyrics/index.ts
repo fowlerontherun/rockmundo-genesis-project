@@ -361,12 +361,21 @@ serve(async (req) => {
 
     // Process creative brief modifiers if available
     let modifierGuidance = '';
+    let songNotesContext = '';
+    
     if (creativeBrief) {
       const inspirationMods = creativeBrief.inspirationModifiers || [];
       const moodMods = creativeBrief.moodModifiers || [];
+      const coWriters = creativeBrief.coWriters || [];
+      const sessionMusicians = creativeBrief.sessionMusicians || [];
+      const writingMode = creativeBrief.writingMode || '';
       
+      // Build modifier guidance
       if (inspirationMods.includes('anthemic')) {
         modifierGuidance += '\n- Make the chorus HUGE and singable, meant for crowds';
+      }
+      if (inspirationMods.includes('story')) {
+        modifierGuidance += '\n- Focus on storytelling with a clear narrative arc';
       }
       if (inspirationMods.includes('intimate')) {
         modifierGuidance += '\n- Keep it close and personal, like a whispered secret';
@@ -374,15 +383,71 @@ serve(async (req) => {
       if (inspirationMods.includes('experimental')) {
         modifierGuidance += '\n- Break conventional structures, try something weird';
       }
+      if (inspirationMods.includes('retro')) {
+        modifierGuidance += '\n- Include nostalgic references and vintage vibes';
+      }
+      if (inspirationMods.includes('future')) {
+        modifierGuidance += '\n- Use forward-thinking, modern imagery and themes';
+      }
+      if (inspirationMods.includes('city-nights')) {
+        modifierGuidance += '\n- Urban nightlife imagery, city lights, streets, clubs';
+      }
+      
       if (moodMods.includes('moody') || moodMods.includes('dark')) {
         modifierGuidance += '\n- Use darker imagery, shadows, night, cold';
       }
       if (moodMods.includes('uplifting') || moodMods.includes('bright')) {
         modifierGuidance += '\n- Use bright imagery, warmth, light, hope';
       }
-      if (creativeBrief.writingMode === 'camp') {
+      if (moodMods.includes('urgent')) {
+        modifierGuidance += '\n- Create a sense of urgency, racing pulse, time pressure';
+      }
+      if (moodMods.includes('intimate')) {
+        modifierGuidance += '\n- Soft, personal, vulnerable emotional tone';
+      }
+      if (moodMods.includes('playful')) {
+        modifierGuidance += '\n- Light-hearted, fun, maybe even cheeky';
+      }
+      
+      if (writingMode === 'camp') {
         modifierGuidance += '\n- Feel collaborative, like multiple voices contributed';
       }
+      if (writingMode === 'topline') {
+        modifierGuidance += '\n- Focus on melody-friendly phrasing and singable hooks';
+      }
+      if (writingMode === 'track-led') {
+        modifierGuidance += '\n- Lyrics should complement a strong production bed';
+      }
+      
+      // Build song notes context for AI
+      const noteParts: string[] = [];
+      if (moodMods.length > 0) noteParts.push(`Mood palette: ${moodMods.join(', ')}`);
+      if (inspirationMods.length > 0) noteParts.push(`Inspiration anchors: ${inspirationMods.join(', ')}`);
+      if (coWriters.length > 0) noteParts.push(`Collaborating with: ${coWriters.join(', ')}`);
+      if (sessionMusicians.length > 0) noteParts.push(`Session musicians: ${sessionMusicians.join(', ')}`);
+      if (writingMode) {
+        const modeLabels: Record<string, string> = {
+          'solo': 'Solo writing session',
+          'topline': 'Top-line focused (melody-first)',
+          'track-led': 'Track-led production approach',
+          'camp': 'Writing camp collaboration'
+        };
+        noteParts.push(`Writing mode: ${modeLabels[writingMode] || writingMode}`);
+      }
+      
+      if (noteParts.length > 0) {
+        songNotesContext = `
+═══════════════════════════════════════════════════════════════
+SONGWRITER'S NOTES (Use this context)
+═══════════════════════════════════════════════════════════════
+${noteParts.join('\n')}`;
+      }
+    }
+    
+    // Include additional notes from the user if provided
+    if (existingLyrics && !existingLyrics.includes('[') && existingLyrics.length < 500) {
+      // This looks like additional notes rather than lyrics
+      songNotesContext += `\n\nAdditional songwriter notes:\n${existingLyrics}`;
     }
 
     const prompt = `You are an elite professional songwriter creating COMPLETELY UNIQUE, ORIGINAL lyrics. This song must be DISTINCTLY DIFFERENT from anything you've written before.
@@ -425,6 +490,7 @@ ${selectedStructure.description}
 Follow this structure:
 ${selectedStructure.structure}
 ${modifierGuidance}
+${songNotesContext}
 
 ═══════════════════════════════════════════════════════════════
 UNIQUENESS REQUIREMENTS
