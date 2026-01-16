@@ -12,6 +12,7 @@ import {
   MapPin,
   Shield,
   Sparkles,
+  Store,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { useUnderworld, type CryptoToken } from "@/hooks/useUnderworld";
 import underworldVeil from "@/assets/underworld-veil.svg";
+import { UnderworldStoreTab } from "@/components/underworld/UnderworldStoreTab";
 
 interface MerchandiseItem {
   name: string;
@@ -82,9 +84,9 @@ const loreSections = [
 ];
 
 const heroLinks = [
+  { label: "Shadow Store", href: "store" },
   { label: "Market intel", href: "market" },
   { label: "Lore districts", href: "lore" },
-  { label: "Merch drops", href: "merch" },
   { label: "Allies & exits", href: "actions" },
 ];
 
@@ -258,13 +260,13 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" className="gap-2" onClick={() => document.getElementById("market")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" className="gap-2" onClick={() => document.getElementById("store")?.scrollIntoView({ behavior: "smooth" })}>
+                  <Store className="h-4 w-4" />
+                  Browse Shadow Store
+                </Button>
+                <Button size="lg" variant="outline" className="gap-2" onClick={() => document.getElementById("market")?.scrollIntoView({ behavior: "smooth" })}>
                   <ArrowDownRight className="h-4 w-4" />
                   Enter the pit
-                </Button>
-                <Button size="lg" variant="outline" className="gap-2" onClick={() => document.getElementById("merch")?.scrollIntoView({ behavior: "smooth" })}>
-                  <ArrowUpRight className="h-4 w-4" />
-                  Track rare drops
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2" aria-label="Underworld section quick links">
@@ -307,6 +309,25 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
               </Card>
             </div>
           </div>
+        </section>
+
+        {/* Shadow Store Section */}
+        <section id="store" className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2 text-primary" aria-hidden>
+              <Store className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm uppercase tracking-wide text-primary">Shadow Store</p>
+              <h2 className="text-3xl font-semibold">Acquire power from the depths</h2>
+              <p className="text-muted-foreground">Consumables, boosters, and forbidden knowledge to enhance your abilities.</p>
+            </div>
+          </div>
+          <Card className="border-primary/20 bg-background/70">
+            <CardContent className="pt-6">
+              <UnderworldStoreTab />
+            </CardContent>
+          </Card>
         </section>
 
         <section id="lore" className="space-y-6">

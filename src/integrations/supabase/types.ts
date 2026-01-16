@@ -9098,6 +9098,50 @@ export type Database = {
           },
         ]
       }
+      player_active_boosts: {
+        Row: {
+          boost_type: string
+          boost_value: number
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_active: boolean | null
+          product_id: string
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          boost_type: string
+          boost_value: number
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean | null
+          product_id: string
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          boost_type?: string
+          boost_value?: number
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean | null
+          product_id?: string
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_active_boosts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "underworld_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_attributes: {
         Row: {
           attribute_points: number | null
@@ -17507,6 +17551,134 @@ export type Database = {
             columns: ["quoted_twaat_id"]
             isOneToOne: false
             referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      underworld_products: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_stock: number | null
+          description: string | null
+          duration_hours: number | null
+          effects: Json | null
+          icon_name: string | null
+          id: string
+          is_available: boolean | null
+          lore: string | null
+          name: string
+          price_cash: number | null
+          price_token_amount: number | null
+          price_token_id: string | null
+          rarity: string | null
+          restock_at: string | null
+          stock_limit: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          current_stock?: number | null
+          description?: string | null
+          duration_hours?: number | null
+          effects?: Json | null
+          icon_name?: string | null
+          id?: string
+          is_available?: boolean | null
+          lore?: string | null
+          name: string
+          price_cash?: number | null
+          price_token_amount?: number | null
+          price_token_id?: string | null
+          rarity?: string | null
+          restock_at?: string | null
+          stock_limit?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_stock?: number | null
+          description?: string | null
+          duration_hours?: number | null
+          effects?: Json | null
+          icon_name?: string | null
+          id?: string
+          is_available?: boolean | null
+          lore?: string | null
+          name?: string
+          price_cash?: number | null
+          price_token_amount?: number | null
+          price_token_id?: string | null
+          rarity?: string | null
+          restock_at?: string | null
+          stock_limit?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "underworld_products_price_token_id_fkey"
+            columns: ["price_token_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      underworld_purchases: {
+        Row: {
+          applied_at: string | null
+          cash_amount: number | null
+          created_at: string | null
+          effects_applied: Json | null
+          expires_at: string | null
+          id: string
+          paid_with: string
+          product_id: string
+          token_amount: number | null
+          token_id: string | null
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          cash_amount?: number | null
+          created_at?: string | null
+          effects_applied?: Json | null
+          expires_at?: string | null
+          id?: string
+          paid_with: string
+          product_id: string
+          token_amount?: number | null
+          token_id?: string | null
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          cash_amount?: number | null
+          created_at?: string | null
+          effects_applied?: Json | null
+          expires_at?: string | null
+          id?: string
+          paid_with?: string
+          product_id?: string
+          token_amount?: number | null
+          token_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "underworld_purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "underworld_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "underworld_purchases_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_tokens"
             referencedColumns: ["id"]
           },
         ]
