@@ -53,6 +53,26 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
     enabled: !!songId,
   });
 
+  // Fetch streaming data from song_releases
+  const { data: streamingData } = useQuery({
+    queryKey: ["song-streaming-details", songId],
+    queryFn: async () => {
+      if (!songId) return null;
+      
+      const { data } = await supabase
+        .from("song_releases")
+        .select("total_streams, total_revenue, platform_name, release_type")
+        .eq("song_id", songId);
+
+      return {
+        totalStreams: data?.reduce((sum, r) => sum + (r.total_streams || 0), 0) || 0,
+        totalRevenue: data?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
+        platforms: data || []
+      };
+    },
+    enabled: !!songId,
+  });
+
   if (!songId) return null;
 
   return (
@@ -136,13 +156,13 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
 
               <Separator />
 
-              {/* Hype & Fame */}
+              {/* Hype, Fame & Streaming */}
               <div>
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
                   Performance Metrics
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
                     <div className="flex items-center gap-2 mb-1">
                       <Flame className="h-4 w-4 text-orange-500" />
@@ -150,9 +170,6 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                     </div>
                     <div className="text-2xl font-bold text-orange-500">
                       {song.hype || 0}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Buzz & anticipation
                     </div>
                   </div>
                   <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
@@ -163,8 +180,23 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                     <div className="text-2xl font-bold text-purple-500">
                       {song.fame || 0}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      From sales, streams & radio
+                  </div>
+                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      <span className="text-xs text-muted-foreground">Streams</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-500">
+                      {(streamingData?.totalStreams || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-green-500 font-bold text-sm">$</span>
+                      <span className="text-xs text-muted-foreground">Revenue</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-500">
+                      ${(streamingData?.totalRevenue || 0).toLocaleString()}
                     </div>
                   </div>
                 </div>

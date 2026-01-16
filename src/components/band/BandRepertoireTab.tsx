@@ -56,7 +56,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
     staleTime: 60000, // Only run once per minute
   });
 
-  // Fetch band songs with ownership data
+  // Fetch band songs with ownership data and aggregated streaming stats
   const { data: songs = [], isLoading: loadingSongs, refetch: refetchSongs } = useQuery({
     queryKey: ["band-repertoire-songs", bandId],
     queryFn: async () => {
@@ -72,8 +72,6 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           status,
           created_at,
           audio_url,
-          streams,
-          revenue,
           user_id
         `)
         .eq("band_id", bandId)
@@ -81,68 +79,105 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
 
       if (error) throw error;
 
-      // Fetch ownership data for each song
       const songIds = songsData?.map(s => s.id) || [];
-      if (songIds.length > 0) {
-        const { data: ownershipData } = await supabase
-          .from("band_song_ownership")
-          .select("*")
-          .in("song_id", songIds);
+      if (songIds.length === 0) return [];
 
-        return (songsData || []).map(song => ({
-          ...song,
-          ownership: ownershipData?.filter(o => o.song_id === song.id) || []
-        }));
-      }
+      // Fetch streaming data from song_releases (the real source of streams/revenue)
+      const { data: streamingData } = await supabase
+        .from("song_releases")
+        .select("song_id, total_streams, total_revenue")
+        .in("song_id", songIds);
 
-      return songsData || [];
+      // Aggregate streams/revenue by song_id
+      const streamsBySong = (streamingData || []).reduce((acc, rel) => {
+        if (!acc[rel.song_id]) {
+          acc[rel.song_id] = { streams: 0, revenue: 0 };
+        }
+        acc[rel.song_id].streams += rel.total_streams || 0;
+        acc[rel.song_id].revenue += rel.total_revenue || 0;
+        return acc;
+      }, {} as Record<string, { streams: number; revenue: number }>);
+
+      // Fetch ownership data for each song
+      const { data: ownershipData } = await supabase
+        .from("band_song_ownership")
+        .select("*")
+        .in("song_id", songIds);
+
+      return (songsData || []).map(song => ({
+        ...song,
+        streams: streamsBySong[song.id]?.streams || 0,
+        revenue: streamsBySong[song.id]?.revenue || 0,
+        ownership: ownershipData?.filter(o => o.song_id === song.id) || []
+      }));
     },
     enabled: !!bandId,
   });
 
-  // Fetch streaming analytics
+  // Fetch streaming analytics from song_releases table (correct source)
   const { data: streamingStats } = useQuery({
     queryKey: ["band-streaming-stats", bandId],
     queryFn: async () => {
       if (!bandId) return { totalStreams: 0, totalRevenue: 0 };
 
       const { data } = await supabase
-        .from("songs")
-        .select("streams, revenue")
-        .eq("band_id", bandId);
+        .from("song_releases")
+        .select("total_streams, total_revenue")
+        .eq("band_id", bandId)
+        .eq("is_active", true);
 
-      const totalStreams = data?.reduce((sum, s) => sum + (s.streams || 0), 0) || 0;
-      const totalRevenue = data?.reduce((sum, s) => sum + (s.revenue || 0), 0) || 0;
+      const totalStreams = data?.reduce((sum, r) => sum + (r.total_streams || 0), 0) || 0;
+      const totalRevenue = data?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0;
 
       return { totalStreams, totalRevenue };
     },
     enabled: !!bandId,
   });
 
-  // Fetch radio plays
+  // Fetch radio plays - first get band songs, then get their radio plays
   const { data: radioPlays = [], isLoading: loadingRadio } = useQuery({
     queryKey: ["band-radio-plays", bandId],
     queryFn: async () => {
       if (!bandId) return [];
+
+      // Get all song IDs for this band
+      const { data: bandSongs } = await supabase
+        .from("songs")
+        .select("id, title")
+        .eq("band_id", bandId);
+
+      if (!bandSongs?.length) return [];
+
+      const songIds = bandSongs.map(s => s.id);
+      const songTitles = bandSongs.reduce((acc, s) => {
+        acc[s.id] = s.title;
+        return acc;
+      }, {} as Record<string, string>);
 
       const { data } = await supabase
         .from("radio_plays")
         .select(`
           id,
           played_at,
-          listener_count,
-          songs!inner(id, title, band_id)
+          listeners,
+          hype_gained,
+          streams_boost,
+          song_id
         `)
-        .eq("songs.band_id", bandId)
+        .in("song_id", songIds)
         .order("played_at", { ascending: false })
         .limit(50);
 
-      return data || [];
+      // Attach song title to each play
+      return (data || []).map(play => ({
+        ...play,
+        song_title: songTitles[play.song_id] || "Unknown Song"
+      }));
     },
     enabled: !!bandId,
   });
 
-  // Fetch gig history
+  // Fetch gig history - use correct column names
   const { data: gigs = [], isLoading: loadingGigs } = useQuery({
     queryKey: ["band-gigs", bandId],
     queryFn: async () => {
@@ -153,14 +188,15 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
         .select(`
           id,
           venue_id,
-          gig_date,
+          scheduled_date,
           status,
-          actual_earnings,
-          actual_attendance,
+          payment,
+          attendance,
+          tickets_sold,
           venues(name, city)
         `)
         .eq("band_id", bandId)
-        .order("gig_date", { ascending: false })
+        .order("scheduled_date", { ascending: false })
         .limit(20);
 
       return data || [];
@@ -168,7 +204,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
     enabled: !!bandId,
   });
 
-  // Fetch recordings
+  // Fetch recordings - query directly by band_id on recording_sessions
   const { data: recordings = [], isLoading: loadingRecordings } = useQuery({
     queryKey: ["band-recordings", bandId],
     queryFn: async () => {
@@ -181,10 +217,11 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           status,
           scheduled_start,
           completed_at,
-          quality_score,
-          songs!inner(id, title, band_id)
+          quality_improvement,
+          song_id,
+          songs(id, title)
         `)
-        .eq("songs.band_id", bandId)
+        .eq("band_id", bandId)
         .order("scheduled_start", { ascending: false })
         .limit(20);
 
@@ -474,14 +511,19 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
                 <Card key={play.id}>
                   <CardContent className="flex items-center justify-between py-4">
                     <div>
-                      <p className="font-medium">{play.songs?.title}</p>
+                      <p className="font-medium">{play.song_title}</p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(play.played_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge variant="outline">
-                      {(play.listener_count || 0).toLocaleString()} listeners
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {(play.listeners || 0).toLocaleString()} listeners
+                      </Badge>
+                      {play.hype_gained > 0 && (
+                        <Badge variant="secondary">+{play.hype_gained} hype</Badge>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -514,21 +556,26 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
                     <div>
                       <p className="font-medium">{gig.venues?.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {gig.venues?.city} • {new Date(gig.gig_date).toLocaleDateString()}
+                        {gig.venues?.city} • {gig.scheduled_date ? new Date(gig.scheduled_date).toLocaleDateString() : "No date"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={gig.status === "completed" ? "default" : "secondary"}>
                         {gig.status}
                       </Badge>
-                      {gig.actual_earnings && (
+                      {gig.payment > 0 && (
                         <span className="text-green-600 font-medium">
-                          ${gig.actual_earnings.toLocaleString()}
+                          ${gig.payment.toLocaleString()}
                         </span>
                       )}
-                      {gig.actual_attendance && (
+                      {gig.attendance > 0 && (
                         <span className="text-muted-foreground text-sm">
-                          {gig.actual_attendance} attended
+                          {gig.attendance} attended
+                        </span>
+                      )}
+                      {gig.tickets_sold > 0 && (
+                        <span className="text-muted-foreground text-sm">
+                          {gig.tickets_sold} tickets
                         </span>
                       )}
                     </div>
