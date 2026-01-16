@@ -1,9 +1,9 @@
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MapPin } from 'lucide-react';
-
 interface StartingCitySelectorProps {
   value: string | null;
   onChange: (cityId: string) => void;
@@ -26,6 +26,15 @@ export function StartingCitySelector({ value, onChange, currentCityId }: Startin
     },
   });
 
+  // Auto-select current city or first city when data loads
+  React.useEffect(() => {
+    if (!value && cities && cities.length > 0) {
+      const cityToSelect = currentCityId && cities.find(c => c.id === currentCityId)
+        ? currentCityId
+        : cities[0].id;
+      onChange(cityToSelect);
+    }
+  }, [cities, currentCityId, value, onChange]);
   // Group cities by country
   const citiesByCountry = cities?.reduce((acc, city) => {
     const country = city.country || 'Unknown';
