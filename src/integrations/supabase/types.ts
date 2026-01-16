@@ -3949,12 +3949,14 @@ export type Database = {
           id: string
           image_url: string | null
           is_available: boolean | null
+          max_stock: number | null
           model: string | null
           name: string
           quality_rating: number | null
           rarity: string | null
           required_level: number | null
           stat_boosts: Json | null
+          stock_quantity: number | null
           subcategory: string | null
           updated_at: string | null
         }
@@ -3968,12 +3970,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean | null
+          max_stock?: number | null
           model?: string | null
           name: string
           quality_rating?: number | null
           rarity?: string | null
           required_level?: number | null
           stat_boosts?: Json | null
+          stock_quantity?: number | null
           subcategory?: string | null
           updated_at?: string | null
         }
@@ -3987,12 +3991,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean | null
+          max_stock?: number | null
           model?: string | null
           name?: string
           quality_rating?: number | null
           rarity?: string | null
           required_level?: number | null
           stat_boosts?: Json | null
+          stock_quantity?: number | null
           subcategory?: string | null
           updated_at?: string | null
         }

@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.409",
+    date: "2026-01-16",
+    changes: [
+      { type: 'fix', description: "Fixed Tour Manager 'New Tour' button - auto-selects starting city" },
+      { type: 'feature', description: "Added equipment stock levels based on rarity (legendary=3, epic=10, rare=20)" },
+      { type: 'feature', description: "Added brand/make filter to Gear shop" },
+      { type: 'feature', description: "Added 12 new self-promotion activities (TikTok, Discord, Patreon, etc.)" },
+      { type: 'feature', description: "Added 25+ new music websites (Billboard, XXL, Metal Hammer, etc.)" },
+    ],
+  },
+  {
     version: "1.0.408",
     date: "2026-01-16",
     changes: [
