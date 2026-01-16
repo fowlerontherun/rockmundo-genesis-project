@@ -77,8 +77,8 @@ export const JamSessionHistory = ({ outcomes }: JamSessionHistoryProps) => {
                   <div className="flex gap-3 text-xs text-muted-foreground">
                     <span>+{outcome.xp_earned} XP</span>
                     <span>+{outcome.chemistry_gained} Chemistry</span>
-                    {outcome.skill_improvement > 0 && (
-                      <span>+{outcome.skill_improvement.toFixed(2)} Skill</span>
+                    {outcome.skill_xp_gained > 0 && (
+                      <span>+{outcome.skill_xp_gained} Skill XP</span>
                     )}
                   </div>
                 </div>
