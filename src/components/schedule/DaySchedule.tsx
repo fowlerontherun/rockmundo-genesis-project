@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, addHours, isSameHour, isPast } from "date-fns";
 import { 
-  Clock, Play, CheckCircle, Plus, X,
+  Clock, Play, CheckCircle, Plus, X, ArrowRight,
   Music, Guitar, Headphones, Briefcase, GraduationCap,
   BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScheduledActivities, useStartActivity, useCompleteActivity, useDeleteScheduledActivity, type ActivityType } from "@/hooks/useScheduledActivities";
 import { ScheduleActivityDialog } from "./ScheduleActivityDialog";
+import { formatTimeInCityTimezone, getCityTimeLabel } from "@/utils/timezoneUtils";
 
 interface DayScheduleProps {
   date: Date;
@@ -57,6 +58,8 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   other: "bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300",
 };
 
+type ActivityPosition = 'start' | 'middle' | 'end' | 'single';
+
 export function DaySchedule({ date, userId }: DayScheduleProps) {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
@@ -68,11 +71,44 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
+  // Updated to show activities in ALL hours they span
   const getActivitiesForHour = (hour: number) => {
     return activities.filter(activity => {
       const activityStart = new Date(activity.scheduled_start);
-      return activityStart.getHours() === hour;
+      const activityEnd = new Date(activity.scheduled_end);
+      
+      // Create hour boundaries for comparison
+      const hourStart = new Date(date);
+      hourStart.setHours(hour, 0, 0, 0);
+      const hourEnd = new Date(date);
+      hourEnd.setHours(hour + 1, 0, 0, 0);
+      
+      // Activity overlaps this hour if it starts before hour ends AND ends after hour starts
+      return activityStart < hourEnd && activityEnd > hourStart;
     });
+  };
+
+  // Determine where in the activity duration this hour falls
+  const getActivityPosition = (activity: typeof activities[0], hour: number): ActivityPosition => {
+    const activityStart = new Date(activity.scheduled_start);
+    const activityEnd = new Date(activity.scheduled_end);
+    const startHour = activityStart.getHours();
+    
+    // Calculate end hour (handle midnight crossing)
+    let endHour = activityEnd.getHours();
+    if (activityEnd.getMinutes() === 0 && endHour > 0) {
+      // If ends exactly on the hour (e.g., 14:00), the last visible hour is the previous one
+      endHour = endHour - 1;
+    }
+    
+    // Single-hour activity
+    if (startHour === hour && (endHour === hour || (endHour === startHour))) {
+      return 'single';
+    }
+    
+    if (hour === startHour) return 'start';
+    if (hour === endHour) return 'end';
+    return 'middle';
   };
 
   const handleAddActivity = (hour: number) => {
@@ -105,6 +141,49 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
     if (isPast(hourDate) && !isSameHour(hourDate, new Date())) return 'past';
     if (isSameHour(hourDate, new Date())) return 'current';
     return 'future';
+  };
+
+  // Get display time with timezone support
+  const getDisplayTime = (activity: typeof activities[0]) => {
+    const metadata = activity.metadata as Record<string, any> | null;
+    const venueTimezone = metadata?.venue_timezone;
+    const venueCityName = metadata?.venue_city_name;
+    
+    if (venueTimezone) {
+      const localTime = formatTimeInCityTimezone(activity.scheduled_start, venueTimezone);
+      const cityLabel = venueCityName ? getCityTimeLabel(venueCityName) : 'Local';
+      return { time: localTime, label: cityLabel, hasTimezone: true };
+    }
+    
+    return { 
+      time: format(new Date(activity.scheduled_start), 'h:mm a'), 
+      label: null, 
+      hasTimezone: false 
+    };
+  };
+
+  // Get position badge for multi-hour activities
+  const getPositionBadge = (position: ActivityPosition) => {
+    switch (position) {
+      case 'start':
+        return (
+          <Badge variant="outline" className="text-xs shrink-0 bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300">
+            Starts
+          </Badge>
+        );
+      case 'middle':
+        return (
+          <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+        );
+      case 'end':
+        return (
+          <Badge variant="outline" className="text-xs shrink-0 bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-300">
+            Ends
+          </Badge>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -149,58 +228,75 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
                         const Icon = ACTIVITY_ICONS[activity.activity_type as ActivityType];
                         const colorClass = ACTIVITY_COLORS[activity.activity_type as ActivityType];
                         const isAutoScheduled = activity.metadata?.auto_scheduled;
+                        const position = getActivityPosition(activity, hour);
+                        const displayTime = getDisplayTime(activity);
                         
                         return (
                           <div
-                            key={activity.id}
+                            key={`${activity.id}-${hour}`}
                             className={cn(
                               "flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded border text-xs md:text-sm",
                               colorClass,
-                              isAutoScheduled && "opacity-80"
+                              isAutoScheduled && "opacity-80",
+                              position === 'middle' && "border-dashed opacity-70"
                             )}
                           >
                             <Icon className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">{activity.title}</div>
-                              {activity.location && (
-                                <div className="text-xs text-muted-foreground truncate hidden md:block">{activity.location}</div>
+                              <div className="font-medium truncate flex items-center gap-1.5">
+                                {activity.title}
+                                {getPositionBadge(position)}
+                              </div>
+                              {activity.location && position !== 'middle' && (
+                                <div className="text-xs text-muted-foreground truncate hidden md:block">
+                                  {activity.location}
+                                  {displayTime.hasTimezone && (
+                                    <span className="ml-1 text-primary/70">
+                                      ({displayTime.time} {displayTime.label})
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                            <Badge variant="outline" className="text-xs shrink-0 hidden md:inline-flex">
-                              {activity.status}
-                            </Badge>
-                            <div className="flex gap-0.5 md:gap-1 shrink-0">
-                              {activity.status === 'scheduled' && status !== 'past' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 md:h-7 px-1.5 md:px-2"
-                                  onClick={() => handleStart(activity.id)}
-                                >
-                                  <Play className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                </Button>
-                              )}
-                              {activity.status === 'in_progress' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 md:h-7 px-1.5 md:px-2"
-                                  onClick={() => handleComplete(activity.id)}
-                                >
-                                  <CheckCircle className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                </Button>
-                              )}
-                              {!isAutoScheduled && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 md:h-7 px-1.5 md:px-2 text-destructive"
-                                  onClick={() => handleDelete(activity.id)}
-                                >
-                                  <X className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                </Button>
-                              )}
-                            </div>
+                            {position !== 'middle' && (
+                              <>
+                                <Badge variant="outline" className="text-xs shrink-0 hidden md:inline-flex">
+                                  {activity.status}
+                                </Badge>
+                                <div className="flex gap-0.5 md:gap-1 shrink-0">
+                                  {activity.status === 'scheduled' && status !== 'past' && position === 'start' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 md:h-7 px-1.5 md:px-2"
+                                      onClick={() => handleStart(activity.id)}
+                                    >
+                                      <Play className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                    </Button>
+                                  )}
+                                  {activity.status === 'in_progress' && position === 'start' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 md:h-7 px-1.5 md:px-2"
+                                      onClick={() => handleComplete(activity.id)}
+                                    >
+                                      <CheckCircle className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                    </Button>
+                                  )}
+                                  {!isAutoScheduled && position === 'start' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 md:h-7 px-1.5 md:px-2 text-destructive"
+                                      onClick={() => handleDelete(activity.id)}
+                                    >
+                                      <X className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
                         );
                       })}

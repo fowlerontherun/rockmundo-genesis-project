@@ -295,6 +295,52 @@ serve(async (req) => {
             completed: isCompleted,
           },
         });
+
+        // Create player_scheduled_activities entry to block the player's schedule
+        // Fetch course with class hours
+        const { data: courseWithHours } = await supabaseClient
+          .from("university_courses")
+          .select("name, class_start_hour, class_end_hour")
+          .eq("id", enrollment.course_id)
+          .single();
+
+        if (courseWithHours) {
+          const classStart = new Date(now);
+          classStart.setHours(courseWithHours.class_start_hour || 10, 0, 0, 0);
+          const classEnd = new Date(now);
+          classEnd.setHours(courseWithHours.class_end_hour || 14, 0, 0, 0);
+
+          // Check if schedule entry already exists for today
+          const { data: existingSchedule } = await supabaseClient
+            .from("player_scheduled_activities")
+            .select("id")
+            .eq("user_id", profile.user_id)
+            .eq("activity_type", "university")
+            .gte("scheduled_start", classStart.toISOString().split('T')[0])
+            .lt("scheduled_start", new Date(classStart.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+            .single();
+
+          if (!existingSchedule) {
+            await supabaseClient
+              .from("player_scheduled_activities")
+              .insert({
+                user_id: profile.user_id,
+                profile_id: enrollment.profile_id,
+                activity_type: 'university',
+                title: `University: ${courseWithHours.name}`,
+                scheduled_start: classStart.toISOString(),
+                scheduled_end: classEnd.toISOString(),
+                status: 'completed', // Already attended via auto-attend
+                metadata: {
+                  enrollment_id: enrollment.id,
+                  course_id: enrollment.course_id,
+                  xp_earned: xpEarned,
+                  auto_attended: true,
+                },
+              });
+            console.log(`Created schedule entry for auto-attended class: ${courseWithHours.name}`);
+          }
+        }
       }
 
       processedCount++;
