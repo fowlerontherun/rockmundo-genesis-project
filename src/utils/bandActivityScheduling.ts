@@ -4,7 +4,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { checkTimeSlotAvailable } from '@/hooks/useActivityBooking';
 
-interface BandActivityParams {
+export interface BandActivityParams {
   bandId: string;
   activityType: string;
   scheduledStart: Date;
@@ -15,6 +15,7 @@ interface BandActivityParams {
   metadata?: Record<string, any>;
   linkedRehearsalId?: string;
   linkedRecordingId?: string;
+  linkedGigId?: string;
 }
 
 interface ConflictInfo {
@@ -154,6 +155,7 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     },
     linked_rehearsal_id: params.linkedRehearsalId || null,
     linked_recording_id: params.linkedRecordingId || null,
+    linked_gig_id: params.linkedGigId || null,
     status: 'scheduled',
   }));
   
