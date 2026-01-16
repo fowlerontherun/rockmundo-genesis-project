@@ -1,5 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { getSongRating } from "@/data/songRatings";
 import type { SongQualityResult } from "@/utils/songQuality";
 
@@ -11,12 +12,22 @@ export const SongQualityBreakdown = ({ quality }: SongQualityBreakdownProps) => 
   const rating = getSongRating(quality.totalQuality);
   
   const areas = [
-    { name: "Melody", value: quality.melodyStrength, max: 200 },
-    { name: "Lyrics", value: quality.lyricsStrength, max: 200 },
-    { name: "Rhythm", value: quality.rhythmStrength, max: 200 },
-    { name: "Arrangement", value: quality.arrangementStrength, max: 200 },
-    { name: "Production", value: quality.productionPotential, max: 200 },
+    { name: "Melody", value: quality.melodyStrength, max: 280 },
+    { name: "Lyrics", value: quality.lyricsStrength, max: 280 },
+    { name: "Rhythm", value: quality.rhythmStrength, max: 220 },
+    { name: "Arrangement", value: quality.arrangementStrength, max: 250 },
+    { name: "Production", value: quality.productionPotential, max: 280 },
   ];
+
+  // Format luck multiplier as percentage change
+  const luckPercent = quality.sessionLuckMultiplier 
+    ? Math.round((quality.sessionLuckMultiplier - 1) * 100) 
+    : 0;
+  const luckColor = luckPercent >= 10 
+    ? 'bg-green-500/10 text-green-600 border-green-500/30' 
+    : luckPercent <= -10 
+      ? 'bg-red-500/10 text-red-600 border-red-500/30'
+      : 'bg-muted text-muted-foreground';
 
   return (
     <Card className="p-6 space-y-6">
@@ -29,6 +40,16 @@ export const SongQualityBreakdown = ({ quality }: SongQualityBreakdownProps) => 
           <span className="text-lg text-muted-foreground">/1000</span>
         </div>
       </div>
+
+      {/* Session Luck Display */}
+      {quality.sessionLuckLabel && (
+        <div className={`flex items-center justify-center gap-2 p-3 rounded-lg border ${luckColor}`}>
+          <span className="text-lg">{quality.sessionLuckLabel}</span>
+          <Badge variant="outline" className={luckColor}>
+            {luckPercent >= 0 ? '+' : ''}{luckPercent}%
+          </Badge>
+        </div>
+      )}
 
       <div className="space-y-4">
         <h4 className="font-semibold">Quality Breakdown</h4>
