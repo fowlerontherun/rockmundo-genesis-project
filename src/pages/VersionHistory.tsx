@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.400",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "8 new sports entrance song random events - boxers, wrestlers, darts players, MMA fighters, esports teams, NASCAR drivers, Olympic athletes, football clubs" },
+      { type: 'feature', description: "25+ global podcasts added - UK, Germany, Japan, Australia, Brazil, France, Sweden, South Korea, Canada, Spain, Mexico, South Africa" },
+      { type: 'feature', description: "Random events now trigger automatically via cron jobs (every 4 hours)" },
+      { type: 'feature', description: "Event outcomes processed daily with fame/fan/cash rewards" },
+      { type: 'improvement', description: "Sports licensing events offer $500-$20,000+ with fame and fan bonuses" },
+    ],
+  },
+  {
     version: "1.0.399",
     date: "2026-01-16",
     changes: [
