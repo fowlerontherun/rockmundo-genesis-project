@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.384",
+    date: "2026-01-16",
+    changes: [
+      { type: 'feature', description: "Job vacancy system - all jobs now have limited positions (2-10 depending on job type)" },
+      { type: 'feature', description: "Atomic hiring with race condition prevention - no more 100 people getting the same job" },
+      { type: 'feature', description: "Added hire_player and quit_job database functions for safe employment operations" },
+      { type: 'improvement', description: "Employee counts now automatically sync when hiring/quitting" },
+      { type: 'fix', description: "Fixed potential race condition where multiple players could fill the last job slot" },
+    ],
+  },
+  {
     version: "1.0.383",
     date: "2026-01-16",
     changes: [
