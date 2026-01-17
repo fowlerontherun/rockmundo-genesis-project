@@ -138,6 +138,7 @@ export const en = {
     gettit: "Gettit",
     sponsorships: "Sponsorships",
     recordLabels: "Record Labels",
+    myCompanies: "Company",
     adminPanel: "Admin Panel",
     underworld: "Underworld",
     more: "More",

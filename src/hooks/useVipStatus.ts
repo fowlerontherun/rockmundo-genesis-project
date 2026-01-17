@@ -39,6 +39,8 @@ export const useVipStatus = () => {
         };
       }
 
+      console.log('[useVipStatus] Checking VIP for user:', user.id);
+      
       const { data, error } = await supabase
         .from("vip_subscriptions")
         .select("*")
@@ -48,6 +50,8 @@ export const useVipStatus = () => {
         .order("expires_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      console.log('[useVipStatus] Query result:', { data, error });
 
       if (error) {
         console.error("Error fetching VIP status:", error);

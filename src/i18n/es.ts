@@ -138,6 +138,7 @@ export const es: TranslationKeys = {
     gettit: "Gettit",
     sponsorships: "Patrocinios",
     recordLabels: "Discográficas",
+    myCompanies: "Empresa",
     adminPanel: "Panel de Admin",
     underworld: "Inframundo",
     more: "Más",
