@@ -9,7 +9,7 @@ import { GigAudioPlayer } from "./GigAudioPlayer";
 import { RpmAvatarImage } from "./RpmAvatarImage";
 import { SimpleStageBackground } from "./SimpleStageBackground";
 import { StageSpotlights } from "./StageSpotlights";
-import { Stage3DEquipment } from "./Stage3DEquipment";
+import { InstrumentSilhouettes } from "./InstrumentSilhouettes";
 import { useCrowdSounds } from "@/hooks/useCrowdSounds";
 import type { Database } from "@/lib/supabase-types";
 interface ParallaxGigViewerProps {
@@ -409,12 +409,11 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
         isNightShow={isNightShow}
       />
       
-      {/* 3D Stage Equipment Layer */}
-      <Stage3DEquipment 
+      {/* 2D Instrument Silhouettes Layer */}
+      <InstrumentSilhouettes 
         bandMembers={bandMembers.map(m => ({ role: m.role, isPresent: true }))}
         intensity={intensity}
         songSection={songSection}
-        crowdMood={crowdMood}
       />
       
       {/* Spotlight Effects */}
@@ -434,10 +433,10 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
       {/* Band Members on Stage */}
       <div className="absolute inset-0 flex items-end justify-center pb-4" style={{ zIndex: 25 }}>
         <div className="relative w-full max-w-6xl h-[80vh]">
-          {/* Drummer (back center - smaller, higher) */}
+          {/* Drummer (back center - elevated) */}
           {positionedMembers.drummer && (
             <motion.div
-              className="absolute bottom-[40%] left-1/2 -translate-x-1/2 z-10"
+              className="absolute bottom-[45%] left-1/2 -translate-x-1/2 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -447,15 +446,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="drummer"
                 intensity={intensity}
                 songSection={songSection}
-                size="md"
+                size="lg"
               />
             </motion.div>
           )}
 
-          {/* Keyboardist (back left - smaller) */}
+          {/* Keyboardist (back left) */}
           {positionedMembers.keyboardist && (
             <motion.div
-              className="absolute bottom-[35%] left-[8%] z-10"
+              className="absolute bottom-[38%] left-[12%] z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
@@ -465,15 +464,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="keyboardist"
                 intensity={intensity}
                 songSection={songSection}
-                size="md"
+                size="lg"
               />
             </motion.div>
           )}
 
-          {/* Guitarist (front left - spread wider) */}
+          {/* Guitarist (front left) */}
           {positionedMembers.guitarist && (
             <motion.div
-              className="absolute bottom-[5%] left-[5%] z-20"
+              className="absolute bottom-[10%] left-[15%] z-20"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -491,7 +490,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
           {/* Vocalist (front center - prominent) */}
           {positionedMembers.vocalist && (
             <motion.div
-              className="absolute bottom-[8%] left-1/2 -translate-x-1/2 z-30"
+              className="absolute bottom-[12%] left-1/2 -translate-x-1/2 z-30"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
@@ -506,10 +505,10 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
             </motion.div>
           )}
 
-          {/* Bassist (front right - spread wider) */}
+          {/* Bassist (front right) */}
           {positionedMembers.bassist && (
             <motion.div
-              className="absolute bottom-[5%] right-[5%] z-20"
+              className="absolute bottom-[10%] right-[15%] z-20"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
@@ -526,26 +525,76 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
         </div>
       </div>
 
-      {/* Crowd Silhouettes at Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
-        <div className="absolute bottom-0 left-0 right-0 flex justify-around items-end opacity-40">
-          {Array.from({ length: 20 }).map((_, i) => (
+      {/* Enhanced Crowd Silhouettes at Bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none" style={{ zIndex: 35 }}>
+        {/* Crowd gradient backdrop */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-transparent" />
+        
+        {/* Back row of crowd - smaller, more subtle */}
+        <div className="absolute bottom-12 left-0 right-0 flex justify-around items-end opacity-25">
+          {Array.from({ length: 30 }).map((_, i) => (
             <motion.div
-              key={i}
-              className="w-6 h-8 bg-black rounded-t-full"
-              animate={{
-                y: [0, -3, 0],
-              }}
+              key={`back-${i}`}
+              className="bg-zinc-900 rounded-t-full"
+              animate={{ y: [0, -2, 0] }}
               transition={{
-                duration: 0.5 + Math.random() * 0.5,
+                duration: 0.6 + Math.random() * 0.4,
                 repeat: Infinity,
                 delay: Math.random() * 0.5,
               }}
               style={{
-                height: 20 + Math.random() * 20,
+                width: 8 + Math.random() * 6,
+                height: 15 + Math.random() * 10,
               }}
             />
           ))}
+        </div>
+        
+        {/* Front row of crowd - larger, more animated */}
+        <div className="absolute bottom-0 left-0 right-0 flex justify-around items-end opacity-50">
+          {Array.from({ length: 25 }).map((_, i) => {
+            const isHandsUp = Math.random() > 0.7;
+            const hasPhone = Math.random() > 0.85;
+            return (
+              <motion.div
+                key={`front-${i}`}
+                className="relative"
+                animate={{
+                  y: crowdMood > 60 ? [0, -4, 0] : [0, -2, 0],
+                }}
+                transition={{
+                  duration: 0.4 + Math.random() * 0.3,
+                  repeat: Infinity,
+                  delay: Math.random() * 0.4,
+                }}
+              >
+                {/* Head */}
+                <div 
+                  className="bg-black rounded-full"
+                  style={{
+                    width: 10 + Math.random() * 8,
+                    height: 10 + Math.random() * 8,
+                  }}
+                />
+                {/* Raised hands */}
+                {isHandsUp && crowdMood > 50 && (
+                  <motion.div
+                    className="absolute -top-6 left-1/2 -translate-x-1/2 w-1 h-5 bg-black rounded-full"
+                    animate={{ rotate: [-10, 10, -10] }}
+                    transition={{ duration: 0.3, repeat: Infinity }}
+                  />
+                )}
+                {/* Phone flashlight */}
+                {hasPhone && crowdMood > 70 && (
+                  <motion.div
+                    className="absolute -top-8 left-1/2 w-2 h-2 bg-white rounded-full"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: Math.random() * 2 }}
+                  />
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 

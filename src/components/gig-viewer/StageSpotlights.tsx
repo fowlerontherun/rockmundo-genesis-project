@@ -5,23 +5,32 @@ interface StageSpotlightsProps {
   songSection: 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
 }
 
+// Individual performer spotlight colors
+const performerSpotlights = [
+  { position: 'left-[20%]', color: 'rgba(249, 115, 22, 0.35)', role: 'guitarist' },
+  { position: 'left-1/2 -translate-x-1/2', color: 'rgba(168, 85, 247, 0.4)', role: 'vocalist' },
+  { position: 'right-[20%]', color: 'rgba(59, 130, 246, 0.35)', role: 'bassist' },
+];
+
 export const StageSpotlights = ({ crowdMood, songSection }: StageSpotlightsProps) => {
   const isHighEnergy = crowdMood > 70;
+  const isMediumEnergy = crowdMood > 40;
   const isChorus = songSection === 'chorus';
   const isSolo = songSection === 'solo';
   const isBridge = songSection === 'bridge';
+  const isIntro = songSection === 'intro';
   
   // Colors based on song section and energy
   const getSpotlightColor = (index: number) => {
-    if (isSolo) return index % 2 === 0 ? 'rgba(255, 100, 100, 0.4)' : 'rgba(255, 200, 100, 0.4)';
+    if (isSolo) return index % 2 === 0 ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 200, 100, 0.5)';
     if (isChorus && isHighEnergy) return index % 2 === 0 ? 'rgba(138, 43, 226, 0.5)' : 'rgba(0, 191, 255, 0.5)';
-    if (isChorus) return 'rgba(255, 255, 255, 0.3)';
-    if (isBridge) return 'rgba(100, 100, 255, 0.3)';
-    return 'rgba(255, 200, 100, 0.2)';
+    if (isChorus) return 'rgba(255, 255, 255, 0.35)';
+    if (isBridge) return 'rgba(100, 100, 255, 0.35)';
+    return 'rgba(255, 200, 100, 0.25)';
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 20 }}>
       {/* Center spotlight on vocalist */}
       <motion.div
         className="absolute top-0 left-1/2 -translate-x-1/2"
@@ -94,18 +103,62 @@ export const StageSpotlights = ({ crowdMood, songSection }: StageSpotlightsProps
         </>
       )}
       
+      {/* Individual performer spotlights */}
+      {performerSpotlights.map((spot, i) => (
+        <motion.div
+          key={spot.role}
+          className={`absolute top-0 ${spot.position}`}
+          animate={{
+            opacity: isSolo && spot.role === 'guitarist' 
+              ? [0.5, 0.8, 0.5] 
+              : isChorus 
+                ? [0.3, 0.5, 0.3] 
+                : [0.2, 0.35, 0.2],
+          }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+          style={{
+            width: '15vw',
+            height: '100vh',
+            background: `radial-gradient(ellipse at top, ${spot.color} 0%, transparent 60%)`,
+          }}
+        />
+      ))}
+      
       {/* Solo spotlight enhancement */}
       {isSolo && (
         <motion.div
-          className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-64 h-64 rounded-full"
+          className="absolute bottom-[25%] left-1/2 -translate-x-1/2 w-72 h-72 rounded-full"
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.4, 0.2],
+            scale: [1, 1.3, 1],
+            opacity: [0.25, 0.5, 0.25],
           }}
-          transition={{ duration: 1, repeat: Infinity }}
+          transition={{ duration: 0.8, repeat: Infinity }}
           style={{
-            background: 'radial-gradient(circle, rgba(255, 100, 100, 0.4) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(255, 100, 100, 0.5) 0%, transparent 70%)',
           }}
+        />
+      )}
+      
+      {/* Haze/fog effect at stage level */}
+      <motion.div
+        className="absolute bottom-[15%] left-0 right-0 h-32"
+        animate={{
+          opacity: isChorus || isSolo ? [0.15, 0.3, 0.15] : 0.1,
+        }}
+        transition={{ duration: 4, repeat: Infinity }}
+        style={{
+          background: 'linear-gradient(to top, rgba(255,255,255,0.15) 0%, transparent 100%)',
+        }}
+      />
+      
+      {/* Flash effect on high energy moments */}
+      {isHighEnergy && isChorus && (
+        <motion.div
+          className="absolute inset-0 bg-white"
+          animate={{
+            opacity: [0, 0.15, 0],
+          }}
+          transition={{ duration: 0.3, repeat: Infinity, repeatDelay: 2 }}
         />
       )}
       
@@ -115,13 +168,15 @@ export const StageSpotlights = ({ crowdMood, songSection }: StageSpotlightsProps
         animate={{
           background: isHighEnergy 
             ? [
-                'linear-gradient(135deg, rgba(138, 43, 226, 0.1) 0%, transparent 50%, rgba(0, 191, 255, 0.1) 100%)',
-                'linear-gradient(135deg, rgba(0, 191, 255, 0.1) 0%, transparent 50%, rgba(138, 43, 226, 0.1) 100%)',
-                'linear-gradient(135deg, rgba(138, 43, 226, 0.1) 0%, transparent 50%, rgba(0, 191, 255, 0.1) 100%)',
+                'linear-gradient(135deg, rgba(138, 43, 226, 0.12) 0%, transparent 50%, rgba(0, 191, 255, 0.12) 100%)',
+                'linear-gradient(135deg, rgba(0, 191, 255, 0.12) 0%, transparent 50%, rgba(138, 43, 226, 0.12) 100%)',
+                'linear-gradient(135deg, rgba(138, 43, 226, 0.12) 0%, transparent 50%, rgba(0, 191, 255, 0.12) 100%)',
               ]
-            : 'transparent'
+            : isMediumEnergy
+              ? 'linear-gradient(135deg, rgba(255, 200, 100, 0.05) 0%, transparent 100%)'
+              : 'transparent'
         }}
-        transition={{ duration: 5, repeat: Infinity }}
+        transition={{ duration: 4, repeat: Infinity }}
       />
     </div>
   );

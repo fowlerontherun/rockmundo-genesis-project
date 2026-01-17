@@ -154,25 +154,37 @@ export const SimpleStageBackground = ({
       
       {/* Stage floor with perspective */}
       <div 
-        className={`absolute bottom-0 left-0 right-0 h-[35%] bg-gradient-to-t ${colors.floor} to-transparent`}
+        className={`absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t ${colors.floor} to-transparent`}
         style={{
-          transform: 'perspective(500px) rotateX(25deg)',
+          transform: 'perspective(600px) rotateX(20deg)',
           transformOrigin: 'bottom center',
         }}
       >
         {/* Floor grid lines for depth */}
-        <div className="absolute inset-0 opacity-20">
-          {Array.from({ length: 8 }).map((_, i) => (
+        <div className="absolute inset-0 opacity-15">
+          {Array.from({ length: 10 }).map((_, i) => (
             <div 
               key={i}
-              className="absolute left-0 right-0 h-px bg-white/30"
+              className="absolute left-0 right-0 h-px bg-white/20"
               style={{ 
-                top: `${(i + 1) * 12}%`,
-                opacity: 0.3 - (i * 0.03),
+                top: `${(i + 1) * 10}%`,
+                opacity: 0.25 - (i * 0.02),
               }}
             />
           ))}
         </div>
+        
+        {/* Stage edge / front lip */}
+        <div className="absolute bottom-[15%] left-0 right-0 h-2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        
+        {/* Stage rug/carpet for drummer area */}
+        <div className="absolute bottom-[40%] left-1/2 -translate-x-1/2 w-48 h-24 bg-gradient-radial from-zinc-800/30 to-transparent rounded-full blur-sm" />
+        
+        {/* Cable hints on floor */}
+        <svg className="absolute inset-0 opacity-10" preserveAspectRatio="none">
+          <path d="M 20% 80% Q 35% 70% 50% 75%" stroke="white" strokeWidth="1" fill="none" />
+          <path d="M 80% 80% Q 65% 70% 50% 75%" stroke="white" strokeWidth="1" fill="none" />
+        </svg>
         
         {/* Club floor lights */}
         {isClub && (
