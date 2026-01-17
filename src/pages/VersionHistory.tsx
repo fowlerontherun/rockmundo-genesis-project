@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.421",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed setlist creation error 'invalid input syntax for type integer' by ensuring position values are always integers" },
+    ],
+  },
+  {
     version: "1.0.420",
     date: "2026-01-16",
     changes: [

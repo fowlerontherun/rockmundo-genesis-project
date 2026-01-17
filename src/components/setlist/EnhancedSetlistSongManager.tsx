@@ -276,7 +276,7 @@ export const EnhancedSetlistSongManager = ({
   const unaddedSongs = filteredAvailableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
   const getNextPosition = () =>
-    Math.max(0, ...(setlistSongs?.map(song => song.position || 0) || [])) + 1;
+    Math.floor(Math.max(0, ...(setlistSongs?.map(song => song.position || 0) || []))) + 1;
 
   const handleAddSong = () => {
     if (!selectedSongId) return;
