@@ -6992,6 +6992,134 @@ export type Database = {
         }
         Relationships: []
       }
+      label_distribution_deals: {
+        Row: {
+          advance_amount: number | null
+          created_at: string
+          deal_type: string
+          distributor_name: string
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          label_id: string | null
+          minimum_releases: number | null
+          revenue_share_pct: number
+          start_date: string
+          territories: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          advance_amount?: number | null
+          created_at?: string
+          deal_type: string
+          distributor_name: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          label_id?: string | null
+          minimum_releases?: number | null
+          revenue_share_pct: number
+          start_date?: string
+          territories?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          advance_amount?: number | null
+          created_at?: string
+          deal_type?: string
+          distributor_name?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          label_id?: string | null
+          minimum_releases?: number | null
+          revenue_share_pct?: number
+          start_date?: string
+          territories?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_distribution_deals_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_financial_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          label_id: string | null
+          related_band_id: string | null
+          related_contract_id: string | null
+          related_release_id: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          label_id?: string | null
+          related_band_id?: string | null
+          related_contract_id?: string | null
+          related_release_id?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          label_id?: string | null
+          related_band_id?: string | null
+          related_contract_id?: string | null
+          related_release_id?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_financial_transactions_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_financial_transactions_related_band_id_fkey"
+            columns: ["related_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_financial_transactions_related_contract_id_fkey"
+            columns: ["related_contract_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_financial_transactions_related_release_id_fkey"
+            columns: ["related_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "label_financial_transactions_related_release_id_fkey"
+            columns: ["related_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       label_promotion_campaigns: {
         Row: {
           budget: number
@@ -7225,6 +7353,53 @@ export type Database = {
           },
         ]
       }
+      label_staff: {
+        Row: {
+          created_at: string
+          hired_at: string
+          id: string
+          label_id: string | null
+          name: string
+          performance_rating: number | null
+          role: string
+          salary_monthly: number
+          skill_level: number
+          specialty_genre: string | null
+        }
+        Insert: {
+          created_at?: string
+          hired_at?: string
+          id?: string
+          label_id?: string | null
+          name: string
+          performance_rating?: number | null
+          role: string
+          salary_monthly?: number
+          skill_level?: number
+          specialty_genre?: string | null
+        }
+        Update: {
+          created_at?: string
+          hired_at?: string
+          id?: string
+          label_id?: string | null
+          name?: string
+          performance_rating?: number | null
+          role?: string
+          salary_monthly?: number
+          skill_level?: number
+          specialty_genre?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_staff_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       label_territories: {
         Row: {
           created_at: string | null
@@ -7347,66 +7522,96 @@ export type Database = {
       }
       labels: {
         Row: {
+          a_and_r_budget: number | null
+          advance_pool: number | null
           balance: number | null
           balance_went_negative_at: string | null
           company_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          distribution_cut_pct: number | null
+          distribution_deal: string | null
           genre_focus: string[] | null
           headquarters_city: string | null
           headquarters_city_id: string | null
           id: string
           is_bankrupt: boolean | null
+          is_subsidiary: boolean | null
           logo_url: string | null
           market_share: number | null
           marketing_budget: number | null
+          monthly_overhead: number | null
           name: string
+          operating_budget: number | null
           owner_id: string | null
           reputation_score: number | null
           roster_slot_capacity: number | null
+          royalty_default_pct: number | null
+          total_expenses_lifetime: number | null
+          total_revenue_lifetime: number | null
           updated_at: string | null
         }
         Insert: {
+          a_and_r_budget?: number | null
+          advance_pool?: number | null
           balance?: number | null
           balance_went_negative_at?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          distribution_cut_pct?: number | null
+          distribution_deal?: string | null
           genre_focus?: string[] | null
           headquarters_city?: string | null
           headquarters_city_id?: string | null
           id?: string
           is_bankrupt?: boolean | null
+          is_subsidiary?: boolean | null
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
+          monthly_overhead?: number | null
           name: string
+          operating_budget?: number | null
           owner_id?: string | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
+          royalty_default_pct?: number | null
+          total_expenses_lifetime?: number | null
+          total_revenue_lifetime?: number | null
           updated_at?: string | null
         }
         Update: {
+          a_and_r_budget?: number | null
+          advance_pool?: number | null
           balance?: number | null
           balance_went_negative_at?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          distribution_cut_pct?: number | null
+          distribution_deal?: string | null
           genre_focus?: string[] | null
           headquarters_city?: string | null
           headquarters_city_id?: string | null
           id?: string
           is_bankrupt?: boolean | null
+          is_subsidiary?: boolean | null
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
+          monthly_overhead?: number | null
           name?: string
+          operating_budget?: number | null
           owner_id?: string | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
+          royalty_default_pct?: number | null
+          total_expenses_lifetime?: number | null
+          total_revenue_lifetime?: number | null
           updated_at?: string | null
         }
         Relationships: [
