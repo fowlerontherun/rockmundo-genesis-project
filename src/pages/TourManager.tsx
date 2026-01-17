@@ -349,13 +349,15 @@ const TourManager = () => {
       </div>
 
       <Tabs defaultValue="current" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="current">My Current Tour</TabsTrigger>
-          <TabsTrigger value="upcoming">Upcoming Tours</TabsTrigger>
-          <TabsTrigger value="historic">Historic Tours</TabsTrigger>
-          <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
-          <TabsTrigger value="other-tours">Other Bands Tours</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+          <TabsList className="inline-flex w-max gap-1 lg:w-auto lg:grid lg:grid-cols-5">
+            <TabsTrigger value="current" className="whitespace-nowrap">Current</TabsTrigger>
+            <TabsTrigger value="upcoming" className="whitespace-nowrap">Upcoming</TabsTrigger>
+            <TabsTrigger value="historic" className="whitespace-nowrap">History</TabsTrigger>
+            <TabsTrigger value="getting-started" className="whitespace-nowrap">Getting Started</TabsTrigger>
+            <TabsTrigger value="other-tours" className="whitespace-nowrap">Other Bands</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* My Current Tour */}
         <TabsContent value="current" className="space-y-4">
