@@ -8430,6 +8430,192 @@ export type Database = {
           },
         ]
       }
+      merch_factories: {
+        Row: {
+          city_id: string | null
+          company_id: string | null
+          created_at: string
+          current_production: number
+          equipment_condition: number
+          factory_type: string
+          id: string
+          is_operational: boolean
+          name: string
+          operating_costs_daily: number
+          production_capacity: number
+          quality_level: number
+          updated_at: string
+          worker_count: number
+          worker_skill_avg: number
+        }
+        Insert: {
+          city_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          current_production?: number
+          equipment_condition?: number
+          factory_type?: string
+          id?: string
+          is_operational?: boolean
+          name: string
+          operating_costs_daily?: number
+          production_capacity?: number
+          quality_level?: number
+          updated_at?: string
+          worker_count?: number
+          worker_skill_avg?: number
+        }
+        Update: {
+          city_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          current_production?: number
+          equipment_condition?: number
+          factory_type?: string
+          id?: string
+          is_operational?: boolean
+          name?: string
+          operating_costs_daily?: number
+          production_capacity?: number
+          quality_level?: number
+          updated_at?: string
+          worker_count?: number
+          worker_skill_avg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_factories_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_factories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_factory_contracts: {
+        Row: {
+          client_band_id: string | null
+          client_label_id: string | null
+          contract_type: string
+          created_at: string
+          discount_percentage: number
+          end_date: string | null
+          factory_id: string | null
+          id: string
+          is_active: boolean
+          minimum_monthly_orders: number | null
+          priority_level: number
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          client_band_id?: string | null
+          client_label_id?: string | null
+          contract_type?: string
+          created_at?: string
+          discount_percentage?: number
+          end_date?: string | null
+          factory_id?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_monthly_orders?: number | null
+          priority_level?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          client_band_id?: string | null
+          client_label_id?: string | null
+          contract_type?: string
+          created_at?: string
+          discount_percentage?: number
+          end_date?: string | null
+          factory_id?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_monthly_orders?: number | null
+          priority_level?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_factory_contracts_client_band_id_fkey"
+            columns: ["client_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_factory_contracts_client_label_id_fkey"
+            columns: ["client_label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_factory_contracts_factory_id_fkey"
+            columns: ["factory_id"]
+            isOneToOne: false
+            referencedRelation: "merch_factories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_factory_workers: {
+        Row: {
+          created_at: string
+          experience_months: number
+          factory_id: string | null
+          hired_at: string
+          id: string
+          morale: number
+          name: string
+          role: string
+          salary_weekly: number
+          skill_level: number
+        }
+        Insert: {
+          created_at?: string
+          experience_months?: number
+          factory_id?: string | null
+          hired_at?: string
+          id?: string
+          morale?: number
+          name: string
+          role?: string
+          salary_weekly?: number
+          skill_level?: number
+        }
+        Update: {
+          created_at?: string
+          experience_months?: number
+          factory_id?: string | null
+          hired_at?: string
+          id?: string
+          morale?: number
+          name?: string
+          role?: string
+          salary_weekly?: number
+          skill_level?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_factory_workers_factory_id_fkey"
+            columns: ["factory_id"]
+            isOneToOne: false
+            referencedRelation: "merch_factories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merch_item_requirements: {
         Row: {
           base_cost: number | null
@@ -8468,6 +8654,199 @@ export type Database = {
           min_level?: number | null
         }
         Relationships: []
+      }
+      merch_product_catalog: {
+        Row: {
+          base_cost: number
+          created_at: string
+          factory_id: string | null
+          id: string
+          is_active: boolean
+          min_order_quantity: number
+          product_name: string
+          product_type: string
+          production_time_hours: number
+          suggested_price: number
+        }
+        Insert: {
+          base_cost: number
+          created_at?: string
+          factory_id?: string | null
+          id?: string
+          is_active?: boolean
+          min_order_quantity?: number
+          product_name: string
+          product_type: string
+          production_time_hours?: number
+          suggested_price: number
+        }
+        Update: {
+          base_cost?: number
+          created_at?: string
+          factory_id?: string | null
+          id?: string
+          is_active?: boolean
+          min_order_quantity?: number
+          product_name?: string
+          product_type?: string
+          production_time_hours?: number
+          suggested_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_product_catalog_factory_id_fkey"
+            columns: ["factory_id"]
+            isOneToOne: false
+            referencedRelation: "merch_factories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_production_queue: {
+        Row: {
+          client_band_id: string | null
+          client_label_id: string | null
+          completed_at: string | null
+          created_at: string
+          estimated_completion: string | null
+          factory_id: string | null
+          id: string
+          notes: string | null
+          priority: number
+          product_catalog_id: string | null
+          quality_rating: number | null
+          quantity: number
+          shipped_at: string | null
+          started_at: string | null
+          status: string
+          total_cost: number
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          client_band_id?: string | null
+          client_label_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_completion?: string | null
+          factory_id?: string | null
+          id?: string
+          notes?: string | null
+          priority?: number
+          product_catalog_id?: string | null
+          quality_rating?: number | null
+          quantity: number
+          shipped_at?: string | null
+          started_at?: string | null
+          status?: string
+          total_cost: number
+          unit_cost: number
+          updated_at?: string
+        }
+        Update: {
+          client_band_id?: string | null
+          client_label_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_completion?: string | null
+          factory_id?: string | null
+          id?: string
+          notes?: string | null
+          priority?: number
+          product_catalog_id?: string | null
+          quality_rating?: number | null
+          quantity?: number
+          shipped_at?: string | null
+          started_at?: string | null
+          status?: string
+          total_cost?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_production_queue_client_band_id_fkey"
+            columns: ["client_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_production_queue_client_label_id_fkey"
+            columns: ["client_label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_production_queue_factory_id_fkey"
+            columns: ["factory_id"]
+            isOneToOne: false
+            referencedRelation: "merch_factories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_production_queue_product_catalog_id_fkey"
+            columns: ["product_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "merch_product_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_quality_records: {
+        Row: {
+          defect_types: Json | null
+          id: string
+          inspected_at: string
+          inspector_id: string | null
+          items_failed: number
+          items_inspected: number
+          items_passed: number
+          notes: string | null
+          production_queue_id: string | null
+          quality_score: number
+        }
+        Insert: {
+          defect_types?: Json | null
+          id?: string
+          inspected_at?: string
+          inspector_id?: string | null
+          items_failed: number
+          items_inspected: number
+          items_passed: number
+          notes?: string | null
+          production_queue_id?: string | null
+          quality_score: number
+        }
+        Update: {
+          defect_types?: Json | null
+          id?: string
+          inspected_at?: string
+          inspector_id?: string | null
+          items_failed?: number
+          items_inspected?: number
+          items_passed?: number
+          notes?: string | null
+          production_queue_id?: string | null
+          quality_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_quality_records_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "merch_factory_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_quality_records_production_queue_id_fkey"
+            columns: ["production_queue_id"]
+            isOneToOne: false
+            referencedRelation: "merch_production_queue"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       multiplayer_events: {
         Row: {
