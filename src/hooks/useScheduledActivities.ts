@@ -112,13 +112,17 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Fetch gigs for user's bands
       let gigs: any[] = [];
       if (userBandIds.length > 0) {
-        const { data: bandGigs } = await supabase
+        const { data: bandGigs, error: gigsError } = await supabase
           .from('gigs')
-          .select('*, venues:venue_id(name, cities(name)), bands:band_id(name), tours:tour_id(name)')
+          .select('*, venues:venue_id(name, city_id, cities:city_id(name)), bands:band_id(name), tours:tour_id(name)')
           .in('band_id', userBandIds)
           .gte('scheduled_date', dayStart.toISOString())
           .lte('scheduled_date', dayEnd.toISOString())
           .in('status', ['scheduled', 'in_progress', 'completed', 'confirmed']);
+        
+        if (gigsError) {
+          console.error('Error fetching gigs for schedule:', gigsError);
+        }
         gigs = bandGigs || [];
       }
 
