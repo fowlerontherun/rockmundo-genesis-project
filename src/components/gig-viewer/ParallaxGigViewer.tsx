@@ -10,6 +10,7 @@ import { RpmAvatarImage } from "./RpmAvatarImage";
 import { SimpleStageBackground } from "./SimpleStageBackground";
 import { StageSpotlights } from "./StageSpotlights";
 import { InstrumentOverlay } from "./InstrumentOverlay";
+import { Stage3DEquipment } from "./Stage3DEquipment";
 import { useCrowdSounds } from "@/hooks/useCrowdSounds";
 import type { Database } from "@/lib/supabase-types";
 
@@ -408,6 +409,14 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
         songSection={songSection} 
         stageTheme={stageTheme}
         isNightShow={isNightShow}
+      />
+      
+      {/* 3D Stage Equipment Layer */}
+      <Stage3DEquipment 
+        bandMembers={bandMembers.map(m => ({ role: m.role, isPresent: true }))}
+        intensity={intensity}
+        songSection={songSection}
+        crowdMood={crowdMood}
       />
       
       {/* Spotlight Effects */}
