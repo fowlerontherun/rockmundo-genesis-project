@@ -83,7 +83,16 @@ export const EnhancedSetlistSongManager = ({
         throw new Error('Maximum 5 performance items per setlist');
       }
       
-      const nextPosition = getNextPosition();
+      // Query actual max position from database to avoid unique constraint violations
+      const { data: maxPositionData } = await supabase
+        .from("setlist_songs")
+        .select("position")
+        .eq("setlist_id", setlistId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      const nextPosition = Math.floor((maxPositionData?.position || 0) + 1);
       
       console.log('[EnhancedSetlistSongManager] Adding performance item:', {
         itemId: item.id,
@@ -136,7 +145,16 @@ export const EnhancedSetlistSongManager = ({
         currentEncoreCount: encoreCount
       });
       
-      const nextPosition = getNextPosition();
+      // Query actual max position from database to avoid unique constraint violations
+      const { data: maxPositionData } = await supabase
+        .from("setlist_songs")
+        .select("position")
+        .eq("setlist_id", setlistId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      const nextPosition = Math.floor((maxPositionData?.position || 0) + 1);
 
       const { data, error } = await supabase
         .from("setlist_songs")
@@ -178,7 +196,16 @@ export const EnhancedSetlistSongManager = ({
         currentMainCount: mainCount
       });
 
-      const nextPosition = getNextPosition();
+      // Query actual max position from database to avoid unique constraint violations
+      const { data: maxPositionData } = await supabase
+        .from("setlist_songs")
+        .select("position")
+        .eq("setlist_id", setlistId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      const nextPosition = Math.floor((maxPositionData?.position || 0) + 1);
 
       const { data, error } = await supabase
         .from("setlist_songs")

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.422",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed setlist song management duplicate key error by querying actual max position from database before inserting" },
+    ],
+  },
+  {
     version: "1.0.421",
     date: "2026-01-17",
     changes: [
