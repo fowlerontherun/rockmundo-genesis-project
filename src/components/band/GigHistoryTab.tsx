@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award, Monitor, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
 import { GigReviewViewer } from "@/components/gig/GigReviewViewer";
+import { ParallaxGigViewer } from "@/components/gig-viewer/ParallaxGigViewer";
+import { GigViewerModeSelector } from "@/components/gig/GigViewerModeSelector";
 import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
 import { buildGearOutcomeNarrative } from "@/utils/gigNarrative";
@@ -65,6 +67,8 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [reviewOutcomeId, setReviewOutcomeId] = useState<string | null>(null);
   const [showReviewChoice, setShowReviewChoice] = useState(false);
   const [pendingOutcome, setPendingOutcome] = useState<GigHistoryOutcome | null>(null);
+  const [reviewMode, setReviewMode] = useState<'3d' | 'text'>('text');
+  const [show3DViewer, setShow3DViewer] = useState(false);
   const { data: selectedGearData } = useBandGearEffects(selectedOutcome?.gigs?.band_id ?? bandId, {
     enabled: showReport && Boolean(selectedOutcome?.gigs?.band_id ?? bandId),
   });
@@ -345,18 +349,34 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                 How would you like to view this gig?
               </DialogTitle>
               <DialogDescription>
-                Choose to watch the gig with live commentary or skip straight to the outcome report.
+                Choose your viewing experience for this performance.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 gap-4 mt-4">
               <Button
-                onClick={handleWatchWithCommentary}
+                onClick={() => {
+                  if (!pendingOutcome?.gigs?.id) return;
+                  setReviewGigId(pendingOutcome.gigs.id);
+                  setReviewOutcomeId(pendingOutcome.id);
+                  setShowReviewChoice(false);
+                  setShow3DViewer(true);
+                }}
                 size="lg"
                 className="h-auto flex-col gap-2 py-4"
               >
-                <Play className="h-6 w-6" />
-                <span className="font-semibold">Watch with Commentary</span>
-                <span className="text-xs opacity-80">Experience the gig song by song</span>
+                <Monitor className="h-6 w-6" />
+                <span className="font-semibold">3D Stage View</span>
+                <span className="text-xs opacity-80">Watch the band perform on stage with audio & crowd sounds</span>
+              </Button>
+              <Button
+                onClick={handleWatchWithCommentary}
+                variant="secondary"
+                size="lg"
+                className="h-auto flex-col gap-2 py-4"
+              >
+                <FileText className="h-6 w-6" />
+                <span className="font-semibold">Commentary Mode</span>
+                <span className="text-xs opacity-80">Experience the gig with live text commentary</span>
               </Button>
               <Button
                 onClick={handleInstantOutcome}
@@ -371,6 +391,18 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             </div>
           </DialogContent>
         </Dialog>
+        
+        {/* 3D Stage Viewer */}
+        {show3DViewer && reviewGigId && (
+          <ParallaxGigViewer
+            gigId={reviewGigId}
+            onClose={() => {
+              setShow3DViewer(false);
+              setReviewGigId(null);
+              setReviewOutcomeId(null);
+            }}
+          />
+        )}
 
         {/* Gig Review Viewer */}
         {showReviewViewer && reviewGigId && reviewOutcomeId && (

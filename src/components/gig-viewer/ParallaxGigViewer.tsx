@@ -1,14 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, Maximize2, Minimize2, Music, Users } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { X, Maximize2, Minimize2, Music, Users, Volume2, VolumeX, Play, Pause, SkipForward } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GigAudioPlayer } from "./GigAudioPlayer";
 import { RpmAvatarImage } from "./RpmAvatarImage";
 import { SimpleStageBackground } from "./SimpleStageBackground";
 import { StageSpotlights } from "./StageSpotlights";
 import { InstrumentOverlay } from "./InstrumentOverlay";
+import { useCrowdSounds } from "@/hooks/useCrowdSounds";
 import type { Database } from "@/lib/supabase-types";
 
 interface ParallaxGigViewerProps {
@@ -37,6 +39,32 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
   const [bandMembers, setBandMembers] = useState<BandMember[]>([]);
   const [songSection, setSongSection] = useState<'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro'>('intro');
   const [isAudioPlaying, setIsAudioPlaying] = useState(true);
+  const [volume, setVolume] = useState(0.7);
+  const [isMuted, setIsMuted] = useState(false);
+  const hasPlayedEntranceRef = useRef(false);
+  const lastSongIndexRef = useRef(-1);
+  
+  // Crowd sounds
+  const { 
+    isLoaded: crowdSoundsLoaded, 
+    setVolume: setCrowdVolume, 
+    setMuted: setCrowdMuted,
+    playEntrance, 
+    playApplause, 
+    playCrowdReaction 
+  } = useCrowdSounds();
+  
+  // Sync volume with crowd sounds
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    setCrowdVolume(newVolume);
+  };
+  
+  const handleMuteToggle = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    setCrowdMuted(newMuted);
+  };
 
   // Fetch gig data
   useEffect(() => {
@@ -144,9 +172,30 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
     return () => clearInterval(interval);
   }, []);
 
+  // Play entrance sound when viewer loads
+  useEffect(() => {
+    if (crowdSoundsLoaded && !hasPlayedEntranceRef.current && !isLoading) {
+      playEntrance();
+      hasPlayedEntranceRef.current = true;
+    }
+  }, [crowdSoundsLoaded, isLoading, playEntrance]);
+  
+  // Play crowd reaction when song changes
+  useEffect(() => {
+    if (!crowdSoundsLoaded || songPerformances.length === 0) return;
+    
+    if (lastSongIndexRef.current !== currentSongIndex && lastSongIndexRef.current !== -1) {
+      const currentSong = songPerformances[currentSongIndex];
+      if (currentSong?.crowd_response) {
+        playCrowdReaction(currentSong.crowd_response);
+      }
+    }
+    lastSongIndexRef.current = currentSongIndex;
+  }, [currentSongIndex, crowdSoundsLoaded, songPerformances, playCrowdReaction]);
+  
   // Simulate song progression
   useEffect(() => {
-    if (songPerformances.length === 0) return;
+    if (songPerformances.length === 0 || !isAudioPlaying) return;
 
     const interval = setInterval(() => {
       setCurrentSongIndex((prev) => {
@@ -156,12 +205,33 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
           const songMood = Math.min(100, Math.max(0, (currentSong.performance_score / 25) * 100));
           setCrowdMood(songMood);
         }
+        
+        // Play applause at the end of the setlist
+        if (next === 0 && prev === songPerformances.length - 1 && crowdSoundsLoaded) {
+          playApplause();
+        }
+        
         return next;
       });
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [songPerformances]);
+  }, [songPerformances, isAudioPlaying, crowdSoundsLoaded, playApplause]);
+  
+  const handleSkipSong = () => {
+    if (currentSongIndex < songPerformances.length - 1) {
+      setCurrentSongIndex(prev => prev + 1);
+      const nextSong = songPerformances[currentSongIndex + 1];
+      if (nextSong) {
+        const songMood = Math.min(100, Math.max(0, (nextSong.performance_score / 25) * 100));
+        setCrowdMood(songMood);
+      }
+    }
+  };
+  
+  const handlePlayPause = () => {
+    setIsAudioPlaying(prev => !prev);
+  };
 
   const handleSongAudioEnded = () => {
     if (currentSongIndex < songPerformances.length - 1) {
@@ -383,8 +453,48 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 audioUrl={currentSong.song_audio_url}
                 isPlaying={isAudioPlaying}
                 onEnded={handleSongAudioEnded}
+                volume={isMuted ? 0 : volume}
               />
             )}
+            
+            {/* Audio Controls */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handlePlayPause}
+                className="h-8 w-8 text-white hover:bg-white/20"
+              >
+                {isAudioPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSkipSong}
+                disabled={currentSongIndex >= songPerformances.length - 1}
+                className="h-8 w-8 text-white hover:bg-white/20 disabled:opacity-30"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMuteToggle}
+                className="h-8 w-8 text-white hover:bg-white/20"
+              >
+                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </Button>
+              <Slider
+                value={[isMuted ? 0 : volume * 100]}
+                onValueChange={([val]) => {
+                  handleVolumeChange(val / 100);
+                  if (val > 0) setIsMuted(false);
+                }}
+                max={100}
+                step={1}
+                className="w-20"
+              />
+            </div>
           </div>
         </Card>
 

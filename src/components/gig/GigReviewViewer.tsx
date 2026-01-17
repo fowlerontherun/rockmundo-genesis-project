@@ -118,18 +118,41 @@ export const GigReviewViewer = ({
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip || false;
   
+  // Crowd sounds hook
+  const { 
+    isLoaded: crowdSoundsLoaded, 
+    setVolume: setCrowdVolume, 
+    setMuted: setCrowdMuted,
+    playEntrance, 
+    playApplause, 
+    playCrowdReaction 
+  } = useCrowdSounds();
+  
   const [performances, setPerformances] = useState<SongPerformance[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1); // -1 = arrival, 0+ = song index
   const [commentary, setCommentary] = useState<CommentaryEntry[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const [gig, setGig] = useState<any>(null);
-  const [volume, setVolume] = useState(0.7);
+  const [volume, setVolumeState] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasPlayedEntrance, setHasPlayedEntrance] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Sync volume with crowd sounds
+  const setVolume = (newVolume: number) => {
+    setVolumeState(newVolume);
+    setCrowdVolume(newVolume);
+  };
+  
+  // Sync mute with crowd sounds
+  const handleMuteToggle = (muted: boolean) => {
+    setIsMuted(muted);
+    setCrowdMuted(muted);
+  };
 
   const getRandomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
@@ -250,12 +273,18 @@ export const GigReviewViewer = ({
         icon: '🎆',
         variant: 'success',
       });
+      
+      // Play applause for finale
+      if (crowdSoundsLoaded) {
+        playApplause();
+      }
+      
       setIsPlaying(false);
       if (audioRef.current) {
         audioRef.current.pause();
       }
     }
-  }, [currentIndex, performances.length, addCommentary]);
+  }, [currentIndex, performances.length, addCommentary, crowdSoundsLoaded, playApplause]);
 
   // Handle song advancement
   useEffect(() => {
@@ -270,6 +299,12 @@ export const GigReviewViewer = ({
         variant: 'success',
       });
       
+      // Play entrance crowd sound
+      if (crowdSoundsLoaded && !hasPlayedEntrance) {
+        playEntrance();
+        setHasPlayedEntrance(true);
+      }
+      
       if (isAutoPlay) {
         timeoutRef.current = setTimeout(() => {
           setCurrentIndex(0);
@@ -279,6 +314,13 @@ export const GigReviewViewer = ({
       const perf = performances[currentIndex];
       generateSongCommentary(perf);
       playCurrentSong();
+      
+      // Play crowd reaction sound after a delay
+      if (crowdSoundsLoaded) {
+        setTimeout(() => {
+          playCrowdReaction(perf.crowd_response);
+        }, 2500);
+      }
       
       if (isAutoPlay) {
         // Use actual song duration (capped at 5 minutes for review mode)
@@ -294,7 +336,7 @@ export const GigReviewViewer = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [currentIndex, isPlaying, performances, isAutoPlay, addCommentary, generateSongCommentary, playCurrentSong, advanceToNext]);
+  }, [currentIndex, isPlaying, performances, isAutoPlay, addCommentary, generateSongCommentary, playCurrentSong, advanceToNext, crowdSoundsLoaded, playEntrance, playCrowdReaction, hasPlayedEntrance]);
 
   // Handle volume changes
   useEffect(() => {
@@ -438,7 +480,7 @@ export const GigReviewViewer = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => handleMuteToggle(!isMuted)}
               >
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>

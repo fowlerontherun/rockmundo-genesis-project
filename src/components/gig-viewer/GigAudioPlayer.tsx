@@ -7,19 +7,24 @@ interface GigAudioPlayerProps {
   audioUrl: string | null;
   isPlaying: boolean;
   onEnded?: () => void;
+  volume?: number; // External volume control (0-1)
+  hideControls?: boolean; // Hide built-in volume controls
 }
 
-export const GigAudioPlayer = ({ audioUrl, isPlaying, onEnded }: GigAudioPlayerProps) => {
+export const GigAudioPlayer = ({ audioUrl, isPlaying, onEnded, volume: externalVolume, hideControls = false }: GigAudioPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [volume, setVolume] = useState(0.7);
+  const [internalVolume, setInternalVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  
+  // Use external volume if provided, otherwise use internal state
+  const effectiveVolume = externalVolume !== undefined ? externalVolume : internalVolume;
 
   useEffect(() => {
     if (!audioUrl) return;
 
     if (!audioRef.current) {
       audioRef.current = new Audio(audioUrl);
-      audioRef.current.volume = volume;
+      audioRef.current.volume = effectiveVolume;
       audioRef.current.onended = () => onEnded?.();
     } else if (audioRef.current.src !== audioUrl) {
       audioRef.current.src = audioUrl;
@@ -41,9 +46,16 @@ export const GigAudioPlayer = ({ audioUrl, isPlaying, onEnded }: GigAudioPlayerP
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.volume = isMuted ? 0 : effectiveVolume;
     }
-  }, [volume, isMuted]);
+  }, [effectiveVolume, isMuted]);
+
+  if (!audioUrl) return null;
+  
+  // If hideControls is true or external volume is provided, don't show the built-in controls
+  if (hideControls || externalVolume !== undefined) {
+    return null; // Audio plays but no UI rendered
+  }
 
   if (!audioUrl) return null;
 
@@ -58,9 +70,9 @@ export const GigAudioPlayer = ({ audioUrl, isPlaying, onEnded }: GigAudioPlayerP
         {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
       </Button>
       <Slider
-        value={[isMuted ? 0 : volume * 100]}
+        value={[isMuted ? 0 : internalVolume * 100]}
         onValueChange={([val]) => {
-          setVolume(val / 100);
+          setInternalVolume(val / 100);
           if (val > 0) setIsMuted(false);
         }}
         max={100}
