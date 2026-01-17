@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.455",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 9: Logistics & Transport Companies" },
+      { type: 'feature', description: "Create and manage logistics companies as company subsidiaries" },
+      { type: 'feature', description: "Fleet vehicle management - vans, sprinters, box trucks, semi-trailers, flatbeds" },
+      { type: 'feature', description: "Driver hiring system with license types (standard, commercial, hazmat, oversize)" },
+      { type: 'feature', description: "Transport contracts - tour transport, equipment haul, merch delivery, one-way/round trips" },
+      { type: 'feature', description: "Contract assignment system with vehicle and driver scheduling" },
+      { type: 'feature', description: "Company upgrades - fleet capacity, GPS tracking, climate control, insurance, permits" },
+      { type: 'improvement', description: "License tiers from Local Courier to Global Transport Network with fleet limits" },
+    ],
+  },
+  {
     version: "1.0.454",
     date: "2026-01-17",
     changes: [
