@@ -2622,6 +2622,7 @@ export type Database = {
           name: string
           quality_rating: number | null
           reputation: number | null
+          sessions_completed: number | null
           specialties: string[] | null
           total_revenue: number | null
           total_sessions: number | null
@@ -2648,6 +2649,7 @@ export type Database = {
           name: string
           quality_rating?: number | null
           reputation?: number | null
+          sessions_completed?: number | null
           specialties?: string[] | null
           total_revenue?: number | null
           total_sessions?: number | null
@@ -2674,6 +2676,7 @@ export type Database = {
           name?: string
           quality_rating?: number | null
           reputation?: number | null
+          sessions_completed?: number | null
           specialties?: string[] | null
           total_revenue?: number | null
           total_sessions?: number | null
@@ -2997,6 +3000,7 @@ export type Database = {
           is_bankrupt: boolean
           logo_url: string | null
           name: string
+          negative_balance_since: string | null
           owner_id: string
           parent_company_id: string | null
           reputation_score: number
@@ -3016,6 +3020,7 @@ export type Database = {
           is_bankrupt?: boolean
           logo_url?: string | null
           name: string
+          negative_balance_since?: string | null
           owner_id: string
           parent_company_id?: string | null
           reputation_score?: number
@@ -3035,6 +3040,7 @@ export type Database = {
           is_bankrupt?: boolean
           logo_url?: string | null
           name?: string
+          negative_balance_since?: string | null
           owner_id?: string
           parent_company_id?: string | null
           reputation_score?: number
@@ -15284,6 +15290,7 @@ export type Database = {
           quality_rating: number | null
           recording_capable: boolean | null
           reputation: number | null
+          sessions_completed: number | null
           soundproofing_level: number | null
           total_bookings: number | null
           total_revenue: number | null
@@ -15309,6 +15316,7 @@ export type Database = {
           quality_rating?: number | null
           recording_capable?: boolean | null
           reputation?: number | null
+          sessions_completed?: number | null
           soundproofing_level?: number | null
           total_bookings?: number | null
           total_revenue?: number | null
@@ -15334,6 +15342,7 @@ export type Database = {
           quality_rating?: number | null
           recording_capable?: boolean | null
           reputation?: number | null
+          sessions_completed?: number | null
           soundproofing_level?: number | null
           total_bookings?: number | null
           total_revenue?: number | null
