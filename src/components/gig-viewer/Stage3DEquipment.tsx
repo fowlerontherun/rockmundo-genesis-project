@@ -83,118 +83,91 @@ const StageEquipmentScene = ({
         distance={8}
       />
       
-      {/* Drum Kit - back center - scaled up for visibility */}
+      {/* Stage floor plane for grounding */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[12, 8]} />
+        <meshStandardMaterial 
+          color="#1a1a1a" 
+          roughness={0.8}
+          metalness={0.2}
+          transparent
+          opacity={0.6}
+        />
+      </mesh>
+      
+      {/* Drum Kit - pushed further back, smaller scale */}
       {equipment.hasDrummer && (
         <ProceduralDrumKit 
-          position={[0, 0, -1.2]} 
-          scale={1.1}
+          position={[0, 0, -2.5]} 
+          scale={0.7}
           intensity={intensity}
           songSection={songSection}
         />
       )}
       
-      {/* Guitar Amp Stack - left side - scaled up */}
+      {/* Guitar Amp Stack - far left, pushed back */}
       {equipment.hasGuitarist && (
         <ProceduralGuitarAmp 
-          position={[-1.8, 0, -0.5]} 
-          scale={1.0}
+          position={[-2.8, 0, -1.8]} 
+          scale={0.65}
           intensity={intensity}
           isActive={true}
         />
       )}
       
-      {/* Bass Amp - right side - scaled up */}
+      {/* Bass Amp - far right, pushed back */}
       {equipment.hasBassist && (
         <ProceduralBassAmp 
-          position={[1.8, 0, -0.5]} 
-          scale={1.0}
+          position={[2.8, 0, -1.8]} 
+          scale={0.65}
           intensity={intensity}
           isActive={true}
         />
       )}
       
-      {/* Keyboard Setup - back left - scaled up */}
+      {/* Keyboard Setup - back left corner */}
       {equipment.hasKeyboardist && (
         <ProceduralKeyboard 
-          position={[-1.2, 0, -0.9]} 
-          scale={1.0}
+          position={[-2.2, 0, -2.2]} 
+          scale={0.6}
           intensity={intensity}
           isActive={true}
         />
       )}
       
-      {/* Main Vocal Mic Stand - front center - scaled up */}
+      {/* Minimal mic stands - only vocalist, positioned to not block */}
       {equipment.hasVocalist && (
         <ProceduralMicStand 
-          position={[0, 0, 0.8]} 
-          scale={1.1}
+          position={[0, 0, -0.5]} 
+          scale={0.7}
           intensity={intensity}
           hasBoomArm={true}
         />
       )}
       
-      {/* Backup mic for guitarist - scaled up */}
-      {equipment.hasGuitarist && (
-        <ProceduralMicStand 
-          position={[-1.0, 0, 0.5]} 
-          scale={0.9}
-          intensity={intensity}
-          hasBoomArm={false}
-        />
-      )}
-      
-      {/* Backup mic for bassist - scaled up */}
-      {equipment.hasBassist && (
-        <ProceduralMicStand 
-          position={[1.0, 0, 0.5]} 
-          scale={0.9}
-          intensity={intensity}
-          hasBoomArm={false}
-        />
-      )}
-      
-      {/* Stage Monitors - facing performers - scaled up */}
+      {/* Removed front stage monitors that were blocking view */}
+      {/* Only keep small side monitors at edges */}
       <ProceduralStageMonitor 
-        position={[-0.6, 0, 1.0]} 
-        scale={1.0}
+        position={[-3.5, 0, 0]} 
+        scale={0.5}
         intensity={intensity}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, Math.PI * 0.3, 0]}
       />
       <ProceduralStageMonitor 
-        position={[0.6, 0, 1.0]} 
-        scale={1.0}
+        position={[3.5, 0, 0]} 
+        scale={0.5}
         intensity={intensity}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, -Math.PI * 0.3, 0]}
       />
-      
-      {/* Additional monitors for drummer - scaled up */}
-      {equipment.hasDrummer && (
-        <ProceduralStageMonitor 
-          position={[0, 0, -0.3]} 
-          scale={0.9}
-          intensity={intensity}
-          rotation={[0, Math.PI, 0]}
-        />
-      )}
-      
-      {/* Side-fill monitor for keyboardist - scaled up */}
-      {equipment.hasKeyboardist && (
-        <ProceduralStageMonitor 
-          position={[-1.6, 0, -0.2]} 
-          scale={0.9}
-          intensity={intensity}
-          rotation={[0, Math.PI * 0.8, 0]}
-        />
-      )}
       
       {/* Cables for realism - updated positions */}
       <ProceduralCableSet
         equipmentPositions={{
-          guitarAmp: equipment.hasGuitarist ? [-1.8, 0, -0.5] : undefined,
-          bassAmp: equipment.hasBassist ? [1.8, 0, -0.5] : undefined,
-          drums: equipment.hasDrummer ? [0, 0, -1.2] : undefined,
-          keyboard: equipment.hasKeyboardist ? [-1.2, 0, -0.9] : undefined,
-          vocalMic: equipment.hasVocalist ? [0, 0, 0.8] : undefined,
+          guitarAmp: equipment.hasGuitarist ? [-2.8, 0, -1.8] : undefined,
+          bassAmp: equipment.hasBassist ? [2.8, 0, -1.8] : undefined,
+          drums: equipment.hasDrummer ? [0, 0, -2.5] : undefined,
+          keyboard: equipment.hasKeyboardist ? [-2.2, 0, -2.2] : undefined,
+          vocalMic: equipment.hasVocalist ? [0, 0, -0.5] : undefined,
         }}
         intensity={intensity}
       />
@@ -220,12 +193,12 @@ export const Stage3DEquipment = ({
   return (
     <div 
       className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: 10 }}
+      style={{ zIndex: 5 }}
     >
       <Canvas
         camera={{ 
-          position: [0, 1.8, 4.5], 
-          fov: 50,
+          position: [0, 3, 7], 
+          fov: 40,
           near: 0.1,
           far: 100
         }}

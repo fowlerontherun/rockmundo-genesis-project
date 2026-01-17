@@ -432,12 +432,12 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
       )}
       
       {/* Band Members on Stage */}
-      <div className="absolute inset-0 flex items-end justify-center pb-8" style={{ zIndex: 25 }}>
-        <div className="relative w-full max-w-5xl h-[75vh]">
-          {/* Drummer (back center) */}
+      <div className="absolute inset-0 flex items-end justify-center pb-4" style={{ zIndex: 25 }}>
+        <div className="relative w-full max-w-6xl h-[80vh]">
+          {/* Drummer (back center - smaller, higher) */}
           {positionedMembers.drummer && (
             <motion.div
-              className="absolute bottom-[35%] left-1/2 -translate-x-1/2 z-10"
+              className="absolute bottom-[40%] left-1/2 -translate-x-1/2 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -447,15 +447,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="drummer"
                 intensity={intensity}
                 songSection={songSection}
-                size="lg"
+                size="md"
               />
             </motion.div>
           )}
 
-          {/* Keyboardist (back left if exists) */}
+          {/* Keyboardist (back left - smaller) */}
           {positionedMembers.keyboardist && (
             <motion.div
-              className="absolute bottom-[30%] left-[15%] z-10"
+              className="absolute bottom-[35%] left-[8%] z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
@@ -465,15 +465,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="keyboardist"
                 intensity={intensity}
                 songSection={songSection}
-                size="lg"
+                size="md"
               />
             </motion.div>
           )}
 
-          {/* Guitarist (front left) */}
+          {/* Guitarist (front left - spread wider) */}
           {positionedMembers.guitarist && (
             <motion.div
-              className="absolute bottom-[8%] left-[10%] z-20"
+              className="absolute bottom-[5%] left-[5%] z-20"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -488,7 +488,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
             </motion.div>
           )}
 
-          {/* Vocalist (front center) */}
+          {/* Vocalist (front center - prominent) */}
           {positionedMembers.vocalist && (
             <motion.div
               className="absolute bottom-[8%] left-1/2 -translate-x-1/2 z-30"
@@ -506,10 +506,10 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
             </motion.div>
           )}
 
-          {/* Bassist (front right) */}
+          {/* Bassist (front right - spread wider) */}
           {positionedMembers.bassist && (
             <motion.div
-              className="absolute bottom-[8%] right-[10%] z-20"
+              className="absolute bottom-[5%] right-[5%] z-20"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}

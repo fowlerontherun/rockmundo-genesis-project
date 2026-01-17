@@ -41,11 +41,21 @@ function isRpmUrl(url: string): boolean {
   return url.includes('models.readyplayer.me') || url.includes('readyplayer.me');
 }
 
+// Taller proportions (2:1 ratio) for full-body display
 const sizeClasses = {
-  sm: 'h-32 w-20',
-  md: 'h-48 w-28',
-  lg: 'h-64 w-36',
-  xl: 'h-80 w-44',
+  sm: 'h-48 w-24',
+  md: 'h-64 w-32',
+  lg: 'h-80 w-40',
+  xl: 'h-96 w-48',
+};
+
+// Role-based glow colors for stage presence
+const roleGlowColors: Record<string, string> = {
+  vocalist: 'from-purple-500/60 via-pink-500/40 to-transparent',
+  guitarist: 'from-orange-500/60 via-red-500/40 to-transparent',
+  bassist: 'from-blue-500/60 via-indigo-500/40 to-transparent',
+  drummer: 'from-emerald-500/60 via-teal-500/40 to-transparent',
+  keyboardist: 'from-amber-500/60 via-yellow-500/40 to-transparent',
 };
 
 // Animation variants based on role
@@ -232,19 +242,36 @@ export const RpmAvatarImage = ({
   // Show fallback if no URL or image failed to load
   const showFallback = !currentUrl || imageError;
 
+  const glowColor = roleGlowColors[role] || 'from-white/40 via-white/20 to-transparent';
+
   return (
     <motion.div
       className="relative"
       animate={animate}
       transition={transition}
     >
+      {/* Role-based ground glow for stage presence */}
+      <div 
+        className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-[120%] h-16 bg-gradient-radial ${glowColor} blur-xl opacity-80 -z-10`}
+        style={{
+          background: `radial-gradient(ellipse at center, ${
+            role === 'vocalist' ? 'rgba(168,85,247,0.6)' :
+            role === 'guitarist' ? 'rgba(249,115,22,0.6)' :
+            role === 'bassist' ? 'rgba(59,130,246,0.6)' :
+            role === 'drummer' ? 'rgba(16,185,129,0.6)' :
+            role === 'keyboardist' ? 'rgba(245,158,11,0.6)' :
+            'rgba(255,255,255,0.4)'
+          } 0%, transparent 70%)`
+        }}
+      />
+      
       {!showFallback ? (
         <div className={`${sizeClasses[size]} relative`}>
           {/* Show full avatar image for both RPM and regular avatars */}
           <img 
             src={currentUrl}
             alt={`${role} avatar`}
-            className={`w-full h-full drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] ${
+            className={`w-full h-full drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] ${
               isRegularAvatar ? 'object-cover rounded-lg' : 'object-contain'
             }`}
             onError={handleImageError}
