@@ -234,7 +234,7 @@ export const useAddSongToSetlist = () => {
         .insert({
           setlist_id: setlistId,
           song_id: songId,
-          position,
+          position: Math.floor(position),
           notes,
           section,
           item_type: itemType,
@@ -314,7 +314,7 @@ export const useReorderSetlistSongs = () => {
       songUpdates: { id: string; position: number }[];
     }) => {
       const promises = songUpdates.map(({ id, position }) =>
-        supabase.from("setlist_songs").update({ position }).eq("id", id)
+        supabase.from("setlist_songs").update({ position: Math.floor(position) }).eq("id", id)
       );
 
       const results = await Promise.all(promises);
