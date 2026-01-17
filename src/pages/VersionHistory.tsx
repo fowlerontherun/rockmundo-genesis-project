@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.444",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Audio now continues playing when Now Playing panel is minimized in gig viewer" },
+      { type: 'improvement', description: "Full-body avatars on stage - increased avatar sizes (80-100% larger) for proper stage presence" },
+      { type: 'improvement', description: "Removed emoji instrument overlays - 3D equipment now provides visual context" },
+      { type: 'improvement', description: "Dramatically improved 3D stage lighting - brighter equipment, colored fills, rim lights, floor bounce" },
+      { type: 'improvement', description: "Better stage layout - avatars spread wider, positioned higher, larger viewing area" },
+    ],
+  },
+  {
     version: "1.0.443",
     date: "2026-01-17",
     changes: [

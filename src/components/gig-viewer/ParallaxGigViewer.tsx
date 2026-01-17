@@ -9,11 +9,9 @@ import { GigAudioPlayer } from "./GigAudioPlayer";
 import { RpmAvatarImage } from "./RpmAvatarImage";
 import { SimpleStageBackground } from "./SimpleStageBackground";
 import { StageSpotlights } from "./StageSpotlights";
-import { InstrumentOverlay } from "./InstrumentOverlay";
 import { Stage3DEquipment } from "./Stage3DEquipment";
 import { useCrowdSounds } from "@/hooks/useCrowdSounds";
 import type { Database } from "@/lib/supabase-types";
-
 interface ParallaxGigViewerProps {
   gigId: string;
   onClose: () => void;
@@ -422,13 +420,24 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
       {/* Spotlight Effects */}
       <StageSpotlights crowdMood={crowdMood} songSection={songSection} />
       
+      {/* Audio Player - rendered outside minimize block so it keeps playing */}
+      {currentSong?.song_audio_url && (
+        <GigAudioPlayer
+          audioUrl={currentSong.song_audio_url}
+          isPlaying={isAudioPlaying}
+          onEnded={handleSongAudioEnded}
+          volume={isMuted ? 0 : volume}
+          hideControls={true}
+        />
+      )}
+      
       {/* Band Members on Stage */}
-      <div className="absolute inset-0 flex items-end justify-center pb-8">
-        <div className="relative w-full max-w-4xl h-[60vh]">
+      <div className="absolute inset-0 flex items-end justify-center pb-8" style={{ zIndex: 25 }}>
+        <div className="relative w-full max-w-5xl h-[75vh]">
           {/* Drummer (back center) */}
           {positionedMembers.drummer && (
             <motion.div
-              className="absolute bottom-[30%] left-1/2 -translate-x-1/2 z-10"
+              className="absolute bottom-[35%] left-1/2 -translate-x-1/2 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -438,16 +447,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="drummer"
                 intensity={intensity}
                 songSection={songSection}
-                size="md"
+                size="lg"
               />
-              <InstrumentOverlay role="drummer" />
             </motion.div>
           )}
 
           {/* Keyboardist (back left if exists) */}
           {positionedMembers.keyboardist && (
             <motion.div
-              className="absolute bottom-[25%] left-[20%] z-10"
+              className="absolute bottom-[30%] left-[15%] z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
@@ -457,16 +465,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="keyboardist"
                 intensity={intensity}
                 songSection={songSection}
-                size="md"
+                size="lg"
               />
-              <InstrumentOverlay role="keyboardist" />
             </motion.div>
           )}
 
           {/* Guitarist (front left) */}
           {positionedMembers.guitarist && (
             <motion.div
-              className="absolute bottom-[5%] left-[15%] z-20"
+              className="absolute bottom-[8%] left-[10%] z-20"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -476,16 +483,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="guitarist"
                 intensity={intensity}
                 songSection={songSection}
-                size="lg"
+                size="xl"
               />
-              <InstrumentOverlay role="guitarist" />
             </motion.div>
           )}
 
           {/* Vocalist (front center) */}
           {positionedMembers.vocalist && (
             <motion.div
-              className="absolute bottom-[5%] left-1/2 -translate-x-1/2 z-30"
+              className="absolute bottom-[8%] left-1/2 -translate-x-1/2 z-30"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
@@ -497,14 +503,13 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 songSection={songSection}
                 size="xl"
               />
-              <InstrumentOverlay role="vocalist" />
             </motion.div>
           )}
 
           {/* Bassist (front right) */}
           {positionedMembers.bassist && (
             <motion.div
-              className="absolute bottom-[5%] right-[15%] z-20"
+              className="absolute bottom-[8%] right-[10%] z-20"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
@@ -514,9 +519,8 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 role="bassist"
                 intensity={intensity}
                 songSection={songSection}
-                size="lg"
+                size="xl"
               />
-              <InstrumentOverlay role="bassist" />
             </motion.div>
           )}
         </div>
@@ -604,14 +608,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                       Attendance: {Math.round(attendancePercentage)}% capacity
                     </div>
                     
-                    {currentSong?.song_audio_url && (
-                      <GigAudioPlayer
-                        audioUrl={currentSong.song_audio_url}
-                        isPlaying={isAudioPlaying}
-                        onEnded={handleSongAudioEnded}
-                        volume={isMuted ? 0 : volume}
-                      />
-                    )}
+                    {/* Audio player moved outside minimize block - controls remain here */}
                     
                     {/* Audio Controls */}
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">

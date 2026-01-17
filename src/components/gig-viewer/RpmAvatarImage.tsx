@@ -29,10 +29,10 @@ function extractRpmAvatarId(url: string): string | null {
 // Generate RPM 2D render URLs (primary and fallback)
 function getRpmRenderUrls(avatarId: string): { primary: string; fallback: string } {
   return {
-    // Primary: fullbody camera with transparent background
-    primary: `https://models.readyplayer.me/${avatarId}.png?camera=fullbody&background=transparent&size=512`,
+    // Primary: fullbody camera with transparent background - larger size for better quality
+    primary: `https://models.readyplayer.me/${avatarId}.png?camera=fullbody&background=transparent&size=1024`,
     // Fallback: simpler URL that may work better
-    fallback: `https://models.readyplayer.me/${avatarId}.png`
+    fallback: `https://models.readyplayer.me/${avatarId}.png?size=1024`
   };
 }
 
@@ -42,10 +42,10 @@ function isRpmUrl(url: string): boolean {
 }
 
 const sizeClasses = {
-  sm: 'h-24 w-16',
-  md: 'h-32 w-20',
-  lg: 'h-40 w-24',
-  xl: 'h-48 w-28',
+  sm: 'h-32 w-20',
+  md: 'h-48 w-28',
+  lg: 'h-64 w-36',
+  xl: 'h-80 w-44',
 };
 
 // Animation variants based on role
