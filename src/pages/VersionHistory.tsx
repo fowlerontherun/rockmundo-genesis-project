@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.447",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 1: Core company infrastructure for business empire management" },
+      { type: 'feature', description: "VIP players can now create holding companies and manage subsidiaries" },
+      { type: 'feature', description: "New My Companies page with financial dashboard and company cards" },
+      { type: 'feature', description: "Company types: Holding, Record Label, Security Firm, Factory, Venue, Rehearsal Studio" },
+      { type: 'feature', description: "VipGate component blocks non-VIP users with upgrade prompt" },
+      { type: 'improvement', description: "Added Business section navigation link to My Companies" },
+    ],
+  },
+  {
     version: "1.0.446",
     date: "2026-01-17",
     changes: [

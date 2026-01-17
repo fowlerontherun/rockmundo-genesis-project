@@ -191,14 +191,15 @@ const Navigation = () => {
     {
       titleKey: "nav.business",
       items: [
+        { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies" },
         { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
         { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
         { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
         { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
         { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
-        { icon: Building2, labelKey: "nav.venues", path: "/venues" },
+        { icon: Building, labelKey: "nav.venues", path: "/venues" },
         { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
-        { icon: Building, labelKey: "nav.recordLabels", path: "/labels" },
+        { icon: Disc, labelKey: "nav.recordLabels", path: "/labels" },
       ],
     },
     {
