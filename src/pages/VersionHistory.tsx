@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.439",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed gig viewer RPM avatar selection when player_avatar_config is returned as a one-to-one object (now handles both object/array shapes)" },
+    ],
+  },
+  {
     version: "1.0.438",
     date: "2026-01-17",
     changes: [

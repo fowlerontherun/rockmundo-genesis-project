@@ -226,14 +226,18 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
 
               const processedMembers: BandMember[] = members.map((member) => {
                 const profile = profileMap.get(member.user_id!) as any;
-                // Get avatar config from the joined table
-                const avatarConfig = profile?.player_avatar_config?.[0];
-                
+
+                // Relationship is one-to-one in Supabase types, but PostgREST can return either
+                // an object (one-to-one) or an array depending on query shape.
+                const avatarConfig = Array.isArray(profile?.player_avatar_config)
+                  ? profile.player_avatar_config[0]
+                  : profile?.player_avatar_config;
+
                 // Use RPM avatar if available and enabled, otherwise fall back to regular avatar
-                const avatarUrl = (avatarConfig?.use_rpm_avatar && avatarConfig?.rpm_avatar_url) 
-                  ? avatarConfig.rpm_avatar_url 
+                const avatarUrl = (avatarConfig?.use_rpm_avatar && avatarConfig?.rpm_avatar_url)
+                  ? avatarConfig.rpm_avatar_url
                   : profile?.avatar_url || null;
-                  
+
                 return {
                   role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
                   avatarUrl,
