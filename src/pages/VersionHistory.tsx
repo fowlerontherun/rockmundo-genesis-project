@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.430",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "Gig review now plays crowd sounds (entrance, reactions, applause) synchronized with performances" },
+      { type: 'feature', description: "Added 3D Stage View option when reviewing completed gigs - watch band perform with audio and visuals" },
+      { type: 'improvement', description: "Unified audio controls for song playback and crowd sounds in both view modes" },
+      { type: 'improvement', description: "Added play/pause and skip controls to 3D Stage View for better navigation" },
+    ],
+  },
+  {
     version: "1.0.429",
     date: "2026-01-17",
     changes: [
