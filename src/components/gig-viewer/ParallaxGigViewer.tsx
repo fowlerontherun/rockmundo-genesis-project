@@ -185,25 +185,32 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
           if (gigData.band_id) {
             const { data: members } = await supabase
               .from('band_members')
-              .select('instrument_role, user_id, profiles!band_members_user_id_fkey(rpm_avatar_url)')
+              .select('instrument_role, user_id, profiles!band_members_user_id_fkey(rpm_avatar_url, avatar_url)')
               .eq('band_id', gigData.band_id);
 
             if (members && members.length > 0) {
               const roleMap: Record<string, string> = {
                 'lead_vocals': 'vocalist',
                 'vocals': 'vocalist',
+                'Vocals': 'vocalist',
                 'lead_guitar': 'guitarist',
                 'rhythm_guitar': 'guitarist',
                 'guitar': 'guitarist',
+                'Guitar': 'guitarist',
                 'bass': 'bassist',
+                'Bass': 'bassist',
                 'drums': 'drummer',
+                'Drums': 'drummer',
                 'keyboard': 'keyboardist',
                 'keys': 'keyboardist',
+                'Keyboard': 'keyboardist',
+                'DJ/Producer': 'keyboardist',
               };
 
               const processedMembers: BandMember[] = members.map((member: any) => ({
-                role: roleMap[member.instrument_role] || member.instrument_role,
-                avatarUrl: member.profiles?.rpm_avatar_url || null,
+                role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
+                // Prefer RPM avatar, fall back to regular avatar
+                avatarUrl: member.profiles?.rpm_avatar_url || member.profiles?.avatar_url || null,
                 instrumentRole: member.instrument_role,
               }));
               

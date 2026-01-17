@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.432",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed band member avatars not loading - now fetches avatar_url in addition to rpm_avatar_url" },
+      { type: 'improvement', description: "Regular profile avatars (headshots) now display with a silhouette body on stage" },
+      { type: 'fix', description: "Fixed instrument role mapping for capitalized roles like 'Guitar', 'Drums', 'Vocals'" },
+    ],
+  },
+  {
     version: "1.0.431",
     date: "2026-01-17",
     changes: [
