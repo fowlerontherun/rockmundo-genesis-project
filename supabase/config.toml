@@ -170,3 +170,24 @@ verify_jwt = false
 
 [functions.process-self-promotion]
 verify_jwt = false
+
+[functions.process-company-payroll]
+verify_jwt = false
+
+[functions.process-company-operations]
+verify_jwt = false
+
+[functions.process-venue-bookings]
+verify_jwt = false
+
+[functions.process-studio-bookings]
+verify_jwt = false
+
+[functions.process-logistics-contracts]
+verify_jwt = false
+
+[functions.check-company-bankruptcy]
+verify_jwt = false
+
+[functions.generate-company-reports]
+verify_jwt = false
