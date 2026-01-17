@@ -162,19 +162,24 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Convert to unified format
       const activities: ScheduledActivity[] = [
         ...(scheduledData || []),
-        ...(gigs || []).map((g: any) => ({ 
-          id: g.id, 
-          user_id: userId, 
-          profile_id: userId, 
-          activity_type: 'gig' as const, 
-          scheduled_start: g.scheduled_date, 
-          scheduled_end: g.scheduled_date, 
-          status: g.status, 
-          title: g.tour_id ? `Tour Gig: ${g.venues?.name}` : `Gig: ${g.venues?.name}`,
-          location: g.venues?.cities?.name,
-          linked_gig_id: g.id,
-          metadata: g.tour_id ? { tour_id: g.tour_id, tour_name: g.tours?.name } : undefined,
-        })),
+        ...(gigs || []).map((g: any) => {
+          // Give gigs a default 4-hour duration for display
+          const gigStart = new Date(g.scheduled_date);
+          const gigEnd = new Date(gigStart.getTime() + 4 * 60 * 60 * 1000);
+          return { 
+            id: g.id, 
+            user_id: userId, 
+            profile_id: userId, 
+            activity_type: 'gig' as const, 
+            scheduled_start: g.scheduled_date, 
+            scheduled_end: gigEnd.toISOString(), 
+            status: g.status, 
+            title: g.tour_id ? `Tour Gig: ${g.venues?.name}` : `Gig: ${g.venues?.name}`,
+            location: g.venues?.cities?.name,
+            linked_gig_id: g.id,
+            metadata: g.tour_id ? { tour_id: g.tour_id, tour_name: g.tours?.name } : undefined,
+          };
+        }),
         ...(rehearsals || []).map((r: any) => ({ id: r.id, user_id: userId, profile_id: userId, activity_type: 'rehearsal' as const, scheduled_start: r.scheduled_start, scheduled_end: r.scheduled_end, status: r.status, title: `Rehearsal: ${r.bands?.name}`, linked_rehearsal_id: r.id })),
         ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: userId, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: `Recording: ${s.songs?.title}`, linked_recording_id: s.id })),
         ...(travelLegs || []).map((t: any) => ({

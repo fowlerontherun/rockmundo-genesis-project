@@ -24,7 +24,7 @@ import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
 
 // Advisor imports
-import { Link } from "react-router-dom";
+import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
 import { generateAdvisorInsights, type AdvisorInsights, type AdvisorSuggestion } from "@/lib/services/advisor";
 import { streamAdvisorChat } from "@/lib/api/advisor-chat";
 import { Textarea } from "@/components/ui/textarea";
@@ -508,19 +508,27 @@ const Dashboard = () => {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <CardTitle>{t('nav.schedule')}</CardTitle>
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" className="text-xs sm:text-sm" onClick={() => window.location.href = '/booking/songwriting'}>
-                    <span className="hidden sm:inline">{t('nav.songwriting')}</span>
-                    <span className="sm:hidden">{t('dashboard.write', 'Write')}</span>
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/performance'}>
-                    {t('nav.perform')}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/education'}>
-                    {t('nav.education')}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = '/booking/work'}>
-                    {t('dashboard.life', 'Life')}
-                  </Button>
+                  <Link to="/booking/songwriting">
+                    <Button size="sm" variant="outline" className="text-xs sm:text-sm">
+                      <span className="hidden sm:inline">{t('nav.songwriting')}</span>
+                      <span className="sm:hidden">{t('dashboard.write', 'Write')}</span>
+                    </Button>
+                  </Link>
+                  <Link to="/booking/performance">
+                    <Button size="sm" variant="outline">
+                      {t('nav.perform')}
+                    </Button>
+                  </Link>
+                  <Link to="/booking/education">
+                    <Button size="sm" variant="outline">
+                      {t('nav.education')}
+                    </Button>
+                  </Link>
+                  <Link to="/booking/work">
+                    <Button size="sm" variant="outline">
+                      {t('dashboard.life', 'Life')}
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </CardHeader>
