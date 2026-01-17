@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { X, Maximize2, Minimize2, Music, Users, Volume2, VolumeX, Play, Pause, SkipForward } from "lucide-react";
+import { X, Maximize2, Minimize2, Music, Users, Volume2, VolumeX, Play, Pause, SkipForward, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GigAudioPlayer } from "./GigAudioPlayer";
 import { RpmAvatarImage } from "./RpmAvatarImage";
@@ -39,6 +39,7 @@ type StageTheme = 'indoor_night' | 'indoor_day' | 'outdoor_festival' | 'club' | 
 
 export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isHudMinimized, setIsHudMinimized] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [crowdMood, setCrowdMood] = useState(50);
   const [gigOutcome, setGigOutcome] = useState<GigOutcome | null>(null);
@@ -223,13 +224,13 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 const profile = profileMap.get(member.user_id!);
                 return {
                   role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
-                  // Only use RPM avatar for stage display (not regular profile pictures)
-                  avatarUrl: profile?.rpm_avatar_url || null,
+                  // Use RPM avatar if available, otherwise fall back to regular avatar
+                  avatarUrl: profile?.rpm_avatar_url || profile?.avatar_url || null,
                   instrumentRole: member.instrument_role,
                 };
               });
               
-              // Only include members who have RPM avatars (full 3D avatars)
+              // Include members who have any avatar (RPM or regular)
               const membersWithAvatars = processedMembers.filter(m => m.avatarUrl !== null);
               setBandMembers(membersWithAvatars);
             } else {
@@ -521,84 +522,112 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
       <div className="absolute top-0 left-0 right-0 z-40 p-4 flex justify-between items-start">
         <Card className="bg-black/60 backdrop-blur-sm border-white/20 px-4 py-3">
           <div className="text-white space-y-3">
-            <div className="flex items-center gap-2">
-              <Music className="h-4 w-4 text-primary" />
-              <div>
-                <div className="text-xs text-white/60">Now Playing</div>
-                <div className="text-base font-bebas">{currentSong?.song_title || "Loading..."}</div>
-                <div className="text-xs text-white/40">
-                  Song {currentSongIndex + 1} of {songPerformances.length}
+            {/* Header with minimize button */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Music className="h-4 w-4 text-primary" />
+                <div>
+                  <div className="text-xs text-white/60">Now Playing</div>
+                  <div className="text-base font-bebas">{currentSong?.song_title || "Loading..."}</div>
+                  {!isHudMinimized && (
+                    <div className="text-xs text-white/40">
+                      Song {currentSongIndex + 1} of {songPerformances.length}
+                    </div>
+                  )}
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsHudMinimized(!isHudMinimized)}
+                className="h-6 w-6 text-white/60 hover:text-white hover:bg-white/10"
+              >
+                {isHudMinimized ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
-              <div className="space-y-1">
-                <div className="text-xs text-white/60">Crowd Energy</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-32 h-2 bg-white/20 rounded-full overflow-hidden">
-                    <motion.div 
-                      className="h-full bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500"
-                      animate={{ width: `${crowdMood}%` }}
-                      transition={{ duration: 1 }}
-                    />
+            
+            <AnimatePresence>
+              {!isHudMinimized && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" />
+                      <div className="space-y-1">
+                        <div className="text-xs text-white/60">Crowd Energy</div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 h-2 bg-white/20 rounded-full overflow-hidden">
+                            <motion.div 
+                              className="h-full bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500"
+                              animate={{ width: `${crowdMood}%` }}
+                              transition={{ duration: 1 }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium">{Math.round(crowdMood)}%</span>
+                        </div>
+                        <div className="text-xs text-white/50 capitalize">{crowdResponseLabel}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-white/40">
+                      Attendance: {Math.round(attendancePercentage)}% capacity
+                    </div>
+                    
+                    {currentSong?.song_audio_url && (
+                      <GigAudioPlayer
+                        audioUrl={currentSong.song_audio_url}
+                        isPlaying={isAudioPlaying}
+                        onEnded={handleSongAudioEnded}
+                        volume={isMuted ? 0 : volume}
+                      />
+                    )}
+                    
+                    {/* Audio Controls */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handlePlayPause}
+                        className="h-8 w-8 text-white hover:bg-white/20"
+                      >
+                        {isAudioPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleSkipSong}
+                        disabled={currentSongIndex >= songPerformances.length - 1}
+                        className="h-8 w-8 text-white hover:bg-white/20 disabled:opacity-30"
+                      >
+                        <SkipForward className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleMuteToggle}
+                        className="h-8 w-8 text-white hover:bg-white/20"
+                      >
+                        {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                      </Button>
+                      <Slider
+                        value={[isMuted ? 0 : volume * 100]}
+                        onValueChange={([val]) => {
+                          handleVolumeChange(val / 100);
+                          if (val > 0) setIsMuted(false);
+                        }}
+                        max={100}
+                        step={1}
+                        className="w-20"
+                      />
+                    </div>
                   </div>
-                  <span className="text-xs font-medium">{Math.round(crowdMood)}%</span>
-                </div>
-                <div className="text-xs text-white/50 capitalize">{crowdResponseLabel}</div>
-              </div>
-            </div>
-            <div className="text-xs text-white/40">
-              Attendance: {Math.round(attendancePercentage)}% capacity
-            </div>
-            
-            {currentSong?.song_audio_url && (
-              <GigAudioPlayer
-                audioUrl={currentSong.song_audio_url}
-                isPlaying={isAudioPlaying}
-                onEnded={handleSongAudioEnded}
-                volume={isMuted ? 0 : volume}
-              />
-            )}
-            
-            {/* Audio Controls */}
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePlayPause}
-                className="h-8 w-8 text-white hover:bg-white/20"
-              >
-                {isAudioPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSkipSong}
-                disabled={currentSongIndex >= songPerformances.length - 1}
-                className="h-8 w-8 text-white hover:bg-white/20 disabled:opacity-30"
-              >
-                <SkipForward className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleMuteToggle}
-                className="h-8 w-8 text-white hover:bg-white/20"
-              >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </Button>
-              <Slider
-                value={[isMuted ? 0 : volume * 100]}
-                onValueChange={([val]) => {
-                  handleVolumeChange(val / 100);
-                  if (val > 0) setIsMuted(false);
-                }}
-                max={100}
-                step={1}
-                className="w-20"
-              />
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </Card>
 
