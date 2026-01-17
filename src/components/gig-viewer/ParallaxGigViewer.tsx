@@ -223,13 +223,13 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 const profile = profileMap.get(member.user_id!);
                 return {
                   role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
-                  // Prefer RPM avatar, fall back to regular avatar
-                  avatarUrl: profile?.rpm_avatar_url || profile?.avatar_url || null,
+                  // Only use RPM avatar for stage display (not regular profile pictures)
+                  avatarUrl: profile?.rpm_avatar_url || null,
                   instrumentRole: member.instrument_role,
                 };
               });
               
-              // Only include members who have avatars
+              // Only include members who have RPM avatars (full 3D avatars)
               const membersWithAvatars = processedMembers.filter(m => m.avatarUrl !== null);
               setBandMembers(membersWithAvatars);
             } else {
