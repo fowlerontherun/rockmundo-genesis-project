@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.428",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed tour gigs not loading in schedule by disambiguating the gigs→venues join" },
+    ],
+  },
+  {
     version: "1.0.426",
     date: "2026-01-17",
     changes: [
