@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.443",
+    date: "2026-01-17",
+    changes: [
+      { type: 'improvement', description: "Scaled up 3D stage equipment for better visibility - amps, drums, mic stands now larger and more prominent" },
+      { type: 'fix', description: "Adjusted camera angle and z-index so 3D equipment layer is visible above background" },
+    ],
+  },
+  {
     version: "1.0.442",
     date: "2026-01-17",
     changes: [
