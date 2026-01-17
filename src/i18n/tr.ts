@@ -140,6 +140,7 @@ export const tr: TranslationKeys = {
     gettit: "Gettit",
     sponsorships: "Sponsorluklar",
     recordLabels: "Plak Şirketleri",
+    myCompanies: "Şirket",
     adminPanel: "Yönetici Paneli",
     underworld: "Yeraltı Dünyası",
     more: "Daha Fazla",
