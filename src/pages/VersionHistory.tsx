@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.438",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed 3D avatars not displaying in gig viewer - now correctly fetches from player_avatar_config table" },
+      { type: 'improvement', description: "Avatars created in Avatar Designer now properly appear on stage during gig performances" },
+    ],
+  },
+  {
     version: "1.0.437",
     date: "2026-01-17",
     changes: [
