@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.435",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "Added avatar status indicators to band roster (shows 3D avatar, basic avatar, or missing)" },
+      { type: 'feature', description: "Added 'travels with band' setting for each band member" },
+      { type: 'improvement', description: "Tour cost calculations now factor in number of traveling band members" },
+      { type: 'feature', description: "Added Travel Party summary card showing who's traveling on tours" },
+    ],
+  },
+  {
     version: "1.0.434",
     date: "2026-01-17",
     changes: [

@@ -132,6 +132,14 @@ export const TOUR_BUS_DAILY_COST = 150; // Static daily rental cost
 
 export const TOUR_MERCH_BOOST = 1.3; // Tours get 30% boost on merch sales
 
+// Travel costs per leg per band member (when not using tour bus)
+export const MEMBER_TRAVEL_COST_PER_LEG = {
+  bus: 25,
+  train: 50,
+  plane: 150,
+  tour_bus: 0, // Included in daily bus cost
+} as const;
+
 export const DEFAULT_WIZARD_STATE: TourWizardState = {
   name: '',
   startingCityId: null,
@@ -170,6 +178,8 @@ export interface TourCostEstimate {
   travelCosts: number;
   tourBusCosts: number;
   stageSetupCosts: number;
+  memberTravelCosts: number; // Cost for traveling band members
+  travelingMemberCount: number; // Number of members traveling
   totalUpfrontCost: number;
   sponsorCashIncome: number;
   netUpfrontCost: number;
