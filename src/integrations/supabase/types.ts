@@ -13964,47 +13964,265 @@ export type Database = {
           },
         ]
       }
+      rehearsal_room_equipment: {
+        Row: {
+          condition: number | null
+          created_at: string | null
+          daily_rate: number | null
+          equipment_name: string
+          equipment_type: string
+          hourly_rate: number | null
+          id: string
+          is_available: boolean | null
+          room_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          condition?: number | null
+          created_at?: string | null
+          daily_rate?: number | null
+          equipment_name: string
+          equipment_type: string
+          hourly_rate?: number | null
+          id?: string
+          is_available?: boolean | null
+          room_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          condition?: number | null
+          created_at?: string | null
+          daily_rate?: number | null
+          equipment_name?: string
+          equipment_type?: string
+          hourly_rate?: number | null
+          id?: string
+          is_available?: boolean | null
+          room_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rehearsal_room_equipment_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rehearsal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rehearsal_room_staff: {
+        Row: {
+          created_at: string | null
+          hire_date: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          performance_rating: number | null
+          role: string
+          room_id: string
+          salary: number
+          skill_level: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          performance_rating?: number | null
+          role: string
+          room_id: string
+          salary?: number
+          skill_level?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          performance_rating?: number | null
+          role?: string
+          room_id?: string
+          salary?: number
+          skill_level?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rehearsal_room_staff_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rehearsal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rehearsal_room_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          room_id: string
+          transaction_date: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          room_id: string
+          transaction_date?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          room_id?: string
+          transaction_date?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rehearsal_room_transactions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rehearsal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rehearsal_room_upgrades: {
+        Row: {
+          cost: number
+          created_at: string | null
+          effect_description: string | null
+          effect_value: number | null
+          id: string
+          installed_at: string | null
+          level: number | null
+          name: string
+          room_id: string
+          upgrade_type: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number | null
+          id?: string
+          installed_at?: string | null
+          level?: number | null
+          name: string
+          room_id: string
+          upgrade_type: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number | null
+          id?: string
+          installed_at?: string | null
+          level?: number | null
+          name?: string
+          room_id?: string
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rehearsal_room_upgrades_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rehearsal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rehearsal_rooms: {
         Row: {
+          amenities: Json | null
           capacity: number | null
           city_id: string | null
+          company_id: string | null
           created_at: string | null
+          daily_operating_cost: number | null
           description: string | null
           district_id: string | null
           equipment_quality: number | null
           hourly_rate: number
           id: string
+          is_company_owned: boolean | null
           location: string | null
+          max_simultaneous_bands: number | null
+          monthly_rent: number | null
           name: string
           quality_rating: number | null
+          recording_capable: boolean | null
+          reputation: number | null
+          soundproofing_level: number | null
+          total_bookings: number | null
+          total_revenue: number | null
           updated_at: string | null
         }
         Insert: {
+          amenities?: Json | null
           capacity?: number | null
           city_id?: string | null
+          company_id?: string | null
           created_at?: string | null
+          daily_operating_cost?: number | null
           description?: string | null
           district_id?: string | null
           equipment_quality?: number | null
           hourly_rate?: number
           id?: string
+          is_company_owned?: boolean | null
           location?: string | null
+          max_simultaneous_bands?: number | null
+          monthly_rent?: number | null
           name: string
           quality_rating?: number | null
+          recording_capable?: boolean | null
+          reputation?: number | null
+          soundproofing_level?: number | null
+          total_bookings?: number | null
+          total_revenue?: number | null
           updated_at?: string | null
         }
         Update: {
+          amenities?: Json | null
           capacity?: number | null
           city_id?: string | null
+          company_id?: string | null
           created_at?: string | null
+          daily_operating_cost?: number | null
           description?: string | null
           district_id?: string | null
           equipment_quality?: number | null
           hourly_rate?: number
           id?: string
+          is_company_owned?: boolean | null
           location?: string | null
+          max_simultaneous_bands?: number | null
+          monthly_rent?: number | null
           name?: string
           quality_rating?: number | null
+          recording_capable?: boolean | null
+          reputation?: number | null
+          soundproofing_level?: number | null
+          total_bookings?: number | null
+          total_revenue?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -14013,6 +14231,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rehearsal_rooms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {

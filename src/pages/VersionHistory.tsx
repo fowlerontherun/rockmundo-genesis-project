@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.453",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 7: Rehearsal Room Management" },
+      { type: 'feature', description: "Rehearsal rooms can now be owned by companies as subsidiaries" },
+      { type: 'feature', description: "Studio staff management - hire managers, technicians, receptionists, security, maintenance" },
+      { type: 'feature', description: "Rental equipment inventory - amps, drums, keyboards, PA systems, mics, recording gear" },
+      { type: 'feature', description: "Studio upgrades system - soundproofing, equipment, recording gear, climate, lounge, storage, lighting" },
+      { type: 'feature', description: "Financial transaction tracking for studio revenue and expenses" },
+      { type: 'improvement', description: "Rehearsal rooms table extended with business metrics, reputation, and recording capabilities" },
+    ],
+  },
+  {
     version: "1.0.452",
     date: "2026-01-17",
     changes: [
