@@ -141,6 +141,7 @@ export const tr: TranslationKeys = {
     sponsorships: "Sponsorluklar",
     recordLabels: "Plak Şirketleri",
     adminPanel: "Yönetici Paneli",
+    underworld: "Yeraltı Dünyası",
     more: "Daha Fazla",
     openMenu: "Menüyü aç",
     toggleMenu: "Menüyü değiştir",

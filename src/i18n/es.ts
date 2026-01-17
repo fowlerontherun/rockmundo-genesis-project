@@ -139,6 +139,7 @@ export const es: TranslationKeys = {
     sponsorships: "Patrocinios",
     recordLabels: "Discográficas",
     adminPanel: "Panel de Admin",
+    underworld: "Inframundo",
     more: "Más",
     openMenu: "Abrir menú de navegación",
     toggleMenu: "Alternar menú de navegación",

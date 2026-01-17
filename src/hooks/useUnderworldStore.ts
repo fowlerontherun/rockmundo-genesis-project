@@ -159,66 +159,75 @@ export const useUnderworldStore = () => {
       // Apply effects based on product category
       const effects = product.effects || {};
 
-      // Apply instant effects to profile
-      if (effects.health || effects.energy || effects.xp || effects.fame) {
-        const { data: profile, error: profileFetchError } = await supabase
-          .from("profiles")
-          .select("health, energy, experience, fame")
-          .eq("user_id", user.id)
-          .single();
+      // For boosters with duration - apply immediately as they're time-sensitive
+      // For consumables without duration - store in inventory for later use
+      const hasInstantDuration = product.duration_hours !== null && product.duration_hours > 0;
+      const isConsumableForInventory = product.category === 'consumable' && !hasInstantDuration;
+      const isSkillBook = product.category === 'skill_book';
+      const shouldStoreInInventory = isConsumableForInventory || isSkillBook;
 
-        if (profileFetchError) throw profileFetchError;
-
-        const updates: Record<string, number> = {};
-        if (effects.health) {
-          updates.health = Math.min(100, (profile?.health || 0) + (effects.health as number));
-        }
-        if (effects.energy) {
-          updates.energy = Math.min(100, (profile?.energy || 0) + (effects.energy as number));
-        }
-        if (effects.xp) {
-          updates.experience = (profile?.experience || 0) + (effects.xp as number);
-        }
-        if (effects.fame) {
-          updates.fame = (profile?.fame || 0) + (effects.fame as number);
-        }
-
-        if (Object.keys(updates).length > 0) {
-          const { error: updateError } = await supabase
+      if (!shouldStoreInInventory) {
+        // Apply instant effects to profile (for boosters or non-inventory items)
+        if (effects.health || effects.energy || effects.xp || effects.fame) {
+          const { data: profile, error: profileFetchError } = await supabase
             .from("profiles")
-            .update(updates)
-            .eq("user_id", user.id);
-
-          if (updateError) throw updateError;
-        }
-      }
-
-      // Apply skill XP if applicable
-      if (effects.skill_slug && effects.skill_xp) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (profile?.id) {
-          const { data: skillProgress, error: skillFetchError } = await supabase
-            .from("skill_progress")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("skill_slug", String(effects.skill_slug))
+            .select("health, energy, experience, fame")
+            .eq("user_id", user.id)
             .single();
 
-          if (!skillFetchError && skillProgress) {
-            const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
-            const { error: skillUpdateError } = await supabase
-              .from("skill_progress")
-              .update({
-                current_xp: (skillProgress.current_xp || 0) + skillXpToAdd,
-              })
-              .eq("id", skillProgress.id);
+          if (profileFetchError) throw profileFetchError;
 
-            if (skillUpdateError) throw skillUpdateError;
+          const updates: Record<string, number> = {};
+          if (effects.health) {
+            updates.health = Math.min(100, (profile?.health || 0) + (effects.health as number));
+          }
+          if (effects.energy) {
+            updates.energy = Math.min(100, (profile?.energy || 0) + (effects.energy as number));
+          }
+          if (effects.xp) {
+            updates.experience = (profile?.experience || 0) + (effects.xp as number);
+          }
+          if (effects.fame) {
+            updates.fame = (profile?.fame || 0) + (effects.fame as number);
+          }
+
+          if (Object.keys(updates).length > 0) {
+            const { error: updateError } = await supabase
+              .from("profiles")
+              .update(updates)
+              .eq("user_id", user.id);
+
+            if (updateError) throw updateError;
+          }
+        }
+
+        // Apply skill XP if applicable (for non-inventory items)
+        if (effects.skill_slug && effects.skill_xp) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+          if (profile?.id) {
+            const { data: skillProgress, error: skillFetchError } = await supabase
+              .from("skill_progress")
+              .select("*")
+              .eq("profile_id", profile.id)
+              .eq("skill_slug", String(effects.skill_slug))
+              .single();
+
+            if (!skillFetchError && skillProgress) {
+              const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
+              const { error: skillUpdateError } = await supabase
+                .from("skill_progress")
+                .update({
+                  current_xp: (skillProgress.current_xp || 0) + skillXpToAdd,
+                })
+                .eq("id", skillProgress.id);
+
+              if (skillUpdateError) throw skillUpdateError;
+            }
           }
         }
       }
@@ -261,7 +270,7 @@ export const useUnderworldStore = () => {
         if (boostError) throw boostError;
       }
 
-      // Record the purchase
+      // Record the purchase - mark as used only if effects were applied immediately
       const { error: purchaseError } = await supabase
         .from("underworld_purchases")
         .insert({
@@ -271,21 +280,25 @@ export const useUnderworldStore = () => {
           cash_amount: paymentMethod === "cash" ? product.price_cash : null,
           effects_applied: effects,
           expires_at: expiresAt,
+          is_used: !shouldStoreInInventory, // If stored in inventory, mark as not used
         });
 
       if (purchaseError) throw purchaseError;
 
-      return { success: true, expiresAt };
+      return { success: true, expiresAt, storedInInventory: shouldStoreInInventory };
     },
-    onSuccess: (_, { product }) => {
+    onSuccess: (result, { product }) => {
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       queryClient.invalidateQueries({ queryKey: ["active-boosts"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-history"] });
+      queryClient.invalidateQueries({ queryKey: ["underworld-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
       toast({
         title: "Purchase Complete",
-        description: `You acquired ${product.name}!`,
+        description: result.storedInInventory 
+          ? `${product.name} has been added to your inventory!`
+          : `You acquired ${product.name}!`,
       });
     },
     onError: (error: Error) => {

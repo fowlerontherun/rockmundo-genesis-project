@@ -139,6 +139,7 @@ export const en = {
     sponsorships: "Sponsorships",
     recordLabels: "Record Labels",
     adminPanel: "Admin Panel",
+    underworld: "Underworld",
     more: "More",
     openMenu: "Open navigation menu",
     toggleMenu: "Toggle navigation menu",

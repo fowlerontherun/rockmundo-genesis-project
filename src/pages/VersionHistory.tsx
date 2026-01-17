@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.429",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "Underworld purchases now appear in Inventory with usable items and detail dialogs" },
+      { type: 'feature', description: "Added item detail dialog to view effects and use consumables from inventory" },
+      { type: 'improvement', description: "Renamed 'Underground' to 'Underworld' throughout the app" },
+      { type: 'improvement', description: "Inventory Manager now has tabs for Underworld Items and Book Library" },
+    ],
+  },
+  {
     version: "1.0.428",
     date: "2026-01-17",
     changes: [
