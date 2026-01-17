@@ -192,11 +192,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
               .not('user_id', 'is', null);
 
             if (members && members.length > 0) {
-              // Fetch profiles separately using user_id
+              // Fetch profiles with their player_avatar_config (where RPM avatars are actually stored)
               const userIds = members.map(m => m.user_id).filter(Boolean) as string[];
               const { data: profiles } = await supabase
                 .from('profiles')
-                .select('user_id, avatar_url, rpm_avatar_url')
+                .select(`
+                  user_id, 
+                  avatar_url,
+                  player_avatar_config!player_avatar_config_profile_id_fkey(rpm_avatar_url, use_rpm_avatar)
+                `)
                 .in('user_id', userIds);
               
               // Create a map for easy lookup
@@ -221,11 +225,18 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
               };
 
               const processedMembers: BandMember[] = members.map((member) => {
-                const profile = profileMap.get(member.user_id!);
+                const profile = profileMap.get(member.user_id!) as any;
+                // Get avatar config from the joined table
+                const avatarConfig = profile?.player_avatar_config?.[0];
+                
+                // Use RPM avatar if available and enabled, otherwise fall back to regular avatar
+                const avatarUrl = (avatarConfig?.use_rpm_avatar && avatarConfig?.rpm_avatar_url) 
+                  ? avatarConfig.rpm_avatar_url 
+                  : profile?.avatar_url || null;
+                  
                 return {
                   role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
-                  // Use RPM avatar if available, otherwise fall back to regular avatar
-                  avatarUrl: profile?.rpm_avatar_url || profile?.avatar_url || null,
+                  avatarUrl,
                   instrumentRole: member.instrument_role,
                 };
               });
