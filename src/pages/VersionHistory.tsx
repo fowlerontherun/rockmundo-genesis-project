@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.437",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Stage viewer now shows regular avatars when no 3D RPM avatar is available" },
+      { type: 'feature', description: "Added minimize button to Now Playing panel in stage viewer" },
+    ],
+  },
+  {
     version: "1.0.436",
     date: "2026-01-17",
     changes: [
