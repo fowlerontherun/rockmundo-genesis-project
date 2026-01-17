@@ -229,12 +229,23 @@ export const useAddSongToSetlist = () => {
       section?: string;
       itemType?: string;
     }) => {
+      // Query the actual max position from database to avoid conflicts
+      const { data: maxPositionData } = await supabase
+        .from("setlist_songs")
+        .select("position")
+        .eq("setlist_id", setlistId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      const actualNextPosition = Math.floor((maxPositionData?.position || 0) + 1);
+      
       const { data, error } = await supabase
         .from("setlist_songs")
         .insert({
           setlist_id: setlistId,
           song_id: songId,
-          position: Math.floor(position),
+          position: actualNextPosition,
           notes,
           section,
           item_type: itemType,
