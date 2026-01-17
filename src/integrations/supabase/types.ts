@@ -1376,6 +1376,7 @@ export type Database = {
           skill_contribution: number | null
           touring_member_cost: number | null
           touring_member_tier: number | null
+          travels_with_band: boolean | null
           user_id: string | null
           vocal_role: string | null
         }
@@ -1395,6 +1396,7 @@ export type Database = {
           skill_contribution?: number | null
           touring_member_cost?: number | null
           touring_member_tier?: number | null
+          travels_with_band?: boolean | null
           user_id?: string | null
           vocal_role?: string | null
         }
@@ -1414,6 +1416,7 @@ export type Database = {
           skill_contribution?: number | null
           touring_member_cost?: number | null
           touring_member_tier?: number | null
+          travels_with_band?: boolean | null
           user_id?: string | null
           vocal_role?: string | null
         }

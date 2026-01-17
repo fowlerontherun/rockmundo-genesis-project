@@ -7,7 +7,8 @@ import {
   VENUE_SIZE_REQUIREMENTS,
   TOUR_SCOPE_REQUIREMENTS,
   CANCELLATION_REFUND_SCALE,
-  TOUR_BUS_DAILY_COST 
+  TOUR_BUS_DAILY_COST,
+  MEMBER_TRAVEL_COST_PER_LEG
 } from '@/lib/tourTypes';
 
 // Calculate ticket price based on venue capacity and band fame
@@ -121,12 +122,23 @@ export function estimateMerchSalesPerAttendee(bandFame: number): number {
   return Math.round(baseAmount * fameMultiplier);
 }
 
+// Calculate member travel costs for a tour leg
+export function calculateMemberTravelCosts(
+  travelMode: 'bus' | 'train' | 'plane' | 'tour_bus',
+  memberCount: number,
+  legCount: number
+): number {
+  const costPerLeg = MEMBER_TRAVEL_COST_PER_LEG[travelMode] || 0;
+  return costPerLeg * memberCount * legCount;
+}
+
 // Calculate full tour cost estimate
 export function calculateTourCostEstimate(
   venues: VenueMatch[],
   state: TourWizardState,
   bandFame: number,
-  bandTotalFans: number
+  bandTotalFans: number,
+  travelingMemberCount: number = 1
 ): TourCostEstimate {
   let venueCosts = 0;
   let bookingFees = 0;
@@ -173,11 +185,16 @@ export function calculateTourCostEstimate(
   // If using tour bus, travel costs are just fuel (already low in tour_bus mode)
   const totalTravelCosts = state.travelMode === 'tour_bus' ? travelCosts : travelCosts;
   
+  // Calculate member travel costs (number of legs = venues - 1)
+  const legCount = Math.max(0, venues.length - 1);
+  const travelMode = getBestTravelMode(500, state.travelMode === 'tour_bus');
+  const memberTravelCosts = calculateMemberTravelCosts(travelMode, travelingMemberCount, legCount);
+  
   const stageSetupCosts = 0; // Calculated by wizard
   const sponsorCashIncome = 0; // From wizard
   const supportArtistShare = 0; // From wizard
   
-  const totalUpfrontCost = venueCosts + bookingFees + totalTravelCosts + tourBusCosts + stageSetupCosts;
+  const totalUpfrontCost = venueCosts + bookingFees + totalTravelCosts + tourBusCosts + stageSetupCosts + memberTravelCosts;
   const netUpfrontCost = totalUpfrontCost - sponsorCashIncome;
   const estimatedRevenue = estimatedTicketRevenue + estimatedMerchRevenue - supportArtistShare;
   const estimatedProfit = estimatedRevenue - totalUpfrontCost + sponsorCashIncome;
@@ -188,6 +205,8 @@ export function calculateTourCostEstimate(
     travelCosts: totalTravelCosts,
     tourBusCosts,
     stageSetupCosts,
+    memberTravelCosts,
+    travelingMemberCount,
     totalUpfrontCost,
     sponsorCashIncome,
     netUpfrontCost,

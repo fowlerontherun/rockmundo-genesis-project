@@ -15,6 +15,7 @@ import {
   StageSetupTier,
   TOUR_MERCH_BOOST,
   TOUR_BUS_DAILY_COST,
+  MEMBER_TRAVEL_COST_PER_LEG,
 } from '@/lib/tourTypes';
 import {
   getMaxVenueCapacityForFans,
@@ -334,7 +335,13 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       ? Math.round(estimatedTicketRevenue * state.supportRevenueShare)
       : 0;
     
-    const totalUpfrontCost = venueCosts + bookingFees + travelCosts + tourBusCosts + stageSetupCosts;
+    // Member travel costs (placeholder - actual count fetched when booking tour)
+    const travelingMemberCount = 1; // Will be calculated from band_members.travels_with_band
+    const legCount = Math.max(0, venueMatches.length - 1);
+    const travelModeForMembers = state.travelMode === 'tour_bus' ? 'tour_bus' : 'bus';
+    const memberTravelCosts = (MEMBER_TRAVEL_COST_PER_LEG[travelModeForMembers] || 0) * travelingMemberCount * legCount;
+    
+    const totalUpfrontCost = venueCosts + bookingFees + travelCosts + tourBusCosts + stageSetupCosts + memberTravelCosts;
     const netUpfrontCost = Math.max(0, totalUpfrontCost - sponsorCashIncome);
     const estimatedRevenue = estimatedTicketRevenue + estimatedMerchRevenue - supportArtistShare;
     const estimatedProfit = estimatedRevenue - totalUpfrontCost + sponsorCashIncome;
@@ -345,6 +352,8 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       travelCosts,
       tourBusCosts,
       stageSetupCosts,
+      memberTravelCosts,
+      travelingMemberCount,
       totalUpfrontCost,
       sponsorCashIncome,
       netUpfrontCost,

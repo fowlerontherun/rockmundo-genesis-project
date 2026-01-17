@@ -25,16 +25,23 @@ import {
   Music,
   Mic,
   Zap,
+  UserCheck,
+  User,
+  UserX,
+  Bus,
 } from "lucide-react";
 
 interface MemberWithProfile {
   id: string;
   user_id: string | null;
+  travels_with_band?: boolean | null;
+  is_touring_member?: boolean | null;
   profiles: {
     user_id: string;
     display_name: string | null;
     username: string;
     avatar_url: string | null;
+    rpm_avatar_url?: string | null;
     level: number | null;
   } | null;
   instrument_role: string;
@@ -254,11 +261,65 @@ export function BandMemberDetailDialog({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex flex-wrap items-center gap-2 mt-2">
           <Badge variant="secondary">
             {member?.instrument_role || member?.vocal_role || member?.role}
           </Badge>
+          {member?.is_touring_member && (
+            <Badge variant="outline">Session Musician</Badge>
+          )}
+          {member?.travels_with_band && (
+            <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-700">
+              <Bus className="h-3 w-3 mr-1" />
+              Travels with band
+            </Badge>
+          )}
         </div>
+
+        {/* Avatar Status */}
+        <Card className="mt-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              {profile?.rpm_avatar_url ? (
+                <UserCheck className="h-4 w-4 text-emerald-600" />
+              ) : profile?.avatar_url ? (
+                <User className="h-4 w-4 text-amber-600" />
+              ) : (
+                <UserX className="h-4 w-4 text-red-600" />
+              )}
+              Avatar Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              {(profile?.rpm_avatar_url || profile?.avatar_url) && (
+                <Avatar className="h-12 w-12">
+                  <AvatarImage 
+                    src={profile?.rpm_avatar_url || profile?.avatar_url || undefined}
+                    alt="Avatar preview"
+                  />
+                </Avatar>
+              )}
+              <div>
+                {profile?.rpm_avatar_url ? (
+                  <p className="text-sm text-emerald-600 font-medium">Full 3D avatar ready</p>
+                ) : profile?.avatar_url ? (
+                  <p className="text-sm text-amber-600 font-medium">Basic avatar uploaded</p>
+                ) : (
+                  <p className="text-sm text-red-600 font-medium">No avatar uploaded</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {profile?.rpm_avatar_url 
+                    ? "Will appear in 3D stage performances"
+                    : profile?.avatar_url
+                    ? "Upgrade to 3D avatar for stage performances"
+                    : "Upload an avatar to appear on stage"
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Separator />
 
