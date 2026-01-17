@@ -18939,6 +18939,127 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_bookings: {
+        Row: {
+          band_id: string | null
+          bar_revenue_share_pct: number | null
+          booking_date: string
+          booking_type: string
+          created_at: string
+          end_time: string | null
+          gig_id: string | null
+          id: string
+          notes: string | null
+          rental_fee: number | null
+          start_time: string | null
+          status: string
+          ticket_revenue_share_pct: number | null
+          updated_at: string
+          venue_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          bar_revenue_share_pct?: number | null
+          booking_date: string
+          booking_type?: string
+          created_at?: string
+          end_time?: string | null
+          gig_id?: string | null
+          id?: string
+          notes?: string | null
+          rental_fee?: number | null
+          start_time?: string | null
+          status?: string
+          ticket_revenue_share_pct?: number | null
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          bar_revenue_share_pct?: number | null
+          booking_date?: string
+          booking_type?: string
+          created_at?: string
+          end_time?: string | null
+          gig_id?: string | null
+          id?: string
+          notes?: string | null
+          rental_fee?: number | null
+          start_time?: string | null
+          status?: string
+          ticket_revenue_share_pct?: number | null
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_bookings_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_bookings_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_bookings_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_financial_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          related_booking_id: string | null
+          transaction_type: string
+          venue_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_booking_id?: string | null
+          transaction_type: string
+          venue_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_booking_id?: string | null
+          transaction_type?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_financial_transactions_related_booking_id_fkey"
+            columns: ["related_booking_id"]
+            isOneToOne: false
+            referencedRelation: "venue_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_financial_transactions_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_relationships: {
         Row: {
           band_id: string | null
@@ -19041,85 +19162,218 @@ export type Database = {
           },
         ]
       }
+      venue_staff: {
+        Row: {
+          created_at: string
+          hired_at: string
+          id: string
+          name: string
+          performance_rating: number | null
+          role: string
+          salary_weekly: number
+          skill_level: number
+          venue_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          hired_at?: string
+          id?: string
+          name: string
+          performance_rating?: number | null
+          role: string
+          salary_weekly?: number
+          skill_level?: number
+          venue_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          hired_at?: string
+          id?: string
+          name?: string
+          performance_rating?: number | null
+          role?: string
+          salary_weekly?: number
+          skill_level?: number
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_staff_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_upgrades: {
+        Row: {
+          cost: number
+          description: string | null
+          id: string
+          installed_at: string
+          upgrade_level: number
+          upgrade_type: string
+          venue_id: string | null
+        }
+        Insert: {
+          cost: number
+          description?: string | null
+          id?: string
+          installed_at?: string
+          upgrade_level?: number
+          upgrade_type: string
+          venue_id?: string | null
+        }
+        Update: {
+          cost?: number
+          description?: string | null
+          id?: string
+          installed_at?: string
+          upgrade_level?: number
+          upgrade_type?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_upgrades_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
+          alcohol_license: boolean | null
           amenities: Json | null
           audience_type: string | null
+          avg_attendance_rate: number | null
+          backstage_quality: number | null
           band_revenue_share: number | null
           base_payment: number | null
           capacity: number | null
           city_id: string | null
+          company_id: string | null
           created_at: string | null
+          daily_operating_cost: number | null
           description: string | null
           district_id: string | null
           economy_factor: number | null
+          equipment_quality: number | null
           genre_bias: Json | null
+          has_green_room: boolean | null
+          has_recording_capability: boolean | null
           id: string
           image_url: string | null
+          is_company_owned: boolean | null
+          lighting_rating: number | null
           location: string | null
           min_security_guards: number | null
+          monthly_rent: number | null
           name: string
+          parking_spaces: number | null
           prestige_level: number | null
           reputation: number | null
+          reputation_score: number | null
           requirements: Json | null
           security_license_required: number | null
           security_required: boolean | null
           slot_config: Json | null
           slots_per_day: number | null
+          sound_system_rating: number | null
+          staff_count: number | null
+          total_gigs_hosted: number | null
+          total_revenue_lifetime: number | null
           venue_cut: number | null
           venue_type: string | null
         }
         Insert: {
+          alcohol_license?: boolean | null
           amenities?: Json | null
           audience_type?: string | null
+          avg_attendance_rate?: number | null
+          backstage_quality?: number | null
           band_revenue_share?: number | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
+          company_id?: string | null
           created_at?: string | null
+          daily_operating_cost?: number | null
           description?: string | null
           district_id?: string | null
           economy_factor?: number | null
+          equipment_quality?: number | null
           genre_bias?: Json | null
+          has_green_room?: boolean | null
+          has_recording_capability?: boolean | null
           id?: string
           image_url?: string | null
+          is_company_owned?: boolean | null
+          lighting_rating?: number | null
           location?: string | null
           min_security_guards?: number | null
+          monthly_rent?: number | null
           name: string
+          parking_spaces?: number | null
           prestige_level?: number | null
           reputation?: number | null
+          reputation_score?: number | null
           requirements?: Json | null
           security_license_required?: number | null
           security_required?: boolean | null
           slot_config?: Json | null
           slots_per_day?: number | null
+          sound_system_rating?: number | null
+          staff_count?: number | null
+          total_gigs_hosted?: number | null
+          total_revenue_lifetime?: number | null
           venue_cut?: number | null
           venue_type?: string | null
         }
         Update: {
+          alcohol_license?: boolean | null
           amenities?: Json | null
           audience_type?: string | null
+          avg_attendance_rate?: number | null
+          backstage_quality?: number | null
           band_revenue_share?: number | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
+          company_id?: string | null
           created_at?: string | null
+          daily_operating_cost?: number | null
           description?: string | null
           district_id?: string | null
           economy_factor?: number | null
+          equipment_quality?: number | null
           genre_bias?: Json | null
+          has_green_room?: boolean | null
+          has_recording_capability?: boolean | null
           id?: string
           image_url?: string | null
+          is_company_owned?: boolean | null
+          lighting_rating?: number | null
           location?: string | null
           min_security_guards?: number | null
+          monthly_rent?: number | null
           name?: string
+          parking_spaces?: number | null
           prestige_level?: number | null
           reputation?: number | null
+          reputation_score?: number | null
           requirements?: Json | null
           security_license_required?: number | null
           security_required?: boolean | null
           slot_config?: Json | null
           slots_per_day?: number | null
+          sound_system_rating?: number | null
+          staff_count?: number | null
+          total_gigs_hosted?: number | null
+          total_revenue_lifetime?: number | null
           venue_cut?: number | null
           venue_type?: string | null
         }
@@ -19129,6 +19383,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venues_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
