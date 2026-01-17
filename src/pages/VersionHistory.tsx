@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.456",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 10: Advanced Features Complete" },
+      { type: 'feature', description: "Company Empire Dashboard with consolidated metrics and KPIs" },
+      { type: 'feature', description: "Business Synergies system - unlock discounts when owning complementary businesses" },
+      { type: 'feature', description: "Company Goals Manager - set and track business targets" },
+      { type: 'feature', description: "Notifications Center for company alerts and updates" },
+      { type: 'feature', description: "Internal Services Log tracking cross-business usage and savings" },
+      { type: 'feature', description: "Financial reporting with revenue/expense breakdown" },
+      { type: 'improvement', description: "Full 10-phase VIP Company System implementation complete" },
+    ],
+  },
+  {
     version: "1.0.455",
     date: "2026-01-17",
     changes: [

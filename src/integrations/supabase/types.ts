@@ -3120,6 +3120,295 @@ export type Database = {
           },
         ]
       }
+      company_financial_reports: {
+        Row: {
+          capital_expenditure: number | null
+          closing_balance: number | null
+          company_id: string
+          created_at: string | null
+          employee_costs: number | null
+          expense_breakdown: Json | null
+          generated_at: string | null
+          id: string
+          net_profit: number | null
+          opening_balance: number | null
+          operating_costs: number | null
+          report_period: string
+          report_type: string
+          revenue_breakdown: Json | null
+          subsidiary_performance: Json | null
+          total_expenses: number | null
+          total_revenue: number | null
+        }
+        Insert: {
+          capital_expenditure?: number | null
+          closing_balance?: number | null
+          company_id: string
+          created_at?: string | null
+          employee_costs?: number | null
+          expense_breakdown?: Json | null
+          generated_at?: string | null
+          id?: string
+          net_profit?: number | null
+          opening_balance?: number | null
+          operating_costs?: number | null
+          report_period: string
+          report_type?: string
+          revenue_breakdown?: Json | null
+          subsidiary_performance?: Json | null
+          total_expenses?: number | null
+          total_revenue?: number | null
+        }
+        Update: {
+          capital_expenditure?: number | null
+          closing_balance?: number | null
+          company_id?: string
+          created_at?: string | null
+          employee_costs?: number | null
+          expense_breakdown?: Json | null
+          generated_at?: string | null
+          id?: string
+          net_profit?: number | null
+          opening_balance?: number | null
+          operating_costs?: number | null
+          report_period?: string
+          report_type?: string
+          revenue_breakdown?: Json | null
+          subsidiary_performance?: Json | null
+          total_expenses?: number | null
+          total_revenue?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_financial_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_goals: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string | null
+          current_value: number | null
+          deadline: string | null
+          description: string | null
+          goal_type: string
+          id: string
+          reward_type: string | null
+          reward_value: number | null
+          status: string | null
+          target_value: number
+          title: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          current_value?: number | null
+          deadline?: string | null
+          description?: string | null
+          goal_type: string
+          id?: string
+          reward_type?: string | null
+          reward_value?: number | null
+          status?: string | null
+          target_value: number
+          title: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          current_value?: number | null
+          deadline?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          reward_type?: string | null
+          reward_value?: number | null
+          status?: string | null
+          target_value?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_goals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_internal_services: {
+        Row: {
+          company_id: string
+          consumer_entity_id: string
+          consumer_type: string
+          created_at: string | null
+          discount_applied: number | null
+          final_cost: number
+          id: string
+          notes: string | null
+          original_cost: number
+          provider_entity_id: string
+          provider_type: string
+          service_date: string | null
+          service_type: string
+        }
+        Insert: {
+          company_id: string
+          consumer_entity_id: string
+          consumer_type: string
+          created_at?: string | null
+          discount_applied?: number | null
+          final_cost: number
+          id?: string
+          notes?: string | null
+          original_cost: number
+          provider_entity_id: string
+          provider_type: string
+          service_date?: string | null
+          service_type: string
+        }
+        Update: {
+          company_id?: string
+          consumer_entity_id?: string
+          consumer_type?: string
+          created_at?: string | null
+          discount_applied?: number | null
+          final_cost?: number
+          id?: string
+          notes?: string | null
+          original_cost?: number
+          provider_entity_id?: string
+          provider_type?: string
+          service_date?: string | null
+          service_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_internal_services_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_kpis: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          customer_satisfaction_avg: number | null
+          growth_rate_monthly: number | null
+          id: string
+          liquidity_ratio: number | null
+          market_share_estimate: number | null
+          metric_date: string
+          reputation_avg: number | null
+          total_contracts_active: number | null
+          total_contracts_completed: number | null
+          total_employees: number | null
+          total_subsidiaries: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          customer_satisfaction_avg?: number | null
+          growth_rate_monthly?: number | null
+          id?: string
+          liquidity_ratio?: number | null
+          market_share_estimate?: number | null
+          metric_date?: string
+          reputation_avg?: number | null
+          total_contracts_active?: number | null
+          total_contracts_completed?: number | null
+          total_employees?: number | null
+          total_subsidiaries?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          customer_satisfaction_avg?: number | null
+          growth_rate_monthly?: number | null
+          id?: string
+          liquidity_ratio?: number | null
+          market_share_estimate?: number | null
+          metric_date?: string
+          reputation_avg?: number | null
+          total_contracts_active?: number | null
+          total_contracts_completed?: number | null
+          total_employees?: number | null
+          total_subsidiaries?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_kpis_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_notifications: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_dismissed: boolean | null
+          is_read: boolean | null
+          message: string | null
+          notification_type: string
+          priority: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_dismissed?: boolean | null
+          is_read?: boolean | null
+          message?: string | null
+          notification_type: string
+          priority?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_dismissed?: boolean | null
+          is_read?: boolean | null
+          message?: string | null
+          notification_type?: string
+          priority?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_settings: {
         Row: {
           allow_subsidiary_creation: boolean | null
@@ -3162,6 +3451,47 @@ export type Database = {
             foreignKeyName: "company_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_synergies: {
+        Row: {
+          activated_at: string | null
+          company_id: string
+          created_at: string | null
+          discount_percent: number | null
+          id: string
+          is_active: boolean | null
+          requirements_met: boolean | null
+          synergy_type: string
+        }
+        Insert: {
+          activated_at?: string | null
+          company_id: string
+          created_at?: string | null
+          discount_percent?: number | null
+          id?: string
+          is_active?: boolean | null
+          requirements_met?: boolean | null
+          synergy_type: string
+        }
+        Update: {
+          activated_at?: string | null
+          company_id?: string
+          created_at?: string | null
+          discount_percent?: number | null
+          id?: string
+          is_active?: boolean | null
+          requirements_met?: boolean | null
+          synergy_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_synergies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
