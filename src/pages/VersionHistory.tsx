@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.451",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 5: Record Label Integration" },
+      { type: 'feature', description: "Labels can now be owned by companies as subsidiaries" },
+      { type: 'feature', description: "Label financial transactions tracking with detailed breakdown" },
+      { type: 'feature', description: "Label staff management - hire A&R scouts, marketers, producers, accountants" },
+      { type: 'feature', description: "Distribution deals system with major distributors and revenue sharing" },
+      { type: 'feature', description: "Operating budget, advance pool, and marketing budget tracking" },
+      { type: 'improvement', description: "Labels table extended with business fields and company ownership" },
+    ],
+  },
+  {
     version: "1.0.450",
     date: "2026-01-17",
     changes: [
