@@ -41,26 +41,46 @@ const StageEquipmentScene = ({
 
   return (
     <>
-      {/* Ambient lighting */}
-      <ambientLight intensity={0.3} />
+      {/* Brighter ambient lighting for visibility */}
+      <ambientLight intensity={0.6} />
       
-      {/* Stage lighting */}
+      {/* Main stage front wash light */}
       <directionalLight 
-        position={[0, 5, 2]} 
-        intensity={0.5 + intensity * 0.3} 
+        position={[0, 8, 5]} 
+        intensity={0.8 + intensity * 0.4} 
         color="#ffffff"
       />
+      
+      {/* Warm side fill left */}
       <pointLight 
-        position={[-3, 3, 1]} 
-        intensity={0.4} 
-        color="#ff6666"
-        distance={10}
+        position={[-4, 4, 2]} 
+        intensity={0.6} 
+        color="#ffaa66"
+        distance={12}
       />
+      
+      {/* Cool side fill right */}
       <pointLight 
-        position={[3, 3, 1]} 
-        intensity={0.4} 
-        color="#6666ff"
-        distance={10}
+        position={[4, 4, 2]} 
+        intensity={0.6} 
+        color="#6699ff"
+        distance={12}
+      />
+      
+      {/* Back light for rim/separation */}
+      <pointLight 
+        position={[0, 5, -3]} 
+        intensity={0.5} 
+        color="#ffffff"
+        distance={15}
+      />
+      
+      {/* Floor bounce light */}
+      <pointLight 
+        position={[0, 0.2, 1]} 
+        intensity={0.3} 
+        color="#ffddcc"
+        distance={8}
       />
       
       {/* Drum Kit - back center - scaled up for visibility */}
@@ -200,7 +220,7 @@ export const Stage3DEquipment = ({
   return (
     <div 
       className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: 15 }}
+      style={{ zIndex: 10 }}
     >
       <Canvas
         camera={{ 
