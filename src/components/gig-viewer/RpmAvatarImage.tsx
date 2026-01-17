@@ -41,12 +41,12 @@ function isRpmUrl(url: string): boolean {
   return url.includes('models.readyplayer.me') || url.includes('readyplayer.me');
 }
 
-// Taller proportions (2:1 ratio) for full-body display
+// Proportions for full-body display - taller containers
 const sizeClasses = {
-  sm: 'h-48 w-24',
-  md: 'h-64 w-32',
-  lg: 'h-80 w-40',
-  xl: 'h-96 w-48',
+  sm: 'h-32 w-20',
+  md: 'h-48 w-28',
+  lg: 'h-64 w-36',
+  xl: 'h-80 w-44',
 };
 
 // Role-based glow colors for stage presence

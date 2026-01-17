@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.446",
+    date: "2026-01-17",
+    changes: [
+      { type: 'improvement', description: "Pure 2D stage overhaul - removed problematic 3D equipment layer entirely" },
+      { type: 'feature', description: "Added 2D instrument silhouettes (amps, drums, keyboard, mic stand) with role-colored glow effects" },
+      { type: 'improvement', description: "Enhanced stage background with visible floor edge, cable hints, and drum rug" },
+      { type: 'improvement', description: "Improved spotlight system with individual performer lights and haze effects" },
+      { type: 'improvement', description: "Better avatar positioning - drummer elevated, front row spread wider" },
+      { type: 'improvement', description: "Enhanced crowd with phone flashlights, raised hands, and depth layers" },
+      { type: 'improvement', description: "Added stage monitors and floor details for realism" },
+    ],
+  },
+  {
     version: "1.0.445",
     date: "2026-01-17",
     changes: [
