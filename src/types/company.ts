@@ -1,4 +1,4 @@
-// Company System Types - Phase 1
+// Company System Types - Phase 1 & 2
 
 export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'venue' | 'rehearsal';
 export type CompanyStatus = 'active' | 'suspended' | 'bankrupt' | 'dissolved';
@@ -69,6 +69,19 @@ export interface CompanyTransaction {
   created_at: string;
 }
 
+export interface CompanySettings {
+  company_id: string;
+  auto_pay_salaries: boolean;
+  dividend_payout_percent: number;
+  reinvestment_percent: number;
+  allow_subsidiary_creation: boolean;
+  max_subsidiaries: number;
+  notification_threshold_low: number;
+  notification_threshold_critical: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreateCompanyInput {
   name: string;
   company_type: CompanyType;
@@ -84,6 +97,17 @@ export interface CompanyFinancialSummary {
   monthly_net: number;
   total_employees: number;
   total_subsidiaries: number;
+}
+
+export interface CompanyLabel {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  company_id: string | null;
+  balance: number;
+  is_bankrupt: boolean;
+  headquarters_city: string | null;
+  reputation_score: number | null;
 }
 
 // Company type display info
