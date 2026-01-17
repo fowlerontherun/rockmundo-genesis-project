@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Music, Users, Flame, Star } from "lucide-react";
+import { Music, Users, Flame, Star, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 export const BandGainsNews = () => {
@@ -27,14 +27,14 @@ export const BandGainsNews = () => {
 
   const bandIds = userBands?.map((b) => b.band_id) || [];
 
-  // Get fame gains today
+  // Get fame gains today from band_fame_history
   const { data: fameGains } = useQuery({
     queryKey: ["news-fame-gains", bandIds, today],
     queryFn: async () => {
       if (bandIds.length === 0) return [];
       const { data, error } = await supabase
         .from("band_fame_history")
-        .select("band_id, fame_change, scope, event_type, recorded_at")
+        .select("band_id, fame_change, scope, event_type, country, recorded_at, cities(name)")
         .in("band_id", bandIds)
         .gte("recorded_at", `${today}T00:00:00`)
         .order("recorded_at", { ascending: false });
@@ -44,7 +44,7 @@ export const BandGainsNews = () => {
     enabled: bandIds.length > 0,
   });
 
-  // Get gig outcomes (fan gains) today
+  // Get gig outcomes (fan gains) today with venue and city info
   const { data: gigOutcomes } = useQuery({
     queryKey: ["news-gig-outcomes", bandIds, today],
     queryFn: async () => {
@@ -58,7 +58,7 @@ export const BandGainsNews = () => {
           fame_gained,
           completed_at,
           gig_id,
-          gigs!inner(band_id, bands(name))
+          gigs!inner(band_id, venue_id, bands(name), venues(name, cities(name, country)))
         `)
         .gte("completed_at", `${today}T00:00:00`)
         .order("completed_at", { ascending: false });
@@ -69,8 +69,15 @@ export const BandGainsNews = () => {
     enabled: bandIds.length > 0,
   });
 
-  // Aggregate by band
-  const bandStats = new Map<string, { name: string; fame: number; casual: number; dedicated: number; superfans: number }>();
+  // Aggregate by band with location info
+  const bandStats = new Map<string, { 
+    name: string; 
+    fame: number; 
+    casual: number; 
+    dedicated: number; 
+    superfans: number;
+    locations: Set<string>;
+  }>();
 
   userBands?.forEach((b: any) => {
     bandStats.set(b.band_id, {
@@ -79,13 +86,18 @@ export const BandGainsNews = () => {
       casual: 0,
       dedicated: 0,
       superfans: 0,
+      locations: new Set(),
     });
   });
 
-  fameGains?.forEach((fg) => {
+  fameGains?.forEach((fg: any) => {
     const stats = bandStats.get(fg.band_id);
     if (stats) {
       stats.fame += fg.fame_change || 0;
+      if (fg.country) {
+        const cityName = fg.cities?.name;
+        stats.locations.add(cityName ? `${cityName}, ${fg.country}` : fg.country);
+      }
     }
   });
 
@@ -96,6 +108,15 @@ export const BandGainsNews = () => {
       stats.casual += go.casual_fans_gained || 0;
       stats.dedicated += go.dedicated_fans_gained || 0;
       stats.superfans += go.superfans_gained || 0;
+      // Also add fame from gig_outcomes if band_fame_history is empty
+      if (!fameGains?.some((fg) => fg.band_id === bandId)) {
+        stats.fame += go.fame_gained || 0;
+      }
+      // Add location from gig venue
+      const venue = go.gigs?.venues;
+      if (venue?.cities?.name && venue?.cities?.country) {
+        stats.locations.add(`${venue.cities.name}, ${venue.cities.country}`);
+      }
     }
   });
 
@@ -143,6 +164,12 @@ export const BandGainsNews = () => {
                 </div>
               )}
             </div>
+            {band.locations.size > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                <span>From: {Array.from(band.locations).join(", ")}</span>
+              </div>
+            )}
           </div>
         ))}
       </CardContent>
