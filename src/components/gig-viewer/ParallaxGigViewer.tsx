@@ -29,6 +29,14 @@ interface BandMember {
   instrumentRole: string;
 }
 
+interface VenueInfo {
+  name: string;
+  venueType: string;
+  capacity: number;
+}
+
+type StageTheme = 'indoor_night' | 'indoor_day' | 'outdoor_festival' | 'club' | 'arena' | 'theater';
+
 export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
@@ -41,6 +49,9 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
   const [isAudioPlaying, setIsAudioPlaying] = useState(true);
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const [venueInfo, setVenueInfo] = useState<VenueInfo | null>(null);
+  const [stageTheme, setStageTheme] = useState<StageTheme>('indoor_night');
+  const [isNightShow, setIsNightShow] = useState(true);
   const hasPlayedEntranceRef = useRef(false);
   const lastSongIndexRef = useRef(-1);
   
@@ -64,6 +75,42 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
     const newMuted = !isMuted;
     setIsMuted(newMuted);
     setCrowdMuted(newMuted);
+  };
+
+  // Helper to determine stage theme from venue type and time
+  const determineStageTheme = (venueType: string, timeSlot: string | null, scheduledDate: string | null): StageTheme => {
+    // Check if outdoor venue (stadium, festival-like)
+    if (venueType === 'stadium' || venueType === 'arena') {
+      // Check time - if before 6pm, it's a day festival
+      if (scheduledDate) {
+        const hour = new Date(scheduledDate).getHours();
+        if (hour < 18) {
+          setIsNightShow(false);
+          return 'outdoor_festival';
+        }
+      }
+      setIsNightShow(true);
+      return 'arena';
+    }
+    
+    if (venueType === 'club') {
+      setIsNightShow(true);
+      return 'club';
+    }
+    
+    if (venueType === 'theater' || venueType === 'concert_hall') {
+      setIsNightShow(true);
+      return 'theater';
+    }
+    
+    // Default indoor venues
+    if (timeSlot === 'kids' || timeSlot === 'opening') {
+      setIsNightShow(false);
+      return 'indoor_day';
+    }
+    
+    setIsNightShow(true);
+    return 'indoor_night';
   };
 
   // Fetch gig data
@@ -109,43 +156,86 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
           setCrowdMood(initialMood);
         }
 
-        // Fetch gig to get band members with avatars
+        // Fetch gig details including venue info
         const { data: gigData } = await supabase
           .from('gigs')
-          .select('band_id')
+          .select('band_id, time_slot, scheduled_date, venues!gigs_venue_id_fkey(name, venue_type, capacity)')
           .eq('id', gigId)
           .single();
 
-        if (gigData?.band_id) {
-          const { data: members } = await supabase
-            .from('band_members')
-            .select('instrument_role, user_id, profiles!band_members_user_id_fkey(rpm_avatar_url)')
-            .eq('band_id', gigData.band_id);
-
-          if (members) {
-            const roleMap: Record<string, string> = {
-              'lead_vocals': 'vocalist',
-              'vocals': 'vocalist',
-              'lead_guitar': 'guitarist',
-              'rhythm_guitar': 'guitarist',
-              'guitar': 'guitarist',
-              'bass': 'bassist',
-              'drums': 'drummer',
-              'keyboard': 'keyboardist',
-              'keys': 'keyboardist',
-            };
-
-            const processedMembers: BandMember[] = members.map((member: any) => ({
-              role: roleMap[member.instrument_role] || member.instrument_role,
-              avatarUrl: member.profiles?.rpm_avatar_url || null,
-              instrumentRole: member.instrument_role,
-            }));
+        if (gigData) {
+          // Set venue info and stage theme
+          const venue = gigData.venues as any;
+          if (venue) {
+            setVenueInfo({
+              name: venue.name || 'Unknown Venue',
+              venueType: venue.venue_type || 'indie_venue',
+              capacity: venue.capacity || 200,
+            });
             
-            setBandMembers(processedMembers);
+            const theme = determineStageTheme(
+              venue.venue_type || 'indie_venue',
+              gigData.time_slot,
+              gigData.scheduled_date
+            );
+            setStageTheme(theme);
+          }
+
+          // Fetch band members
+          if (gigData.band_id) {
+            const { data: members } = await supabase
+              .from('band_members')
+              .select('instrument_role, user_id, profiles!band_members_user_id_fkey(rpm_avatar_url)')
+              .eq('band_id', gigData.band_id);
+
+            if (members && members.length > 0) {
+              const roleMap: Record<string, string> = {
+                'lead_vocals': 'vocalist',
+                'vocals': 'vocalist',
+                'lead_guitar': 'guitarist',
+                'rhythm_guitar': 'guitarist',
+                'guitar': 'guitarist',
+                'bass': 'bassist',
+                'drums': 'drummer',
+                'keyboard': 'keyboardist',
+                'keys': 'keyboardist',
+              };
+
+              const processedMembers: BandMember[] = members.map((member: any) => ({
+                role: roleMap[member.instrument_role] || member.instrument_role,
+                avatarUrl: member.profiles?.rpm_avatar_url || null,
+                instrumentRole: member.instrument_role,
+              }));
+              
+              setBandMembers(processedMembers);
+            } else {
+              // Default band lineup if no members found
+              setBandMembers([
+                { role: 'vocalist', avatarUrl: null, instrumentRole: 'lead_vocals' },
+                { role: 'guitarist', avatarUrl: null, instrumentRole: 'lead_guitar' },
+                { role: 'bassist', avatarUrl: null, instrumentRole: 'bass' },
+                { role: 'drummer', avatarUrl: null, instrumentRole: 'drums' },
+              ]);
+            }
+          } else {
+            // Default band lineup if no band_id
+            setBandMembers([
+              { role: 'vocalist', avatarUrl: null, instrumentRole: 'lead_vocals' },
+              { role: 'guitarist', avatarUrl: null, instrumentRole: 'lead_guitar' },
+              { role: 'bassist', avatarUrl: null, instrumentRole: 'bass' },
+              { role: 'drummer', avatarUrl: null, instrumentRole: 'drums' },
+            ]);
           }
         }
       } catch (error) {
         console.error('Error fetching gig data:', error);
+        // Set default band on error
+        setBandMembers([
+          { role: 'vocalist', avatarUrl: null, instrumentRole: 'lead_vocals' },
+          { role: 'guitarist', avatarUrl: null, instrumentRole: 'lead_guitar' },
+          { role: 'bassist', avatarUrl: null, instrumentRole: 'bass' },
+          { role: 'drummer', avatarUrl: null, instrumentRole: 'drums' },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -285,7 +375,12 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
   return (
     <div className="fixed inset-0 z-50 bg-black overflow-hidden">
       {/* Stage Background */}
-      <SimpleStageBackground crowdMood={crowdMood} songSection={songSection} />
+      <SimpleStageBackground 
+        crowdMood={crowdMood} 
+        songSection={songSection} 
+        stageTheme={stageTheme}
+        isNightShow={isNightShow}
+      />
       
       {/* Spotlight Effects */}
       <StageSpotlights crowdMood={crowdMood} songSection={songSection} />
