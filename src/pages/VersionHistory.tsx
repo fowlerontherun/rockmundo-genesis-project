@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.445",
+    date: "2026-01-17",
+    changes: [
+      { type: 'improvement', description: "Full-body avatar display with taller 2:1 aspect ratio containers" },
+      { type: 'improvement', description: "Role-based colored glow effects under each performer (vocalist=purple, guitarist=orange, bassist=blue, drummer=green, keyboardist=amber)" },
+      { type: 'improvement', description: "3D equipment pushed further back and scaled down so it doesn't obstruct performers" },
+      { type: 'improvement', description: "Camera angle adjusted higher for better stage perspective" },
+      { type: 'improvement', description: "Removed front stage monitors that were blocking view" },
+      { type: 'improvement', description: "Better performer spread - front members at edges, back members clearly visible" },
+      { type: 'improvement', description: "Added subtle stage floor for grounding the 3D scene" },
+    ],
+  },
+  {
     version: "1.0.444",
     date: "2026-01-17",
     changes: [
