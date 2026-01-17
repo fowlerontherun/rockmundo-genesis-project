@@ -184,12 +184,15 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
 
           // Fetch band members (only real players, not session/touring musicians)
           if (gigData.band_id) {
-            const { data: members } = await supabase
+            // Don't filter by is_touring_member in query - it may be NULL for real members
+            const { data: allMembers } = await supabase
               .from('band_members')
               .select('instrument_role, user_id, is_touring_member')
               .eq('band_id', gigData.band_id)
-              .eq('is_touring_member', false)
               .not('user_id', 'is', null);
+            
+            // Filter client-side: include members where is_touring_member is false OR null
+            const members = allMembers?.filter(m => m.is_touring_member !== true) || [];
 
             if (members && members.length > 0) {
               // Fetch profiles with their player_avatar_config (where RPM avatars are actually stored)

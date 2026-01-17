@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.440",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed RPM avatar 2D render URL generation with automatic fallback for failed loads" },
+      { type: 'fix', description: "Fixed band member query to include members where is_touring_member is NULL (not just false)" },
+      { type: 'improvement', description: "RPM avatars now use camera=fullbody parameter for better 2D renders on stage" },
+    ],
+  },
+  {
     version: "1.0.439",
     date: "2026-01-17",
     changes: [
