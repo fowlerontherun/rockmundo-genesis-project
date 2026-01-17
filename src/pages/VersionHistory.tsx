@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.454",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 8: Recording Studio Management" },
+      { type: 'feature', description: "Recording studios can now be owned by companies as subsidiaries" },
+      { type: 'feature', description: "Studio staff management - hire chief engineers, assistant engineers, producers, managers, techs" },
+      { type: 'feature', description: "High-end gear inventory - microphones, preamps, compressors, EQs, reverbs, consoles" },
+      { type: 'feature', description: "Studio upgrades - console, monitors, mics, preamps, outboard, live room, iso booths, mastering suite" },
+      { type: 'feature', description: "Track albums recorded and hit songs produced for reputation building" },
+      { type: 'improvement', description: "Studios now have console type, max tracks, isolation booths, and mastering capabilities" },
+    ],
+  },
+  {
     version: "1.0.453",
     date: "2026-01-17",
     changes: [
