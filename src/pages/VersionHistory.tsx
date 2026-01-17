@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.431",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed band avatars not showing in 3D Stage View - now displays fallback silhouettes when no avatar is set" },
+      { type: 'feature', description: "Added dynamic stage themes based on venue type: club, arena, theater, outdoor festival, indoor night/day" },
+      { type: 'improvement', description: "Stage backgrounds now reflect venue atmosphere with themed lighting, colors, and effects" },
+      { type: 'improvement', description: "Outdoor festivals show sky with stars (night) or sun (day), arenas have moving head lights, clubs have laser effects" },
+    ],
+  },
+  {
     version: "1.0.430",
     date: "2026-01-17",
     changes: [
