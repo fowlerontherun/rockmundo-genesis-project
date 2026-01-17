@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.441",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "Added hybrid 2D/3D stage with procedural 3D equipment (amps, drums, keyboards, mic stands, monitors)" },
+      { type: 'feature', description: "3D equipment animates based on song intensity and section (cymbal shimmer, amp vibration, LED pulses)" },
+      { type: 'improvement', description: "Equipment automatically positioned based on which band members are present" },
+    ],
+  },
+  {
     version: "1.0.440",
     date: "2026-01-17",
     changes: [
