@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.423",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "Reorganized Travel page with three tabs: Book Travel, My Travel Plans, and Past Travel" },
+      { type: 'feature', description: "Added My Travel Plans tab showing upcoming manual bookings and tour travel with cancel functionality" },
+      { type: 'feature', description: "Enhanced Past Travel tab with travel statistics (trips, cities, spending, time)" },
+    ],
+  },
+  {
     version: "1.0.422",
     date: "2026-01-17",
     changes: [

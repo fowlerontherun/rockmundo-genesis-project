@@ -1,36 +1,26 @@
 import { useState, useEffect, useContext } from "react";
-import { MapPin, Clock, DollarSign, History, Plane, Train, Bus, Ship, Globe, ArrowRight, X } from "lucide-react";
+import { MapPin, Plane, Train, Bus, Ship, Globe, ArrowRight, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/use-auth-context";
 import { useTranslation } from "@/hooks/useTranslation";
 import { TravelDestinationBrowser } from "@/components/travel/TravelDestinationBrowser";
 import { TransportComparison } from "@/components/travel/TransportComparison";
 import { DepartureTimePicker } from "@/components/travel/DepartureTimePicker";
+import { UpcomingTravelList } from "@/components/travel/UpcomingTravelList";
+import { PastTravelList } from "@/components/travel/PastTravelList";
 import { bookTravel } from "@/utils/travelSystem";
 import { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
 import { getNextAvailableDeparture, isValidDeparture, formatHourToTime, calculateArrivalTime } from "@/utils/transportSchedules";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-
-interface TravelHistoryEntry {
-  id: string;
-  from_city: { name: string; country: string } | null;
-  to_city: { name: string; country: string };
-  transport_type: string;
-  cost_paid: number;
-  travel_duration_hours: number;
-  departure_time: string;
-  arrival_time: string;
-  created_at: string;
-}
 
 interface SelectedDestination {
   city: CityWithCoords;
@@ -53,7 +43,6 @@ const Travel = () => {
   const queryClient = useQueryClient();
   const [currentCity, setCurrentCity] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [travelHistory, setTravelHistory] = useState<TravelHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDestination, setSelectedDestination] = useState<SelectedDestination | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
@@ -80,22 +69,6 @@ const Travel = () => {
           if (profileData.cities) {
             setCurrentCity(profileData.cities);
           }
-        }
-
-        // Load travel history
-        const { data: history } = await supabase
-          .from("player_travel_history")
-          .select(`
-            *,
-            from_city:from_city_id(name, country),
-            to_city:to_city_id(name, country)
-          `)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (history) {
-          setTravelHistory(history as any);
         }
       } catch (error) {
         console.error("Error loading travel data:", error);
@@ -164,8 +137,9 @@ const Travel = () => {
         `Travel booked! Departing ${formatHourToTime(departureHour)}, arriving in ${selectedDestination.city.name} at ${format(arrivalTime, "h:mm a")}`
       );
       
-      // Refresh profile data
+      // Refresh profile data and travel queries
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] });
       
       // Close dialog
       setSelectedDestination(null);
@@ -180,27 +154,6 @@ const Travel = () => {
     } finally {
       setIsBooking(false);
     }
-  };
-
-  const getTransportIcon = (type: string) => {
-    const Icon = TRANSPORT_ICONS[type.toLowerCase() as keyof typeof TRANSPORT_ICONS] || Train;
-    return <Icon className="h-4 w-4" />;
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(dateString));
-  };
-
-  const formatDuration = (hours: number) => {
-    if (hours < 1) {
-      return `${Math.round(hours * 60)}m`;
-    }
-    return `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
   };
 
   // Get selected option for validation
@@ -272,70 +225,54 @@ const Travel = () => {
         </CardContent>
       </Card>
 
-      {/* Destination Browser */}
-      {currentCity && (
-        <TravelDestinationBrowser
-          currentCityId={currentCity.id}
-          currentCityName={currentCity.name}
-          onSelectDestination={handleSelectDestination}
-        />
-      )}
+      {/* Tabbed Content */}
+      <Tabs defaultValue="book" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="book" className="flex items-center gap-2">
+            <Plane className="h-4 w-4" />
+            <span className="hidden sm:inline">Book Travel</span>
+            <span className="sm:hidden">Book</span>
+          </TabsTrigger>
+          <TabsTrigger value="upcoming" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">My Travel Plans</span>
+            <span className="sm:hidden">Plans</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            <span className="hidden sm:inline">Past Travel</span>
+            <span className="sm:hidden">History</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Travel History */}
-      {travelHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              {t('schedule.past', 'Travel History')}
-            </CardTitle>
-            <CardDescription>{t('travel.duration', 'Your recent journeys')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Route</TableHead>
-                  <TableHead>Transport</TableHead>
-                  <TableHead className="hidden sm:table-cell">Duration</TableHead>
-                  <TableHead className="hidden sm:table-cell">Cost</TableHead>
-                  <TableHead className="text-right">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {travelHistory.map((trip) => (
-                  <TableRow key={trip.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {trip.from_city && (
-                          <span className="text-muted-foreground">{trip.from_city.name}</span>
-                        )}
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <span>{trip.to_city.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                        {getTransportIcon(trip.transport_type)}
-                        <span className="capitalize">{trip.transport_type}</span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {formatDuration(trip.travel_duration_hours)}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      ${trip.cost_paid.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {formatDateTime(trip.departure_time)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+        {/* Book Travel Tab */}
+        <TabsContent value="book" className="space-y-6">
+          {currentCity ? (
+            <TravelDestinationBrowser
+              currentCityId={currentCity.id}
+              currentCityName={currentCity.name}
+              onSelectDestination={handleSelectDestination}
+            />
+          ) : (
+            <Alert>
+              <MapPin className="h-4 w-4" />
+              <AlertDescription>
+                Set your current location to browse travel destinations.
+              </AlertDescription>
+            </Alert>
+          )}
+        </TabsContent>
+
+        {/* My Travel Plans Tab */}
+        <TabsContent value="upcoming" className="space-y-6">
+          {user && <UpcomingTravelList userId={user.id} />}
+        </TabsContent>
+
+        {/* Past Travel Tab */}
+        <TabsContent value="history" className="space-y-6">
+          {user && <PastTravelList userId={user.id} />}
+        </TabsContent>
+      </Tabs>
 
       {/* Booking Dialog */}
       <Dialog open={!!selectedDestination} onOpenChange={(open) => !open && setSelectedDestination(null)}>
