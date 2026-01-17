@@ -2601,40 +2601,82 @@ export type Database = {
       }
       city_studios: {
         Row: {
+          albums_recorded: number | null
           available_slots: number | null
           city_id: string
+          company_id: string | null
+          console_type: string | null
           created_at: string | null
+          daily_operating_cost: number | null
           district_id: string | null
           equipment_rating: number | null
+          has_isolation_booths: number | null
+          has_live_room: boolean | null
+          hit_songs_recorded: number | null
           hourly_rate: number
           id: string
+          is_company_owned: boolean | null
+          mastering_capable: boolean | null
+          max_tracks: number | null
+          monthly_rent: number | null
           name: string
           quality_rating: number | null
+          reputation: number | null
           specialties: string[] | null
+          total_revenue: number | null
+          total_sessions: number | null
         }
         Insert: {
+          albums_recorded?: number | null
           available_slots?: number | null
           city_id: string
+          company_id?: string | null
+          console_type?: string | null
           created_at?: string | null
+          daily_operating_cost?: number | null
           district_id?: string | null
           equipment_rating?: number | null
+          has_isolation_booths?: number | null
+          has_live_room?: boolean | null
+          hit_songs_recorded?: number | null
           hourly_rate: number
           id?: string
+          is_company_owned?: boolean | null
+          mastering_capable?: boolean | null
+          max_tracks?: number | null
+          monthly_rent?: number | null
           name: string
           quality_rating?: number | null
+          reputation?: number | null
           specialties?: string[] | null
+          total_revenue?: number | null
+          total_sessions?: number | null
         }
         Update: {
+          albums_recorded?: number | null
           available_slots?: number | null
           city_id?: string
+          company_id?: string | null
+          console_type?: string | null
           created_at?: string | null
+          daily_operating_cost?: number | null
           district_id?: string | null
           equipment_rating?: number | null
+          has_isolation_booths?: number | null
+          has_live_room?: boolean | null
+          hit_songs_recorded?: number | null
           hourly_rate?: number
           id?: string
+          is_company_owned?: boolean | null
+          mastering_capable?: boolean | null
+          max_tracks?: number | null
+          monthly_rent?: number | null
           name?: string
           quality_rating?: number | null
+          reputation?: number | null
           specialties?: string[] | null
+          total_revenue?: number | null
+          total_sessions?: number | null
         }
         Relationships: [
           {
@@ -2642,6 +2684,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_studios_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -13957,6 +14006,209 @@ export type Database = {
           },
           {
             foreignKeyName: "recording_sessions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_studio_equipment: {
+        Row: {
+          brand: string | null
+          condition: number | null
+          created_at: string | null
+          equipment_name: string
+          equipment_type: string
+          hourly_rental_rate: number | null
+          id: string
+          is_available: boolean | null
+          is_vintage: boolean | null
+          model: string | null
+          studio_id: string
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          brand?: string | null
+          condition?: number | null
+          created_at?: string | null
+          equipment_name: string
+          equipment_type: string
+          hourly_rental_rate?: number | null
+          id?: string
+          is_available?: boolean | null
+          is_vintage?: boolean | null
+          model?: string | null
+          studio_id: string
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          brand?: string | null
+          condition?: number | null
+          created_at?: string | null
+          equipment_name?: string
+          equipment_type?: string
+          hourly_rental_rate?: number | null
+          id?: string
+          is_available?: boolean | null
+          is_vintage?: boolean | null
+          model?: string | null
+          studio_id?: string
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_studio_equipment_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_studio_staff: {
+        Row: {
+          albums_worked: number | null
+          created_at: string | null
+          hire_date: string | null
+          hit_songs: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          role: string
+          salary: number
+          skill_level: number | null
+          specialty: string | null
+          studio_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          albums_worked?: number | null
+          created_at?: string | null
+          hire_date?: string | null
+          hit_songs?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          role: string
+          salary?: number
+          skill_level?: number | null
+          specialty?: string | null
+          studio_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          albums_worked?: number | null
+          created_at?: string | null
+          hire_date?: string | null
+          hit_songs?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          role?: string
+          salary?: number
+          skill_level?: number | null
+          specialty?: string | null
+          studio_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_studio_staff_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_studio_transactions: {
+        Row: {
+          amount: number
+          band_name: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          studio_id: string
+          transaction_date: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          band_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          studio_id: string
+          transaction_date?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          band_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          studio_id?: string
+          transaction_date?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_studio_transactions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_studio_upgrades: {
+        Row: {
+          cost: number
+          created_at: string | null
+          effect_description: string | null
+          effect_value: number | null
+          id: string
+          installed_at: string | null
+          level: number | null
+          name: string
+          studio_id: string
+          upgrade_type: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number | null
+          id?: string
+          installed_at?: string | null
+          level?: number | null
+          name: string
+          studio_id: string
+          upgrade_type: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number | null
+          id?: string
+          installed_at?: string | null
+          level?: number | null
+          name?: string
+          studio_id?: string
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_studio_upgrades_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "city_studios"
