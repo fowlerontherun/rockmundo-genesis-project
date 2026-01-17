@@ -9,16 +9,24 @@ interface RpmAvatarImageProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-// Convert RPM .glb URL to 2D render URL
-function getRpm2DImageUrl(glbUrl: string): string {
-  // Extract avatar ID from URL - handles query params like ?textureAtlas=512
-  // URL format: https://models.readyplayer.me/{avatarId}.glb or .glb?params
-  const match = glbUrl.match(/models\.readyplayer\.me\/([a-f0-9]+)\.glb/i);
-  if (!match) return glbUrl;
+// Check if URL is an RPM GLB URL and convert to 2D render URL
+function getAvatarImageUrl(url: string): string {
+  // Check if it's a ReadyPlayerMe GLB URL
+  const rpmMatch = url.match(/models\.readyplayer\.me\/([a-f0-9]+)\.glb/i);
+  if (rpmMatch) {
+    const avatarId = rpmMatch[1];
+    // Use RPM's 2D render API - use transparent background for layering
+    return `https://models.readyplayer.me/${avatarId}.png?scene=fullbody-portrait-v1&background=transparent`;
+  }
   
-  const avatarId = match[1];
-  // Use RPM's 2D render API - use transparent background for layering
-  return `https://models.readyplayer.me/${avatarId}.png?scene=fullbody-portrait-v1&background=transparent`;
+  // Check if it's already an RPM PNG URL
+  if (url.includes('models.readyplayer.me') && url.includes('.png')) {
+    return url;
+  }
+  
+  // For regular avatar URLs (like Supabase storage), use as-is
+  // These are usually profile photos/headshots
+  return url;
 }
 
 const sizeClasses = {
@@ -167,8 +175,11 @@ export const RpmAvatarImage = ({
   const { animate, transition } = getAnimationVariants(role, intensity, songSection);
   const [imageError, setImageError] = useState(false);
   
-  // Generate 2D image URL from RPM avatar
-  const imageUrl = avatarUrl ? getRpm2DImageUrl(avatarUrl) : null;
+  // Generate image URL from avatar (works with RPM, Supabase storage, or any URL)
+  const imageUrl = avatarUrl ? getAvatarImageUrl(avatarUrl) : null;
+  
+  // Check if this is a regular avatar (not RPM) - we'll style it differently
+  const isRegularAvatar = avatarUrl && !avatarUrl.includes('readyplayer.me');
   
   // Show fallback if no URL or image failed to load
   const showFallback = !imageUrl || imageError;
@@ -181,12 +192,30 @@ export const RpmAvatarImage = ({
     >
       {!showFallback ? (
         <div className={`${sizeClasses[size]} relative`}>
-          <img 
-            src={imageUrl}
-            alt={`${role} avatar`}
-            className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-            onError={() => setImageError(true)}
-          />
+          {isRegularAvatar ? (
+            // Regular avatar (headshot) - show in a circular frame on top of silhouette
+            <div className="relative w-full h-full">
+              {/* Silhouette body behind */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-[60%] bg-gradient-to-t from-zinc-800 to-zinc-700 rounded-t-2xl opacity-80" />
+              {/* Avatar headshot */}
+              <div className="absolute top-1 left-1/2 -translate-x-1/2 w-[70%] aspect-square rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+                <img 
+                  src={imageUrl}
+                  alt={`${role} avatar`}
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            </div>
+          ) : (
+            // RPM full-body avatar
+            <img 
+              src={imageUrl}
+              alt={`${role} avatar`}
+              className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+              onError={() => setImageError(true)}
+            />
+          )}
           {/* Glow effect during high intensity */}
           {intensity > 0.7 && (
             <motion.div
