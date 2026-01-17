@@ -8122,6 +8122,538 @@ export type Database = {
           },
         ]
       }
+      logistics_companies: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          current_fleet_size: number | null
+          fleet_capacity: number
+          id: string
+          insurance_coverage: number | null
+          license_tier: number
+          name: string
+          on_time_delivery_rate: number | null
+          operating_regions: string[] | null
+          reputation: number | null
+          service_quality_rating: number | null
+          specializations: string[] | null
+          total_contracts_completed: number | null
+          total_distance_covered: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          current_fleet_size?: number | null
+          fleet_capacity?: number
+          id?: string
+          insurance_coverage?: number | null
+          license_tier?: number
+          name: string
+          on_time_delivery_rate?: number | null
+          operating_regions?: string[] | null
+          reputation?: number | null
+          service_quality_rating?: number | null
+          specializations?: string[] | null
+          total_contracts_completed?: number | null
+          total_distance_covered?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          current_fleet_size?: number | null
+          fleet_capacity?: number
+          id?: string
+          insurance_coverage?: number | null
+          license_tier?: number
+          name?: string
+          on_time_delivery_rate?: number | null
+          operating_regions?: string[] | null
+          reputation?: number | null
+          service_quality_rating?: number | null
+          specializations?: string[] | null
+          total_contracts_completed?: number | null
+          total_distance_covered?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_contract_assignments: {
+        Row: {
+          actual_arrival: string | null
+          actual_departure: string | null
+          contract_id: string
+          created_at: string | null
+          delay_minutes: number | null
+          destination_city_id: string | null
+          distance_km: number | null
+          driver_id: string
+          fuel_cost: number | null
+          id: string
+          incident_notes: string | null
+          leg_number: number | null
+          origin_city_id: string | null
+          scheduled_arrival: string | null
+          scheduled_departure: string | null
+          status: string | null
+          toll_cost: number | null
+          vehicle_id: string
+        }
+        Insert: {
+          actual_arrival?: string | null
+          actual_departure?: string | null
+          contract_id: string
+          created_at?: string | null
+          delay_minutes?: number | null
+          destination_city_id?: string | null
+          distance_km?: number | null
+          driver_id: string
+          fuel_cost?: number | null
+          id?: string
+          incident_notes?: string | null
+          leg_number?: number | null
+          origin_city_id?: string | null
+          scheduled_arrival?: string | null
+          scheduled_departure?: string | null
+          status?: string | null
+          toll_cost?: number | null
+          vehicle_id: string
+        }
+        Update: {
+          actual_arrival?: string | null
+          actual_departure?: string | null
+          contract_id?: string
+          created_at?: string | null
+          delay_minutes?: number | null
+          destination_city_id?: string | null
+          distance_km?: number | null
+          driver_id?: string
+          fuel_cost?: number | null
+          id?: string
+          incident_notes?: string | null
+          leg_number?: number | null
+          origin_city_id?: string | null
+          scheduled_arrival?: string | null
+          scheduled_departure?: string | null
+          status?: string | null
+          toll_cost?: number | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_contract_assignments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contract_assignments_destination_city_id_fkey"
+            columns: ["destination_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contract_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contract_assignments_origin_city_id_fkey"
+            columns: ["origin_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contract_assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_fleet_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_contracts: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          cargo_description: string | null
+          cargo_value: number | null
+          cargo_weight_kg: number | null
+          client_band_id: string | null
+          client_company_id: string | null
+          client_rating: number | null
+          company_rating: number | null
+          contract_type: string
+          created_at: string | null
+          destination_city_id: string | null
+          distance_km: number | null
+          drivers_required: number | null
+          end_date: string | null
+          estimated_duration_hours: number | null
+          fee_paid: number | null
+          fee_quoted: number
+          id: string
+          logistics_company_id: string
+          notes: string | null
+          origin_city_id: string | null
+          start_date: string | null
+          status: string | null
+          tour_id: string | null
+          updated_at: string | null
+          vehicles_required: number | null
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          cargo_description?: string | null
+          cargo_value?: number | null
+          cargo_weight_kg?: number | null
+          client_band_id?: string | null
+          client_company_id?: string | null
+          client_rating?: number | null
+          company_rating?: number | null
+          contract_type: string
+          created_at?: string | null
+          destination_city_id?: string | null
+          distance_km?: number | null
+          drivers_required?: number | null
+          end_date?: string | null
+          estimated_duration_hours?: number | null
+          fee_paid?: number | null
+          fee_quoted: number
+          id?: string
+          logistics_company_id: string
+          notes?: string | null
+          origin_city_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          tour_id?: string | null
+          updated_at?: string | null
+          vehicles_required?: number | null
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          cargo_description?: string | null
+          cargo_value?: number | null
+          cargo_weight_kg?: number | null
+          client_band_id?: string | null
+          client_company_id?: string | null
+          client_rating?: number | null
+          company_rating?: number | null
+          contract_type?: string
+          created_at?: string | null
+          destination_city_id?: string | null
+          distance_km?: number | null
+          drivers_required?: number | null
+          end_date?: string | null
+          estimated_duration_hours?: number | null
+          fee_paid?: number | null
+          fee_quoted?: number
+          id?: string
+          logistics_company_id?: string
+          notes?: string | null
+          origin_city_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          tour_id?: string | null
+          updated_at?: string | null
+          vehicles_required?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_contracts_client_band_id_fkey"
+            columns: ["client_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contracts_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contracts_destination_city_id_fkey"
+            columns: ["destination_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contracts_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contracts_origin_city_id_fkey"
+            columns: ["origin_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_contracts_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_drivers: {
+        Row: {
+          accidents: number | null
+          created_at: string | null
+          experience_years: number | null
+          hired_at: string | null
+          id: string
+          is_npc: boolean | null
+          license_type: string | null
+          logistics_company_id: string
+          name: string
+          profile_id: string | null
+          reliability_rating: number | null
+          salary_per_day: number | null
+          skill_level: number | null
+          status: string | null
+          total_km_driven: number | null
+          total_trips_completed: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accidents?: number | null
+          created_at?: string | null
+          experience_years?: number | null
+          hired_at?: string | null
+          id?: string
+          is_npc?: boolean | null
+          license_type?: string | null
+          logistics_company_id: string
+          name: string
+          profile_id?: string | null
+          reliability_rating?: number | null
+          salary_per_day?: number | null
+          skill_level?: number | null
+          status?: string | null
+          total_km_driven?: number | null
+          total_trips_completed?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accidents?: number | null
+          created_at?: string | null
+          experience_years?: number | null
+          hired_at?: string | null
+          id?: string
+          is_npc?: boolean | null
+          license_type?: string | null
+          logistics_company_id?: string
+          name?: string
+          profile_id?: string | null
+          reliability_rating?: number | null
+          salary_per_day?: number | null
+          skill_level?: number | null
+          status?: string | null
+          total_km_driven?: number | null
+          total_trips_completed?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_drivers_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_fleet_vehicles: {
+        Row: {
+          assigned_driver_id: string | null
+          capacity_units: number | null
+          condition_percent: number | null
+          created_at: string | null
+          fuel_efficiency: number | null
+          id: string
+          last_maintenance_km: number | null
+          logistics_company_id: string
+          name: string
+          next_maintenance_due: string | null
+          purchase_cost: number | null
+          purchase_date: string | null
+          status: string | null
+          total_km_traveled: number | null
+          updated_at: string | null
+          vehicle_catalog_id: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          assigned_driver_id?: string | null
+          capacity_units?: number | null
+          condition_percent?: number | null
+          created_at?: string | null
+          fuel_efficiency?: number | null
+          id?: string
+          last_maintenance_km?: number | null
+          logistics_company_id: string
+          name: string
+          next_maintenance_due?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          status?: string | null
+          total_km_traveled?: number | null
+          updated_at?: string | null
+          vehicle_catalog_id?: string | null
+          vehicle_type?: string
+        }
+        Update: {
+          assigned_driver_id?: string | null
+          capacity_units?: number | null
+          condition_percent?: number | null
+          created_at?: string | null
+          fuel_efficiency?: number | null
+          id?: string
+          last_maintenance_km?: number | null
+          logistics_company_id?: string
+          name?: string
+          next_maintenance_due?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          status?: string | null
+          total_km_traveled?: number | null
+          updated_at?: string | null
+          vehicle_catalog_id?: string | null
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_fleet_vehicles_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_fleet_vehicles_vehicle_catalog_id_fkey"
+            columns: ["vehicle_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_transactions: {
+        Row: {
+          amount: number
+          contract_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          logistics_company_id: string
+          transaction_date: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          contract_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logistics_company_id: string
+          transaction_date?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          contract_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logistics_company_id?: string
+          transaction_date?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_transactions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_transactions_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_upgrades: {
+        Row: {
+          active: boolean | null
+          cost: number
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          logistics_company_id: string
+          purchased_at: string | null
+          upgrade_level: number | null
+          upgrade_type: string
+        }
+        Insert: {
+          active?: boolean | null
+          cost: number
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          logistics_company_id: string
+          purchased_at?: string | null
+          upgrade_level?: number | null
+          upgrade_type: string
+        }
+        Update: {
+          active?: boolean | null
+          cost?: number
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          logistics_company_id?: string
+          purchased_at?: string | null
+          upgrade_level?: number | null
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_upgrades_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       magazine_submissions: {
         Row: {
           band_id: string
