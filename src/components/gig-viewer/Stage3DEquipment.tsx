@@ -6,7 +6,8 @@ import {
   ProceduralMicStand, 
   ProceduralKeyboard, 
   ProceduralBassAmp, 
-  ProceduralStageMonitor 
+  ProceduralStageMonitor,
+  ProceduralCableSet
 } from "./procedural-equipment";
 
 interface BandMemberInfo {
@@ -165,6 +166,18 @@ const StageEquipmentScene = ({
           rotation={[0, Math.PI * 0.8, 0]}
         />
       )}
+      
+      {/* Cables for realism */}
+      <ProceduralCableSet
+        equipmentPositions={{
+          guitarAmp: equipment.hasGuitarist ? [-2.2, 0, -0.8] : undefined,
+          bassAmp: equipment.hasBassist ? [2.2, 0, -0.8] : undefined,
+          drums: equipment.hasDrummer ? [0, 0, -1.5] : undefined,
+          keyboard: equipment.hasKeyboardist ? [-1.5, 0, -1.2] : undefined,
+          vocalMic: equipment.hasVocalist ? [0, 0, 0.5] : undefined,
+        }}
+        intensity={intensity}
+      />
     </>
   );
 };

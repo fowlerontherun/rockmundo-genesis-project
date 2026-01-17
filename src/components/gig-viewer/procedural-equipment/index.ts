@@ -4,3 +4,4 @@ export { ProceduralMicStand } from './ProceduralMicStand';
 export { ProceduralKeyboard } from './ProceduralKeyboard';
 export { ProceduralBassAmp } from './ProceduralBassAmp';
 export { ProceduralStageMonitor } from './ProceduralStageMonitor';
+export { ProceduralCable, ProceduralCableSet } from './ProceduralCables';

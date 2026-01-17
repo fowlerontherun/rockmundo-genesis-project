@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.442",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "Added procedural cable system with realistic sag, stage box, and snake cable running off-stage" },
+      { type: 'improvement', description: "Cables automatically connect equipment to stage box based on which instruments are present" },
+    ],
+  },
+  {
     version: "1.0.441",
     date: "2026-01-17",
     changes: [
