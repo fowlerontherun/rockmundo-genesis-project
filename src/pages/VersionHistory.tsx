@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.450",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 4: Merchandise Factories" },
+      { type: 'feature', description: "Build factories with types: apparel, accessories, vinyl, CD, posters, mixed" },
+      { type: 'feature', description: "Product catalog management with customizable pricing" },
+      { type: 'feature', description: "Production queue system with status tracking and priority levels" },
+      { type: 'feature', description: "Factory worker roster with roles: production, quality control, supervisor, maintenance" },
+      { type: 'feature', description: "Quality control records and defect tracking" },
+      { type: 'feature', description: "Factory contracts for bands and labels with discount tiers" },
+    ],
+  },
+  {
     version: "1.0.449",
     date: "2026-01-17",
     changes: [

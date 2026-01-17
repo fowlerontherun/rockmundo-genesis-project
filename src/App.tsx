@@ -117,6 +117,7 @@ const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVide
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
 const SecurityFirmManagement = lazyWithRetry(() => import("./pages/SecurityFirmManagement"));
+const MerchFactoryManagement = lazyWithRetry(() => import("./pages/MerchFactoryManagement"));
 
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
@@ -354,6 +355,7 @@ function App() {
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="company/:companyId" element={<CompanyDetail />} />
                     <Route path="security-firm/:companyId" element={<SecurityFirmManagement />} />
+                    <Route path="merch-factory/:factoryId" element={<MerchFactoryManagement />} />
                     
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
