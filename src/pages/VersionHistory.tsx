@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.452",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 6: Venue Management" },
+      { type: 'feature', description: "Venues can now be owned by companies as subsidiaries" },
+      { type: 'feature', description: "Venue staff management - hire managers, sound engineers, security, bartenders" },
+      { type: 'feature', description: "Venue booking calendar for gigs, private events, rehearsals, recording sessions" },
+      { type: 'feature', description: "Venue upgrades system - sound system, lighting, capacity, backstage, parking" },
+      { type: 'feature', description: "Venue financial tracking with revenue/expense breakdown" },
+      { type: 'improvement', description: "Venues table extended with business metrics and quality ratings" },
+    ],
+  },
+  {
     version: "1.0.451",
     date: "2026-01-17",
     changes: [
