@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.436",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Stage viewer now only shows RPM 3D avatars, not regular profile pictures" },
+    ],
+  },
+  {
     version: "1.0.435",
     date: "2026-01-17",
     changes: [
