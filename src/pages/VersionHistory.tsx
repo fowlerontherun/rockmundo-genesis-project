@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.457",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Integration: Complete cron jobs and admin features" },
+      { type: 'feature', description: "7 new cron edge functions: payroll, operations, venue/studio bookings, logistics contracts, bankruptcy, reports" },
+      { type: 'feature', description: "Admin Company Management page for oversight of all player companies" },
+      { type: 'feature', description: "VIP gating added to Security Firm and Merch Factory management pages" },
+      { type: 'feature', description: "New management pages: Logistics, Venue, Rehearsal Studio, Recording Studio businesses" },
+      { type: 'feature', description: "Automated daily payroll processing for all company employees" },
+      { type: 'feature', description: "Bankruptcy detection system with 7-day grace period and warnings" },
+      { type: 'feature', description: "Weekly financial report generation with KPIs and synergy detection" },
+      { type: 'improvement', description: "Company-owned venues and studios now auto-credit revenue to parent company" },
+    ],
+  },
+  {
     version: "1.0.456",
     date: "2026-01-17",
     changes: [

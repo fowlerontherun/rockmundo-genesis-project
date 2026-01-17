@@ -118,6 +118,11 @@ const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
 const SecurityFirmManagement = lazyWithRetry(() => import("./pages/SecurityFirmManagement"));
 const MerchFactoryManagement = lazyWithRetry(() => import("./pages/MerchFactoryManagement"));
+const LogisticsCompanyManagement = lazyWithRetry(() => import("./pages/LogisticsCompanyManagement"));
+const VenueBusinessManagement = lazyWithRetry(() => import("./pages/VenueBusinessManagement"));
+const RehearsalStudioBusinessManagement = lazyWithRetry(() => import("./pages/RehearsalStudioBusinessManagement"));
+const RecordingStudioBusinessManagement = lazyWithRetry(() => import("./pages/RecordingStudioBusinessManagement"));
+const CompanyAdmin = lazyWithRetry(() => import("./pages/admin/CompanyAdmin"));
 
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
@@ -356,6 +361,10 @@ function App() {
                     <Route path="company/:companyId" element={<CompanyDetail />} />
                     <Route path="security-firm/:companyId" element={<SecurityFirmManagement />} />
                     <Route path="merch-factory/:factoryId" element={<MerchFactoryManagement />} />
+                    <Route path="logistics-company/:companyId" element={<LogisticsCompanyManagement />} />
+                    <Route path="venue-business/:venueId" element={<VenueBusinessManagement />} />
+                    <Route path="rehearsal-studio-business/:studioId" element={<RehearsalStudioBusinessManagement />} />
+                    <Route path="recording-studio-business/:studioId" element={<RecordingStudioBusinessManagement />} />
                     
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
@@ -419,6 +428,7 @@ function App() {
                     <Route path="admin/game-balance" element={<GameBalanceAdmin />} />
                     <Route path="admin/tutorials" element={<TutorialsAdmin />} />
                     <Route path="admin/vip" element={<VipManagement />} />
+                    <Route path="admin/companies" element={<CompanyAdmin />} />
                     <Route path="admin/skin-collections" element={<SkinCollectionsAdmin />} />
                     <Route path="admin/skin-collections/:collectionId/items" element={<CollectionItemsAdmin />} />
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />
