@@ -2935,6 +2935,183 @@ export type Database = {
         }
         Relationships: []
       }
+      companies: {
+        Row: {
+          balance: number
+          bankruptcy_date: string | null
+          company_type: string
+          created_at: string
+          description: string | null
+          founded_at: string
+          headquarters_city_id: string | null
+          id: string
+          is_bankrupt: boolean
+          logo_url: string | null
+          name: string
+          owner_id: string
+          parent_company_id: string | null
+          reputation_score: number
+          status: string
+          updated_at: string
+          weekly_operating_costs: number
+        }
+        Insert: {
+          balance?: number
+          bankruptcy_date?: string | null
+          company_type: string
+          created_at?: string
+          description?: string | null
+          founded_at?: string
+          headquarters_city_id?: string | null
+          id?: string
+          is_bankrupt?: boolean
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          parent_company_id?: string | null
+          reputation_score?: number
+          status?: string
+          updated_at?: string
+          weekly_operating_costs?: number
+        }
+        Update: {
+          balance?: number
+          bankruptcy_date?: string | null
+          company_type?: string
+          created_at?: string
+          description?: string | null
+          founded_at?: string
+          headquarters_city_id?: string | null
+          id?: string
+          is_bankrupt?: boolean
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          parent_company_id?: string | null
+          reputation_score?: number
+          status?: string
+          updated_at?: string
+          weekly_operating_costs?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_headquarters_city_id_fkey"
+            columns: ["headquarters_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_parent_company_id_fkey"
+            columns: ["parent_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_employees: {
+        Row: {
+          company_id: string
+          created_at: string
+          hired_at: string
+          id: string
+          performance_rating: number | null
+          profile_id: string
+          role: string
+          salary: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          hired_at?: string
+          id?: string
+          performance_rating?: number | null
+          profile_id: string
+          role: string
+          salary?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          hired_at?: string
+          id?: string
+          performance_rating?: number | null
+          profile_id?: string
+          role?: string
+          salary?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_transactions: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_clauses: {
         Row: {
           clause_key: string
