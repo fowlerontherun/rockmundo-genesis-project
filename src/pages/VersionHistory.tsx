@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.449",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 3: Private Security Firms" },
+      { type: 'feature', description: "Create security firm subsidiaries with license levels and equipment tiers" },
+      { type: 'feature', description: "Hire and manage security guards with skill levels and salaries" },
+      { type: 'feature', description: "Security contracts system for gigs, tours, and venues" },
+      { type: 'feature', description: "Guard roster management with performance tracking" },
+      { type: 'improvement', description: "Venues now have security requirements based on capacity" },
+    ],
+  },
+  {
     version: "1.0.448",
     date: "2026-01-17",
     changes: [

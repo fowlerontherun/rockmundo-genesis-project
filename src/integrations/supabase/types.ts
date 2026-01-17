@@ -13897,6 +13897,262 @@ export type Database = {
           },
         ]
       }
+      security_contract_assignments: {
+        Row: {
+          assignment_date: string
+          contract_id: string
+          created_at: string | null
+          guard_id: string
+          id: string
+          performance_rating: number | null
+          status: string | null
+        }
+        Insert: {
+          assignment_date: string
+          contract_id: string
+          created_at?: string | null
+          guard_id: string
+          id?: string
+          performance_rating?: number | null
+          status?: string | null
+        }
+        Update: {
+          assignment_date?: string
+          contract_id?: string
+          created_at?: string | null
+          guard_id?: string
+          id?: string
+          performance_rating?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_contract_assignments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "security_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_contract_assignments_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "security_guards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_contracts: {
+        Row: {
+          client_band_id: string | null
+          client_company_id: string | null
+          contract_type: string
+          created_at: string | null
+          end_date: string | null
+          fee_per_event: number
+          gig_id: string | null
+          guards_required: number
+          id: string
+          notes: string | null
+          security_firm_id: string
+          start_date: string | null
+          status: string | null
+          total_fee: number | null
+          tour_id: string | null
+          updated_at: string | null
+          venue_id: string | null
+        }
+        Insert: {
+          client_band_id?: string | null
+          client_company_id?: string | null
+          contract_type: string
+          created_at?: string | null
+          end_date?: string | null
+          fee_per_event: number
+          gig_id?: string | null
+          guards_required: number
+          id?: string
+          notes?: string | null
+          security_firm_id: string
+          start_date?: string | null
+          status?: string | null
+          total_fee?: number | null
+          tour_id?: string | null
+          updated_at?: string | null
+          venue_id?: string | null
+        }
+        Update: {
+          client_band_id?: string | null
+          client_company_id?: string | null
+          contract_type?: string
+          created_at?: string | null
+          end_date?: string | null
+          fee_per_event?: number
+          gig_id?: string | null
+          guards_required?: number
+          id?: string
+          notes?: string | null
+          security_firm_id?: string
+          start_date?: string | null
+          status?: string | null
+          total_fee?: number | null
+          tour_id?: string | null
+          updated_at?: string | null
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_contracts_client_band_id_fkey"
+            columns: ["client_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_contracts_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_contracts_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_contracts_security_firm_id_fkey"
+            columns: ["security_firm_id"]
+            isOneToOne: false
+            referencedRelation: "security_firms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_contracts_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_contracts_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_firms: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          equipment_quality: number | null
+          id: string
+          license_level: number | null
+          max_guards: number | null
+          name: string
+          reputation: number | null
+          total_contracts_completed: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          equipment_quality?: number | null
+          id?: string
+          license_level?: number | null
+          max_guards?: number | null
+          name: string
+          reputation?: number | null
+          total_contracts_completed?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          equipment_quality?: number | null
+          id?: string
+          license_level?: number | null
+          max_guards?: number | null
+          name?: string
+          reputation?: number | null
+          total_contracts_completed?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_firms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_guards: {
+        Row: {
+          experience_years: number | null
+          hired_at: string | null
+          id: string
+          is_npc: boolean | null
+          name: string
+          profile_id: string | null
+          salary_per_event: number | null
+          security_firm_id: string
+          skill_level: number | null
+          status: string | null
+        }
+        Insert: {
+          experience_years?: number | null
+          hired_at?: string | null
+          id?: string
+          is_npc?: boolean | null
+          name: string
+          profile_id?: string | null
+          salary_per_event?: number | null
+          security_firm_id: string
+          skill_level?: number | null
+          status?: string | null
+        }
+        Update: {
+          experience_years?: number | null
+          hired_at?: string | null
+          id?: string
+          is_npc?: boolean | null
+          name?: string
+          profile_id?: string | null
+          salary_per_event?: number | null
+          security_firm_id?: string
+          skill_level?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_guards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_guards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_guards_security_firm_id_fkey"
+            columns: ["security_firm_id"]
+            isOneToOne: false
+            referencedRelation: "security_firms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       self_promotion_activities: {
         Row: {
           activity_type: string
@@ -18217,10 +18473,13 @@ export type Database = {
           id: string
           image_url: string | null
           location: string | null
+          min_security_guards: number | null
           name: string
           prestige_level: number | null
           reputation: number | null
           requirements: Json | null
+          security_license_required: number | null
+          security_required: boolean | null
           slot_config: Json | null
           slots_per_day: number | null
           venue_cut: number | null
@@ -18241,10 +18500,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          min_security_guards?: number | null
           name: string
           prestige_level?: number | null
           reputation?: number | null
           requirements?: Json | null
+          security_license_required?: number | null
+          security_required?: boolean | null
           slot_config?: Json | null
           slots_per_day?: number | null
           venue_cut?: number | null
@@ -18265,10 +18527,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          min_security_guards?: number | null
           name?: string
           prestige_level?: number | null
           reputation?: number | null
           requirements?: Json | null
+          security_license_required?: number | null
+          security_required?: boolean | null
           slot_config?: Json | null
           slots_per_day?: number | null
           venue_cut?: number | null
