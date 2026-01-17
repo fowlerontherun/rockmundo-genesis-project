@@ -114,7 +114,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
       if (userBandIds.length > 0) {
         const { data: bandGigs, error: gigsError } = await supabase
           .from('gigs')
-          .select('*, venues:venue_id(name, city_id, cities:city_id(name)), bands:band_id(name), tours:tour_id(name)')
+          // NOTE: gigs->venues has multiple FK relationships; we must disambiguate with an explicit join
+          .select('*, venues:venues!gigs_venue_id_fkey(name, city_id, cities:city_id(name)), bands:band_id(name), tours:tour_id(name)')
           .in('band_id', userBandIds)
           .gte('scheduled_date', dayStart.toISOString())
           .lte('scheduled_date', dayEnd.toISOString())
