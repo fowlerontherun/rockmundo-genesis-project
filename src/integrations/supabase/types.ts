@@ -3071,6 +3071,53 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          allow_subsidiary_creation: boolean | null
+          auto_pay_salaries: boolean | null
+          company_id: string
+          created_at: string | null
+          dividend_payout_percent: number | null
+          max_subsidiaries: number | null
+          notification_threshold_critical: number | null
+          notification_threshold_low: number | null
+          reinvestment_percent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_subsidiary_creation?: boolean | null
+          auto_pay_salaries?: boolean | null
+          company_id: string
+          created_at?: string | null
+          dividend_payout_percent?: number | null
+          max_subsidiaries?: number | null
+          notification_threshold_critical?: number | null
+          notification_threshold_low?: number | null
+          reinvestment_percent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_subsidiary_creation?: boolean | null
+          auto_pay_salaries?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          dividend_payout_percent?: number | null
+          max_subsidiaries?: number | null
+          notification_threshold_critical?: number | null
+          notification_threshold_low?: number | null
+          reinvestment_percent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_transactions: {
         Row: {
           amount: number
@@ -7302,6 +7349,7 @@ export type Database = {
         Row: {
           balance: number | null
           balance_went_negative_at: string | null
+          company_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -7322,6 +7370,7 @@ export type Database = {
         Insert: {
           balance?: number | null
           balance_went_negative_at?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -7342,6 +7391,7 @@ export type Database = {
         Update: {
           balance?: number | null
           balance_went_negative_at?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -7360,6 +7410,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "labels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "labels_headquarters_city_id_fkey"
             columns: ["headquarters_city_id"]
