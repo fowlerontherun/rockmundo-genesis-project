@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.448",
+    date: "2026-01-17",
+    changes: [
+      { type: 'feature', description: "VIP Company System Phase 2: Holding companies and subsidiary management" },
+      { type: 'feature', description: "Company Detail page with subsidiary tree visualization and financial overview" },
+      { type: 'feature', description: "Transfer existing labels to company ownership via Transfer Label dialog" },
+      { type: 'feature', description: "Company Settings dialog for dividend payouts and salary automation" },
+      { type: 'feature', description: "Visual corporate hierarchy tree showing parent/child company relationships" },
+      { type: 'improvement', description: "Added company_settings table with auto-creation trigger" },
+    ],
+  },
+  {
     version: "1.0.447",
     date: "2026-01-17",
     changes: [
