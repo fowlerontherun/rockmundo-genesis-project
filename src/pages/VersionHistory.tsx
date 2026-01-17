@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.433",
+    date: "2026-01-17",
+    changes: [
+      { type: 'improvement', description: "Regular avatars now display as full images on stage instead of headshot+silhouette" },
+    ],
+  },
+  {
     version: "1.0.432",
     date: "2026-01-17",
     changes: [

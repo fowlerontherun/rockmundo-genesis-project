@@ -192,30 +192,15 @@ export const RpmAvatarImage = ({
     >
       {!showFallback ? (
         <div className={`${sizeClasses[size]} relative`}>
-          {isRegularAvatar ? (
-            // Regular avatar (headshot) - show in a circular frame on top of silhouette
-            <div className="relative w-full h-full">
-              {/* Silhouette body behind */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-[60%] bg-gradient-to-t from-zinc-800 to-zinc-700 rounded-t-2xl opacity-80" />
-              {/* Avatar headshot */}
-              <div className="absolute top-1 left-1/2 -translate-x-1/2 w-[70%] aspect-square rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
-                <img 
-                  src={imageUrl}
-                  alt={`${role} avatar`}
-                  className="w-full h-full object-cover"
-                  onError={() => setImageError(true)}
-                />
-              </div>
-            </div>
-          ) : (
-            // RPM full-body avatar
-            <img 
-              src={imageUrl}
-              alt={`${role} avatar`}
-              className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-              onError={() => setImageError(true)}
-            />
-          )}
+          {/* Show full avatar image for both RPM and regular avatars */}
+          <img 
+            src={imageUrl}
+            alt={`${role} avatar`}
+            className={`w-full h-full drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] ${
+              isRegularAvatar ? 'object-cover rounded-lg' : 'object-contain'
+            }`}
+            onError={() => setImageError(true)}
+          />
           {/* Glow effect during high intensity */}
           {intensity > 0.7 && (
             <motion.div
