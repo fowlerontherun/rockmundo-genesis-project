@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.426",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed tour gigs not showing on dashboard schedule - gigs now display with proper 4-hour duration" },
+      { type: 'fix', description: "Fixed PerformanceBooking using wrong table name - activities now save to correct table" },
+      { type: 'fix', description: "Fixed dashboard navigation buttons causing full page reloads - now uses client-side routing" },
+    ],
+  },
+  {
     version: "1.0.425",
     date: "2026-01-17",
     changes: [

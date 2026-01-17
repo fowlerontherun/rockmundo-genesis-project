@@ -197,20 +197,29 @@ export default function PerformanceBooking() {
 
       if (balanceError) throw balanceError;
 
-      // Create scheduled activity
-      await (supabase as any).from("scheduled_activities").insert({
-        user_id: user.id,
-        activity_type: "rehearsal",
-        scheduled_start: scheduledStart.toISOString(),
-        scheduled_end: scheduledEnd.toISOString(),
-        status: "scheduled",
-        title: "Band Rehearsal",
-        metadata: {
-          rehearsal_id: rehearsal.id,
-          band_id: selectedBand,
-          rehearsal_room_id: selectedRoom,
-        },
-      });
+      // Create scheduled activity - fetch profile_id first
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (userProfile) {
+        await (supabase as any).from("player_scheduled_activities").insert({
+          user_id: user.id,
+          profile_id: userProfile.id,
+          activity_type: "rehearsal",
+          scheduled_start: scheduledStart.toISOString(),
+          scheduled_end: scheduledEnd.toISOString(),
+          status: "scheduled",
+          title: "Band Rehearsal",
+          metadata: {
+            rehearsal_id: rehearsal.id,
+            band_id: selectedBand,
+            rehearsal_room_id: selectedRoom,
+          },
+        });
+      }
 
       toast({
         title: "Rehearsal Booked!",
@@ -259,8 +268,16 @@ export default function PerformanceBooking() {
     const metadata: any = {};
     if (activityType === "gig") metadata.venue_id = selectedVenue;
 
-    const { error } = await (supabase as any).from("scheduled_activities").insert({
+    // Fetch profile_id first
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+    
+    const { error } = await (supabase as any).from("player_scheduled_activities").insert({
       user_id: user.id,
+      profile_id: userProfile?.id,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),
