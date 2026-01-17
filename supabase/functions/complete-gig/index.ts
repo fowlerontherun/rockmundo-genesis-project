@@ -21,10 +21,10 @@ serve(async (req) => {
 
     console.log(`Completing gig ${gigId}`);
 
-    // Get gig and outcome with venue country info
+    // Get gig and outcome with venue and city info for proper country tracking
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(city_id, city, country)')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(id, name, city_id, cities!venues_city_id_fkey(id, name, country))')
       .eq('id', gigId)
       .single();
 
@@ -272,10 +272,15 @@ serve(async (req) => {
 
     if (bandError) throw bandError;
 
-    // Add regional fame for the gig's country
-    const venueCountry = gig.venues?.country;
+    // Add regional fame for the gig's country and city
+    const venueCity = gig.venues?.cities;
+    const venueCountry = venueCity?.country;
+    const venueCityId = venueCity?.id;
+    const venueCityName = venueCity?.name || 'Unknown City';
+    
     if (venueCountry && gig.band_id) {
       try {
+        // Update country-level fame and fans
         await supabaseClient.rpc("add_band_country_fame", {
           p_band_id: gig.band_id,
           p_country: venueCountry,
@@ -285,6 +290,123 @@ serve(async (req) => {
         console.log(`Added ${fameGained} fame and ${newFansTotal} fans to ${venueCountry} for band`);
       } catch (e) {
         console.log('add_band_country_fame RPC may not exist, skipping regional fame:', e);
+      }
+      
+      // Update city-level fans tracking
+      if (venueCityId) {
+        try {
+          // Upsert to band_city_fans
+          const { data: existingCityFans } = await supabaseClient
+            .from('band_city_fans')
+            .select('*')
+            .eq('band_id', gig.band_id)
+            .eq('city_id', venueCityId)
+            .maybeSingle();
+          
+          if (existingCityFans) {
+            await supabaseClient
+              .from('band_city_fans')
+              .update({
+                total_fans: (existingCityFans.total_fans || 0) + newFansTotal,
+                casual_fans: (existingCityFans.casual_fans || 0) + casualFans,
+                dedicated_fans: (existingCityFans.dedicated_fans || 0) + dedicatedFans,
+                superfans: (existingCityFans.superfans || 0) + superfans,
+                city_fame: (existingCityFans.city_fame || 0) + fameGained,
+                gigs_in_city: (existingCityFans.gigs_in_city || 0) + 1,
+                last_gig_date: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingCityFans.id);
+          } else {
+            await supabaseClient
+              .from('band_city_fans')
+              .insert({
+                band_id: gig.band_id,
+                city_id: venueCityId,
+                city_name: venueCityName,
+                country: venueCountry,
+                total_fans: newFansTotal,
+                casual_fans: casualFans,
+                dedicated_fans: dedicatedFans,
+                superfans: superfans,
+                city_fame: fameGained,
+                gigs_in_city: 1,
+                last_gig_date: new Date().toISOString(),
+              });
+          }
+          console.log(`Updated city fans for ${venueCityName}: +${newFansTotal} fans`);
+        } catch (e) {
+          console.log('Error updating city fans:', e);
+        }
+      }
+      
+      // Record fame history for Today's News
+      try {
+        await supabaseClient
+          .from('band_fame_history')
+          .insert({
+            band_id: gig.band_id,
+            city_id: venueCityId,
+            country: venueCountry,
+            scope: 'city',
+            event_type: 'gig',
+            fame_value: (gig.bands.fame || 0) + fameGained,
+            fame_change: fameGained,
+          });
+        console.log(`Recorded fame history: +${fameGained} fame in ${venueCityName}`);
+      } catch (e) {
+        console.log('Error recording fame history:', e);
+      }
+      
+      // Distribute fans across demographics
+      try {
+        const { data: demographics } = await supabaseClient
+          .from('age_demographics')
+          .select('id, name, genre_preferences');
+        
+        if (demographics && demographics.length > 0) {
+          const bandGenre = gig.bands.genre || 'rock';
+          
+          for (const demo of demographics) {
+            // Calculate fan allocation based on genre preferences
+            const genrePrefs = demo.genre_preferences as Record<string, number> | null;
+            const genreMatch = genrePrefs?.[bandGenre] || 0.5;
+            const demoFans = Math.floor(newFansTotal * (genreMatch / demographics.length));
+            
+            if (demoFans > 0) {
+              const { data: existingDemo } = await supabaseClient
+                .from('band_demographic_fans')
+                .select('*')
+                .eq('band_id', gig.band_id)
+                .eq('demographic_id', demo.id)
+                .eq('city_id', venueCityId)
+                .maybeSingle();
+              
+              if (existingDemo) {
+                await supabaseClient
+                  .from('band_demographic_fans')
+                  .update({
+                    fan_count: (existingDemo.fan_count || 0) + demoFans,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', existingDemo.id);
+              } else {
+                await supabaseClient
+                  .from('band_demographic_fans')
+                  .insert({
+                    band_id: gig.band_id,
+                    demographic_id: demo.id,
+                    city_id: venueCityId,
+                    country: venueCountry,
+                    fan_count: demoFans,
+                  });
+              }
+            }
+          }
+          console.log(`Distributed fans across ${demographics.length} demographics`);
+        }
+      } catch (e) {
+        console.log('Error distributing demographic fans:', e);
       }
     }
 

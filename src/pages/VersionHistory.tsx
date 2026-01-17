@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.424",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed city/country fame tracking - gigs now properly record fans and fame per city and country" },
+      { type: 'fix', description: "Fixed 'Countries Visited' and 'Fans by Country' showing empty in Band Manager" },
+      { type: 'fix', description: "Fixed fan demographics not being recorded after gig performances" },
+      { type: 'improvement', description: "Today's News now shows location where fame/fans were gained" },
+      { type: 'improvement', description: "Fame history now recorded for each gig with city/country context" },
+    ],
+  },
+  {
     version: "1.0.423",
     date: "2026-01-17",
     changes: [
