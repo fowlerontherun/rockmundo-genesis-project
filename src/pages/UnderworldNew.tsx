@@ -241,7 +241,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
             </span>
             <span className="inline-flex items-center gap-2 rounded-full bg-muted/70 px-3 py-1">
               <Compass className="h-3.5 w-3.5" />
-              Underground map updated hourly
+              Underworld map updated hourly
             </span>
           </div>
         </div>

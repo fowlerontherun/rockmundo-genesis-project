@@ -17634,8 +17634,10 @@ export type Database = {
           effects_applied: Json | null
           expires_at: string | null
           id: string
+          is_used: boolean | null
           paid_with: string
           product_id: string
+          quantity: number | null
           token_amount: number | null
           token_id: string | null
           user_id: string
@@ -17647,8 +17649,10 @@ export type Database = {
           effects_applied?: Json | null
           expires_at?: string | null
           id?: string
+          is_used?: boolean | null
           paid_with: string
           product_id: string
+          quantity?: number | null
           token_amount?: number | null
           token_id?: string | null
           user_id: string
@@ -17660,8 +17664,10 @@ export type Database = {
           effects_applied?: Json | null
           expires_at?: string | null
           id?: string
+          is_used?: boolean | null
           paid_with?: string
           product_id?: string
+          quantity?: number | null
           token_amount?: number | null
           token_id?: string | null
           user_id?: string
