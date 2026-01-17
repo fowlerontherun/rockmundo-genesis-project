@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.434",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed band member avatars by fetching profiles using user_id correctly" },
+      { type: 'improvement', description: "Session/touring musicians no longer appear on stage - only real players with avatars" },
+      { type: 'improvement', description: "Removed fallback silhouettes - stage only shows members who have uploaded avatars" },
+    ],
+  },
+  {
     version: "1.0.433",
     date: "2026-01-17",
     changes: [

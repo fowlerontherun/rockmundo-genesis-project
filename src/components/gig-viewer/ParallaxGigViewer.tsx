@@ -181,14 +181,26 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
             setStageTheme(theme);
           }
 
-          // Fetch band members
+          // Fetch band members (only real players, not session/touring musicians)
           if (gigData.band_id) {
             const { data: members } = await supabase
               .from('band_members')
-              .select('instrument_role, user_id, profiles!band_members_user_id_fkey(rpm_avatar_url, avatar_url)')
-              .eq('band_id', gigData.band_id);
+              .select('instrument_role, user_id, is_touring_member')
+              .eq('band_id', gigData.band_id)
+              .eq('is_touring_member', false)
+              .not('user_id', 'is', null);
 
             if (members && members.length > 0) {
+              // Fetch profiles separately using user_id
+              const userIds = members.map(m => m.user_id).filter(Boolean) as string[];
+              const { data: profiles } = await supabase
+                .from('profiles')
+                .select('user_id, avatar_url, rpm_avatar_url')
+                .in('user_id', userIds);
+              
+              // Create a map for easy lookup
+              const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
               const roleMap: Record<string, string> = {
                 'lead_vocals': 'vocalist',
                 'vocals': 'vocalist',
@@ -207,42 +219,32 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 'DJ/Producer': 'keyboardist',
               };
 
-              const processedMembers: BandMember[] = members.map((member: any) => ({
-                role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
-                // Prefer RPM avatar, fall back to regular avatar
-                avatarUrl: member.profiles?.rpm_avatar_url || member.profiles?.avatar_url || null,
-                instrumentRole: member.instrument_role,
-              }));
+              const processedMembers: BandMember[] = members.map((member) => {
+                const profile = profileMap.get(member.user_id!);
+                return {
+                  role: roleMap[member.instrument_role] || roleMap[member.instrument_role.toLowerCase()] || 'vocalist',
+                  // Prefer RPM avatar, fall back to regular avatar
+                  avatarUrl: profile?.rpm_avatar_url || profile?.avatar_url || null,
+                  instrumentRole: member.instrument_role,
+                };
+              });
               
-              setBandMembers(processedMembers);
+              // Only include members who have avatars
+              const membersWithAvatars = processedMembers.filter(m => m.avatarUrl !== null);
+              setBandMembers(membersWithAvatars);
             } else {
-              // Default band lineup if no members found
-              setBandMembers([
-                { role: 'vocalist', avatarUrl: null, instrumentRole: 'lead_vocals' },
-                { role: 'guitarist', avatarUrl: null, instrumentRole: 'lead_guitar' },
-                { role: 'bassist', avatarUrl: null, instrumentRole: 'bass' },
-                { role: 'drummer', avatarUrl: null, instrumentRole: 'drums' },
-              ]);
+              // No real band members found - show empty stage
+              setBandMembers([]);
             }
           } else {
-            // Default band lineup if no band_id
-            setBandMembers([
-              { role: 'vocalist', avatarUrl: null, instrumentRole: 'lead_vocals' },
-              { role: 'guitarist', avatarUrl: null, instrumentRole: 'lead_guitar' },
-              { role: 'bassist', avatarUrl: null, instrumentRole: 'bass' },
-              { role: 'drummer', avatarUrl: null, instrumentRole: 'drums' },
-            ]);
+            // No band_id - show empty stage
+            setBandMembers([]);
           }
         }
       } catch (error) {
         console.error('Error fetching gig data:', error);
-        // Set default band on error
-        setBandMembers([
-          { role: 'vocalist', avatarUrl: null, instrumentRole: 'lead_vocals' },
-          { role: 'guitarist', avatarUrl: null, instrumentRole: 'lead_guitar' },
-          { role: 'bassist', avatarUrl: null, instrumentRole: 'bass' },
-          { role: 'drummer', avatarUrl: null, instrumentRole: 'drums' },
-        ]);
+        // Show empty stage on error
+        setBandMembers([]);
       } finally {
         setIsLoading(false);
       }
