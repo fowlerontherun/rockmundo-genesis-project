@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.425",
+    date: "2026-01-17",
+    changes: [
+      { type: 'fix', description: "Fixed Tour Manager tabs overlapping on mobile - now horizontally scrollable with shorter labels" },
+    ],
+  },
+  {
     version: "1.0.424",
     date: "2026-01-17",
     changes: [
