@@ -151,6 +151,7 @@ export const adminCategories: AdminCategory[] = [
     icon: Settings,
     items: [
       { path: "/admin/dashboard", label: "Admin Dashboard", description: "Overview & quick actions" },
+      { path: "/admin/companies", label: "Company Admin", description: "VIP company management" },
       { path: "/admin/game-balance", label: "Game Balance", description: "Tune XP, economy, fame" },
       { path: "/admin/tutorials", label: "Tutorials", description: "Onboarding steps" },
       { path: "/admin/game-calendar", label: "Game Calendar", description: "Time system" },
