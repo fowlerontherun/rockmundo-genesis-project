@@ -252,6 +252,17 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       }
       break;
 
+    case 'self_promotion':
+      // Complete self-promotion activity and apply rewards
+      if (activity.metadata?.self_promotion_id) {
+        await supabase.functions.invoke('process-self-promotion', {
+          body: { 
+            activityId: activity.metadata.self_promotion_id 
+          }
+        });
+      }
+      break;
+
     case 'film_production':
       // Complete film production and apply rewards
       if (activity.metadata?.contract_id) {

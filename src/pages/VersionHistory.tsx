@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.459",
+    date: "2026-01-18",
+    changes: [
+      { type: 'fix', description: "Fixed self-promotion activities never completing - added missing handler in scheduled activities processor" },
+    ],
+  },
+  {
     version: "1.0.458",
     date: "2026-01-18",
     changes: [
