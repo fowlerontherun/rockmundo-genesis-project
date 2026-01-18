@@ -6026,7 +6026,7 @@ export type Database = {
           merch_revenue: number
           net_profit: number
           new_followers: number | null
-          overall_rating: number
+          overall_rating: number | null
           performance_grade: string | null
           promoter_modifier: number | null
           repeat_attendees: number | null
@@ -6071,7 +6071,7 @@ export type Database = {
           merch_revenue?: number
           net_profit?: number
           new_followers?: number | null
-          overall_rating: number
+          overall_rating?: number | null
           performance_grade?: string | null
           promoter_modifier?: number | null
           repeat_attendees?: number | null
@@ -6116,7 +6116,7 @@ export type Database = {
           merch_revenue?: number
           net_profit?: number
           new_followers?: number | null
-          overall_rating?: number
+          overall_rating?: number | null
           performance_grade?: string | null
           promoter_modifier?: number | null
           repeat_attendees?: number | null
