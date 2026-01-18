@@ -6039,6 +6039,7 @@ export type Database = {
           total_xp_awarded: number | null
           venue_capacity: number | null
           venue_cost: number
+          venue_id: string | null
           venue_loyalty_bonus: number | null
           venue_name: string | null
           xp_breakdown: Json | null
@@ -6083,6 +6084,7 @@ export type Database = {
           total_xp_awarded?: number | null
           venue_capacity?: number | null
           venue_cost?: number
+          venue_id?: string | null
           venue_loyalty_bonus?: number | null
           venue_name?: string | null
           xp_breakdown?: Json | null
@@ -6127,6 +6129,7 @@ export type Database = {
           total_xp_awarded?: number | null
           venue_capacity?: number | null
           venue_cost?: number
+          venue_id?: string | null
           venue_loyalty_bonus?: number | null
           venue_name?: string | null
           xp_breakdown?: Json | null
@@ -6144,6 +6147,13 @@ export type Database = {
             columns: ["gig_id"]
             isOneToOne: false
             referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_outcomes_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
