@@ -6004,6 +6004,7 @@ export type Database = {
           attendance_percentage: number | null
           audience_memory_impact: number | null
           band_chemistry_level: number | null
+          band_id: string | null
           band_synergy_modifier: number | null
           casual_fans_gained: number | null
           chemistry_change: number | null
@@ -6047,6 +6048,7 @@ export type Database = {
           attendance_percentage?: number | null
           audience_memory_impact?: number | null
           band_chemistry_level?: number | null
+          band_id?: string | null
           band_synergy_modifier?: number | null
           casual_fans_gained?: number | null
           chemistry_change?: number | null
@@ -6090,6 +6092,7 @@ export type Database = {
           attendance_percentage?: number | null
           audience_memory_impact?: number | null
           band_chemistry_level?: number | null
+          band_id?: string | null
           band_synergy_modifier?: number | null
           casual_fans_gained?: number | null
           chemistry_change?: number | null
@@ -6129,6 +6132,13 @@ export type Database = {
           xp_breakdown?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "gig_outcomes_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gig_outcomes_gig_id_fkey"
             columns: ["gig_id"]
