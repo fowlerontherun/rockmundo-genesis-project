@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.458",
+    date: "2026-01-18",
+    changes: [
+      { type: 'fix', description: "Fixed infinite recursion in companies RLS policies breaking gigs, venues, studios, rehearsals" },
+      { type: 'fix', description: "Cleaned up all recursive policies on companies, venues, city_studios, rehearsal_rooms tables" },
+      { type: 'fix', description: "Fixed gig_outcomes.overall_rating NOT NULL constraint causing auto-start failures" },
+      { type: 'improvement', description: "All venue/studio/rehearsal data now loads correctly for booking and history" },
+    ],
+  },
+  {
     version: "1.0.457",
     date: "2026-01-17",
     changes: [
