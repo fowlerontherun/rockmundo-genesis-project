@@ -12,7 +12,7 @@ const corsHeaders = {
 };
 
 const JOB_NAME = "trigger-random-events";
-const TRIGGER_CHANCE = 25; // 1 in 25 chance
+const TRIGGER_CHANCE = 15; // 1 in 15 chance (~6.7%)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
