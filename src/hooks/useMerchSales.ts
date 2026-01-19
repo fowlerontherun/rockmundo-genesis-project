@@ -12,6 +12,8 @@ export interface MerchOrder {
   order_type: string;
   gig_id?: string;
   customer_type: string;
+  country?: string;
+  city?: string;
   created_at: string;
   merchandise?: {
     design_name: string;
@@ -47,7 +49,7 @@ export const useMerchSales = (bandId: string | null) => {
         `)
         .eq("band_id", bandId)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (error) throw error;
       return (data || []) as MerchOrder[];

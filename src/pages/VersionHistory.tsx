@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.460",
+    date: "2026-01-19",
+    changes: [
+      { type: 'fix', description: "Fixed self-promotion activities not completing - new dedicated completion cron job every 10 minutes" },
+      { type: 'feature', description: "Daily merchandise sales simulation - bands with fans now earn passive merch revenue" },
+      { type: 'feature', description: "Merchandise orders table with sales by country, customer type, and order channel" },
+      { type: 'feature', description: "Today's News now shows: earnings breakdown, merch sales, pending random events" },
+      { type: 'improvement', description: "Random events trigger chance increased from 4% to 6.7% for more activity" },
+      { type: 'feature', description: "New Earnings News component showing daily income by source" },
+      { type: 'feature', description: "New Merchandise Sales News with top products and top markets" },
+      { type: 'feature', description: "Random Events News shows pending decisions requiring attention" },
+    ],
+  },
+  {
     version: "1.0.459",
     date: "2026-01-18",
     changes: [

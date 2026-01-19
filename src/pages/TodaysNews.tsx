@@ -15,8 +15,10 @@ import { TopTracksNews } from "@/components/news/TopTracksNews";
 import { PlayerGainsNews } from "@/components/news/PlayerGainsNews";
 import { BandGainsNews } from "@/components/news/BandGainsNews";
 import { OtherBandsGigOutcomes } from "@/components/news/OtherBandsGigOutcomes";
+import { MerchSalesNews } from "@/components/news/MerchSalesNews";
+import { RandomEventsNews } from "@/components/news/RandomEventsNews";
+import { EarningsNews } from "@/components/news/EarningsNews";
 import { useTranslation } from "@/hooks/useTranslation";
-
 export default function TodaysNewsPage() {
   const { t } = useTranslation();
   const today = new Date().toISOString().split('T')[0];
@@ -72,14 +74,21 @@ export default function TodaysNewsPage() {
         <p className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
       </div>
 
+      {/* Random Events - urgent attention */}
+      <RandomEventsNews />
+
       {/* Personal Updates - highlighted */}
       <PersonalUpdates />
 
-      {/* Player XP and Skill Gains */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Player XP, Skills, and Earnings */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <PlayerGainsNews />
         <BandGainsNews />
+        <EarningsNews />
       </div>
+
+      {/* Merchandise Sales */}
+      <MerchSalesNews />
 
       {/* Top Tracks - playable songs */}
       <TopTracksNews />

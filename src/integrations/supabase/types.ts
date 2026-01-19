@@ -9797,6 +9797,73 @@ export type Database = {
         }
         Relationships: []
       }
+      merch_orders: {
+        Row: {
+          band_id: string
+          city: string | null
+          country: string | null
+          created_at: string | null
+          customer_type: string
+          gig_id: string | null
+          id: string
+          merchandise_id: string | null
+          order_type: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          band_id: string
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          customer_type?: string
+          gig_id?: string | null
+          id?: string
+          merchandise_id?: string | null
+          order_type?: string
+          quantity?: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          band_id?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          customer_type?: string
+          gig_id?: string | null
+          id?: string
+          merchandise_id?: string | null
+          order_type?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_orders_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_orders_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_orders_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merch_product_catalog: {
         Row: {
           base_cost: number
