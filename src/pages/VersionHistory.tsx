@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.462",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Setlist manager now loads songs faster with optimized parallel queries" },
+      { type: 'feature', description: "Drag-and-drop reordering for setlist songs using dnd-kit library" },
+      { type: 'feature', description: "Arrow buttons for manual song reordering (mobile/accessibility)" },
+      { type: 'fix', description: "Performance items can now be added and removed correctly" },
+      { type: 'improvement', description: "Song list caching for 2 minutes to reduce database queries" },
+    ],
+  },
+  {
     version: "1.0.461",
     date: "2026-01-20",
     changes: [
