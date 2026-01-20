@@ -160,16 +160,32 @@ serve(async (req) => {
           .maybeSingle();
 
         if (activeShow) {
-          // Add to playlist
-          await supabaseClient
+          // Add to playlist - check if not already exists
+          const { data: existingPlaylist } = await supabaseClient
             .from("radio_playlists")
-            .insert({
-              show_id: activeShow.id,
-              song_id: submission.song_id,
-              submission_id: submission.id,
-              play_order: Math.floor(Math.random() * 100),
-              is_currently_playing: false,
-            });
+            .select("id")
+            .eq("show_id", activeShow.id)
+            .eq("song_id", submission.song_id)
+            .maybeSingle();
+          
+          if (!existingPlaylist) {
+            // Calculate week start date (Monday of current week)
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() + mondayOffset);
+            const weekStartDate = weekStart.toISOString().split('T')[0];
+            
+            await supabaseClient
+              .from("radio_playlists")
+              .insert({
+                show_id: activeShow.id,
+                song_id: submission.song_id,
+                week_start_date: weekStartDate,
+                is_active: true,
+              });
+          }
         }
 
         accepted++;
