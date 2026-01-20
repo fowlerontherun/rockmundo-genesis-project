@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.466",
+    date: "2026-01-20",
+    changes: [
+      { type: 'feature', description: "Charts now use industry-standard combined formula: (streams/150) + digital + CD + vinyl + cassette sales" },
+      { type: 'feature', description: "Added weekly_plays and combined_score columns for accurate chart tracking" },
+      { type: 'fix', description: "Combined chart now queries directly from database instead of client-side combining" },
+      { type: 'improvement', description: "Chart table shows appropriate metrics per chart type (Chart Pts for combined, Weekly/Total for others)" },
+      { type: 'improvement', description: "Added tooltip explaining the chart points formula" },
+    ],
+  },
+  {
     version: "1.0.465",
     date: "2026-01-20",
     changes: [

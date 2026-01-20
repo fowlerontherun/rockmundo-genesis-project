@@ -2191,6 +2191,7 @@ export type Database = {
         Row: {
           chart_date: string | null
           chart_type: string
+          combined_score: number | null
           country: string | null
           created_at: string | null
           entry_type: string | null
@@ -2203,11 +2204,13 @@ export type Database = {
           song_id: string
           trend: string | null
           trend_change: number | null
+          weekly_plays: number | null
           weeks_on_chart: number | null
         }
         Insert: {
           chart_date?: string | null
           chart_type: string
+          combined_score?: number | null
           country?: string | null
           created_at?: string | null
           entry_type?: string | null
@@ -2220,11 +2223,13 @@ export type Database = {
           song_id: string
           trend?: string | null
           trend_change?: number | null
+          weekly_plays?: number | null
           weeks_on_chart?: number | null
         }
         Update: {
           chart_date?: string | null
           chart_type?: string
+          combined_score?: number | null
           country?: string | null
           created_at?: string | null
           entry_type?: string | null
@@ -2237,6 +2242,7 @@ export type Database = {
           song_id?: string
           trend?: string | null
           trend_change?: number | null
+          weekly_plays?: number | null
           weeks_on_chart?: number | null
         }
         Relationships: [

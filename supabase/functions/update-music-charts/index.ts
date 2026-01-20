@@ -14,6 +14,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
+// Industry-standard chart calculation:
+// 150 streams = 1 chart unit (Billboard/UK Official Charts standard)
+const STREAM_TO_UNIT_RATIO = 150;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,6 +47,8 @@ serve(async (req) => {
     });
 
     const chartDate = new Date().toISOString().split("T")[0];
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const RELEASE_SCOPES = ["single", "ep", "album"] as const;
     type ReleaseScope = (typeof RELEASE_SCOPES)[number];
@@ -57,7 +63,41 @@ serve(async (req) => {
 
     console.log(`Starting chart generation for ${chartDate}`);
 
-    // === STREAMING CHARTS (ALL released songs) ===
+    // =========================================================================
+    // STEP 1: Collect weekly streams from streaming_analytics_daily
+    // =========================================================================
+    const { data: weeklyStreamData, error: weeklyStreamError } = await supabaseClient
+      .from("streaming_analytics_daily")
+      .select(`
+        song_id,
+        streams,
+        songs!inner(
+          id,
+          title,
+          genre,
+          user_id,
+          band_id,
+          status
+        )
+      `)
+      .eq("songs.status", "released")
+      .gte("analytics_date", sevenDaysAgo.toISOString().split("T")[0]);
+
+    if (weeklyStreamError) {
+      console.error("Error fetching weekly streaming data:", weeklyStreamError);
+    }
+
+    // Aggregate weekly streams by song
+    const weeklyStreamsMap = new Map<string, number>();
+    for (const entry of weeklyStreamData || []) {
+      const current = weeklyStreamsMap.get(entry.song_id) || 0;
+      weeklyStreamsMap.set(entry.song_id, current + (entry.streams || 0));
+    }
+    console.log(`Aggregated weekly streams for ${weeklyStreamsMap.size} songs`);
+
+    // =========================================================================
+    // STEP 2: Get total streams from song_releases for all-time totals
+    // =========================================================================
     const { data: streamingData, error: streamingError } = await supabaseClient
       .from("song_releases")
       .select(`
@@ -87,18 +127,21 @@ serve(async (req) => {
 
     console.log(`Fetched ${streamingData?.length || 0} streaming entries`);
 
-    // Aggregate by song (multiple platforms) and also by release scope (single/ep/album)
+    // Aggregate by song (multiple platforms)
     const streamingAggregated = new Map<string, any>();
     const streamingAggregatedByScope = new Map<string, any>();
 
     for (const entry of streamingData || []) {
       const existing = streamingAggregated.get(entry.song_id);
+      const weeklyStreams = weeklyStreamsMap.get(entry.song_id) || 0;
+      
       if (existing) {
         existing.total_streams += entry.total_streams;
       } else {
         streamingAggregated.set(entry.song_id, {
           song_id: entry.song_id,
           total_streams: entry.total_streams,
+          weekly_streams: weeklyStreams,
           song: entry.songs,
         });
       }
@@ -113,19 +156,23 @@ serve(async (req) => {
           song_id: entry.song_id,
           scope,
           total_streams: entry.total_streams,
+          weekly_streams: weeklyStreams,
           song: entry.songs,
         });
       }
     }
 
+    // Create streaming chart entries with weekly_plays
     const streamingEntries = Array.from(streamingAggregated.values())
-      .sort((a, b) => b.total_streams - a.total_streams)
+      .sort((a, b) => b.weekly_streams - a.weekly_streams) // Sort by weekly for freshness
       .slice(0, 100)
       .map((entry, index) => ({
         song_id: entry.song_id,
         chart_type: "streaming",
         rank: index + 1,
         plays_count: entry.total_streams,
+        weekly_plays: entry.weekly_streams,
+        combined_score: 0, // Will be set for combined chart
         chart_date: chartDate,
         genre: entry.song?.genre,
         country: "all",
@@ -135,13 +182,15 @@ serve(async (req) => {
     chartEntries.push(...streamingEntries);
 
     const streamingScopedEntries = Array.from(streamingAggregatedByScope.values())
-      .sort((a, b) => b.total_streams - a.total_streams)
+      .sort((a, b) => b.weekly_streams - a.weekly_streams)
       .slice(0, 100)
       .map((entry, index) => ({
         song_id: entry.song_id,
         chart_type: scopedType("streaming", entry.scope),
         rank: index + 1,
         plays_count: entry.total_streams,
+        weekly_plays: entry.weekly_streams,
+        combined_score: 0,
         chart_date: chartDate,
         genre: entry.song?.genre,
         country: "all",
@@ -149,10 +198,11 @@ serve(async (req) => {
       }));
 
     chartEntries.push(...streamingScopedEntries);
-
     console.log(`Generated ${streamingEntries.length} streaming entries, ${streamingScopedEntries.length} scoped entries`);
 
-    // === SALES CHARTS (ALL released songs) - Fixed with explicit FK hint ===
+    // =========================================================================
+    // STEP 3: Collect weekly sales by format
+    // =========================================================================
     const salesTypes = [
       { type: "digital_sales", format: "digital" },
       { type: "cd_sales", format: "cd" },
@@ -160,11 +210,16 @@ serve(async (req) => {
       { type: "cassette_sales", format: "cassette" },
     ];
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Store sales data for combined chart calculation
+    const weeklySalesMap = new Map<string, {
+      digital: number;
+      cd: number;
+      vinyl: number;
+      cassette: number;
+      totalPhysical: number;
+    }>();
 
     for (const salesType of salesTypes) {
-      // Use explicit FK hint to disambiguate the release_songs relationship
       const { data: salesData, error: salesError } = await supabaseClient
         .from("release_sales")
         .select(`
@@ -199,7 +254,7 @@ serve(async (req) => {
 
       console.log(`Fetched ${salesData?.length || 0} ${salesType.type} entries`);
 
-      // Aggregate by song + also by scope
+      // Aggregate by song
       const songSales = new Map<string, number>();
       const songInfo = new Map<string, any>();
       const songSalesByScope = new Map<string, number>();
@@ -217,6 +272,24 @@ serve(async (req) => {
 
           const currentSales = songSales.get(song.id) || 0;
           songSales.set(song.id, currentSales + sale.quantity_sold);
+
+          // Track for combined chart
+          const existingSales = weeklySalesMap.get(song.id) || {
+            digital: 0, cd: 0, vinyl: 0, cassette: 0, totalPhysical: 0
+          };
+          if (salesType.format === "digital") {
+            existingSales.digital += sale.quantity_sold;
+          } else if (salesType.format === "cd") {
+            existingSales.cd += sale.quantity_sold;
+            existingSales.totalPhysical += sale.quantity_sold;
+          } else if (salesType.format === "vinyl") {
+            existingSales.vinyl += sale.quantity_sold;
+            existingSales.totalPhysical += sale.quantity_sold;
+          } else if (salesType.format === "cassette") {
+            existingSales.cassette += sale.quantity_sold;
+            existingSales.totalPhysical += sale.quantity_sold;
+          }
+          weeklySalesMap.set(song.id, existingSales);
 
           if (!songInfo.has(song.id)) {
             songInfo.set(song.id, {
@@ -241,6 +314,7 @@ serve(async (req) => {
         }
       }
 
+      // Create format-specific chart entries
       const salesEntries = Array.from(songSales.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 100)
@@ -250,7 +324,9 @@ serve(async (req) => {
             song_id: songId,
             chart_type: salesType.type,
             rank: index + 1,
-            plays_count: sales,
+            plays_count: sales, // Total weekly sales for this format
+            weekly_plays: sales, // Weekly is same as total for sales charts
+            combined_score: 0,
             chart_date: chartDate,
             genre: info?.genre,
             country: "all",
@@ -272,6 +348,8 @@ serve(async (req) => {
             chart_type: scopedType(salesType.type, info?.scope),
             rank: index + 1,
             plays_count: sales,
+            weekly_plays: sales,
+            combined_score: 0,
             chart_date: chartDate,
             genre: info?.genre,
             country: "all",
@@ -284,76 +362,89 @@ serve(async (req) => {
       console.log(`Generated ${salesEntries.length} ${salesType.type} entries, ${scopedSalesEntries.length} scoped`);
     }
 
-    // === OVERALL RECORD SALES (physical combined) - Fixed with explicit FK hint ===
-    const { data: recordSales, error: recordError } = await supabaseClient
-      .from("release_sales")
-      .select(`
-        release_format_id,
-        quantity_sold,
-        release_formats!inner(
-          format_type,
-          release:releases!inner(
-            id,
-            release_type,
-            release_songs:release_songs!release_songs_release_id_fkey(
-              song:songs!inner(
-                id,
-                title,
-                genre,
-                user_id,
-                band_id,
-                status
-              )
-            )
-          )
-        )
-      `)
-      .in("release_formats.format_type", ["cd", "vinyl", "cassette"])
-      .gte("sale_date", sevenDaysAgo.toISOString());
+    // =========================================================================
+    // STEP 4: Generate COMBINED chart (industry-standard weighted formula)
+    // Formula: (weekly_streams / 150) + digital_sales + cd_sales + vinyl_sales + cassette_sales
+    // =========================================================================
+    const combinedScores = new Map<string, {
+      songId: string;
+      combinedScore: number;
+      weeklyStreams: number;
+      digitalSales: number;
+      physicalSales: number;
+      genre: string;
+    }>();
 
-    if (recordError) {
-      console.error("Error fetching record sales:", recordError);
+    // Get all songs that have either streams or sales
+    const allSongIds = new Set([
+      ...weeklyStreamsMap.keys(),
+      ...weeklySalesMap.keys(),
+    ]);
+
+    // Also get song info for songs we might have missed
+    const songInfoForCombined = new Map<string, any>();
+    for (const entry of streamingData || []) {
+      if (!songInfoForCombined.has(entry.song_id)) {
+        songInfoForCombined.set(entry.song_id, entry.songs);
+      }
     }
 
-    console.log(`Fetched ${recordSales?.length || 0} record sales entries`);
+    for (const songId of allSongIds) {
+      const weeklyStreams = weeklyStreamsMap.get(songId) || 0;
+      const sales = weeklySalesMap.get(songId) || {
+        digital: 0, cd: 0, vinyl: 0, cassette: 0, totalPhysical: 0
+      };
 
+      // Industry formula: 150 streams = 1 unit
+      const streamUnits = Math.floor(weeklyStreams / STREAM_TO_UNIT_RATIO);
+      const combinedScore = streamUnits + sales.digital + sales.cd + sales.vinyl + sales.cassette;
+
+      if (combinedScore > 0) {
+        const songInfo = songInfoForCombined.get(songId);
+        combinedScores.set(songId, {
+          songId,
+          combinedScore,
+          weeklyStreams,
+          digitalSales: sales.digital,
+          physicalSales: sales.totalPhysical,
+          genre: songInfo?.genre || "Unknown",
+        });
+      }
+    }
+
+    // Create combined chart entries
+    const combinedEntries = Array.from(combinedScores.values())
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.songId,
+        chart_type: "combined",
+        rank: index + 1,
+        plays_count: entry.weeklyStreams, // Store weekly streams as plays_count for display
+        weekly_plays: entry.weeklyStreams,
+        combined_score: entry.combinedScore,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "song",
+      }));
+
+    chartEntries.push(...combinedEntries);
+    console.log(`Generated ${combinedEntries.length} combined chart entries`);
+
+    // =========================================================================
+    // STEP 5: Record sales (combined physical)
+    // =========================================================================
     const recordSongSales = new Map<string, number>();
     const recordSongInfo = new Map<string, any>();
-    const recordSongSalesByScope = new Map<string, number>();
-    const recordSongInfoByScope = new Map<string, any>();
 
-    for (const sale of recordSales || []) {
-      const release = sale.release_formats?.release;
-      if (!release || !release.release_songs) continue;
-
-      const scope = toReleaseScope((release as any)?.release_type);
-
-      for (const releaseSong of release.release_songs) {
-        const song = releaseSong.song;
-        if (!song) continue;
-
-        const currentSales = recordSongSales.get(song.id) || 0;
-        recordSongSales.set(song.id, currentSales + sale.quantity_sold);
-
-        if (!recordSongInfo.has(song.id)) {
-          recordSongInfo.set(song.id, {
-            title: song.title,
-            genre: song.genre,
-            user_id: song.user_id,
-            band_id: song.band_id,
-          });
-        }
-
-        const scopedKey = `${song.id}:${scope}`;
-        const currentScopedSales = recordSongSalesByScope.get(scopedKey) || 0;
-        recordSongSalesByScope.set(scopedKey, currentScopedSales + sale.quantity_sold);
-
-        if (!recordSongInfoByScope.has(scopedKey)) {
-          recordSongInfoByScope.set(scopedKey, {
-            title: song.title,
-            genre: song.genre,
-            scope,
-          });
+    for (const [songId, sales] of weeklySalesMap) {
+      const physicalTotal = sales.cd + sales.vinyl + sales.cassette;
+      if (physicalTotal > 0) {
+        recordSongSales.set(songId, physicalTotal);
+        const songInfo = songInfoForCombined.get(songId);
+        if (songInfo) {
+          recordSongInfo.set(songId, songInfo);
         }
       }
     }
@@ -368,6 +459,8 @@ serve(async (req) => {
           chart_type: "record_sales",
           rank: index + 1,
           plays_count: sales,
+          weekly_plays: sales,
+          combined_score: 0,
           chart_date: chartDate,
           genre: info?.genre,
           country: "all",
@@ -377,31 +470,11 @@ serve(async (req) => {
       });
 
     chartEntries.push(...recordEntries);
+    console.log(`Generated ${recordEntries.length} record sales entries`);
 
-    const recordScopedEntries = Array.from(recordSongSalesByScope.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 100)
-      .map(([scopedKey, sales], index) => {
-        const [songId] = scopedKey.split(":");
-        const info = recordSongInfoByScope.get(scopedKey);
-        return {
-          song_id: songId,
-          chart_type: scopedType("record_sales", info?.scope),
-          rank: index + 1,
-          plays_count: sales,
-          chart_date: chartDate,
-          genre: info?.genre,
-          country: "all",
-          sale_type: "physical",
-          entry_type: "song",
-        };
-      });
-
-    chartEntries.push(...recordScopedEntries);
-    console.log(`Generated ${recordEntries.length} record sales entries, ${recordScopedEntries.length} scoped`);
-
-    // === ALBUM PHYSICAL SALES CHARTS ===
-    // Aggregate physical sales at release/album level
+    // =========================================================================
+    // STEP 6: Album physical sales charts
+    // =========================================================================
     const { data: albumPhysicalSales, error: albumPhysicalError } = await supabaseClient
       .from("release_sales")
       .select(`
@@ -428,7 +501,6 @@ serve(async (req) => {
 
     console.log(`Fetched ${albumPhysicalSales?.length || 0} album physical sales entries`);
 
-    // Aggregate by release_id for album charts
     const albumPhysicalAggregated = new Map<string, {
       release_id: string;
       release_title: string;
@@ -457,18 +529,18 @@ serve(async (req) => {
       }
     }
 
-    // Create album physical sales chart entries (only for albums/EPs, not singles)
-    // Now that we have a partial unique index for album entries, we can insert these
     const albumPhysicalEntries = Array.from(albumPhysicalAggregated.values())
       .filter(entry => entry.release_type === "album" || entry.release_type === "ep")
       .sort((a, b) => b.total_sales - a.total_sales)
       .slice(0, 50)
       .map((entry, index) => ({
         release_id: entry.release_id,
-        song_id: null, // Album entries use release_id instead
+        song_id: null,
         chart_type: "record_sales_album",
         rank: index + 1,
         plays_count: entry.total_sales,
+        weekly_plays: entry.total_sales,
+        combined_score: 0,
         chart_date: chartDate,
         genre: null,
         country: "all",
@@ -479,7 +551,9 @@ serve(async (req) => {
     chartEntries.push(...albumPhysicalEntries);
     console.log(`Generated ${albumPhysicalEntries.length} album physical sales entries`);
 
-    // === RADIO AIRPLAY CHARTS (ALL songs) ===
+    // =========================================================================
+    // STEP 7: Radio airplay charts
+    // =========================================================================
     const { data: radioPlays, error: radioError } = await supabaseClient
       .from("radio_plays")
       .select(`
@@ -502,7 +576,6 @@ serve(async (req) => {
 
     console.log(`Fetched ${radioPlays?.length || 0} radio play entries`);
 
-    // Aggregate by song - ALL songs with radio plays
     const radioAggregated = new Map<string, any>();
     for (const play of radioPlays || []) {
       const existing = radioAggregated.get(play.song_id);
@@ -527,6 +600,8 @@ serve(async (req) => {
         chart_type: "radio_airplay",
         rank: index + 1,
         plays_count: entry.total_listeners,
+        weekly_plays: entry.total_listeners,
+        combined_score: 0,
         chart_date: chartDate,
         genre: entry.song?.genre,
         country: "all",
@@ -536,7 +611,9 @@ serve(async (req) => {
     chartEntries.push(...radioEntries);
     console.log(`Generated ${radioEntries.length} radio airplay entries`);
 
-    // === VIDEO VIEWS CHARTS (ALL released videos) ===
+    // =========================================================================
+    // STEP 8: Video views charts
+    // =========================================================================
     const { data: videoData, error: videoError } = await supabaseClient
       .from("music_videos")
       .select(`
@@ -568,6 +645,8 @@ serve(async (req) => {
       chart_type: "video_views",
       rank: index + 1,
       plays_count: video.views_count,
+      weekly_plays: video.views_count,
+      combined_score: 0,
       chart_date: chartDate,
       genre: (video.songs as any)?.genre,
       country: "all",
@@ -577,7 +656,9 @@ serve(async (req) => {
     chartEntries.push(...videoEntries);
     console.log(`Generated ${videoEntries.length} video views entries`);
 
-    // === ALBUM STREAMING CHARTS (aggregate all songs per album) ===
+    // =========================================================================
+    // STEP 9: Album streaming charts
+    // =========================================================================
     const { data: albumStreamingData, error: albumStreamingError } = await supabaseClient
       .from("song_releases")
       .select(`
@@ -609,7 +690,6 @@ serve(async (req) => {
 
     console.log(`Fetched ${albumStreamingData?.length || 0} album song entries for aggregation`);
 
-    // Aggregate streams by release_id (album)
     const albumAggregated = new Map<string, {
       release_id: string;
       release_title: string;
@@ -640,16 +720,17 @@ serve(async (req) => {
       }
     }
 
-    // Create album streaming chart entries - now possible with partial unique index
     const albumStreamingEntries = Array.from(albumAggregated.values())
       .sort((a, b) => b.total_streams - a.total_streams)
       .slice(0, 50)
       .map((entry, index) => ({
         release_id: entry.release_id,
-        song_id: null, // Album entries use release_id instead
+        song_id: null,
         chart_type: "streaming_album",
         rank: index + 1,
         plays_count: entry.total_streams,
+        weekly_plays: entry.total_streams,
+        combined_score: 0,
         chart_date: chartDate,
         genre: entry.genre,
         country: "all",
@@ -659,11 +740,11 @@ serve(async (req) => {
     chartEntries.push(...albumStreamingEntries);
     console.log(`Generated ${albumStreamingEntries.length} album streaming chart entries`);
 
-    // Log summary before insert
+    // =========================================================================
+    // STEP 10: Insert all chart entries
+    // =========================================================================
     console.log(`Total chart entries to insert: ${chartEntries.length}`);
-    console.log(`Breakdown: streaming=${streamingEntries.length}, sales entries by type, radio=${radioEntries.length}, video=${videoEntries.length}`);
 
-    // NOW: Delete old entries and insert new ones (atomic operation)
     if (chartEntries.length > 0) {
       // Delete today's chart entries
       const { error: deleteError } = await supabaseClient
@@ -678,11 +759,13 @@ serve(async (req) => {
 
       console.log(`Deleted old entries for ${chartDate}`);
 
-      // Filter out any entries with null song_id (can't use unique constraint)
-      const validEntries = chartEntries.filter(e => e.song_id !== null);
-      console.log(`Inserting ${validEntries.length} valid entries (filtered out ${chartEntries.length - validEntries.length} with null song_id)`);
+      // Filter out entries with null song_id (except album entries)
+      const validEntries = chartEntries.filter(e => 
+        e.song_id !== null || e.entry_type === "album"
+      );
+      console.log(`Inserting ${validEntries.length} valid entries (filtered out ${chartEntries.length - validEntries.length})`);
 
-      // Insert all new entries using upsert to handle unique constraints
+      // Insert all new entries
       const { data: insertedData, error: insertError } = await supabaseClient
         .from("chart_entries")
         .upsert(validEntries, { 
@@ -700,14 +783,13 @@ serve(async (req) => {
       console.log(`Successfully inserted/updated ${chartsUpdated} chart entries`);
     }
 
-    console.log(`Updated ${chartsUpdated} chart entries total (streaming, sales, radio, video)`);
+    console.log(`Updated ${chartsUpdated} chart entries total`);
 
     // Calculate trends based on yesterday's chart
     try {
       await supabaseClient.rpc("calculate_chart_trends");
     } catch (trendError) {
       console.error("Error calculating trends:", trendError);
-      // Don't fail the whole job for trend calculation
     }
 
     await completeJobRun({
@@ -716,7 +798,7 @@ serve(async (req) => {
       supabaseClient,
       durationMs: Date.now() - startedAt,
       processedCount: chartsUpdated,
-      resultSummary: { chartsUpdated, chartDate },
+      resultSummary: { chartsUpdated, chartDate, combinedEntriesCount: combinedEntries.length },
     });
 
     return new Response(
