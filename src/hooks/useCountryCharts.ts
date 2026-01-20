@@ -53,23 +53,27 @@ const GENRES = [...MUSIC_GENRES];
 const COUNTRIES = ["Global", ...Object.keys(countryData).sort()];
 
 // Helper to get the correct label for the metric based on chart type
-export const getMetricLabels = (chartType: ChartType): { weekly: string; total: string } => {
+export const getMetricLabels = (chartType: ChartType, timeRange: ChartTimeRange = "weekly"): { weekly: string; total: string } => {
+  const timeLabel = timeRange === "daily" ? "Today" :
+                    timeRange === "weekly" ? "This Week" :
+                    timeRange === "monthly" ? "This Month" : "This Year";
+  
   switch (chartType) {
     case "combined":
       return { weekly: "Chart Pts", total: "Streams" };
     case "streaming":
-      return { weekly: "Weekly", total: "Total Streams" };
+      return { weekly: timeLabel, total: "Total Streams" };
     case "radio_airplay":
       return { weekly: "Listeners", total: "Total Plays" };
     case "digital_sales":
-      return { weekly: "Weekly", total: "Total Sales" };
+      return { weekly: timeLabel, total: "Total Sales" };
     case "cd_sales":
     case "vinyl_sales":
     case "cassette_sales":
     case "record_sales":
-      return { weekly: "Weekly", total: "Total Sales" };
+      return { weekly: timeLabel, total: "Total Sales" };
     default:
-      return { weekly: "Weekly", total: "Total" };
+      return { weekly: timeLabel, total: "Total" };
   }
 };
 
@@ -109,20 +113,7 @@ export const useCountryCharts = (
           startDate.setDate(now.getDate() - 7);
       }
 
-      // First, get the latest chart_date to avoid duplicates
-      const { data: latestDateData } = await supabase
-        .from("chart_entries")
-        .select("chart_date")
-        .order("chart_date", { ascending: false })
-        .limit(1)
-        .single();
-
-      const latestChartDate = latestDateData?.chart_date;
-
-      if (!latestChartDate) {
-        console.log("[useCountryCharts] No chart data available");
-        return [];
-      }
+      const startDateStr = startDate.toISOString().split("T")[0];
 
       // Build chart_type values to query
       let chartTypeFilter: string[] = [];
@@ -136,8 +127,70 @@ export const useCountryCharts = (
         chartTypeFilter = [`${chartType}${suffix}`, chartType]; // Include both scoped and base
       }
 
-      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "date:", latestChartDate);
+      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "from:", startDateStr, "timeRange:", timeRange);
 
+      // For daily, get just the latest date. For other ranges, aggregate across dates.
+      if (timeRange === "daily") {
+        // Get the latest chart_date
+        const { data: latestDateData } = await supabase
+          .from("chart_entries")
+          .select("chart_date")
+          .order("chart_date", { ascending: false })
+          .limit(1)
+          .single();
+
+        const latestChartDate = latestDateData?.chart_date;
+
+        if (!latestChartDate) {
+          console.log("[useCountryCharts] No chart data available");
+          return [];
+        }
+
+        let query = supabase
+          .from("chart_entries")
+          .select(`
+            *,
+            songs(
+              title,
+              genre,
+              audio_url,
+              audio_generation_status,
+              bands(name, artist_name)
+            )
+          `)
+          .in("chart_type", chartTypeFilter)
+          .eq("chart_date", latestChartDate)
+          .limit(100);
+
+        // Handle country filter
+        if (country !== "Global") {
+          query = query.or(`country.eq.${country},country.eq.all`);
+        }
+
+        if (genre !== "All") {
+          query = query.eq("genre", genre);
+        }
+
+        // Sort by the appropriate metric
+        if (chartType === "combined") {
+          query = query.order("combined_score", { ascending: false });
+        } else if (chartType === "streaming") {
+          query = query.order("weekly_plays", { ascending: false });
+        } else {
+          query = query.order("plays_count", { ascending: false });
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("[useCountryCharts] Error fetching chart entries:", error);
+          return [];
+        }
+
+        return transformAndDeduplicateEntries(data || [], chartType);
+      }
+
+      // For weekly/monthly/yearly, aggregate across multiple dates
       let query = supabase
         .from("chart_entries")
         .select(`
@@ -151,17 +204,8 @@ export const useCountryCharts = (
           )
         `)
         .in("chart_type", chartTypeFilter)
-        .eq("chart_date", latestChartDate)
-        .limit(100);
-
-      // Sort by the appropriate metric
-      if (chartType === "combined") {
-        query = query.order("combined_score", { ascending: false });
-      } else if (chartType === "streaming") {
-        query = query.order("weekly_plays", { ascending: false });
-      } else {
-        query = query.order("plays_count", { ascending: false });
-      }
+        .gte("chart_date", startDateStr)
+        .limit(1000); // Get more entries to aggregate
 
       // Handle country filter
       if (country !== "Global") {
@@ -179,55 +223,70 @@ export const useCountryCharts = (
         return [];
       }
 
-      console.log("[useCountryCharts] Found entries:", data?.length || 0);
+      console.log("[useCountryCharts] Found raw entries:", data?.length || 0);
 
-      // Deduplicate by song_id - keep the entry with highest plays_count
-      const songMap = new Map<string, any>();
+      // Aggregate by song_id across all dates
+      const aggregatedMap = new Map<string, {
+        entry: any;
+        totalPlays: number;
+        totalWeeklyPlays: number;
+        totalCombinedScore: number;
+        latestTrend: string;
+        latestTrendChange: number;
+        maxWeeksOnChart: number;
+      }>();
+
       for (const entry of data || []) {
         const key = entry.song_id;
-        const existing = songMap.get(key);
-        
-        // Use combined_score for combined chart, otherwise use plays_count
-        const entryScore = chartType === "combined" 
-          ? (entry.combined_score || 0) 
-          : (entry.plays_count || 0);
-        const existingScore = existing 
-          ? (chartType === "combined" ? (existing.combined_score || 0) : (existing.plays_count || 0))
-          : 0;
-          
-        if (!existing || entryScore > existingScore) {
-          songMap.set(key, entry);
+        const existing = aggregatedMap.get(key);
+
+        if (existing) {
+          existing.totalPlays += entry.plays_count || 0;
+          existing.totalWeeklyPlays += entry.weekly_plays || 0;
+          existing.totalCombinedScore += entry.combined_score || 0;
+          existing.maxWeeksOnChart = Math.max(existing.maxWeeksOnChart, entry.weeks_on_chart || 1);
+          // Keep the latest trend info
+          if (entry.chart_date > existing.entry.chart_date) {
+            existing.latestTrend = entry.trend || "stable";
+            existing.latestTrendChange = entry.trend_change || 0;
+            existing.entry = entry;
+          }
+        } else {
+          aggregatedMap.set(key, {
+            entry,
+            totalPlays: entry.plays_count || 0,
+            totalWeeklyPlays: entry.weekly_plays || 0,
+            totalCombinedScore: entry.combined_score || 0,
+            latestTrend: entry.trend || "stable",
+            latestTrendChange: entry.trend_change || 0,
+            maxWeeksOnChart: entry.weeks_on_chart || 1,
+          });
         }
       }
 
-      const deduplicatedData = Array.from(songMap.values());
-      console.log("[useCountryCharts] After deduplication:", deduplicatedData.length);
+      console.log("[useCountryCharts] After aggregation:", aggregatedMap.size);
 
-      // Transform real data
-      const realEntries: ChartEntry[] = deduplicatedData.map((entry, index) => {
+      // Transform aggregated data to ChartEntry format
+      const aggregatedEntries = Array.from(aggregatedMap.values()).map(agg => {
+        const entry = agg.entry;
         const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
         const artistName = bandArtistName || "Unknown Artist";
-        
-        const playsCount = entry.plays_count || 0;
-        const weeklyPlays = entry.weekly_plays || 0;
-        const combinedScore = entry.combined_score || 0;
-        const weeksOnChart = entry.weeks_on_chart || 1;
-        
+
         return {
           id: entry.id,
-          rank: index + 1,
+          rank: 0, // Will be set after sorting
           song_id: entry.song_id,
           title: entry.songs?.title || "Unknown Song",
           artist: artistName,
           genre: entry.genre || entry.songs?.genre || "Unknown",
           country: entry.country || "Global",
-          plays_count: playsCount,
-          weekly_plays: weeklyPlays,
-          combined_score: combinedScore,
-          total_sales: playsCount,
-          trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
-          trend_change: entry.trend_change || 0,
-          weeks_on_chart: weeksOnChart,
+          plays_count: agg.totalPlays,
+          weekly_plays: agg.totalWeeklyPlays,
+          combined_score: agg.totalCombinedScore,
+          total_sales: agg.totalPlays,
+          trend: agg.latestTrend as "up" | "down" | "stable" | "new",
+          trend_change: agg.latestTrendChange,
+          weeks_on_chart: agg.maxWeeksOnChart,
           is_fake: false,
           audio_url: entry.songs?.audio_url || null,
           audio_generation_status: entry.songs?.audio_generation_status || null,
@@ -236,11 +295,14 @@ export const useCountryCharts = (
         };
       });
 
-      // Re-rank entries by appropriate score
-      return realEntries
+      // Sort by appropriate metric and assign ranks
+      return aggregatedEntries
         .sort((a, b) => {
           if (chartType === "combined") {
             return b.combined_score - a.combined_score;
+          }
+          if (chartType === "streaming") {
+            return b.weekly_plays - a.weekly_plays;
           }
           return b.plays_count - a.plays_count;
         })
@@ -253,6 +315,78 @@ export const useCountryCharts = (
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
+
+// Helper function to transform and deduplicate entries (for daily view)
+function transformAndDeduplicateEntries(data: any[], chartType: ChartType): ChartEntry[] {
+  // Deduplicate by song_id - keep the entry with highest plays_count
+  const songMap = new Map<string, any>();
+  for (const entry of data || []) {
+    const key = entry.song_id;
+    const existing = songMap.get(key);
+    
+    // Use combined_score for combined chart, otherwise use plays_count
+    const entryScore = chartType === "combined" 
+      ? (entry.combined_score || 0) 
+      : (entry.plays_count || 0);
+    const existingScore = existing 
+      ? (chartType === "combined" ? (existing.combined_score || 0) : (existing.plays_count || 0))
+      : 0;
+      
+    if (!existing || entryScore > existingScore) {
+      songMap.set(key, entry);
+    }
+  }
+
+  const deduplicatedData = Array.from(songMap.values());
+  console.log("[useCountryCharts] After deduplication:", deduplicatedData.length);
+
+  // Transform real data
+  const realEntries: ChartEntry[] = deduplicatedData.map((entry, index) => {
+    const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
+    const artistName = bandArtistName || "Unknown Artist";
+    
+    const playsCount = entry.plays_count || 0;
+    const weeklyPlays = entry.weekly_plays || 0;
+    const combinedScore = entry.combined_score || 0;
+    const weeksOnChart = entry.weeks_on_chart || 1;
+    
+    return {
+      id: entry.id,
+      rank: index + 1,
+      song_id: entry.song_id,
+      title: entry.songs?.title || "Unknown Song",
+      artist: artistName,
+      genre: entry.genre || entry.songs?.genre || "Unknown",
+      country: entry.country || "Global",
+      plays_count: playsCount,
+      weekly_plays: weeklyPlays,
+      combined_score: combinedScore,
+      total_sales: playsCount,
+      trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
+      trend_change: entry.trend_change || 0,
+      weeks_on_chart: weeksOnChart,
+      is_fake: false,
+      audio_url: entry.songs?.audio_url || null,
+      audio_generation_status: entry.songs?.audio_generation_status || null,
+      entry_type: entry.entry_type || "song",
+      release_id: entry.release_id || null,
+    };
+  });
+
+  // Re-rank entries by appropriate score
+  return realEntries
+    .sort((a, b) => {
+      if (chartType === "combined") {
+        return b.combined_score - a.combined_score;
+      }
+      return b.plays_count - a.plays_count;
+    })
+    .slice(0, 50)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
+}
 
 // Hook to fetch chart history for a specific song
 export const useChartHistory = (songId: string, chartType: ChartType) => {
