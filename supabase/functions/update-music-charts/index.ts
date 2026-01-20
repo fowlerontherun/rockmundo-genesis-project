@@ -67,15 +67,17 @@ serve(async (req) => {
     // STEP 1: Collect weekly streams from streaming_analytics_daily
     // FIXED: Using correct column names: song_release_id, daily_streams
     // =========================================================================
-    const { data: weeklyStreamData, error: weeklyStreamError } = await supabaseClient
+    // FIXED: Removed broken nested filter - Supabase doesn't support .eq() on deeply nested relations
+    // We fetch all data and filter in code instead
+    const { data: weeklyStreamDataRaw, error: weeklyStreamError } = await supabaseClient
       .from("streaming_analytics_daily")
       .select(`
         song_release_id,
         daily_streams,
         listener_region,
-        song_releases!inner(
+        song_releases(
           song_id,
-          songs!inner(
+          songs(
             id,
             title,
             genre,
@@ -85,12 +87,16 @@ serve(async (req) => {
           )
         )
       `)
-      .eq("song_releases.songs.status", "recorded")
       .gte("analytics_date", sevenDaysAgo.toISOString().split("T")[0]);
 
     if (weeklyStreamError) {
       console.error("Error fetching weekly streaming data:", weeklyStreamError);
     }
+
+    // Filter to only include songs with status = 'recorded' in code
+    const weeklyStreamData = (weeklyStreamDataRaw || []).filter(
+      entry => entry.song_releases?.songs?.status === "recorded"
+    );
 
     console.log(`Fetched ${weeklyStreamData?.length || 0} streaming analytics entries`);
 
@@ -134,7 +140,8 @@ serve(async (req) => {
     // STEP 2: Get total streams from song_releases for all-time totals
     // FIXED: status filter from 'released' to 'recorded'
     // =========================================================================
-    const { data: streamingData, error: streamingError } = await supabaseClient
+    // FIXED: Removed broken nested filter - filter in code instead
+    const { data: streamingDataRaw, error: streamingError } = await supabaseClient
       .from("song_releases")
       .select(`
         song_id,
@@ -142,7 +149,7 @@ serve(async (req) => {
         release:releases(
           release_type
         ),
-        songs!inner(
+        songs(
           id,
           title,
           genre,
@@ -152,7 +159,6 @@ serve(async (req) => {
         )
       `)
       .eq("is_active", true)
-      .eq("songs.status", "recorded")
       .gte("total_streams", 0)
       .order("total_streams", { ascending: false })
       .limit(500);
@@ -160,6 +166,11 @@ serve(async (req) => {
     if (streamingError) {
       console.error("Error fetching streaming data:", streamingError);
     }
+
+    // Filter to only include songs with status = 'recorded'
+    const streamingData = (streamingDataRaw || []).filter(
+      entry => entry.songs?.status === "recorded"
+    );
 
     console.log(`Fetched ${streamingData?.length || 0} streaming entries`);
 
@@ -536,6 +547,7 @@ serve(async (req) => {
 
     // =========================================================================
     // STEP 6: Album physical sales charts
+    // FIXED: Include a lead song_id for each release (song_id is NOT NULL in chart_entries)
     // =========================================================================
     const { data: albumPhysicalSales, error: albumPhysicalError } = await supabaseClient
       .from("release_sales")
@@ -550,7 +562,11 @@ serve(async (req) => {
             title,
             release_type,
             band_id,
-            bands(name, artist_name)
+            bands(name, artist_name),
+            release_songs(
+              song_id,
+              track_number
+            )
           )
         )
       `)
@@ -562,24 +578,32 @@ serve(async (req) => {
     }
 
     // Aggregate by release
-    const albumSales = new Map<string, { quantity: number; release: any }>();
+    const albumSales = new Map<string, { quantity: number; release: any; leadSongId: string | null }>();
     for (const sale of albumPhysicalSales || []) {
       const releaseId = sale.release_formats?.release_id;
       const release = sale.release_formats?.release;
       if (!releaseId || !release) continue;
 
+      // Get lead song (first track) for the release
+      const releaseSongs = (release as any).release_songs || [];
+      const sortedSongs = releaseSongs.sort((a: any, b: any) => (a.track_number || 0) - (b.track_number || 0));
+      const leadSongId = sortedSongs[0]?.song_id || null;
+
       const existing = albumSales.get(releaseId);
       if (existing) {
         existing.quantity += sale.quantity_sold;
       } else {
-        albumSales.set(releaseId, { quantity: sale.quantity_sold, release });
+        albumSales.set(releaseId, { quantity: sale.quantity_sold, release, leadSongId });
       }
     }
 
+    // Only create entries for albums that have a lead song (song_id is required)
     const albumPhysicalEntries = Array.from(albumSales.entries())
+      .filter(([_, data]) => data.leadSongId !== null)
       .sort((a, b) => b[1].quantity - a[1].quantity)
       .slice(0, 100)
       .map(([releaseId, data], index) => ({
+        song_id: data.leadSongId!, // Lead song of the album
         release_id: releaseId,
         chart_type: "album_physical",
         rank: index + 1,
@@ -597,39 +621,46 @@ serve(async (req) => {
     // =========================================================================
     // STEP 7: Radio airplay charts
     // =========================================================================
-    const { data: radioData, error: radioError } = await supabaseClient
-      .from("radio_playlists")
+    // FIXED: Query radio_plays table (has listeners column) instead of radio_playlists
+    // radio_playlists only has: id, show_id, song_id, week_start_date, times_played, added_at, removed_at, is_active
+    // radio_plays has: id, playlist_id, song_id, show_id, station_id, played_at, listeners, hype_gained, etc.
+    const { data: radioDataRaw, error: radioError } = await supabaseClient
+      .from("radio_plays")
       .select(`
         song_id,
-        estimated_listeners,
-        total_plays,
-        songs!inner(
+        listeners,
+        played_at,
+        songs(
           id,
           title,
           genre,
           status
         )
       `)
-      .eq("songs.status", "recorded")
-      .gte("week_start_date", sevenDaysAgo.toISOString().split("T")[0]);
+      .gte("played_at", sevenDaysAgo.toISOString());
 
     if (radioError) {
       console.error("Error fetching radio data:", radioError);
     }
 
-    console.log(`Fetched ${radioData?.length || 0} radio playlist entries`);
+    // Filter to only include songs with status = 'recorded'
+    const radioData = (radioDataRaw || []).filter(
+      entry => entry.songs?.status === "recorded"
+    );
 
-    // Aggregate radio plays by song
+    console.log(`Fetched ${radioData?.length || 0} radio play entries`);
+
+    // Aggregate radio plays by song - count each play and sum listeners
     const radioAggregated = new Map<string, { listeners: number; plays: number; song: any }>();
     for (const entry of radioData || []) {
       const existing = radioAggregated.get(entry.song_id);
       if (existing) {
-        existing.listeners += entry.estimated_listeners || 0;
-        existing.plays += entry.total_plays || 0;
+        existing.listeners += entry.listeners || 0;
+        existing.plays += 1; // Count each radio play
       } else {
         radioAggregated.set(entry.song_id, {
-          listeners: entry.estimated_listeners || 0,
-          plays: entry.total_plays || 0,
+          listeners: entry.listeners || 0,
+          plays: 1,
           song: entry.songs,
         });
       }
@@ -642,8 +673,8 @@ serve(async (req) => {
         song_id: entry.song.id,
         chart_type: "radio_airplay",
         rank: index + 1,
-        plays_count: entry.plays,
-        weekly_plays: entry.listeners,
+        plays_count: entry.plays, // Number of radio plays
+        weekly_plays: entry.listeners, // Total listeners reached
         combined_score: 0,
         chart_date: chartDate,
         genre: entry.song?.genre,
