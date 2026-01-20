@@ -765,13 +765,10 @@ serve(async (req) => {
       );
       console.log(`Inserting ${validEntries.length} valid entries (filtered out ${chartEntries.length - validEntries.length})`);
 
-      // Insert all new entries
+      // Insert all new entries (plain insert since we deleted first)
       const { data: insertedData, error: insertError } = await supabaseClient
         .from("chart_entries")
-        .upsert(validEntries, { 
-          onConflict: "song_id,chart_type,chart_date",
-          ignoreDuplicates: true 
-        })
+        .insert(validEntries)
         .select("id");
 
       if (insertError) {

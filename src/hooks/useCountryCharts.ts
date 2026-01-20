@@ -10,9 +10,12 @@ export type ChartType =
   | "digital_sales"
   | "cassette_sales"
   | "record_sales"
+  | "radio_airplay"
   | "combined";
 
 export type ReleaseCategory = "all" | "single" | "ep" | "album";
+
+export type ChartTimeRange = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface ChartEntry {
   id: string;
@@ -38,6 +41,12 @@ export interface ChartEntry {
   song_count?: number;
 }
 
+export interface ChartHistoryPoint {
+  date: string;
+  rank: number;
+  plays_count: number;
+}
+
 const GENRES = [...MUSIC_GENRES];
 
 // Use all countries from countryData (43 countries + Global)
@@ -50,6 +59,8 @@ export const getMetricLabels = (chartType: ChartType): { weekly: string; total: 
       return { weekly: "Chart Pts", total: "Streams" };
     case "streaming":
       return { weekly: "Weekly", total: "Total Streams" };
+    case "radio_airplay":
+      return { weekly: "Listeners", total: "Total Plays" };
     case "digital_sales":
       return { weekly: "Weekly", total: "Total Sales" };
     case "cd_sales":
@@ -66,11 +77,38 @@ export const useCountryCharts = (
   country: string,
   genre: string,
   chartType: ChartType,
-  releaseCategory: ReleaseCategory = "all",
+  releaseCategory: ReleaseCategory = "single", // Default to singles
+  timeRange: ChartTimeRange = "weekly",
 ) => {
   return useQuery({
-    queryKey: ["country-charts", country, genre, chartType, releaseCategory],
+    queryKey: ["country-charts", country, genre, chartType, releaseCategory, timeRange],
     queryFn: async (): Promise<ChartEntry[]> => {
+      // Calculate date range based on timeRange
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (timeRange) {
+        case "daily":
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 1);
+          break;
+        case "weekly":
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case "monthly":
+          startDate = new Date(now);
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case "yearly":
+          startDate = new Date(now);
+          startDate.setFullYear(now.getFullYear() - 1);
+          break;
+        default:
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+      }
+
       // First, get the latest chart_date to avoid duplicates
       const { data: latestDateData } = await supabase
         .from("chart_entries")
@@ -95,7 +133,7 @@ export const useCountryCharts = (
       } else {
         // Query specific category suffix
         const suffix = `_${releaseCategory}`;
-        chartTypeFilter = [`${chartType}${suffix}`];
+        chartTypeFilter = [`${chartType}${suffix}`, chartType]; // Include both scoped and base
       }
 
       console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "date:", latestChartDate);
@@ -213,6 +251,64 @@ export const useCountryCharts = (
         }));
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Hook to fetch chart history for a specific song
+export const useChartHistory = (songId: string, chartType: ChartType) => {
+  return useQuery({
+    queryKey: ["chart-history", songId, chartType],
+    queryFn: async (): Promise<ChartHistoryPoint[]> => {
+      const { data, error } = await supabase
+        .from("chart_entries")
+        .select("chart_date, rank, plays_count")
+        .eq("song_id", songId)
+        .eq("chart_type", chartType)
+        .order("chart_date", { ascending: true })
+        .limit(90); // Last 90 days
+
+      if (error) {
+        console.error("[useChartHistory] Error:", error);
+        return [];
+      }
+
+      return (data || []).map(entry => ({
+        date: entry.chart_date,
+        rank: entry.rank,
+        plays_count: entry.plays_count || 0,
+      }));
+    },
+    enabled: !!songId,
+    staleTime: 10 * 60 * 1000,
+  });
+};
+
+// Hook to fetch #1 streaks
+export const useNumberOneStreaks = (songId?: string) => {
+  return useQuery({
+    queryKey: ["number-one-streaks", songId],
+    queryFn: async () => {
+      let query = supabase
+        .from("chart_number_one_streaks")
+        .select(`
+          *,
+          songs(title, bands(name, artist_name))
+        `)
+        .order("streak_days", { ascending: false })
+        .limit(20);
+
+      if (songId) {
+        query = query.eq("song_id", songId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("[useNumberOneStreaks] Error:", error);
+        return [];
+      }
+      return data || [];
+    },
+    staleTime: 10 * 60 * 1000,
   });
 };
 
