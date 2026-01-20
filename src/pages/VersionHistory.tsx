@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.464",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed setlist songs query using wrong table name (performance_items → performance_items_catalog)" },
+    ],
+  },
+  {
     version: "1.0.463",
     date: "2026-01-20",
     changes: [
