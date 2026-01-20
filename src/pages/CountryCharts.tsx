@@ -5,18 +5,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle } from "lucide-react";
-import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, getMetricLabels } from "@/hooks/useCountryCharts";
+import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle, Calendar } from "lucide-react";
+import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, ChartTimeRange, getMetricLabels } from "@/hooks/useCountryCharts";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
+import { ChartHistoryDialog } from "@/components/charts/ChartHistoryDialog";
 
 const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; description: string }[] = [
   { value: "combined", label: "Combined", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales" },
   { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" />, description: "Ranked by weekly streams" },
+  { value: "radio_airplay", label: "Radio", icon: <Radio className="h-4 w-4" />, description: "Radio airplay chart" },
   { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" />, description: "Digital download sales" },
-  { value: "cd_sales", label: "CD Sales", icon: <Disc className="h-4 w-4" />, description: "Physical CD sales" },
+  { value: "cd_sales", label: "CD", icon: <Disc className="h-4 w-4" />, description: "Physical CD sales" },
   { value: "vinyl_sales", label: "Vinyl", icon: <Disc className="h-4 w-4" />, description: "Vinyl record sales" },
   { value: "cassette_sales", label: "Cassette", icon: <PlaySquare className="h-4 w-4" />, description: "Cassette tape sales" },
+];
+
+const TIME_RANGES: { value: ChartTimeRange; label: string }[] = [
+  { value: "daily", label: "Today" },
+  { value: "weekly", label: "This Week" },
+  { value: "monthly", label: "This Month" },
+  { value: "yearly", label: "This Year" },
 ];
 
 const getTrendIcon = (trend: string) => {
@@ -50,6 +59,7 @@ interface ChartTableProps {
 
 const ChartTable = ({ entries, isLoading, chartType }: ChartTableProps) => {
   const labels = getMetricLabels(chartType);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   
   if (isLoading) {
     return (
@@ -92,117 +102,130 @@ const ChartTable = ({ entries, isLoading, chartType }: ChartTableProps) => {
   };
 
   return (
-    <div className="space-y-1">
-      {/* Header */}
-      <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
-        <div className="col-span-1">#</div>
-        <div className="col-span-4 sm:col-span-3">Song</div>
-        <div className="col-span-2 hidden sm:block">Genre</div>
-        <div className="col-span-2 text-right flex items-center justify-end gap-1">
-          {labels.weekly}
-          {chartType === "combined" && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p className="text-xs">
-                    <strong>Chart Points Formula:</strong><br/>
-                    (Weekly Streams ÷ 150) + Digital Sales + CD Sales + Vinyl Sales + Cassette Sales
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-        <div className="col-span-2 text-right">{labels.total}</div>
-        <div className="col-span-1 text-center hidden sm:block">Trend</div>
-        <div className="col-span-1 text-right hidden sm:block">Wks</div>
-      </div>
-
-      {/* Entries */}
-      {entries.map((entry) => (
-        <div
-          key={entry.id}
-          className={cn(
-            "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-start",
-            entry.rank <= 3 && "bg-accent/30",
-            entry.is_fake && "opacity-70"
-          )}
-        >
-          {/* Rank */}
-          <div className="col-span-1">
-            <span
-              className={cn(
-                "font-bold text-lg",
-                entry.rank === 1 && "text-yellow-500",
-                entry.rank === 2 && "text-slate-400",
-                entry.rank === 3 && "text-amber-600"
-              )}
-            >
-              {entry.rank}
-            </span>
-          </div>
-
-          {/* Song & Artist */}
-          <div className="col-span-4 sm:col-span-3 min-w-0">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium truncate text-sm">{entry.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{entry.artist}</p>
-              </div>
-              {entry.is_fake && (
-                <Badge variant="outline" className="text-[10px] px-1 shrink-0">
-                  SIM
-                </Badge>
-              )}
-            </div>
-            {/* Audio Player for real songs */}
-            {!entry.is_fake && entry.audio_url && (
-              <div className="mt-2">
-                <TrackableSongPlayer
-                  songId={entry.song_id}
-                  audioUrl={entry.audio_url}
-                  title={entry.title}
-                  artist={entry.artist}
-                  generationStatus={entry.audio_generation_status}
-                  compact
-                  source="country_charts"
-                />
-              </div>
+    <>
+      <div className="space-y-1">
+        {/* Header */}
+        <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
+          <div className="col-span-1">#</div>
+          <div className="col-span-4 sm:col-span-3">Song</div>
+          <div className="col-span-2 hidden sm:block">Genre</div>
+          <div className="col-span-2 text-right flex items-center justify-end gap-1">
+            {labels.weekly}
+            {chartType === "combined" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      <strong>Chart Points Formula:</strong><br/>
+                      (Weekly Streams ÷ 150) + Digital Sales + CD Sales + Vinyl Sales + Cassette Sales
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
-
-          {/* Genre */}
-          <div className="col-span-2 hidden sm:block">
-            <Badge variant="secondary" className="text-xs">
-              {entry.genre}
-            </Badge>
-          </div>
-
-          {/* Weekly/Chart Points */}
-          <div className="col-span-2 text-right">
-            <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
-          </div>
-
-          {/* Total */}
-          <div className="col-span-2 text-right">
-            <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
-          </div>
-
-          {/* Trend */}
-          <div className="col-span-1 hidden sm:flex items-center justify-center gap-1">
-            {getTrendIcon(entry.trend)}
-          </div>
-
-          {/* Weeks */}
-          <div className="col-span-1 text-right hidden sm:block">
-            <span className="text-sm text-muted-foreground">{entry.weeks_on_chart}</span>
-          </div>
+          <div className="col-span-2 text-right">{labels.total}</div>
+          <div className="col-span-1 text-center hidden sm:block">Trend</div>
+          <div className="col-span-1 text-right hidden sm:block">Wks</div>
         </div>
-      ))}
-    </div>
+
+        {/* Entries */}
+        {entries.map((entry) => (
+          <div
+            key={entry.id}
+            className={cn(
+              "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-start cursor-pointer",
+              entry.rank <= 3 && "bg-accent/30",
+              entry.is_fake && "opacity-70"
+            )}
+            onClick={() => setSelectedSongId(entry.song_id)}
+          >
+            {/* Rank */}
+            <div className="col-span-1">
+              <span
+                className={cn(
+                  "font-bold text-lg",
+                  entry.rank === 1 && "text-yellow-500",
+                  entry.rank === 2 && "text-slate-400",
+                  entry.rank === 3 && "text-amber-600"
+                )}
+              >
+                {entry.rank}
+              </span>
+            </div>
+
+            {/* Song & Artist */}
+            <div className="col-span-4 sm:col-span-3 min-w-0">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate text-sm">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{entry.artist}</p>
+                </div>
+                {entry.is_fake && (
+                  <Badge variant="outline" className="text-[10px] px-1 shrink-0">
+                    SIM
+                  </Badge>
+                )}
+              </div>
+              {/* Audio Player for real songs */}
+              {!entry.is_fake && entry.audio_url && (
+                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                  <TrackableSongPlayer
+                    songId={entry.song_id}
+                    audioUrl={entry.audio_url}
+                    title={entry.title}
+                    artist={entry.artist}
+                    generationStatus={entry.audio_generation_status}
+                    compact
+                    source="country_charts"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Genre */}
+            <div className="col-span-2 hidden sm:block">
+              <Badge variant="secondary" className="text-xs">
+                {entry.genre}
+              </Badge>
+            </div>
+
+            {/* Weekly/Chart Points */}
+            <div className="col-span-2 text-right">
+              <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
+            </div>
+
+            {/* Total */}
+            <div className="col-span-2 text-right">
+              <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
+            </div>
+
+            {/* Trend */}
+            <div className="col-span-1 hidden sm:flex items-center justify-center gap-1">
+              {getTrendIcon(entry.trend)}
+            </div>
+
+            {/* Weeks */}
+            <div className="col-span-1 text-right hidden sm:block">
+              <span className="text-sm text-muted-foreground">{entry.weeks_on_chart}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Chart History Dialog */}
+      {selectedSongId && (
+        <ChartHistoryDialog
+          songId={selectedSongId}
+          chartType={chartType}
+          isOpen={!!selectedSongId}
+          onClose={() => setSelectedSongId(null)}
+        />
+      )}
+    </>
   );
 };
 
@@ -210,9 +233,10 @@ export default function CountryCharts() {
   const [country, setCountry] = useState("Global");
   const [genre, setGenre] = useState("All");
   const [chartType, setChartType] = useState<ChartType>("combined");
-  const [releaseCategory, setReleaseCategory] = useState<ReleaseCategory>("all");
+  const [releaseCategory, setReleaseCategory] = useState<ReleaseCategory>("single"); // Default to singles
+  const [timeRange, setTimeRange] = useState<ChartTimeRange>("weekly");
 
-  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType, releaseCategory);
+  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType, releaseCategory, timeRange);
   const { data: genres = ["All", ...GENRES] } = useAvailableGenres();
   const { data: countries = COUNTRIES } = useAvailableCountries();
 
@@ -235,6 +259,22 @@ export default function CountryCharts() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select value={timeRange} onValueChange={(v) => setTimeRange(v as ChartTimeRange)}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Time range" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_RANGES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <Select value={country} onValueChange={setCountry}>
@@ -274,8 +314,8 @@ export default function CountryCharts() {
                 <SelectValue placeholder="Release type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="single">Singles</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="ep">EPs</SelectItem>
                 <SelectItem value="album">Albums</SelectItem>
               </SelectContent>
@@ -292,7 +332,7 @@ export default function CountryCharts() {
 
       {/* Chart Type Tabs */}
       <Tabs value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
           {CHART_TYPES.map((type) => (
             <TabsTrigger
               key={type.value}

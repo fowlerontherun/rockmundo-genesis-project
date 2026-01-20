@@ -2371,6 +2371,81 @@ export type Database = {
           },
         ]
       }
+      chart_number_one_streaks: {
+        Row: {
+          band_id: string | null
+          chart_type: string
+          created_at: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean | null
+          song_id: string | null
+          started_at: string
+          streak_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          chart_type: string
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          song_id?: string | null
+          started_at: string
+          streak_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          chart_type?: string
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          song_id?: string | null
+          started_at?: string
+          streak_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_number_one_streaks_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_number_one_streaks_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_number_one_streaks_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_number_one_streaks_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_number_one_streaks_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           channel: string
@@ -17937,42 +18012,60 @@ export type Database = {
       }
       sponsorship_brands: {
         Row: {
+          available_budget: number | null
           category: string
+          cooldown_until: string | null
           created_at: string
+          exclusivity_pref: boolean | null
           id: string
           is_active: boolean
           logo_url: string | null
           min_fame_required: number
+          min_fame_threshold: number | null
           name: string
           region: string
           size: string
+          targeting_flags: string[] | null
           updated_at: string
+          wealth_score: number | null
           wealth_tier: number
         }
         Insert: {
+          available_budget?: number | null
           category?: string
+          cooldown_until?: string | null
           created_at?: string
+          exclusivity_pref?: boolean | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           min_fame_required?: number
+          min_fame_threshold?: number | null
           name: string
           region?: string
           size?: string
+          targeting_flags?: string[] | null
           updated_at?: string
+          wealth_score?: number | null
           wealth_tier?: number
         }
         Update: {
+          available_budget?: number | null
           category?: string
+          cooldown_until?: string | null
           created_at?: string
+          exclusivity_pref?: boolean | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           min_fame_required?: number
+          min_fame_threshold?: number | null
           name?: string
           region?: string
           size?: string
+          targeting_flags?: string[] | null
           updated_at?: string
+          wealth_score?: number | null
           wealth_tier?: number
         }
         Relationships: []

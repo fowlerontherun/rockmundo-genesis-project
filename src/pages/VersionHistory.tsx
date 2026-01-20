@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.467",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "VIP status now syncs automatically between vip_subscriptions and profiles.is_vip via database trigger" },
+      { type: 'fix', description: "Fixed sponsorship cron job - added missing cooldown_until column to sponsorship_brands" },
+      { type: 'fix', description: "Fixed process-event-outcomes edge function RPC syntax error" },
+      { type: 'feature', description: "Added Radio Airplay chart type" },
+      { type: 'feature', description: "Added chart history graphs - click any song to see position history" },
+      { type: 'feature', description: "Added time range filters: Daily, Weekly, Monthly, Yearly views" },
+      { type: 'feature', description: "Added chart achievements: Chart Topper, Week at the Top, Month of Glory, Year of Dominance" },
+      { type: 'improvement', description: "Charts now default to Singles instead of All releases" },
+    ],
+  },
+  {
     version: "1.0.466",
     date: "2026-01-20",
     changes: [

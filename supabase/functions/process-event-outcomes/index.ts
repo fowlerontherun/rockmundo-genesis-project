@@ -125,18 +125,19 @@ Deno.serve(async (req) => {
           .single();
 
         if (bandMember) {
-          await supabase.rpc("increment", {
-            table_name: "bands",
-            row_id: bandMember.band_id,
-            column_name: "total_fans",
-            increment_by: effects.fans,
-          }).catch(() => {
-            // RPC might not exist, try direct update
-            supabase
+          // Direct update for fans - RPC might not exist
+          const { data: currentBand } = await supabase
+            .from("bands")
+            .select("total_fans")
+            .eq("id", bandMember.band_id)
+            .single();
+          
+          if (currentBand) {
+            await supabase
               .from("bands")
-              .update({ total_fans: effects.fans })
+              .update({ total_fans: Math.max(0, (currentBand.total_fans || 0) + effects.fans) })
               .eq("id", bandMember.band_id);
-          });
+          }
         }
       }
 
