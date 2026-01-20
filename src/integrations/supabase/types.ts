@@ -9174,6 +9174,7 @@ export type Database = {
         Row: {
           compensation_max: number | null
           compensation_min: number | null
+          cooldown_days: number | null
           country: string | null
           created_at: string | null
           description: string | null
@@ -9196,6 +9197,7 @@ export type Database = {
         Insert: {
           compensation_max?: number | null
           compensation_min?: number | null
+          cooldown_days?: number | null
           country?: string | null
           created_at?: string | null
           description?: string | null
@@ -9218,6 +9220,7 @@ export type Database = {
         Update: {
           compensation_max?: number | null
           compensation_min?: number | null
+          cooldown_days?: number | null
           country?: string | null
           created_at?: string | null
           description?: string | null
@@ -13762,6 +13765,7 @@ export type Database = {
         Row: {
           compensation_max: number | null
           compensation_min: number | null
+          cooldown_days: number | null
           country: string | null
           created_at: string | null
           description: string | null
@@ -13784,6 +13788,7 @@ export type Database = {
         Insert: {
           compensation_max?: number | null
           compensation_min?: number | null
+          cooldown_days?: number | null
           country?: string | null
           created_at?: string | null
           description?: string | null
@@ -13806,6 +13811,7 @@ export type Database = {
         Update: {
           compensation_max?: number | null
           compensation_min?: number | null
+          cooldown_days?: number | null
           country?: string | null
           created_at?: string | null
           description?: string | null

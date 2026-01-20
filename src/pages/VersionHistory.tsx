@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.476",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Chart notifications now rate-limited to once every 12 hours per song/chart type" },
+      { type: 'fix', description: "Fixed underworld products RLS - admins can now add/edit/delete products" },
+      { type: 'feature', description: "Seeded 20 more TV networks, 20 magazines, 20 podcasts, and 15 websites for PR system" },
+      { type: 'feature', description: "Added cooldown_days column to magazines, podcasts, and websites for PR cooldowns" },
+    ],
+  },
+  {
     version: "1.0.475",
     date: "2026-01-20",
     changes: [
