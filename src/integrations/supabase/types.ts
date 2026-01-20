@@ -21531,6 +21531,10 @@ export type Database = {
         Returns: Json
       }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
+      reorder_setlist_items: {
+        Args: { p_setlist_id: string; p_updates: Json }
+        Returns: undefined
+      }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       swap_gettit_comment_vote: {
