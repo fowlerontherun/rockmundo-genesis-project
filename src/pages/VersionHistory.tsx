@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.468",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed radio airplay stats always showing 0 - process-radio-submissions now correctly inserts to radio_playlists with week_start_date" },
+      { type: 'fix', description: "Backfilled radio_playlists from 77 previously accepted submissions" },
+      { type: 'improvement', description: "Radio plays will now generate correctly from songs in active playlists" },
+    ],
+  },
+  {
     version: "1.0.467",
     date: "2026-01-20",
     changes: [
