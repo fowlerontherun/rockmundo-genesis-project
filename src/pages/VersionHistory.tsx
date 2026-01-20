@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.474",
+    date: "2026-01-20",
+    changes: [
+      { type: 'feature', description: "Added tour cancellation button in tour details dialog with same-day refund logic" },
+      { type: 'fix', description: "Fixed current tour detection to show tours where start_date <= now and end_date >= now" },
+      { type: 'feature', description: "Added VIP sales pause/unpause toggle in admin VIP Management page" },
+      { type: 'feature', description: "Created system_settings table for global app configuration" },
+    ],
+  },
+  {
     version: "1.0.473",
     date: "2026-01-20",
     changes: [
