@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.465",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed setlist rehearsals not updating song familiarity - added missing setlist_id column to band_rehearsals" },
+      { type: 'fix', description: "Rehearsal booking now correctly stores setlist_id for setlist-based rehearsals" },
+    ],
+  },
+  {
     version: "1.0.464",
     date: "2026-01-20",
     changes: [

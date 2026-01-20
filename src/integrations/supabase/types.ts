@@ -1530,6 +1530,7 @@ export type Database = {
           scheduled_end: string
           scheduled_start: string
           selected_song_id: string | null
+          setlist_id: string | null
           status: string
           total_cost: number
           xp_earned: number | null
@@ -1546,6 +1547,7 @@ export type Database = {
           scheduled_end: string
           scheduled_start?: string
           selected_song_id?: string | null
+          setlist_id?: string | null
           status?: string
           total_cost: number
           xp_earned?: number | null
@@ -1562,6 +1564,7 @@ export type Database = {
           scheduled_end?: string
           scheduled_start?: string
           selected_song_id?: string | null
+          setlist_id?: string | null
           status?: string
           total_cost?: number
           xp_earned?: number | null
@@ -1607,6 +1610,13 @@ export type Database = {
             columns: ["selected_song_id"]
             isOneToOne: false
             referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_rehearsals_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
             referencedColumns: ["id"]
           },
         ]

@@ -101,6 +101,7 @@ export function useRehearsalBooking() {
           scheduled_start: params.scheduledStart.toISOString(),
           scheduled_end: scheduledEnd.toISOString(),
           selected_song_id: params.songId,
+          setlist_id: params.setlistId,
           status: 'scheduled',
           chemistry_gain: params.chemistryGain,
           xp_earned: params.xpEarned,
