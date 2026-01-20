@@ -115,7 +115,6 @@ export function MediaSubmissionDialog({
       if (!user || !bandId) throw new Error("Not authenticated");
       
       const submission: Record<string, unknown> = {
-        user_id: user.id,
         band_id: bandId,
         [config.idField]: mediaItem.id,
         [config.typeField]: selectedType,

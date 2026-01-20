@@ -571,7 +571,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
             tour_id: tour.id,
             from_city_id: fromVenue.cityId,
             to_city_id: toVenue.cityId,
-            travel_mode: state.travelMode === 'tour_bus' ? 'bus' : 'auto',
+            travel_mode: state.travelMode || 'bus',
             travel_cost: 0,
             departure_date: departureDate.toISOString(),
             arrival_date: arrivalDate.toISOString(),

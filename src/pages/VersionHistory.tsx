@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.473",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed website feature request failing - removed non-existent user_id column from website_submissions insert" },
+      { type: 'fix', description: "Fixed tour booking 'travel_mode_check' constraint error - was using 'auto' instead of valid mode like 'bus'" },
+    ],
+  },
+  {
     version: "1.0.472",
     date: "2026-01-20",
     changes: [
