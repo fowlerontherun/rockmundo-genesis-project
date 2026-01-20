@@ -431,6 +431,7 @@ export const useGameEventNotifications = () => {
     channels.push(songwritingChannel);
 
     // === CHART ENTRY (Song charts for the first time or improves position) ===
+    // Rate limited to once every 12 hours per song/chart type
     const chartChannel = supabase
       .channel('chart-notifications')
       .on(
@@ -455,6 +456,30 @@ export const useGameEventNotifications = () => {
           const isOwner = song?.user_id === user.id || userBandIdsRef.current.includes(song?.band_id);
           
           if (isOwner && song) {
+            // Check 12-hour cooldown before sending notification
+            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+            const { data: existingCooldown } = await supabase
+              .from('chart_notification_cooldowns' as any)
+              .select('id, last_notified_at')
+              .eq('user_id', user.id)
+              .eq('song_id', entry.song_id)
+              .eq('chart_type', entry.chart_type)
+              .gte('last_notified_at', twelveHoursAgo)
+              .maybeSingle();
+            
+            // Skip notification if within cooldown period
+            if (existingCooldown) return;
+            
+            // Upsert cooldown record
+            await supabase
+              .from('chart_notification_cooldowns' as any)
+              .upsert({
+                user_id: user.id,
+                song_id: entry.song_id,
+                chart_type: entry.chart_type,
+                last_notified_at: new Date().toISOString(),
+              }, { onConflict: 'user_id,song_id,chart_type' });
+            
             const chartName = entry.chart_type === 'streaming' ? 'Streaming Charts' :
                             entry.chart_type === 'radio_airplay' ? 'Radio Charts' :
                             entry.chart_type === 'record_sales' ? 'Sales Charts' : 'Charts';
