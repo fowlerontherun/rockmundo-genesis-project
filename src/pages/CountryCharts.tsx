@@ -4,18 +4,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter } from "lucide-react";
-import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory } from "@/hooks/useCountryCharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle } from "lucide-react";
+import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, getMetricLabels } from "@/hooks/useCountryCharts";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
-const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode }[] = [
-  { value: "combined", label: "Combined", icon: <BarChart3 className="h-4 w-4" /> },
-  { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" /> },
-  { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" /> },
-  { value: "cd_sales", label: "CD Sales", icon: <Disc className="h-4 w-4" /> },
-  { value: "vinyl_sales", label: "Vinyl", icon: <Disc className="h-4 w-4" /> },
-  { value: "cassette_sales", label: "Cassette", icon: <PlaySquare className="h-4 w-4" /> },
+const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: "combined", label: "Combined", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales" },
+  { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" />, description: "Ranked by weekly streams" },
+  { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" />, description: "Digital download sales" },
+  { value: "cd_sales", label: "CD Sales", icon: <Disc className="h-4 w-4" />, description: "Physical CD sales" },
+  { value: "vinyl_sales", label: "Vinyl", icon: <Disc className="h-4 w-4" />, description: "Vinyl record sales" },
+  { value: "cassette_sales", label: "Cassette", icon: <PlaySquare className="h-4 w-4" />, description: "Cassette tape sales" },
 ];
 
 const getTrendIcon = (trend: string) => {
@@ -41,7 +42,15 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: boolean }) => {
+interface ChartTableProps {
+  entries: ChartEntry[];
+  isLoading: boolean;
+  chartType: ChartType;
+}
+
+const ChartTable = ({ entries, isLoading, chartType }: ChartTableProps) => {
+  const labels = getMetricLabels(chartType);
+  
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -64,6 +73,24 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
     );
   }
 
+  // Get the correct values to display based on chart type
+  const getWeeklyValue = (entry: ChartEntry) => {
+    if (chartType === "combined") {
+      return entry.combined_score;
+    }
+    if (chartType === "streaming") {
+      return entry.weekly_plays;
+    }
+    return entry.plays_count; // For sales, plays_count IS the weekly sales
+  };
+
+  const getTotalValue = (entry: ChartEntry) => {
+    if (chartType === "combined") {
+      return entry.plays_count; // Show streams as "total" for combined
+    }
+    return entry.total_sales;
+  };
+
   return (
     <div className="space-y-1">
       {/* Header */}
@@ -71,8 +98,25 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
         <div className="col-span-1">#</div>
         <div className="col-span-4 sm:col-span-3">Song</div>
         <div className="col-span-2 hidden sm:block">Genre</div>
-        <div className="col-span-2 text-right">Weekly</div>
-        <div className="col-span-2 text-right">Total</div>
+        <div className="col-span-2 text-right flex items-center justify-end gap-1">
+          {labels.weekly}
+          {chartType === "combined" && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs">
+                    <strong>Chart Points Formula:</strong><br/>
+                    (Weekly Streams ÷ 150) + Digital Sales + CD Sales + Vinyl Sales + Cassette Sales
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+        <div className="col-span-2 text-right">{labels.total}</div>
         <div className="col-span-1 text-center hidden sm:block">Trend</div>
         <div className="col-span-1 text-right hidden sm:block">Wks</div>
       </div>
@@ -137,14 +181,14 @@ const ChartTable = ({ entries, isLoading }: { entries: ChartEntry[]; isLoading: 
             </Badge>
           </div>
 
-          {/* Weekly Sales */}
+          {/* Weekly/Chart Points */}
           <div className="col-span-2 text-right">
-            <span className="font-mono text-sm">{formatNumber(entry.weekly_sales)}</span>
+            <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
           </div>
 
-          {/* Total Sales */}
+          {/* Total */}
           <div className="col-span-2 text-right">
-            <span className="font-mono text-sm">{formatNumber(entry.total_sales)}</span>
+            <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
           </div>
 
           {/* Trend */}
@@ -173,6 +217,7 @@ export default function CountryCharts() {
   const { data: countries = COUNTRIES } = useAvailableCountries();
 
   const realSongsCount = entries.filter((e) => !e.is_fake).length;
+  const currentChartInfo = CHART_TYPES.find(t => t.value === chartType);
 
   return (
     <div className="container mx-auto py-6 space-y-6 px-4">
@@ -237,9 +282,9 @@ export default function CountryCharts() {
             </Select>
           </div>
 
-          {realSongsCount < 50 && (
+          {realSongsCount < 50 && realSongsCount > 0 && (
             <Badge variant="outline" className="text-xs">
-              {realSongsCount} real / {50 - realSongsCount} simulated
+              {realSongsCount} songs charting
             </Badge>
           )}
         </div>
@@ -270,11 +315,11 @@ export default function CountryCharts() {
                   {country} - {genre === "All" ? "All Genres" : genre} - {type.label} Chart
                 </CardTitle>
                 <CardDescription>
-                  Top 50 songs ranked by {type.value === "streaming" ? "streams" : type.value === "combined" ? "total sales & streams" : "sales"}
+                  {type.description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartTable entries={entries} isLoading={isLoading} />
+                <ChartTable entries={entries} isLoading={isLoading} chartType={chartType} />
               </CardContent>
             </Card>
           </TabsContent>
