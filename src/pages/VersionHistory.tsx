@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.475",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed encore move constraint error - updated unique constraint to be per-section (setlist_id, section, position)" },
+    ],
+  },
+  {
     version: "1.0.474",
     date: "2026-01-20",
     changes: [
