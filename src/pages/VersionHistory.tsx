@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.471",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed streaming chart returning empty - removed broken nested Supabase filter, now filters status='recorded' in code" },
+      { type: 'fix', description: "Fixed radio airplay chart - now queries radio_plays table (with listeners column) instead of radio_playlists" },
+      { type: 'fix', description: "Radio chart aggregates individual play events and sums listeners correctly" },
+    ],
+  },
+  {
     version: "1.0.470",
     date: "2026-01-20",
     changes: [
