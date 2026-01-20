@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.472",
+    date: "2026-01-20",
+    changes: [
+      { type: 'feature', description: "Added dedicated Sales Analytics tab with revenue charts, geographic breakdown, and top products" },
+      { type: 'feature', description: "Added Brand Collaboration System - brands can offer partnerships with upfront payments and royalties" },
+      { type: 'feature', description: "Added 6 brand partners across 4 tiers (indie, mainstream, premium, luxury) with varying fame requirements" },
+      { type: 'feature', description: "Added Active Collaborations tracking with sales boost percentages and royalty earnings" },
+      { type: 'feature', description: "Added custom design preview modal for viewing saved t-shirt designs" },
+      { type: 'improvement', description: "Merchandise page now has 5 tabs: Overview, Sales, Add Product, Manage Inventory, Designer" },
+      { type: 'improvement', description: "Sales tab includes time range filters (Today, Week, Month, All Time)" },
+    ],
+  },
+  {
     version: "1.0.471",
     date: "2026-01-20",
     changes: [

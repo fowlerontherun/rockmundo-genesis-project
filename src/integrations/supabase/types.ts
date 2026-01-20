@@ -9663,6 +9663,194 @@ export type Database = {
           },
         ]
       }
+      merch_brand_partners: {
+        Row: {
+          base_upfront_payment: number | null
+          brand_tier: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          min_fame_required: number | null
+          min_fans_required: number | null
+          name: string
+          product_types: string[] | null
+          quality_boost: string | null
+          royalty_percentage: number | null
+          sales_boost_pct: number | null
+        }
+        Insert: {
+          base_upfront_payment?: number | null
+          brand_tier?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          min_fame_required?: number | null
+          min_fans_required?: number | null
+          name: string
+          product_types?: string[] | null
+          quality_boost?: string | null
+          royalty_percentage?: number | null
+          sales_boost_pct?: number | null
+        }
+        Update: {
+          base_upfront_payment?: number | null
+          brand_tier?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          min_fame_required?: number | null
+          min_fans_required?: number | null
+          name?: string
+          product_types?: string[] | null
+          quality_boost?: string | null
+          royalty_percentage?: number | null
+          sales_boost_pct?: number | null
+        }
+        Relationships: []
+      }
+      merch_collaboration_offers: {
+        Row: {
+          band_id: string
+          brand_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          limited_quantity: number | null
+          offer_message: string | null
+          product_type: string
+          responded_at: string | null
+          royalty_per_sale: number | null
+          status: string | null
+          upfront_payment: number
+        }
+        Insert: {
+          band_id: string
+          brand_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          limited_quantity?: number | null
+          offer_message?: string | null
+          product_type: string
+          responded_at?: string | null
+          royalty_per_sale?: number | null
+          status?: string | null
+          upfront_payment: number
+        }
+        Update: {
+          band_id?: string
+          brand_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          limited_quantity?: number | null
+          offer_message?: string | null
+          product_type?: string
+          responded_at?: string | null
+          royalty_per_sale?: number | null
+          status?: string | null
+          upfront_payment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_collaboration_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_collaboration_offers_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "merch_brand_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_collaborations: {
+        Row: {
+          band_id: string
+          brand_id: string
+          ended_at: string | null
+          id: string
+          is_active: boolean | null
+          merchandise_id: string | null
+          offer_id: string | null
+          product_type: string
+          quality_tier: string
+          sales_boost_pct: number | null
+          started_at: string | null
+          total_royalties_earned: number | null
+          total_units_sold: number | null
+        }
+        Insert: {
+          band_id: string
+          brand_id: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          merchandise_id?: string | null
+          offer_id?: string | null
+          product_type: string
+          quality_tier: string
+          sales_boost_pct?: number | null
+          started_at?: string | null
+          total_royalties_earned?: number | null
+          total_units_sold?: number | null
+        }
+        Update: {
+          band_id?: string
+          brand_id?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          merchandise_id?: string | null
+          offer_id?: string | null
+          product_type?: string
+          quality_tier?: string
+          sales_boost_pct?: number | null
+          started_at?: string | null
+          total_royalties_earned?: number | null
+          total_units_sold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_collaborations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_collaborations_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "merch_brand_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_collaborations_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_collaborations_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "merch_collaboration_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merch_factories: {
         Row: {
           city_id: string | null
@@ -12439,10 +12627,12 @@ export type Database = {
         Row: {
           available_until: string | null
           band_id: string
+          collaboration_id: string | null
           cost_to_produce: number
           created_at: string
           custom_design_id: string | null
           design_name: string
+          design_preview_url: string | null
           id: string
           is_limited_edition: boolean | null
           item_type: string
@@ -12457,10 +12647,12 @@ export type Database = {
         Insert: {
           available_until?: string | null
           band_id: string
+          collaboration_id?: string | null
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
           design_name: string
+          design_preview_url?: string | null
           id?: string
           is_limited_edition?: boolean | null
           item_type: string
@@ -12475,10 +12667,12 @@ export type Database = {
         Update: {
           available_until?: string | null
           band_id?: string
+          collaboration_id?: string | null
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
           design_name?: string
+          design_preview_url?: string | null
           id?: string
           is_limited_edition?: boolean | null
           item_type?: string
@@ -12496,6 +12690,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_merchandise_collaboration_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "merch_collaborations"
             referencedColumns: ["id"]
           },
           {
