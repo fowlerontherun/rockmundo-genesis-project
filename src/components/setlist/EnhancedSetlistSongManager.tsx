@@ -119,7 +119,7 @@ const SortableItem = ({
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="font-medium">{index + 1}.</span>
           <span className="font-medium truncate">
-            {isPerformanceItem ? item.performance_items?.name : item.songs?.title || "Unknown"}
+            {isPerformanceItem ? item.performance_items_catalog?.name : item.songs?.title || "Unknown"}
           </span>
           {isPerformanceItem && (
             <Badge variant="secondary" className="text-xs shrink-0">
@@ -136,7 +136,7 @@ const SortableItem = ({
         </div>
         <div className="text-sm text-muted-foreground truncate">
           {isPerformanceItem 
-            ? item.performance_items?.category?.replace('_', ' ')
+            ? item.performance_items_catalog?.item_category?.replace('_', ' ')
             : `${item.songs?.genre} • Quality: ${item.songs?.quality_score || "N/A"}`
           }
         </div>

@@ -26,7 +26,7 @@ export interface SetlistSong {
   notes: string | null;
   created_at: string;
   songs?: any;
-  performance_items?: {
+  performance_items_catalog?: {
     id: string;
     name: string;
     item_category: string;
@@ -78,10 +78,10 @@ export const useSetlistSongs = (setlistId: string | null) => {
             duration_display,
             version
           ),
-          performance_items (
+          performance_items_catalog (
             id,
             name,
-            category
+            item_category
           )
         `)
         .eq("setlist_id", setlistId)
