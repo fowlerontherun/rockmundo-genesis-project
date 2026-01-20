@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Crown, Gift, Search, UserPlus, Trash2, Clock } from "lucide-react";
+import { Crown, Gift, Search, UserPlus, Trash2, Clock, ShoppingCart, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { AdminRoute } from "@/components/AdminRoute";
 
@@ -41,11 +42,41 @@ const VipManagement = () => {
   const [duration, setDuration] = useState("1");
   const [giftMessage, setGiftMessage] = useState("");
 
+  // Fetch VIP sales enabled setting
+  const { data: vipSalesEnabled, isLoading: loadingSetting } = useQuery({
+    queryKey: ["vip-sales-enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "vip_sales_enabled")
+        .single();
+      if (error) return true; // Default to enabled if not found
+      return data?.value === true || data?.value === "true";
+    },
+  });
+
+  // Toggle VIP sales mutation
+  const toggleVipSalesMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase
+        .from("system_settings")
+        .upsert({ key: "vip_sales_enabled", value: enabled, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["vip-sales-enabled"] });
+      toast.success(enabled ? "VIP sales enabled" : "VIP sales paused");
+    },
+    onError: (error) => {
+      toast.error(`Failed to update setting: ${error.message}`);
+    },
+  });
+
   // Fetch all VIP subscriptions with player info
   const { data: vipSubscriptions, isLoading: loadingSubscriptions } = useQuery({
     queryKey: ["admin-vip-subscriptions"],
     queryFn: async () => {
-      // First get all VIP subscriptions
       const { data: subs, error: subsError } = await supabase
         .from("vip_subscriptions")
         .select("*")
@@ -54,14 +85,12 @@ const VipManagement = () => {
       if (subsError) throw subsError;
       if (!subs) return [];
 
-      // Get unique user IDs and fetch their profiles
       const userIds = [...new Set(subs.map(s => s.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, username, display_name")
         .in("user_id", userIds);
 
-      // Map profiles to subscriptions
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
       
       return subs.map(sub => ({
@@ -168,7 +197,33 @@ const VipManagement = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                VIP Sales
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                {loadingSetting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Switch
+                      checked={vipSalesEnabled}
+                      onCheckedChange={(checked) => toggleVipSalesMutation.mutate(checked)}
+                      disabled={toggleVipSalesMutation.isPending}
+                    />
+                    <span className={vipSalesEnabled ? "text-green-500" : "text-destructive"}>
+                      {vipSalesEnabled ? "Enabled" : "Paused"}
+                    </span>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Active VIP Members</CardTitle>

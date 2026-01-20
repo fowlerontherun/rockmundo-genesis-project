@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -15,6 +16,7 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
 import { MUSIC_GENRES } from "@/data/genres";
+import { toast } from "sonner";
 
 interface Tour {
   id: string;
@@ -26,6 +28,7 @@ interface Tour {
   end_date: string;
   total_revenue: number;
   description: string | null;
+  created_at: string;
   band: {
     id: string;
     name: string;
@@ -89,9 +92,73 @@ const TourManager = () => {
     enabled: !!currentBandId,
   });
 
-  const currentTour = myTours.find(t => t.status === 'active');
-  const upcomingTours = myTours.filter(t => t.status === 'scheduled');
+  const queryClient = useQueryClient();
+  
+  // Current tour: status is active OR (scheduled and start_date <= now and end_date >= now)
+  const now = new Date();
+  const currentTours = myTours.filter(t => {
+    if (t.status === 'active') return true;
+    if (t.status === 'scheduled') {
+      const startDate = new Date(t.start_date);
+      const endDate = new Date(t.end_date);
+      return startDate <= now && endDate >= now;
+    }
+    return false;
+  });
+  const upcomingTours = myTours.filter(t => {
+    if (t.status !== 'scheduled') return false;
+    const startDate = new Date(t.start_date);
+    return startDate > now;
+  });
   const historicTours = myTours.filter(t => t.status === 'completed' || t.status === 'cancelled');
+  
+  // Cancel tour mutation
+  const cancelTourMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      const { data: tour, error: fetchError } = await supabase
+        .from("tours")
+        .select("*, bands!tours_band_id_fkey(band_balance)")
+        .eq("id", tourId)
+        .single();
+
+      if (fetchError || !tour) throw new Error("Tour not found");
+
+      const createdAt = new Date(tour.created_at);
+      const isSameDay = createdAt.toDateString() === now.toDateString();
+      const refundAmount = isSameDay ? (tour.total_upfront_cost || 0) : 0;
+
+      await supabase.from("gigs").delete().eq("tour_id", tourId);
+      await supabase.from("tour_venues").delete().eq("tour_id", tourId);
+      await supabase.from("tour_travel_legs").delete().eq("tour_id", tourId);
+
+      if (refundAmount > 0 && tour.band_id) {
+        const currentBalance = tour.bands?.band_balance || 0;
+        await supabase
+          .from("bands")
+          .update({ band_balance: currentBalance + refundAmount })
+          .eq("id", tour.band_id);
+      }
+
+      const { error: deleteError } = await supabase.from("tours").delete().eq("id", tourId);
+      if (deleteError) throw deleteError;
+
+      return { refundAmount, isSameDay };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["my-tours"] });
+      queryClient.invalidateQueries({ queryKey: ["tour-venues"] });
+      setDetailsOpen(false);
+      setSelectedTour(null);
+      toast.success(
+        result.refundAmount > 0 
+          ? `Tour cancelled! Full refund of $${result.refundAmount.toLocaleString()} applied.`
+          : "Tour cancelled. No refund available after booking day."
+      );
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to cancel tour: ${error.message}`);
+    },
+  });
 
   // Fetch other bands' tours with filtering and pagination
   const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
@@ -365,7 +432,7 @@ const TourManager = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : !currentTour ? (
+          ) : currentTours.length === 0 ? (
             <EmptyState
               icon={MapPin}
               title="No Active Tour"
@@ -378,7 +445,11 @@ const TourManager = () => {
               }
             />
           ) : (
-            <TourCard tour={currentTour} />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {currentTours.map((tour) => (
+                <TourCard key={tour.id} tour={tour} />
+              ))}
+            </div>
           )}
         </TabsContent>
 
@@ -681,7 +752,7 @@ const TourManager = () => {
                           <p className="text-xs text-muted-foreground">Total Capacity</p>
                         </div>
                         <div>
-                          <p className="text-2xl font-bold text-green-500">
+                          <p className="text-2xl font-bold text-accent-foreground">
                             ${tourVenues.reduce((sum, tv) => sum + (tv.revenue || 0), 0).toLocaleString()}
                           </p>
                           <p className="text-xs text-muted-foreground">Revenue</p>
@@ -689,6 +760,44 @@ const TourManager = () => {
                       </div>
                     </CardContent>
                   </Card>
+                )}
+
+                {/* Cancel Tour Button - only for own tours */}
+                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-full">
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Cancel Tour
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently cancel "{selectedTour.name}" and delete all associated gigs and travel legs.
+                          {new Date(selectedTour.created_at).toDateString() === new Date().toDateString() 
+                            ? " Since this tour was booked today, you'll receive a full refund."
+                            : " No refund is available after the booking day."}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Tour</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => cancelTourMutation.mutate(selectedTour.id)}
+                          disabled={cancelTourMutation.isPending}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {cancelTourMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Yes, Cancel Tour
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             </ScrollArea>
