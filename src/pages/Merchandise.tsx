@@ -28,7 +28,11 @@ import {
   ClipboardList,
   Sparkles,
   Shirt,
+  TrendingUp,
 } from "lucide-react";
+import { SalesAnalyticsTab } from "@/components/merchandise/SalesAnalyticsTab";
+import { CollaborationOffersCard } from "@/components/merchandise/CollaborationOffersCard";
+import { ActiveCollaborationsCard } from "@/components/merchandise/ActiveCollaborationsCard";
 import type { LucideIcon } from "lucide-react";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -180,7 +184,7 @@ const statusVariants: Record<MerchandiseStatus, "default" | "secondary" | "destr
 };
 
 type TabConfig = {
-  value: "overview" | "add-product" | "manage-product" | "designer";
+  value: "overview" | "sales" | "add-product" | "manage-product" | "designer";
   label: string;
   description: string;
   icon: LucideIcon;
@@ -192,6 +196,12 @@ const TAB_CONFIG: TabConfig[] = [
     label: "Overview",
     description: "Performance & alerts",
     icon: BarChart3,
+  },
+  {
+    value: "sales",
+    label: "Sales",
+    description: "Revenue & analytics",
+    icon: TrendingUp,
   },
   {
     value: "add-product",
@@ -685,7 +695,7 @@ const Merchandise = () => {
         className="space-y-6"
       >
         {/* Mobile Tabs - Icons with short labels */}
-        <TabsList className="grid w-full grid-cols-4 gap-1 rounded-xl bg-muted/40 p-1 md:hidden">
+        <TabsList className="grid w-full grid-cols-5 gap-1 rounded-xl bg-muted/40 p-1 md:hidden">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -702,7 +712,7 @@ const Merchandise = () => {
         </TabsList>
 
         {/* Desktop Tabs - Full labels */}
-        <TabsList className="hidden w-full grid-cols-4 gap-2 rounded-xl bg-muted/40 p-1 md:grid">
+        <TabsList className="hidden w-full grid-cols-5 gap-2 rounded-xl bg-muted/40 p-1 md:grid">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -934,8 +944,26 @@ const Merchandise = () => {
                   ))}
                 </CardContent>
               </Card>
+
+              {/* Brand Collaborations */}
+              <CollaborationOffersCard bandId={bandId} />
+              <ActiveCollaborationsCard bandId={bandId} />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Analytics</CardTitle>
+              <CardDescription>
+                Track merchandise revenue, top products, and sales performance across channels.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SalesAnalyticsTab bandId={bandId} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="add-product">
