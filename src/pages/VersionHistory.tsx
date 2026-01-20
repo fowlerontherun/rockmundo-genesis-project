@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.469",
+    date: "2026-01-20",
+    changes: [
+      { type: 'feature', description: "VIP Payment System: Stripe integration with Monthly ($4.99), Quarterly ($12.49), and Annual ($39.99) plans" },
+      { type: 'feature', description: "New /vip-subscribe page with pricing cards, feature list, and checkout flow" },
+      { type: 'feature', description: "VIP days remaining now visible next to VipBadge (e.g., '14d')" },
+      { type: 'feature', description: "VipStatusCard component for Dashboard showing subscription details and progress" },
+      { type: 'feature', description: "Stripe Customer Portal for subscription management" },
+      { type: 'improvement', description: "VipGate now redirects to /vip-subscribe instead of skin store" },
+    ],
+  },
+  {
     version: "1.0.468",
     date: "2026-01-20",
     changes: [

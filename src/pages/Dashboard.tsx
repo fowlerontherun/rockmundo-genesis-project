@@ -22,6 +22,7 @@ import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
 import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
+import { VipStatusCard } from "@/components/VipStatusCard";
 
 // Advisor imports
 import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
@@ -304,7 +305,9 @@ const Dashboard = () => {
             />
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* VIP Status Card */}
+            <VipStatusCard />
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>{t('dashboard.profileInfo', 'Profile Information')}</CardTitle>
