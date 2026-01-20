@@ -75,7 +75,8 @@ export const useSetlistSongs = (setlistId: string | null) => {
             genre,
             quality_score,
             duration_seconds,
-            duration_display
+            duration_display,
+            version
           ),
           performance_items (
             id,
@@ -84,12 +85,15 @@ export const useSetlistSongs = (setlistId: string | null) => {
           )
         `)
         .eq("setlist_id", setlistId)
+        .order("section")
         .order("position");
 
       if (error) throw error;
       return data;
     },
     enabled: !!setlistId,
+    staleTime: 30 * 1000, // 30 seconds
+    placeholderData: (prev) => prev, // Keep previous data while refetching to avoid UI blink
   });
 };
 
@@ -217,35 +221,35 @@ export const useAddSongToSetlist = () => {
     mutationFn: async ({
       setlistId,
       songId,
-      position,
       notes,
       section = 'main',
       itemType = 'song',
     }: {
       setlistId: string;
       songId: string;
-      position: number;
+      position?: number; // Optional - we calculate from DB
       notes?: string;
       section?: string;
       itemType?: string;
     }) => {
-      // Query the actual max position from database to avoid conflicts
+      // Query max position for this section only to avoid conflicts
       const { data: maxPositionData } = await supabase
         .from("setlist_songs")
         .select("position")
         .eq("setlist_id", setlistId)
+        .eq("section", section)
         .order("position", { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      const actualNextPosition = Math.floor((maxPositionData?.position || 0) + 1);
+      const nextPosition = (maxPositionData?.position || 0) + 1;
       
       const { data, error } = await supabase
         .from("setlist_songs")
         .insert({
           setlist_id: setlistId,
           song_id: songId,
-          position: actualNextPosition,
+          position: nextPosition,
           notes,
           section,
           item_type: itemType,
@@ -253,7 +257,13 @@ export const useAddSongToSetlist = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Handle duplicate constraint specifically
+        if (error.code === '23505') {
+          throw new Error("This song is already in the setlist");
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: (_, variables) => {
@@ -267,7 +277,7 @@ export const useAddSongToSetlist = () => {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to add song: " + error.message,
+        description: error.message || "Failed to add song",
         variant: "destructive",
       });
     },
@@ -322,16 +332,22 @@ export const useReorderSetlistSongs = () => {
       songUpdates,
     }: {
       setlistId: string;
-      songUpdates: { id: string; position: number }[];
+      songUpdates: { id: string; position: number; section?: string }[];
     }) => {
-      const promises = songUpdates.map(({ id, position }) =>
-        supabase.from("setlist_songs").update({ position: Math.floor(position) }).eq("id", id)
-      );
+      // Use atomic RPC function to avoid unique constraint collisions
+      const { error } = await supabase.rpc('reorder_setlist_items', {
+        p_setlist_id: setlistId,
+        p_updates: songUpdates.map(u => ({
+          id: u.id,
+          position: Math.floor(u.position),
+          section: u.section || null
+        }))
+      });
 
-      const results = await Promise.all(promises);
-      const errors = results.filter((r) => r.error);
-
-      if (errors.length > 0) throw new Error("Failed to reorder songs");
+      if (error) {
+        console.error('Reorder error:', error);
+        throw new Error("Failed to reorder songs");
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", variables.setlistId] });

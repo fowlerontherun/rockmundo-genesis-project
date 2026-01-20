@@ -250,15 +250,17 @@ export const EnhancedSetlistSongManager = ({
         throw new Error('Maximum 5 performance items per setlist');
       }
       
+      // Get max position for main section only
       const { data: maxPositionData } = await supabase
         .from("setlist_songs")
         .select("position")
         .eq("setlist_id", setlistId)
+        .eq("section", "main")
         .order("position", { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      const nextPosition = Math.floor((maxPositionData?.position || 0) + 1);
+      const nextPosition = (maxPositionData?.position || 0) + 1;
       
       const { error } = await supabase
         .from("setlist_songs")
@@ -289,15 +291,17 @@ export const EnhancedSetlistSongManager = ({
 
   const moveToEncoreMutation = useMutation({
     mutationFn: async ({ setlistSongId }: { setlistSongId: string; itemType: string }) => {
+      // Get max position for encore section only (per-section numbering)
       const { data: maxPositionData } = await supabase
         .from("setlist_songs")
         .select("position")
         .eq("setlist_id", setlistId)
+        .eq("section", "encore")
         .order("position", { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      const nextPosition = Math.floor((maxPositionData?.position || 0) + 1);
+      const nextPosition = (maxPositionData?.position || 0) + 1;
 
       const { error } = await supabase
         .from("setlist_songs")
@@ -325,15 +329,17 @@ export const EnhancedSetlistSongManager = ({
 
   const moveToMainMutation = useMutation({
     mutationFn: async ({ setlistSongId }: { setlistSongId: string }) => {
+      // Get max position for main section only (per-section numbering)
       const { data: maxPositionData } = await supabase
         .from("setlist_songs")
         .select("position")
         .eq("setlist_id", setlistId)
+        .eq("section", "main")
         .order("position", { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      const nextPosition = Math.floor((maxPositionData?.position || 0) + 1);
+      const nextPosition = (maxPositionData?.position || 0) + 1;
 
       const { error } = await supabase
         .from("setlist_songs")
@@ -426,18 +432,16 @@ export const EnhancedSetlistSongManager = ({
   const handleAddSong = useCallback(() => {
     if (!selectedSongId) return;
 
-    const maxPos = Math.max(0, ...(setlistSongs?.map(s => s.position || 0) || []));
-    
+    // Let the mutation handle position calculation (per-section)
     addSongMutation.mutate({
       setlistId,
       songId: selectedSongId,
-      position: maxPos + 1,
       section: 'main',
       itemType: 'song',
     });
     
     setSelectedSongId("");
-  }, [selectedSongId, setlistSongs, setlistId, addSongMutation]);
+  }, [selectedSongId, setlistId, addSongMutation]);
 
   const handleRemoveSong = useCallback((setlistSongId: string) => {
     removeSongMutation.mutate({ setlistId, setlistSongId });
@@ -464,9 +468,11 @@ export const EnhancedSetlistSongManager = ({
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const reorderedItems = arrayMove(items, oldIndex, newIndex);
+      // Per-section positions (1..N within each section) - no offset needed
       const updates = reorderedItems.map((item, index) => ({
         id: item.id,
-        position: index + 1 + (section === 'encore' ? 1000 : 0), // Offset encore positions
+        position: index + 1,
+        section: section,
       }));
 
       reorderMutation.mutate({ setlistId, songUpdates: updates });
@@ -477,9 +483,11 @@ export const EnhancedSetlistSongManager = ({
     if (index === 0) return;
     const items = section === 'main' ? mainSetlist : encoreSetlist;
     const reorderedItems = arrayMove(items, index, index - 1);
+    // Per-section positions - no offset
     const updates = reorderedItems.map((item, idx) => ({
       id: item.id,
-      position: idx + 1 + (section === 'encore' ? 1000 : 0),
+      position: idx + 1,
+      section: section,
     }));
     reorderMutation.mutate({ setlistId, songUpdates: updates });
   }, [mainSetlist, encoreSetlist, setlistId, reorderMutation]);
@@ -488,9 +496,11 @@ export const EnhancedSetlistSongManager = ({
     const items = section === 'main' ? mainSetlist : encoreSetlist;
     if (index >= items.length - 1) return;
     const reorderedItems = arrayMove(items, index, index + 1);
+    // Per-section positions - no offset
     const updates = reorderedItems.map((item, idx) => ({
       id: item.id,
-      position: idx + 1 + (section === 'encore' ? 1000 : 0),
+      position: idx + 1,
+      section: section,
     }));
     reorderMutation.mutate({ setlistId, songUpdates: updates });
   }, [mainSetlist, encoreSetlist, setlistId, reorderMutation]);

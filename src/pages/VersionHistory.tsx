@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.463",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Setlist reordering now uses atomic database transaction (RPC) to prevent unique constraint collisions" },
+      { type: 'fix', description: "Position logic now uses per-section numbering (main: 1-N, encore: 1-N) instead of global offsets" },
+      { type: 'fix', description: "Adding songs to setlist now reliably inserts with correct position per-section" },
+      { type: 'fix', description: "Move to encore/main now correctly calculates next position within target section" },
+      { type: 'improvement', description: "Setlist songs query now keeps previous data while refetching to prevent UI blinking" },
+      { type: 'improvement', description: "Better error messages for duplicate song constraint violations" },
+    ],
+  },
+  {
     version: "1.0.462",
     date: "2026-01-20",
     changes: [
