@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.461",
+    date: "2026-01-20",
+    changes: [
+      { type: 'feature', description: "Cron jobs configured: complete-self-promotions (every 10 min), simulate-merch-sales (daily 6 AM), trigger-random-events (every 2 hours)" },
+    ],
+  },
+  {
     version: "1.0.460",
     date: "2026-01-19",
     changes: [
