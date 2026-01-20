@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle, Calendar } from "lucide-react";
 import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, ChartTimeRange, getMetricLabels } from "@/hooks/useCountryCharts";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { ChartHistoryDialog } from "@/components/charts/ChartHistoryDialog";
@@ -57,8 +58,15 @@ interface ChartTableProps {
   chartType: ChartType;
 }
 
-const ChartTable = ({ entries, isLoading, chartType }: ChartTableProps) => {
-  const labels = getMetricLabels(chartType);
+interface ChartTableProps {
+  entries: ChartEntry[];
+  isLoading: boolean;
+  chartType: ChartType;
+  timeRange: ChartTimeRange;
+}
+
+const ChartTable = ({ entries, isLoading, chartType, timeRange }: ChartTableProps) => {
+  const labels = getMetricLabels(chartType, timeRange);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   
   if (isLoading) {
@@ -359,7 +367,7 @@ export default function CountryCharts() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartTable entries={entries} isLoading={isLoading} chartType={chartType} />
+                <ChartTable entries={entries} isLoading={isLoading} chartType={chartType} timeRange={timeRange} />
               </CardContent>
             </Card>
           </TabsContent>

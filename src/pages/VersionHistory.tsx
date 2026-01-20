@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.470",
+    date: "2026-01-20",
+    changes: [
+      { type: 'fix', description: "Fixed streaming chart showing blank - corrected column references (song_release_id, daily_streams) in update-music-charts" },
+      { type: 'fix', description: "Fixed song status filter from 'released' to 'recorded' in chart generation" },
+      { type: 'fix', description: "Time range filters (This Week/Month/Year) now properly aggregate data across multiple chart dates" },
+      { type: 'feature', description: "Country-specific charts now generated from listener_region data in streaming analytics" },
+      { type: 'improvement', description: "Chart column headers now show dynamic time range labels (Today, This Week, This Month, This Year)" },
+    ],
+  },
+  {
     version: "1.0.469",
     date: "2026-01-20",
     changes: [
