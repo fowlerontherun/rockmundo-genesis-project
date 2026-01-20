@@ -223,6 +223,8 @@ const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const Prison = lazyWithRetry(() => import("./pages/Prison"));
 const VersionHistory = lazyWithRetry(() => import("./pages/VersionHistory"));
+const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
+const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -262,6 +264,8 @@ function App() {
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
+                    <Route path="vip-subscribe" element={<VipSubscribe />} />
+                    <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
                     <Route path="band/repertoire" element={<BandRepertoire />} />

@@ -55,7 +55,7 @@ export const VipGate = ({
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           {showUpgradeButton && (
             <Button
-              onClick={() => navigate("/skin-store")}
+              onClick={() => navigate("/vip-subscribe")}
               className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
             >
               <Crown className="h-4 w-4 mr-2" />
