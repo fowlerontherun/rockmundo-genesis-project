@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.477",
+    date: "2026-01-21",
+    changes: [
+      { type: 'fix', description: "Fixed mentor focus_skill mappings to use valid skill definition slugs" },
+      { type: 'fix', description: "Added missing skill definitions for orphan education skills (vocals, guitar, bass, drums, etc.)" },
+      { type: 'feature', description: "Skill Tree now shows compact list view with education source badges (university, book, video, mentor)" },
+      { type: 'feature', description: "Added filter modes: Learned, Education, All, Unlearned for easier skill browsing" },
+      { type: 'feature', description: "Skills gained from education (YouTube, Books, University, Mentors) now properly display in skill hierarchy" },
+      { type: 'improvement', description: "Skill Tree now has scrollable container (500px max) for better viewing of large skill lists" },
+      { type: 'improvement', description: "Category filtering improved with pattern matching instead of exact string matching" },
+      { type: 'improvement', description: "Added skill counts per category for quick overview" },
+    ],
+  },
+  {
     version: "1.0.476",
     date: "2026-01-20",
     changes: [
