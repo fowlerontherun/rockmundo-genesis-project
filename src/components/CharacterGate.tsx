@@ -54,7 +54,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage p-6">
         <Alert variant="destructive" className="max-w-lg">
           <AlertTitle>Unable to load your profile</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{typeof error === 'string' ? error : 'An unexpected error occurred'}</AlertDescription>
           <div className="mt-4 flex gap-2">
             <Button onClick={() => refetch()} variant="secondary">Retry</Button>
             <Button onClick={() => navigate("/my-character/edit")}>Open character</Button>
