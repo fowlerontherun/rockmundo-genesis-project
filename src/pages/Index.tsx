@@ -46,7 +46,7 @@ const Index = () => {
           <Alert variant="destructive" className="text-left">
             <AlertCircle className="h-5 w-5" />
             <AlertTitle>We couldn&apos;t load your profile</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{typeof error === 'string' ? error : 'An unexpected error occurred'}</AlertDescription>
           </Alert>
           <Button onClick={() => navigate("/my-character/edit")}>Open character</Button>
         </div>
