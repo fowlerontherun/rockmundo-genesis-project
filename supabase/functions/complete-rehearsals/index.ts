@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
             rehearsalStage = 'practicing'
           }
 
-          await supabase
+          const { error: familiarityError } = await supabase
             .from('band_song_familiarity')
             .upsert(
               {
@@ -202,6 +202,12 @@ Deno.serve(async (req) => {
                 onConflict: 'band_id,song_id',
               }
             )
+
+          if (familiarityError) {
+            console.error(`[complete-rehearsals] Error updating familiarity for song ${songId}:`, familiarityError)
+          } else {
+            console.log(`[complete-rehearsals] Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} mins (${rehearsalStage})`)
+          }
 
           // Update song_rehearsals table for tracking
           const { data: existingRehearsal } = await supabase
