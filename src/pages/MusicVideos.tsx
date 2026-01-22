@@ -113,45 +113,69 @@ const MusicVideos = () => {
   const [videoBudget, setVideoBudget] = useState("5000");
   const [videoStyle, setVideoStyle] = useState("standard");
 
-  // Fetch user's released songs
+  // Fetch user's recorded songs (from releases OR directly recorded)
   const { data: releasedSongs = [] } = useQuery({
-    queryKey: ["released-songs-for-videos", profile?.id],
+    queryKey: ["songs-for-videos", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
-      const { data: userReleases, error: releasesError } = await supabase
+      
+      // First get user's band IDs
+      const { data: userBands } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("user_id", profile.id)
+        .eq("member_status", "active");
+      
+      const bandIds = userBands?.map(b => b.band_id) || [];
+      
+      // Get all recorded songs from user's bands
+      const { data: recordedSongs, error: songsError } = await supabase
+        .from("songs")
+        .select("id, title, band_id, status")
+        .in("band_id", bandIds.length > 0 ? bandIds : ['none'])
+        .eq("status", "recorded");
+      
+      if (songsError) {
+        console.error("Error fetching recorded songs:", songsError);
+        return [];
+      }
+      
+      // Also get songs from released releases as fallback
+      const { data: userReleases } = await supabase
         .from("releases")
         .select("id, title")
         .eq("user_id", profile.id)
         .eq("release_status", "released");
-      if (releasesError) throw releasesError;
-      if (!userReleases || userReleases.length === 0) return [];
 
-      const releaseIds = userReleases.map((r) => r.id);
-      const { data: releaseSongs, error: rsError } = await supabase
-        .from("release_songs")
-        .select("song_id, release_id")
-        .in("release_id", releaseIds);
-      if (rsError) throw rsError;
-      if (!releaseSongs || releaseSongs.length === 0) return [];
-
-      const songIds = [...new Set(releaseSongs.map((rs) => rs.song_id))];
-      const { data: songs, error: songsError } = await supabase
-        .from("songs")
-        .select("id, title")
-        .in("id", songIds);
-      if (songsError) throw songsError;
-
-      return (
-        songs?.map((song: any) => {
-          const rs = releaseSongs.find((rs) => rs.song_id === song.id);
-          const release = userReleases.find((r) => r.id === rs?.release_id);
-          return {
-            ...song,
-            release_id: rs?.release_id,
-            release_title: release?.title,
-          };
-        }) || []
-      );
+      const releaseIds = userReleases?.map((r) => r.id) || [];
+      
+      let releasedSongIds: string[] = [];
+      if (releaseIds.length > 0) {
+        const { data: releaseSongs } = await supabase
+          .from("release_songs")
+          .select("song_id, release_id")
+          .in("release_id", releaseIds);
+        releasedSongIds = releaseSongs?.map(rs => rs.song_id) || [];
+      }
+      
+      // Combine both sources - recorded songs take priority
+      const allSongs = recordedSongs || [];
+      const songMap = new Map<string, any>();
+      
+      for (const song of allSongs) {
+        const releaseId = releasedSongIds.includes(song.id) 
+          ? releaseIds.find(rId => true) // Find matching release
+          : null;
+        const release = userReleases?.find(r => r.id === releaseId);
+        
+        songMap.set(song.id, {
+          ...song,
+          release_id: releaseId,
+          release_title: release?.title || "Unreleased",
+        });
+      }
+      
+      return Array.from(songMap.values());
     },
     enabled: !!profile?.id,
   });

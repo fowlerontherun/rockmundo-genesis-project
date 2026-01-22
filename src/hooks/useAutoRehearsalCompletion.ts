@@ -211,11 +211,14 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
           description: `${completedCount} rehearsal(s) finished. Song familiarity and chemistry updated!`,
         });
 
-        // Invalidate queries
+        // Invalidate queries to refresh UI immediately
         queryClient.invalidateQueries({ queryKey: ['all-rehearsals'] });
         queryClient.invalidateQueries({ queryKey: ['band-rehearsals'] });
         queryClient.invalidateQueries({ queryKey: ['band-song-familiarity'] });
         queryClient.invalidateQueries({ queryKey: ['user-bands'] });
+        queryClient.invalidateQueries({ queryKey: ['songs'] });
+        queryClient.invalidateQueries({ queryKey: ['band-songs'] });
+        queryClient.invalidateQueries({ queryKey: ['setlist-songs'] });
       }
     } catch (err) {
       console.error('Error in auto-complete rehearsals:', err);

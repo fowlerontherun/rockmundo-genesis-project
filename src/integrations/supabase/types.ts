@@ -13285,6 +13285,7 @@ export type Database = {
           scheduled_departure_time: string | null
           status: string | null
           to_city_id: string
+          tour_leg_id: string | null
           transport_type: string
           travel_duration_hours: number
           user_id: string
@@ -13300,6 +13301,7 @@ export type Database = {
           scheduled_departure_time?: string | null
           status?: string | null
           to_city_id: string
+          tour_leg_id?: string | null
           transport_type: string
           travel_duration_hours: number
           user_id: string
@@ -13315,6 +13317,7 @@ export type Database = {
           scheduled_departure_time?: string | null
           status?: string | null
           to_city_id?: string
+          tour_leg_id?: string | null
           transport_type?: string
           travel_duration_hours?: number
           user_id?: string
@@ -13346,6 +13349,13 @@ export type Database = {
             columns: ["to_city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_travel_history_tour_leg_id_fkey"
+            columns: ["tour_leg_id"]
+            isOneToOne: false
+            referencedRelation: "tour_travel_legs"
             referencedColumns: ["id"]
           },
         ]

@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.478",
+    date: "2026-01-22",
+    changes: [
+      { type: 'fix', description: "Fixed rehearsal song familiarity not updating - added error logging and improved cache invalidation" },
+      { type: 'fix', description: "Fixed Music Videos page not detecting recorded songs - now shows all recorded songs, not just from released albums" },
+      { type: 'feature', description: "Added process-tour-travel edge function to automatically move band members during tours" },
+      { type: 'fix', description: "Tour travel now creates player_travel_history entries for band members with 'travels_with_band' enabled" },
+      { type: 'improvement', description: "Rehearsal completion now invalidates more query keys for immediate UI refresh" },
+    ],
+  },
+  {
     version: "1.0.477",
     date: "2026-01-21",
     changes: [
