@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.479",
+    date: "2026-01-22",
+    changes: [
+      { type: 'feature', description: "Added Admin Debug Panel for troubleshooting player issues" },
+      { type: 'feature', description: "Debug Panel shows recent edge function executions with success/failure status" },
+      { type: 'feature', description: "Debug Panel includes player lookup to view game state (bands, rehearsals, travel, familiarity)" },
+      { type: 'feature', description: "Debug Panel shows database stats overview (players, bands, scheduled activities)" },
+      { type: 'feature', description: "Errors tab shows all failed edge function runs with error details" },
+    ],
+  },
+  {
     version: "1.0.478",
     date: "2026-01-22",
     changes: [
