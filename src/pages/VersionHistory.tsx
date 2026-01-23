@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.497",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Company Admin: Full edit dialog for company name, balance, status, and bankruptcy flag" },
+      { type: 'feature', description: "Company Admin: Quick fund injection buttons (+$50k, +$100k, +$500k)" },
+      { type: 'feature', description: "Company Admin: Financial Overview tab with daily payroll and operating costs" },
+      { type: 'feature', description: "Company Admin: Subsidiary quick links to Security Firms, Factories, Logistics, Labels" },
+      { type: 'feature', description: "Company Admin: Clear bankruptcy and inject funds actions for bankrupt companies" },
+    ],
+  },
+  {
     version: "1.0.496",
     date: "2026-01-23",
     changes: [

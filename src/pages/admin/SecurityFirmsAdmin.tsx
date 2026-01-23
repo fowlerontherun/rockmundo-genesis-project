@@ -257,7 +257,7 @@ const SecurityFirmsAdmin = () => {
                       <TableCell>{guard.firm?.name || "Unknown"}</TableCell>
                       <TableCell>{guard.skill_level}</TableCell>
                       <TableCell>{guard.experience_years} years</TableCell>
-                      <TableCell>${guard.daily_salary?.toLocaleString()}/day</TableCell>
+                      <TableCell>${(guard as any).salary_per_event?.toLocaleString() || 0}/event</TableCell>
                       <TableCell>
                         <Badge variant={guard.status === "active" ? "default" : "secondary"}>
                           {guard.status}
