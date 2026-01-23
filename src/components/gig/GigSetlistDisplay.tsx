@@ -131,7 +131,7 @@ export const GigSetlistDisplay = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        ) : canChange && eligibleSetlists.length > 1 ? (
+        ) : canChange && eligibleSetlists.length >= 1 ? (
           <Button
             variant="ghost"
             size="sm"

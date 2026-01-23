@@ -209,6 +209,9 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
 
   if (!venue) return null;
 
+  // Ticket operator is mandatory for venues 200+ capacity
+  const operatorRequired = canUseTicketOperator && !selectedOperatorId;
+  
   const isConfirmDisabled =
     !hasEligibleSetlists ||
     !selectedSetlistId ||
@@ -216,7 +219,8 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     ticketPrice <= 0 ||
     isBooking ||
     bandLockout.isLocked ||
-    durationValidation?.valid === false;
+    durationValidation?.valid === false ||
+    operatorRequired;
 
   return (
     <Dialog open onOpenChange={onClose}>

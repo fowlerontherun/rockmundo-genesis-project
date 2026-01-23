@@ -21104,6 +21104,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_company_owned: boolean | null
+          is_legendary: boolean | null
           lighting_rating: number | null
           location: string | null
           min_security_guards: number | null
@@ -21148,6 +21149,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_company_owned?: boolean | null
+          is_legendary?: boolean | null
           lighting_rating?: number | null
           location?: string | null
           min_security_guards?: number | null
@@ -21192,6 +21194,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_company_owned?: boolean | null
+          is_legendary?: boolean | null
           lighting_rating?: number | null
           location?: string | null
           min_security_guards?: number | null
