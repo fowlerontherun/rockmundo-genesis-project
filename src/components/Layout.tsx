@@ -65,7 +65,7 @@ const Layout = () => {
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden">
       <Navigation />
-      <main className="flex-1 lg:ml-64 pt-12 pb-14 lg:pt-0 lg:pb-0 overflow-x-hidden max-w-full">
+      <main className="flex-1 pt-12 pb-20 lg:pt-16 lg:pb-20 overflow-x-hidden max-w-full">
         <div className="p-3 md:p-4 max-w-full overflow-x-hidden">
           {profileError && (
             <Alert variant="destructive" className="mb-4 max-w-2xl">

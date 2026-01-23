@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.489",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Dashboard redesigned with sub-tabs: Quick Stats, Career, Finances, Location" },
+      { type: 'feature', description: "Unified navigation - desktop now uses bottom nav bar matching mobile experience" },
+      { type: 'improvement', description: "Dashboard overview shows band summary, upcoming events, weekly earnings" },
+      { type: 'improvement', description: "Better color contrast and visibility using semantic design tokens" },
+      { type: 'improvement', description: "Removed sidebar on desktop - maximized content area" },
+    ],
+  },
+  {
     version: "1.0.488",
     date: "2026-01-23",
     changes: [
