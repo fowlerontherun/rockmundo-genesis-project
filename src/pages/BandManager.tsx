@@ -19,7 +19,6 @@ import { BandEarnings } from '@/components/band/BandEarnings';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
-import { BandSongGifts } from '@/components/band/BandSongGifts';
 import { BandSongsTab } from '@/components/band/BandSongsTab';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
@@ -309,7 +308,6 @@ export default function BandManager() {
             bandName={selectedBand.name}
             onBandUpdate={() => loadBandDetails(selectedBand.id)}
           />
-          <BandSongGifts bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="fame" className="space-y-4">
