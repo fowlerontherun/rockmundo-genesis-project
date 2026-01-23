@@ -912,6 +912,7 @@ export type Database = {
           created_at: string | null
           dedicated_fans: number | null
           fame: number | null
+          has_performed: boolean | null
           id: string
           last_activity_date: string | null
           superfans: number | null
@@ -925,6 +926,7 @@ export type Database = {
           created_at?: string | null
           dedicated_fans?: number | null
           fame?: number | null
+          has_performed?: boolean | null
           id?: string
           last_activity_date?: string | null
           superfans?: number | null
@@ -938,6 +940,7 @@ export type Database = {
           created_at?: string | null
           dedicated_fans?: number | null
           fame?: number | null
+          has_performed?: boolean | null
           id?: string
           last_activity_date?: string | null
           superfans?: number | null
@@ -3731,6 +3734,30 @@ export type Database = {
           },
         ]
       }
+      country_adjacency: {
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          neighbor: string
+          spillover_rate: number | null
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          id?: string
+          neighbor: string
+          spillover_rate?: number | null
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          neighbor?: string
+          spillover_rate?: number | null
+        }
+        Relationships: []
+      }
       crew_catalog: {
         Row: {
           assignment: string
@@ -6137,6 +6164,7 @@ export type Database = {
           total_costs: number
           total_revenue: number
           total_xp_awarded: number | null
+          tout_attendance_reduction: number | null
           venue_capacity: number | null
           venue_cost: number
           venue_id: string | null
@@ -6182,6 +6210,7 @@ export type Database = {
           total_costs?: number
           total_revenue?: number
           total_xp_awarded?: number | null
+          tout_attendance_reduction?: number | null
           venue_capacity?: number | null
           venue_cost?: number
           venue_id?: string | null
@@ -6227,6 +6256,7 @@ export type Database = {
           total_costs?: number
           total_revenue?: number
           total_xp_awarded?: number | null
+          tout_attendance_reduction?: number | null
           venue_capacity?: number | null
           venue_cost?: number
           venue_id?: string | null
@@ -6529,10 +6559,12 @@ export type Database = {
           fan_gain: number | null
           id: string
           last_ticket_update: string | null
+          original_ticket_price: number | null
           payment: number | null
           performance_calculation: Json | null
           pre_gig_forecast: Json | null
           predicted_tickets: number | null
+          price_adjusted_at: string | null
           promoter_id: string | null
           rider_id: string | null
           scheduled_date: string
@@ -6546,6 +6578,7 @@ export type Database = {
           slot_type: string | null
           started_at: string | null
           status: string | null
+          ticket_operator_id: string | null
           ticket_price: number | null
           tickets_sold: number | null
           time_slot: string | null
@@ -6567,10 +6600,12 @@ export type Database = {
           fan_gain?: number | null
           id?: string
           last_ticket_update?: string | null
+          original_ticket_price?: number | null
           payment?: number | null
           performance_calculation?: Json | null
           pre_gig_forecast?: Json | null
           predicted_tickets?: number | null
+          price_adjusted_at?: string | null
           promoter_id?: string | null
           rider_id?: string | null
           scheduled_date: string
@@ -6584,6 +6619,7 @@ export type Database = {
           slot_type?: string | null
           started_at?: string | null
           status?: string | null
+          ticket_operator_id?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
           time_slot?: string | null
@@ -6605,10 +6641,12 @@ export type Database = {
           fan_gain?: number | null
           id?: string
           last_ticket_update?: string | null
+          original_ticket_price?: number | null
           payment?: number | null
           performance_calculation?: Json | null
           pre_gig_forecast?: Json | null
           predicted_tickets?: number | null
+          price_adjusted_at?: string | null
           promoter_id?: string | null
           rider_id?: string | null
           scheduled_date?: string
@@ -6622,6 +6660,7 @@ export type Database = {
           slot_type?: string | null
           started_at?: string | null
           status?: string | null
+          ticket_operator_id?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
           time_slot?: string | null
@@ -19145,6 +19184,7 @@ export type Database = {
           support_band_id: string | null
           support_revenue_share: number | null
           target_show_count: number | null
+          ticket_operator_id: string | null
           total_accommodation_cost: number | null
           total_revenue: number | null
           total_travel_cost: number | null
@@ -19187,6 +19227,7 @@ export type Database = {
           support_band_id?: string | null
           support_revenue_share?: number | null
           target_show_count?: number | null
+          ticket_operator_id?: string | null
           total_accommodation_cost?: number | null
           total_revenue?: number | null
           total_travel_cost?: number | null
@@ -19229,6 +19270,7 @@ export type Database = {
           support_band_id?: string | null
           support_revenue_share?: number | null
           target_show_count?: number | null
+          ticket_operator_id?: string | null
           total_accommodation_cost?: number | null
           total_revenue?: number | null
           total_travel_cost?: number | null
