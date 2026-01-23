@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
+import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
 
 interface UnderworldProduct {
   id: string;
@@ -44,6 +45,27 @@ interface CryptoToken {
 const UnderworldAdmin = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Build grouped skill options from skill tree
+  const skillOptions = useMemo(() => {
+    const grouped: Record<string, { slug: string; name: string }[]> = {};
+    
+    SKILL_TREE_DEFINITIONS.forEach(def => {
+      const category = (def.metadata?.category as string) || 'Other';
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push({
+        slug: def.slug,
+        name: def.display_name
+      });
+    });
+    
+    return Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([category, skills]) => ({
+        category,
+        skills: skills.sort((a, b) => a.name.localeCompare(b.name))
+      }));
+  }, []);
   const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
   const [editTokenDialogOpen, setEditTokenDialogOpen] = useState(false);
   const [editingToken, setEditingToken] = useState<CryptoToken | null>(null);
@@ -662,14 +684,32 @@ const UnderworldAdmin = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Skill Slug</Label>
-                        <Input
-                          value={newProduct.effects.skill_slug}
-                          onChange={(e) => setNewProduct({
+                        <Select
+                          value={newProduct.effects.skill_slug as string || ""}
+                          onValueChange={(v) => setNewProduct({
                             ...newProduct,
-                            effects: { ...newProduct.effects, skill_slug: e.target.value }
+                            effects: { ...newProduct.effects, skill_slug: v === "__none__" ? "" : v }
                           })}
-                          placeholder="e.g., guitar_speed"
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a skill..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <SelectItem value="__none__">None</SelectItem>
+                            {skillOptions.map(group => (
+                              <React.Fragment key={group.category}>
+                                <SelectItem disabled value={`__group_${group.category}`} className="font-semibold text-muted-foreground">
+                                  ── {group.category} ──
+                                </SelectItem>
+                                {group.skills.map(skill => (
+                                  <SelectItem key={skill.slug} value={skill.slug}>
+                                    {skill.name}
+                                  </SelectItem>
+                                ))}
+                              </React.Fragment>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Skill XP Amount</Label>
