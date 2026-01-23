@@ -225,8 +225,9 @@ const Navigation = () => {
 
   const mobileShortcuts = [
     { icon: Home, labelKey: "nav.home", path: "/dashboard" },
-    { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
-    { icon: Music, labelKey: "nav.music", path: "/music-hub" },
+    { icon: Music, labelKey: "nav.music", path: "/songwriting" },
+    { icon: Users, labelKey: "nav.band", path: "/band" },
+    { icon: Calendar, labelKey: "nav.schedule", path: "/gigs" },
   ];
 
   const handleLogout = async () => {
@@ -367,24 +368,48 @@ const Navigation = () => {
 
   return (
     <>
-      {/* Mobile Header with Hamburger */}
+      {/* Mobile Header - Consolidated Single Row */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-        <VersionHeader />
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-3 py-2 h-12">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="icon" 
-                className="h-10 w-10 border-primary/50 hover:bg-primary/10"
+                className="h-9 w-9"
                 aria-label={t('nav.openMenu')}
               >
-                <Menu className="h-6 w-6 text-primary" />
+                <Menu className="h-5 w-5 text-primary" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-80 p-0 bg-sidebar">
               <div className="flex flex-col h-full">
+                {/* Mobile menu footer with utilities */}
+                <div className="p-4 border-b border-sidebar-border/50 flex items-center justify-between">
+                  <img 
+                    src={logo} 
+                    alt="RockMundo" 
+                    className="h-10 w-auto object-contain"
+                  />
+                  <div className="flex items-center gap-1">
+                    <ThemeSwitcher />
+                    <LanguageSwitcher />
+                  </div>
+                </div>
                 <NavigationContent isMobile={true} />
+                {/* Mobile menu footer */}
+                <div className="p-3 border-t border-sidebar-border/50 flex items-center justify-between">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => { navigate('/version-history'); setIsOpen(false); }}
+                  >
+                    <History className="h-4 w-4 mr-1" />
+                    v1.0.481
+                  </Button>
+                  <HowToPlayDialog />
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -392,24 +417,13 @@ const Navigation = () => {
           <img 
             src={logo} 
             alt="RockMundo" 
-            className="h-8 w-auto object-contain"
+            className="h-7 w-auto object-contain"
           />
           
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
-            <ThemeSwitcher />
-            <LanguageSwitcher />
-            <Button 
-              variant="outline" 
-              size="icon" 
-              title="Version History"
-              onClick={() => navigate('/version-history')}
-            >
-              <History className="h-5 w-5" />
-            </Button>
-            <HowToPlayDialog />
           </div>
         </div>
       </div>
@@ -448,37 +462,38 @@ const Navigation = () => {
         <NavigationContent collapsed={isDesktopCollapsed} />
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg">
-        <div className="flex justify-around items-center py-2">
+      {/* Mobile Bottom Navigation - 5 Tabs Icon Only */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg safe-area-bottom">
+        <div className="flex justify-around items-center py-1.5 px-1">
           {mobileShortcuts.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item.path);
             return (
               <Button
                 key={item.path}
                 variant="ghost"
                 size="sm"
-                className={`flex flex-col gap-1 h-12 px-2 ${
-                  isActive(item.path)
-                    ? "text-primary"
+                className={`flex flex-col gap-0.5 h-11 px-3 min-w-0 ${
+                  active
+                    ? "text-primary bg-primary/10"
                     : "text-muted-foreground"
                 }`}
                 onClick={() => handleNavigation(item.path)}
-                aria-current={isActive(item.path) ? "page" : undefined}
+                aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4" />
-                <span className="text-xs font-oswald">{t(item.labelKey)}</span>
+                <Icon className={`h-5 w-5 ${active ? 'scale-110' : ''} transition-transform`} />
+                <span className="text-[10px] font-oswald truncate">{t(item.labelKey)}</span>
               </Button>
             );
           })}
           <Button
             variant="ghost"
             size="sm"
-            className="flex flex-col gap-1 h-12 px-2 text-muted-foreground"
+            className="flex flex-col gap-0.5 h-11 px-3 min-w-0 text-muted-foreground"
             onClick={() => setIsOpen(true)}
           >
-            <Menu className="h-4 w-4" />
-            <span className="text-xs font-oswald">{t('nav.more')}</span>
+            <Menu className="h-5 w-5" />
+            <span className="text-[10px] font-oswald">{t('nav.more')}</span>
           </Button>
         </div>
       </div>
