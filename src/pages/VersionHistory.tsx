@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.487",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Ticket price adjuster now available directly on PerformGig page for scheduled gigs with poor sales" },
+      { type: 'improvement', description: "PerformGig page now fetches band fame and fan data for price adjustment calculations" },
+    ],
+  },
+  {
     version: "1.0.486",
     date: "2026-01-23",
     changes: [
