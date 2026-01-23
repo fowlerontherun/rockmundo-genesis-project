@@ -2025,6 +2025,7 @@ export type Database = {
           fame: number | null
           fame_multiplier: number | null
           genre: string | null
+          genre_last_changed_at: string | null
           global_fame: number | null
           hiatus_ends_at: string | null
           hiatus_notification_sent: boolean | null
@@ -2045,7 +2046,9 @@ export type Database = {
           next_leadership_vote: string | null
           performance_count: number | null
           popularity: number | null
+          primary_genre: string | null
           regional_fame: Json | null
+          secondary_genres: string[] | null
           sound_description: string | null
           status: Database["public"]["Enums"]["band_status"]
           superfans: number | null
@@ -2068,6 +2071,7 @@ export type Database = {
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
+          genre_last_changed_at?: string | null
           global_fame?: number | null
           hiatus_ends_at?: string | null
           hiatus_notification_sent?: boolean | null
@@ -2088,7 +2092,9 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          primary_genre?: string | null
           regional_fame?: Json | null
+          secondary_genres?: string[] | null
           sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
           superfans?: number | null
@@ -2111,6 +2117,7 @@ export type Database = {
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
+          genre_last_changed_at?: string | null
           global_fame?: number | null
           hiatus_ends_at?: string | null
           hiatus_notification_sent?: boolean | null
@@ -2131,7 +2138,9 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          primary_genre?: string | null
           regional_fame?: Json | null
+          secondary_genres?: string[] | null
           sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
           superfans?: number | null
