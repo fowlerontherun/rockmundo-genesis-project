@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.495",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Underworld Admin: Added to admin navigation under Economy & Resources" },
+      { type: 'feature', description: "Underworld Admin: Full edit/delete functionality for crypto tokens" },
+      { type: 'feature', description: "Underworld Admin: Simulate Prices button randomizes all token prices ±10%" },
+      { type: 'feature', description: "Underworld Admin: New Analytics tab with purchase history, revenue, and active boosts" },
+      { type: 'feature', description: "Underworld Admin: Token transaction history view" },
+    ],
+  },
+  {
     version: "1.0.494",
     date: "2026-01-23",
     changes: [
