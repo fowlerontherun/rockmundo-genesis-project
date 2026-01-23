@@ -115,15 +115,15 @@ const MusicVideos = () => {
 
   // Fetch user's recorded songs (from releases OR directly recorded)
   const { data: releasedSongs = [], isLoading: songsLoading } = useQuery({
-    queryKey: ["songs-for-videos", profile?.id],
+    queryKey: ["songs-for-videos", profile?.user_id],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!profile?.user_id) return [];
       
       // First get user's band IDs - don't filter by member_status to include all bands
       const { data: userBands, error: bandsError } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", profile.id);
+        .eq("user_id", profile.user_id);
       
       if (bandsError) {
         console.error("Error fetching user bands:", bandsError);
@@ -153,7 +153,7 @@ const MusicVideos = () => {
       const { data: userOwnedSongs, error: userSongsError } = await supabase
         .from("songs")
         .select("id, title, band_id, status")
-        .eq("user_id", profile.id)
+        .eq("user_id", profile.user_id)
         .eq("status", "recorded");
       
       if (userSongsError) {
@@ -187,20 +187,20 @@ const MusicVideos = () => {
       const { data: userReleases } = await supabase
         .from("releases")
         .select("id, title")
-        .eq("user_id", profile.id)
+        .eq("user_id", profile.user_id)
         .eq("release_status", "released");
 
       if (userReleases && userReleases.length > 0) {
         const releaseIds = userReleases.map((r) => r.id);
         const { data: releaseSongs } = await supabase
           .from("release_songs")
-          .select("song_id, songs(id, title, band_id, status)")
+          .select("song_id, release_id, songs(id, title, band_id, status)")
           .in("release_id", releaseIds);
         
         for (const rs of (releaseSongs || [])) {
           const song = rs.songs as any;
           if (song && !songMap.has(song.id)) {
-            const release = userReleases.find(r => r.id === rs.song_id);
+            const release = userReleases.find(r => r.id === (rs as any).release_id);
             songMap.set(song.id, {
               ...song,
               release_id: release?.id || null,
@@ -214,7 +214,7 @@ const MusicVideos = () => {
       console.log("🎬 Music Video - Total available songs:", result.length);
       return result;
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.user_id,
   });
 
   // Fetch music videos with song audio data

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.502",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Music Videos: Fixed critical bug where no recorded songs were found - was using wrong profile ID field" },
+      { type: 'fix', description: "Music Videos: Fixed release song lookup to correctly match by release_id" },
+      { type: 'fix', description: "Music Videos: Songs with 'recorded' status now properly appear in the video creation dialog" },
+      { type: 'feature', description: "Companies: Added quick 'Finance' button to company cards for easier deposit/withdraw access" },
+    ],
+  },
+  {
     version: "1.0.501",
     date: "2026-01-23",
     changes: [
