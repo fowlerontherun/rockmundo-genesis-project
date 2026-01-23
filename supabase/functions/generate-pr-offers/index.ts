@@ -97,11 +97,11 @@ serve(async (req) => {
     });
 
     // Get bands to process (either specific band or all active bands)
+    // No minimum fame requirement - local media outlets exist for 0 fame bands
     let bandsQuery = supabaseClient
       .from('bands')
       .select('id, leader_id, fame, total_fans')
-      .eq('status', 'active')
-      .gte('fame', 50);
+      .eq('status', 'active');
 
     if (payload?.bandId) {
       bandsQuery = bandsQuery.eq('id', payload.bandId);
