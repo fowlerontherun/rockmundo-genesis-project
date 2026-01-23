@@ -1,245 +1,169 @@
 
-# Company & Subsidiary System Overhaul
+# Music Video System Complete Fix + Company Deposits Access
 
-## Version: 1.0.501
+## Version: 1.0.502
 
 ## Overview
-This comprehensive update fixes critical issues with the company system and adds essential business management features. The company empire system will become a fully functional business simulation.
+This update fixes critical bugs in the music video system preventing song detection and ensures the full video pipeline works end-to-end. Additionally, it improves access to company deposit/withdraw functionality.
 
 ---
 
-## Current Problems
+## Issues Identified
 
-| Issue | Impact |
-|-------|--------|
-| Creating subsidiaries doesn't create the actual business entities | Security firms, factories, logistics companies don't exist in their respective tables |
-| No creation costs | Companies are free to create, no economic impact |
-| Companies start with $0 | No initial capital means immediate bankruptcy risk |
-| No deposit/withdraw funds | Owners can't manage company finances |
-| No tax system | Missing realistic business costs |
-| Navigation confusion | "Manage" goes to generic detail page, not specialized management |
+### Music Videos - Critical Bugs
+
+| Bug | Location | Root Cause |
+|-----|----------|------------|
+| "No Recorded Songs Found" always shows | `MusicVideos.tsx:126` | Using `profile.id` (profiles table PK) instead of `profile.user_id` (auth user id) when querying `band_members` table |
+| Solo songs not found | `MusicVideos.tsx:156` | Same issue - `songs.user_id` expects auth user id, not profile table id |
+| Releases not found | `MusicVideos.tsx:190` | Same issue - `releases.user_id` expects auth user id |
+| Wrong release lookup | `MusicVideos.tsx:203` | Code matches `release.id === rs.song_id` but should be matching via `release_id` from `release_songs` table |
+
+### Company Deposits - Accessibility
+The deposit/withdraw functionality exists but is buried in the CompanyDetail page's Finances tab. Users need clearer access points.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Fix Subsidiary Creation (Critical)
+### Phase 1: Fix Music Video Song Detection (Critical)
 
-**Problem**: When creating a company of type `security`, `factory`, or `logistics`, only a `companies` table record is created. No corresponding record is created in `security_firms`, `merch_factories`, or `logistics_companies`.
+**File: `src/pages/MusicVideos.tsx`**
 
-**Solution**: Create a database trigger OR modify `useCreateCompany` hook to automatically create the subsidiary entity after the company is created.
+Fix all occurrences of `profile.id` to use `profile.user_id`:
 
-**Database Migration**:
-- Add trigger function `create_subsidiary_entity()` that fires AFTER INSERT on `companies`
-- When `company_type = 'security'` → insert into `security_firms`
-- When `company_type = 'factory'` → insert into `merch_factories`  
-- When `company_type = 'logistics'` → insert into `logistics_companies`
+1. **Line 126**: Change band_members query
+   ```typescript
+   // BEFORE
+   .eq("user_id", profile.id)
+   
+   // AFTER
+   .eq("user_id", profile.user_id)
+   ```
 
-**Alternatively (Code-based)**: Modify `useCreateCompany` in `src/hooks/useCompanies.ts`:
-```tsx
-onSuccess: async (data) => {
-  // Create the subsidiary entity based on type
-  if (data.company_type === 'security') {
-    await supabase.from('security_firms').insert({
-      company_id: data.id,
-      name: data.name + ' Security Division'
-    });
-  } else if (data.company_type === 'factory') {
-    await supabase.from('merch_factories').insert({
-      company_id: data.id,
-      name: data.name + ' Manufacturing',
-      city_id: data.headquarters_city_id
-    });
-  } else if (data.company_type === 'logistics') {
-    await supabase.from('logistics_companies').insert({
-      company_id: data.id,
-      name: data.name + ' Logistics'
-    });
-  }
-}
+2. **Line 156**: Change user-owned songs query
+   ```typescript
+   // BEFORE
+   .eq("user_id", profile.id)
+   
+   // AFTER
+   .eq("user_id", profile.user_id)
+   ```
+
+3. **Line 190**: Change releases query
+   ```typescript
+   // BEFORE
+   .eq("user_id", profile.id)
+   
+   // AFTER  
+   .eq("user_id", profile.user_id)
+   ```
+
+4. **Line 197**: Include `release_id` in the select statement
+   ```typescript
+   // BEFORE
+   .select("song_id, songs(id, title, band_id, status)")
+   
+   // AFTER
+   .select("song_id, release_id, songs(id, title, band_id, status)")
+   ```
+
+5. **Line 203**: Fix release lookup logic
+   ```typescript
+   // BEFORE
+   const release = userReleases.find(r => r.id === rs.song_id);
+   
+   // AFTER
+   const release = userReleases.find(r => r.id === rs.release_id);
+   ```
+
+6. **Line 217**: Update enabled condition
+   ```typescript
+   // BEFORE
+   enabled: !!profile?.id
+   
+   // AFTER
+   enabled: !!profile?.user_id
+   ```
+
+### Phase 2: Verify Video Production & View Simulation
+
+The edge functions `complete-video-production` and `simulate-video-views` are correctly implemented. They:
+- Run on cron schedules to process videos
+- Transition videos from "production" → "released" based on budget-time calculation
+- Simulate daily views with viral chances
+- Credit earnings to player cash and band balance
+- Update hype scores and fame
+
+**Verification needed**: Check if cron jobs are scheduled in the database. If not, ensure they're registered.
+
+### Phase 3: Improve Company Finance Access
+
+**Add quick-access finance button to CompanyCard:**
+
+Update `src/components/company/CompanyCard.tsx` to add a "Finance" quick-action button alongside "Manage":
+
+```typescript
+<Button 
+  variant="outline" 
+  size="sm" 
+  onClick={(e) => {
+    e.stopPropagation();
+    setFinanceDialogOpen(true);
+  }}
+>
+  <Wallet className="h-4 w-4 mr-1" />
+  Finance
+</Button>
 ```
 
-### Phase 2: Creation Costs & Initial Capital
-
-**Add creation costs by company type**:
-
-| Company Type | Creation Cost | Starting Balance |
-|--------------|---------------|------------------|
-| Holding Company | $100,000 | $500,000 |
-| Record Label | $75,000 | $250,000 |
-| Security Firm | $50,000 | $100,000 |
-| Merch Factory | $150,000 | $200,000 |
-| Logistics Company | $100,000 | $150,000 |
-| Venue | $200,000 | $300,000 |
-| Rehearsal Studio | $75,000 | $100,000 |
-
-**Files to modify**:
-- `src/types/company.ts` - Add `COMPANY_CREATION_COSTS` constant
-- `src/hooks/useCompanies.ts` - Deduct from player cash, set initial balance
-- `src/components/company/CreateCompanyDialog.tsx` - Show cost, validate player has funds
-
-### Phase 3: Fund Management (Deposit/Withdraw)
-
-**Create new component**: `src/components/company/CompanyFinanceDialog.tsx`
-
-Pattern follows `LabelFinanceDialog.tsx`:
-- Deposit: Transfer from personal cash → company balance
-- Withdraw: Transfer from company balance → personal cash (minimum balance requirement)
-- Transaction logging to `company_transactions`
-
-**Add to CompanyDetail.tsx finances tab**:
-- Current balance display
-- Deposit/withdraw forms
-- Recent transactions list
-- Projected costs breakdown
-
-### Phase 4: Monthly Tax System
-
-**Create database table**: `company_tax_records`
-```sql
-CREATE TABLE company_tax_records (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID REFERENCES companies(id) NOT NULL,
-  tax_period TEXT NOT NULL, -- 'YYYY-MM' format
-  gross_revenue NUMERIC DEFAULT 0,
-  deductible_expenses NUMERIC DEFAULT 0,
-  taxable_income NUMERIC DEFAULT 0,
-  tax_rate NUMERIC DEFAULT 0.15, -- 15% default corporate tax
-  tax_amount NUMERIC NOT NULL,
-  status TEXT DEFAULT 'pending', -- pending, paid, overdue
-  due_date TIMESTAMPTZ NOT NULL,
-  paid_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-**Create edge function**: `supabase/functions/process-company-taxes/index.ts`
-- Run monthly (1st of each month)
-- Calculate taxable income from transactions
-- Apply progressive tax rate based on profit
-- Create tax record with due date (7 days)
-- Auto-deduct if `auto_pay_taxes` is enabled in settings
-- Send overdue notifications
-
-**Tax Rate Structure**:
-| Monthly Profit | Tax Rate |
-|----------------|----------|
-| $0 - $10,000 | 10% |
-| $10,001 - $50,000 | 15% |
-| $50,001 - $100,000 | 20% |
-| $100,001+ | 25% |
-
-### Phase 5: Enhanced Navigation
-
-**Update CompanyCard.tsx**: Smart navigation based on company type
-```tsx
-const getManageRoute = (company: Company) => {
-  switch (company.company_type) {
-    case 'security':
-      return `/security-firm/${company.id}`;
-    case 'factory':
-      return `/merch-factory/${company.id}`;
-    case 'logistics':
-      return `/logistics-company/${company.id}`;
-    case 'venue':
-      return `/venue-business/${company.id}`;
-    case 'rehearsal':
-      return `/rehearsal-studio-business/${company.id}`;
-    default:
-      return `/company/${company.id}`;
-  }
-};
-```
-
-**Fix subsidiary management pages** to look up by `company_id` not direct ID:
-- `SecurityFirmManagement.tsx` - Uses companyId correctly
-- `MerchFactoryManagement.tsx` - Uses factoryId (needs fix)
-- `LogisticsCompanyManagement.tsx` - Uses companyId correctly
-
-### Phase 6: UI Enhancements
-
-**CompanyDetail.tsx Finances Tab**:
-- Replace placeholder with actual finance management
-- Add CompanyFinanceDialog for deposits/withdrawals
-- Show tax obligations and payment history
-- Display weekly/monthly cost projections
-
-**CreateCompanyDialog.tsx**:
-- Show creation cost prominently
-- Show player's available cash
-- Disable creation if insufficient funds
-- Add initial capital preview
+Import and render `CompanyFinanceDialog` in the card component.
 
 ---
 
-## Technical Implementation
-
-### Database Changes
-
-**Migration: Create tax table and add company settings columns**
-```sql
--- Tax records table
-CREATE TABLE IF NOT EXISTS company_tax_records (...);
-
--- Add auto_pay_taxes to company_settings
-ALTER TABLE company_settings 
-ADD COLUMN IF NOT EXISTS auto_pay_taxes BOOLEAN DEFAULT true;
-
--- Create trigger for subsidiary entity creation
-CREATE OR REPLACE FUNCTION create_subsidiary_entity()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.company_type = 'security' THEN
-    INSERT INTO security_firms (company_id, name)
-    VALUES (NEW.id, NEW.name || ' Security');
-  ELSIF NEW.company_type = 'factory' THEN
-    INSERT INTO merch_factories (company_id, name, city_id)
-    VALUES (NEW.id, NEW.name || ' Manufacturing', NEW.headquarters_city_id);
-  ELSIF NEW.company_type = 'logistics' THEN
-    INSERT INTO logistics_companies (company_id, name)
-    VALUES (NEW.id, NEW.name || ' Logistics');
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER after_company_insert
-AFTER INSERT ON companies
-FOR EACH ROW
-EXECUTE FUNCTION create_subsidiary_entity();
-```
-
-### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/company/CompanyFinanceDialog.tsx` | Deposit/withdraw funds |
-| `src/components/company/CompanyTaxOverview.tsx` | Tax obligations display |
-| `src/hooks/useCompanyFinance.ts` | Finance operations hooks |
-| `supabase/functions/process-company-taxes/index.ts` | Monthly tax processing |
-
-### Files to Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/types/company.ts` | Add `COMPANY_CREATION_COSTS`, tax types |
-| `src/hooks/useCompanies.ts` | Add creation cost logic, initial balance |
-| `src/components/company/CreateCompanyDialog.tsx` | Show costs, validate funds |
-| `src/components/company/CompanyCard.tsx` | Smart navigation by type |
-| `src/pages/CompanyDetail.tsx` | Real finances tab with operations |
-| `src/pages/MerchFactoryManagement.tsx` | Fix to use company_id lookup |
-| `src/components/VersionHeader.tsx` | Update to v1.0.501 |
-| `src/pages/VersionHistory.tsx` | Add changelog |
+| `src/pages/MusicVideos.tsx` | Fix 6 instances of profile.id → profile.user_id, fix release_id lookup |
+| `src/components/company/CompanyCard.tsx` | Add inline finance dialog access |
+| `src/components/VersionHeader.tsx` | Update to v1.0.502 |
+| `src/pages/VersionHistory.tsx` | Add changelog entry |
+
+---
+
+## Technical Details
+
+### Profile ID vs User ID Distinction
+
+The `profiles` table has two important ID fields:
+- `id` (UUID): Primary key of the profiles table - used for internal table relationships
+- `user_id` (UUID): Foreign key to `auth.users` - this is the user's authentication ID
+
+Most game-related tables (`band_members`, `songs`, `releases`, `activity_feed`) use `user_id` to link to users, NOT `profiles.id`.
+
+When using `useGameData()`:
+- `profile.id` = profiles table primary key (rarely needed)
+- `profile.user_id` = auth user id (used for most queries)
+
+### Video Production Timeline
+
+| Budget | Production Time |
+|--------|-----------------|
+| $50,000+ | 6 hours |
+| $25,000+ | 12 hours |
+| $10,000+ | 24 hours |
+| $5,000+ | 36 hours |
+| < $5,000 | 48 hours |
+
+Videos automatically transition to "released" status when production time elapses.
 
 ---
 
 ## Version History Entry
 
-**v1.0.501**
-- Companies: Creating subsidiaries now automatically creates the actual business entity (security firm, factory, logistics)
-- Companies: Added creation costs and initial starting capital by company type
-- Companies: Added deposit/withdraw funds functionality for company owners
-- Companies: Introduced monthly tax billing system with progressive rates
-- Companies: Smart navigation - "Manage" now goes to the correct specialized management page
-- Companies: Fixed merch factory management to properly lookup by company_id
-- UI: Enhanced finances tab with real fund management and tax overview
+**v1.0.502**
+- Music Videos: Fixed critical bug where no recorded songs were found - was using wrong profile ID field
+- Music Videos: Fixed release song lookup to correctly match by release_id
+- Music Videos: Songs with "recorded" status now properly appear in the video creation dialog
+- Companies: Added quick "Finance" button to company cards for easier deposit/withdraw access
