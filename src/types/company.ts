@@ -1,6 +1,17 @@
 // Company System Types - Phase 1 & 2
 
-export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'venue' | 'rehearsal';
+export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'venue' | 'rehearsal' | 'logistics';
+
+// Company creation costs and starting balances
+export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number }> = {
+  holding: { creationCost: 100_000, startingBalance: 500_000 },
+  label: { creationCost: 75_000, startingBalance: 250_000 },
+  security: { creationCost: 50_000, startingBalance: 100_000 },
+  factory: { creationCost: 150_000, startingBalance: 200_000 },
+  logistics: { creationCost: 100_000, startingBalance: 150_000 },
+  venue: { creationCost: 200_000, startingBalance: 300_000 },
+  rehearsal: { creationCost: 75_000, startingBalance: 100_000 },
+};
 export type CompanyStatus = 'active' | 'suspended' | 'bankrupt' | 'dissolved';
 export type EmployeeRole = 'ceo' | 'manager' | 'accountant' | 'security_guard' | 'technician' | 'producer' | 'promoter' | 'receptionist';
 export type EmployeeStatus = 'active' | 'on_leave' | 'terminated';
@@ -135,6 +146,12 @@ export const COMPANY_TYPE_INFO: Record<CompanyType, { label: string; icon: strin
     icon: 'Factory',
     description: 'Manufacture merchandise for bands and artists',
     color: 'text-orange-500',
+  },
+  logistics: {
+    label: 'Logistics Company',
+    icon: 'Truck',
+    description: 'Transport equipment and merchandise',
+    color: 'text-cyan-500',
   },
   venue: {
     label: 'Venue',
