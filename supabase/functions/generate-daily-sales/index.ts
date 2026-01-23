@@ -50,7 +50,7 @@ serve(async (req) => {
         band_id,
         user_id,
         release_type,
-        bands(fame, popularity, chemistry_level),
+        bands(fame, popularity, chemistry_level, home_country),
         release_formats(id, format_type, retail_price, quantity),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
@@ -88,6 +88,17 @@ serve(async (req) => {
     const marketMultiplier = Math.max(1, Math.min(5, 100 / Math.max(activeBandCount || 100, 20)));
     console.log(`Market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
+    // Helper function to calculate regional sales multiplier
+    function calculateRegionalSalesMultiplier(countryFame: number, hasPerformed: boolean, globalFame: number): number {
+      // Base multiplier from country fame (0.5x to 2x)
+      const countryBase = 0.5 + (countryFame / 10000) * 1.5;
+      // Bonus for having performed in the country
+      const performedBonus = hasPerformed ? 1.2 : 1.0;
+      // Global fame provides a floor (never go below 0.3x of what global fame would give)
+      const globalFloor = 0.3 + (globalFame / 10000) * 0.7;
+      return Math.max(countryBase * performedBonus, globalFloor);
+    }
+
     for (const release of releases || []) {
       try {
         releasesProcessed += 1;
@@ -98,6 +109,31 @@ serve(async (req) => {
 
         const artistFame = release.bands?.[0]?.fame || profile?.fame || 0;
         const artistPopularity = release.bands?.[0]?.popularity || profile?.popularity || 0;
+        const homeCountry = (release.bands?.[0] as any)?.home_country || 'United States';
+
+        // Fetch regional fame data for bands
+        let regionalMultiplier = 1.0;
+        if (release.band_id) {
+          const { data: countryFans } = await supabaseClient
+            .from("band_country_fans")
+            .select("fame, has_performed, total_fans")
+            .eq("band_id", release.band_id);
+          
+          if (countryFans && countryFans.length > 0) {
+            // Calculate weighted global fame
+            const totalFans = countryFans.reduce((sum, cf) => sum + (cf.total_fans || 0), 0);
+            const globalFame = totalFans > 0 
+              ? countryFans.reduce((sum, cf) => sum + (cf.fame || 0) * (cf.total_fans || 0), 0) / totalFans
+              : artistFame;
+            
+            // Use home country fame for base sales calculation
+            const homeCountryData = countryFans.find(cf => true); // Default to first entry
+            const countryFame = homeCountryData?.fame || artistFame;
+            const hasPerformed = homeCountryData?.has_performed || false;
+            
+            regionalMultiplier = calculateRegionalSalesMultiplier(countryFame, hasPerformed, globalFame);
+          }
+        }
 
         const avgQuality =
           (release.release_songs?.reduce(
@@ -135,7 +171,7 @@ serve(async (req) => {
           }
 
           const calculatedSales = Math.floor(
-            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier
+            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier
           );
 
           // For digital, no stock limit. For physical, cap at available stock
