@@ -16,7 +16,8 @@ import { TicketPricingSlider } from './TicketPricingSlider';
 import { StageSetupPicker } from './StageSetupPicker';
 import { SupportArtistPicker } from './SupportArtistPicker';
 import { TourBudgetSummary } from './TourBudgetSummary';
-import { Calendar, MapPin, Music, Bus, Plane, Check, Lock, AlertCircle } from 'lucide-react';
+import { TicketOperatorSelector } from '@/components/gig/TicketOperatorSelector';
+import { Calendar, MapPin, Music, Bus, Plane, Check, Lock, AlertCircle, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TourWizardProps {
@@ -235,15 +236,32 @@ export function TourWizard({ bandId, onComplete, onCancel }: TourWizardProps) {
 
         {/* Step 4: Tickets */}
         {wizard.currentStep === 4 && (
-          <TicketPricingSlider
-            value={wizard.state.customTicketPrice}
-            onChange={(price) => wizard.updateState({ customTicketPrice: price })}
-            recommendedPrice={wizard.recommendedTicketPrice}
-            bandFame={wizard.band?.fame || 0}
-            averageCapacity={wizard.venueMatches.length > 0 
-              ? wizard.venueMatches.reduce((sum, v) => sum + v.capacity, 0) / wizard.venueMatches.length 
-              : 500}
-          />
+          <div className="space-y-6">
+            <TicketPricingSlider
+              value={wizard.state.customTicketPrice}
+              onChange={(price) => wizard.updateState({ customTicketPrice: price })}
+              recommendedPrice={wizard.recommendedTicketPrice}
+              bandFame={wizard.band?.fame || 0}
+              averageCapacity={wizard.venueMatches.length > 0 
+                ? wizard.venueMatches.reduce((sum, v) => sum + v.capacity, 0) / wizard.venueMatches.length 
+                : 500}
+            />
+            
+            {/* Ticket Operator Selection for medium+ venues */}
+            {wizard.venueMatches.length > 0 && (
+              <div className="pt-4 border-t">
+                <div className="flex items-center gap-2 mb-4">
+                  <Ticket className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-medium">Ticket Operator</Label>
+                </div>
+                <TicketOperatorSelector
+                  venueCapacity={Math.max(...wizard.venueMatches.map(v => v.capacity))}
+                  selectedOperatorId={wizard.state.ticketOperatorId || null}
+                  onSelectOperator={(operatorId) => wizard.updateState({ ticketOperatorId: operatorId })}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {/* Step 5: Stage Setup */}

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle, ListMusic } from "lucide-react";
+import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle, ListMusic, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -16,6 +16,7 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
 import { MUSIC_GENRES } from "@/data/genres";
+import { getBandFameTitle } from "@/utils/bandFame";
 import { toast } from "sonner";
 
 interface Tour {
@@ -316,10 +317,10 @@ const TourManager = () => {
             <CardDescription className="flex items-center gap-1 mt-1">
               <Music className="h-3 w-3" />
               {tour.band?.name || 'Unknown Band'}
-              {showBandInfo && tour.band?.fame && (
+              {showBandInfo && tour.band?.fame !== null && tour.band?.fame !== undefined && (
                 <Badge variant="outline" className="ml-2 text-xs">
-                  <Star className="h-3 w-3 mr-1" />
-                  {tour.band.fame.toLocaleString()}
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  {getBandFameTitle(tour.band.fame)}
                 </Badge>
               )}
             </CardDescription>
