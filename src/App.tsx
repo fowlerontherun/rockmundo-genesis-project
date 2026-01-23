@@ -123,6 +123,9 @@ const VenueBusinessManagement = lazyWithRetry(() => import("./pages/VenueBusines
 const RehearsalStudioBusinessManagement = lazyWithRetry(() => import("./pages/RehearsalStudioBusinessManagement"));
 const RecordingStudioBusinessManagement = lazyWithRetry(() => import("./pages/RecordingStudioBusinessManagement"));
 const CompanyAdmin = lazyWithRetry(() => import("./pages/admin/CompanyAdmin"));
+const SecurityFirmsAdmin = lazyWithRetry(() => import("./pages/admin/SecurityFirmsAdmin"));
+const MerchFactoriesAdmin = lazyWithRetry(() => import("./pages/admin/MerchFactoriesAdmin"));
+const LogisticsCompaniesAdmin = lazyWithRetry(() => import("./pages/admin/LogisticsCompaniesAdmin"));
 
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
@@ -437,6 +440,9 @@ function App() {
                     <Route path="admin/tutorials" element={<TutorialsAdmin />} />
                     <Route path="admin/vip" element={<VipManagement />} />
                     <Route path="admin/companies" element={<CompanyAdmin />} />
+                    <Route path="admin/security-firms" element={<SecurityFirmsAdmin />} />
+                    <Route path="admin/merch-factories" element={<MerchFactoriesAdmin />} />
+                    <Route path="admin/logistics-companies" element={<LogisticsCompaniesAdmin />} />
                     <Route path="admin/skin-collections" element={<SkinCollectionsAdmin />} />
                     <Route path="admin/skin-collections/:collectionId/items" element={<CollectionItemsAdmin />} />
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />

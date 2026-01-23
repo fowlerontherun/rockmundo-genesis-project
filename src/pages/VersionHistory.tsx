@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.496",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Security Firms Admin: Global management of all security firms, guards, and contracts" },
+      { type: 'feature', description: "Merch Factories Admin: Global management of all factories, workers, production queues, and product catalogs" },
+      { type: 'feature', description: "Logistics Companies Admin: Global management of all logistics companies, fleet vehicles, drivers, and contracts" },
+      { type: 'improvement', description: "Admin Navigation: Added subsidiary admin pages under System & Configuration" },
+    ],
+  },
+  {
     version: "1.0.495",
     date: "2026-01-23",
     changes: [
