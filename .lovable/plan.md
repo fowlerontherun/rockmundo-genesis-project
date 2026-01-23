@@ -1,151 +1,348 @@
 
-# Underworld & Company Admin Enhancement Plan
+# Underworld Admin Skill Dropdown & Recording Studio Booking Update
+
+## Version: 1.0.498
 
 ## Overview
-This plan addresses gaps in admin management for the Underworld and Company systems, ensuring admins can fully edit and control underworld products, crypto tokens, and company subsidiaries.
-
-## Phase 1: Complete Underworld Admin Features (v1.0.495)
-
-### 1.1 Add Underworld Admin to Navigation
-- **File**: `src/components/admin/AdminNav.tsx`
-- Add entry under "Economy & Resources" category:
-  ```
-  { path: "/admin/underworld", label: "Underworld", description: "Shadow Store & Crypto" }
-  ```
-
-### 1.2 Enhance Crypto Token Management
-- **File**: `src/pages/admin/UnderworldAdmin.tsx`
-- Add full edit dialog for tokens (similar to products):
-  - Edit name, symbol, description
-  - Manual price input (not just +5%/-5%)
-  - Edit volume and market cap
-  - Delete token functionality
-- Add price simulation button (randomize within range)
-- Add bulk price volatility toggle
-
-### 1.3 Add Purchase History & Analytics Tab
-- **File**: `src/pages/admin/UnderworldAdmin.tsx`
-- New tab showing:
-  - Recent purchases across all users
-  - Revenue totals by product
-  - Most popular products
-  - Active boosts count
+This update addresses two key improvements:
+1. **Underworld Admin**: Replace the manual text input for `skill_slug` with a searchable dropdown populated from the skill tree hierarchy
+2. **Recording Studio Booking**: Add date and time slot selection to mirror the rehearsal booking flow
 
 ---
 
-## Phase 2: Company Subsidiary Admin Pages (v1.0.496)
+## Part 1: Underworld Admin Skill Dropdown
 
-### 2.1 Security Firms Admin Page
-- **New File**: `src/pages/admin/SecurityFirmsAdmin.tsx`
-- Features:
-  - List all security firms across all companies
-  - View/edit firm details (license level, equipment, reputation)
-  - Manage guards globally (view, adjust stats)
-  - View all active contracts
-  - Link to parent company
-- Add to navigation under "System & Configuration"
+### Current State
+The product edit/create form uses a plain text `Input` for `skill_slug` (lines 664-672 in `UnderworldAdmin.tsx`):
+```tsx
+<Input
+  value={newProduct.effects.skill_slug}
+  onChange={(e) => setNewProduct({...})}
+  placeholder="e.g., guitar_speed"
+/>
+```
 
-### 2.2 Merch Factories Admin Page  
-- **New File**: `src/pages/admin/MerchFactoriesAdmin.tsx`
-- Features:
-  - List all factories across all companies
-  - View/edit factory details (capacity, quality level, operating costs)
-  - Manage workers globally
-  - View production queues
-  - View product catalogs
-- Add to navigation under "System & Configuration"
-
-### 2.3 Logistics Companies Admin Page
-- **New File**: `src/pages/admin/LogisticsCompaniesAdmin.tsx`
-- Features:
-  - List all logistics companies across all companies
-  - View/edit company details (fleet capacity, license tier)
-  - Manage fleets and drivers globally
-  - View active contracts
-  - Track delivery metrics
-- Add to navigation under "System & Configuration"
-
----
-
-## Phase 3: Enhance Company Admin (v1.0.497)
-
-### 3.1 Edit Company Functionality
-- **File**: `src/pages/admin/CompanyAdmin.tsx`
-- Add edit dialog for companies:
-  - Edit name
-  - Inject/remove funds (admin balance adjustment)
-  - Change status (active/suspended)
-  - Clear bankruptcy flag manually
-  - Transfer ownership
-
-### 3.2 Financial Overview Tab
-- Add consolidated view of:
-  - Total payroll across all subsidiaries
-  - Daily operating costs
-  - Revenue streams
-  - Profit/loss projections
-
-### 3.3 Subsidiary Quick Links
-- From company row, add quick links to:
-  - View/manage security firms
-  - View/manage factories
-  - View/manage logistics
-  - View/manage labels
-
----
-
-## Technical Implementation Details
-
-### Database Changes
-None required - all tables already exist with proper structure.
-
-### New Files to Create
-1. `src/pages/admin/SecurityFirmsAdmin.tsx`
-2. `src/pages/admin/MerchFactoriesAdmin.tsx`
-3. `src/pages/admin/LogisticsCompaniesAdmin.tsx`
+### Solution
+Replace with a searchable `Select` dropdown populated from `SKILL_TREE_DEFINITIONS` (which contains 200+ skill definitions with slugs like `songwriting_basic_composing`, `instruments_basic_acoustic_guitar`, etc.)
 
 ### Files to Modify
-1. `src/components/admin/AdminNav.tsx` - Add new navigation items
-2. `src/pages/admin/UnderworldAdmin.tsx` - Enhance token editing
-3. `src/pages/admin/CompanyAdmin.tsx` - Add edit capabilities
-4. `src/App.tsx` - Add routes for new admin pages
-5. `src/components/VersionHeader.tsx` - Update version
-6. `src/pages/VersionHistory.tsx` - Add changelog entries
 
-### Route Additions
+**src/pages/admin/UnderworldAdmin.tsx**
+- Import `SKILL_TREE_DEFINITIONS` from `@/data/skillTree`
+- Add a `useMemo` hook to create sorted skill options grouped by category
+- Replace the `Input` for `skill_slug` with a `Select` component featuring:
+  - Searchable dropdown with all skills
+  - Grouped by category (Genres, Instruments, Songwriting, etc.)
+  - Display format: `Display Name (slug)`
+  - Option to clear selection
+
+### Implementation Details
+
+```text
++-------------------------------+
+|  Skill Slug Selection         |
++-------------------------------+
+| [Select a skill...]        v  |
++-------------------------------+
+| Genres                        |
+|   Basic Rock (genres_basic_rock)
+|   Pro Rock (genres_professional_rock)
+| Instruments                   |
+|   Basic Acoustic Guitar       |
+|   Pro Electric Guitar         |
+| Songwriting                   |
+|   Basic Composing             |
+|   ...                         |
++-------------------------------+
+```
+
+---
+
+## Part 2: Recording Studio Booking Flow Update
+
+### Current State
+The `SessionConfigurator` component only allows selecting:
+- Duration (2, 3, or 4 hours)
+- Orchestra size (optional)
+
+It does **not** include:
+- Date selection
+- Time slot selection (like rehearsals use)
+
+### How Rehearsals Work (Target Pattern)
+The `RehearsalBookingDialog` uses:
+1. **Room Selection** - Radio group with room details
+2. **Date Selection** - Calendar popover
+3. **Duration Selection** - Dropdown (2, 4, 6, 8 hours = 1-4 slots)
+4. **Time Slot Selection** - Grid of slots with availability status
+5. **Song/Setlist Selection**
+
+It uses:
+- `REHEARSAL_SLOTS` (6 x 2-hour slots)
+- `useRehearsalRoomAvailability` hook for slot status
+- `getSlotTimeRange()` to calculate scheduled start/end
+
+### Recording Studio Pattern (To Implement)
+The recording booking already has:
+- `STUDIO_SLOTS` (4 x 4-hour slots: Morning, Afternoon, Evening, Late Night)
+- `useStudioAvailability` hook (already exists!)
+- `StudioSlotSelector` component (already exists but not used in wizard!)
+
+### Solution
+Modify `SessionConfigurator` to add date and slot selection before duration/orchestra, similar to rehearsals:
+
+1. Add state for `selectedDate` and `selectedSlotId`
+2. Add Calendar popover for date selection
+3. Add slot selection grid using `STUDIO_SLOTS` and `useStudioAvailability`
+4. Remove duration selection (studio slots are fixed 4-hour blocks)
+5. Update `createSession.mutateAsync` to include `scheduled_start` and `scheduled_end`
+
+### Files to Modify
+
+**src/components/recording/SessionConfigurator.tsx**
+- Add date and slot selection state
+- Import Calendar, Popover, and slot utilities
+- Add `useStudioAvailability` hook call
+- Add date picker UI (Calendar in Popover)
+- Add slot selection grid (similar to RehearsalBookingDialog)
+- Update session creation to include scheduled times
+
+**src/hooks/useRecordingData.ts** (if needed)
+- Ensure `createRecordingSession` accepts `scheduled_start` and `scheduled_end` parameters
+
+### UI Flow After Update
+
+```text
+Recording Wizard Tabs:
+[Studio] -> [Song] -> [Version?] -> [Producer] -> [Configure]
+
+Configure Tab (Updated):
++------------------------------------------+
+| Recording Date                           |
+| [Calendar Button: Wed, Jan 22, 2026]  v  |
++------------------------------------------+
+| Time Slot                                |
+| +----------------+ +----------------+    |
+| | Morning 9-1pm  | | Afternoon 2-6pm|    |
+| | [Available]    | | [Booked]       |    |
+| +----------------+ +----------------+    |
+| +----------------+ +----------------+    |
+| | Evening 7-11pm | | Late Night 12-4|    |
+| | [Available]    | | [Available]    |    |
+| +----------------+ +----------------+    |
++------------------------------------------+
+| Orchestra (Optional)                     |
+| [ ] Chamber Orchestra                    |
+| [ ] Small Orchestra                      |
+| [ ] Full Orchestra                       |
++------------------------------------------+
+| Cost Breakdown                           |
+| Studio (4 hrs): $X                       |
+| Producer (4 hrs): $X                     |
+| Total: $X                                |
++------------------------------------------+
+| [Cancel]  [Start Recording ($X)]         |
++------------------------------------------+
+```
+
+---
+
+## Technical Implementation
+
+### Part 1: Skill Dropdown (UnderworldAdmin.tsx)
+
+1. Add import:
 ```tsx
-<Route path="admin/underworld" element={<UnderworldAdmin />} /> // Already exists, verify
-<Route path="admin/security-firms" element={<SecurityFirmsAdmin />} />
-<Route path="admin/merch-factories" element={<MerchFactoriesAdmin />} />
-<Route path="admin/logistics-companies" element={<LogisticsCompaniesAdmin />} />
+import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+```
+
+2. Add memoized skill options:
+```tsx
+const skillOptions = useMemo(() => {
+  const grouped: Record<string, { slug: string; name: string }[]> = {};
+  
+  SKILL_TREE_DEFINITIONS.forEach(def => {
+    const category = def.metadata?.category as string || 'Other';
+    if (!grouped[category]) grouped[category] = [];
+    grouped[category].push({
+      slug: def.slug,
+      name: def.display_name
+    });
+  });
+  
+  return Object.entries(grouped)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, skills]) => ({
+      category,
+      skills: skills.sort((a, b) => a.name.localeCompare(b.name))
+    }));
+}, []);
+```
+
+3. Replace Input with Select:
+```tsx
+<Select
+  value={newProduct.effects.skill_slug}
+  onValueChange={(v) => setNewProduct({
+    ...newProduct,
+    effects: { ...newProduct.effects, skill_slug: v }
+  })}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Select a skill..." />
+  </SelectTrigger>
+  <SelectContent className="max-h-[300px]">
+    <SelectItem value="">None</SelectItem>
+    {skillOptions.map(group => (
+      <React.Fragment key={group.category}>
+        <SelectItem disabled value={`__${group.category}`}>
+          {group.category}
+        </SelectItem>
+        {group.skills.map(skill => (
+          <SelectItem key={skill.slug} value={skill.slug}>
+            {skill.name}
+          </SelectItem>
+        ))}
+      </React.Fragment>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+### Part 2: Recording Session Scheduling (SessionConfigurator.tsx)
+
+1. Add imports:
+```tsx
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon, Ban, CheckCircle } from "lucide-react";
+import { STUDIO_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
+import { useStudioAvailability } from "@/hooks/useStudioAvailability";
+import { isSlotInPast } from "@/utils/timeSlotValidation";
+import { cn } from "@/lib/utils";
+```
+
+2. Add state:
+```tsx
+const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+const [selectedSlotId, setSelectedSlotId] = useState<string>('');
+```
+
+3. Add availability hook:
+```tsx
+const { data: slotAvailability, isLoading: loadingSlots } = useStudioAvailability(
+  studio.id,
+  selectedDate,
+  bandId,
+  true
+);
+```
+
+4. Add date picker card (before Duration card):
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Recording Date</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-start">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {format(selectedDate, 'PPP')}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => { if (date) { setSelectedDate(date); setSelectedSlotId(''); }}}
+          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+        />
+      </PopoverContent>
+    </Popover>
+  </CardContent>
+</Card>
+```
+
+5. Add slot selection card:
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Time Slot</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <RadioGroup value={selectedSlotId} onValueChange={setSelectedSlotId}>
+      <div className="grid grid-cols-2 gap-2">
+        {STUDIO_SLOTS.map(slot => {
+          const slotData = slotAvailability?.find(s => s.slot.id === slot.id);
+          const isBooked = slotData?.isBooked || false;
+          const isPast = isSlotInPast(slot, selectedDate);
+          const canSelect = !isBooked && !isPast;
+          
+          return (
+            <div key={slot.id} className={cn(
+              'flex items-center space-x-2 rounded-lg border p-3',
+              selectedSlotId === slot.id && 'border-primary bg-primary/5',
+              isPast && 'opacity-60 cursor-not-allowed',
+              isBooked && 'bg-red-500/10 border-red-500/30',
+              canSelect && 'cursor-pointer hover:bg-accent/50'
+            )} onClick={() => canSelect && setSelectedSlotId(slot.id)}>
+              <RadioGroupItem value={slot.id} disabled={!canSelect} />
+              <div className="flex-1">
+                <Label>{slot.name}</Label>
+                <div className="text-xs text-muted-foreground">
+                  {slot.startTime} - {slot.endTime}
+                </div>
+                {isBooked && <Badge variant="destructive">Booked</Badge>}
+                {isPast && <Badge variant="secondary">Passed</Badge>}
+                {canSelect && <Badge variant="outline" className="bg-green-500/10">Available</Badge>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </RadioGroup>
+  </CardContent>
+</Card>
+```
+
+6. Update duration logic:
+- Remove duration selection (fixed 4-hour slots)
+- Set `durationHours = 4` as constant
+- Update cost calculations accordingly
+
+7. Update session creation:
+```tsx
+const slot = STUDIO_SLOTS.find(s => s.id === selectedSlotId);
+if (!slot) throw new Error('Select a time slot');
+const { start, end } = getSlotTimeRange(slot, selectedDate);
+
+await createSession.mutateAsync({
+  // ...existing params
+  scheduled_start: start.toISOString(),
+  scheduled_end: end.toISOString(),
+});
 ```
 
 ---
 
-## Admin Navigation Updates
+## Files Modified Summary
 
-### New Entries in AdminNav.tsx
-
-**Economy & Resources:**
-```js
-{ path: "/admin/underworld", label: "Underworld", description: "Shadow Store & Crypto" }
-```
-
-**System & Configuration:**
-```js
-{ path: "/admin/security-firms", label: "Security Firms", description: "Global firm management" },
-{ path: "/admin/merch-factories", label: "Merch Factories", description: "Factory administration" },
-{ path: "/admin/logistics-companies", label: "Logistics", description: "Fleet & delivery management" }
-```
+| File | Changes |
+|------|---------|
+| `src/pages/admin/UnderworldAdmin.tsx` | Add skill dropdown with grouped options from SKILL_TREE_DEFINITIONS |
+| `src/components/recording/SessionConfigurator.tsx` | Add date picker, slot selection grid, use fixed 4-hour duration |
+| `src/hooks/useRecordingData.ts` | Ensure scheduled_start/end are passed through (verify existing) |
+| `src/components/VersionHeader.tsx` | Update to v1.0.498 |
+| `src/pages/VersionHistory.tsx` | Add changelog entry |
 
 ---
 
-## Summary
+## Version History Entry
 
-| Phase | Version | Scope |
-|-------|---------|-------|
-| 1 | v1.0.495 | Complete Underworld Admin (nav link, token editing, analytics) |
-| 2 | v1.0.496 | New subsidiary admin pages (Security, Merch, Logistics) |
-| 3 | v1.0.497 | Enhanced Company Admin (edit, financials, links) |
-
-This phased approach allows for incremental testing and ensures each system is fully manageable by admins before moving to the next.
+**v1.0.498**
+- Admin: Underworld product skill selection now uses dropdown with all skills from skill tree
+- Recording: Added date and time slot selection to recording session booking (mirrors rehearsal flow)
+- Recording: Sessions now use fixed 4-hour time slots (Morning, Afternoon, Evening, Late Night)
