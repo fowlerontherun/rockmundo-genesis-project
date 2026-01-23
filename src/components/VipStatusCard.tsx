@@ -179,6 +179,16 @@ export const VipStatusCard = ({ compact = false }: VipStatusCardProps) => {
           <Crown className="h-4 w-4 mr-2" />
           Become VIP - From $4.99/mo
         </Button>
+
+        <Button
+          onClick={handleDonate}
+          disabled={donating}
+          variant="outline"
+          className="w-full border-pink-500/30 text-pink-500 hover:bg-pink-500/10"
+        >
+          {donating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Heart className="h-4 w-4 mr-2" />}
+          Donate $10 to Project
+        </Button>
       </CardContent>
     </Card>
   );
