@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/supabase-types";
 import { calculateSetlistDuration, validateSetlistForSlot } from "@/utils/setlistDuration";
 import { useSetlistSongs } from "@/hooks/useSetlists";
+import { TicketOperatorSelector } from "@/components/gig/TicketOperatorSelector";
+import { TICKET_OPERATORS } from "@/data/ticketOperators";
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type BandRow = Database['public']['Tables']['bands']['Row'];
@@ -52,6 +54,7 @@ export interface GigBookingSubmission {
   selectedSlot: string;
   attendanceForecast: BookingForecast;
   estimatedRevenue: number;
+  ticketOperatorId?: string;
 }
 
 interface GigBookingDialogProps {
@@ -71,6 +74,10 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate ? new Date(initialDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
+
+  // Check if venue is large enough for ticket operators (200+ capacity)
+  const canUseTicketOperator = (venue?.capacity || 0) >= 200;
 
   useEffect(() => {
     if (initialDate) {
@@ -196,6 +203,7 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       selectedSlot,
       attendanceForecast,
       estimatedRevenue,
+      ticketOperatorId: selectedOperatorId || undefined,
     });
   };
 
@@ -487,6 +495,18 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
               </Card>
             )}
           </div>
+
+          {/* Ticket Operator Selection (for venues 200+ capacity) */}
+          {canUseTicketOperator && (
+            <>
+              <Separator />
+              <TicketOperatorSelector
+                selectedOperatorId={selectedOperatorId}
+                onSelectOperator={setSelectedOperatorId}
+                venueCapacity={venue?.capacity || 0}
+              />
+            </>
+          )}
         </div>
 
         <DialogFooter>

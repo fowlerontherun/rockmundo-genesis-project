@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.485",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Comprehensive fame system overhaul - 20 fame levels from 'bedroom' to 'legendary band'" },
+      { type: 'feature', description: "Gig details dialog accessible from schedule - view ticket sales, setlist, and pricing" },
+      { type: 'feature', description: "Ticket price adjustment - reduce prices up to 30% when sales are poor" },
+      { type: 'feature', description: "5 ticket operators (FeeMaster, TicketHoarder, SeatSnatcher, QueueMaster, ClickFastLoseAnyway)" },
+      { type: 'feature', description: "Ticket operators offer different cuts, sales boosts, and tout levels for medium+ venues" },
+      { type: 'feature', description: "Regional fame system - country-based fame with neighboring country spillover" },
+      { type: 'feature', description: "Unvisited countries capped at 100 fame until you perform there" },
+      { type: 'improvement', description: "Dynamic pricing option with ClickFastLoseAnyway operator" },
+      { type: 'fix', description: "Tour manager now correctly displays band fame level" },
+    ],
+  },
+  {
     version: "1.0.484",
     date: "2026-01-23",
     changes: [

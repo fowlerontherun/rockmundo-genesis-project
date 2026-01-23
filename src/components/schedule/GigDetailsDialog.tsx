@@ -18,10 +18,10 @@ interface GigDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gigId: string;
-  bandId: string;
+  bandId?: string; // Optional - will be fetched from gig if not provided
 }
 
-export function GigDetailsDialog({ open, onOpenChange, gigId, bandId }: GigDetailsDialogProps) {
+export function GigDetailsDialog({ open, onOpenChange, gigId, bandId: propBandId }: GigDetailsDialogProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -45,10 +45,14 @@ export function GigDetailsDialog({ open, onOpenChange, gigId, bandId }: GigDetai
     enabled: open && !!gigId,
   });
 
+  // Use the prop bandId or derive from gig
+  const bandId = propBandId || gig?.band_id;
+
   // Fetch band setlists with song count
   const { data: setlists = [] } = useQuery({
     queryKey: ['band-setlists-for-gig', bandId],
     queryFn: async () => {
+      if (!bandId) return [];
       const { data, error } = await supabase
         .from('setlists')
         .select('id, name')
@@ -231,15 +235,19 @@ export function GigDetailsDialog({ open, onOpenChange, gigId, bandId }: GigDetai
                 <Music className="h-4 w-4" />
                 Setlist
               </h4>
-              <GigSetlistDisplay
-                gigId={gigId}
-                bandId={bandId}
-                currentSetlistId={gig.setlist_id}
-                currentSetlistName={currentSetlist?.name}
-                scheduledDate={gig.scheduled_date}
-                setlists={setlists}
-                onSetlistChanged={handleSetlistChanged}
-              />
+              {bandId ? (
+                <GigSetlistDisplay
+                  gigId={gigId}
+                  bandId={bandId}
+                  currentSetlistId={gig.setlist_id}
+                  currentSetlistName={currentSetlist?.name}
+                  scheduledDate={gig.scheduled_date}
+                  setlists={setlists}
+                  onSetlistChanged={handleSetlistChanged}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">Loading setlist information...</p>
+              )}
             </div>
 
             {/* Action Button */}
