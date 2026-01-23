@@ -10,6 +10,7 @@ import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { BandOverviewTabs } from './BandOverviewTabs';
+import { BandSongGifts } from './BandSongGifts';
 import type { Database } from '@/lib/supabase-types';
 
 type BandRow = Database['public']['Tables']['bands']['Row'];
@@ -201,6 +202,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         homeCity={homeCity}
         bandId={bandId}
       />
+
+      {/* Gifted Songs - after tabs */}
+      <BandSongGifts bandId={bandId} />
 
       {/* Profile Edit Section (Leaders Only) - Moved to bottom */}
       {isLeader && (

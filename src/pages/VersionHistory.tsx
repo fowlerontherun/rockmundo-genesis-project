@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.494",
+    date: "2026-01-23",
+    changes: [
+      { type: 'improvement', description: "Band Overview: Gifted Songs now displays below the tabs, before Band Profile" },
+    ],
+  },
+  {
     version: "1.0.493",
     date: "2026-01-23",
     changes: [
