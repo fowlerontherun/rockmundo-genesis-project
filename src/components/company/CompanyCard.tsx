@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck, Wallet } from "lucide-react";
+import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck, Wallet, Mic2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
       return <Building {...iconProps} />;
     case 'rehearsal':
       return <Music {...iconProps} />;
+    case 'recording_studio':
+      return <Mic2 {...iconProps} />;
     default:
       return <Building2 {...iconProps} />;
   }
@@ -66,6 +68,10 @@ const getManageRoute = (company: Company): string => {
       return `/venue-business/${company.id}`;
     case 'rehearsal':
       return `/rehearsal-studio-business/${company.id}`;
+    case 'recording_studio':
+      return `/recording-studio-business/${company.id}`;
+    case 'label':
+      return `/labels`; // Labels have their own management section
     default:
       return `/company/${company.id}`;
   }
