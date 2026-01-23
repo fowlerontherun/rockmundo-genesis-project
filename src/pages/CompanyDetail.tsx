@@ -21,13 +21,13 @@ import type { Company } from "@/types/company";
 import { formatDistanceToNow, format } from "date-fns";
 
 const CompanyDetailContent = () => {
-  const { id } = useParams<{ id: string }>();
+  const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
-  const { data: company, isLoading } = useCompany(id);
+  const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
-    company?.company_type === 'holding' ? id : undefined
+    company?.company_type === 'holding' ? companyId : undefined
   );
-  const { data: labels = [] } = useCompanyLabels(id);
+  const { data: labels = [] } = useCompanyLabels(companyId);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.500",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Companies: Fixed 'Company Not Found' caused by route param mismatch (companyId vs id)" },
+    ],
+  },
+  {
     version: "1.0.499",
     date: "2026-01-23",
     changes: [
