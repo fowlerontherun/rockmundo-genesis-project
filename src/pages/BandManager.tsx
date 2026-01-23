@@ -301,7 +301,6 @@ export default function BandManager() {
           </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <BandSongGifts bandId={selectedBand.id} />
           <BandOverview 
             bandId={selectedBand.id} 
             isLeader={isLeader}
@@ -310,6 +309,7 @@ export default function BandManager() {
             bandName={selectedBand.name}
             onBandUpdate={() => loadBandDetails(selectedBand.id)}
           />
+          <BandSongGifts bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="fame" className="space-y-4">

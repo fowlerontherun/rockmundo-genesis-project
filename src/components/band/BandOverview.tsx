@@ -157,39 +157,6 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
   return (
     <div className="space-y-4">
-      {/* Profile Edit Section (Leaders Only) */}
-      {isLeader && (
-        <Collapsible open={profileOpen} onOpenChange={setProfileOpen}>
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Settings2 className="h-4 w-4" />
-                  Band Profile
-                </CardTitle>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    {profileOpen ? 'Close' : 'Edit Profile'}
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent className="pt-2">
-                <BandProfileEdit
-                  bandId={bandId}
-                  bandName={bandName || ''}
-                  logoUrl={logoUrl}
-                  soundDescription={soundDescription}
-                  isLeader={isLeader}
-                  onUpdate={onBandUpdate}
-                />
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
       {/* Home City Card - for leaders who haven't set it yet */}
       {isLeader && !band.home_city_id && (
         <Card className="border-warning/30 bg-warning/5">
@@ -232,7 +199,41 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         maxMembers={band.max_members ?? undefined}
         skillRating={skillRating}
         homeCity={homeCity}
+        bandId={bandId}
       />
+
+      {/* Profile Edit Section (Leaders Only) - Moved to bottom */}
+      {isLeader && (
+        <Collapsible open={profileOpen} onOpenChange={setProfileOpen}>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Band Profile
+                </CardTitle>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {profileOpen ? 'Close' : 'Edit Profile'}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="pt-2">
+                <BandProfileEdit
+                  bandId={bandId}
+                  bandName={bandName || ''}
+                  logoUrl={logoUrl}
+                  soundDescription={soundDescription}
+                  isLeader={isLeader}
+                  onUpdate={onBandUpdate}
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
     </div>
   );
 }

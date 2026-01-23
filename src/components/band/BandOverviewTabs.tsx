@@ -9,7 +9,9 @@ import {
 import { getBandFameTitle } from '@/utils/bandFame';
 import { getChemistryLabel, getChemistryColor } from '@/utils/bandChemistry';
 import { useMemo } from 'react';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, subDays } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Area,
   AreaChart,
@@ -47,16 +49,45 @@ interface BandOverviewTabsProps {
   maxMembers?: number;
   skillRating: number;
   homeCity?: { name: string; country: string } | null;
+  bandId: string;
 }
 
-export function BandOverviewTabs({ band, memberCount, maxMembers, skillRating, homeCity }: BandOverviewTabsProps) {
+export function BandOverviewTabs({ band, memberCount, maxMembers, skillRating, homeCity, bandId }: BandOverviewTabsProps) {
   const numberFormatter = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }), []);
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }),
     []
   );
 
-  const weeklyFans = band?.weekly_fans ?? 0;
+  // Query fans gained this week from band_fame_history
+  const weekAgo = useMemo(() => subDays(new Date(), 7).toISOString(), []);
+  const { data: weeklyFansData } = useQuery({
+    queryKey: ['band-weekly-fans', bandId],
+    queryFn: async () => {
+      // Get fans gained from country fans in the last 7 days
+      const { data: fansHistory } = await supabase
+        .from('band_fame_history')
+        .select('fame_change')
+        .eq('band_id', bandId)
+        .gte('recorded_at', weekAgo);
+      
+      // Also count gigs in the last week for activity-based fans
+      const { count: gigsCount } = await supabase
+        .from('gigs')
+        .select('id', { count: 'exact', head: true })
+        .eq('band_id', bandId)
+        .eq('status', 'completed')
+        .gte('date', weekAgo);
+
+      const historyFans = fansHistory?.reduce((sum, e) => sum + (e.fame_change || 0), 0) || 0;
+      const gigsFans = (gigsCount || 0) * 5; // 5 fans per gig
+      
+      return Math.max(historyFans + gigsFans, 0);
+    },
+    staleTime: 60000, // 1 minute
+  });
+
+  const weeklyFans = weeklyFansData ?? 0;
   const totalFame = band?.fame ?? 0;
   const lifetimeFame = band?.collective_fame_earned ?? 0;
   const performanceCount = band?.performance_count ?? 0;
