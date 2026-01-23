@@ -370,7 +370,7 @@ function App() {
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="company/:companyId" element={<CompanyDetail />} />
                     <Route path="security-firm/:companyId" element={<SecurityFirmManagement />} />
-                    <Route path="merch-factory/:factoryId" element={<MerchFactoryManagement />} />
+                    <Route path="merch-factory/:companyId" element={<MerchFactoryManagement />} />
                     <Route path="logistics-company/:companyId" element={<LogisticsCompanyManagement />} />
                     <Route path="venue-business/:venueId" element={<VenueBusinessManagement />} />
                     <Route path="rehearsal-studio-business/:studioId" element={<RehearsalStudioBusinessManagement />} />

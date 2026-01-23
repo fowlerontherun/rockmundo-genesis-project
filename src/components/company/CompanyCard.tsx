@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle } from "lucide-react";
+import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
       return <Shield {...iconProps} />;
     case 'factory':
       return <Factory {...iconProps} />;
+    case 'logistics':
+      return <Truck {...iconProps} />;
     case 'venue':
       return <Building {...iconProps} />;
     case 'rehearsal':
@@ -37,15 +39,33 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
 const StatusBadge = ({ status }: { status: string }) => {
   switch (status) {
     case 'active':
-      return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Active</Badge>;
+      return <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Active</Badge>;
     case 'suspended':
-      return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Suspended</Badge>;
+      return <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">Suspended</Badge>;
     case 'bankrupt':
-      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Bankrupt</Badge>;
+      return <Badge variant="destructive">Bankrupt</Badge>;
     case 'dissolved':
-      return <Badge className="bg-muted text-muted-foreground">Dissolved</Badge>;
+      return <Badge variant="secondary">Dissolved</Badge>;
     default:
       return null;
+  }
+};
+
+// Smart navigation based on company type
+const getManageRoute = (company: Company): string => {
+  switch (company.company_type) {
+    case 'security':
+      return `/security-firm/${company.id}`;
+    case 'factory':
+      return `/merch-factory/${company.id}`;
+    case 'logistics':
+      return `/logistics-company/${company.id}`;
+    case 'venue':
+      return `/venue-business/${company.id}`;
+    case 'rehearsal':
+      return `/rehearsal-studio-business/${company.id}`;
+    default:
+      return `/company/${company.id}`;
   }
 };
 
@@ -96,7 +116,7 @@ export const CompanyCard = ({ company, showActions = true, onClick }: CompanyCar
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-green-500" />
+            <DollarSign className="h-4 w-4 text-emerald-500" />
             <span className={company.balance < 0 ? 'text-destructive' : 'text-foreground'}>
               {formatCurrency(company.balance)}
             </span>
@@ -137,7 +157,7 @@ export const CompanyCard = ({ company, showActions = true, onClick }: CompanyCar
               className="flex-1"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/company/${company.id}`);
+                navigate(getManageRoute(company));
               }}
             >
               Manage

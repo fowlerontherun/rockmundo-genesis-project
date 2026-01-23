@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Building2, Disc, Shield, Factory, Building, Music, Plus, Loader2 } from "lucide-react";
+import { Building2, Disc, Shield, Factory, Building, Music, Plus, Loader2, Truck, DollarSign, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,16 +32,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCreateCompany } from "@/hooks/useCompanies";
 import { useGameData } from "@/hooks/useGameData";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth-context";
 import type { CompanyType, Company } from "@/types/company";
-import { COMPANY_TYPE_INFO } from "@/types/company";
+import { COMPANY_TYPE_INFO, COMPANY_CREATION_COSTS } from "@/types/company";
 
 const formSchema = z.object({
   name: z.string().min(2, "Company name must be at least 2 characters").max(50, "Company name cannot exceed 50 characters"),
-  company_type: z.enum(['holding', 'label', 'security', 'factory', 'venue', 'rehearsal']),
+  company_type: z.enum(['holding', 'label', 'security', 'factory', 'venue', 'rehearsal', 'logistics']),
   description: z.string().max(500, "Description cannot exceed 500 characters").optional(),
   headquarters_city_id: z.string().optional(),
   parent_company_id: z.string().optional(),
@@ -68,6 +71,8 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
       return <Shield {...iconProps} />;
     case 'factory':
       return <Factory {...iconProps} />;
+    case 'logistics':
+      return <Truck {...iconProps} />;
     case 'venue':
       return <Building {...iconProps} />;
     case 'rehearsal':
@@ -75,6 +80,15 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
     default:
       return <Building2 {...iconProps} />;
   }
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 };
 
 export const CreateCompanyDialog = ({
@@ -85,7 +99,24 @@ export const CreateCompanyDialog = ({
 }: CreateCompanyDialogProps) => {
   const [open, setOpen] = useState(false);
   const { currentCity } = useGameData();
+  const { user } = useAuth();
   const createCompany = useCreateCompany();
+
+  // Fetch player profile for cash balance
+  const { data: profile } = useQuery({
+    queryKey: ["profile-for-company", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, cash")
+        .eq("user_id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && open,
+  });
 
   // Fetch cities for headquarters selection
   const { data: cities } = useQuery({
@@ -116,9 +147,13 @@ export const CreateCompanyDialog = ({
   // Filter available types
   const availableTypes = allowedTypes || (
     parentCompanyId 
-      ? (['label', 'security', 'factory', 'venue', 'rehearsal'] as CompanyType[])
+      ? (['label', 'security', 'factory', 'logistics', 'venue', 'rehearsal'] as CompanyType[])
       : (['holding'] as CompanyType[])
   );
+
+  const playerCash = Number(profile?.cash ?? 0);
+  const costs = selectedType ? COMPANY_CREATION_COSTS[selectedType] : null;
+  const canAfford = costs ? playerCash >= costs.creationCost : false;
 
   const onSubmit = async (data: FormData) => {
     await createCompany.mutateAsync({
@@ -127,6 +162,7 @@ export const CreateCompanyDialog = ({
       description: data.description,
       headquarters_city_id: data.headquarters_city_id || undefined,
       parent_company_id: data.parent_company_id || undefined,
+      profileId: profile?.id,
     });
     setOpen(false);
     form.reset();
@@ -157,6 +193,40 @@ export const CreateCompanyDialog = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Cost Overview Card */}
+            {costs && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Creation Cost:</span>
+                    <span className="font-bold text-destructive">
+                      -{formatCurrency(costs.creationCost)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Starting Capital:</span>
+                    <span className="font-bold text-emerald-500">
+                      {formatCurrency(costs.startingBalance)}
+                    </span>
+                  </div>
+                  <div className="border-t pt-2 flex items-center justify-between">
+                    <span className="text-sm font-medium">Your Cash:</span>
+                    <span className={`font-bold ${canAfford ? 'text-foreground' : 'text-destructive'}`}>
+                      {formatCurrency(playerCash)}
+                    </span>
+                  </div>
+                  {!canAfford && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Insufficient funds! Need {formatCurrency(costs.creationCost - playerCash)} more.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Company Type Selection */}
             <FormField
               control={form.control}
@@ -172,19 +242,25 @@ export const CreateCompanyDialog = ({
                     >
                       {availableTypes.map((type) => {
                         const info = COMPANY_TYPE_INFO[type];
+                        const typeCosts = COMPANY_CREATION_COSTS[type];
+                        const affordable = playerCash >= typeCosts.creationCost;
                         return (
                           <div key={type}>
                             <RadioGroupItem
                               value={type}
                               id={type}
                               className="peer sr-only"
+                              disabled={!affordable}
                             />
                             <Label
                               htmlFor={type}
-                              className={`flex flex-col items-center gap-2 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer transition-all ${info.color}`}
+                              className={`flex flex-col items-center gap-2 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer transition-all ${info.color} ${!affordable ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               <CompanyTypeIcon type={type} />
                               <span className="text-sm font-medium text-foreground">{info.label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(typeCosts.creationCost)}
+                              </span>
                             </Label>
                           </div>
                         );
@@ -305,7 +381,7 @@ export const CreateCompanyDialog = ({
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={createCompany.isPending}
+                disabled={createCompany.isPending || !canAfford}
               >
                 {createCompany.isPending ? (
                   <>
@@ -314,8 +390,8 @@ export const CreateCompanyDialog = ({
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Company
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Create ({costs ? formatCurrency(costs.creationCost) : ""})
                   </>
                 )}
               </Button>

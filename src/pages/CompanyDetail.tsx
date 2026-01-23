@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight
+  Calendar, ChevronRight, Wallet
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,11 @@ import { SubsidiaryTree } from "@/components/company/SubsidiaryTree";
 import { CreateCompanyDialog } from "@/components/company/CreateCompanyDialog";
 import { CompanySettingsDialog } from "@/components/company/CompanySettingsDialog";
 import { TransferLabelDialog } from "@/components/company/TransferLabelDialog";
+import { CompanyFinanceDialog } from "@/components/company/CompanyFinanceDialog";
+import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
+import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { COMPANY_TYPE_INFO } from "@/types/company";
 import type { Company } from "@/types/company";
 import { formatDistanceToNow, format } from "date-fns";
@@ -23,11 +27,14 @@ import { formatDistanceToNow, format } from "date-fns";
 const CompanyDetailContent = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
+  const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
+  
   const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
     company?.company_type === 'holding' ? companyId : undefined
   );
   const { data: labels = [] } = useCompanyLabels(companyId);
+  const { data: transactions = [] } = useCompanyTransactions(companyId);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -338,18 +345,50 @@ const CompanyDetailContent = () => {
         </TabsContent>
 
         <TabsContent value="finances" className="space-y-4">
+          {/* Finance Actions */}
           <Card>
-            <CardHeader>
-              <CardTitle>Financial Overview</CardTitle>
-              <CardDescription>Coming in Phase 9: Company Analytics</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Fund Management</CardTitle>
+                <CardDescription>Deposit or withdraw company funds</CardDescription>
+              </div>
+              <Button onClick={() => setFinanceDialogOpen(true)}>
+                <Wallet className="h-4 w-4 mr-2" />
+                Manage Funds
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <DollarSign className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p>Detailed financial analytics coming soon.</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="p-4 rounded-lg bg-muted">
+                  <p className="text-sm text-muted-foreground">Current Balance</p>
+                  <p className={`text-2xl font-bold ${company.balance < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
+                    {formatCurrency(company.balance)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted">
+                  <p className="text-sm text-muted-foreground">Weekly Costs</p>
+                  <p className="text-2xl font-bold text-amber-500">
+                    -{formatCurrency(company.weekly_operating_costs)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted">
+                  <p className="text-sm text-muted-foreground">Recent Transactions</p>
+                  <p className="text-2xl font-bold">{transactions.length}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Tax Overview */}
+          <CompanyTaxOverview companyId={company.id} companyBalance={company.balance} />
+          
+          {/* Finance Dialog */}
+          <CompanyFinanceDialog
+            open={financeDialogOpen}
+            onOpenChange={setFinanceDialogOpen}
+            companyId={company.id}
+            companyName={company.name}
+          />
         </TabsContent>
       </Tabs>
     </div>

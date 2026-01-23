@@ -10,10 +10,10 @@ import { FactoryCard } from "@/components/merch-factory/FactoryCard";
 import { VipGate } from "@/components/company/VipGate";
 
 export default function MerchFactoryManagement() {
-  const { factoryId } = useParams();
+  const { companyId } = useParams();
   const navigate = useNavigate();
   
-  const { data: factory, isLoading } = useMerchFactory(factoryId);
+  const { data: factory, isLoading } = useMerchFactory(companyId);
   
   if (isLoading) {
     return (
