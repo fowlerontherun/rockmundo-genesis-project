@@ -14,15 +14,17 @@ import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
 // Alert removed - unused
-import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
+// GigSetlistSelector import removed - using GigSetlistDisplay instead
 import { GigSetlistDisplay } from '@/components/gig/GigSetlistDisplay';
+import { TicketPriceAdjuster } from '@/components/gig/TicketPriceAdjuster';
 import { ParallaxGigViewer } from '@/components/gig-viewer/ParallaxGigViewer';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
-import { format, differenceInMinutes, isBefore, addMinutes } from 'date-fns';
+import { format, differenceInMinutes, differenceInDays, isBefore, addMinutes } from 'date-fns';
 import { useBandGearEffects } from '@/hooks/useBandGearEffects';
 import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
+import { calculateDailySalesRate } from '@/utils/ticketSalesSimulation';
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -40,6 +42,8 @@ export default function PerformGig() {
   const [equipmentCount, setEquipmentCount] = useState(0);
   const [crewCount, setCrewCount] = useState(0);
   const [bandChemistry, setBandChemistry] = useState(0);
+  const [bandFame, setBandFame] = useState(0);
+  const [bandTotalFans, setBandTotalFans] = useState(0);
   const [showOutcome, setShowOutcome] = useState(false);
   // const [show3DViewer, setShow3DViewer] = useState(false); // Removed - using inline viewer
   const [outcome, setOutcome] = useState<any>(null);
@@ -117,7 +121,7 @@ export default function PerformGig() {
             .eq('band_id', gigData.band_id),
           supabase
             .from('bands')
-            .select('chemistry_level')
+            .select('chemistry_level, fame, total_fans')
             .eq('id', gigData.band_id)
             .single()
         ]);
@@ -128,12 +132,16 @@ export default function PerformGig() {
         setEquipmentCount(equipmentRes.data?.length || 0);
         setCrewCount(crewRes.data?.length || 0);
         setBandChemistry(bandRes.data?.chemistry_level || 0);
+        setBandFame(bandRes.data?.fame || 0);
+        setBandTotalFans(bandRes.data?.total_fans || 0);
       } else {
         setSetlistSongs([]);
         setRehearsals([]);
         setEquipmentCount(0);
         setCrewCount(0);
         setBandChemistry(0);
+        setBandFame(0);
+        setBandTotalFans(0);
       }
 
       if (existingOutcome) {
@@ -515,6 +523,41 @@ export default function PerformGig() {
           </CardContent>
         </Card>
       )}
+
+      {/* Ticket Price Adjuster - shown for scheduled gigs with poor sales */}
+      {gig.status === 'scheduled' && (() => {
+        const daysUntilGig = differenceInDays(new Date(gig.scheduled_date), new Date());
+        const ticketsSold = gig.tickets_sold || 0;
+        const venueCapacity = gig.venues?.capacity || 100;
+        
+        // Calculate predicted sales
+        const salesResult = calculateDailySalesRate({
+          bandFame: bandFame,
+          bandTotalFans: bandTotalFans,
+          venueCapacity: venueCapacity,
+          daysUntilGig: Math.max(1, daysUntilGig),
+          daysBooked: 14,
+          ticketPrice: gig.ticket_price || 20,
+        });
+        const predictedSales = salesResult.expectedTotalSales;
+        
+        // Check if price adjustment is available
+        const salesPercentage = predictedSales > 0 ? (ticketsSold / predictedSales) * 100 : 0;
+        const canAdjustPrice = daysUntilGig >= 7 && salesPercentage < 50 && !gig.price_adjusted_at;
+        
+        if (canAdjustPrice) {
+          return (
+            <TicketPriceAdjuster
+              gigId={gig.id}
+              currentPrice={gig.ticket_price || 20}
+              ticketsSold={ticketsSold}
+              predictedSales={predictedSales}
+              onPriceAdjusted={loadGig}
+            />
+          );
+        }
+        return null;
+      })()}
 
       {/* Preparation Checklist */}
       {setlistSongs.length > 0 && (
