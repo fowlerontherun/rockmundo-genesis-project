@@ -41,18 +41,22 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
 
   const loadBandSongs = async () => {
     try {
+      // Primary query: Get songs directly associated with the band
+      const { data: bandSongs } = await supabase
+        .from('songs')
+        .select('*')
+        .eq('band_id', bandId)
+        .order('created_at', { ascending: false });
+
+      // Secondary: Get songs from band members (for solo songs they may have brought)
       const { data: members } = await supabase
         .from('band_members')
         .select('user_id')
         .eq('band_id', bandId);
 
-      if (!members || members.length === 0) {
-        setLoading(false);
-        return;
-      }
+      const memberIds = (members || []).map(m => m.user_id).filter((id): id is string => id !== null);
 
-      const memberIds = members.map(m => m.user_id).filter(id => id !== null);
-
+      // Get familiarity data for rehearsed songs
       const { data: familiarityData } = await supabase
         .from('band_song_familiarity')
         .select('song_id, familiarity_percentage, familiarity_minutes, last_rehearsed_at')
@@ -60,30 +64,61 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
 
       const familiaritySongIds = familiarityData?.map(f => f.song_id) || [];
 
-      const { data: setlistSongs } = await supabase
-        .from('setlist_songs')
-        .select('song_id')
-        .in('setlist_id', await supabase
-          .from('setlists')
-          .select('id')
-          .eq('band_id', bandId)
-          .then(res => res.data?.map(s => s.id) || [])
-        );
+      // Get songs from setlists
+      const { data: setlistIds } = await supabase
+        .from('setlists')
+        .select('id')
+        .eq('band_id', bandId);
 
-      const setlistSongIds = setlistSongs?.map(s => s.song_id) || [];
-      const allSongIds = [...new Set([...familiaritySongIds, ...setlistSongIds])];
-
-      let songsQuery = supabase.from('songs').select('*');
-      
-      if (memberIds.length > 0 && allSongIds.length > 0) {
-        songsQuery = songsQuery.or(`user_id.in.(${memberIds.join(',')}),id.in.(${allSongIds.join(',')})`);
-      } else if (memberIds.length > 0) {
-        songsQuery = songsQuery.in('user_id', memberIds);
-      } else if (allSongIds.length > 0) {
-        songsQuery = songsQuery.in('id', allSongIds);
+      let setlistSongIds: string[] = [];
+      if (setlistIds && setlistIds.length > 0) {
+        const { data: setlistSongs } = await supabase
+          .from('setlist_songs')
+          .select('song_id')
+          .in('setlist_id', setlistIds.map(s => s.id));
+        setlistSongIds = setlistSongs?.map(s => s.song_id) || [];
       }
 
-      const { data: songsData } = await songsQuery.order('created_at', { ascending: false });
+      // Get member songs (songs written by members but not assigned to band)
+      let memberSongs: any[] = [];
+      if (memberIds.length > 0) {
+        const { data: memberSongsData } = await supabase
+          .from('songs')
+          .select('*')
+          .in('user_id', memberIds)
+          .is('band_id', null)
+          .order('created_at', { ascending: false });
+        memberSongs = memberSongsData || [];
+      }
+
+      // Combine all songs (band songs + member songs + familiarity/setlist songs)
+      const allBandSongIds = new Set((bandSongs || []).map(s => s.id));
+      const allMemberSongIds = new Set(memberSongs.map(s => s.id));
+      const additionalSongIds = [...familiaritySongIds, ...setlistSongIds].filter(
+        id => !allBandSongIds.has(id) && !allMemberSongIds.has(id)
+      );
+
+      // Fetch any additional songs from familiarity/setlists not already loaded
+      let additionalSongs: any[] = [];
+      if (additionalSongIds.length > 0) {
+        const { data: additionalData } = await supabase
+          .from('songs')
+          .select('*')
+          .in('id', additionalSongIds);
+        additionalSongs = additionalData || [];
+      }
+
+      // Combine and deduplicate
+      const allSongsMap = new Map<string, any>();
+      [...(bandSongs || []), ...memberSongs, ...additionalSongs].forEach(song => {
+        if (!allSongsMap.has(song.id)) {
+          allSongsMap.set(song.id, song);
+        }
+      });
+
+      const songsData = Array.from(allSongsMap.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
       if (!songsData) {
         setLoading(false);
