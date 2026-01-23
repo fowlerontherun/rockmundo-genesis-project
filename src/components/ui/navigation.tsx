@@ -406,7 +406,7 @@ const Navigation = () => {
                     onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                   >
                     <History className="h-4 w-4 mr-1" />
-                    v1.0.481
+                    v1.0.489
                   </Button>
                   <HowToPlayDialog />
                 </div>
@@ -428,38 +428,102 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* Desktop Sidebar with Hamburger Toggle */}
-      <div className={`hidden lg:flex ${isDesktopCollapsed ? 'w-14' : 'w-64'} h-screen bg-sidebar border-r border-sidebar-border flex-col fixed left-0 top-0 transition-all duration-300`}>
-        {!isDesktopCollapsed && <VersionHeader />}
-        <div className={`${isDesktopCollapsed ? 'p-2' : 'p-4'} border-b border-sidebar-border/50 flex ${isDesktopCollapsed ? 'justify-center' : 'items-center justify-between'}`}>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 border-primary/50 hover:bg-primary/10"
-            onClick={toggleDesktopSidebar}
-            aria-label={t('nav.toggleMenu')}
-          >
-            <Menu className="h-5 w-5 text-primary" />
-          </Button>
-          {!isDesktopCollapsed && (
-            <div className="flex items-center gap-1">
-              <PrisonStatusIndicator />
-              <NotificationBell />
-              <ThemeSwitcher />
-              <LanguageSwitcher />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                title="Version History"
-                onClick={() => navigate('/version-history')}
-              >
-                <History className="h-5 w-5" />
-              </Button>
-              <HowToPlayDialog />
-            </div>
-          )}
+      {/* Desktop Header Bar - Matches mobile style */}
+      <div className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center justify-between px-4 py-2 h-14 w-full">
+          <div className="flex items-center gap-3">
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-9 w-9"
+                  aria-label={t('nav.openMenu')}
+                >
+                  <Menu className="h-5 w-5 text-primary" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0 bg-sidebar">
+                <div className="flex flex-col h-full">
+                  <div className="p-4 border-b border-sidebar-border/50 flex items-center justify-between">
+                    <img 
+                      src={logo} 
+                      alt="RockMundo" 
+                      className="h-10 w-auto object-contain"
+                    />
+                    <div className="flex items-center gap-1">
+                      <ThemeSwitcher />
+                      <LanguageSwitcher />
+                    </div>
+                  </div>
+                  <NavigationContent isMobile={true} />
+                  <div className="p-3 border-t border-sidebar-border/50 flex items-center justify-between">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => { navigate('/version-history'); setIsOpen(false); }}
+                    >
+                      <History className="h-4 w-4 mr-1" />
+                      v1.0.489
+                    </Button>
+                    <HowToPlayDialog />
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <img 
+              src={logo} 
+              alt="RockMundo" 
+              className="h-8 w-auto object-contain"
+            />
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <PrisonStatusIndicator />
+            <ActivityStatusIndicator />
+            <NotificationBell />
+            <ThemeSwitcher />
+            <LanguageSwitcher />
+            <HowToPlayDialog />
+          </div>
         </div>
-        <NavigationContent collapsed={isDesktopCollapsed} />
+      </div>
+
+      {/* Desktop Bottom Navigation - Same as mobile */}
+      <div className="hidden lg:flex fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg">
+        <div className="flex justify-around items-center py-2 px-4 w-full max-w-4xl mx-auto">
+          {mobileShortcuts.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Button
+                key={item.path}
+                variant="ghost"
+                size="sm"
+                className={`flex flex-col gap-1 h-14 px-6 ${
+                  active
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => handleNavigation(item.path)}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon className={`h-5 w-5 ${active ? 'scale-110' : ''} transition-transform`} />
+                <span className="text-xs font-medium">{t(item.labelKey)}</span>
+              </Button>
+            );
+          })}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex flex-col gap-1 h-14 px-6 text-muted-foreground hover:text-foreground"
+            onClick={() => setIsOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+            <span className="text-xs font-medium">{t('nav.more')}</span>
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Bottom Navigation - 5 Tabs Icon Only */}
