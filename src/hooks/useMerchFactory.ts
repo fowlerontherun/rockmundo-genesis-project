@@ -35,17 +35,31 @@ export function useMerchFactory(factoryId: string | undefined) {
     queryKey: ['merch-factory', factoryId],
     queryFn: async () => {
       if (!factoryId) return null;
-      const { data, error } = await supabase
+      
+      // First try direct ID lookup
+      const { data: directData, error: directError } = await supabase
         .from('merch_factories')
         .select(`
           *,
           city:cities(name, country)
         `)
         .eq('id', factoryId)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
-      return data as MerchFactory;
+      if (directData) return directData as MerchFactory;
+      
+      // If not found, try lookup by company_id (for navigation from CompanyCard)
+      const { data: companyData, error: companyError } = await supabase
+        .from('merch_factories')
+        .select(`
+          *,
+          city:cities(name, country)
+        `)
+        .eq('company_id', factoryId)
+        .maybeSingle();
+      
+      if (companyError) throw companyError;
+      return companyData as MerchFactory | null;
     },
     enabled: !!factoryId,
   });
