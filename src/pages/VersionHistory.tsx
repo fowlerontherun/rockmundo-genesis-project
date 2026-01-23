@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.493",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Weekly fans now calculated from actual activity in last 7 days instead of stale counter" },
+      { type: 'improvement', description: "Band Manager: Moved Gifted Songs and Band Profile sections to bottom of overview" },
+    ],
+  },
+  {
     version: "1.0.492",
     date: "2026-01-23",
     changes: [
