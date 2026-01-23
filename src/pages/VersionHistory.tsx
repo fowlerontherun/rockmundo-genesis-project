@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.484",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Gig setlist display now shows on perform gig page with change option" },
+      { type: 'feature', description: "Tour venues display setlist information for each gig" },
+      { type: 'improvement', description: "Setlist changes locked 1 hour before gig starts with clear indicator" },
+    ],
+  },
+  {
     version: "1.0.483",
     date: "2026-01-23",
     changes: [

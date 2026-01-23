@@ -15,6 +15,7 @@ import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklis
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
 // Alert removed - unused
 import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
+import { GigSetlistDisplay } from '@/components/gig/GigSetlistDisplay';
 import { ParallaxGigViewer } from '@/components/gig-viewer/ParallaxGigViewer';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
@@ -499,15 +500,20 @@ export default function PerformGig() {
         </CardContent>
       </Card>
 
-      {/* Setlist Selector - only for scheduled gigs before they start */}
-      {gig.status === 'scheduled' && bandSetlists.length > 0 && (
-        <GigSetlistSelector
-          gigId={gig.id}
-          bandId={gig.band_id}
-          currentSetlistId={gig.setlist_id}
-          setlists={bandSetlists}
-          onSetlistChanged={loadGig}
-        />
+      {/* Setlist Display with change option - locked 1 hour before gig */}
+      {bandSetlists.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <GigSetlistDisplay
+              gigId={gig.id}
+              bandId={gig.band_id}
+              currentSetlistId={gig.setlist_id}
+              scheduledDate={gig.scheduled_date}
+              setlists={bandSetlists}
+              onSetlistChanged={loadGig}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {/* Preparation Checklist */}
