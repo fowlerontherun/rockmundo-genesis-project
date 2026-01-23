@@ -12,12 +12,16 @@ import { useAuth } from '@/hooks/use-auth-context';
 import { leaveBand, transferLeadership, disbandBand, getEligibleLeaders } from '@/utils/bandMembers';
 import { putBandOnHiatus, reactivateBand } from '@/utils/bandHiatus';
 import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
+import { BandGenreEditor } from './BandGenreEditor';
 
 interface BandSettingsTabProps {
   bandId: string;
   isLeader: boolean;
   bandStatus: string;
   isSoloArtist: boolean;
+  primaryGenre?: string | null;
+  secondaryGenres?: string[] | null;
+  genreLastChangedAt?: string | null;
   onBandUpdate: () => void;
 }
 
@@ -26,6 +30,9 @@ export function BandSettingsTab({
   isLeader, 
   bandStatus,
   isSoloArtist,
+  primaryGenre,
+  secondaryGenres,
+  genreLastChangedAt,
   onBandUpdate 
 }: BandSettingsTabProps) {
   const { user } = useAuth();
@@ -213,6 +220,16 @@ export function BandSettingsTab({
 
   return (
     <div className="space-y-6">
+      {/* Genre Editor */}
+      <BandGenreEditor
+        bandId={bandId}
+        currentPrimaryGenre={primaryGenre ?? null}
+        currentSecondaryGenres={secondaryGenres ?? null}
+        genreLastChangedAt={genreLastChangedAt ?? null}
+        isLeader={isLeader}
+        onUpdate={onBandUpdate}
+      />
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

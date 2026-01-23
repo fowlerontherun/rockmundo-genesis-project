@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.480",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Band Genre Management: Leaders can now set primary genre and up to 2 secondary genres" },
+      { type: 'feature', description: "Genre changes have a 30-day cooldown to prevent frequent switching" },
+      { type: 'feature', description: "Added 'Travels with Band' toggle in Band Roster for tour automation" },
+      { type: 'fix', description: "Fixed tour gigs created with $0 ticket price - now calculates proper pricing based on venue and fame" },
+      { type: 'fix', description: "Fixed band members not automatically moving during tours - default travels_with_band to true" },
+      { type: 'improvement', description: "Genre selection uses centralized genre list from skill tree" },
+    ],
+  },
+  {
     version: "1.0.479",
     date: "2026-01-22",
     changes: [
