@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.501",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Companies: Creating subsidiaries now auto-creates business entities (security firms, factories, logistics)" },
+      { type: 'feature', description: "Companies: Added creation costs and initial starting capital by company type" },
+      { type: 'feature', description: "Companies: Added deposit/withdraw funds functionality for company owners" },
+      { type: 'feature', description: "Companies: Introduced monthly tax billing system with progressive rates (10-25%)" },
+      { type: 'feature', description: "Companies: Added CompanyFinanceDialog for managing company funds" },
+      { type: 'feature', description: "Companies: Added CompanyTaxOverview for viewing and paying taxes" },
+      { type: 'improvement', description: "Companies: Added logistics company type to company system" },
+    ],
+  },
+  {
     version: "1.0.500",
     date: "2026-01-23",
     changes: [

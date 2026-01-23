@@ -3522,6 +3522,7 @@ export type Database = {
         Row: {
           allow_subsidiary_creation: boolean | null
           auto_pay_salaries: boolean | null
+          auto_pay_taxes: boolean | null
           company_id: string
           created_at: string | null
           dividend_payout_percent: number | null
@@ -3534,6 +3535,7 @@ export type Database = {
         Insert: {
           allow_subsidiary_creation?: boolean | null
           auto_pay_salaries?: boolean | null
+          auto_pay_taxes?: boolean | null
           company_id: string
           created_at?: string | null
           dividend_payout_percent?: number | null
@@ -3546,6 +3548,7 @@ export type Database = {
         Update: {
           allow_subsidiary_creation?: boolean | null
           auto_pay_salaries?: boolean | null
+          auto_pay_taxes?: boolean | null
           company_id?: string
           created_at?: string | null
           dividend_payout_percent?: number | null
@@ -3599,6 +3602,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_synergies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_tax_records: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          deductible_expenses: number | null
+          due_date: string
+          gross_revenue: number | null
+          id: string
+          paid_at: string | null
+          status: string | null
+          tax_amount: number
+          tax_period: string
+          tax_rate: number | null
+          taxable_income: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          deductible_expenses?: number | null
+          due_date: string
+          gross_revenue?: number | null
+          id?: string
+          paid_at?: string | null
+          status?: string | null
+          tax_amount?: number
+          tax_period: string
+          tax_rate?: number | null
+          taxable_income?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          deductible_expenses?: number | null
+          due_date?: string
+          gross_revenue?: number | null
+          id?: string
+          paid_at?: string | null
+          status?: string | null
+          tax_amount?: number
+          tax_period?: string
+          tax_rate?: number | null
+          taxable_income?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_tax_records_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
