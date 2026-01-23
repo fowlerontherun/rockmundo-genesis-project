@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.488",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Ticket operator selection now mandatory for venues 200+ capacity" },
+      { type: 'feature', description: "8 legendary historic venues added (United Center, Ryman Auditorium, Caesars Superdome, etc.)" },
+      { type: 'fix', description: "Fixed fame-to-fans ratio - bands now properly gain fans based on fame level (5% for mega bands)" },
+      { type: 'fix', description: "Setlist change button now shows even with single eligible setlist" },
+      { type: 'improvement', description: "Ticket operator display component added for booked gigs" },
+    ],
+  },
+  {
     version: "1.0.487",
     date: "2026-01-23",
     changes: [
