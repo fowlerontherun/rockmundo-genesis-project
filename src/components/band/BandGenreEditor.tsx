@@ -175,15 +175,15 @@ export function BandGenreEditor({
         <div className="space-y-2">
           <Label htmlFor="secondary-genre-1">Secondary Genre 1 (Optional)</Label>
           <Select 
-            value={secondaryGenre1} 
-            onValueChange={setSecondaryGenre1}
+            value={secondaryGenre1 || "__none__"} 
+            onValueChange={(val) => setSecondaryGenre1(val === "__none__" ? "" : val)}
             disabled={!canChange || !primaryGenre}
           >
             <SelectTrigger id="secondary-genre-1">
               <SelectValue placeholder="Select secondary genre" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="__none__">None</SelectItem>
               {availableSecondary.map((genre) => (
                 <SelectItem key={genre} value={genre}>
                   {genre}
@@ -197,15 +197,15 @@ export function BandGenreEditor({
         <div className="space-y-2">
           <Label htmlFor="secondary-genre-2">Secondary Genre 2 (Optional)</Label>
           <Select 
-            value={secondaryGenre2} 
-            onValueChange={setSecondaryGenre2}
+            value={secondaryGenre2 || "__none__"} 
+            onValueChange={(val) => setSecondaryGenre2(val === "__none__" ? "" : val)}
             disabled={!canChange || !primaryGenre || !secondaryGenre1}
           >
             <SelectTrigger id="secondary-genre-2">
               <SelectValue placeholder="Select secondary genre" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="__none__">None</SelectItem>
               {availableSecondary2.map((genre) => (
                 <SelectItem key={genre} value={genre}>
                   {genre}
