@@ -1,25 +1,49 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const BAND_FAME_THRESHOLDS = {
-  garageBand: 0,
-  localAct: 200,
-  regionalFavorite: 1000,
-  risingBand: 3000,
-  touredAct: 8000,
-  nationalBand: 20000,
-  headliner: 50000,
-  legendaryBand: 100000,
+  unknown: 0,
+  bedroom: 25,
+  garageBand: 100,
+  openMicRegular: 300,
+  localAct: 500,
+  localFavorite: 1000,
+  cityDarling: 2000,
+  regionalAct: 3500,
+  regionalFavorite: 5500,
+  risingBand: 8000,
+  touredAct: 12000,
+  nationalAct: 18000,
+  nationalBand: 28000,
+  headliner: 45000,
+  arenaAct: 70000,
+  festivalHeadliner: 100000,
+  nationalIcon: 150000,
+  internationalStar: 250000,
+  globalSuperstar: 500000,
+  legendaryBand: 1000000,
 } as const;
 
 export function getBandFameTitle(fame: number): string {
   if (fame >= BAND_FAME_THRESHOLDS.legendaryBand) return "Legendary Band";
+  if (fame >= BAND_FAME_THRESHOLDS.globalSuperstar) return "Global Superstar";
+  if (fame >= BAND_FAME_THRESHOLDS.internationalStar) return "International Star";
+  if (fame >= BAND_FAME_THRESHOLDS.nationalIcon) return "National Icon";
+  if (fame >= BAND_FAME_THRESHOLDS.festivalHeadliner) return "Festival Headliner";
+  if (fame >= BAND_FAME_THRESHOLDS.arenaAct) return "Arena Act";
   if (fame >= BAND_FAME_THRESHOLDS.headliner) return "Headliner";
   if (fame >= BAND_FAME_THRESHOLDS.nationalBand) return "National Band";
+  if (fame >= BAND_FAME_THRESHOLDS.nationalAct) return "National Act";
   if (fame >= BAND_FAME_THRESHOLDS.touredAct) return "Toured Act";
   if (fame >= BAND_FAME_THRESHOLDS.risingBand) return "Rising Band";
   if (fame >= BAND_FAME_THRESHOLDS.regionalFavorite) return "Regional Favorite";
+  if (fame >= BAND_FAME_THRESHOLDS.regionalAct) return "Regional Act";
+  if (fame >= BAND_FAME_THRESHOLDS.cityDarling) return "City Darling";
+  if (fame >= BAND_FAME_THRESHOLDS.localFavorite) return "Local Favorite";
   if (fame >= BAND_FAME_THRESHOLDS.localAct) return "Local Act";
-  return "Garage Band";
+  if (fame >= BAND_FAME_THRESHOLDS.openMicRegular) return "Open Mic Regular";
+  if (fame >= BAND_FAME_THRESHOLDS.garageBand) return "Garage Band";
+  if (fame >= BAND_FAME_THRESHOLDS.bedroom) return "Bedroom Artist";
+  return "Unknown";
 }
 
 export async function calculateBandBaseFame(bandId: string): Promise<number> {
