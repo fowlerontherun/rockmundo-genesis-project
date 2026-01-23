@@ -14102,6 +14102,7 @@ export type Database = {
           band_id: string | null
           compensation: number | null
           completed_at: string | null
+          cooldown_days: number | null
           created_at: string | null
           duration_hours: number | null
           expires_at: string
@@ -14128,6 +14129,7 @@ export type Database = {
           band_id?: string | null
           compensation?: number | null
           completed_at?: string | null
+          cooldown_days?: number | null
           created_at?: string | null
           duration_hours?: number | null
           expires_at: string
@@ -14154,6 +14156,7 @@ export type Database = {
           band_id?: string | null
           compensation?: number | null
           completed_at?: string | null
+          cooldown_days?: number | null
           created_at?: string | null
           duration_hours?: number | null
           expires_at?: string
@@ -18476,44 +18479,174 @@ export type Database = {
           },
         ]
       }
+      sponsorship_entities: {
+        Row: {
+          active_deals: number | null
+          artist_profile_id: string | null
+          band_id: string | null
+          brand_flags: string[] | null
+          chart_momentum: number | null
+          created_at: string | null
+          event_attendance_score: number | null
+          fame_momentum: number | null
+          id: string
+          last_offer_at: string | null
+          max_deals: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          active_deals?: number | null
+          artist_profile_id?: string | null
+          band_id?: string | null
+          brand_flags?: string[] | null
+          chart_momentum?: number | null
+          created_at?: string | null
+          event_attendance_score?: number | null
+          fame_momentum?: number | null
+          id?: string
+          last_offer_at?: string | null
+          max_deals?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          active_deals?: number | null
+          artist_profile_id?: string | null
+          band_id?: string | null
+          brand_flags?: string[] | null
+          chart_momentum?: number | null
+          created_at?: string | null
+          event_attendance_score?: number | null
+          fame_momentum?: number | null
+          id?: string
+          last_offer_at?: string | null
+          max_deals?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_entities_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_entities_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_entities_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_notifications: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          notification_type: string
+          offer_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          offer_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          offer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_notifications_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_notifications_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsorship_offers: {
         Row: {
           band_id: string
           brand_id: string
           created_at: string
+          entity_id: string | null
           exclusivity: boolean
           expires_at: string
           fit_score: number
           id: string
+          metadata: Json | null
           notes: string | null
+          offer_type: string | null
+          payout: number | null
           status: string
           term_weeks: number
+          terms: Json | null
           total_value: number
         }
         Insert: {
           band_id: string
           brand_id: string
           created_at?: string
+          entity_id?: string | null
           exclusivity?: boolean
           expires_at: string
           fit_score?: number
           id?: string
+          metadata?: Json | null
           notes?: string | null
+          offer_type?: string | null
+          payout?: number | null
           status?: string
           term_weeks?: number
+          terms?: Json | null
           total_value: number
         }
         Update: {
           band_id?: string
           brand_id?: string
           created_at?: string
+          entity_id?: string | null
           exclusivity?: boolean
           expires_at?: string
           fit_score?: number
           id?: string
+          metadata?: Json | null
           notes?: string | null
+          offer_type?: string | null
+          payout?: number | null
           status?: string
           term_weeks?: number
+          terms?: Json | null
           total_value?: number
         }
         Relationships: [
@@ -18529,6 +18662,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_offers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_entities"
             referencedColumns: ["id"]
           },
         ]

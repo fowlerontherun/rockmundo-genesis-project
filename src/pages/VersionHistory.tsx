@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.503",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Offers: Registered missing cron jobs for PR, sponsorship, and daily update offer generation" },
+      { type: 'fix', description: "Offers: Created missing sponsorship_entities table required for sponsorship offer generation" },
+      { type: 'fix', description: "Offers: Added missing cooldown_days column to pr_media_offers table" },
+      { type: 'fix', description: "Offers: Added missing entity_id/payout/terms columns to sponsorship_offers table" },
+      { type: 'fix', description: "Offers: Removed 50 fame requirement for PR offers - local media now available to all bands" },
+      { type: 'feature', description: "Offers: Auto-populate sponsorship entities for active bands with trigger for new bands" },
+    ],
+  },
+  {
     version: "1.0.502",
     date: "2026-01-23",
     changes: [
