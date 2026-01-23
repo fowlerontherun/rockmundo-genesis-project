@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.486",
+    date: "2026-01-23",
+    changes: [
+      { type: 'improvement', description: "Regional fame now affects daily release sales - more sales in countries where you're famous" },
+      { type: 'improvement', description: "Deployed all edge functions with regional fame and ticket operator integrations" },
+    ],
+  },
+  {
     version: "1.0.485",
     date: "2026-01-23",
     changes: [
