@@ -187,7 +187,7 @@ const CompanyAdmin = () => {
         .from("companies")
         .update({ 
           is_bankrupt: false,
-          balance_went_negative_at: null,
+          negative_balance_since: null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -244,7 +244,7 @@ const CompanyAdmin = () => {
         balance: editForm.balance,
         status: editForm.status,
         is_bankrupt: editForm.is_bankrupt,
-        ...(editForm.is_bankrupt === false ? { balance_went_negative_at: null } : {}),
+        ...(editForm.is_bankrupt === false ? { negative_balance_since: null } : {}),
       },
     });
   };

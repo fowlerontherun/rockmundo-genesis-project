@@ -74,7 +74,7 @@ const CompanyDetailContent = () => {
   const isHolding = company.company_type === 'holding';
 
   const handleCompanyClick = (c: Company) => {
-    navigate(`/companies/${c.id}`);
+    navigate(`/company/${c.id}`);
   };
 
   return (
