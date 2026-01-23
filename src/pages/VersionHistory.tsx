@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.504",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Companies: Fixed subsidiary creation - labels, venues, rehearsal studios now properly create their specialized business records" },
+      { type: 'improvement', description: "Companies: Aligned creation costs with realistic values ($1M for labels, $750K for venues, etc.)" },
+      { type: 'feature', description: "Companies: Added Recording Studio as a new subsidiary type ($400K to create)" },
+      { type: 'improvement', description: "Companies: Added smart navigation to route subsidiaries to their management pages" },
+      { type: 'fix', description: "Companies: Added company_id column to venues table for proper ownership tracking" },
+    ],
+  },
+  {
     version: "1.0.503",
     date: "2026-01-23",
     changes: [

@@ -1,16 +1,17 @@
 // Company System Types - Phase 1 & 2
 
-export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal';
+export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal' | 'recording_studio';
 
-// Company creation costs and starting balances
+// Company creation costs and starting balances - aligned with independent business costs
 export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number }> = {
-  holding: { creationCost: 100_000, startingBalance: 500_000 },
-  label: { creationCost: 75_000, startingBalance: 250_000 },
-  security: { creationCost: 50_000, startingBalance: 100_000 },
-  factory: { creationCost: 150_000, startingBalance: 200_000 },
-  logistics: { creationCost: 100_000, startingBalance: 150_000 },
-  venue: { creationCost: 200_000, startingBalance: 300_000 },
-  rehearsal: { creationCost: 75_000, startingBalance: 100_000 },
+  holding: { creationCost: 500_000, startingBalance: 1_000_000 },
+  label: { creationCost: 1_000_000, startingBalance: 1_000_000 },
+  security: { creationCost: 250_000, startingBalance: 500_000 },
+  factory: { creationCost: 500_000, startingBalance: 750_000 },
+  logistics: { creationCost: 300_000, startingBalance: 500_000 },
+  venue: { creationCost: 750_000, startingBalance: 1_000_000 },
+  rehearsal: { creationCost: 200_000, startingBalance: 300_000 },
+  recording_studio: { creationCost: 400_000, startingBalance: 600_000 },
 };
 export type CompanyStatus = 'active' | 'suspended' | 'bankrupt' | 'dissolved';
 export type EmployeeRole = 'ceo' | 'manager' | 'accountant' | 'security_guard' | 'technician' | 'producer' | 'promoter' | 'receptionist';
@@ -164,6 +165,12 @@ export const COMPANY_TYPE_INFO: Record<CompanyType, { label: string; icon: strin
     icon: 'Music',
     description: 'Rent practice space to bands and artists',
     color: 'text-amber-500',
+  },
+  recording_studio: {
+    label: 'Recording Studio',
+    icon: 'Mic2',
+    description: 'Professional recording facilities for music production',
+    color: 'text-rose-500',
   },
 };
 
