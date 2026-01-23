@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle } from "lucide-react";
+import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle, ListMusic } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -207,7 +207,7 @@ const TourManager = () => {
 
   const otherToursTotalPages = Math.ceil((otherToursData?.totalCount ?? 0) / OTHER_TOURS_PER_PAGE);
 
-  // Fetch tour venues/dates for selected tour
+  // Fetch tour venues/dates for selected tour with associated gig setlists
   const { data: tourVenues = [], isLoading: loadingVenues } = useQuery({
     queryKey: ['tour-venues', selectedTour?.id],
     queryFn: async () => {
@@ -230,7 +230,7 @@ const TourManager = () => {
       
       if (error) throw error;
       
-      // Fetch venue details separately
+      // Fetch venue details and gigs separately
       const venueIdSet = new Set<string>();
       const cityIdSet = new Set<string>();
       (data || []).forEach(tv => {
@@ -240,32 +240,50 @@ const TourManager = () => {
       const venueIds = Array.from(venueIdSet);
       const cityIds = Array.from(cityIdSet);
       
-      const [venuesResult, citiesResult] = await Promise.all([
+      const [venuesResult, citiesResult, gigsResult] = await Promise.all([
         venueIds.length > 0 
           ? supabase.from('venues').select('id, name, capacity, city_id').in('id', venueIds)
           : { data: [] },
         cityIds.length > 0
           ? supabase.from('cities').select('id, name, country').in('id', cityIds)
-          : { data: [] }
+          : { data: [] },
+        // Fetch gigs for this tour to get setlist info
+        supabase.from('gigs').select('id, venue_id, scheduled_date, setlist_id, setlists(id, name, song_count)').eq('tour_id', selectedTour.id)
       ]);
       
       const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
       const citiesMap: Record<string, { id: string; name: string; country: string }> = {};
+      const gigsMap: Record<string, { id: string; setlist_id: string | null; setlist_name: string | null; setlist_song_count: number | null }> = {};
       (venuesResult.data || []).forEach(v => { venuesMap[v.id] = v; });
       (citiesResult.data || []).forEach(c => { citiesMap[c.id] = c; });
+      (gigsResult.data || []).forEach((g: any) => { 
+        if (g.venue_id) {
+          gigsMap[g.venue_id] = { 
+            id: g.id, 
+            setlist_id: g.setlist_id, 
+            setlist_name: g.setlists?.name || null,
+            setlist_song_count: g.setlists?.song_count || null
+          }; 
+        }
+      });
       
       return (data || []).map(tv => {
         const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
         const city = venue?.city_id ? citiesMap[venue.city_id] : (tv.city_id ? citiesMap[tv.city_id] : null);
+        const gig = tv.venue_id ? gigsMap[tv.venue_id] : null;
         return {
           ...tv,
           venue: venue ? {
             name: venue.name,
             capacity: venue.capacity,
             city: city ? { name: city.name, country: city.country } : null
-          } : null
+          } : null,
+          gig_id: gig?.id || null,
+          setlist_id: gig?.setlist_id || null,
+          setlist_name: gig?.setlist_name || null,
+          setlist_song_count: gig?.setlist_song_count || null,
         };
-      }) as TourVenue[];
+      }) as (TourVenue & { gig_id: string | null; setlist_id: string | null; setlist_name: string | null; setlist_song_count: number | null })[];
     },
     enabled: !!selectedTour?.id,
   });
@@ -700,7 +718,7 @@ const TourManager = () => {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {tourVenues.map((tv, index) => (
+                      {tourVenues.map((tv: any, index: number) => (
                         <div 
                           key={tv.id} 
                           className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
@@ -714,6 +732,12 @@ const TourManager = () => {
                               <p className="text-xs text-muted-foreground">
                                 {tv.venue?.city?.name}, {tv.venue?.city?.country} • {format(new Date(tv.date), 'MMM d, yyyy')}
                               </p>
+                              {tv.setlist_name && (
+                                <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                                  <ListMusic className="h-3 w-3" />
+                                  {tv.setlist_name} ({tv.setlist_song_count || 0} songs)
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
@@ -721,7 +745,7 @@ const TourManager = () => {
                               <Ticket className="h-3 w-3" />
                               <span>{tv.tickets_sold || 0} / {tv.venue?.capacity || '?'}</span>
                             </div>
-                            <p className="text-xs text-green-500">
+                            <p className="text-xs text-accent-foreground">
                               ${(tv.revenue || 0).toLocaleString()}
                             </p>
                           </div>
