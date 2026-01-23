@@ -22,6 +22,7 @@ import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
 import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
+import { DashboardOverviewTabs } from "@/components/dashboard/DashboardOverviewTabs";
 import { VipStatusCard } from "@/components/VipStatusCard";
 
 // Advisor imports
@@ -293,7 +294,7 @@ const Dashboard = () => {
           </TabsList>
         </div>
 
-        {/* Profile Tab */}
+        {/* Profile Tab - Now with sub-tabs */}
         <TabsContent value="profile" className="space-y-4">
           {/* Location Header - Shows country flag, city name, and local flavor */}
           {currentCity && (
@@ -305,124 +306,13 @@ const Dashboard = () => {
             />
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* VIP Status Card */}
-            <VipStatusCard />
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>{t('dashboard.profileInfo', 'Profile Information')}</CardTitle>
-                <Link to="/my-character/edit">
-                  <Button variant="outline" size="sm">{t('dashboard.editProfile', 'Edit Profile')}</Button>
-                </Link>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={(profile as any)?.avatar_url} />
-                    <AvatarFallback>
-                      {getInitials((profile as any)?.display_name || (profile as any)?.username || "Player")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold">
-                      {(profile as any)?.display_name || (profile as any)?.username}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      @{(profile as any)?.username}
-                    </p>
-                  </div>
-                </div>
+          {/* VIP Status Card */}
+          <VipStatusCard />
 
-                <div className="grid grid-cols-2 gap-3 pt-4 border-t">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('dashboard.age', 'Age')}</p>
-                    <p className="text-sm font-medium">{(profile as any)?.age || t('dashboard.notSet', 'Not set')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('forms.gender')}</p>
-                    <p className="text-sm font-medium capitalize">{(profile as any)?.gender || t('dashboard.unspecified', 'unspecified')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('dashboard.fame')}</p>
-                    <p className="text-sm font-medium">{(profile as any)?.fame || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('band.fans')}</p>
-                    <p className="text-sm font-medium">{(profile as any)?.fans || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('dashboard.cash')}</p>
-                    <p className="text-sm font-medium">${(profile as any)?.cash || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('dashboard.totalHours', 'Total Hours')}</p>
-                    <p className="text-sm font-medium">{((profile as any)?.total_hours_played || 0).toFixed(1)}h</p>
-                  </div>
-                </div>
+          {/* Overview Tabs */}
+          <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
 
-                <div className="pt-4 border-t space-y-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{currentCity?.name || t('dashboard.noLocation', 'No location')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {t('dashboard.joined', 'Joined')} {(profile as any)?.created_at && formatDistanceToNow(new Date((profile as any).created_at), {
-                      addSuffix: true
-                    })}
-                    </span>
-                  </div>
-                  {(profile as any)?.last_active && <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {t('dashboard.lastActive', 'Last active')} {formatDistanceToNow(new Date((profile as any).last_active), {
-                      addSuffix: true
-                    })}
-                      </span>
-                    </div>}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('dashboard.stats', 'Stats')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-red-500" />
-                      <span className="text-sm font-medium">{t('wellness.health')}</span>
-                    </div>
-                    <span className="text-sm font-semibold">{(profile as any)?.health || 100}%</span>
-                  </div>
-                  <Progress value={(profile as any)?.health || 100} className="h-2" />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm font-medium">{t('wellness.energy')}</span>
-                    </div>
-                    <span className="text-sm font-semibold">{(profile as any)?.energy || 100}%</span>
-                  </div>
-                  <Progress value={(profile as any)?.energy || 100} className="h-2" />
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm font-medium">{t('dashboard.cashBalance', 'Cash Balance')}</span>
-                  </div>
-                  <p className="text-2xl font-bold">${(profile as any)?.cash || 0}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+          {/* Recent Activity */}
           <Card>
             <CardHeader>
               <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
