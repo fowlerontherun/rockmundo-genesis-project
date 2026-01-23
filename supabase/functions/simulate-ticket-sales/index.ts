@@ -81,7 +81,7 @@ serve(async (req) => {
 
     console.log('Starting ticket sales simulation...');
 
-    // Get all scheduled gigs
+    // Get all scheduled gigs with ticket operator info
     const { data: gigs, error: gigsError } = await supabaseClient
       .from('gigs')
       .select(`
@@ -93,6 +93,7 @@ serve(async (req) => {
         predicted_tickets,
         ticket_price,
         created_at,
+        ticket_operator_id,
         venues!gigs_venue_id_fkey (capacity)
       `)
       .eq('status', 'scheduled');
@@ -144,7 +145,7 @@ serve(async (req) => {
         }
 
         // Calculate daily sales
-        const ticketsSoldToday = calculateDailySales(
+        let ticketsSoldToday = calculateDailySales(
           band.fame || 0,
           band.total_fans || 0,
           venueCapacity,
@@ -153,6 +154,19 @@ serve(async (req) => {
           gig.ticket_price || 20,
           daysBooked
         );
+
+        // Apply ticket operator sales boost if present
+        if (gig.ticket_operator_id && ticketsSoldToday > 0) {
+          const OPERATOR_SALES_BOOSTS: Record<string, number> = {
+            'feemaster': 1.0,
+            'tickethoarder': 1.1,
+            'seatsnatcher': 1.2,
+            'queuemaster': 1.35,
+            'clickfastloseanyway': 1.5
+          };
+          const salesBoost = OPERATOR_SALES_BOOSTS[gig.ticket_operator_id] || 1.0;
+          ticketsSoldToday = Math.round(ticketsSoldToday * salesBoost);
+        }
 
         if (ticketsSoldToday > 0) {
           const newTotal = Math.min(currentTicketsSold + ticketsSoldToday, venueCapacity);

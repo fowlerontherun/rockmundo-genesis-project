@@ -74,6 +74,7 @@ export interface TourWizardState {
   
   // Step 5: Ticket Pricing
   customTicketPrice: number | null;
+  ticketOperatorId: string | null;
   
   // Step 6: Stage Setup
   stageSetupTier: StageSetupTier;
@@ -158,6 +159,7 @@ export const DEFAULT_WIZARD_STATE: TourWizardState = {
   venueCityFilter: null,
   venueCountryFilter: null,
   customTicketPrice: null,
+  ticketOperatorId: null,
   stageSetupTier: 'basic',
   travelMode: 'auto',
   tourBusDailyCost: TOUR_BUS_DAILY_COST,

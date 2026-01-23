@@ -24,7 +24,7 @@ serve(async (req) => {
     // Get gig and outcome with venue and city info for proper country tracking
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(id, name, city_id, cities!venues_city_id_fkey(id, name, country))')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(id, name, capacity, city_id, cities!venues_city_id_fkey(id, name, country)), ticket_operator_id')
       .eq('id', gigId)
       .single();
 
@@ -195,7 +195,41 @@ serve(async (req) => {
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
     const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty;
     
-    const newFansTotal = Math.floor(outcome.actual_attendance * conversionRate);
+    // === TICKET OPERATOR TOUT MECHANICS ===
+    // If a ticket operator was used, calculate tout impact on attendance and fan gains
+    let toutAttendanceReduction = 0;
+    let actualAttendanceForFans = outcome.actual_attendance;
+    let fanGainPenalty = 1.0;
+    
+    if (gig.ticket_operator_id) {
+      // Tout levels by operator (match the frontend data)
+      const OPERATOR_TOUT_LEVELS: Record<string, number> = {
+        'feemaster': 0,
+        'tickethoarder': 0.15,
+        'seatsnatcher': 0.25,
+        'queuemaster': 0.35,
+        'clickfastloseanyway': 0.45
+      };
+      
+      const toutLevel = OPERATOR_TOUT_LEVELS[gig.ticket_operator_id] || 0;
+      
+      if (toutLevel > 0) {
+        // Touts buy tickets but don't attend (60% no-show rate for touted tickets)
+        const toutedTickets = Math.floor(outcome.actual_attendance * toutLevel);
+        const toutNoShows = Math.floor(toutedTickets * 0.6);
+        toutAttendanceReduction = toutNoShows;
+        actualAttendanceForFans = Math.max(0, outcome.actual_attendance - toutNoShows);
+        
+        // Fan gain penalty from touting (up to 40% reduction)
+        fanGainPenalty = Math.max(0.6, 1 - (toutLevel * 0.4 / 0.45));
+        
+        console.log(`Ticket operator ${gig.ticket_operator_id} tout impact: ${toutedTickets} touted, ${toutNoShows} no-shows, ${fanGainPenalty.toFixed(2)} fan penalty`);
+      }
+    }
+    
+    // Calculate fans with tout penalty applied
+    const baseFansFromAttendance = Math.floor(actualAttendanceForFans * conversionRate);
+    const newFansTotal = Math.floor(baseFansFromAttendance * fanGainPenalty);
     
     // Distribute into tiers based on performance
     let casualFans = 0, dedicatedFans = 0, superfans = 0;
@@ -216,9 +250,9 @@ serve(async (req) => {
       casualFans = newFansTotal - superfans - dedicatedFans;
     }
 
-    console.log(`Fan conversion: ${newFansTotal} new fans (${casualFans} casual, ${dedicatedFans} dedicated, ${superfans} super)`);
+    console.log(`Fan conversion: ${newFansTotal} new fans (${casualFans} casual, ${dedicatedFans} dedicated, ${superfans} super)${toutAttendanceReduction > 0 ? ` [tout reduction: ${toutAttendanceReduction}]` : ''}`);
 
-    // Update outcome with final calculations including fan conversion
+    // Update outcome with final calculations including fan conversion and tout impact
     const { error: updateError } = await supabaseClient
       .from('gig_outcomes')
       .update({
@@ -241,6 +275,7 @@ serve(async (req) => {
         casual_fans_gained: casualFans,
         dedicated_fans_gained: dedicatedFans,
         superfans_gained: superfans,
+        tout_attendance_reduction: toutAttendanceReduction,
         completed_at: new Date().toISOString()
       })
       .eq('id', outcome.id);
