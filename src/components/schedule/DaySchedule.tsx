@@ -6,11 +6,12 @@ import { format, addHours, isSameHour, isPast } from "date-fns";
 import { 
   Clock, Play, CheckCircle, Plus, X, ArrowRight,
   Music, Guitar, Headphones, Briefcase, GraduationCap,
-  BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard
+  BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard, Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScheduledActivities, useStartActivity, useCompleteActivity, useDeleteScheduledActivity, type ActivityType } from "@/hooks/useScheduledActivities";
 import { ScheduleActivityDialog } from "./ScheduleActivityDialog";
+import { GigDetailsDialog } from "./GigDetailsDialog";
 import { formatTimeInCityTimezone, getCityTimeLabel } from "@/utils/timezoneUtils";
 
 interface DayScheduleProps {
@@ -63,6 +64,8 @@ type ActivityPosition = 'start' | 'middle' | 'end' | 'single';
 export function DaySchedule({ date, userId }: DayScheduleProps) {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [gigDetailsOpen, setGigDetailsOpen] = useState(false);
+  const [selectedGigId, setSelectedGigId] = useState<string | null>(null);
   
   const { data: activities = [] } = useScheduledActivities(date, userId);
   const startActivity = useStartActivity();
@@ -133,6 +136,14 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
   const handleDelete = async (activityId: string) => {
     if (confirm('Delete this activity?')) {
       await deleteActivity.mutateAsync(activityId);
+    }
+  };
+
+  const handleViewGigDetails = (activity: typeof activities[0]) => {
+    const gigId = activity.metadata?.gig_id as string;
+    if (gigId) {
+      setSelectedGigId(gigId);
+      setGigDetailsOpen(true);
     }
   };
 
@@ -284,6 +295,17 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
                                       <CheckCircle className="h-2.5 w-2.5 md:h-3 md:w-3" />
                                     </Button>
                                   )}
+                                  {activity.activity_type === 'gig' && activity.metadata?.gig_id && position === 'start' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 md:h-7 px-1.5 md:px-2"
+                                      onClick={() => handleViewGigDetails(activity)}
+                                      title="View gig details"
+                                    >
+                                      <Eye className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                    </Button>
+                                  )}
                                   {!isAutoScheduled && position === 'start' && (
                                     <Button
                                       size="sm"
@@ -315,6 +337,14 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
         date={date}
         selectedHour={selectedHour}
       />
+
+      {selectedGigId && (
+        <GigDetailsDialog
+          open={gigDetailsOpen}
+          onOpenChange={setGigDetailsOpen}
+          gigId={selectedGigId}
+        />
+      )}
     </>
   );
 }
