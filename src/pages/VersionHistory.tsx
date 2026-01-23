@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.481",
+    date: "2026-01-23",
+    changes: [
+      { type: 'improvement', description: "Mobile UI: Consolidated header from 2 rows (~72px) to single row (48px) - more screen space" },
+      { type: 'improvement', description: "Mobile UI: 5-tab bottom navigation with icon-only compact design (Home, Music, Band, Schedule, More)" },
+      { type: 'improvement', description: "Mobile UI: Moved theme/language switchers and version history into hamburger menu" },
+      { type: 'fix', description: "Fixed horizontal overflow issues - added overflow-x-hidden to body and main containers" },
+      { type: 'improvement', description: "Added safe-area-inset support for devices with notches (iPhone X+)" },
+      { type: 'improvement', description: "Reduced bottom nav height and adjusted spacing for better touch targets" },
+    ],
+  },
+  {
     version: "1.0.480",
     date: "2026-01-23",
     changes: [
