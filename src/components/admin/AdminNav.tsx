@@ -94,6 +94,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/brands", label: "Brands", description: "Brand management" },
       { path: "/admin/jobs", label: "Jobs", description: "Employment system" },
       { path: "/admin/experience-rewards", label: "Experience Rewards", description: "XP rewards" },
+      { path: "/admin/underworld", label: "Underworld", description: "Shadow Store & Crypto" },
     ],
   },
   {
