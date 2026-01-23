@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.483",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Gigs now display which setlist is being used" },
+      { type: 'feature', description: "Players can change gig setlists up to 1 hour before start time" },
+      { type: 'improvement', description: "Setlist locked indicator shows when changes are no longer allowed" },
+      { type: 'improvement', description: "GigSetlistDisplay component with compact and full modes" },
+    ],
+  },
+  {
     version: "1.0.482",
     date: "2026-01-23",
     changes: [
