@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.499",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Company Admin: Fixed edit error - corrected column name from balance_went_negative_at to negative_balance_since" },
+      { type: 'fix', description: "Companies: Fixed 404 error when clicking Manage - corrected route from /companies/:id to /company/:id" },
+    ],
+  },
+  {
     version: "1.0.498",
     date: "2026-01-23",
     changes: [

@@ -137,7 +137,7 @@ export const CompanyCard = ({ company, showActions = true, onClick }: CompanyCar
               className="flex-1"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/companies/${company.id}`);
+                navigate(`/company/${company.id}`);
               }}
             >
               Manage
