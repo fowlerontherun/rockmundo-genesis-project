@@ -1,6 +1,6 @@
 // Company System Types - Phase 1 & 2
 
-export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'venue' | 'rehearsal' | 'logistics';
+export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal';
 
 // Company creation costs and starting balances
 export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number }> = {

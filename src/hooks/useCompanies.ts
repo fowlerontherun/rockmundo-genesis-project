@@ -285,3 +285,112 @@ export const useCompanyFinancialSummary = () => {
     enabled: !!user?.id,
   });
 };
+
+export const useCloseSubsidiary = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      companyId, 
+      profileId,
+      transferBalance = true 
+    }: { 
+      companyId: string; 
+      profileId?: string;
+      transferBalance?: boolean;
+    }): Promise<void> => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      // Get company details
+      const { data: company, error: companyError } = await supabase
+        .from("companies")
+        .select("id, name, balance, company_type, parent_company_id, owner_id")
+        .eq("id", companyId)
+        .single();
+
+      if (companyError || !company) throw new Error("Company not found");
+      if (company.owner_id !== user.id) throw new Error("You don't own this company");
+      if (company.company_type === 'holding') throw new Error("Cannot close a holding company with subsidiaries");
+
+      // Check for active contracts/obligations
+      const { count: contractCount } = await supabase
+        .from("artist_label_contracts")
+        .select("id", { count: "exact", head: true })
+        .eq("label_id", companyId)
+        .eq("status", "active");
+
+      if (contractCount && contractCount > 0) {
+        throw new Error("Cannot close company with active artist contracts");
+      }
+
+      // Transfer remaining balance to player if requested
+      if (transferBalance && Number(company.balance) > 0 && profileId) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("cash")
+          .eq("id", profileId)
+          .single();
+
+        if (!profileError && profile) {
+          await supabase
+            .from("profiles")
+            .update({ cash: Number(profile.cash) + Number(company.balance) })
+            .eq("id", profileId);
+
+          // Record the withdrawal transaction
+          await supabase.from("company_transactions").insert({
+            company_id: companyId,
+            transaction_type: "transfer_out",
+            amount: Number(company.balance),
+            description: "Closing liquidation - funds transferred to owner",
+          });
+        }
+      }
+
+      // Delete related records based on company type
+      if (company.company_type === 'security') {
+        await supabase.from("security_firms").delete().eq("company_id", companyId);
+      } else if (company.company_type === 'factory') {
+        await supabase.from("merch_factories").delete().eq("company_id", companyId);
+      } else if (company.company_type === 'logistics') {
+        await supabase.from("logistics_companies").delete().eq("company_id", companyId);
+      }
+
+      // Delete company settings
+      await supabase.from("company_settings").delete().eq("company_id", companyId);
+      
+      // Delete company transactions
+      await supabase.from("company_transactions").delete().eq("company_id", companyId);
+      
+      // Delete tax records
+      await supabase.from("company_tax_records").delete().eq("company_id", companyId);
+
+      // Finally delete the company
+      const { error: deleteError } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", companyId);
+
+      if (deleteError) throw deleteError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company-subsidiaries"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
+      toast({
+        title: "Company Closed",
+        description: "The subsidiary has been successfully dissolved and any remaining funds have been transferred.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cannot Close Company",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};

@@ -1,16 +1,19 @@
-import { ChevronRight, Building2, Disc, Shield, Factory, Building, Music, Plus } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, Building2, Disc, Shield, Factory, Building, Music, Plus, Trash2, Truck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Company, CompanyType } from "@/types/company";
 import { COMPANY_TYPE_INFO } from "@/types/company";
+import { CloseSubsidiaryDialog } from "./CloseSubsidiaryDialog";
 
 interface SubsidiaryTreeProps {
   holdingCompany: Company;
   subsidiaries: Company[];
   onCompanyClick?: (company: Company) => void;
   onAddSubsidiary?: () => void;
+  onCloseSubsidiary?: (company: Company) => void;
 }
 
 const CompanyTypeIcon = ({ type, className }: { type: CompanyType; className?: string }) => {
@@ -25,6 +28,8 @@ const CompanyTypeIcon = ({ type, className }: { type: CompanyType; className?: s
       return <Shield {...iconProps} />;
     case 'factory':
       return <Factory {...iconProps} />;
+    case 'logistics':
+      return <Truck {...iconProps} />;
     case 'venue':
       return <Building {...iconProps} />;
     case 'rehearsal':
@@ -37,46 +42,68 @@ const CompanyTypeIcon = ({ type, className }: { type: CompanyType; className?: s
 const TreeNode = ({ 
   company, 
   isRoot = false, 
-  onClick 
+  onClick,
+  onClose
 }: { 
   company: Company; 
   isRoot?: boolean; 
   onClick?: () => void;
+  onClose?: () => void;
 }) => {
   const typeInfo = COMPANY_TYPE_INFO[company.company_type];
   
   return (
     <div
-      onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
-        "hover:border-primary/50 hover:bg-accent/50",
+        "flex items-center gap-3 p-3 rounded-lg border transition-all",
         isRoot ? "border-primary/30 bg-primary/5" : "border-border bg-background",
         company.is_bankrupt && "opacity-60 border-destructive/30"
       )}
     >
-      <div className={cn(
-        "p-2 rounded-lg",
-        isRoot ? "bg-primary/20" : "bg-muted",
-        typeInfo.color
-      )}>
-        <CompanyTypeIcon type={company.company_type} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{company.name}</p>
-        <p className="text-xs text-muted-foreground">{typeInfo.label}</p>
-      </div>
-      <Badge 
-        variant="outline" 
+      <div 
+        onClick={onClick}
         className={cn(
-          "text-xs",
-          company.status === 'active' && "bg-green-500/10 text-green-500 border-green-500/20",
-          company.status === 'bankrupt' && "bg-destructive/10 text-destructive border-destructive/20"
+          "flex items-center gap-3 flex-1 min-w-0 cursor-pointer",
+          "hover:opacity-80 transition-opacity"
         )}
       >
-        {company.status}
-      </Badge>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <div className={cn(
+          "p-2 rounded-lg",
+          isRoot ? "bg-primary/20" : "bg-muted",
+          typeInfo.color
+        )}>
+          <CompanyTypeIcon type={company.company_type} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate">{company.name}</p>
+          <p className="text-xs text-muted-foreground">{typeInfo.label}</p>
+        </div>
+        <Badge 
+          variant="outline" 
+          className={cn(
+            "text-xs",
+            company.status === 'active' && "bg-green-500/10 text-green-500 border-green-500/20",
+            company.status === 'bankrupt' && "bg-destructive/10 text-destructive border-destructive/20"
+          )}
+        >
+          {company.status}
+        </Badge>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </div>
+      
+      {!isRoot && onClose && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 };
@@ -87,6 +114,8 @@ export const SubsidiaryTree = ({
   onCompanyClick,
   onAddSubsidiary,
 }: SubsidiaryTreeProps) => {
+  const [closingCompany, setClosingCompany] = useState<Company | null>(null);
+  
   // Group subsidiaries by type
   const groupedSubsidiaries = subsidiaries.reduce((acc, sub) => {
     const type = sub.company_type;
@@ -95,7 +124,7 @@ export const SubsidiaryTree = ({
     return acc;
   }, {} as Record<CompanyType, Company[]>);
 
-  const subsidiaryTypes: CompanyType[] = ['label', 'security', 'factory', 'venue', 'rehearsal'];
+  const subsidiaryTypes: CompanyType[] = ['label', 'security', 'factory', 'logistics', 'venue', 'rehearsal'];
 
   return (
     <Card>
@@ -132,12 +161,22 @@ export const SubsidiaryTree = ({
                       key={sub.id}
                       company={sub}
                       onClick={() => onCompanyClick?.(sub)}
+                      onClose={() => setClosingCompany(sub)}
                     />
                   ))}
                 </div>
               </div>
             );
           })}
+          
+          {/* Close Subsidiary Dialog */}
+          {closingCompany && (
+            <CloseSubsidiaryDialog
+              company={closingCompany}
+              open={!!closingCompany}
+              onOpenChange={(open) => !open && setClosingCompany(null)}
+            />
+          )}
 
           {/* Empty state / Add button */}
           {subsidiaries.length === 0 ? (
