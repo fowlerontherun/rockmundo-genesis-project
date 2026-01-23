@@ -1,123 +1,175 @@
 
-# Music Video System Complete Fix + Company Deposits Access
 
-## Version: 1.0.502
+# Company Subsidiary System Complete Fix
+
+## Version: 1.0.504
 
 ## Overview
-This update fixes critical bugs in the music video system preventing song detection and ensures the full video pipeline works end-to-end. Additionally, it improves access to company deposit/withdraw functionality.
+This update fixes the subsidiary creation system so that all company types properly create their specialized business records. It also aligns costs across the platform to match the $1,000,000 standard for labels and appropriately scales other business types.
 
 ---
 
 ## Issues Identified
 
-### Music Videos - Critical Bugs
+### 1. Missing Specialized Record Creation
+The database trigger `create_subsidiary_entity` only handles:
+- ✅ `security` → creates `security_firms` record
+- ✅ `factory` → creates `merch_factories` record  
+- ✅ `logistics` → creates `logistics_companies` record
+- ❌ `label` → NO record created (should create `labels` record)
+- ❌ `venue` → NO record created (should create `venues` record)
+- ❌ `rehearsal` → NO record created (should create `rehearsal_rooms` record)
 
-| Bug | Location | Root Cause |
-|-----|----------|------------|
-| "No Recorded Songs Found" always shows | `MusicVideos.tsx:126` | Using `profile.id` (profiles table PK) instead of `profile.user_id` (auth user id) when querying `band_members` table |
-| Solo songs not found | `MusicVideos.tsx:156` | Same issue - `songs.user_id` expects auth user id, not profile table id |
-| Releases not found | `MusicVideos.tsx:190` | Same issue - `releases.user_id` expects auth user id |
-| Wrong release lookup | `MusicVideos.tsx:203` | Code matches `release.id === rs.song_id` but should be matching via `release_id` from `release_songs` table |
+### 2. Cost Inconsistency
+| Type | Current Subsidiary Cost | Should Be |
+|------|------------------------|-----------|
+| holding | $100,000 | $500,000 |
+| label | $75,000 | $1,000,000 (matches independent) |
+| security | $50,000 | $250,000 |
+| factory | $150,000 | $500,000 |
+| logistics | $100,000 | $300,000 |
+| venue | $200,000 | $750,000 |
+| rehearsal | $75,000 | $200,000 |
 
-### Company Deposits - Accessibility
-The deposit/withdraw functionality exists but is buried in the CompanyDetail page's Finances tab. Users need clearer access points.
+### 3. Missing Navigation/Management
+After creation, subsidiaries need proper routing to their management pages.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Fix Music Video Song Detection (Critical)
+### Phase 1: Update Company Creation Costs
 
-**File: `src/pages/MusicVideos.tsx`**
+**File: `src/types/company.ts`**
 
-Fix all occurrences of `profile.id` to use `profile.user_id`:
-
-1. **Line 126**: Change band_members query
-   ```typescript
-   // BEFORE
-   .eq("user_id", profile.id)
-   
-   // AFTER
-   .eq("user_id", profile.user_id)
-   ```
-
-2. **Line 156**: Change user-owned songs query
-   ```typescript
-   // BEFORE
-   .eq("user_id", profile.id)
-   
-   // AFTER
-   .eq("user_id", profile.user_id)
-   ```
-
-3. **Line 190**: Change releases query
-   ```typescript
-   // BEFORE
-   .eq("user_id", profile.id)
-   
-   // AFTER  
-   .eq("user_id", profile.user_id)
-   ```
-
-4. **Line 197**: Include `release_id` in the select statement
-   ```typescript
-   // BEFORE
-   .select("song_id, songs(id, title, band_id, status)")
-   
-   // AFTER
-   .select("song_id, release_id, songs(id, title, band_id, status)")
-   ```
-
-5. **Line 203**: Fix release lookup logic
-   ```typescript
-   // BEFORE
-   const release = userReleases.find(r => r.id === rs.song_id);
-   
-   // AFTER
-   const release = userReleases.find(r => r.id === rs.release_id);
-   ```
-
-6. **Line 217**: Update enabled condition
-   ```typescript
-   // BEFORE
-   enabled: !!profile?.id
-   
-   // AFTER
-   enabled: !!profile?.user_id
-   ```
-
-### Phase 2: Verify Video Production & View Simulation
-
-The edge functions `complete-video-production` and `simulate-video-views` are correctly implemented. They:
-- Run on cron schedules to process videos
-- Transition videos from "production" → "released" based on budget-time calculation
-- Simulate daily views with viral chances
-- Credit earnings to player cash and band balance
-- Update hype scores and fame
-
-**Verification needed**: Check if cron jobs are scheduled in the database. If not, ensure they're registered.
-
-### Phase 3: Improve Company Finance Access
-
-**Add quick-access finance button to CompanyCard:**
-
-Update `src/components/company/CompanyCard.tsx` to add a "Finance" quick-action button alongside "Manage":
+Update `COMPANY_CREATION_COSTS` to realistic values:
 
 ```typescript
-<Button 
-  variant="outline" 
-  size="sm" 
-  onClick={(e) => {
-    e.stopPropagation();
-    setFinanceDialogOpen(true);
-  }}
->
-  <Wallet className="h-4 w-4 mr-1" />
-  Finance
-</Button>
+export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number }> = {
+  holding: { creationCost: 500_000, startingBalance: 1_000_000 },
+  label: { creationCost: 1_000_000, startingBalance: 1_000_000 },
+  security: { creationCost: 250_000, startingBalance: 500_000 },
+  factory: { creationCost: 500_000, startingBalance: 750_000 },
+  logistics: { creationCost: 300_000, startingBalance: 500_000 },
+  venue: { creationCost: 750_000, startingBalance: 1_000_000 },
+  rehearsal: { creationCost: 200_000, startingBalance: 300_000 },
+};
 ```
 
-Import and render `CompanyFinanceDialog` in the card component.
+### Phase 2: Expand Database Trigger
+
+**New Migration: Expand `create_subsidiary_entity` trigger**
+
+Update the trigger function to handle all company types:
+
+```sql
+CREATE OR REPLACE FUNCTION create_subsidiary_entity()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Security Firm
+  IF NEW.company_type = 'security' THEN
+    INSERT INTO security_firms (company_id, name, city_id, reputation, license_tier)
+    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 50, 1);
+  
+  -- Merch Factory
+  ELSIF NEW.company_type = 'factory' THEN
+    INSERT INTO merch_factories (company_id, name, city_id, production_capacity, quality_rating)
+    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 100, 50);
+  
+  -- Logistics Company
+  ELSIF NEW.company_type = 'logistics' THEN
+    INSERT INTO logistics_companies (company_id, name, city_id, fleet_size, license_tier)
+    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 0, 1);
+  
+  -- Record Label (NEW)
+  ELSIF NEW.company_type = 'label' THEN
+    INSERT INTO labels (company_id, name, headquarters_city, balance, reputation_score, is_subsidiary)
+    VALUES (NEW.id, NEW.name, 
+      (SELECT name FROM cities WHERE id = NEW.headquarters_city_id),
+      NEW.balance, 50, true);
+  
+  -- Venue (NEW)
+  ELSIF NEW.company_type = 'venue' THEN
+    INSERT INTO venues (name, city, capacity, base_payment, venue_type, prestige_level, company_id)
+    VALUES (NEW.name, 
+      (SELECT name FROM cities WHERE id = NEW.headquarters_city_id),
+      500, 5000, 'club', 1, NEW.id);
+  
+  -- Rehearsal Studio (NEW)
+  ELSIF NEW.company_type = 'rehearsal' THEN
+    INSERT INTO rehearsal_rooms (company_id, name, city_id, hourly_rate, daily_rate, capacity, quality_rating)
+    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 50, 300, 4, 50);
+  
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Phase 3: Add company_id to venues table
+
+The `venues` table currently lacks a `company_id` column. Add it:
+
+```sql
+ALTER TABLE venues ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL;
+```
+
+### Phase 4: Update Subsidiary Management Navigation
+
+**File: `src/components/company/CompanyCard.tsx`**
+
+Add smart navigation that routes to the correct management page based on company type:
+
+```typescript
+const getManagementRoute = (company: Company): string => {
+  switch (company.company_type) {
+    case 'label':
+      // Find the label record linked to this company
+      return `/labels`; // or specific label page
+    case 'venue':
+      return `/venue-management/${company.id}`;
+    case 'rehearsal':
+      return `/rehearsal-studio/${company.id}`;
+    case 'security':
+      return `/security-firm/${company.id}`;
+    case 'factory':
+      return `/merch-factory/${company.id}`;
+    case 'logistics':
+      return `/logistics/${company.id}`;
+    default:
+      return `/company/${company.id}`;
+  }
+};
+```
+
+### Phase 5: Add Recording Studio Type
+
+Currently missing from company types - add `recording_studio` as a company type option:
+
+**File: `src/types/company.ts`**
+
+```typescript
+export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal' | 'recording_studio';
+
+// Add to COMPANY_CREATION_COSTS
+recording_studio: { creationCost: 400_000, startingBalance: 600_000 },
+
+// Add to COMPANY_TYPE_INFO
+recording_studio: {
+  label: 'Recording Studio',
+  icon: 'Mic2',
+  description: 'Professional recording facilities for music production',
+  color: 'text-rose-500',
+},
+```
+
+And update the trigger to handle it:
+```sql
+ELSIF NEW.company_type = 'recording_studio' THEN
+  INSERT INTO recording_studios (company_id, name, city_id, hourly_rate, quality_rating, capacity)
+  VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 200, 50, 1);
+```
 
 ---
 
@@ -125,45 +177,45 @@ Import and render `CompanyFinanceDialog` in the card component.
 
 | File | Changes |
 |------|---------|
-| `src/pages/MusicVideos.tsx` | Fix 6 instances of profile.id → profile.user_id, fix release_id lookup |
-| `src/components/company/CompanyCard.tsx` | Add inline finance dialog access |
-| `src/components/VersionHeader.tsx` | Update to v1.0.502 |
+| `src/types/company.ts` | Update costs, add recording_studio type |
+| `supabase/migrations/xxx_expand_subsidiary_trigger.sql` | New migration for trigger + venues.company_id |
+| `src/components/company/CompanyCard.tsx` | Add smart management routing |
+| `src/components/company/CreateSubsidiaryDialog.tsx` | Ensure all types available |
+| `src/components/VersionHeader.tsx` | Update to v1.0.504 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
 ---
 
 ## Technical Details
 
-### Profile ID vs User ID Distinction
+### Specialized Tables & Required Fields
 
-The `profiles` table has two important ID fields:
-- `id` (UUID): Primary key of the profiles table - used for internal table relationships
-- `user_id` (UUID): Foreign key to `auth.users` - this is the user's authentication ID
+| Company Type | Target Table | Key Fields |
+|--------------|--------------|------------|
+| label | labels | name, headquarters_city, balance, reputation_score, is_subsidiary, company_id |
+| venue | venues | name, city, capacity, base_payment, venue_type, prestige_level, company_id |
+| rehearsal | rehearsal_rooms | name, city_id, hourly_rate, daily_rate, capacity, quality_rating, company_id |
+| recording_studio | recording_studios | name, city_id, hourly_rate, quality_rating, capacity, company_id |
+| security | security_firms | name, city_id, reputation, license_tier, company_id |
+| factory | merch_factories | name, city_id, production_capacity, quality_rating, company_id |
+| logistics | logistics_companies | name, city_id, fleet_size, license_tier, company_id |
 
-Most game-related tables (`band_members`, `songs`, `releases`, `activity_feed`) use `user_id` to link to users, NOT `profiles.id`.
+### Default Starting Values
 
-When using `useGameData()`:
-- `profile.id` = profiles table primary key (rarely needed)
-- `profile.user_id` = auth user id (used for most queries)
-
-### Video Production Timeline
-
-| Budget | Production Time |
-|--------|-----------------|
-| $50,000+ | 6 hours |
-| $25,000+ | 12 hours |
-| $10,000+ | 24 hours |
-| $5,000+ | 36 hours |
-| < $5,000 | 48 hours |
-
-Videos automatically transition to "released" status when production time elapses.
+All subsidiaries start with:
+- **Reputation/Quality**: 50 (out of 100)
+- **License Tier**: 1 (basic)
+- **Capacity**: Type-appropriate defaults
+- **Rates**: Market-standard starting rates
 
 ---
 
 ## Version History Entry
 
-**v1.0.502**
-- Music Videos: Fixed critical bug where no recorded songs were found - was using wrong profile ID field
-- Music Videos: Fixed release song lookup to correctly match by release_id
-- Music Videos: Songs with "recorded" status now properly appear in the video creation dialog
-- Companies: Added quick "Finance" button to company cards for easier deposit/withdraw access
+**v1.0.504**
+- Companies: Fixed subsidiary creation - all types (labels, venues, rehearsal studios, recording studios) now properly create their specialized business records
+- Companies: Aligned creation costs with realistic values ($1M for labels, $750K for venues, etc.)
+- Companies: Added Recording Studio as a new subsidiary type
+- Companies: Added smart navigation to route subsidiaries to their management pages
+- Companies: Added company_id column to venues table for proper ownership tracking
+
