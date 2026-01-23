@@ -1,348 +1,245 @@
 
-# Underworld Admin Skill Dropdown & Recording Studio Booking Update
+# Company & Subsidiary System Overhaul
 
-## Version: 1.0.498
+## Version: 1.0.501
 
 ## Overview
-This update addresses two key improvements:
-1. **Underworld Admin**: Replace the manual text input for `skill_slug` with a searchable dropdown populated from the skill tree hierarchy
-2. **Recording Studio Booking**: Add date and time slot selection to mirror the rehearsal booking flow
+This comprehensive update fixes critical issues with the company system and adds essential business management features. The company empire system will become a fully functional business simulation.
 
 ---
 
-## Part 1: Underworld Admin Skill Dropdown
+## Current Problems
 
-### Current State
-The product edit/create form uses a plain text `Input` for `skill_slug` (lines 664-672 in `UnderworldAdmin.tsx`):
+| Issue | Impact |
+|-------|--------|
+| Creating subsidiaries doesn't create the actual business entities | Security firms, factories, logistics companies don't exist in their respective tables |
+| No creation costs | Companies are free to create, no economic impact |
+| Companies start with $0 | No initial capital means immediate bankruptcy risk |
+| No deposit/withdraw funds | Owners can't manage company finances |
+| No tax system | Missing realistic business costs |
+| Navigation confusion | "Manage" goes to generic detail page, not specialized management |
+
+---
+
+## Implementation Plan
+
+### Phase 1: Fix Subsidiary Creation (Critical)
+
+**Problem**: When creating a company of type `security`, `factory`, or `logistics`, only a `companies` table record is created. No corresponding record is created in `security_firms`, `merch_factories`, or `logistics_companies`.
+
+**Solution**: Create a database trigger OR modify `useCreateCompany` hook to automatically create the subsidiary entity after the company is created.
+
+**Database Migration**:
+- Add trigger function `create_subsidiary_entity()` that fires AFTER INSERT on `companies`
+- When `company_type = 'security'` → insert into `security_firms`
+- When `company_type = 'factory'` → insert into `merch_factories`  
+- When `company_type = 'logistics'` → insert into `logistics_companies`
+
+**Alternatively (Code-based)**: Modify `useCreateCompany` in `src/hooks/useCompanies.ts`:
 ```tsx
-<Input
-  value={newProduct.effects.skill_slug}
-  onChange={(e) => setNewProduct({...})}
-  placeholder="e.g., guitar_speed"
-/>
+onSuccess: async (data) => {
+  // Create the subsidiary entity based on type
+  if (data.company_type === 'security') {
+    await supabase.from('security_firms').insert({
+      company_id: data.id,
+      name: data.name + ' Security Division'
+    });
+  } else if (data.company_type === 'factory') {
+    await supabase.from('merch_factories').insert({
+      company_id: data.id,
+      name: data.name + ' Manufacturing',
+      city_id: data.headquarters_city_id
+    });
+  } else if (data.company_type === 'logistics') {
+    await supabase.from('logistics_companies').insert({
+      company_id: data.id,
+      name: data.name + ' Logistics'
+    });
+  }
+}
 ```
 
-### Solution
-Replace with a searchable `Select` dropdown populated from `SKILL_TREE_DEFINITIONS` (which contains 200+ skill definitions with slugs like `songwriting_basic_composing`, `instruments_basic_acoustic_guitar`, etc.)
+### Phase 2: Creation Costs & Initial Capital
 
-### Files to Modify
+**Add creation costs by company type**:
 
-**src/pages/admin/UnderworldAdmin.tsx**
-- Import `SKILL_TREE_DEFINITIONS` from `@/data/skillTree`
-- Add a `useMemo` hook to create sorted skill options grouped by category
-- Replace the `Input` for `skill_slug` with a `Select` component featuring:
-  - Searchable dropdown with all skills
-  - Grouped by category (Genres, Instruments, Songwriting, etc.)
-  - Display format: `Display Name (slug)`
-  - Option to clear selection
+| Company Type | Creation Cost | Starting Balance |
+|--------------|---------------|------------------|
+| Holding Company | $100,000 | $500,000 |
+| Record Label | $75,000 | $250,000 |
+| Security Firm | $50,000 | $100,000 |
+| Merch Factory | $150,000 | $200,000 |
+| Logistics Company | $100,000 | $150,000 |
+| Venue | $200,000 | $300,000 |
+| Rehearsal Studio | $75,000 | $100,000 |
 
-### Implementation Details
+**Files to modify**:
+- `src/types/company.ts` - Add `COMPANY_CREATION_COSTS` constant
+- `src/hooks/useCompanies.ts` - Deduct from player cash, set initial balance
+- `src/components/company/CreateCompanyDialog.tsx` - Show cost, validate player has funds
 
-```text
-+-------------------------------+
-|  Skill Slug Selection         |
-+-------------------------------+
-| [Select a skill...]        v  |
-+-------------------------------+
-| Genres                        |
-|   Basic Rock (genres_basic_rock)
-|   Pro Rock (genres_professional_rock)
-| Instruments                   |
-|   Basic Acoustic Guitar       |
-|   Pro Electric Guitar         |
-| Songwriting                   |
-|   Basic Composing             |
-|   ...                         |
-+-------------------------------+
+### Phase 3: Fund Management (Deposit/Withdraw)
+
+**Create new component**: `src/components/company/CompanyFinanceDialog.tsx`
+
+Pattern follows `LabelFinanceDialog.tsx`:
+- Deposit: Transfer from personal cash → company balance
+- Withdraw: Transfer from company balance → personal cash (minimum balance requirement)
+- Transaction logging to `company_transactions`
+
+**Add to CompanyDetail.tsx finances tab**:
+- Current balance display
+- Deposit/withdraw forms
+- Recent transactions list
+- Projected costs breakdown
+
+### Phase 4: Monthly Tax System
+
+**Create database table**: `company_tax_records`
+```sql
+CREATE TABLE company_tax_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID REFERENCES companies(id) NOT NULL,
+  tax_period TEXT NOT NULL, -- 'YYYY-MM' format
+  gross_revenue NUMERIC DEFAULT 0,
+  deductible_expenses NUMERIC DEFAULT 0,
+  taxable_income NUMERIC DEFAULT 0,
+  tax_rate NUMERIC DEFAULT 0.15, -- 15% default corporate tax
+  tax_amount NUMERIC NOT NULL,
+  status TEXT DEFAULT 'pending', -- pending, paid, overdue
+  due_date TIMESTAMPTZ NOT NULL,
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
----
+**Create edge function**: `supabase/functions/process-company-taxes/index.ts`
+- Run monthly (1st of each month)
+- Calculate taxable income from transactions
+- Apply progressive tax rate based on profit
+- Create tax record with due date (7 days)
+- Auto-deduct if `auto_pay_taxes` is enabled in settings
+- Send overdue notifications
 
-## Part 2: Recording Studio Booking Flow Update
+**Tax Rate Structure**:
+| Monthly Profit | Tax Rate |
+|----------------|----------|
+| $0 - $10,000 | 10% |
+| $10,001 - $50,000 | 15% |
+| $50,001 - $100,000 | 20% |
+| $100,001+ | 25% |
 
-### Current State
-The `SessionConfigurator` component only allows selecting:
-- Duration (2, 3, or 4 hours)
-- Orchestra size (optional)
+### Phase 5: Enhanced Navigation
 
-It does **not** include:
-- Date selection
-- Time slot selection (like rehearsals use)
-
-### How Rehearsals Work (Target Pattern)
-The `RehearsalBookingDialog` uses:
-1. **Room Selection** - Radio group with room details
-2. **Date Selection** - Calendar popover
-3. **Duration Selection** - Dropdown (2, 4, 6, 8 hours = 1-4 slots)
-4. **Time Slot Selection** - Grid of slots with availability status
-5. **Song/Setlist Selection**
-
-It uses:
-- `REHEARSAL_SLOTS` (6 x 2-hour slots)
-- `useRehearsalRoomAvailability` hook for slot status
-- `getSlotTimeRange()` to calculate scheduled start/end
-
-### Recording Studio Pattern (To Implement)
-The recording booking already has:
-- `STUDIO_SLOTS` (4 x 4-hour slots: Morning, Afternoon, Evening, Late Night)
-- `useStudioAvailability` hook (already exists!)
-- `StudioSlotSelector` component (already exists but not used in wizard!)
-
-### Solution
-Modify `SessionConfigurator` to add date and slot selection before duration/orchestra, similar to rehearsals:
-
-1. Add state for `selectedDate` and `selectedSlotId`
-2. Add Calendar popover for date selection
-3. Add slot selection grid using `STUDIO_SLOTS` and `useStudioAvailability`
-4. Remove duration selection (studio slots are fixed 4-hour blocks)
-5. Update `createSession.mutateAsync` to include `scheduled_start` and `scheduled_end`
-
-### Files to Modify
-
-**src/components/recording/SessionConfigurator.tsx**
-- Add date and slot selection state
-- Import Calendar, Popover, and slot utilities
-- Add `useStudioAvailability` hook call
-- Add date picker UI (Calendar in Popover)
-- Add slot selection grid (similar to RehearsalBookingDialog)
-- Update session creation to include scheduled times
-
-**src/hooks/useRecordingData.ts** (if needed)
-- Ensure `createRecordingSession` accepts `scheduled_start` and `scheduled_end` parameters
-
-### UI Flow After Update
-
-```text
-Recording Wizard Tabs:
-[Studio] -> [Song] -> [Version?] -> [Producer] -> [Configure]
-
-Configure Tab (Updated):
-+------------------------------------------+
-| Recording Date                           |
-| [Calendar Button: Wed, Jan 22, 2026]  v  |
-+------------------------------------------+
-| Time Slot                                |
-| +----------------+ +----------------+    |
-| | Morning 9-1pm  | | Afternoon 2-6pm|    |
-| | [Available]    | | [Booked]       |    |
-| +----------------+ +----------------+    |
-| +----------------+ +----------------+    |
-| | Evening 7-11pm | | Late Night 12-4|    |
-| | [Available]    | | [Available]    |    |
-| +----------------+ +----------------+    |
-+------------------------------------------+
-| Orchestra (Optional)                     |
-| [ ] Chamber Orchestra                    |
-| [ ] Small Orchestra                      |
-| [ ] Full Orchestra                       |
-+------------------------------------------+
-| Cost Breakdown                           |
-| Studio (4 hrs): $X                       |
-| Producer (4 hrs): $X                     |
-| Total: $X                                |
-+------------------------------------------+
-| [Cancel]  [Start Recording ($X)]         |
-+------------------------------------------+
+**Update CompanyCard.tsx**: Smart navigation based on company type
+```tsx
+const getManageRoute = (company: Company) => {
+  switch (company.company_type) {
+    case 'security':
+      return `/security-firm/${company.id}`;
+    case 'factory':
+      return `/merch-factory/${company.id}`;
+    case 'logistics':
+      return `/logistics-company/${company.id}`;
+    case 'venue':
+      return `/venue-business/${company.id}`;
+    case 'rehearsal':
+      return `/rehearsal-studio-business/${company.id}`;
+    default:
+      return `/company/${company.id}`;
+  }
+};
 ```
+
+**Fix subsidiary management pages** to look up by `company_id` not direct ID:
+- `SecurityFirmManagement.tsx` - Uses companyId correctly
+- `MerchFactoryManagement.tsx` - Uses factoryId (needs fix)
+- `LogisticsCompanyManagement.tsx` - Uses companyId correctly
+
+### Phase 6: UI Enhancements
+
+**CompanyDetail.tsx Finances Tab**:
+- Replace placeholder with actual finance management
+- Add CompanyFinanceDialog for deposits/withdrawals
+- Show tax obligations and payment history
+- Display weekly/monthly cost projections
+
+**CreateCompanyDialog.tsx**:
+- Show creation cost prominently
+- Show player's available cash
+- Disable creation if insufficient funds
+- Add initial capital preview
 
 ---
 
 ## Technical Implementation
 
-### Part 1: Skill Dropdown (UnderworldAdmin.tsx)
+### Database Changes
 
-1. Add import:
-```tsx
-import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+**Migration: Create tax table and add company settings columns**
+```sql
+-- Tax records table
+CREATE TABLE IF NOT EXISTS company_tax_records (...);
+
+-- Add auto_pay_taxes to company_settings
+ALTER TABLE company_settings 
+ADD COLUMN IF NOT EXISTS auto_pay_taxes BOOLEAN DEFAULT true;
+
+-- Create trigger for subsidiary entity creation
+CREATE OR REPLACE FUNCTION create_subsidiary_entity()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.company_type = 'security' THEN
+    INSERT INTO security_firms (company_id, name)
+    VALUES (NEW.id, NEW.name || ' Security');
+  ELSIF NEW.company_type = 'factory' THEN
+    INSERT INTO merch_factories (company_id, name, city_id)
+    VALUES (NEW.id, NEW.name || ' Manufacturing', NEW.headquarters_city_id);
+  ELSIF NEW.company_type = 'logistics' THEN
+    INSERT INTO logistics_companies (company_id, name)
+    VALUES (NEW.id, NEW.name || ' Logistics');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER after_company_insert
+AFTER INSERT ON companies
+FOR EACH ROW
+EXECUTE FUNCTION create_subsidiary_entity();
 ```
 
-2. Add memoized skill options:
-```tsx
-const skillOptions = useMemo(() => {
-  const grouped: Record<string, { slug: string; name: string }[]> = {};
-  
-  SKILL_TREE_DEFINITIONS.forEach(def => {
-    const category = def.metadata?.category as string || 'Other';
-    if (!grouped[category]) grouped[category] = [];
-    grouped[category].push({
-      slug: def.slug,
-      name: def.display_name
-    });
-  });
-  
-  return Object.entries(grouped)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([category, skills]) => ({
-      category,
-      skills: skills.sort((a, b) => a.name.localeCompare(b.name))
-    }));
-}, []);
-```
+### Files to Create
 
-3. Replace Input with Select:
-```tsx
-<Select
-  value={newProduct.effects.skill_slug}
-  onValueChange={(v) => setNewProduct({
-    ...newProduct,
-    effects: { ...newProduct.effects, skill_slug: v }
-  })}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select a skill..." />
-  </SelectTrigger>
-  <SelectContent className="max-h-[300px]">
-    <SelectItem value="">None</SelectItem>
-    {skillOptions.map(group => (
-      <React.Fragment key={group.category}>
-        <SelectItem disabled value={`__${group.category}`}>
-          {group.category}
-        </SelectItem>
-        {group.skills.map(skill => (
-          <SelectItem key={skill.slug} value={skill.slug}>
-            {skill.name}
-          </SelectItem>
-        ))}
-      </React.Fragment>
-    ))}
-  </SelectContent>
-</Select>
-```
+| File | Purpose |
+|------|---------|
+| `src/components/company/CompanyFinanceDialog.tsx` | Deposit/withdraw funds |
+| `src/components/company/CompanyTaxOverview.tsx` | Tax obligations display |
+| `src/hooks/useCompanyFinance.ts` | Finance operations hooks |
+| `supabase/functions/process-company-taxes/index.ts` | Monthly tax processing |
 
-### Part 2: Recording Session Scheduling (SessionConfigurator.tsx)
-
-1. Add imports:
-```tsx
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { CalendarIcon, Ban, CheckCircle } from "lucide-react";
-import { STUDIO_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
-import { useStudioAvailability } from "@/hooks/useStudioAvailability";
-import { isSlotInPast } from "@/utils/timeSlotValidation";
-import { cn } from "@/lib/utils";
-```
-
-2. Add state:
-```tsx
-const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-const [selectedSlotId, setSelectedSlotId] = useState<string>('');
-```
-
-3. Add availability hook:
-```tsx
-const { data: slotAvailability, isLoading: loadingSlots } = useStudioAvailability(
-  studio.id,
-  selectedDate,
-  bandId,
-  true
-);
-```
-
-4. Add date picker card (before Duration card):
-```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Recording Date</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-start">
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {format(selectedDate, 'PPP')}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={(date) => { if (date) { setSelectedDate(date); setSelectedSlotId(''); }}}
-          disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-        />
-      </PopoverContent>
-    </Popover>
-  </CardContent>
-</Card>
-```
-
-5. Add slot selection card:
-```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Time Slot</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <RadioGroup value={selectedSlotId} onValueChange={setSelectedSlotId}>
-      <div className="grid grid-cols-2 gap-2">
-        {STUDIO_SLOTS.map(slot => {
-          const slotData = slotAvailability?.find(s => s.slot.id === slot.id);
-          const isBooked = slotData?.isBooked || false;
-          const isPast = isSlotInPast(slot, selectedDate);
-          const canSelect = !isBooked && !isPast;
-          
-          return (
-            <div key={slot.id} className={cn(
-              'flex items-center space-x-2 rounded-lg border p-3',
-              selectedSlotId === slot.id && 'border-primary bg-primary/5',
-              isPast && 'opacity-60 cursor-not-allowed',
-              isBooked && 'bg-red-500/10 border-red-500/30',
-              canSelect && 'cursor-pointer hover:bg-accent/50'
-            )} onClick={() => canSelect && setSelectedSlotId(slot.id)}>
-              <RadioGroupItem value={slot.id} disabled={!canSelect} />
-              <div className="flex-1">
-                <Label>{slot.name}</Label>
-                <div className="text-xs text-muted-foreground">
-                  {slot.startTime} - {slot.endTime}
-                </div>
-                {isBooked && <Badge variant="destructive">Booked</Badge>}
-                {isPast && <Badge variant="secondary">Passed</Badge>}
-                {canSelect && <Badge variant="outline" className="bg-green-500/10">Available</Badge>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </RadioGroup>
-  </CardContent>
-</Card>
-```
-
-6. Update duration logic:
-- Remove duration selection (fixed 4-hour slots)
-- Set `durationHours = 4` as constant
-- Update cost calculations accordingly
-
-7. Update session creation:
-```tsx
-const slot = STUDIO_SLOTS.find(s => s.id === selectedSlotId);
-if (!slot) throw new Error('Select a time slot');
-const { start, end } = getSlotTimeRange(slot, selectedDate);
-
-await createSession.mutateAsync({
-  // ...existing params
-  scheduled_start: start.toISOString(),
-  scheduled_end: end.toISOString(),
-});
-```
-
----
-
-## Files Modified Summary
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/admin/UnderworldAdmin.tsx` | Add skill dropdown with grouped options from SKILL_TREE_DEFINITIONS |
-| `src/components/recording/SessionConfigurator.tsx` | Add date picker, slot selection grid, use fixed 4-hour duration |
-| `src/hooks/useRecordingData.ts` | Ensure scheduled_start/end are passed through (verify existing) |
-| `src/components/VersionHeader.tsx` | Update to v1.0.498 |
-| `src/pages/VersionHistory.tsx` | Add changelog entry |
+| `src/types/company.ts` | Add `COMPANY_CREATION_COSTS`, tax types |
+| `src/hooks/useCompanies.ts` | Add creation cost logic, initial balance |
+| `src/components/company/CreateCompanyDialog.tsx` | Show costs, validate funds |
+| `src/components/company/CompanyCard.tsx` | Smart navigation by type |
+| `src/pages/CompanyDetail.tsx` | Real finances tab with operations |
+| `src/pages/MerchFactoryManagement.tsx` | Fix to use company_id lookup |
+| `src/components/VersionHeader.tsx` | Update to v1.0.501 |
+| `src/pages/VersionHistory.tsx` | Add changelog |
 
 ---
 
 ## Version History Entry
 
-**v1.0.498**
-- Admin: Underworld product skill selection now uses dropdown with all skills from skill tree
-- Recording: Added date and time slot selection to recording session booking (mirrors rehearsal flow)
-- Recording: Sessions now use fixed 4-hour time slots (Morning, Afternoon, Evening, Late Night)
+**v1.0.501**
+- Companies: Creating subsidiaries now automatically creates the actual business entity (security firm, factory, logistics)
+- Companies: Added creation costs and initial starting capital by company type
+- Companies: Added deposit/withdraw funds functionality for company owners
+- Companies: Introduced monthly tax billing system with progressive rates
+- Companies: Smart navigation - "Manage" now goes to the correct specialized management page
+- Companies: Fixed merch factory management to properly lookup by company_id
+- UI: Enhanced finances tab with real fund management and tax overview
