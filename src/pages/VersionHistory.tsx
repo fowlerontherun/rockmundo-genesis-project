@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.491",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Fixed Songs tab returning 0 results - now queries songs by band_id directly" },
+      { type: 'improvement', description: "Band Overview redesigned with tabbed layout (Quick Stats, Performance, Engagement, Profile)" },
+      { type: 'improvement', description: "Improved color visibility with gradient cards and semantic color tokens" },
+    ],
+  },
+  {
     version: "1.0.490",
     date: "2026-01-23",
     changes: [
