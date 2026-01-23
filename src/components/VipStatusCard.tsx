@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Calendar, Clock, CreditCard } from "lucide-react";
+import { Crown, Calendar, Clock, CreditCard, Heart, Loader2 } from "lucide-react";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface VipStatusCardProps {
   compact?: boolean;
@@ -14,6 +17,23 @@ interface VipStatusCardProps {
 export const VipStatusCard = ({ compact = false }: VipStatusCardProps) => {
   const { data: vipStatus, isLoading } = useVipStatus();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [donating, setDonating] = useState(false);
+
+  const handleDonate = async () => {
+    setDonating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-donation");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to start donation process", variant: "destructive" });
+    } finally {
+      setDonating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -116,6 +136,16 @@ export const VipStatusCard = ({ compact = false }: VipStatusCardProps) => {
               Renew VIP Now
             </Button>
           )}
+
+          <Button
+            onClick={handleDonate}
+            disabled={donating}
+            variant="outline"
+            className="w-full border-pink-500/30 text-pink-500 hover:bg-pink-500/10"
+          >
+            {donating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Heart className="h-4 w-4 mr-2" />}
+            Donate $10 to Project
+          </Button>
         </CardContent>
       </Card>
     );
