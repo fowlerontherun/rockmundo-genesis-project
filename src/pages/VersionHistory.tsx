@@ -14,13 +14,6 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.505",
-    date: "2026-01-23",
-    changes: [
-      { type: 'improvement', description: "Underworld: Removed Shadow Store section (placeholder items) pending admin-managed rare item system" },
-    ],
-  },
-  {
     version: "1.0.504",
     date: "2026-01-23",
     changes: [
