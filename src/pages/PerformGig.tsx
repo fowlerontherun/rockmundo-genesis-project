@@ -91,14 +91,23 @@ export default function PerformGig() {
 
       setGig(gigData as any);
 
-      // Load band setlists for setlist selector
+      // Load band setlists for setlist selector with song counts
       const { data: setlistsData } = await supabase
         .from('setlists')
-        .select('id, name, song_count')
+        .select('id, name')
         .eq('band_id', gigData.band_id)
         .order('created_at', { ascending: false });
       
-      setBandSetlists(setlistsData || []);
+      // Calculate song counts for each setlist
+      const setlistsWithCounts = await Promise.all((setlistsData || []).map(async (setlist) => {
+        const { count } = await supabase
+          .from('setlist_songs')
+          .select('*', { count: 'exact', head: true })
+          .eq('setlist_id', setlist.id);
+        return { ...setlist, song_count: count || 0 };
+      }));
+      
+      setBandSetlists(setlistsWithCounts);
 
       if (gigData.setlist_id) {
         const [songsRes, rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
