@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.498",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Admin: Underworld product skill selection now uses dropdown with all skills from skill tree" },
+      { type: 'feature', description: "Recording: Added date and time slot selection to recording session booking (mirrors rehearsal flow)" },
+      { type: 'improvement', description: "Recording: Sessions now use fixed 4-hour time slots (Morning, Afternoon, Evening, Late Night)" },
+    ],
+  },
+  {
     version: "1.0.497",
     date: "2026-01-23",
     changes: [

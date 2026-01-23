@@ -132,6 +132,8 @@ interface CreateRecordingSessionInput {
   rehearsal_bonus?: number;
   session_type?: string;
   parent_recording_id?: string;
+  scheduled_start?: string;  // ISO date for scheduled sessions
+  scheduled_end?: string;    // ISO date for scheduled sessions
 }
 
 export const calculateRecordingQuality = (
@@ -183,8 +185,9 @@ export const useCreateRecordingSession = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const now = new Date();
-      const sessionEnd = new Date(now.getTime() + input.duration_hours * 60 * 60 * 1000);
+      // Use scheduled times if provided, otherwise use now
+      const now = input.scheduled_start ? new Date(input.scheduled_start) : new Date();
+      const sessionEnd = input.scheduled_end ? new Date(input.scheduled_end) : new Date(now.getTime() + input.duration_hours * 60 * 60 * 1000);
 
       // If band session, check availability for ALL band members first
       if (input.band_id) {
