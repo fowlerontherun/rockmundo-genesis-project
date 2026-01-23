@@ -225,6 +225,7 @@ const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const Prison = lazyWithRetry(() => import("./pages/Prison"));
 const VersionHistory = lazyWithRetry(() => import("./pages/VersionHistory"));
 const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
+const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const queryClient = new QueryClient();
 
@@ -320,6 +321,7 @@ function App() {
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="version-history" element={<VersionHistory />} />
+                    <Route path="donation-success" element={<DonationSuccess />} />
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}

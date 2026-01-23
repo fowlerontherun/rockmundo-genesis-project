@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.492",
+    date: "2026-01-23",
+    changes: [
+      { type: 'feature', description: "Donate to Project button - VIP players can donate $10 to support the project" },
+      { type: 'feature', description: "Donation grants 'Project Supporter' achievement and 1000 XP reward" },
+      { type: 'fix', description: "Fixed release_formats constraint errors - added 'cassette' to format_type and 'manufacturing' to manufacturing_status" },
+    ],
+  },
+  {
     version: "1.0.491",
     date: "2026-01-23",
     changes: [
