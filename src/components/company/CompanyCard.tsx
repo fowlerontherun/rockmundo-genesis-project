@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck } from "lucide-react";
+import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck, Wallet } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import type { Company, CompanyType } from "@/types/company";
 import { COMPANY_TYPE_INFO } from "@/types/company";
+import { CompanyFinanceDialog } from "./CompanyFinanceDialog";
 
 interface CompanyCardProps {
   company: Company;
@@ -71,6 +73,7 @@ const getManageRoute = (company: Company): string => {
 
 export const CompanyCard = ({ company, showActions = true, onClick }: CompanyCardProps) => {
   const navigate = useNavigate();
+  const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
   const typeInfo = COMPANY_TYPE_INFO[company.company_type];
 
   const formatCurrency = (amount: number) => {
@@ -153,6 +156,16 @@ export const CompanyCard = ({ company, showActions = true, onClick }: CompanyCar
           <div className="pt-2 flex gap-2">
             <Button 
               variant="outline" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFinanceDialogOpen(true);
+              }}
+            >
+              <Wallet className="h-4 w-4 mr-1" />
+              Finance
+            </Button>
+            <Button 
               size="sm" 
               className="flex-1"
               onClick={(e) => {
@@ -164,6 +177,14 @@ export const CompanyCard = ({ company, showActions = true, onClick }: CompanyCar
             </Button>
           </div>
         )}
+        
+        {/* Finance Dialog */}
+        <CompanyFinanceDialog
+          open={financeDialogOpen}
+          onOpenChange={setFinanceDialogOpen}
+          companyId={company.id}
+          companyName={company.name}
+        />
       </CardContent>
     </Card>
   );
