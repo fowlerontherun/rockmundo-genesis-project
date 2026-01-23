@@ -194,3 +194,6 @@ verify_jwt = false
 
 [functions.process-tour-travel]
 verify_jwt = false
+
+[functions.create-donation]
+verify_jwt = false
