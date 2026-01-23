@@ -110,6 +110,9 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const userBandIds = userBands?.map(b => b.band_id) || [];
 
       // Fetch gigs for user's bands
+      // Use date-only comparison to avoid timezone issues
+      const dateString = date.toISOString().split('T')[0];
+      
       let gigs: any[] = [];
       if (userBandIds.length > 0) {
         const { data: bandGigs, error: gigsError } = await supabase
@@ -117,12 +120,15 @@ export function useScheduledActivities(date: Date, userId?: string) {
           // NOTE: gigs->venues has multiple FK relationships; we must disambiguate with an explicit join
           .select('*, venues:venues!gigs_venue_id_fkey(name, city_id, cities:city_id(name)), bands:band_id(name), tours:tour_id(name)')
           .in('band_id', userBandIds)
-          .gte('scheduled_date', dayStart.toISOString())
-          .lte('scheduled_date', dayEnd.toISOString())
+          // Use date cast for reliable timezone-independent comparison
+          .gte('scheduled_date', `${dateString}T00:00:00.000Z`)
+          .lt('scheduled_date', `${dateString}T23:59:59.999Z`)
           .in('status', ['scheduled', 'in_progress', 'completed', 'confirmed']);
         
         if (gigsError) {
           console.error('Error fetching gigs for schedule:', gigsError);
+        } else {
+          console.log(`📅 Fetched ${bandGigs?.length || 0} gigs for ${dateString}`);
         }
         gigs = bandGigs || [];
       }
