@@ -114,68 +114,105 @@ const MusicVideos = () => {
   const [videoStyle, setVideoStyle] = useState("standard");
 
   // Fetch user's recorded songs (from releases OR directly recorded)
-  const { data: releasedSongs = [] } = useQuery({
+  const { data: releasedSongs = [], isLoading: songsLoading } = useQuery({
     queryKey: ["songs-for-videos", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
       
-      // First get user's band IDs
-      const { data: userBands } = await supabase
+      // First get user's band IDs - don't filter by member_status to include all bands
+      const { data: userBands, error: bandsError } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", profile.id)
-        .eq("member_status", "active");
+        .eq("user_id", profile.id);
       
-      const bandIds = userBands?.map(b => b.band_id) || [];
-      
-      // Get all recorded songs from user's bands
-      const { data: recordedSongs, error: songsError } = await supabase
-        .from("songs")
-        .select("id, title, band_id, status")
-        .in("band_id", bandIds.length > 0 ? bandIds : ['none'])
-        .eq("status", "recorded");
-      
-      if (songsError) {
-        console.error("Error fetching recorded songs:", songsError);
-        return [];
+      if (bandsError) {
+        console.error("Error fetching user bands:", bandsError);
       }
       
-      // Also get songs from released releases as fallback
+      const bandIds = userBands?.map(b => b.band_id) || [];
+      console.log("🎬 Music Video - User bands:", bandIds.length, bandIds);
+      
+      // Get all recorded songs from user's bands
+      let recordedSongs: any[] = [];
+      if (bandIds.length > 0) {
+        const { data: bandSongs, error: songsError } = await supabase
+          .from("songs")
+          .select("id, title, band_id, status")
+          .in("band_id", bandIds)
+          .eq("status", "recorded");
+        
+        if (songsError) {
+          console.error("Error fetching recorded songs:", songsError);
+        } else {
+          recordedSongs = bandSongs || [];
+          console.log("🎬 Music Video - Found recorded songs:", recordedSongs.length);
+        }
+      }
+      
+      // Also get songs directly owned by user (solo artist songs)
+      const { data: userOwnedSongs, error: userSongsError } = await supabase
+        .from("songs")
+        .select("id, title, band_id, status")
+        .eq("user_id", profile.id)
+        .eq("status", "recorded");
+      
+      if (userSongsError) {
+        console.error("Error fetching user-owned songs:", userSongsError);
+      } else {
+        console.log("🎬 Music Video - Found user-owned songs:", userOwnedSongs?.length || 0);
+      }
+      
+      // Merge both sources, avoiding duplicates
+      const songMap = new Map<string, any>();
+      
+      for (const song of recordedSongs) {
+        songMap.set(song.id, {
+          ...song,
+          release_id: null,
+          release_title: "Recorded",
+        });
+      }
+      
+      for (const song of (userOwnedSongs || [])) {
+        if (!songMap.has(song.id)) {
+          songMap.set(song.id, {
+            ...song,
+            release_id: null,
+            release_title: "Recorded",
+          });
+        }
+      }
+      
+      // Also check for songs from released releases as additional source
       const { data: userReleases } = await supabase
         .from("releases")
         .select("id, title")
         .eq("user_id", profile.id)
         .eq("release_status", "released");
 
-      const releaseIds = userReleases?.map((r) => r.id) || [];
-      
-      let releasedSongIds: string[] = [];
-      if (releaseIds.length > 0) {
+      if (userReleases && userReleases.length > 0) {
+        const releaseIds = userReleases.map((r) => r.id);
         const { data: releaseSongs } = await supabase
           .from("release_songs")
-          .select("song_id, release_id")
+          .select("song_id, songs(id, title, band_id, status)")
           .in("release_id", releaseIds);
-        releasedSongIds = releaseSongs?.map(rs => rs.song_id) || [];
-      }
-      
-      // Combine both sources - recorded songs take priority
-      const allSongs = recordedSongs || [];
-      const songMap = new Map<string, any>();
-      
-      for (const song of allSongs) {
-        const releaseId = releasedSongIds.includes(song.id) 
-          ? releaseIds.find(rId => true) // Find matching release
-          : null;
-        const release = userReleases?.find(r => r.id === releaseId);
         
-        songMap.set(song.id, {
-          ...song,
-          release_id: releaseId,
-          release_title: release?.title || "Unreleased",
-        });
+        for (const rs of (releaseSongs || [])) {
+          const song = rs.songs as any;
+          if (song && !songMap.has(song.id)) {
+            const release = userReleases.find(r => r.id === rs.song_id);
+            songMap.set(song.id, {
+              ...song,
+              release_id: release?.id || null,
+              release_title: release?.title || "Released",
+            });
+          }
+        }
       }
       
-      return Array.from(songMap.values());
+      const result = Array.from(songMap.values());
+      console.log("🎬 Music Video - Total available songs:", result.length);
+      return result;
     },
     enabled: !!profile?.id,
   });
@@ -449,15 +486,21 @@ const MusicVideos = () => {
             </DialogHeader>
 
             <div className="space-y-4">
-              {releasedSongs.length === 0 ? (
+              {songsLoading ? (
+                <div className="text-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">Loading your songs...</p>
+                </div>
+              ) : releasedSongs.length === 0 ? (
                 <div className="text-center py-8">
                   <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="font-semibold mb-2">No Released Music Yet</p>
+                  <p className="font-semibold mb-2">No Recorded Songs Found</p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    You need to create and release music in Release Manager first
+                    You need to record songs in the Recording Studio first. 
+                    Any song with status "recorded" can be used for music videos.
                   </p>
-                  <Button variant="outline" onClick={() => (window.location.href = "/releases")}>
-                    Go to Release Manager
+                  <Button variant="outline" onClick={() => (window.location.href = "/recording-studio")}>
+                    Go to Recording Studio
                   </Button>
                 </div>
               ) : (

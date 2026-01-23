@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.482",
+    date: "2026-01-23",
+    changes: [
+      { type: 'fix', description: "Fixed tour gigs not showing on schedule - resolved timezone comparison issues" },
+      { type: 'fix', description: "Music Videos: Now shows all recorded songs, not just from released albums" },
+      { type: 'fix', description: "Music Videos: Removed member_status filter that was hiding songs" },
+      { type: 'improvement', description: "Music Videos: Added loading state and better error messaging for song selection" },
+      { type: 'improvement', description: "Physical Releases: Fallback costs now work properly when manufacturing costs not found" },
+      { type: 'improvement', description: "Schedule: Added debug logging for gig fetching" },
+    ],
+  },
+  {
     version: "1.0.481",
     date: "2026-01-23",
     changes: [
