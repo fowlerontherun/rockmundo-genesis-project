@@ -50,7 +50,46 @@ Deno.serve(async (req) => {
 
     let processedCount = 0
     let travelCreated = 0
+    let travelCompleted = 0
 
+    // STEP 1: Complete any in-progress tour travels that have arrived
+    const { data: inProgressTravels, error: inProgressError } = await supabase
+      .from('player_travel_history')
+      .select('id, user_id, to_city_id, arrival_time')
+      .eq('status', 'in_progress')
+      .not('tour_leg_id', 'is', null)
+      .lte('arrival_time', now)
+
+    if (!inProgressError && inProgressTravels) {
+      console.log(`[process-tour-travel] Found ${inProgressTravels.length} in-progress tour travels to complete`)
+      
+      for (const travel of inProgressTravels) {
+        try {
+          // Mark travel as completed
+          await supabase
+            .from('player_travel_history')
+            .update({ status: 'completed' })
+            .eq('id', travel.id)
+
+          // Update player's current city
+          await supabase
+            .from('profiles')
+            .update({
+              current_city_id: travel.to_city_id,
+              is_traveling: false,
+              travel_arrives_at: null,
+            })
+            .eq('user_id', travel.user_id)
+
+          travelCompleted++
+          console.log(`[process-tour-travel] Completed tour travel ${travel.id} for user ${travel.user_id}`)
+        } catch (err) {
+          console.error(`[process-tour-travel] Error completing travel ${travel.id}:`, err)
+        }
+      }
+    }
+
+    // STEP 2: Process new tour legs
     for (const leg of dueLegs || []) {
       try {
         const tour = (leg as any).tours
@@ -78,19 +117,16 @@ Deno.serve(async (req) => {
         for (const member of members || []) {
           if (!member.user_id) continue
 
-          // Check if travel already exists for this user and leg
+          // Check if travel already exists for this user and leg (by tour_leg_id)
           const { data: existingTravel } = await supabase
             .from('player_travel_history')
-            .select('id')
+            .select('id, status')
+            .eq('tour_leg_id', leg.id)
             .eq('user_id', member.user_id)
-            .eq('from_city_id', leg.from_city_id)
-            .eq('to_city_id', leg.to_city_id)
-            .gte('departure_time', new Date(new Date(leg.departure_date).getTime() - 3600000).toISOString())
-            .lte('departure_time', new Date(new Date(leg.departure_date).getTime() + 3600000).toISOString())
             .maybeSingle()
 
           if (existingTravel) {
-            console.log(`[process-tour-travel] Travel already exists for user ${member.user_id}, leg ${leg.id}`)
+            console.log(`[process-tour-travel] Travel already exists for user ${member.user_id}, leg ${leg.id} (status: ${existingTravel.status})`)
             continue
           }
 
@@ -118,7 +154,7 @@ Deno.serve(async (req) => {
             continue
           }
 
-          // Update player profile
+          // Update player profile based on status
           if (status === 'completed') {
             await supabase
               .from('profiles')
@@ -148,13 +184,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[process-tour-travel] Complete: ${processedCount} legs, ${travelCreated} travels created`)
+    console.log(`[process-tour-travel] Complete: ${processedCount} legs, ${travelCreated} new travels, ${travelCompleted} completed`)
 
     return new Response(
       JSON.stringify({
         success: true,
         processedLegs: processedCount,
         travelsCreated: travelCreated,
+        travelsCompleted: travelCompleted,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

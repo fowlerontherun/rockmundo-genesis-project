@@ -25,7 +25,8 @@ interface ConflictInfo {
 }
 
 /**
- * Get all active band member user IDs (excluding touring members)
+ * Get all active REAL band member user IDs (players only, not touring/hired members)
+ * Only includes members with user_id (real players) - excludes NPC touring members
  */
 export async function getBandMemberUserIds(bandId: string): Promise<string[]> {
   const { data: members, error } = await supabase
@@ -33,7 +34,8 @@ export async function getBandMemberUserIds(bandId: string): Promise<string[]> {
     .select('user_id')
     .eq('band_id', bandId)
     .eq('member_status', 'active')
-    .eq('is_touring_member', false);
+    .eq('is_touring_member', false)
+    .not('user_id', 'is', null);  // Only real players
   
   if (error) {
     console.error('Error fetching band members:', error);
@@ -47,15 +49,17 @@ export async function getBandMemberUserIds(bandId: string): Promise<string[]> {
 
 /**
  * Get band member details including names for conflict reporting
+ * Only includes REAL players (user_id is not null), excludes touring/hired members
  */
 export async function getBandMemberDetails(bandId: string): Promise<{ userId: string; name: string }[]> {
-  // First get band members
+  // First get band members - only real players (have user_id)
   const { data: members, error: membersError } = await supabase
     .from('band_members')
     .select('user_id')
     .eq('band_id', bandId)
     .eq('member_status', 'active')
-    .eq('is_touring_member', false);
+    .eq('is_touring_member', false)
+    .not('user_id', 'is', null);  // Only real players
   
   if (membersError) {
     console.error('Error fetching band members:', membersError);

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.505",
+    date: "2026-01-24",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed availability check to only include real players (excludes touring/NPC members)" },
+      { type: 'feature', description: "Rehearsals: Added post-rehearsal completion report showing song familiarity gains and time to next levels" },
+      { type: 'fix', description: "Tours: Fixed auto-travel not updating player location - now completes in-progress travels when arrival time passes" },
+    ],
+  },
+  {
     version: "1.0.504",
     date: "2026-01-23",
     changes: [
