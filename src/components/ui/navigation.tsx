@@ -15,7 +15,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
-// RMRadioButton moved to VersionHeader
+import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home,
   Users,
@@ -421,6 +421,7 @@ const Navigation = () => {
           />
           
           <div className="flex items-center gap-0.5">
+            <RMRadioButton />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
@@ -480,6 +481,7 @@ const Navigation = () => {
           </div>
           
           <div className="flex items-center gap-1">
+            <RMRadioButton />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
