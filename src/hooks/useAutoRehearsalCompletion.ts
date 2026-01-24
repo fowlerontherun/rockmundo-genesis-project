@@ -1,16 +1,30 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { logGameActivity } from "./useGameActivityLog";
+import type { SongRehearsalResult } from "@/components/rehearsal/RehearsalCompletionReport";
+
+export interface RehearsalCompletionData {
+  results: SongRehearsalResult[];
+  chemistryGain: number;
+  xpGained: number;
+  durationHours: number;
+}
 
 /**
  * Hook to automatically complete rehearsals that have passed their scheduled end time.
  * This does the work directly instead of relying on edge functions/cron.
+ * Returns completion data for showing post-rehearsal reports.
  */
 export const useAutoRehearsalCompletion = (userId: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [pendingReport, setPendingReport] = useState<RehearsalCompletionData | null>(null);
+
+  const clearPendingReport = useCallback(() => {
+    setPendingReport(null);
+  }, []);
 
   const completeRehearsals = useCallback(async () => {
     if (!userId) return;
@@ -54,6 +68,12 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
 
       let completedCount = 0;
 
+      // Track all song results for the report
+      let allSongResults: SongRehearsalResult[] = [];
+      let totalChemistryGain = 0;
+      let totalXpGained = 0;
+      let totalDurationHours = 0;
+
       for (const rehearsal of overdueRehearsals) {
         try {
           // Calculate duration in minutes
@@ -66,6 +86,10 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
           const baseXpPerHour = 10 + Math.floor(Math.random() * 10);
           const xpEarned = Math.floor(baseXpPerHour * durationHours);
           const chemistryGain = Math.floor(durationHours * 2) + 1;
+
+          totalChemistryGain += chemistryGain;
+          totalXpGained += xpEarned;
+          totalDurationHours += durationHours;
 
           // Update rehearsal as completed
           const { error: updateError } = await supabase
@@ -115,6 +139,14 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
             // Split familiarity minutes across all songs
             const minutesPerSong = Math.floor(durationMinutes / songsToUpdate.length);
             
+            // Fetch song titles for the report
+            const { data: songsData } = await supabase
+              .from('songs')
+              .select('id, title')
+              .in('id', songsToUpdate);
+            
+            const songTitleMap = new Map((songsData || []).map(s => [s.id, s.title]));
+            
             for (const songId of songsToUpdate) {
               console.log(`[AutoRehearsal] Updating familiarity for song ${songId}, band ${rehearsal.band_id}`);
               
@@ -133,6 +165,15 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
               const currentMinutes = existing?.familiarity_minutes || 0;
               const newMinutes = currentMinutes + minutesPerSong;
               console.log(`[AutoRehearsal] Familiarity for ${songId}: ${currentMinutes} -> ${newMinutes} mins`);
+
+              // Track this result for the report
+              allSongResults.push({
+                songId,
+                songTitle: songTitleMap.get(songId) || 'Unknown Song',
+                previousMinutes: currentMinutes,
+                addedMinutes: minutesPerSong,
+                newMinutes: newMinutes,
+              });
 
               if (existing?.id) {
                 const { error: updateError } = await supabase
@@ -206,10 +247,21 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
       }
 
       if (completedCount > 0) {
-        toast({
-          title: 'Rehearsal Completed!',
-          description: `${completedCount} rehearsal(s) finished. Song familiarity and chemistry updated!`,
-        });
+        // Set pending report data for UI to show
+        if (allSongResults.length > 0) {
+          setPendingReport({
+            results: allSongResults,
+            chemistryGain: totalChemistryGain,
+            xpGained: totalXpGained,
+            durationHours: totalDurationHours,
+          });
+        } else {
+          // Fallback to toast if no song data
+          toast({
+            title: 'Rehearsal Completed!',
+            description: `${completedCount} rehearsal(s) finished. Song familiarity and chemistry updated!`,
+          });
+        }
 
         // Invalidate queries to refresh UI immediately
         queryClient.invalidateQueries({ queryKey: ['all-rehearsals'] });
@@ -236,4 +288,9 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
 
     return () => clearInterval(interval);
   }, [userId, completeRehearsals]);
+
+  return {
+    pendingReport,
+    clearPendingReport,
+  };
 };
