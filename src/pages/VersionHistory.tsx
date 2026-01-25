@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.507",
+    date: "2026-01-25",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed 'Failed to schedule activity for all band members' error - now includes required profile_id in activity records" },
+    ],
+  },
+  {
     version: "1.0.506",
     date: "2026-01-25",
     changes: [
