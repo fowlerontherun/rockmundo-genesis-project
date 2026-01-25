@@ -174,9 +174,33 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     return [];
   }
   
+  // Fetch profile IDs for each member (required by the table schema)
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, user_id')
+    .in('user_id', memberIds);
+  
+  if (profileError) {
+    console.error('Error fetching profiles for band members:', profileError);
+    throw new Error('Failed to fetch member profiles');
+  }
+  
+  const profileMap = new Map(
+    (profiles || []).map(p => [p.user_id, p.id])
+  );
+  
+  // Filter to only members with valid profiles
+  const validMembers = memberIds.filter(userId => profileMap.has(userId));
+  
+  if (validMembers.length === 0) {
+    console.warn('No valid profiles found for band members');
+    return [];
+  }
+  
   // Create activity for each band member
-  const insertData = memberIds.map(userId => ({
+  const insertData = validMembers.map(userId => ({
     user_id: userId,
+    profile_id: profileMap.get(userId),
     activity_type: params.activityType,
     scheduled_start: params.scheduledStart.toISOString(),
     scheduled_end: params.scheduledEnd.toISOString(),
