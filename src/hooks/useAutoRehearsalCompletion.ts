@@ -150,21 +150,33 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
             for (const songId of songsToUpdate) {
               console.log(`[AutoRehearsal] Updating familiarity for song ${songId}, band ${rehearsal.band_id}`);
               
+              // First fetch existing to calculate new total and track for report
               const { data: existing, error: fetchError } = await supabase
                 .from('band_song_familiarity')
-                .select('id, familiarity_minutes')
+                .select('familiarity_minutes')
                 .eq('band_id', rehearsal.band_id)
                 .eq('song_id', songId)
                 .maybeSingle();
 
               if (fetchError) {
                 console.error(`[AutoRehearsal] Error fetching existing familiarity:`, fetchError);
-                continue;
               }
 
               const currentMinutes = existing?.familiarity_minutes || 0;
               const newMinutes = currentMinutes + minutesPerSong;
-              console.log(`[AutoRehearsal] Familiarity for ${songId}: ${currentMinutes} -> ${newMinutes} mins`);
+              
+              // Calculate rehearsal stage based on percentage (600 minutes = 100%)
+              const calculatedPercentage = Math.min(100, Math.floor((newMinutes / 600) * 100));
+              let rehearsalStage = 'learning';
+              if (calculatedPercentage >= 90) {
+                rehearsalStage = 'mastered';
+              } else if (calculatedPercentage >= 60) {
+                rehearsalStage = 'familiar';
+              } else if (calculatedPercentage >= 30) {
+                rehearsalStage = 'practicing';
+              }
+              
+              console.log(`[AutoRehearsal] Familiarity for ${songId}: ${currentMinutes} -> ${newMinutes} mins (${rehearsalStage})`);
 
               // Track this result for the report
               allSongResults.push({
@@ -175,32 +187,28 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
                 newMinutes: newMinutes,
               });
 
-              if (existing?.id) {
-                const { error: updateError } = await supabase
-                  .from('band_song_familiarity')
-                  .update({
-                    familiarity_minutes: newMinutes,
-                    last_rehearsed_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', existing.id);
-
-                if (updateError) {
-                  console.error(`[AutoRehearsal] Error updating familiarity:`, updateError);
-                }
-              } else {
-                const { error: insertError } = await supabase
-                  .from('band_song_familiarity')
-                  .insert({
+              // Use proper upsert with onConflict for band_id,song_id constraint
+              const { error: upsertError } = await supabase
+                .from('band_song_familiarity')
+                .upsert(
+                  {
                     band_id: rehearsal.band_id,
                     song_id: songId,
                     familiarity_minutes: newMinutes,
+                    rehearsal_stage: rehearsalStage,
                     last_rehearsed_at: new Date().toISOString(),
-                  });
+                    updated_at: new Date().toISOString(),
+                  },
+                  {
+                    onConflict: 'band_id,song_id',
+                    ignoreDuplicates: false,
+                  }
+                );
 
-                if (insertError) {
-                  console.error(`[AutoRehearsal] Error inserting familiarity:`, insertError);
-                }
+              if (upsertError) {
+                console.error(`[AutoRehearsal] Error upserting familiarity for ${songId}:`, upsertError);
+              } else {
+                console.log(`[AutoRehearsal] Successfully updated familiarity for ${songId}`);
               }
             }
             console.log(`[AutoRehearsal] Updated familiarity for ${songsToUpdate.length} songs`);

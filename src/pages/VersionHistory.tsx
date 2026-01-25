@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.506",
+    date: "2026-01-25",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed post-rehearsal completion report not displaying - now shows song progress and level-up information" },
+      { type: 'fix', description: "Rehearsals: Fixed song familiarity not updating after rehearsals - corrected upsert logic with proper conflict resolution" },
+      { type: 'improvement', description: "Rehearsals: Improved scheduling conflict error messages - now clearly indicates when you have a conflict" },
+      { type: 'fix', description: "Rehearsals: Fixed RLS policies for band_song_familiarity to allow proper inserts by band members" },
+    ],
+  },
+  {
     version: "1.0.505",
     date: "2026-01-24",
     changes: [

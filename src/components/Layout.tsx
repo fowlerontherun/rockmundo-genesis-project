@@ -14,6 +14,7 @@ import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingComp
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
+import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ const Layout = () => {
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
   
-  // Global auto-complete for rehearsals
-  useAutoRehearsalCompletion(user?.id || null);
+  // Global auto-complete for rehearsals - get pending report for UI display
+  const { pendingReport, clearPendingReport } = useAutoRehearsalCompletion(user?.id || null);
 
   // Global gig execution - processes active gigs
   useGlobalGigExecution(user?.id || null);
@@ -81,6 +82,16 @@ const Layout = () => {
         </div>
       </main>
       <EventNotificationModal />
+      {pendingReport && (
+        <RehearsalCompletionReport
+          open={!!pendingReport}
+          onClose={clearPendingReport}
+          results={pendingReport.results}
+          chemistryGain={pendingReport.chemistryGain}
+          xpGained={pendingReport.xpGained}
+          durationHours={pendingReport.durationHours}
+        />
+      )}
     </div>
   );
 };
