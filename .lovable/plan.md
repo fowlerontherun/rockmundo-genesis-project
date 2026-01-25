@@ -1,174 +1,139 @@
 
+# Rehearsal System Bug Fixes
 
-# Company Subsidiary System Complete Fix
-
-## Version: 1.0.504
+## Version: 1.0.506
 
 ## Overview
-This update fixes the subsidiary creation system so that all company types properly create their specialized business records. It also aligns costs across the platform to match the $1,000,000 standard for labels and appropriately scales other business types.
+This update fixes three critical issues with the rehearsal system: the post-rehearsal report not displaying, song familiarity not being updated, and improved error messaging for scheduling conflicts.
 
 ---
 
-## Issues Identified
+## Issues Found
 
-### 1. Missing Specialized Record Creation
-The database trigger `create_subsidiary_entity` only handles:
-- ✅ `security` → creates `security_firms` record
-- ✅ `factory` → creates `merch_factories` record  
-- ✅ `logistics` → creates `logistics_companies` record
-- ❌ `label` → NO record created (should create `labels` record)
-- ❌ `venue` → NO record created (should create `venues` record)
-- ❌ `rehearsal` → NO record created (should create `rehearsal_rooms` record)
+### 1. Rehearsal Completion Report Not Showing
+The `RehearsalCompletionReport` component exists but is **never rendered**. The `useAutoRehearsalCompletion` hook in `Layout.tsx` returns `pendingReport` data but nothing displays it.
 
-### 2. Cost Inconsistency
-| Type | Current Subsidiary Cost | Should Be |
-|------|------------------------|-----------|
-| holding | $100,000 | $500,000 |
-| label | $75,000 | $1,000,000 (matches independent) |
-| security | $50,000 | $250,000 |
-| factory | $150,000 | $500,000 |
-| logistics | $100,000 | $300,000 |
-| venue | $200,000 | $750,000 |
-| rehearsal | $75,000 | $200,000 |
+### 2. Song Familiarity Not Updating
+Despite rehearsals completing, the `band_song_familiarity` table isn't being updated. The client-side hook attempts updates but they fail silently. The edge function also runs but doesn't appear to be creating/updating records.
 
-### 3. Missing Navigation/Management
-After creation, subsidiaries need proper routing to their management pages.
+Root causes identified:
+- The client-side hook may be failing due to RLS policies (INSERT policy has no `qual` check which could be an issue)
+- The edge function logs show success but no actual database changes occur
+
+### 3. Scheduling Conflict Messages
+The current system correctly filters out touring members, but doesn't clearly explain when the user themselves has a conflict. The error message could be clearer.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Update Company Creation Costs
+### Phase 1: Render the Rehearsal Completion Report
 
-**File: `src/types/company.ts`**
+**File: `src/components/Layout.tsx`**
 
-Update `COMPANY_CREATION_COSTS` to realistic values:
-
-```typescript
-export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number }> = {
-  holding: { creationCost: 500_000, startingBalance: 1_000_000 },
-  label: { creationCost: 1_000_000, startingBalance: 1_000_000 },
-  security: { creationCost: 250_000, startingBalance: 500_000 },
-  factory: { creationCost: 500_000, startingBalance: 750_000 },
-  logistics: { creationCost: 300_000, startingBalance: 500_000 },
-  venue: { creationCost: 750_000, startingBalance: 1_000_000 },
-  rehearsal: { creationCost: 200_000, startingBalance: 300_000 },
-};
-```
-
-### Phase 2: Expand Database Trigger
-
-**New Migration: Expand `create_subsidiary_entity` trigger**
-
-Update the trigger function to handle all company types:
-
-```sql
-CREATE OR REPLACE FUNCTION create_subsidiary_entity()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Security Firm
-  IF NEW.company_type = 'security' THEN
-    INSERT INTO security_firms (company_id, name, city_id, reputation, license_tier)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 50, 1);
-  
-  -- Merch Factory
-  ELSIF NEW.company_type = 'factory' THEN
-    INSERT INTO merch_factories (company_id, name, city_id, production_capacity, quality_rating)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 100, 50);
-  
-  -- Logistics Company
-  ELSIF NEW.company_type = 'logistics' THEN
-    INSERT INTO logistics_companies (company_id, name, city_id, fleet_size, license_tier)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 0, 1);
-  
-  -- Record Label (NEW)
-  ELSIF NEW.company_type = 'label' THEN
-    INSERT INTO labels (company_id, name, headquarters_city, balance, reputation_score, is_subsidiary)
-    VALUES (NEW.id, NEW.name, 
-      (SELECT name FROM cities WHERE id = NEW.headquarters_city_id),
-      NEW.balance, 50, true);
-  
-  -- Venue (NEW)
-  ELSIF NEW.company_type = 'venue' THEN
-    INSERT INTO venues (name, city, capacity, base_payment, venue_type, prestige_level, company_id)
-    VALUES (NEW.name, 
-      (SELECT name FROM cities WHERE id = NEW.headquarters_city_id),
-      500, 5000, 'club', 1, NEW.id);
-  
-  -- Rehearsal Studio (NEW)
-  ELSIF NEW.company_type = 'rehearsal' THEN
-    INSERT INTO rehearsal_rooms (company_id, name, city_id, hourly_rate, daily_rate, capacity, quality_rating)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 50, 300, 4, 50);
-  
-  END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### Phase 3: Add company_id to venues table
-
-The `venues` table currently lacks a `company_id` column. Add it:
-
-```sql
-ALTER TABLE venues ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL;
-```
-
-### Phase 4: Update Subsidiary Management Navigation
-
-**File: `src/components/company/CompanyCard.tsx`**
-
-Add smart navigation that routes to the correct management page based on company type:
+Update to actually use the `pendingReport` from `useAutoRehearsalCompletion` and render the `RehearsalCompletionReport` dialog:
 
 ```typescript
-const getManagementRoute = (company: Company): string => {
-  switch (company.company_type) {
-    case 'label':
-      // Find the label record linked to this company
-      return `/labels`; // or specific label page
-    case 'venue':
-      return `/venue-management/${company.id}`;
-    case 'rehearsal':
-      return `/rehearsal-studio/${company.id}`;
-    case 'security':
-      return `/security-firm/${company.id}`;
-    case 'factory':
-      return `/merch-factory/${company.id}`;
-    case 'logistics':
-      return `/logistics/${company.id}`;
-    default:
-      return `/company/${company.id}`;
+// Get the pending report data from the hook
+const { pendingReport, clearPendingReport } = useAutoRehearsalCompletion(user?.id || null);
+
+// ... in the JSX return:
+{pendingReport && (
+  <RehearsalCompletionReport
+    open={!!pendingReport}
+    onClose={clearPendingReport}
+    results={pendingReport.results}
+    chemistryGain={pendingReport.chemistryGain}
+    xpGained={pendingReport.xpGained}
+    durationHours={pendingReport.durationHours}
+  />
+)}
+```
+
+### Phase 2: Fix Familiarity Updates in Edge Function
+
+**File: `supabase/functions/complete-rehearsals/index.ts`**
+
+The edge function logic looks correct but may have silent failures. Add more robust error handling and logging:
+
+1. Add detailed logging for each familiarity update attempt
+2. Add explicit error checking after upsert operations
+3. Ensure the upsert uses the correct conflict resolution
+
+Also verify the columns match the table schema exactly:
+- `band_id`, `song_id`, `familiarity_minutes`, `last_rehearsed_at`, `updated_at`, `rehearsal_stage`
+
+### Phase 3: Fix Client-Side Familiarity Updates
+
+**File: `src/hooks/useAutoRehearsalCompletion.ts`**
+
+The client-side hook has issues with the upsert logic. Problems identified:
+1. Using `update` by `id` requires fetching the existing record's ID first
+2. Upsert may be failing due to constraint issues
+
+Fix by using proper upsert with conflict resolution:
+
+```typescript
+// Instead of separate update/insert, use upsert properly
+const { error: upsertError } = await supabase
+  .from('band_song_familiarity')
+  .upsert(
+    {
+      band_id: rehearsal.band_id,
+      song_id: songId,
+      familiarity_minutes: newMinutes,
+      last_rehearsed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: 'band_id,song_id',
+      ignoreDuplicates: false,
+    }
+  );
+```
+
+### Phase 4: Improve Conflict Error Messages
+
+**File: `src/utils/bandActivityScheduling.ts`**
+
+Update `formatConflictMessage` to be clearer when the user themselves is the one with a conflict:
+
+```typescript
+export function formatConflictMessage(conflicts: ConflictInfo[], currentUserName?: string): string {
+  if (conflicts.length === 0) return '';
+  
+  if (conflicts.length === 1) {
+    const conflict = conflicts[0];
+    // Highlight if it's the current user
+    const isYou = conflict.userName === currentUserName;
+    const name = isYou ? 'You have' : `${conflict.userName} has`;
+    return `${name} "${conflict.activityTitle}" scheduled at this time.`;
   }
-};
+  
+  const names = conflicts.map(c => c.userName).join(', ');
+  return `Multiple band members have scheduling conflicts: ${names}`;
+}
 ```
 
-### Phase 5: Add Recording Studio Type
+### Phase 5: Add Database RLS Policy Fix
 
-Currently missing from company types - add `recording_studio` as a company type option:
+**New Migration File**
 
-**File: `src/types/company.ts`**
+Ensure the INSERT policy for `band_song_familiarity` has proper conditions:
 
-```typescript
-export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal' | 'recording_studio';
-
-// Add to COMPANY_CREATION_COSTS
-recording_studio: { creationCost: 400_000, startingBalance: 600_000 },
-
-// Add to COMPANY_TYPE_INFO
-recording_studio: {
-  label: 'Recording Studio',
-  icon: 'Mic2',
-  description: 'Professional recording facilities for music production',
-  color: 'text-rose-500',
-},
-```
-
-And update the trigger to handle it:
 ```sql
-ELSIF NEW.company_type = 'recording_studio' THEN
-  INSERT INTO recording_studios (company_id, name, city_id, hourly_rate, quality_rating, capacity)
-  VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 200, 50, 1);
+-- Drop existing insert policy and recreate with proper conditions
+DROP POLICY IF EXISTS "Band members can update their song familiarity" ON band_song_familiarity;
+
+CREATE POLICY "Band members can insert song familiarity"
+ON band_song_familiarity
+FOR INSERT
+TO public
+WITH CHECK (
+  band_id IN (
+    SELECT band_id FROM band_members WHERE user_id = auth.uid()
+  )
+);
 ```
 
 ---
@@ -177,45 +142,37 @@ ELSIF NEW.company_type = 'recording_studio' THEN
 
 | File | Changes |
 |------|---------|
-| `src/types/company.ts` | Update costs, add recording_studio type |
-| `supabase/migrations/xxx_expand_subsidiary_trigger.sql` | New migration for trigger + venues.company_id |
-| `src/components/company/CompanyCard.tsx` | Add smart management routing |
-| `src/components/company/CreateSubsidiaryDialog.tsx` | Ensure all types available |
-| `src/components/VersionHeader.tsx` | Update to v1.0.504 |
+| `src/components/Layout.tsx` | Render RehearsalCompletionReport when pendingReport exists |
+| `src/hooks/useAutoRehearsalCompletion.ts` | Fix upsert logic for familiarity updates |
+| `supabase/functions/complete-rehearsals/index.ts` | Add better error logging, verify upsert logic |
+| `src/utils/bandActivityScheduling.ts` | Improve conflict message clarity |
+| `supabase/migrations/xxx_fix_familiarity_rls.sql` | Fix INSERT policy |
+| `src/components/VersionHeader.tsx` | Update to v1.0.506 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
 ---
 
 ## Technical Details
 
-### Specialized Tables & Required Fields
+### Why Familiarity Updates Fail
+The current client-side logic does:
+1. Fetch existing record by `band_id` + `song_id`
+2. If exists, update by `id`
+3. If not exists, insert new
 
-| Company Type | Target Table | Key Fields |
-|--------------|--------------|------------|
-| label | labels | name, headquarters_city, balance, reputation_score, is_subsidiary, company_id |
-| venue | venues | name, city, capacity, base_payment, venue_type, prestige_level, company_id |
-| rehearsal | rehearsal_rooms | name, city_id, hourly_rate, daily_rate, capacity, quality_rating, company_id |
-| recording_studio | recording_studios | name, city_id, hourly_rate, quality_rating, capacity, company_id |
-| security | security_firms | name, city_id, reputation, license_tier, company_id |
-| factory | merch_factories | name, city_id, production_capacity, quality_rating, company_id |
-| logistics | logistics_companies | name, city_id, fleet_size, license_tier, company_id |
+This should work, but if the upsert is failing, it's likely because:
+- The RLS INSERT policy's missing `WITH CHECK` clause
+- The upsert `onConflict` isn't matching the actual unique constraint name
 
-### Default Starting Values
-
-All subsidiaries start with:
-- **Reputation/Quality**: 50 (out of 100)
-- **License Tier**: 1 (basic)
-- **Capacity**: Type-appropriate defaults
-- **Rates**: Market-standard starting rates
+### Database Constraint
+The `band_song_familiarity` table has a unique constraint on `(band_id, song_id)`. Upsert operations need to specify this correctly.
 
 ---
 
 ## Version History Entry
 
-**v1.0.504**
-- Companies: Fixed subsidiary creation - all types (labels, venues, rehearsal studios, recording studios) now properly create their specialized business records
-- Companies: Aligned creation costs with realistic values ($1M for labels, $750K for venues, etc.)
-- Companies: Added Recording Studio as a new subsidiary type
-- Companies: Added smart navigation to route subsidiaries to their management pages
-- Companies: Added company_id column to venues table for proper ownership tracking
-
+**v1.0.506**
+- Rehearsals: Fixed post-rehearsal completion report not displaying - now shows song progress and level-up information
+- Rehearsals: Fixed song familiarity not updating after rehearsals - corrected upsert logic and RLS policies
+- Rehearsals: Improved scheduling conflict error messages for clearer feedback
+- Rehearsals: Added detailed logging to edge function for debugging familiarity updates
