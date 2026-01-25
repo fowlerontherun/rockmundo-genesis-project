@@ -134,15 +134,32 @@ export async function checkBandAvailability(
 /**
  * Format conflict information for user display
  */
-export function formatConflictMessage(conflicts: ConflictInfo[]): string {
+export function formatConflictMessage(conflicts: ConflictInfo[], currentUserId?: string): string {
   if (conflicts.length === 0) return '';
   
   if (conflicts.length === 1) {
-    return `${conflicts[0].userName} has "${conflicts[0].activityTitle}" scheduled at this time.`;
+    const conflict = conflicts[0];
+    // Highlight if it's the current user
+    const isYou = currentUserId && conflict.userId === currentUserId;
+    const name = isYou ? 'You have' : `${conflict.userName} has`;
+    return `${name} "${conflict.activityTitle}" scheduled at this time.`;
+  }
+  
+  // Check if current user is among the conflicts
+  const hasCurrentUser = currentUserId && conflicts.some(c => c.userId === currentUserId);
+  if (hasCurrentUser) {
+    const otherNames = conflicts
+      .filter(c => c.userId !== currentUserId)
+      .map(c => c.userName)
+      .join(', ');
+    if (otherNames) {
+      return `You and ${otherNames} have scheduling conflicts at this time.`;
+    }
+    return `You have a scheduling conflict at this time.`;
   }
   
   const names = conflicts.map(c => c.userName).join(', ');
-  return `Multiple band members have conflicts: ${names}`;
+  return `Multiple band members have scheduling conflicts: ${names}`;
 }
 
 /**
