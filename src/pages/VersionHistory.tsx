@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.509",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Band Manager: Fixed overlapping tab layout on mobile - main tabs now properly wrap with consistent spacing" },
+      { type: 'improvement', description: "Band Manager: Shortened tab labels on mobile for better fit (Fame, Rep, History)" },
+    ],
+  },
+  {
     version: "1.0.508",
     date: "2026-01-26",
     changes: [

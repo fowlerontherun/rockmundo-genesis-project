@@ -154,11 +154,11 @@ export function BandOverviewTabs({ band, memberCount, maxMembers, skillRating, h
 
   return (
     <Tabs defaultValue="quick-stats" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="quick-stats" className="text-xs sm:text-sm">Quick Stats</TabsTrigger>
-        <TabsTrigger value="performance" className="text-xs sm:text-sm">Performance</TabsTrigger>
-        <TabsTrigger value="engagement" className="text-xs sm:text-sm">Engagement</TabsTrigger>
-        <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsTrigger value="quick-stats" className="text-[10px] sm:text-sm py-1.5">Quick Stats</TabsTrigger>
+        <TabsTrigger value="performance" className="text-[10px] sm:text-sm py-1.5">Performance</TabsTrigger>
+        <TabsTrigger value="engagement" className="text-[10px] sm:text-sm py-1.5">Engagement</TabsTrigger>
+        <TabsTrigger value="profile" className="text-[10px] sm:text-sm py-1.5">Profile</TabsTrigger>
       </TabsList>
 
       {/* Quick Stats Tab */}
