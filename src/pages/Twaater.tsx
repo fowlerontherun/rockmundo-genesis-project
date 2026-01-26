@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TwaaterComposer } from "@/components/twaater/TwaaterComposer";
 import { TwaaterFeed } from "@/components/twaater/TwaaterFeed";
+import { TwaaterExploreFeed } from "@/components/twaater/TwaaterExploreFeed";
 import { TrendingSection } from "@/components/twaater/TrendingSection";
 import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
 import { TwaaterNotificationsBell } from "@/components/twaater/TwaaterNotificationsBell";
@@ -17,7 +18,8 @@ import { TwaatCard } from "@/components/twaater/TwaatCard";
 import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
-import { Home, TrendingUp, AtSign, Bookmark, Search, Users } from "lucide-react";
+import { TwaaterFeedSuggestions } from "@/components/twaater/TwaaterFeedSuggestions";
+import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -101,10 +103,14 @@ export default function Twaater() {
           </div>
 
           <Tabs defaultValue="feed" className="w-full">
-            <TabsList className="grid w-full grid-cols-5" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+            <TabsList className="grid w-full grid-cols-6" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
               <TabsTrigger value="feed" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                 <Home className="h-4 w-4" />
                 <span className="hidden sm:inline">Feed</span>
+              </TabsTrigger>
+              <TabsTrigger value="explore" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
+                <Compass className="h-4 w-4" />
+                <span className="hidden sm:inline">Explore</span>
               </TabsTrigger>
               <TabsTrigger value="search" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                 <Search className="h-4 w-4" />
@@ -128,7 +134,12 @@ export default function Twaater() {
               <div className="border-b p-4" style={{ borderColor: "hsl(var(--twaater-border))" }}>
                 {currentAccountId && <TwaaterComposer accountId={currentAccountId} />}
               </div>
+              {currentAccountId && <TwaaterFeedSuggestions currentAccountId={currentAccountId} />}
               <TwaaterFeed viewerAccountId={currentAccountId} feedType="feed" />
+            </TabsContent>
+
+            <TabsContent value="explore" className="mt-0">
+              <TwaaterExploreFeed viewerAccountId={currentAccountId} />
             </TabsContent>
 
             <TabsContent value="search" className="mt-0 p-4">
