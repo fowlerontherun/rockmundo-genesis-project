@@ -284,7 +284,23 @@ export const useCountryCharts = (
         maxWeeksOnChart: number;
       }>();
 
-      for (const entry of data || []) {
+      // Filter entries based on release category to ensure proper data
+      const filteredData = (data || []).filter(entry => {
+        if (releaseCategory === "album") {
+          // For album view, only include entries with entry_type='album' or from _album chart types
+          return entry.entry_type === "album" || entry.chart_type?.endsWith("_album");
+        }
+        if (releaseCategory === "ep") {
+          // For EP view, only include entries with entry_type='album' (EPs use album type) or from _ep chart types
+          return entry.entry_type === "album" || entry.chart_type?.endsWith("_ep");
+        }
+        // For singles and all, include everything (singles are the default)
+        return true;
+      });
+
+      console.log("[useCountryCharts] After filtering by category:", filteredData.length);
+
+      for (const entry of filteredData) {
         // Use release_id for album/EP entries, song_id for singles
         const key = isAlbumCategory && entry.release_id 
           ? entry.release_id 
