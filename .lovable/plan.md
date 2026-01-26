@@ -1,139 +1,241 @@
 
-# Rehearsal System Bug Fixes
 
-## Version: 1.0.506
+# Rehearsal System Complete Fix
+
+## Version: 1.0.508
 
 ## Overview
-This update fixes three critical issues with the rehearsal system: the post-rehearsal report not displaying, song familiarity not being updated, and improved error messaging for scheduling conflicts.
+This update fixes multiple critical issues in the rehearsal system: song familiarity not updating due to database constraint mismatch, enhances the post-rehearsal completion report, and retroactively fixes affected rehearsals from the past week.
 
 ---
 
-## Issues Found
+## Issues Identified
 
-### 1. Rehearsal Completion Report Not Showing
-The `RehearsalCompletionReport` component exists but is **never rendered**. The `useAutoRehearsalCompletion` hook in `Layout.tsx` returns `pendingReport` data but nothing displays it.
+### 1. CRITICAL: `rehearsal_stage` Value Mismatch (Root Cause)
+The code uses incorrect stage values that violate the database CHECK constraint:
 
-### 2. Song Familiarity Not Updating
-Despite rehearsals completing, the `band_song_familiarity` table isn't being updated. The client-side hook attempts updates but they fail silently. The edge function also runs but doesn't appear to be creating/updating records.
+| Code Uses | Database Expects |
+|-----------|------------------|
+| `'learning'` | `'learning'` ✅ |
+| `'practicing'` | ❌ INVALID |
+| `'familiar'` | `'familiar'` ✅ |
+| `'mastered'` | ❌ INVALID |
+| - | `'unlearned'` |
+| - | `'well_rehearsed'` |
+| - | `'perfected'` |
 
-Root causes identified:
-- The client-side hook may be failing due to RLS policies (INSERT policy has no `qual` check which could be an issue)
-- The edge function logs show success but no actual database changes occur
+**Effect**: Every upsert fails silently because `'practicing'` and `'mastered'` violate the CHECK constraint `valid_rehearsal_stage`, so no familiarity records are created or updated.
 
-### 3. Scheduling Conflict Messages
-The current system correctly filters out touring members, but doesn't clearly explain when the user themselves has a conflict. The error message could be clearer.
+### 2. Stage Thresholds Mismatch
+The code calculates stages based on a 600-minute scale (100%), but the actual REHEARSAL_LEVELS use different thresholds:
+- Unlearned: 0-59 min
+- Learning: 60-299 min  
+- Familiar: 300-899 min
+- Well Rehearsed: 900-1799 min
+- Perfected: 1800+ min
+
+### 3. Missing Familiarity Records
+28+ rehearsals completed in the last 7 days have NULL familiarity records, including:
+- "revolution call" - 6 rehearsals totaling ~12 hours
+- "Fight them on beaches fight them in the pubs" - 2 rehearsals 
+- "Blue - Twelve" - 2 rehearsals (12 hours each)
+- Full setlist rehearsal (16 songs) - 4 hours
+
+### 4. Post-Rehearsal Report Enhancement Needed
+Current report works but could be enhanced with:
+- Better time display for hours remaining to next level
+- Color-coded progress bars by level
+- Summary of total minutes added across all songs
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Render the Rehearsal Completion Report
+### Phase 1: Fix Stage Calculation Function
 
-**File: `src/components/Layout.tsx`**
+**Create new utility file: `src/utils/rehearsalStageCalculation.ts`**
 
-Update to actually use the `pendingReport` from `useAutoRehearsalCompletion` and render the `RehearsalCompletionReport` dialog:
-
-```typescript
-// Get the pending report data from the hook
-const { pendingReport, clearPendingReport } = useAutoRehearsalCompletion(user?.id || null);
-
-// ... in the JSX return:
-{pendingReport && (
-  <RehearsalCompletionReport
-    open={!!pendingReport}
-    onClose={clearPendingReport}
-    results={pendingReport.results}
-    chemistryGain={pendingReport.chemistryGain}
-    xpGained={pendingReport.xpGained}
-    durationHours={pendingReport.durationHours}
-  />
-)}
-```
-
-### Phase 2: Fix Familiarity Updates in Edge Function
-
-**File: `supabase/functions/complete-rehearsals/index.ts`**
-
-The edge function logic looks correct but may have silent failures. Add more robust error handling and logging:
-
-1. Add detailed logging for each familiarity update attempt
-2. Add explicit error checking after upsert operations
-3. Ensure the upsert uses the correct conflict resolution
-
-Also verify the columns match the table schema exactly:
-- `band_id`, `song_id`, `familiarity_minutes`, `last_rehearsed_at`, `updated_at`, `rehearsal_stage`
-
-### Phase 3: Fix Client-Side Familiarity Updates
-
-**File: `src/hooks/useAutoRehearsalCompletion.ts`**
-
-The client-side hook has issues with the upsert logic. Problems identified:
-1. Using `update` by `id` requires fetching the existing record's ID first
-2. Upsert may be failing due to constraint issues
-
-Fix by using proper upsert with conflict resolution:
+Create a shared function that maps minutes to correct database stage values:
 
 ```typescript
-// Instead of separate update/insert, use upsert properly
-const { error: upsertError } = await supabase
-  .from('band_song_familiarity')
-  .upsert(
-    {
-      band_id: rehearsal.band_id,
-      song_id: songId,
-      familiarity_minutes: newMinutes,
-      last_rehearsed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      onConflict: 'band_id,song_id',
-      ignoreDuplicates: false,
-    }
-  );
-```
+export const STAGE_THRESHOLDS = {
+  unlearned: { min: 0, max: 59 },
+  learning: { min: 60, max: 299 },
+  familiar: { min: 300, max: 899 },
+  well_rehearsed: { min: 900, max: 1799 },
+  perfected: { min: 1800, max: Infinity },
+};
 
-### Phase 4: Improve Conflict Error Messages
+export type RehearsalStage = 'unlearned' | 'learning' | 'familiar' | 'well_rehearsed' | 'perfected';
 
-**File: `src/utils/bandActivityScheduling.ts`**
-
-Update `formatConflictMessage` to be clearer when the user themselves is the one with a conflict:
-
-```typescript
-export function formatConflictMessage(conflicts: ConflictInfo[], currentUserName?: string): string {
-  if (conflicts.length === 0) return '';
-  
-  if (conflicts.length === 1) {
-    const conflict = conflicts[0];
-    // Highlight if it's the current user
-    const isYou = conflict.userName === currentUserName;
-    const name = isYou ? 'You have' : `${conflict.userName} has`;
-    return `${name} "${conflict.activityTitle}" scheduled at this time.`;
-  }
-  
-  const names = conflicts.map(c => c.userName).join(', ');
-  return `Multiple band members have scheduling conflicts: ${names}`;
+export function calculateRehearsalStage(totalMinutes: number): RehearsalStage {
+  if (totalMinutes >= 1800) return 'perfected';
+  if (totalMinutes >= 900) return 'well_rehearsed';
+  if (totalMinutes >= 300) return 'familiar';
+  if (totalMinutes >= 60) return 'learning';
+  return 'unlearned';
 }
 ```
 
-### Phase 5: Add Database RLS Policy Fix
+### Phase 2: Fix Client-Side Hook
 
-**New Migration File**
+**File: `src/hooks/useAutoRehearsalCompletion.ts`**
 
-Ensure the INSERT policy for `band_song_familiarity` has proper conditions:
+Update the stage calculation to use correct values:
+
+```typescript
+import { calculateRehearsalStage } from '@/utils/rehearsalStageCalculation';
+
+// Replace the incorrect stage calculation (lines 168-177):
+const rehearsalStage = calculateRehearsalStage(newMinutes);
+```
+
+### Phase 3: Fix Edge Function
+
+**File: `supabase/functions/complete-rehearsals/index.ts`**
+
+Update the stage calculation to match database constraints:
+
+```typescript
+// Replace lines 180-188 with:
+function calculateRehearsalStage(totalMinutes: number): string {
+  if (totalMinutes >= 1800) return 'perfected';
+  if (totalMinutes >= 900) return 'well_rehearsed';
+  if (totalMinutes >= 300) return 'familiar';
+  if (totalMinutes >= 60) return 'learning';
+  return 'unlearned';
+}
+
+// Then use:
+const rehearsalStage = calculateRehearsalStage(newMinutes);
+```
+
+### Phase 4: Retroactively Fix Affected Rehearsals
+
+**New Migration: Backfill missing familiarity records**
+
+Create a migration that processes all completed rehearsals that have NULL familiarity:
 
 ```sql
--- Drop existing insert policy and recreate with proper conditions
-DROP POLICY IF EXISTS "Band members can update their song familiarity" ON band_song_familiarity;
+-- Fix missing familiarity records from completed rehearsals
+DO $$
+DECLARE
+  r RECORD;
+  song_record RECORD;
+  current_minutes INTEGER;
+  new_minutes INTEGER;
+  minutes_per_song INTEGER;
+  calc_stage TEXT;
+BEGIN
+  -- Process each completed rehearsal with selected_song_id
+  FOR r IN 
+    SELECT br.id, br.band_id, br.selected_song_id, br.duration_hours
+    FROM band_rehearsals br
+    LEFT JOIN band_song_familiarity bsf ON bsf.song_id = br.selected_song_id AND bsf.band_id = br.band_id
+    WHERE br.status = 'completed'
+    AND br.scheduled_end > NOW() - INTERVAL '14 days'
+    AND br.selected_song_id IS NOT NULL
+    AND bsf.id IS NULL
+  LOOP
+    minutes_per_song := FLOOR(r.duration_hours * 60);
+    
+    -- Calculate stage
+    IF minutes_per_song >= 1800 THEN calc_stage := 'perfected';
+    ELSIF minutes_per_song >= 900 THEN calc_stage := 'well_rehearsed';
+    ELSIF minutes_per_song >= 300 THEN calc_stage := 'familiar';
+    ELSIF minutes_per_song >= 60 THEN calc_stage := 'learning';
+    ELSE calc_stage := 'unlearned';
+    END IF;
+    
+    INSERT INTO band_song_familiarity (band_id, song_id, familiarity_minutes, rehearsal_stage, last_rehearsed_at)
+    VALUES (r.band_id, r.selected_song_id, minutes_per_song, calc_stage, NOW())
+    ON CONFLICT (band_id, song_id) DO UPDATE SET
+      familiarity_minutes = band_song_familiarity.familiarity_minutes + EXCLUDED.familiarity_minutes,
+      rehearsal_stage = EXCLUDED.rehearsal_stage,
+      last_rehearsed_at = EXCLUDED.last_rehearsed_at,
+      updated_at = NOW();
+  END LOOP;
+  
+  -- Process setlist rehearsals
+  FOR r IN 
+    SELECT br.id, br.band_id, br.setlist_id, br.duration_hours
+    FROM band_rehearsals br
+    WHERE br.status = 'completed'
+    AND br.scheduled_end > NOW() - INTERVAL '14 days'
+    AND br.setlist_id IS NOT NULL
+  LOOP
+    -- Get song count for this setlist
+    SELECT COUNT(*) INTO minutes_per_song FROM setlist_songs WHERE setlist_id = r.setlist_id;
+    IF minutes_per_song > 0 THEN
+      minutes_per_song := FLOOR((r.duration_hours * 60) / minutes_per_song);
+    END IF;
+    
+    -- Process each song in the setlist
+    FOR song_record IN 
+      SELECT song_id FROM setlist_songs WHERE setlist_id = r.setlist_id AND song_id IS NOT NULL
+    LOOP
+      -- Get current familiarity
+      SELECT COALESCE(familiarity_minutes, 0) INTO current_minutes 
+      FROM band_song_familiarity 
+      WHERE band_id = r.band_id AND song_id = song_record.song_id;
+      
+      IF current_minutes IS NULL THEN current_minutes := 0; END IF;
+      new_minutes := current_minutes + minutes_per_song;
+      
+      -- Calculate stage
+      IF new_minutes >= 1800 THEN calc_stage := 'perfected';
+      ELSIF new_minutes >= 900 THEN calc_stage := 'well_rehearsed';
+      ELSIF new_minutes >= 300 THEN calc_stage := 'familiar';
+      ELSIF new_minutes >= 60 THEN calc_stage := 'learning';
+      ELSE calc_stage := 'unlearned';
+      END IF;
+      
+      INSERT INTO band_song_familiarity (band_id, song_id, familiarity_minutes, rehearsal_stage, last_rehearsed_at)
+      VALUES (r.band_id, song_record.song_id, new_minutes, calc_stage, NOW())
+      ON CONFLICT (band_id, song_id) DO UPDATE SET
+        familiarity_minutes = EXCLUDED.familiarity_minutes,
+        rehearsal_stage = EXCLUDED.rehearsal_stage,
+        last_rehearsed_at = EXCLUDED.last_rehearsed_at,
+        updated_at = NOW();
+    END LOOP;
+  END LOOP;
+END $$;
+```
 
-CREATE POLICY "Band members can insert song familiarity"
-ON band_song_familiarity
-FOR INSERT
-TO public
-WITH CHECK (
-  band_id IN (
-    SELECT band_id FROM band_members WHERE user_id = auth.uid()
-  )
-);
+### Phase 5: Enhance Post-Rehearsal Report
+
+**File: `src/components/rehearsal/RehearsalCompletionReport.tsx`**
+
+Add enhancements:
+1. Color-coded progress bars by level tier
+2. Show hours remaining (not just minutes) for longer waits
+3. Add summary footer showing total minutes gained
+4. Improve level-up animation
+
+```typescript
+// Enhanced time formatting
+const formatTimeRemaining = (minutes: number): string => {
+  if (minutes >= 120) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+};
+
+// Color-coded progress bars
+const getProgressColor = (levelName: string): string => {
+  switch (levelName) {
+    case "Perfected": return "bg-purple-500";
+    case "Well Rehearsed": return "bg-blue-500";
+    case "Familiar": return "bg-green-500";
+    case "Learning": return "bg-yellow-500";
+    default: return "bg-gray-500";
+  }
+};
+
+// Add summary footer
+const totalMinutesAdded = results.reduce((sum, r) => sum + r.addedMinutes, 0);
 ```
 
 ---
@@ -142,37 +244,54 @@ WITH CHECK (
 
 | File | Changes |
 |------|---------|
-| `src/components/Layout.tsx` | Render RehearsalCompletionReport when pendingReport exists |
-| `src/hooks/useAutoRehearsalCompletion.ts` | Fix upsert logic for familiarity updates |
-| `supabase/functions/complete-rehearsals/index.ts` | Add better error logging, verify upsert logic |
-| `src/utils/bandActivityScheduling.ts` | Improve conflict message clarity |
-| `supabase/migrations/xxx_fix_familiarity_rls.sql` | Fix INSERT policy |
-| `src/components/VersionHeader.tsx` | Update to v1.0.506 |
+| `src/utils/rehearsalStageCalculation.ts` | NEW - Shared stage calculation utility |
+| `src/hooks/useAutoRehearsalCompletion.ts` | Fix stage values to use correct DB enum |
+| `supabase/functions/complete-rehearsals/index.ts` | Fix stage calculation function |
+| `src/components/rehearsal/RehearsalCompletionReport.tsx` | Enhance with color-coding and time formatting |
+| `supabase/migrations/xxx_backfill_missing_familiarity.sql` | NEW - Retroactively fix missing records |
+| `src/components/VersionHeader.tsx` | Update to v1.0.508 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
 ---
 
 ## Technical Details
 
-### Why Familiarity Updates Fail
-The current client-side logic does:
-1. Fetch existing record by `band_id` + `song_id`
-2. If exists, update by `id`
-3. If not exists, insert new
+### Database Constraint Verification
+The `valid_rehearsal_stage` CHECK constraint only allows:
+```sql
+CHECK ((rehearsal_stage = ANY (ARRAY[
+  'unlearned'::text, 
+  'learning'::text, 
+  'familiar'::text, 
+  'well_rehearsed'::text, 
+  'perfected'::text
+])))
+```
 
-This should work, but if the upsert is failing, it's likely because:
-- The RLS INSERT policy's missing `WITH CHECK` clause
-- The upsert `onConflict` isn't matching the actual unique constraint name
+### Level Thresholds (from `rehearsalLevels.ts`)
+| Level | Name | Min Minutes | Max Minutes |
+|-------|------|-------------|-------------|
+| 0 | Unlearned | 0 | 59 |
+| 1 | Learning | 60 | 299 |
+| 2 | Familiar | 300 | 899 |
+| 3 | Well Rehearsed | 900 | 1799 |
+| 4 | Perfected | 1800 | ∞ |
 
-### Database Constraint
-The `band_song_familiarity` table has a unique constraint on `(band_id, song_id)`. Upsert operations need to specify this correctly.
+### Affected Rehearsals to Backfill
+At least 28 rehearsals from the past 7 days need familiarity records created:
+- 6 rehearsals for "revolution call" (~12 hours total)
+- 2 rehearsals for "Fight them on beaches fight them in the pubs" (~4 hours)
+- 12+ rehearsals for "Mr. Blue" band songs (~72 hours)
+- 1 full setlist rehearsal with 16 songs (4 hours)
 
 ---
 
 ## Version History Entry
 
-**v1.0.506**
-- Rehearsals: Fixed post-rehearsal completion report not displaying - now shows song progress and level-up information
-- Rehearsals: Fixed song familiarity not updating after rehearsals - corrected upsert logic and RLS policies
-- Rehearsals: Improved scheduling conflict error messages for clearer feedback
-- Rehearsals: Added detailed logging to edge function for debugging familiarity updates
+**v1.0.508**
+- Rehearsals: CRITICAL FIX - Song familiarity now updates correctly after rehearsals (fixed database constraint mismatch)
+- Rehearsals: Full setlist rehearsals now properly update familiarity for ALL songs in the setlist
+- Rehearsals: Enhanced post-rehearsal report with color-coded progress bars, improved time formatting, and summary totals
+- Rehearsals: Retroactively fixed ~28 completed rehearsals from the past 2 weeks that were missing familiarity data
+- Rehearsals: Added shared stage calculation utility for consistency between client and edge functions
+
