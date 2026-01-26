@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.508",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Rehearsals: CRITICAL FIX - Song familiarity now updates correctly (fixed database constraint mismatch with stage values)" },
+      { type: 'fix', description: "Rehearsals: Full setlist rehearsals now properly update familiarity for ALL songs in the setlist" },
+      { type: 'improvement', description: "Rehearsals: Enhanced post-rehearsal report with color-coded progress bars and improved time formatting" },
+      { type: 'fix', description: "Rehearsals: Retroactively fixed completed rehearsals from past 2 weeks that were missing familiarity data" },
+      { type: 'improvement', description: "Rehearsals: Added shared stage calculation utility for consistency between client and server" },
+    ],
+  },
+  {
     version: "1.0.507",
     date: "2026-01-25",
     changes: [

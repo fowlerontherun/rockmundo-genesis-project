@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { logGameActivity } from "./useGameActivityLog";
+import { calculateRehearsalStage } from "@/utils/rehearsalStageCalculation";
 import type { SongRehearsalResult } from "@/components/rehearsal/RehearsalCompletionReport";
 
 export interface RehearsalCompletionData {
@@ -165,16 +166,8 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
               const currentMinutes = existing?.familiarity_minutes || 0;
               const newMinutes = currentMinutes + minutesPerSong;
               
-              // Calculate rehearsal stage based on percentage (600 minutes = 100%)
-              const calculatedPercentage = Math.min(100, Math.floor((newMinutes / 600) * 100));
-              let rehearsalStage = 'learning';
-              if (calculatedPercentage >= 90) {
-                rehearsalStage = 'mastered';
-              } else if (calculatedPercentage >= 60) {
-                rehearsalStage = 'familiar';
-              } else if (calculatedPercentage >= 30) {
-                rehearsalStage = 'practicing';
-              }
+              // Calculate rehearsal stage using correct database-compliant values
+              const rehearsalStage = calculateRehearsalStage(newMinutes);
               
               console.log(`[AutoRehearsal] Familiarity for ${songId}: ${currentMinutes} -> ${newMinutes} mins (${rehearsalStage})`);
 
