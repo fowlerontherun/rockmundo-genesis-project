@@ -1,146 +1,146 @@
 
-
-# Fix Underworld Store Health Effects and Item Consumption
+# Fix Music Charts - Separate Tabs with Dedicated Chart Data
 
 ## Overview
-Ensure that underworld store items with health effects properly impact the player's health when used, and that consumed items correctly disappear from the inventory. Also fix the display of negative effects in the UI.
+Completely restructure the charts page to use separate tabs with dedicated, working chart data for each tab. The current system has a mismatch between what the edge function generates and what the frontend queries, causing charts to show "No Data Available."
 
-## Current State Analysis
+## Root Cause Analysis
 
-After analyzing the code, I found:
+### Database Content vs Frontend Queries
 
-1. **Health effects ARE being applied** - The code in `useUnderworldInventory.ts` lines 86-88 does apply health changes to the profile
-2. **Items ARE being marked as used** - The `is_used: true` flag is set after use (lines 140-143)
-3. **Used items ARE filtered out** - The inventory query filters `.eq("is_used", false)` (line 44)
+| Chart Type | What DB Has | What Frontend Queries (Singles) | What Frontend Queries (Albums) |
+|------------|-------------|----------------------------------|--------------------------------|
+| Combined | `combined` only | `combined_single` | `combined_album` |
+| Streaming | `streaming`, `streaming_single`, `streaming_album`, `streaming_ep` | `streaming_single` ✅ | `streaming_album` ✅ |
+| Radio | `radio_airplay` only | `radio_airplay_single` ❌ | `radio_airplay_album` ❌ |
+| Digital | `digital_sales`, `digital_sales_single`, `digital_sales_album`, `digital_sales_ep` | `digital_sales_single` ✅ | `digital_sales_album` ✅ |
+| CD | `cd_sales`, `cd_sales_single` only | `cd_sales_single` ✅ | `cd_sales_album` ❌ |
+| Vinyl | `vinyl_sales`, `vinyl_sales_single` only | `vinyl_sales_single` ✅ | `vinyl_sales_album` ❌ |
+| Cassette | No entries exist | `cassette_sales_single` ❌ | `cassette_sales_album` ❌ |
 
-### Issues Found
+### Problems
+1. **Combined chart**: Edge function code exists for `combined_single`/`combined_album`/`combined_ep` but entries are NOT in DB (code may not be deployed)
+2. **Radio chart**: No scoped variants generated (only base `radio_airplay`)
+3. **Physical sales**: Only `_single` variants exist for CD/Vinyl, no `_album` or `_ep`
+4. **Cassette**: No data at all
 
-| Issue | Location | Problem |
-|-------|----------|---------|
-| No health floor | `useUnderworldInventory.ts:87` | Health can go below 0 for negative effects (drugs) |
-| No energy floor | `useUnderworldInventory.ts:90` | Energy can go below 0 |
-| Wrong sign display | `ItemDetailDialog.tsx:120` | Shows `+-10` for negative effects |
-| Missing color coding | `ItemDetailDialog.tsx:119` | Negative effects not highlighted as warnings |
-| Same issues in purchase | `useUnderworldStore.ts:182-185` | Instant effects also lack floor validation |
+## Solution: Simplify to Working Charts
 
-## Technical Implementation
+### Part 1: Restructure Frontend to Query What Exists
 
-### File 1: `src/hooks/useUnderworldInventory.ts`
+Change the query strategy in `useCountryCharts.ts` to:
+1. For "All" and "Singles" categories: Query BOTH the base type AND the `_single` variant
+2. For "Albums" category: Query the `_album` variant, falling back to base type entries that have `entry_type='album'`
+3. For "EPs" category: Query the `_ep` variant, falling back to entries with release_type='ep'
 
-Add floor validation when applying effects:
+### Part 2: Fix Edge Function to Generate All Required Types
 
-**Current (lines 85-91):**
+Add missing scoped variants to the edge function:
+1. Radio: Generate `radio_airplay_single`, `radio_airplay_album`, `radio_airplay_ep`
+2. CD Sales: Generate `cd_sales_album`, `cd_sales_ep`
+3. Vinyl Sales: Generate `vinyl_sales_album`, `vinyl_sales_ep`
+4. Cassette Sales: Generate `cassette_sales_single`, `cassette_sales_album`, `cassette_sales_ep`
+5. Record Sales: Generate `record_sales_album`, `record_sales_ep`
+6. Ensure `combined_single`/`combined_album`/`combined_ep` are inserted (code exists but may not execute)
+
+### Part 3: Simplify the Tabs UI
+
+Reorganize the charts page into cleaner tabs that map to what data exists:
+- **Top 50** (Combined): Official chart combining streams + sales
+- **Streaming**: Ranked by weekly streams
+- **Digital Sales**: Digital download sales
+- **Physical Sales** (merged CD, Vinyl, Cassette): Physical format sales
+- **Radio Airplay**: Radio plays and listeners
+
+Remove confusing release category selector when viewing charts that don't have album data.
+
+## Implementation Details
+
+### File 1: `src/hooks/useCountryCharts.ts`
+
+**Changes:**
+- Fix query to include base chart types alongside scoped types
+- For singles: Query `[chartType, `${chartType}_single`]`
+- For albums: Query `[`${chartType}_album`]` with fallback
+- For all: Query all variants
+
 ```typescript
-if (effects.health) {
-  updates.health = Math.min(100, (profile?.health || 0) + (effects.health as number));
-}
-if (effects.energy) {
-  updates.energy = Math.min(100, (profile?.energy || 0) + (effects.energy as number));
+// Updated chartTypeFilter logic
+if (releaseCategory === "all") {
+  // Query ALL variants plus base type
+  chartTypeFilter = [chartType, `${chartType}_single`, `${chartType}_ep`, `${chartType}_album`];
+} else if (releaseCategory === "single") {
+  // Query both base type AND single variant (base often contains singles)
+  chartTypeFilter = [chartType, `${chartType}_single`];
+} else {
+  // Query specific category
+  chartTypeFilter = [`${chartType}_${releaseCategory}`];
 }
 ```
 
-**Fixed:**
+### File 2: `supabase/functions/update-music-charts/index.ts`
+
+**Add radio airplay scoped variants (after line 900):**
 ```typescript
-if (effects.health) {
-  updates.health = Math.max(0, Math.min(100, (profile?.health || 0) + (effects.health as number)));
-}
-if (effects.energy) {
-  updates.energy = Math.max(0, Math.min(100, (profile?.energy || 0) + (effects.energy as number)));
-}
+// Radio airplay - single entries (all radio plays are for singles currently)
+const radioSingleEntries = radioEntries.map(entry => ({
+  ...entry,
+  chart_type: "radio_airplay_single",
+}));
+chartEntries.push(...radioSingleEntries);
 ```
 
-### File 2: `src/hooks/useUnderworldStore.ts`
+**Add CD/Vinyl sales album variants:**
+- Aggregate CD/Vinyl sales by release_id for albums
+- Create `cd_sales_album`, `vinyl_sales_album` entries
 
-Same fix for instant effect application during purchase:
+**Ensure combined_single/album/ep entries are generated:**
+- Verify the code at lines 621-718 is being executed
+- Add logging to debug if entries fail insertion
 
-**Current (lines 181-186):**
+### File 3: `src/pages/CountryCharts.tsx`
+
+**Simplify chart type tabs:**
 ```typescript
-if (effects.health) {
-  updates.health = Math.min(100, (profile?.health || 0) + (effects.health as number));
-}
-if (effects.energy) {
-  updates.energy = Math.min(100, (profile?.energy || 0) + (effects.energy as number));
-}
+const CHART_TYPES = [
+  { value: "combined", label: "Top 50", icon: <BarChart3 />, description: "Official combined chart" },
+  { value: "streaming", label: "Streaming", icon: <Radio />, description: "Streaming plays" },
+  { value: "digital_sales", label: "Digital", icon: <Download />, description: "Digital downloads" },
+  { value: "physical_sales", label: "Physical", icon: <Disc />, description: "CD, Vinyl, Cassette" },
+  { value: "radio_airplay", label: "Radio", icon: <Radio />, description: "Radio airplay" },
+];
 ```
 
-**Fixed:**
-```typescript
-if (effects.health) {
-  updates.health = Math.max(0, Math.min(100, (profile?.health || 0) + (effects.health as number)));
-}
-if (effects.energy) {
-  updates.energy = Math.max(0, Math.min(100, (profile?.energy || 0) + (effects.energy as number)));
-}
-```
+**Add "physical_sales" as a combined chart type** that queries:
+- `cd_sales`, `cd_sales_single`, `vinyl_sales`, `vinyl_sales_single`, `cassette_sales`, `cassette_sales_single`
 
-### File 3: `src/components/inventory/ItemDetailDialog.tsx`
+**Show release category selector only for chart types that have album data:**
+- Streaming: Has album/EP data
+- Digital: Has album/EP data
+- Combined: Should have album/EP data
+- Physical/Radio: Default to singles only
 
-Fix effect display to handle negative values and show warnings:
-
-**Current (line 119-121):**
-```typescript
-<Badge variant="outline" className="font-mono">
-  +{displayValue}
-</Badge>
-```
-
-**Fixed:**
-```typescript
-<Badge 
-  variant="outline" 
-  className={`font-mono ${Number(value) < 0 ? 'text-destructive border-destructive/50' : 'text-green-600 border-green-500/50'}`}
->
-  {Number(value) >= 0 ? '+' : ''}{displayValue}
-</Badge>
-```
-
-### File 4: `src/pages/InventoryManager.tsx`
-
-Fix the item card badges to also show correct signs and colors for effects:
-
-**Current (lines 147-166):**
-```typescript
-{effects.health && (
-  <Badge variant="outline" className="gap-1 text-xs">
-    <Heart className="h-3 w-3" /> +{String(effects.health)}
-  </Badge>
-)}
-```
-
-**Fixed:**
-```typescript
-{effects.health && (
-  <Badge 
-    variant="outline" 
-    className={`gap-1 text-xs ${Number(effects.health) < 0 ? 'text-destructive border-destructive/30' : ''}`}
-  >
-    <Heart className="h-3 w-3" /> 
-    {Number(effects.health) >= 0 ? '+' : ''}{String(effects.health)}
-  </Badge>
-)}
-```
-
-Apply similar fix for energy, xp, and fame badges.
+### File 4: Migration - No Schema Changes Needed
+The existing `chart_entries` table structure supports all required data.
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useUnderworldInventory.ts` | Add `Math.max(0, ...)` floor for health and energy |
-| `src/hooks/useUnderworldStore.ts` | Add `Math.max(0, ...)` floor for health and energy |
-| `src/components/inventory/ItemDetailDialog.tsx` | Fix sign display and add color coding for negative effects |
-| `src/pages/InventoryManager.tsx` | Fix sign display and add color coding for effect badges |
-| `src/components/VersionHeader.tsx` | Bump to v1.0.527 |
+| `src/hooks/useCountryCharts.ts` | Fix chartTypeFilter to query base types + scoped types |
+| `src/pages/CountryCharts.tsx` | Simplify tabs, add physical_sales type, conditionally show category selector |
+| `supabase/functions/update-music-charts/index.ts` | Add missing scoped variants for radio and physical sales |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.528 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
-## Summary of Changes
+## Execution Order
 
-1. **Health/Energy Floor**: Prevent stats from going below 0 when using items with negative effects
-2. **Correct Sign Display**: Show `-10` instead of `+-10` for negative effects
-3. **Visual Warning**: Red/destructive styling for negative effect values
-4. **Green Positive**: Green styling for positive effect values
+1. **Frontend First**: Fix `useCountryCharts.ts` to query what exists - this will immediately make streaming, digital, CD, and vinyl charts work for singles
+2. **Simplify UI**: Update `CountryCharts.tsx` with cleaner tabs and conditional category selector
+3. **Backend**: Update edge function to generate missing scoped variants
+4. **Deploy**: Deploy edge function and manually trigger chart generation
+5. **Verify**: All chart types should now display data
 
 ## Version Update
-- Bump to **v1.0.527**
-- Changelog: "Underworld: Fixed health effects properly applying when using consumable items, added floor validation (0-100 range), improved effect display with correct signs and color coding for negative effects"
-
+- Bump to **v1.0.528**
+- Changelog: "Charts: Fixed data display by querying correct chart types, simplified tabs to Top 50/Streaming/Digital/Physical/Radio, and updated edge function to generate all required scoped variants"
