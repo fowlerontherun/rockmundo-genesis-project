@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.533",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Songwriting: Made 'Invite' collaborator button visible on mobile by wrapping card actions and adding label" },
+    ],
+  },
+  {
     version: "1.0.532",
     date: "2026-01-26",
     changes: [

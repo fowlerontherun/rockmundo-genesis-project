@@ -186,12 +186,12 @@ export const SimplifiedProjectCard = ({
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-2">
             {canComplete && (
               <Button
                 onClick={() => setCompleteDialogOpen(true)}
                 size="sm"
-                className="flex-1"
+                className="flex-1 min-w-[180px]"
               >
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Complete
@@ -204,7 +204,7 @@ export const SimplifiedProjectCard = ({
                   onClick={onStartSession}
                   disabled={isLocked || isCompleted}
                   size="sm"
-                  className="flex-1"
+                  className="flex-1 min-w-[180px]"
                 >
                   <Play className="w-3 h-3 mr-1" />
                   Start Session
@@ -239,7 +239,8 @@ export const SimplifiedProjectCard = ({
               disabled={isLocked || isCompleted}
               title="Invite Collaborator"
             >
-              <UserPlus className="w-3 h-3" />
+              <UserPlus className="w-3 h-3 mr-1" />
+              Invite
             </Button>
             
             <Button
