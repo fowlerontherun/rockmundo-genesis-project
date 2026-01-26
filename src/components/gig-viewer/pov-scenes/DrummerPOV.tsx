@@ -5,10 +5,13 @@ interface DrummerPOVProps {
   intensity: number;
   songSection: string;
   clipType: string;
+  clipVariant?: 'D1' | 'D2'; // D1 = Snare POV, D2 = Overhead Toms POV
 }
 
-export const DrummerPOV = memo(({ intensity, songSection, clipType }: DrummerPOVProps) => {
-  const isFill = songSection === 'solo' || clipType === 'solo_focus';
+export const DrummerPOV = memo(({ intensity, songSection, clipType, clipVariant = 'D1' }: DrummerPOVProps) => {
+  // D2 focuses on toms during fills/solos
+  const isTomsView = clipVariant === 'D2';
+  const isFill = isTomsView || songSection === 'solo' || clipType === 'solo_focus';
   const isLookingAtCrowd = clipType === 'crowd_look';
   const isPlaying = intensity > 0.3;
   
@@ -171,55 +174,96 @@ export const DrummerPOV = memo(({ intensity, songSection, clipType }: DrummerPOV
         />
       </div>
       
-      {/* Snare drum - CENTER FOCUS */}
-      <motion.div
-        className="absolute bottom-24 left-1/2 -translate-x-1/2 w-36 h-24"
-        style={{ perspective: '200px' }}
-      >
+      {/* Snare drum - CENTER FOCUS for D1 */}
+      {!isTomsView && (
         <motion.div
-          className="w-full h-full rounded-full"
-          animate={{
-            boxShadow: isPlaying 
-              ? ['0 0 25px rgba(255,255,255,0.25)', '0 0 40px rgba(255,255,255,0.5)', '0 0 25px rgba(255,255,255,0.25)']
-              : '0 0 15px rgba(255,255,255,0.15)',
-          }}
-          transition={{ duration: 0.08, repeat: isPlaying ? Infinity : 0 }}
-          style={{
-            background: 'radial-gradient(ellipse at center, #f8f8f8 0%, #e8e8e8 60%, #c8c8c8 100%)',
-            transform: 'perspective(200px) rotateX(55deg)',
-            border: '3px solid #aaa',
-          }}
-        />
-        {/* Snare wires visible */}
-        <div 
-          className="absolute bottom-2 left-1/4 right-1/4 h-1"
-          style={{
-            background: 'repeating-linear-gradient(90deg, #888 0px, #888 1px, transparent 1px, transparent 3px)',
-          }}
-        />
-      </motion.div>
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 w-36 h-24"
+          style={{ perspective: '200px' }}
+        >
+          <motion.div
+            className="w-full h-full rounded-full"
+            animate={{
+              boxShadow: isPlaying 
+                ? ['0 0 25px rgba(255,255,255,0.25)', '0 0 40px rgba(255,255,255,0.5)', '0 0 25px rgba(255,255,255,0.25)']
+                : '0 0 15px rgba(255,255,255,0.15)',
+            }}
+            transition={{ duration: 0.08, repeat: isPlaying ? Infinity : 0 }}
+            style={{
+              background: 'radial-gradient(ellipse at center, #f8f8f8 0%, #e8e8e8 60%, #c8c8c8 100%)',
+              transform: 'perspective(200px) rotateX(55deg)',
+              border: '3px solid #aaa',
+            }}
+          />
+          {/* Snare wires visible */}
+          <div 
+            className="absolute bottom-2 left-1/4 right-1/4 h-1"
+            style={{
+              background: 'repeating-linear-gradient(90deg, #888 0px, #888 1px, transparent 1px, transparent 3px)',
+            }}
+          />
+        </motion.div>
+      )}
       
-      {/* Toms */}
-      <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-12">
-        {/* Tom 1 (left) */}
-        <div
-          className="w-28 h-18 rounded-full"
+      {/* Toms - MAIN FOCUS for D2 (Overhead view) */}
+      <div 
+        className="absolute left-0 right-0 flex justify-center gap-8"
+        style={{ bottom: isTomsView ? '20%' : '16%' }}
+      >
+        {/* Tom 1 (left) - larger in D2 view */}
+        <motion.div
+          className="rounded-full"
+          animate={{
+            boxShadow: isTomsView && isFill 
+              ? ['0 0 15px rgba(255,255,255,0.2)', '0 0 30px rgba(255,255,255,0.4)', '0 0 15px rgba(255,255,255,0.2)']
+              : 'none',
+          }}
+          transition={{ duration: 0.1, repeat: isFill ? Infinity : 0 }}
           style={{
+            width: isTomsView ? 140 : 112,
+            height: isTomsView ? 90 : 72,
             background: 'radial-gradient(ellipse at center, #f4f4f4 0%, #d8d8d8 70%, #b0b0b0 100%)',
-            transform: 'perspective(200px) rotateX(48deg) translateY(-24px)',
+            transform: `perspective(200px) rotateX(${isTomsView ? 40 : 48}deg) translateY(-24px)`,
             border: '2px solid #999',
           }}
         />
         
         {/* Tom 2 (right) */}
-        <div
-          className="w-28 h-18 rounded-full"
+        <motion.div
+          className="rounded-full"
+          animate={{
+            boxShadow: isTomsView && isFill 
+              ? ['0 0 15px rgba(255,255,255,0.2)', '0 0 30px rgba(255,255,255,0.4)', '0 0 15px rgba(255,255,255,0.2)']
+              : 'none',
+          }}
+          transition={{ duration: 0.1, repeat: isFill ? Infinity : 0, delay: 0.05 }}
           style={{
+            width: isTomsView ? 140 : 112,
+            height: isTomsView ? 90 : 72,
             background: 'radial-gradient(ellipse at center, #f4f4f4 0%, #d8d8d8 70%, #b0b0b0 100%)',
-            transform: 'perspective(200px) rotateX(48deg) translateY(-24px)',
+            transform: `perspective(200px) rotateX(${isTomsView ? 40 : 48}deg) translateY(-24px)`,
             border: '2px solid #999',
           }}
         />
+        
+        {/* Floor tom (D2 only - visible in overhead view) */}
+        {isTomsView && (
+          <motion.div
+            className="absolute -right-4 bottom-0 rounded-full"
+            animate={{
+              boxShadow: isFill 
+                ? ['0 0 15px rgba(255,255,255,0.2)', '0 0 30px rgba(255,255,255,0.4)', '0 0 15px rgba(255,255,255,0.2)']
+                : 'none',
+            }}
+            transition={{ duration: 0.1, repeat: isFill ? Infinity : 0, delay: 0.1 }}
+            style={{
+              width: 160,
+              height: 100,
+              background: 'radial-gradient(ellipse at center, #f0f0f0 0%, #d0d0d0 70%, #a8a8a8 100%)',
+              transform: 'perspective(200px) rotateX(35deg)',
+              border: '2px solid #888',
+            }}
+          />
+        )}
       </div>
       
       {/* Drumsticks with hands - VISIBLE WRISTBANDS AND GLOVES */}

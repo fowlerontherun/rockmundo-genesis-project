@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { usePOVClipCycler, InstrumentRole } from '@/hooks/usePOVClipCycler';
 import { POVPostProcessing } from './POVPostProcessing';
@@ -9,6 +9,9 @@ import { DrummerPOV } from './pov-scenes/DrummerPOV';
 import { VocalistPOV } from './pov-scenes/VocalistPOV';
 import { BassistPOV } from './pov-scenes/BassistPOV';
 import { KeyboardistPOV } from './pov-scenes/KeyboardistPOV';
+import { CrowdPOV } from './pov-scenes/CrowdPOV';
+import { StageLightsOverlay } from './pov-scenes/StageLightsOverlay';
+import type { ClipVariantId } from './pov-scenes/clipVariants';
 
 interface POVGigViewerProps {
   playerRole: InstrumentRole;
@@ -16,6 +19,9 @@ interface POVGigViewerProps {
   songSection: string;
   crowdMood: number;
   isPlaying: boolean;
+  venueCapacity?: number;
+  guitarSkin?: 'default' | 'red' | 'black' | 'sunburst' | 'white';
+  showCrowdLayer?: boolean;
 }
 
 export const POVGigViewer = memo(({
@@ -24,6 +30,9 @@ export const POVGigViewer = memo(({
   songSection,
   crowdMood,
   isPlaying,
+  venueCapacity = 500,
+  guitarSkin = 'default',
+  showCrowdLayer = true,
 }: POVGigViewerProps) => {
   const {
     currentClip,
@@ -36,6 +45,28 @@ export const POVGigViewer = memo(({
   });
 
   const clipType = currentClip?.clipType || 'playing';
+  
+  // Determine which clip variant to use based on role and context
+  const clipVariant = useMemo((): ClipVariantId | undefined => {
+    switch (playerRole) {
+      case 'guitarist':
+        // G2 for solos, G1 for regular playing
+        return songSection === 'solo' || clipType === 'solo_focus' ? 'G2' : 'G1';
+      case 'bassist':
+        return 'B1';
+      case 'drummer':
+        // D2 for fills/solos (toms view), D1 for regular (snare view)
+        return songSection === 'solo' || clipType === 'solo_focus' ? 'D2' : 'D1';
+      case 'vocalist':
+        return 'V1';
+      default:
+        return undefined;
+    }
+  }, [playerRole, songSection, clipType]);
+  
+  // Determine crowd variant based on venue size
+  const crowdVariant: 'C1' | 'C2' = venueCapacity < 500 ? 'C1' : 'C2';
+  const venueSize: 'small' | 'medium' | 'large' = venueCapacity < 300 ? 'small' : venueCapacity < 1000 ? 'medium' : 'large';
 
   // Render the appropriate POV scene based on role
   const renderPOVScene = () => {
@@ -46,6 +77,8 @@ export const POVGigViewer = memo(({
             intensity={intensity}
             songSection={songSection}
             clipType={clipType}
+            clipVariant={clipVariant as 'G1' | 'G2' | 'H1'}
+            guitarSkin={guitarSkin}
           />
         );
       case 'drummer':
@@ -54,6 +87,7 @@ export const POVGigViewer = memo(({
             intensity={intensity}
             songSection={songSection}
             clipType={clipType}
+            clipVariant={clipVariant as 'D1' | 'D2'}
           />
         );
       case 'vocalist':
@@ -63,6 +97,7 @@ export const POVGigViewer = memo(({
             songSection={songSection}
             clipType={clipType}
             crowdMood={crowdMood}
+            clipVariant="V1"
           />
         );
       case 'bassist':
@@ -71,6 +106,7 @@ export const POVGigViewer = memo(({
             intensity={intensity}
             songSection={songSection}
             clipType={clipType}
+            clipVariant="B1"
           />
         );
       case 'keyboardist':
@@ -88,6 +124,7 @@ export const POVGigViewer = memo(({
             songSection={songSection}
             clipType={clipType}
             crowdMood={crowdMood}
+            clipVariant="V1"
           />
         );
     }
@@ -101,6 +138,18 @@ export const POVGigViewer = memo(({
         songSection={songSection}
         isPlaying={isPlaying}
       >
+        {/* Crowd layer (background - C1 or C2) */}
+        {showCrowdLayer && playerRole !== 'vocalist' && (
+          <div className="absolute inset-0 opacity-40">
+            <CrowdPOV
+              intensity={intensity}
+              crowdMood={crowdMood}
+              venueSize={venueSize}
+              clipVariant={crowdVariant}
+            />
+          </div>
+        )}
+        
         {/* POV Scene */}
         <motion.div
           className="absolute inset-0"
@@ -111,6 +160,14 @@ export const POVGigViewer = memo(({
           {renderPOVScene()}
         </motion.div>
         
+        {/* Stage Lights Overlay (L1) - always active */}
+        <StageLightsOverlay intensity={intensity} variant="L1" />
+        
+        {/* Camera Shake Overlay (L2) - at high intensity */}
+        {intensity > 0.5 && (
+          <StageLightsOverlay intensity={intensity} variant="L2" />
+        )}
+        
         {/* Dynamic overlays based on clip */}
         <POVOverlays
           activeOverlays={activeOverlays}
@@ -120,21 +177,22 @@ export const POVGigViewer = memo(({
         />
       </CameraShake>
       
-      {/* Post-processing effects (film grain, contrast, etc.) */}
+      {/* Post-processing effects (film grain, contrast, etc.) - MTV2/Kerrang aesthetic */}
       <POVPostProcessing
         intensity={intensity}
-        grainAmount={0.18}
-        contrast={1.3}
-        saturation={0.7}
+        grainAmount={0.2}
+        contrast={1.35}
+        saturation={0.65}
         enableScanLines={true}
-        vignetteStrength={0.6}
+        vignetteStrength={0.65}
       />
       
-      {/* Clip info overlay (debug - can be removed in production) */}
+      {/* Clip variant info overlay (debug) */}
       {currentClip && (
         <div className="absolute bottom-20 left-4 text-xs text-white/30 font-mono z-50 pointer-events-none">
-          <div>{playerRole.toUpperCase()} POV</div>
+          <div>{playerRole.toUpperCase()} POV • {clipVariant || 'default'}</div>
           <div>{currentClip.clipType} • {currentClip.energyLevel}</div>
+          <div>Crowd: {crowdVariant} ({venueSize})</div>
         </div>
       )}
     </div>

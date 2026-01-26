@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.514",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "POV Clip Variants: Guitar strumming (G1) and solo close-up (G2) with switchable guitar skins" },
+      { type: 'feature', description: "POV Clip Variants: Bass groove (B1) with plucking animation and wristbands" },
+      { type: 'feature', description: "POV Clip Variants: Drums snare POV (D1) and overhead toms POV (D2)" },
+      { type: 'feature', description: "POV Clip Variants: Vocalist mic POV (V1) with crowd view and stage monitors" },
+      { type: 'feature', description: "POV Clip Variants: Small venue crowd (C1) and medium/arena crowd (C2) backgrounds" },
+      { type: 'feature', description: "POV Overlays: Dynamic stage lights overlay (L1) with sweeping beams and lens flares" },
+      { type: 'feature', description: "POV Overlays: Cinematic camera shake overlay (L2) with motion blur" },
+      { type: 'feature', description: "POV Skins: Alternate hands/sleeves (H1) with leather jacket option" },
+      { type: 'improvement', description: "POV: Clip variant system with energy-based and song-section-based clip selection" },
+    ],
+  },
+  {
     version: "1.0.513",
     date: "2026-01-26",
     changes: [
