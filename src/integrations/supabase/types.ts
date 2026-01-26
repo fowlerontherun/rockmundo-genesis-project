@@ -10193,10 +10193,13 @@ export type Database = {
           gig_id: string | null
           id: string
           merchandise_id: string | null
+          net_revenue: number | null
           order_type: string
           quantity: number
+          sales_tax: number | null
           total_price: number
           unit_price: number
+          vat: number | null
         }
         Insert: {
           band_id: string
@@ -10207,10 +10210,13 @@ export type Database = {
           gig_id?: string | null
           id?: string
           merchandise_id?: string | null
+          net_revenue?: number | null
           order_type?: string
           quantity?: number
+          sales_tax?: number | null
           total_price: number
           unit_price: number
+          vat?: number | null
         }
         Update: {
           band_id?: string
@@ -10221,10 +10227,13 @@ export type Database = {
           gig_id?: string | null
           id?: string
           merchandise_id?: string | null
+          net_revenue?: number | null
           order_type?: string
           quantity?: number
+          sales_tax?: number | null
           total_price?: number
           unit_price?: number
+          vat?: number | null
         }
         Relationships: [
           {
@@ -22153,6 +22162,10 @@ export type Database = {
       }
       decrement_gettit_vote: {
         Args: { post_id: string; vote_field: string }
+        Returns: undefined
+      }
+      decrement_merch_stock: {
+        Args: { amount: number; merch_id: string }
         Returns: undefined
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
