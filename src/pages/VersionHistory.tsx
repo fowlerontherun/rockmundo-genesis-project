@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.516",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "POV: AI-powered clip generation edge function (generate-pov-clip) using Gemini image model" },
+      { type: 'feature', description: "POV: Full prompt library for all clip variants (G1, G2, B1, D1, D2, V1, C1, C2, L1, L2, H1)" },
+      { type: 'feature', description: "POV: Dynamic skin and sleeve style modifiers applied to generation prompts" },
+      { type: 'feature', description: "POV: usePOVClipGenerator hook with caching for efficient clip generation" },
+      { type: 'feature', description: "POV: POVClipPreview component for generating and previewing AI frames with MTV2 post-processing" },
+      { type: 'improvement', description: "POV: All prompts tuned for MTV2/Kerrang late-night aesthetic: grainy, high contrast, overexposed highlights" },
+    ],
+  },
+  {
     version: "1.0.515",
     date: "2026-01-26",
     changes: [
