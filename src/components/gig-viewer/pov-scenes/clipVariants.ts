@@ -138,13 +138,22 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   H1: {
     id: 'H1',
     name: 'Hands + Sleeves Alternate Skin',
-    description: 'Close-up first-person POV of hands playing electric guitar, wearing a leather jacket sleeve or alternate clothing skin, MTV2 / Kerrang late-night concert aesthetic, high contrast lighting, grainy texture, loopable, cinematic.',
+    description: 'Close-up first-person POV of hands playing electric guitar or bass, instrument featuring an alternate player-owned skin, MTV2 / Kerrang late-night aesthetic, energetic, loopable, cinematic, visible sleeves, designed for layering on top of base POV clips.',
     role: 'skin',
     energyRange: [0.0, 1.0],
     songSections: ['all'],
     loopDuration: 4,
   },
 };
+
+// Available instrument skin IDs
+export const GUITAR_SKIN_IDS = ['classic-sunburst', 'midnight-black', 'arctic-white', 'cherry-red', 'ocean-blue', 'neon-green', 'purple-haze'] as const;
+export const BASS_SKIN_IDS = ['natural-wood', 'jet-black', 'vintage-sunburst', 'blood-red', 'electric-blue'] as const;
+export const SLEEVE_STYLE_IDS = ['leather', 'denim', 'hoodie', 'bare', 'band-tee'] as const;
+
+export type GuitarSkinId = typeof GUITAR_SKIN_IDS[number];
+export type BassSkinId = typeof BASS_SKIN_IDS[number];
+export type SleeveStyleId = typeof SLEEVE_STYLE_IDS[number];
 
 // Get appropriate clips for a given role and context
 export function getClipsForRole(

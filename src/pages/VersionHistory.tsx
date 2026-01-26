@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.515",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "POV: InstrumentSkinOverlay (H1) - hands/instrument overlay for layering player-owned skins on base POV clips" },
+      { type: 'feature', description: "POV: 7 guitar skins (classic-sunburst, midnight-black, arctic-white, cherry-red, ocean-blue, neon-green, purple-haze)" },
+      { type: 'feature', description: "POV: 5 bass skins (natural-wood, jet-black, vintage-sunburst, blood-red, electric-blue)" },
+      { type: 'feature', description: "POV: 5 sleeve styles (leather, denim, hoodie, bare, band-tee) for player customization" },
+      { type: 'improvement', description: "POV: Animated picking hand with guitar pick or bass plucking fingers" },
+      { type: 'improvement', description: "POV: MTV2/Kerrang overexposed light reflections on instrument body" },
+    ],
+  },
+  {
     version: "1.0.514",
     date: "2026-01-26",
     changes: [
