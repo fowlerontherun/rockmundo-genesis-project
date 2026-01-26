@@ -1,17 +1,29 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
+import type { ClipVariantId } from './clipVariants';
 
 interface GuitaristPOVProps {
   intensity: number;
   songSection: string;
   clipType: string;
+  clipVariant?: 'G1' | 'G2' | 'H1'; // G1 = Strumming, G2 = Solo, H1 = Alt Skin
   guitarSkin?: 'default' | 'red' | 'black' | 'sunburst' | 'white';
+  sleeveSkin?: 'default' | 'leather' | 'denim' | 'band_tee';
 }
 
-export const GuitaristPOV = memo(({ intensity, songSection, clipType, guitarSkin = 'default' }: GuitaristPOVProps) => {
-  const isSolo = songSection === 'solo' || clipType === 'solo_focus';
+export const GuitaristPOV = memo(({ 
+  intensity, 
+  songSection, 
+  clipType, 
+  clipVariant = 'G1',
+  guitarSkin = 'default',
+  sleeveSkin = 'default'
+}: GuitaristPOVProps) => {
+  // G2 (Solo) forces solo mode, G1 (Strumming) is default
+  const isSolo = clipVariant === 'G2' || songSection === 'solo' || clipType === 'solo_focus';
   const isLookingUp = clipType === 'crowd_look';
-  const isStrumming = intensity > 0.4;
+  const isStrumming = !isSolo && intensity > 0.3;
+  const isAltSkin = clipVariant === 'H1';
   
   // Guitar skin colors
   const guitarColors = {
@@ -22,7 +34,16 @@ export const GuitaristPOV = memo(({ intensity, songSection, clipType, guitarSkin
     white: { body: '#f5f5f0', highlight: '#fff', pickguard: '#1a1a1a' },
   };
   
-  const colors = guitarColors[guitarSkin];
+  const colors = guitarColors[isAltSkin && guitarSkin === 'default' ? 'red' : guitarSkin];
+  
+  // Sleeve skin colors
+  const sleeveColors = {
+    default: { main: '#1a1a1a', highlight: '#2a2a2a' },
+    leather: { main: '#2a1a0a', highlight: '#4a3020' },
+    denim: { main: '#1a2a4a', highlight: '#2a3a5a' },
+    band_tee: { main: '#0a0a0a', highlight: '#1a1a1a' },
+  };
+  const sleeve = sleeveColors[isAltSkin ? 'leather' : sleeveSkin];
   
   return (
     <div className="absolute inset-0 overflow-hidden">

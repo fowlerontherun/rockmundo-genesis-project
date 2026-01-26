@@ -5,13 +5,24 @@ interface BassistPOVProps {
   intensity: number;
   songSection: string;
   clipType: string;
+  clipVariant?: 'B1'; // B1 = Groove
+  bassSkin?: 'default' | 'black' | 'natural' | 'sunburst';
 }
 
-export const BassistPOV = memo(({ intensity, songSection, clipType }: BassistPOVProps) => {
+export const BassistPOV = memo(({ intensity, songSection, clipType, clipVariant = 'B1', bassSkin = 'default' }: BassistPOVProps) => {
   const isGrooving = intensity > 0.5;
   const isLookingUp = clipType === 'crowd_look';
   const isLookingAtDrummer = clipType === 'stage_scan';
   const isPlucking = intensity > 0.3;
+  
+  // Bass skin colors
+  const bassColors = {
+    default: { body: '#1a0808', highlight: '#3a1515' },
+    black: { body: '#0a0a0a', highlight: '#2a2a2a' },
+    natural: { body: '#8b7355', highlight: '#a08060' },
+    sunburst: { body: '#4a2c17', highlight: '#8b6914' },
+  };
+  const colors = bassColors[bassSkin];
   
   return (
     <div className="absolute inset-0 overflow-hidden">
@@ -177,7 +188,7 @@ export const BassistPOV = memo(({ intensity, songSection, clipType }: BassistPOV
         <div
           className="absolute bottom-0 left-0 w-40 h-28"
           style={{
-            background: 'linear-gradient(135deg, #1a0808 0%, #3a1515 50%, #1a0808 100%)',
+            background: `linear-gradient(135deg, ${colors.body} 0%, ${colors.highlight} 50%, ${colors.body} 100%)`,
             borderRadius: '0 40% 0 0',
             boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)',
           }}

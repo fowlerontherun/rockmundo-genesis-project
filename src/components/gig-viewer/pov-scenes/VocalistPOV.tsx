@@ -6,9 +6,10 @@ interface VocalistPOVProps {
   songSection: string;
   clipType: string;
   crowdMood: number;
+  clipVariant?: 'V1'; // V1 = Mic POV
 }
 
-export const VocalistPOV = memo(({ intensity, songSection, clipType, crowdMood }: VocalistPOVProps) => {
+export const VocalistPOV = memo(({ intensity, songSection, clipType, crowdMood, clipVariant = 'V1' }: VocalistPOVProps) => {
   const isReaching = clipType === 'crowd_look';
   const isIntro = clipType === 'intro';
   const isOutro = clipType === 'outro';
