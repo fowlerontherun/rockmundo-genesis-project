@@ -116,8 +116,11 @@ export const ItemDetailDialog = ({
                       <Icon className="h-4 w-4 text-primary" />
                       <span className="text-sm">{label}</span>
                     </div>
-                    <Badge variant="outline" className="font-mono">
-                      +{displayValue}
+                    <Badge 
+                      variant="outline" 
+                      className={`font-mono ${Number(value) < 0 ? 'text-destructive border-destructive/50' : 'text-green-600 border-green-500/50'}`}
+                    >
+                      {Number(value) >= 0 ? '+' : ''}{displayValue}
                     </Badge>
                   </div>
                 );

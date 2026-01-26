@@ -145,23 +145,35 @@ const InventoryManager = () => {
 
                           <div className="flex flex-wrap gap-1.5">
                             {effects.health && (
-                              <Badge variant="outline" className="gap-1 text-xs">
-                                <Heart className="h-3 w-3" /> +{String(effects.health)}
+                              <Badge 
+                                variant="outline" 
+                                className={`gap-1 text-xs ${Number(effects.health) < 0 ? 'text-destructive border-destructive/30' : ''}`}
+                              >
+                                <Heart className="h-3 w-3" /> {Number(effects.health) >= 0 ? '+' : ''}{String(effects.health)}
                               </Badge>
                             )}
                             {effects.energy && (
-                              <Badge variant="outline" className="gap-1 text-xs">
-                                <Zap className="h-3 w-3" /> +{String(effects.energy)}
+                              <Badge 
+                                variant="outline" 
+                                className={`gap-1 text-xs ${Number(effects.energy) < 0 ? 'text-destructive border-destructive/30' : ''}`}
+                              >
+                                <Zap className="h-3 w-3" /> {Number(effects.energy) >= 0 ? '+' : ''}{String(effects.energy)}
                               </Badge>
                             )}
                             {effects.xp && (
-                              <Badge variant="outline" className="gap-1 text-xs">
-                                <Star className="h-3 w-3" /> +{String(effects.xp)} XP
+                              <Badge 
+                                variant="outline" 
+                                className={`gap-1 text-xs ${Number(effects.xp) < 0 ? 'text-destructive border-destructive/30' : ''}`}
+                              >
+                                <Star className="h-3 w-3" /> {Number(effects.xp) >= 0 ? '+' : ''}{String(effects.xp)} XP
                               </Badge>
                             )}
                             {effects.fame && (
-                              <Badge variant="outline" className="gap-1 text-xs">
-                                <Sparkles className="h-3 w-3" /> +{String(effects.fame)}
+                              <Badge 
+                                variant="outline" 
+                                className={`gap-1 text-xs ${Number(effects.fame) < 0 ? 'text-destructive border-destructive/30' : ''}`}
+                              >
+                                <Sparkles className="h-3 w-3" /> {Number(effects.fame) >= 0 ? '+' : ''}{String(effects.fame)}
                               </Badge>
                             )}
                           </div>

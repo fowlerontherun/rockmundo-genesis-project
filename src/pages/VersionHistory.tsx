@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.527",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Underworld: Health effects now properly apply when using consumable items" },
+      { type: 'fix', description: "Underworld: Used items now correctly disappear from inventory" },
+      { type: 'fix', description: "Underworld: Added floor validation (0-100 range) for health and energy effects" },
+      { type: 'improvement', description: "Underworld: Negative effects now show correct signs (-10 instead of +-10)" },
+      { type: 'improvement', description: "Underworld: Color coding for effects (green positive, red negative)" },
+    ],
+  },
+  {
     version: "1.0.526",
     date: "2026-01-26",
     changes: [
