@@ -2212,6 +2212,7 @@ export type Database = {
           plays_count: number | null
           rank: number
           release_id: string | null
+          release_title: string | null
           sale_type: string | null
           song_id: string
           trend: string | null
@@ -2231,6 +2232,7 @@ export type Database = {
           plays_count?: number | null
           rank: number
           release_id?: string | null
+          release_title?: string | null
           sale_type?: string | null
           song_id: string
           trend?: string | null
@@ -2250,6 +2252,7 @@ export type Database = {
           plays_count?: number | null
           rank?: number
           release_id?: string | null
+          release_title?: string | null
           sale_type?: string | null
           song_id?: string
           trend?: string | null

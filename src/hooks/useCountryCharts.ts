@@ -203,7 +203,7 @@ export const useCountryCharts = (
           return [];
         }
 
-        return transformAndDeduplicateEntries(data || [], chartType);
+        return transformAndDeduplicateEntries(data || [], chartType, releaseCategory);
       }
 
       // For weekly/monthly/yearly, aggregate across multiple dates
@@ -242,7 +242,10 @@ export const useCountryCharts = (
 
       console.log("[useCountryCharts] Found raw entries:", data?.length || 0);
 
-      // Aggregate by song_id across all dates
+      // For album/EP categories, aggregate by release_id instead of song_id
+      const isAlbumCategory = releaseCategory === "album" || releaseCategory === "ep";
+      
+      // Aggregate by the appropriate key
       const aggregatedMap = new Map<string, {
         entry: any;
         totalPlays: number;
@@ -254,7 +257,11 @@ export const useCountryCharts = (
       }>();
 
       for (const entry of data || []) {
-        const key = entry.song_id;
+        // Use release_id for album/EP entries, song_id for singles
+        const key = isAlbumCategory && entry.release_id 
+          ? entry.release_id 
+          : entry.song_id;
+          
         const existing = aggregatedMap.get(key);
 
         if (existing) {
@@ -288,12 +295,18 @@ export const useCountryCharts = (
         const entry = agg.entry;
         const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
         const artistName = bandArtistName || "Unknown Artist";
+        
+        // For album entries, use release_title; for songs, use song title
+        const isAlbumEntry = entry.entry_type === "album";
+        const displayTitle = isAlbumEntry && entry.release_title 
+          ? entry.release_title 
+          : entry.songs?.title || "Unknown Song";
 
         return {
           id: entry.id,
           rank: 0, // Will be set after sorting
           song_id: entry.song_id,
-          title: entry.songs?.title || "Unknown Song",
+          title: displayTitle,
           artist: artistName,
           genre: entry.genre || entry.songs?.genre || "Unknown",
           country: entry.country || "Global",
@@ -309,6 +322,7 @@ export const useCountryCharts = (
           audio_generation_status: entry.songs?.audio_generation_status || null,
           entry_type: entry.entry_type || "song",
           release_id: entry.release_id || null,
+          release_title: entry.release_title || null,
         };
       });
 
@@ -334,12 +348,17 @@ export const useCountryCharts = (
 };
 
 // Helper function to transform and deduplicate entries (for daily view)
-function transformAndDeduplicateEntries(data: any[], chartType: ChartType): ChartEntry[] {
-  // Deduplicate by song_id - keep the entry with highest plays_count
-  const songMap = new Map<string, any>();
+function transformAndDeduplicateEntries(data: any[], chartType: ChartType, releaseCategory: ReleaseCategory): ChartEntry[] {
+  const isAlbumCategory = releaseCategory === "album" || releaseCategory === "ep";
+  
+  // Deduplicate by appropriate key - use release_id for albums, song_id for singles
+  const entryMap = new Map<string, any>();
   for (const entry of data || []) {
-    const key = entry.song_id;
-    const existing = songMap.get(key);
+    const key = isAlbumCategory && entry.release_id 
+      ? entry.release_id 
+      : entry.song_id;
+      
+    const existing = entryMap.get(key);
     
     // Use combined_score for combined chart, otherwise use plays_count
     const entryScore = chartType === "combined" 
@@ -350,17 +369,23 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType): Char
       : 0;
       
     if (!existing || entryScore > existingScore) {
-      songMap.set(key, entry);
+      entryMap.set(key, entry);
     }
   }
 
-  const deduplicatedData = Array.from(songMap.values());
+  const deduplicatedData = Array.from(entryMap.values());
   console.log("[useCountryCharts] After deduplication:", deduplicatedData.length);
 
   // Transform real data
   const realEntries: ChartEntry[] = deduplicatedData.map((entry, index) => {
     const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
     const artistName = bandArtistName || "Unknown Artist";
+    
+    // For album entries, use release_title; for songs, use song title
+    const isAlbumEntry = entry.entry_type === "album";
+    const displayTitle = isAlbumEntry && entry.release_title 
+      ? entry.release_title 
+      : entry.songs?.title || "Unknown Song";
     
     const playsCount = entry.plays_count || 0;
     const weeklyPlays = entry.weekly_plays || 0;
@@ -371,7 +396,7 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType): Char
       id: entry.id,
       rank: index + 1,
       song_id: entry.song_id,
-      title: entry.songs?.title || "Unknown Song",
+      title: displayTitle,
       artist: artistName,
       genre: entry.genre || entry.songs?.genre || "Unknown",
       country: entry.country || "Global",
@@ -387,6 +412,7 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType): Char
       audio_generation_status: entry.songs?.audio_generation_status || null,
       entry_type: entry.entry_type || "song",
       release_id: entry.release_id || null,
+      release_title: entry.release_title || null,
     };
   });
 

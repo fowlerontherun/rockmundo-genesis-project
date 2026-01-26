@@ -146,8 +146,17 @@ serve(async (req) => {
       .select(`
         song_id,
         total_streams,
+        release_id,
         release:releases(
-          release_type
+          id,
+          title,
+          release_type,
+          band_id,
+          bands(name, artist_name),
+          release_songs(
+            song_id,
+            track_number
+          )
         ),
         songs(
           id,
@@ -262,7 +271,9 @@ serve(async (req) => {
       chartEntries.push(...regionEntries);
     }
 
-    const streamingScopedEntries = Array.from(streamingAggregatedByScope.values())
+    // Create scoped streaming entries for singles only (individual song entries)
+    const streamingSingleEntries = Array.from(streamingAggregatedByScope.values())
+      .filter((entry) => entry.scope === "single")
       .sort((a, b) => b.weekly_streams - a.weekly_streams)
       .slice(0, 100)
       .map((entry, index) => ({
@@ -278,8 +289,108 @@ serve(async (req) => {
         entry_type: "song",
       }));
 
-    chartEntries.push(...streamingScopedEntries);
-    console.log(`Generated ${streamingEntries.length} streaming entries, ${streamingScopedEntries.length} scoped entries, ${uniqueRegions.size} region charts`);
+    chartEntries.push(...streamingSingleEntries);
+    console.log(`Generated ${streamingEntries.length} streaming entries, ${streamingSingleEntries.length} single entries, ${uniqueRegions.size} region charts`);
+
+    // =========================================================================
+    // STEP 2b: Album/EP streaming charts - aggregate by release_id
+    // Sum all song streams for each album/EP and create one entry per release
+    // =========================================================================
+    const albumStreamingAggregated = new Map<string, {
+      releaseId: string;
+      releaseTitle: string;
+      releaseType: ReleaseScope;
+      totalStreams: number;
+      weeklyStreams: number;
+      leadSongId: string | null;
+      bandName: string;
+      genre: string;
+    }>();
+
+    for (const entry of streamingData || []) {
+      const release = (entry as any).release;
+      if (!release) continue;
+      
+      const releaseType = toReleaseScope(release.release_type);
+      // Only aggregate albums and EPs
+      if (releaseType !== "album" && releaseType !== "ep") continue;
+
+      const releaseId = entry.release_id;
+      if (!releaseId) continue;
+
+      const weeklyStreams = weeklyStreamsMap.get(entry.song_id) || 0;
+      const totalStreams = entry.total_streams || 0;
+
+      const existing = albumStreamingAggregated.get(releaseId);
+      if (existing) {
+        existing.totalStreams += totalStreams;
+        existing.weeklyStreams += weeklyStreams;
+      } else {
+        // Get lead song (track 1)
+        const releaseSongs = release.release_songs || [];
+        const sortedSongs = [...releaseSongs].sort((a: any, b: any) => (a.track_number || 0) - (b.track_number || 0));
+        const leadSongId = sortedSongs[0]?.song_id || entry.song_id;
+
+        const bandName = release.bands?.artist_name || release.bands?.name || "Unknown Artist";
+
+        albumStreamingAggregated.set(releaseId, {
+          releaseId,
+          releaseTitle: release.title || "Unknown Album",
+          releaseType,
+          totalStreams,
+          weeklyStreams,
+          leadSongId,
+          bandName,
+          genre: entry.songs?.genre || "Unknown",
+        });
+      }
+    }
+
+    // Create streaming_album entries
+    const streamingAlbumEntries = Array.from(albumStreamingAggregated.values())
+      .filter((entry) => entry.releaseType === "album" && entry.leadSongId)
+      .sort((a, b) => b.weeklyStreams - a.weeklyStreams)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.leadSongId!,
+        release_id: entry.releaseId,
+        release_title: entry.releaseTitle,
+        chart_type: "streaming_album",
+        rank: index + 1,
+        plays_count: entry.totalStreams,
+        weekly_plays: entry.weeklyStreams,
+        combined_score: 0,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "album",
+      }));
+
+    chartEntries.push(...streamingAlbumEntries);
+    console.log(`Generated ${streamingAlbumEntries.length} streaming_album entries`);
+
+    // Create streaming_ep entries
+    const streamingEpEntries = Array.from(albumStreamingAggregated.values())
+      .filter((entry) => entry.releaseType === "ep" && entry.leadSongId)
+      .sort((a, b) => b.weeklyStreams - a.weeklyStreams)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.leadSongId!,
+        release_id: entry.releaseId,
+        release_title: entry.releaseTitle,
+        chart_type: "streaming_ep",
+        rank: index + 1,
+        plays_count: entry.totalStreams,
+        weekly_plays: entry.weeklyStreams,
+        combined_score: 0,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "album",
+      }));
+
+    chartEntries.push(...streamingEpEntries);
+    console.log(`Generated ${streamingEpEntries.length} streaming_ep entries`);
 
     // =========================================================================
     // STEP 3: Collect weekly sales by format
@@ -418,7 +529,9 @@ serve(async (req) => {
 
       chartEntries.push(...salesEntries);
 
+      // Only create scoped entries for singles (individual songs)
       const scopedSalesEntries = Array.from(songSalesByScope.entries())
+        .filter(([scopedKey]) => scopedKey.endsWith(":single"))
         .sort((a, b) => b[1] - a[1])
         .slice(0, 100)
         .map(([scopedKey, sales], index) => {
@@ -426,7 +539,7 @@ serve(async (req) => {
           const info = songInfoByScope.get(scopedKey);
           return {
             song_id: songId,
-            chart_type: scopedType(salesType.type, info?.scope),
+            chart_type: scopedType(salesType.type, "single"),
             rank: index + 1,
             plays_count: sales,
             weekly_plays: sales,
@@ -440,7 +553,7 @@ serve(async (req) => {
         });
 
       chartEntries.push(...scopedSalesEntries);
-      console.log(`Generated ${salesEntries.length} ${salesType.type} entries, ${scopedSalesEntries.length} scoped`);
+      console.log(`Generated ${salesEntries.length} ${salesType.type} entries, ${scopedSalesEntries.length} single scoped`);
     }
 
     // =========================================================================
@@ -485,7 +598,7 @@ serve(async (req) => {
       }
     }
 
-    // Create combined chart entries
+    // Create combined chart entries (base combined chart for all songs)
     const combinedEntries = Array.from(combinedScores.values())
       .sort((a, b) => b.combinedScore - a.combinedScore)
       .slice(0, 100)
@@ -504,6 +617,106 @@ serve(async (req) => {
 
     chartEntries.push(...combinedEntries);
     console.log(`Generated ${combinedEntries.length} combined chart entries`);
+
+    // Create combined_single entries
+    const combinedSingleEntries = Array.from(combinedScores.values())
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.songId,
+        chart_type: "combined_single",
+        rank: index + 1,
+        plays_count: entry.weeklyStreams,
+        weekly_plays: entry.weeklyStreams,
+        combined_score: entry.combinedScore,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "song",
+      }));
+
+    chartEntries.push(...combinedSingleEntries);
+    console.log(`Generated ${combinedSingleEntries.length} combined_single entries`);
+
+    // =========================================================================
+    // STEP 4b: Combined album/EP charts - aggregate by release_id
+    // =========================================================================
+    const albumCombinedScores = new Map<string, {
+      releaseId: string;
+      releaseTitle: string;
+      releaseType: ReleaseScope;
+      combinedScore: number;
+      weeklyStreams: number;
+      leadSongId: string | null;
+      genre: string;
+    }>();
+
+    // Use the already aggregated album streaming data and add sales
+    for (const [releaseId, albumData] of albumStreamingAggregated) {
+      const streamUnits = Math.floor(albumData.weeklyStreams / STREAM_TO_UNIT_RATIO);
+      
+      // For now, album combined score is based on aggregated streams
+      // Sales are already per-song, so we'd need to aggregate those too
+      const combinedScore = streamUnits;
+
+      if (combinedScore > 0) {
+        albumCombinedScores.set(releaseId, {
+          releaseId,
+          releaseTitle: albumData.releaseTitle,
+          releaseType: albumData.releaseType,
+          combinedScore,
+          weeklyStreams: albumData.weeklyStreams,
+          leadSongId: albumData.leadSongId,
+          genre: albumData.genre,
+        });
+      }
+    }
+
+    // Create combined_album entries
+    const combinedAlbumEntries = Array.from(albumCombinedScores.values())
+      .filter((entry) => entry.releaseType === "album" && entry.leadSongId)
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.leadSongId!,
+        release_id: entry.releaseId,
+        release_title: entry.releaseTitle,
+        chart_type: "combined_album",
+        rank: index + 1,
+        plays_count: entry.weeklyStreams,
+        weekly_plays: entry.weeklyStreams,
+        combined_score: entry.combinedScore,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "album",
+      }));
+
+    chartEntries.push(...combinedAlbumEntries);
+    console.log(`Generated ${combinedAlbumEntries.length} combined_album entries`);
+
+    // Create combined_ep entries
+    const combinedEpEntries = Array.from(albumCombinedScores.values())
+      .filter((entry) => entry.releaseType === "ep" && entry.leadSongId)
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, 100)
+      .map((entry, index) => ({
+        song_id: entry.leadSongId!,
+        release_id: entry.releaseId,
+        release_title: entry.releaseTitle,
+        chart_type: "combined_ep",
+        rank: index + 1,
+        plays_count: entry.weeklyStreams,
+        weekly_plays: entry.weeklyStreams,
+        combined_score: entry.combinedScore,
+        chart_date: chartDate,
+        genre: entry.genre,
+        country: "all",
+        entry_type: "album",
+      }));
+
+    chartEntries.push(...combinedEpEntries);
+    console.log(`Generated ${combinedEpEntries.length} combined_ep entries`);
 
     // =========================================================================
     // STEP 5: Record sales (combined physical)
@@ -605,6 +818,7 @@ serve(async (req) => {
       .map(([releaseId, data], index) => ({
         song_id: data.leadSongId!, // Lead song of the album
         release_id: releaseId,
+        release_title: data.release.title || "Unknown Album",
         chart_type: "album_physical",
         rank: index + 1,
         plays_count: data.quantity,

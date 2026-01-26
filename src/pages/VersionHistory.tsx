@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.526",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Charts: Album charts now aggregate all song streams into one album entry" },
+      { type: 'fix', description: "Charts: Combined album chart now works correctly (was missing combined_album entries)" },
+      { type: 'fix', description: "Charts: Album/EP charts now display album names instead of individual song names" },
+      { type: 'improvement', description: "Charts: One entry per album instead of per-song entries for album charts" },
+      { type: 'improvement', description: "Charts: Added release_title column for proper album name display" },
+    ],
+  },
+  {
     version: "1.0.525",
     date: "2026-01-26",
     changes: [

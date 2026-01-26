@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle, Calendar } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle, Calendar, Album } from "lucide-react";
 import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, ChartTimeRange, ChartYear, getMetricLabels } from "@/hooks/useCountryCharts";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -56,18 +56,14 @@ interface ChartTableProps {
   entries: ChartEntry[];
   isLoading: boolean;
   chartType: ChartType;
-}
-
-interface ChartTableProps {
-  entries: ChartEntry[];
-  isLoading: boolean;
-  chartType: ChartType;
   timeRange: ChartTimeRange;
+  releaseCategory: ReleaseCategory;
 }
 
-const ChartTable = ({ entries, isLoading, chartType, timeRange }: ChartTableProps) => {
+const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory }: ChartTableProps) => {
   const labels = getMetricLabels(chartType, timeRange);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const isAlbumView = releaseCategory === "album" || releaseCategory === "ep";
   
   if (isLoading) {
     return (
@@ -85,7 +81,7 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange }: ChartTableProp
         <Music className="h-12 w-12 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold text-muted-foreground">No Chart Data Available</h3>
         <p className="text-sm text-muted-foreground/70 max-w-md mt-2">
-          No songs are currently charting for the selected filters. This may happen for physical formats like vinyl or cassette if there haven't been recent sales.
+          No {isAlbumView ? "albums" : "songs"} are currently charting for the selected filters. This may happen for physical formats like vinyl or cassette if there haven't been recent sales.
         </p>
       </div>
     );
@@ -115,7 +111,7 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange }: ChartTableProp
         {/* Header */}
         <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
           <div className="col-span-1">#</div>
-          <div className="col-span-4 sm:col-span-3">Song</div>
+          <div className="col-span-4 sm:col-span-3">{isAlbumView ? "Album" : "Song"}</div>
           <div className="col-span-2 hidden sm:block">Genre</div>
           <div className="col-span-2 text-right flex items-center justify-end gap-1">
             {labels.weekly}
@@ -141,87 +137,101 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange }: ChartTableProp
         </div>
 
         {/* Entries */}
-        {entries.map((entry) => (
-          <div
-            key={entry.id}
-            className={cn(
-              "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-start cursor-pointer",
-              entry.rank <= 3 && "bg-accent/30",
-              entry.is_fake && "opacity-70"
-            )}
-            onClick={() => setSelectedSongId(entry.song_id)}
-          >
-            {/* Rank */}
-            <div className="col-span-1">
-              <span
-                className={cn(
-                  "font-bold text-lg",
-                  entry.rank === 1 && "text-yellow-500",
-                  entry.rank === 2 && "text-slate-400",
-                  entry.rank === 3 && "text-amber-600"
-                )}
-              >
-                {entry.rank}
-              </span>
-            </div>
+        {entries.map((entry) => {
+          const isAlbumEntry = entry.entry_type === "album";
+          
+          return (
+            <div
+              key={entry.id}
+              className={cn(
+                "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-start cursor-pointer",
+                entry.rank <= 3 && "bg-accent/30",
+                entry.is_fake && "opacity-70"
+              )}
+              onClick={() => setSelectedSongId(entry.song_id)}
+            >
+              {/* Rank */}
+              <div className="col-span-1">
+                <span
+                  className={cn(
+                    "font-bold text-lg",
+                    entry.rank === 1 && "text-yellow-500",
+                    entry.rank === 2 && "text-slate-400",
+                    entry.rank === 3 && "text-amber-600"
+                  )}
+                >
+                  {entry.rank}
+                </span>
+              </div>
 
-            {/* Song & Artist */}
-            <div className="col-span-4 sm:col-span-3 min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate text-sm">{entry.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{entry.artist}</p>
+              {/* Song/Album & Artist */}
+              <div className="col-span-4 sm:col-span-3 min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {isAlbumEntry && (
+                        <Album className="h-3.5 w-3.5 text-primary shrink-0" />
+                      )}
+                      <p className="font-medium truncate text-sm">{entry.title}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{entry.artist}</p>
+                  </div>
+                  {entry.is_fake && (
+                    <Badge variant="outline" className="text-[10px] px-1 shrink-0">
+                      SIM
+                    </Badge>
+                  )}
+                  {isAlbumEntry && (
+                    <Badge variant="secondary" className="text-[10px] px-1 shrink-0">
+                      Album
+                    </Badge>
+                  )}
                 </div>
-                {entry.is_fake && (
-                  <Badge variant="outline" className="text-[10px] px-1 shrink-0">
-                    SIM
-                  </Badge>
+                {/* Audio Player for real songs (only for song entries) */}
+                {!entry.is_fake && entry.audio_url && !isAlbumEntry && (
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <TrackableSongPlayer
+                      songId={entry.song_id}
+                      audioUrl={entry.audio_url}
+                      title={entry.title}
+                      artist={entry.artist}
+                      generationStatus={entry.audio_generation_status}
+                      compact
+                      source="country_charts"
+                    />
+                  </div>
                 )}
               </div>
-              {/* Audio Player for real songs */}
-              {!entry.is_fake && entry.audio_url && (
-                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                  <TrackableSongPlayer
-                    songId={entry.song_id}
-                    audioUrl={entry.audio_url}
-                    title={entry.title}
-                    artist={entry.artist}
-                    generationStatus={entry.audio_generation_status}
-                    compact
-                    source="country_charts"
-                  />
-                </div>
-              )}
-            </div>
 
-            {/* Genre */}
-            <div className="col-span-2 hidden sm:block">
-              <Badge variant="secondary" className="text-xs">
-                {entry.genre}
-              </Badge>
-            </div>
+              {/* Genre */}
+              <div className="col-span-2 hidden sm:block">
+                <Badge variant="secondary" className="text-xs">
+                  {entry.genre}
+                </Badge>
+              </div>
 
-            {/* Weekly/Chart Points */}
-            <div className="col-span-2 text-right">
-              <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
-            </div>
+              {/* Weekly/Chart Points */}
+              <div className="col-span-2 text-right">
+                <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
+              </div>
 
-            {/* Total */}
-            <div className="col-span-2 text-right">
-              <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
-            </div>
+              {/* Total */}
+              <div className="col-span-2 text-right">
+                <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
+              </div>
 
-            {/* Trend */}
-            <div className="col-span-1 hidden sm:flex items-center justify-center gap-1">
-              {getTrendIcon(entry.trend)}
-            </div>
+              {/* Trend */}
+              <div className="col-span-1 hidden sm:flex items-center justify-center gap-1">
+                {getTrendIcon(entry.trend)}
+              </div>
 
-            {/* Weeks */}
-            <div className="col-span-1 text-right hidden sm:block">
-              <span className="text-sm text-muted-foreground">{entry.weeks_on_chart}</span>
+              {/* Weeks */}
+              <div className="col-span-1 text-right hidden sm:block">
+                <span className="text-sm text-muted-foreground">{entry.weeks_on_chart}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Chart History Dialog */}
@@ -263,6 +273,7 @@ export default function CountryCharts() {
 
   const realSongsCount = entries.filter((e) => !e.is_fake).length;
   const currentChartInfo = CHART_TYPES.find(t => t.value === chartType);
+  const isAlbumView = releaseCategory === "album" || releaseCategory === "ep";
 
   return (
     <div className="container mx-auto py-6 space-y-6 px-4">
@@ -274,7 +285,7 @@ export default function CountryCharts() {
             Charts
           </h1>
           <p className="text-muted-foreground mt-1">
-            Top 50 songs by region, genre, and sales type
+            Top 50 {isAlbumView ? "albums" : "songs"} by region, genre, and sales type
           </p>
         </div>
 
@@ -372,7 +383,7 @@ export default function CountryCharts() {
 
           {realSongsCount < 50 && realSongsCount > 0 && (
             <Badge variant="outline" className="text-xs">
-              {realSongsCount} songs charting
+              {realSongsCount} {isAlbumView ? "albums" : "songs"} charting
             </Badge>
           )}
         </div>
@@ -401,13 +412,24 @@ export default function CountryCharts() {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   {type.icon}
                   {country} - {genre === "All" ? "All Genres" : genre} - {type.label} Chart
+                  {isAlbumView && (
+                    <Badge variant="secondary" className="ml-2">
+                      {releaseCategory === "album" ? "Albums" : "EPs"}
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   {type.description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartTable entries={entries} isLoading={isLoading} chartType={chartType} timeRange={timeRange} />
+                <ChartTable 
+                  entries={entries} 
+                  isLoading={isLoading} 
+                  chartType={chartType} 
+                  timeRange={timeRange} 
+                  releaseCategory={releaseCategory}
+                />
               </CardContent>
             </Card>
           </TabsContent>
