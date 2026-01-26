@@ -14001,6 +14001,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pov_clip_templates: {
+        Row: {
+          camera_position: Json | null
+          clip_type: string
+          created_at: string | null
+          description: string | null
+          duration_range: number[] | null
+          energy_level: string | null
+          id: string
+          instrument_role: string
+          overlays: string[] | null
+        }
+        Insert: {
+          camera_position?: Json | null
+          clip_type: string
+          created_at?: string | null
+          description?: string | null
+          duration_range?: number[] | null
+          energy_level?: string | null
+          id?: string
+          instrument_role: string
+          overlays?: string[] | null
+        }
+        Update: {
+          camera_position?: Json | null
+          clip_type?: string
+          created_at?: string | null
+          description?: string | null
+          duration_range?: number[] | null
+          energy_level?: string | null
+          id?: string
+          instrument_role?: string
+          overlays?: string[] | null
+        }
+        Relationships: []
+      }
       pr_campaigns: {
         Row: {
           band_id: string | null
