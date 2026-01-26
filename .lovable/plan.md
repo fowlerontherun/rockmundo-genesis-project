@@ -1,146 +1,160 @@
 
-# Fix Music Charts - Separate Tabs with Dedicated Chart Data
+# Fix Songwriting Collaboration & Complete Company System Integration
 
-## Overview
-Completely restructure the charts page to use separate tabs with dedicated, working chart data for each tab. The current system has a mismatch between what the edge function generates and what the frontend queries, causing charts to show "No Data Available."
+## Problem Summary
 
-## Root Cause Analysis
+### Issue 1: Missing "Invite Collaborator" Button in Songwriting
+The user sees a "Collaborators" tab in the Create Songwriting Project dialog (as shown in the screenshot), but this tab only contains static checkbox options for generic co-writer types (Specialist Lyricist, Hook Melody Writer, etc.) - not actual player invitations.
 
-### Database Content vs Frontend Queries
+The `CollaboratorInviteDialog` and `ProjectCollaboratorsPanel` components exist and are fully functional, but they are NOT integrated into the songwriting workflow. They allow:
+- Searching for band members and friends
+- Setting compensation (flat fee or royalty split)
+- Sending real invitations to players
 
-| Chart Type | What DB Has | What Frontend Queries (Singles) | What Frontend Queries (Albums) |
-|------------|-------------|----------------------------------|--------------------------------|
-| Combined | `combined` only | `combined_single` | `combined_album` |
-| Streaming | `streaming`, `streaming_single`, `streaming_album`, `streaming_ep` | `streaming_single` ✅ | `streaming_album` ✅ |
-| Radio | `radio_airplay` only | `radio_airplay_single` ❌ | `radio_airplay_album` ❌ |
-| Digital | `digital_sales`, `digital_sales_single`, `digital_sales_album`, `digital_sales_ep` | `digital_sales_single` ✅ | `digital_sales_album` ✅ |
-| CD | `cd_sales`, `cd_sales_single` only | `cd_sales_single` ✅ | `cd_sales_album` ❌ |
-| Vinyl | `vinyl_sales`, `vinyl_sales_single` only | `vinyl_sales_single` ✅ | `vinyl_sales_album` ❌ |
-| Cassette | No entries exist | `cassette_sales_single` ❌ | `cassette_sales_album` ❌ |
+**Root Cause**: The collaboration invitation system is built but not wired up to the UI.
 
-### Problems
-1. **Combined chart**: Edge function code exists for `combined_single`/`combined_album`/`combined_ep` but entries are NOT in DB (code may not be deployed)
-2. **Radio chart**: No scoped variants generated (only base `radio_airplay`)
-3. **Physical sales**: Only `_single` variants exist for CD/Vinyl, no `_album` or `_ep`
-4. **Cassette**: No data at all
+### Issue 2: Company System Incomplete/Disconnected
+The company system is partially implemented:
+- **Working**: Company creation, finance management, tax overview, subsidiary creation, routing
+- **Placeholder**: Some management pages show "coming soon" messages (Rehearsal Studio, some Venue features)
+- **No obvious errors** in current implementation - the hooks and components are functioning
 
-## Solution: Simplify to Working Charts
+---
 
-### Part 1: Restructure Frontend to Query What Exists
+## Implementation Plan
 
-Change the query strategy in `useCountryCharts.ts` to:
-1. For "All" and "Singles" categories: Query BOTH the base type AND the `_single` variant
-2. For "Albums" category: Query the `_album` variant, falling back to base type entries that have `entry_type='album'`
-3. For "EPs" category: Query the `_ep` variant, falling back to entries with release_type='ep'
+### Part 1: Add Invite Collaborator Button to Songwriting
 
-### Part 2: Fix Edge Function to Generate All Required Types
+**Approach A (Recommended)**: Add `ProjectCollaboratorsPanel` to the project cards when expanded
 
-Add missing scoped variants to the edge function:
-1. Radio: Generate `radio_airplay_single`, `radio_airplay_album`, `radio_airplay_ep`
-2. CD Sales: Generate `cd_sales_album`, `cd_sales_ep`
-3. Vinyl Sales: Generate `vinyl_sales_album`, `vinyl_sales_ep`
-4. Cassette Sales: Generate `cassette_sales_single`, `cassette_sales_album`, `cassette_sales_ep`
-5. Record Sales: Generate `record_sales_album`, `record_sales_ep`
-6. Ensure `combined_single`/`combined_album`/`combined_ep` are inserted (code exists but may not execute)
+Currently, the `SimplifiedProjectCard` shows accepted collaborators but has no way to add new ones. We should:
 
-### Part 3: Simplify the Tabs UI
+1. Add an "Invite Collaborator" button to each project card
+2. This button opens the `CollaboratorInviteDialog`
+3. The existing panel already handles displaying and managing collaborators
 
-Reorganize the charts page into cleaner tabs that map to what data exists:
-- **Top 50** (Combined): Official chart combining streams + sales
-- **Streaming**: Ranked by weekly streams
-- **Digital Sales**: Digital download sales
-- **Physical Sales** (merged CD, Vinyl, Cassette): Physical format sales
-- **Radio Airplay**: Radio plays and listeners
+**Files to modify:**
+- `src/components/songwriting/SimplifiedProjectCard.tsx` - Add invite button and integrate `CollaboratorInviteDialog`
 
-Remove confusing release category selector when viewing charts that don't have album data.
-
-## Implementation Details
-
-### File 1: `src/hooks/useCountryCharts.ts`
-
-**Changes:**
-- Fix query to include base chart types alongside scoped types
-- For singles: Query `[chartType, `${chartType}_single`]`
-- For albums: Query `[`${chartType}_album`]` with fallback
-- For all: Query all variants
-
+**Code changes:**
 ```typescript
-// Updated chartTypeFilter logic
-if (releaseCategory === "all") {
-  // Query ALL variants plus base type
-  chartTypeFilter = [chartType, `${chartType}_single`, `${chartType}_ep`, `${chartType}_album`];
-} else if (releaseCategory === "single") {
-  // Query both base type AND single variant (base often contains singles)
-  chartTypeFilter = [chartType, `${chartType}_single`];
-} else {
-  // Query specific category
-  chartTypeFilter = [`${chartType}_${releaseCategory}`];
-}
+// Add state and dialog integration
+const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+// Add button in the card actions
+<Button
+  onClick={() => setInviteDialogOpen(true)}
+  variant="outline"
+  size="sm"
+  disabled={isLocked}
+>
+  <Users className="w-3 h-3 mr-1" />
+  Invite
+</Button>
+
+// Add dialog at the bottom
+<CollaboratorInviteDialog
+  open={inviteDialogOpen}
+  onOpenChange={setInviteDialogOpen}
+  projectId={project.id}
+  userBandId={userBandId}
+/>
 ```
 
-### File 2: `supabase/functions/update-music-charts/index.ts`
+**Approach B**: Replace static options in the dialog's Collaborators tab
 
-**Add radio airplay scoped variants (after line 900):**
-```typescript
-// Radio airplay - single entries (all radio plays are for singles currently)
-const radioSingleEntries = radioEntries.map(entry => ({
-  ...entry,
-  chart_type: "radio_airplay_single",
-}));
-chartEntries.push(...radioSingleEntries);
-```
+Instead of the current checkbox list (Specialist Lyricist, Hook Melody Writer, etc.), replace with the `ProjectCollaboratorsPanel` after a project is created.
 
-**Add CD/Vinyl sales album variants:**
-- Aggregate CD/Vinyl sales by release_id for albums
-- Create `cd_sales_album`, `vinyl_sales_album` entries
+**Note**: Projects need to be created first before inviting collaborators (the invite system needs a `project_id`). So we need a two-step flow:
+1. Create project with basic info
+2. Add collaborators after project exists
 
-**Ensure combined_single/album/ep entries are generated:**
-- Verify the code at lines 621-718 is being executed
-- Add logging to debug if entries fail insertion
+### Part 2: Complete Company Management Pages
 
-### File 3: `src/pages/CountryCharts.tsx`
+Several management pages need implementation to match the company types:
 
-**Simplify chart type tabs:**
-```typescript
-const CHART_TYPES = [
-  { value: "combined", label: "Top 50", icon: <BarChart3 />, description: "Official combined chart" },
-  { value: "streaming", label: "Streaming", icon: <Radio />, description: "Streaming plays" },
-  { value: "digital_sales", label: "Digital", icon: <Download />, description: "Digital downloads" },
-  { value: "physical_sales", label: "Physical", icon: <Disc />, description: "CD, Vinyl, Cassette" },
-  { value: "radio_airplay", label: "Radio", icon: <Radio />, description: "Radio airplay" },
-];
-```
+| Company Type | Management Page | Status |
+|--------------|-----------------|--------|
+| Security Firm | `/security-firm/:companyId` | ✅ Functional with guards, contracts |
+| Merch Factory | `/merch-factory/:companyId` | ✅ Functional with catalog, production, workers |
+| Logistics | `/logistics-company/:companyId` | ⚠️ Needs review |
+| Venue | `/venue-business/:venueId` | ⚠️ Placeholder tabs |
+| Rehearsal Studio | `/rehearsal-studio-business/:studioId` | ⚠️ All placeholder content |
+| Recording Studio | `/recording-studio-business/:studioId` | ⚠️ Needs review |
 
-**Add "physical_sales" as a combined chart type** that queries:
-- `cd_sales`, `cd_sales_single`, `vinyl_sales`, `vinyl_sales_single`, `cassette_sales`, `cassette_sales_single`
+**Files to enhance:**
+- `src/pages/RehearsalStudioBusinessManagement.tsx` - Implement staff, equipment, bookings, revenue
+- `src/pages/VenueBusinessManagement.tsx` - Complete placeholder sections
+- `src/pages/LogisticsCompanyManagement.tsx` - Verify functionality
+- `src/pages/RecordingStudioBusinessManagement.tsx` - Verify functionality
 
-**Show release category selector only for chart types that have album data:**
-- Streaming: Has album/EP data
-- Digital: Has album/EP data
-- Combined: Should have album/EP data
-- Physical/Radio: Default to singles only
+---
 
-### File 4: Migration - No Schema Changes Needed
-The existing `chart_entries` table structure supports all required data.
+## Detailed Implementation
 
-## Files to Modify
+### File 1: `src/components/songwriting/SimplifiedProjectCard.tsx`
+
+Add the invite functionality:
+
+1. Import `CollaboratorInviteDialog`
+2. Add `userBandId` prop to the component
+3. Add state for dialog visibility
+4. Add "Invite" button next to existing action buttons
+5. Render the dialog
+
+### File 2: `src/pages/Songwriting.tsx`
+
+Pass `userBandId` to the SimplifiedProjectCard:
+
+1. Get `primaryBand` data (already fetched via `usePrimaryBand`)
+2. Pass `primaryBand?.id` as `userBandId` prop to each `SimplifiedProjectCard`
+
+### File 3: `src/pages/RehearsalStudioBusinessManagement.tsx` (Enhancement)
+
+Replace placeholder content with functional components:
+
+1. Fetch actual studio data using the `studioId` param
+2. Display real booking data
+3. Add staff management (using existing company employee patterns)
+4. Add equipment inventory
+5. Show revenue and financial data
+
+### File 4: Version Updates
+
+- `src/components/VersionHeader.tsx` - Bump to v1.0.531
+- `src/pages/VersionHistory.tsx` - Add changelog entry
+
+---
+
+## Summary of Changes
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useCountryCharts.ts` | Fix chartTypeFilter to query base types + scoped types |
-| `src/pages/CountryCharts.tsx` | Simplify tabs, add physical_sales type, conditionally show category selector |
-| `supabase/functions/update-music-charts/index.ts` | Add missing scoped variants for radio and physical sales |
-| `src/components/VersionHeader.tsx` | Bump to v1.0.528 |
+| `src/components/songwriting/SimplifiedProjectCard.tsx` | Add "Invite" button and CollaboratorInviteDialog |
+| `src/pages/Songwriting.tsx` | Pass userBandId to SimplifiedProjectCard |
+| `src/pages/RehearsalStudioBusinessManagement.tsx` | Replace placeholders with functional components |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.531 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
-## Execution Order
+---
 
-1. **Frontend First**: Fix `useCountryCharts.ts` to query what exists - this will immediately make streaming, digital, CD, and vinyl charts work for singles
-2. **Simplify UI**: Update `CountryCharts.tsx` with cleaner tabs and conditional category selector
-3. **Backend**: Update edge function to generate missing scoped variants
-4. **Deploy**: Deploy edge function and manually trigger chart generation
-5. **Verify**: All chart types should now display data
+## Technical Notes
 
-## Version Update
-- Bump to **v1.0.528**
-- Changelog: "Charts: Fixed data display by querying correct chart types, simplified tabs to Top 50/Streaming/Digital/Physical/Radio, and updated edge function to generate all required scoped variants"
+### Songwriting Collaboration Flow
+1. User creates a songwriting project
+2. On the project card, user clicks "Invite" button
+3. Dialog shows band members and friends
+4. User selects collaborator and sets compensation
+5. Invitation is sent and tracked in `songwriting_collaborations` table
+6. Collaborator accepts/declines via their pending invitations
+7. Accepted collaborators appear on project card
+8. When song completes, royalty splits are applied automatically
+
+### Company Subsidiary Types
+The company types use a pattern where:
+1. `companies` table stores the parent company record
+2. Specialized tables (e.g., `security_firms`, `merch_factories`) store type-specific data
+3. A trigger `create_specialized_company_record` auto-creates the specialized record when company is inserted
+4. Management pages query both the company and specialized tables
+
+This pattern should be followed for any remaining implementations.
