@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.534",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Admin: Added City Governance page to appoint mayors and trigger elections" },
+      { type: 'feature', description: "Admin: View and manage current mayors across all cities" },
+      { type: 'feature', description: "Admin: Trigger new elections and advance election phases" },
+    ],
+  },
+  {
     version: "1.0.533",
     date: "2026-01-26",
     changes: [
