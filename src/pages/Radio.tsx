@@ -183,7 +183,7 @@ export default function Radio() {
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("profiles")
         .select("id, display_name, bands!bands_leader_id_fkey(id, name, fame)")
         .eq("user_id", user.id)

@@ -23,7 +23,7 @@ export default function PlayerManagement() {
   const { data: players = [], isLoading } = useQuery({
     queryKey: ["admin-players"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("profiles")
         .select(`
           *,
