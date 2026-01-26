@@ -141,6 +141,7 @@ serve(async (req) => {
     // FIXED: status filter from 'released' to 'recorded'
     // =========================================================================
     // FIXED: Removed broken nested filter - filter in code instead
+    // FIXED: Use explicit foreign key for release_songs to avoid ambiguity
     const { data: streamingDataRaw, error: streamingError } = await supabaseClient
       .from("song_releases")
       .select(`
@@ -153,7 +154,7 @@ serve(async (req) => {
           release_type,
           band_id,
           bands(name, artist_name),
-          release_songs(
+          release_songs:release_songs!release_songs_release_id_fkey(
             song_id,
             track_number
           )
@@ -451,12 +452,33 @@ serve(async (req) => {
       const songInfo = new Map<string, any>();
       const songSalesByScope = new Map<string, number>();
       const songInfoByScope = new Map<string, any>();
+      
+      // Album/EP aggregation: aggregate sales by release_id for albums/EPs
+      const albumSalesAgg = new Map<string, {
+        releaseId: string;
+        releaseTitle: string;
+        releaseType: ReleaseScope;
+        totalSales: number;
+        leadSongId: string | null;
+        genre: string;
+      }>();
 
       for (const sale of salesData || []) {
         const release = sale.release_formats?.release;
         if (!release || !release.release_songs) continue;
 
         const scope = toReleaseScope((release as any)?.release_type);
+        const releaseId = release.id;
+        
+        // Get all songs and find lead song (track 1)
+        const releaseSongs = release.release_songs || [];
+        const sortedSongs = [...releaseSongs].sort((a: any, b: any) => {
+          const aTrack = (a as any).track_number || 0;
+          const bTrack = (b as any).track_number || 0;
+          return aTrack - bTrack;
+        });
+        const leadSong = sortedSongs[0]?.song;
+        const leadSongId = leadSong?.id || null;
 
         for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
@@ -504,9 +526,26 @@ serve(async (req) => {
             });
           }
         }
+        
+        // Aggregate for album/EP charts (one entry per release)
+        if ((scope === "album" || scope === "ep") && releaseId && leadSongId) {
+          const existing = albumSalesAgg.get(releaseId);
+          if (existing) {
+            existing.totalSales += sale.quantity_sold;
+          } else {
+            albumSalesAgg.set(releaseId, {
+              releaseId,
+              releaseTitle: (release as any).title || "Unknown Album",
+              releaseType: scope,
+              totalSales: sale.quantity_sold,
+              leadSongId,
+              genre: leadSong?.genre || "Unknown",
+            });
+          }
+        }
       }
 
-      // Create format-specific chart entries
+      // Create format-specific chart entries (base type - all songs)
       const salesEntries = Array.from(songSales.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 100)
@@ -529,7 +568,7 @@ serve(async (req) => {
 
       chartEntries.push(...salesEntries);
 
-      // Only create scoped entries for singles (individual songs)
+      // Create scoped entries for singles (individual songs)
       const scopedSalesEntries = Array.from(songSalesByScope.entries())
         .filter(([scopedKey]) => scopedKey.endsWith(":single"))
         .sort((a, b) => b[1] - a[1])
@@ -553,7 +592,54 @@ serve(async (req) => {
         });
 
       chartEntries.push(...scopedSalesEntries);
-      console.log(`Generated ${salesEntries.length} ${salesType.type} entries, ${scopedSalesEntries.length} single scoped`);
+      
+      // Create album chart entries (aggregated by release)
+      const albumSalesEntries = Array.from(albumSalesAgg.values())
+        .filter((entry) => entry.releaseType === "album" && entry.leadSongId)
+        .sort((a, b) => b.totalSales - a.totalSales)
+        .slice(0, 100)
+        .map((entry, index) => ({
+          song_id: entry.leadSongId!,
+          release_id: entry.releaseId,
+          release_title: entry.releaseTitle,
+          chart_type: scopedType(salesType.type, "album"),
+          rank: index + 1,
+          plays_count: entry.totalSales,
+          weekly_plays: entry.totalSales,
+          combined_score: 0,
+          chart_date: chartDate,
+          genre: entry.genre,
+          country: "all",
+          sale_type: salesType.format,
+          entry_type: "album",
+        }));
+
+      chartEntries.push(...albumSalesEntries);
+      
+      // Create EP chart entries (aggregated by release)
+      const epSalesEntries = Array.from(albumSalesAgg.values())
+        .filter((entry) => entry.releaseType === "ep" && entry.leadSongId)
+        .sort((a, b) => b.totalSales - a.totalSales)
+        .slice(0, 100)
+        .map((entry, index) => ({
+          song_id: entry.leadSongId!,
+          release_id: entry.releaseId,
+          release_title: entry.releaseTitle,
+          chart_type: scopedType(salesType.type, "ep"),
+          rank: index + 1,
+          plays_count: entry.totalSales,
+          weekly_plays: entry.totalSales,
+          combined_score: 0,
+          chart_date: chartDate,
+          genre: entry.genre,
+          country: "all",
+          sale_type: salesType.format,
+          entry_type: "album",
+        }));
+
+      chartEntries.push(...epSalesEntries);
+      
+      console.log(`Generated ${salesEntries.length} ${salesType.type} entries, ${scopedSalesEntries.length} single, ${albumSalesEntries.length} album, ${epSalesEntries.length} ep`);
     }
 
     // =========================================================================
@@ -776,7 +862,7 @@ serve(async (req) => {
             release_type,
             band_id,
             bands(name, artist_name),
-            release_songs(
+            release_songs:release_songs!release_songs_release_id_fkey(
               song_id,
               track_number
             )

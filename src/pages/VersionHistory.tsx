@@ -14,6 +14,25 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.530",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Charts: Fixed PostgREST ambiguous relationship error for release_songs foreign key" },
+      { type: 'fix', description: "Charts: Album charts now show actual album names (streaming_album, combined_album, digital_sales_album)" },
+      { type: 'improvement', description: "Charts: Album entries properly aggregated with release_id and release_title" },
+    ],
+  },
+  {
+    version: "1.0.529",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Charts: Album charts now properly aggregate sales/streams by release instead of showing individual songs" },
+      { type: 'fix', description: "Charts: Album entries now have correct entry_type='album' and release_title" },
+      { type: 'fix', description: "Charts: Added album/EP sales chart generation for CD, vinyl, digital, and cassette formats" },
+      { type: 'improvement', description: "Charts: Frontend now filters entries by entry_type when viewing album/EP charts" },
+    ],
+  },
+  {
     version: "1.0.528",
     date: "2026-01-26",
     changes: [
