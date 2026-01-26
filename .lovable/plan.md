@@ -1,335 +1,179 @@
 
-# First-Person POV Live Concert System
 
-## Version: 1.0.512
+# Collaborative Songwriting System
 
 ## Overview
-Create an immersive first-person POV concert viewer that places the player on stage as if they are the performer. Features a gritty, handheld MTV2/Kerrang early-2000s aesthetic with high contrast lighting, film grain, and energetic visual effects.
+Add the ability to invite band members or friends to co-write songs together. Band members can join directly, while non-band members must agree to either a one-off writing fee or a royalty percentage offer.
 
----
+## Database Schema
 
-## Core Concept
-
-The POV system shows what the player sees while performing:
-- **Guitarist POV**: Looking down at fretboard, picking hand, sleeve visible
-- **Bassist POV**: Bass neck, fingers on strings, crowd glimpses
-- **Drummer POV**: Sticks hitting drums, cymbals, crowd through kit
-- **Vocalist POV**: Microphone, hand gestures, crowd faces
-- **Keyboardist POV**: Keys, hands moving, stage monitors
-
----
-
-## Visual Aesthetic
-
-### MTV2/Kerrang Late-Night Style
-| Element | Implementation |
-|---------|----------------|
-| Film Grain | Animated noise overlay (15-25% opacity) |
-| High Contrast | CSS filter: contrast(1.3) |
-| Overexposed Highlights | White bloom overlay on bright areas |
-| Desaturation | CSS filter: saturate(0.7) |
-| Handheld Feel | Subtle random camera shake animation |
-| Scan Lines | Optional CRT-style horizontal lines |
-| Vignette | Dark corners gradient overlay |
-
----
-
-## Implementation Plan
-
-### Phase 1: Database Schema
-
-**New Table: `pov_clip_templates`**
-
-Stores metadata for POV clip configurations per instrument/moment:
-
-```sql
-CREATE TABLE pov_clip_templates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  instrument_role text NOT NULL, -- guitarist, bassist, drummer, vocalist, keyboardist
-  clip_type text NOT NULL, -- 'playing', 'crowd_look', 'stage_scan', 'solo_focus'
-  description text,
-  camera_position jsonb, -- { x, y, z, lookAt }
-  duration_range int[] DEFAULT ARRAY[3, 8], -- min/max seconds
-  energy_level text DEFAULT 'medium', -- low, medium, high, climax
-  overlays text[] DEFAULT '{}', -- which overlay effects to use
-  created_at timestamptz DEFAULT now()
-);
+### New Table: `songwriting_collaborations`
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                   songwriting_collaborations                    │
+├─────────────────────────────────────────────────────────────────┤
+│ id                  UUID PRIMARY KEY                            │
+│ project_id          UUID → songwriting_projects (FK)            │
+│ inviter_user_id     UUID → auth.users (FK)                      │
+│ invitee_profile_id  UUID → profiles (FK)                        │
+│ status              ENUM (pending, accepted, declined, expired) │
+│ is_band_member      BOOLEAN                                     │
+│ compensation_type   ENUM (none, flat_fee, royalty)              │
+│ flat_fee_amount     NUMERIC (null if royalty)                   │
+│ royalty_percentage  NUMERIC (null if flat_fee)                  │
+│ fee_paid            BOOLEAN DEFAULT false                       │
+│ contribution_notes  TEXT                                        │
+│ invited_at          TIMESTAMPTZ                                 │
+│ responded_at        TIMESTAMPTZ                                 │
+│ created_at / updated_at                                         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Phase 2: POV Viewer Component
+### New Enum: `collaboration_compensation_type`
+Values: `none`, `flat_fee`, `royalty`
 
-**New File: `src/components/gig-viewer/POVGigViewer.tsx`**
+### New Enum: `collaboration_status`
+Values: `pending`, `accepted`, `declined`, `expired`
 
-Main component that renders the first-person view:
+## Technical Implementation
 
-```typescript
-interface POVGigViewerProps {
-  gigId: string;
-  playerRole: 'guitarist' | 'bassist' | 'drummer' | 'vocalist' | 'keyboardist';
-  intensity: number;
-  songSection: string;
-  crowdMood: number;
-}
-```
+### 1. Migration File
+- Create `songwriting_collaborations` table with foreign keys
+- Add enums for compensation type and status
+- Enable RLS with policies for:
+  - Inviters can view/create/update their own invitations
+  - Invitees can view and respond to invitations addressed to them
+- Add unique constraint on `(project_id, invitee_profile_id)` to prevent duplicate invitations
+
+### 2. New Hook: `useCollaborationInvites`
+Location: `src/hooks/useCollaborationInvites.ts`
+
+Functions:
+- `fetchProjectCollaborators(projectId)` - Get all collaborators for a project
+- `inviteCollaborator(params)` - Send invitation with compensation details
+- `respondToInvitation(id, accept)` - Accept or decline invitation
+- `cancelInvitation(id)` - Withdraw pending invitation
+- `payFlatFee(collaborationId)` - Process one-off payment
+
+### 3. New Component: `CollaboratorInviteDialog`
+Location: `src/components/songwriting/CollaboratorInviteDialog.tsx`
 
 Features:
-- Role-specific POV rendering
-- Automatic clip cycling based on song section
-- Intensity-reactive effects
+- Search for band members and friends
+- Band members shown at top with "No fee required" badge
+- Friends/non-members show compensation options:
+  - Flat fee input ($50 - $10,000 range)
+  - Royalty percentage slider (5% - 50%)
+- Preview of offer before sending
+- Validation: Check inviter has enough cash for flat fee
 
-### Phase 3: Post-Processing Effects Layer
+### 4. New Component: `CollaborationOfferCard`
+Location: `src/components/songwriting/CollaborationOfferCard.tsx`
 
-**New File: `src/components/gig-viewer/POVPostProcessing.tsx`**
+For invitees to view and respond to offers:
+- Show project details (title, genre, current progress)
+- Display compensation offer clearly
+- Accept / Decline buttons
+- For royalty offers: Show estimated earnings based on song quality
 
-Applies the MTV2/Kerrang aesthetic:
+### 5. New Component: `ProjectCollaboratorsPanel`
+Location: `src/components/songwriting/ProjectCollaboratorsPanel.tsx`
 
-```typescript
-interface POVPostProcessingProps {
-  intensity: number;
-  grainAmount: number; // 0.15-0.25
-  contrast: number; // 1.2-1.4
-  saturation: number; // 0.6-0.8
-  enableScanLines: boolean;
-  vignetteStrength: number;
-}
+Displays on project detail/edit view:
+- List of current collaborators with status badges
+- Pending invitations with cancel option
+- "Invite Collaborator" button
+
+### 6. Updates to Existing Components
+
+**SimplifiedProjectCard.tsx**
+- Add collaborator avatars/count indicator
+- Show "Collaboration" badge for projects with active collaborators
+
+**Songwriting.tsx**
+- Add "Collaborators" section in project creation/edit forms
+- Integrate `ProjectCollaboratorsPanel` in project detail view
+
+**SongCompletionDialog.tsx**
+- Show collaborator splits before finalizing
+- Confirm royalty percentages are correctly applied to finished song
+
+### 7. Payment Flow for Flat Fees
+
+When invitee accepts a flat fee offer:
+1. Check inviter has sufficient `profiles.cash`
+2. Deduct fee from inviter's cash
+3. Add fee to invitee's cash
+4. Mark `fee_paid = true` on collaboration record
+5. Record transaction in a new `collaboration_payments` audit table
+
+### 8. Royalty Integration
+
+When song is completed from project:
+- Collect all accepted royalty collaborators
+- Calculate splits: Original writer gets `100 - sum(royalty_percentages)`
+- Populate `songs.co_writers` array with collaborator names
+- Populate `songs.split_percentages` array with percentages
+- Create `band_song_ownership` records for each collaborator
+
+## User Flows
+
+### Flow 1: Invite Band Member
+```text
+1. Open songwriting project → Click "Invite Collaborator"
+2. See band members listed first (fetched from band_members table)
+3. Select band member → Shows "No compensation required"
+4. Click "Send Invitation"
+5. Band member receives notification → Can accept/decline
+6. If accepted: Collaborator added to project
 ```
 
-CSS Filter Stack:
-```css
-.pov-container {
-  filter: 
-    contrast(1.3) 
-    saturate(0.7) 
-    brightness(1.1);
-}
-
-.grain-overlay {
-  background-image: url('/textures/effects/film-grain.png');
-  animation: grain-shift 0.1s steps(10) infinite;
-  opacity: 0.2;
-  mix-blend-mode: overlay;
-}
-
-.vignette {
-  background: radial-gradient(
-    ellipse at center,
-    transparent 40%,
-    rgba(0,0,0,0.6) 100%
-  );
-}
+### Flow 2: Invite Friend (Flat Fee)
+```text
+1. Open songwriting project → Click "Invite Collaborator"
+2. Search friends (from friendships table)
+3. Select friend → Choose "One-off Writing Fee"
+4. Enter fee amount (e.g., $500)
+5. Click "Send Offer"
+6. Friend receives notification with offer details
+7. Friend accepts → Fee transferred immediately
+8. Collaborator added to project
 ```
 
-### Phase 4: Camera Shake System
-
-**New File: `src/components/gig-viewer/CameraShake.tsx`**
-
-Handheld camera simulation:
-
-```typescript
-const useHandheldShake = (intensity: number, songSection: string) => {
-  // Base micro-movement (always present)
-  const microShake = { x: random(-1, 1), y: random(-0.5, 0.5) };
-  
-  // Energy bursts during chorus/solo
-  const energyShake = songSection === 'chorus' 
-    ? { x: random(-3, 3), y: random(-2, 2) }
-    : { x: 0, y: 0 };
-  
-  // Occasional larger movements (looking around)
-  const lookShake = useInterval(() => ({ 
-    x: random(-8, 8), 
-    y: random(-4, 4) 
-  }), 3000);
-  
-  return combine(microShake, energyShake, lookShake);
-};
+### Flow 3: Invite Friend (Royalty)
+```text
+1. Open songwriting project → Click "Invite Collaborator"
+2. Search friends → Select friend
+3. Choose "Royalty Split" → Set percentage (e.g., 15%)
+4. Click "Send Offer"
+5. Friend reviews offer (sees estimated earnings)
+6. Friend accepts → No immediate payment
+7. When song completes: 15% of all future royalties go to collaborator
 ```
-
-### Phase 5: Instrument POV Scenes
-
-**New Directory: `src/components/gig-viewer/pov-scenes/`**
-
-Each instrument gets its own POV component:
-
-**GuitaristPOV.tsx**
-- Fretboard in lower frame
-- Picking hand visible
-- Sleeve/wrist detail
-- Occasional crowd glimpses through hair flick
-- Solo sections: faster hand movement, face close-up to neck
-
-**DrummerPOV.tsx**
-- Sticks in frame, blurred motion
-- Drum heads and cymbals
-- Crowd visible through gaps in kit
-- Hi-hat foot visible bottom frame
-- Fills: rapid view switching
-
-**VocalistPOV.tsx**
-- Microphone center frame
-- Hand gestures
-- Crowd faces (blurred, lit by phones)
-- Stage monitors
-- Between songs: band member glances
-
-**BassistPOV.tsx**
-- Bass neck diagonal in frame
-- Fingers on frets
-- Amp stack visible side
-- Groove sections: subtle head bob
-
-**KeyboardistPOV.tsx**
-- Keys stretching across frame
-- Hands moving
-- Synth displays
-- Side stage view
-
-### Phase 6: Overlay System
-
-**New File: `src/components/gig-viewer/POVOverlays.tsx`**
-
-Layered effects that enhance the concert feel:
-
-```typescript
-type OverlayType = 
-  | 'lens_flare'      // Bright light bursts
-  | 'stage_lights'    // Colored beams
-  | 'sweat_drops'     // Subtle moisture effect
-  | 'crowd_hands'     // Arms reaching up
-  | 'pyro_flash'      // Climax moments
-  | 'strobe'          // High energy
-  | 'haze'            // Atmospheric fog
-  | 'confetti';       // Celebration moments
-```
-
-Overlay behavior by song section:
-| Section | Active Overlays |
-|---------|-----------------|
-| Intro | haze, stage_lights (dim) |
-| Verse | stage_lights, subtle lens_flare |
-| Chorus | lens_flare, crowd_hands, strobe (if high energy) |
-| Bridge | haze (heavy), stage_lights (moody) |
-| Solo | lens_flare (intense), sweat_drops |
-| Outro | confetti (if good show), crowd_hands |
-
-### Phase 7: AI-Generated POV Images
-
-**New Edge Function: `supabase/functions/generate-pov-clip/index.ts`**
-
-Uses the Lovable AI image generation API to create custom POV frames:
-
-```typescript
-const generatePOVImage = async (
-  instrument: string,
-  clipType: string,
-  energy: 'low' | 'medium' | 'high'
-) => {
-  const prompt = buildPOVPrompt(instrument, clipType, energy);
-  // "First-person POV from drummer on stage, looking down at snare drum, 
-  //  drumsticks in motion, blurred crowd visible through cymbals, 
-  //  high contrast stage lighting, film grain, MTV2 late night aesthetic,
-  //  gritty, handheld camera feel, overexposed highlights"
-  
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    // ... generate image
-  });
-  
-  // Store in Supabase storage
-  return imageUrl;
-};
-```
-
-### Phase 8: Integration with Existing Viewer
-
-**Modify: `src/components/gig-viewer/ParallaxGigViewer.tsx`**
-
-Add POV mode toggle:
-
-```typescript
-const [viewMode, setViewMode] = useState<'stage' | 'pov'>('stage');
-const [povRole, setPovRole] = useState<string>('vocalist');
-
-// In render:
-{viewMode === 'pov' ? (
-  <POVGigViewer
-    gigId={gigId}
-    playerRole={povRole}
-    intensity={intensity}
-    songSection={songSection}
-    crowdMood={crowdMood}
-  />
-) : (
-  // Existing stage view
-)}
-```
-
-### Phase 9: Texture Assets
-
-**New Textures to Create:**
-
-| Texture | Purpose |
-|---------|---------|
-| `film-grain.png` | Animated grain overlay |
-| `scan-lines.png` | CRT effect |
-| `lens-dirt.png` | Realistic lens imperfections |
-| `sweat-drops.png` | Intensity effect |
-| `crowd-silhouette-pov.png` | Blurred crowd from stage |
-| `stage-light-beam.png` | Light ray overlay |
-| `pyro-flash.png` | Explosion effect |
-
----
 
 ## Files to Create/Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/migrations/xxx_pov_clips.sql` | CREATE | POV clip template table |
-| `src/components/gig-viewer/POVGigViewer.tsx` | CREATE | Main POV viewer |
-| `src/components/gig-viewer/POVPostProcessing.tsx` | CREATE | Visual effects layer |
-| `src/components/gig-viewer/CameraShake.tsx` | CREATE | Handheld simulation |
-| `src/components/gig-viewer/POVOverlays.tsx` | CREATE | Stage light/effect overlays |
-| `src/components/gig-viewer/pov-scenes/GuitaristPOV.tsx` | CREATE | Guitar POV |
-| `src/components/gig-viewer/pov-scenes/DrummerPOV.tsx` | CREATE | Drums POV |
-| `src/components/gig-viewer/pov-scenes/VocalistPOV.tsx` | CREATE | Vocals POV |
-| `src/components/gig-viewer/pov-scenes/BassistPOV.tsx` | CREATE | Bass POV |
-| `src/components/gig-viewer/pov-scenes/KeyboardistPOV.tsx` | CREATE | Keys POV |
-| `src/hooks/usePOVClipCycler.ts` | CREATE | Clip rotation logic |
-| `supabase/functions/generate-pov-clip/index.ts` | CREATE | AI image generation |
-| `src/components/gig-viewer/ParallaxGigViewer.tsx` | MODIFY | Add POV mode toggle |
-| `src/assets/textures/effects/film-grain.png` | CREATE | Grain texture |
-| `src/components/VersionHeader.tsx` | MODIFY | v1.0.512 |
-| `src/pages/VersionHistory.tsx` | MODIFY | Changelog |
+### New Files
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/[timestamp]_add_songwriting_collaborations.sql` | Database schema |
+| `src/hooks/useCollaborationInvites.ts` | Data fetching and mutations |
+| `src/components/songwriting/CollaboratorInviteDialog.tsx` | Invitation UI |
+| `src/components/songwriting/CollaborationOfferCard.tsx` | Offer response UI |
+| `src/components/songwriting/ProjectCollaboratorsPanel.tsx` | Collaborators list |
 
----
+### Modified Files
+| File | Changes |
+|------|---------|
+| `src/integrations/supabase/types.ts` | Auto-generated type updates |
+| `src/pages/Songwriting.tsx` | Add collaborator panel integration |
+| `src/components/songwriting/SimplifiedProjectCard.tsx` | Show collaborator indicators |
+| `src/components/songwriting/SongCompletionDialog.tsx` | Show royalty splits |
+| `src/utils/bandRoyalties.ts` | Extend for collaboration royalties |
+| `src/components/VersionHeader.tsx` | Version bump to 1.0.524 |
+| `src/pages/VersionHistory.tsx` | Add changelog entry |
 
-## UI Controls
+## Version Update
+- Bump to **v1.0.524**
+- Changelog: "Songwriting: Added collaborative songwriting with band member and friend invitations, flat fee and royalty compensation options"
 
-### POV Mode Selector
-Add to HUD controls:
-- **View Toggle**: Stage View / POV Mode
-- **Role Selector**: Choose which band member's POV (default: player's role)
-- **Effect Intensity**: Slider for grain/contrast amount
-
----
-
-## Performance Considerations
-
-1. **CSS-based effects** preferred over canvas/WebGL for mobile compatibility
-2. **Preload textures** for overlay effects
-3. **Debounce camera shake** calculations
-4. **Lazy load POV scenes** based on current role
-5. **Cache AI-generated images** in Supabase storage
-
----
-
-## Version History Entry
-
-**v1.0.512**
-- NEW: First-Person POV Concert Mode - experience gigs from the performer's perspective
-- POV: Instrument-specific views (guitarist, drummer, vocalist, bassist, keyboardist)
-- POV: MTV2/Kerrang late-night aesthetic with film grain, high contrast, desaturation
-- POV: Handheld camera shake simulation synced to song energy
-- POV: Dynamic overlay system (lens flares, stage lights, crowd hands, pyro)
-- POV: Post-processing effects layer with vignette and scan lines
-- POV: Role selector to view from any band member's perspective
-- POV: AI-generated POV clip frames for variety
