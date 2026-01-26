@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.525",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Cities: Added city governance system with mayors and elections" },
+      { type: 'feature', description: "Cities: Mayors set local laws including tax rates, alcohol age, drug policy" },
+      { type: 'feature', description: "Cities: Noise curfew, prohibited/promoted genres, travel tax laws" },
+      { type: 'feature', description: "Cities: Annual election cycle with nomination and voting phases" },
+      { type: 'feature', description: "Cities: Players can run for mayor with campaign slogans and policy proposals" },
+      { type: 'feature', description: "Cities: Law history tracking with audit trail of all changes" },
+    ],
+  },
+  {
     version: "1.0.524",
     date: "2026-01-26",
     changes: [
