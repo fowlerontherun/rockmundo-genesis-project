@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.513",
+    date: "2026-01-26",
+    changes: [
+      { type: 'improvement', description: "POV: Enhanced Guitar POV - detailed strumming/solo view with visible hands, sleeves, wristbands, and custom guitar skins" },
+      { type: 'improvement', description: "POV: Enhanced Bass POV - plucking groove focus with bass strings, wristbands, amp stack, and head bob motion" },
+      { type: 'improvement', description: "POV: Enhanced Drummer POV - snare/hi-hat focus with drumsticks, gloved hands, wristbands, and hit flash effects" },
+      { type: 'improvement', description: "POV: Enhanced Vocalist POV - mic close-up with detailed crowd, phone lights, hand gestures, and stage monitors" },
+      { type: 'improvement', description: "POV: MTV2/Kerrang aesthetic upgraded - overexposed stage lights, high contrast, gritty handheld feel across all views" },
+      { type: 'feature', description: "POV: Crowd silhouettes with reaching hands, phone lights, and energy-reactive animations" },
+      { type: 'feature', description: "POV: Visible clothing details (jacket sleeves, leather wristbands, studded accessories) on all performers" },
+    ],
+  },
+  {
     version: "1.0.512",
     date: "2026-01-26",
     changes: [
