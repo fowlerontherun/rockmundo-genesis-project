@@ -1,297 +1,264 @@
 
+# Player Inbox System
 
-# Rehearsal System Complete Fix
-
-## Version: 1.0.508
+## Version: 1.0.511
 
 ## Overview
-This update fixes multiple critical issues in the rehearsal system: song familiarity not updating due to database constraint mismatch, enhances the post-rehearsal completion report, and retroactively fixes affected rehearsals from the past week.
+Create a new dedicated Inbox page at the top of navigation that consolidates all player-relevant messages, offers, and notifications into a persistent, organized interface. Messages will be stored in the database so they persist across sessions.
 
 ---
 
-## Issues Identified
+## Features
 
-### 1. CRITICAL: `rehearsal_stage` Value Mismatch (Root Cause)
-The code uses incorrect stage values that violate the database CHECK constraint:
+### Message Categories
+The inbox will organize messages into these categories:
+1. **Random Events** - Event outcomes and pending decisions
+2. **Gig Results** - Performance outcomes, earnings, reputation changes
+3. **PR & Media** - Media appearance invites and results
+4. **Record Labels** - Contract offers and negotiations
+5. **Sponsorships** - Brand deal offers and payments
+6. **Financial** - Daily streaming revenue, record sales, ticket sales summaries
+7. **Social** - Friend requests, band invitations, Twaater mentions
+8. **Achievements** - Unlocked achievements and milestones
 
-| Code Uses | Database Expects |
-|-----------|------------------|
-| `'learning'` | `'learning'` ✅ |
-| `'practicing'` | ❌ INVALID |
-| `'familiar'` | `'familiar'` ✅ |
-| `'mastered'` | ❌ INVALID |
-| - | `'unlearned'` |
-| - | `'well_rehearsed'` |
-| - | `'perfected'` |
-
-**Effect**: Every upsert fails silently because `'practicing'` and `'mastered'` violate the CHECK constraint `valid_rehearsal_stage`, so no familiarity records are created or updated.
-
-### 2. Stage Thresholds Mismatch
-The code calculates stages based on a 600-minute scale (100%), but the actual REHEARSAL_LEVELS use different thresholds:
-- Unlearned: 0-59 min
-- Learning: 60-299 min  
-- Familiar: 300-899 min
-- Well Rehearsed: 900-1799 min
-- Perfected: 1800+ min
-
-### 3. Missing Familiarity Records
-28+ rehearsals completed in the last 7 days have NULL familiarity records, including:
-- "revolution call" - 6 rehearsals totaling ~12 hours
-- "Fight them on beaches fight them in the pubs" - 2 rehearsals 
-- "Blue - Twelve" - 2 rehearsals (12 hours each)
-- Full setlist rehearsal (16 songs) - 4 hours
-
-### 4. Post-Rehearsal Report Enhancement Needed
-Current report works but could be enhanced with:
-- Better time display for hours remaining to next level
-- Color-coded progress bars by level
-- Summary of total minutes added across all songs
+### Inbox Features
+- Unread count badge in navigation
+- Filter by category
+- Mark as read / Mark all as read
+- Archive/delete functionality
+- Quick action buttons (Accept/Decline/View)
+- Date grouping (Today, Yesterday, This Week, Older)
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Fix Stage Calculation Function
+### Phase 1: Database Schema
 
-**Create new utility file: `src/utils/rehearsalStageCalculation.ts`**
+**New Migration: Create `player_inbox` table**
 
-Create a shared function that maps minutes to correct database stage values:
+```sql
+CREATE TYPE inbox_category AS ENUM (
+  'random_event', 'gig_result', 'pr_media', 'record_label', 
+  'sponsorship', 'financial', 'social', 'achievement', 'system'
+);
+
+CREATE TYPE inbox_priority AS ENUM ('low', 'normal', 'high', 'urgent');
+
+CREATE TABLE player_inbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  category inbox_category NOT NULL,
+  priority inbox_priority NOT NULL DEFAULT 'normal',
+  title text NOT NULL,
+  message text NOT NULL,
+  metadata jsonb DEFAULT '{}',
+  action_type text, -- 'accept_decline', 'view_details', 'navigate', null
+  action_data jsonb, -- { route: '/gigs', offerId: 'xxx', etc }
+  related_entity_type text, -- 'gig', 'sponsorship', 'contract', etc
+  related_entity_id uuid,
+  is_read boolean NOT NULL DEFAULT false,
+  is_archived boolean NOT NULL DEFAULT false,
+  expires_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_player_inbox_user_unread ON player_inbox(user_id, is_read) WHERE is_archived = false;
+CREATE INDEX idx_player_inbox_user_category ON player_inbox(user_id, category) WHERE is_archived = false;
+
+-- RLS policies
+ALTER TABLE player_inbox ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own inbox" ON player_inbox
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can update own inbox" ON player_inbox
+  FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "System can insert inbox messages" ON player_inbox
+  FOR INSERT WITH CHECK (true);
+```
+
+### Phase 2: Create Inbox Page
+
+**New File: `src/pages/Inbox.tsx`**
+
+Features:
+- Header with unread count and "Mark all read" button
+- Category filter tabs (All, Events, Gigs, Financial, Social, etc.)
+- Message list with:
+  - Category icon and color coding
+  - Priority indicator for urgent items
+  - Title and preview text
+  - Timestamp (relative: "2 hours ago")
+  - Action buttons based on `action_type`
+  - Read/unread visual state
+- Empty state with helpful message
+- Archive/delete actions
+
+### Phase 3: Create Inbox Hook
+
+**New File: `src/hooks/useInbox.ts`**
 
 ```typescript
-export const STAGE_THRESHOLDS = {
-  unlearned: { min: 0, max: 59 },
-  learning: { min: 60, max: 299 },
-  familiar: { min: 300, max: 899 },
-  well_rehearsed: { min: 900, max: 1799 },
-  perfected: { min: 1800, max: Infinity },
-};
+export function useInbox() {
+  // Fetch all inbox messages for user
+  // Provide filtering by category
+  // Mark as read mutations
+  // Archive/delete mutations
+  // Real-time subscription for new messages
+}
 
-export type RehearsalStage = 'unlearned' | 'learning' | 'familiar' | 'well_rehearsed' | 'perfected';
-
-export function calculateRehearsalStage(totalMinutes: number): RehearsalStage {
-  if (totalMinutes >= 1800) return 'perfected';
-  if (totalMinutes >= 900) return 'well_rehearsed';
-  if (totalMinutes >= 300) return 'familiar';
-  if (totalMinutes >= 60) return 'learning';
-  return 'unlearned';
+export function useUnreadInboxCount() {
+  // Lightweight query for just the unread count
+  // Used in navigation badge
 }
 ```
 
-### Phase 2: Fix Client-Side Hook
+### Phase 4: Update Navigation
 
-**File: `src/hooks/useAutoRehearsalCompletion.ts`**
+**File: `src/components/ui/navigation.tsx`**
 
-Update the stage calculation to use correct values:
-
+Add Inbox at the top of the Home section with unread badge:
 ```typescript
-import { calculateRehearsalStage } from '@/utils/rehearsalStageCalculation';
-
-// Replace the incorrect stage calculation (lines 168-177):
-const rehearsalStage = calculateRehearsalStage(newMinutes);
-```
-
-### Phase 3: Fix Edge Function
-
-**File: `supabase/functions/complete-rehearsals/index.ts`**
-
-Update the stage calculation to match database constraints:
-
-```typescript
-// Replace lines 180-188 with:
-function calculateRehearsalStage(totalMinutes: number): string {
-  if (totalMinutes >= 1800) return 'perfected';
-  if (totalMinutes >= 900) return 'well_rehearsed';
-  if (totalMinutes >= 300) return 'familiar';
-  if (totalMinutes >= 60) return 'learning';
-  return 'unlearned';
+{
+  titleKey: "nav.home",
+  items: [
+    { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadCount },
+    { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
+    // ... rest
+  ],
 }
-
-// Then use:
-const rehearsalStage = calculateRehearsalStage(newMinutes);
 ```
 
-### Phase 4: Retroactively Fix Affected Rehearsals
+### Phase 5: Create Inbox Message Population
 
-**New Migration: Backfill missing familiarity records**
+**New Edge Function: `supabase/functions/create-inbox-message/index.ts`**
 
-Create a migration that processes all completed rehearsals that have NULL familiarity:
+Helper function that other edge functions can call to create inbox messages. This centralizes message creation logic.
 
-```sql
--- Fix missing familiarity records from completed rehearsals
-DO $$
-DECLARE
-  r RECORD;
-  song_record RECORD;
-  current_minutes INTEGER;
-  new_minutes INTEGER;
-  minutes_per_song INTEGER;
-  calc_stage TEXT;
-BEGIN
-  -- Process each completed rehearsal with selected_song_id
-  FOR r IN 
-    SELECT br.id, br.band_id, br.selected_song_id, br.duration_hours
-    FROM band_rehearsals br
-    LEFT JOIN band_song_familiarity bsf ON bsf.song_id = br.selected_song_id AND bsf.band_id = br.band_id
-    WHERE br.status = 'completed'
-    AND br.scheduled_end > NOW() - INTERVAL '14 days'
-    AND br.selected_song_id IS NOT NULL
-    AND bsf.id IS NULL
-  LOOP
-    minutes_per_song := FLOOR(r.duration_hours * 60);
-    
-    -- Calculate stage
-    IF minutes_per_song >= 1800 THEN calc_stage := 'perfected';
-    ELSIF minutes_per_song >= 900 THEN calc_stage := 'well_rehearsed';
-    ELSIF minutes_per_song >= 300 THEN calc_stage := 'familiar';
-    ELSIF minutes_per_song >= 60 THEN calc_stage := 'learning';
-    ELSE calc_stage := 'unlearned';
-    END IF;
-    
-    INSERT INTO band_song_familiarity (band_id, song_id, familiarity_minutes, rehearsal_stage, last_rehearsed_at)
-    VALUES (r.band_id, r.selected_song_id, minutes_per_song, calc_stage, NOW())
-    ON CONFLICT (band_id, song_id) DO UPDATE SET
-      familiarity_minutes = band_song_familiarity.familiarity_minutes + EXCLUDED.familiarity_minutes,
-      rehearsal_stage = EXCLUDED.rehearsal_stage,
-      last_rehearsed_at = EXCLUDED.last_rehearsed_at,
-      updated_at = NOW();
-  END LOOP;
-  
-  -- Process setlist rehearsals
-  FOR r IN 
-    SELECT br.id, br.band_id, br.setlist_id, br.duration_hours
-    FROM band_rehearsals br
-    WHERE br.status = 'completed'
-    AND br.scheduled_end > NOW() - INTERVAL '14 days'
-    AND br.setlist_id IS NOT NULL
-  LOOP
-    -- Get song count for this setlist
-    SELECT COUNT(*) INTO minutes_per_song FROM setlist_songs WHERE setlist_id = r.setlist_id;
-    IF minutes_per_song > 0 THEN
-      minutes_per_song := FLOOR((r.duration_hours * 60) / minutes_per_song);
-    END IF;
-    
-    -- Process each song in the setlist
-    FOR song_record IN 
-      SELECT song_id FROM setlist_songs WHERE setlist_id = r.setlist_id AND song_id IS NOT NULL
-    LOOP
-      -- Get current familiarity
-      SELECT COALESCE(familiarity_minutes, 0) INTO current_minutes 
-      FROM band_song_familiarity 
-      WHERE band_id = r.band_id AND song_id = song_record.song_id;
-      
-      IF current_minutes IS NULL THEN current_minutes := 0; END IF;
-      new_minutes := current_minutes + minutes_per_song;
-      
-      -- Calculate stage
-      IF new_minutes >= 1800 THEN calc_stage := 'perfected';
-      ELSIF new_minutes >= 900 THEN calc_stage := 'well_rehearsed';
-      ELSIF new_minutes >= 300 THEN calc_stage := 'familiar';
-      ELSIF new_minutes >= 60 THEN calc_stage := 'learning';
-      ELSE calc_stage := 'unlearned';
-      END IF;
-      
-      INSERT INTO band_song_familiarity (band_id, song_id, familiarity_minutes, rehearsal_stage, last_rehearsed_at)
-      VALUES (r.band_id, song_record.song_id, new_minutes, calc_stage, NOW())
-      ON CONFLICT (band_id, song_id) DO UPDATE SET
-        familiarity_minutes = EXCLUDED.familiarity_minutes,
-        rehearsal_stage = EXCLUDED.rehearsal_stage,
-        last_rehearsed_at = EXCLUDED.last_rehearsed_at,
-        updated_at = NOW();
-    END LOOP;
-  END LOOP;
-END $$;
-```
+**Update Existing Edge Functions to Create Inbox Messages:**
 
-### Phase 5: Enhance Post-Rehearsal Report
+| Edge Function | Inbox Message Type |
+|---------------|-------------------|
+| `complete-gigs` | Gig result with earnings, reputation change |
+| `process-daily-updates` | Daily financial summary (streams, sales, tickets) |
+| `generate-gig-offers` | New gig offer notification |
+| `generate-sponsorship-offers` | New sponsorship offer |
+| `process-random-events` | Event triggered, outcome applied |
+| `choose-event-option` | Outcome message when applied |
 
-**File: `src/components/rehearsal/RehearsalCompletionReport.tsx`**
+### Phase 6: Daily Financial Summary Message
 
-Add enhancements:
-1. Color-coded progress bars by level tier
-2. Show hours remaining (not just minutes) for longer waits
-3. Add summary footer showing total minutes gained
-4. Improve level-up animation
+**Update: `supabase/functions/process-daily-updates/index.ts`**
 
-```typescript
-// Enhanced time formatting
-const formatTimeRemaining = (minutes: number): string => {
-  if (minutes >= 120) {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  }
-  return `${minutes}m`;
-};
+At the end of daily processing, create a summary inbox message per player:
+- Total streaming revenue earned
+- Physical/digital sales
+- Ticket sales for upcoming gigs
+- Any significant changes
 
-// Color-coded progress bars
-const getProgressColor = (levelName: string): string => {
-  switch (levelName) {
-    case "Perfected": return "bg-purple-500";
-    case "Well Rehearsed": return "bg-blue-500";
-    case "Familiar": return "bg-green-500";
-    case "Learning": return "bg-yellow-500";
-    default: return "bg-gray-500";
-  }
-};
+Example message:
+> **Daily Earnings Summary**
+> Streaming: $45.23 (12,450 streams)
+> Record Sales: $150.00 (10 CDs, 2 vinyl)
+> Ticket Sales: 47 tickets sold for upcoming gigs
 
-// Add summary footer
-const totalMinutesAdded = results.reduce((sum, r) => sum + r.addedMinutes, 0);
-```
+### Phase 7: Inbox Message Components
+
+**New File: `src/components/inbox/InboxMessage.tsx`**
+- Message card component with category styling
+- Action buttons (Accept/Decline/View)
+- Read/unread states
+- Archive action
+
+**New File: `src/components/inbox/InboxFilters.tsx`**
+- Category filter tabs
+- Date range filter
+- Priority filter
+
+**New File: `src/components/inbox/InboxEmptyState.tsx`**
+- Friendly empty state when no messages
 
 ---
 
-## Files to Modify
+## Files to Create/Modify
 
-| File | Changes |
-|------|---------|
-| `src/utils/rehearsalStageCalculation.ts` | NEW - Shared stage calculation utility |
-| `src/hooks/useAutoRehearsalCompletion.ts` | Fix stage values to use correct DB enum |
-| `supabase/functions/complete-rehearsals/index.ts` | Fix stage calculation function |
-| `src/components/rehearsal/RehearsalCompletionReport.tsx` | Enhance with color-coding and time formatting |
-| `supabase/migrations/xxx_backfill_missing_familiarity.sql` | NEW - Retroactively fix missing records |
-| `src/components/VersionHeader.tsx` | Update to v1.0.508 |
-| `src/pages/VersionHistory.tsx` | Add changelog entry |
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/migrations/xxx_create_inbox.sql` | CREATE | New inbox table with RLS |
+| `src/pages/Inbox.tsx` | CREATE | Main inbox page |
+| `src/hooks/useInbox.ts` | CREATE | Inbox data hook |
+| `src/components/inbox/InboxMessage.tsx` | CREATE | Message item component |
+| `src/components/inbox/InboxFilters.tsx` | CREATE | Filter tabs component |
+| `src/components/inbox/InboxEmptyState.tsx` | CREATE | Empty state component |
+| `src/components/ui/navigation.tsx` | MODIFY | Add inbox link with badge |
+| `supabase/functions/create-inbox-message/index.ts` | CREATE | Helper for creating messages |
+| `supabase/functions/complete-gigs/index.ts` | MODIFY | Add inbox message on completion |
+| `supabase/functions/process-daily-updates/index.ts` | MODIFY | Add daily summary message |
+| `supabase/functions/choose-event-option/index.ts` | MODIFY | Add outcome message |
+| `src/App.tsx` | MODIFY | Add route for /inbox |
+| `src/components/VersionHeader.tsx` | MODIFY | Update to v1.0.511 |
+| `src/pages/VersionHistory.tsx` | MODIFY | Add changelog entry |
 
 ---
 
-## Technical Details
+## UI Design
 
-### Database Constraint Verification
-The `valid_rehearsal_stage` CHECK constraint only allows:
-```sql
-CHECK ((rehearsal_stage = ANY (ARRAY[
-  'unlearned'::text, 
-  'learning'::text, 
-  'familiar'::text, 
-  'well_rehearsed'::text, 
-  'perfected'::text
-])))
+### Inbox Page Layout
+
+```text
+┌─────────────────────────────────────────────────┐
+│ 📥 Inbox                     [Mark all read] ⚙️  │
+├─────────────────────────────────────────────────┤
+│ [All] [Events] [Gigs] [Money] [Social] [Labels] │
+├─────────────────────────────────────────────────┤
+│ TODAY                                           │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ 🎲 Random Event               2 hours ago   │ │
+│ │ Equipment Malfunction                       │ │
+│ │ Your amp blew a fuse during practice...     │ │
+│ │                    [Make a Choice →]        │ │
+│ └─────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ 💰 Daily Summary              This morning  │ │
+│ │ Yesterday's Earnings                        │ │
+│ │ Streaming: $45 • Sales: $150 • 47 tickets   │ │
+│ │                    [View Details →]         │ │
+│ └─────────────────────────────────────────────┘ │
+│ YESTERDAY                                       │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ 🎸 Gig Result                    ✓ Read     │ │
+│ │ Great show at The Roxy!                     │ │
+│ │ Earned $1,200 • +15 reputation • 450 fans   │ │
+│ └─────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
 ```
 
-### Level Thresholds (from `rehearsalLevels.ts`)
-| Level | Name | Min Minutes | Max Minutes |
-|-------|------|-------------|-------------|
-| 0 | Unlearned | 0 | 59 |
-| 1 | Learning | 60 | 299 |
-| 2 | Familiar | 300 | 899 |
-| 3 | Well Rehearsed | 900 | 1799 |
-| 4 | Perfected | 1800 | ∞ |
-
-### Affected Rehearsals to Backfill
-At least 28 rehearsals from the past 7 days need familiarity records created:
-- 6 rehearsals for "revolution call" (~12 hours total)
-- 2 rehearsals for "Fight them on beaches fight them in the pubs" (~4 hours)
-- 12+ rehearsals for "Mr. Blue" band songs (~72 hours)
-- 1 full setlist rehearsal with 16 songs (4 hours)
+### Category Icons & Colors
+| Category | Icon | Color |
+|----------|------|-------|
+| Random Events | 🎲 Dice | Yellow |
+| Gig Results | 🎸 Guitar | Green |
+| PR/Media | 📺 TV | Blue |
+| Record Labels | 💿 Disc | Purple |
+| Sponsorships | 🤝 Handshake | Teal |
+| Financial | 💰 Money | Green |
+| Social | 👥 Users | Pink |
+| Achievements | 🏆 Trophy | Gold |
 
 ---
 
 ## Version History Entry
 
-**v1.0.508**
-- Rehearsals: CRITICAL FIX - Song familiarity now updates correctly after rehearsals (fixed database constraint mismatch)
-- Rehearsals: Full setlist rehearsals now properly update familiarity for ALL songs in the setlist
-- Rehearsals: Enhanced post-rehearsal report with color-coded progress bars, improved time formatting, and summary totals
-- Rehearsals: Retroactively fixed ~28 completed rehearsals from the past 2 weeks that were missing familiarity data
-- Rehearsals: Added shared stage calculation utility for consistency between client and edge functions
-
+**v1.0.511**
+- NEW: Inbox page - centralized hub for all player messages and notifications
+- Inbox: Random event outcomes and pending decisions
+- Inbox: Gig results with earnings and reputation changes
+- Inbox: PR and media appearance invites
+- Inbox: Sponsorship and contract offers
+- Inbox: Daily financial summary (streaming, sales, tickets)
+- Inbox: Friend requests and band invitations
+- Inbox: Filter messages by category
+- Inbox: Mark as read and archive functionality
+- Inbox: Unread count badge in navigation
