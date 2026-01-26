@@ -21,6 +21,7 @@ import { CityNightClubsSection } from "@/components/city/CityNightClubsSection";
 import { CityTransportSection } from "@/components/city/CityTransportSection";
 import { CityMusicSceneCard } from "@/components/city/CityMusicSceneCard";
 import { CityCostBreakdown } from "@/components/city/CityCostBreakdown";
+import { CityGovernanceSection } from "@/components/city/CityGovernanceSection";
 
 
 type CityRouteParams = {
@@ -262,6 +263,9 @@ export const CityContent = ({
           cityName={city.name}
         />
       </div>
+
+      {/* City Governance - Mayor & Elections */}
+      <CityGovernanceSection cityId={city.id} cityName={city.name} />
 
       {/* Districts */}
       <CityDistrictsSection districts={districts} />

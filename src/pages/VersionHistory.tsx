@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.532",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Cities: Added governance section showing current mayor with avatar and approval rating" },
+      { type: 'feature', description: "Cities: Display active election status (nominations/voting phase) with countdown" },
+      { type: 'feature', description: "Cities: Quick view of key local laws (taxes, curfew, alcohol age)" },
+      { type: 'feature', description: "Cities: Link to view candidates or cast vote during election season" },
+    ],
+  },
+  {
     version: "1.0.531",
     date: "2026-01-26",
     changes: [
