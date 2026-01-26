@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users } from "lucide-react";
+import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users, UserPlus } from "lucide-react";
 import type { SongwritingProject } from "@/hooks/useSongwritingData";
 import { CompleteSongDialog } from "./CompleteSongDialog";
+import { CollaboratorInviteDialog } from "./CollaboratorInviteDialog";
 import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
 
 interface SimplifiedProjectCardProps {
@@ -19,6 +20,7 @@ interface SimplifiedProjectCardProps {
   onComplete?: () => void;
   onSchedule?: () => void;
   isLocked: boolean;
+  userBandId?: string;
 }
 
 export const SimplifiedProjectCard = ({
@@ -30,8 +32,10 @@ export const SimplifiedProjectCard = ({
   onComplete,
   onSchedule,
   isLocked,
+  userBandId,
 }: SimplifiedProjectCardProps) => {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { collaborators } = useCollaborationInvites(project.id);
   
   const acceptedCollaborators = collaborators?.filter(c => c.status === "accepted") || [];
@@ -229,6 +233,16 @@ export const SimplifiedProjectCard = ({
             </Button>
             
             <Button
+              onClick={() => setInviteDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              disabled={isLocked || isCompleted}
+              title="Invite Collaborator"
+            >
+              <UserPlus className="w-3 h-3" />
+            </Button>
+            
+            <Button
               onClick={onEdit}
               variant="outline"
               size="sm"
@@ -257,6 +271,13 @@ export const SimplifiedProjectCard = ({
         onComplete={() => {
           onComplete?.();
         }}
+      />
+
+      <CollaboratorInviteDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        projectId={project.id}
+        userBandId={userBandId}
       />
     </>
   );

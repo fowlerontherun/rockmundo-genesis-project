@@ -1862,6 +1862,7 @@ const Songwriting = () => {
                 key={project.id}
                 project={project}
                 isLocked={!!isLocked}
+                userBandId={primaryBand?.band_id}
                 onStartSession={() => handleStartSession(project)}
                 onEdit={() => handleEdit(project)}
                 onDelete={() => handleDelete(project)}

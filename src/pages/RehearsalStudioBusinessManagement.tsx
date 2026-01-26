@@ -4,10 +4,46 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Music, Users, Package, Wrench, DollarSign } from "lucide-react";
 import { VipGate } from "@/components/company/VipGate";
+import { useRehearsalStudio, useRehearsalRoomStaff, useRehearsalRoomEquipment, useRehearsalRoomUpgrades, useRehearsalRoomTransactions } from "@/hooks/useRehearsalStudioBusiness";
+import { RehearsalStudioStaffManager, RehearsalStudioEquipmentManager, RehearsalStudioUpgradesManager } from "@/components/rehearsal-studio-business";
 
 export default function RehearsalStudioBusinessManagement() {
   const { studioId } = useParams();
   const navigate = useNavigate();
+  
+  const { data: studio, isLoading } = useRehearsalStudio(studioId);
+  const { data: staff } = useRehearsalRoomStaff(studioId);
+  const { data: equipment } = useRehearsalRoomEquipment(studioId);
+  const { data: upgrades } = useRehearsalRoomUpgrades(studioId);
+  const { data: transactions } = useRehearsalRoomTransactions(studioId);
+  
+  // Calculate stats
+  const totalRevenue = transactions?.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0) || 0;
+  const totalExpenses = transactions?.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3" />
+          <div className="h-64 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!studio) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Rehearsal Studio Not Found</h2>
+          <p className="text-muted-foreground mb-4">The studio you're looking for doesn't exist.</p>
+          <Button onClick={() => navigate(-1)}>Go Back</Button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <VipGate feature="Rehearsal Studio Business" description="Manage your rehearsal studio, staff, equipment, and bookings.">
@@ -19,10 +55,10 @@ export default function RehearsalStudioBusinessManagement() {
           <div className="flex-1">
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Music className="h-6 w-6" />
-              Rehearsal Studio Management
+              {studio.name}
             </h1>
             <p className="text-muted-foreground">
-              Studio ID: {studioId}
+              {studio.cities?.name}, {studio.cities?.country} • ${studio.hourly_rate}/hr
             </p>
           </div>
         </div>
@@ -32,29 +68,29 @@ export default function RehearsalStudioBusinessManagement() {
           <Card>
             <CardContent className="pt-4">
               <p className="text-sm text-muted-foreground">Staff</p>
-              <p className="text-xl font-bold">0</p>
+              <p className="text-xl font-bold">{staff?.length || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">employees</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
               <p className="text-sm text-muted-foreground">Equipment</p>
-              <p className="text-xl font-bold">0</p>
-              <p className="text-xs text-muted-foreground mt-1">items</p>
+              <p className="text-xl font-bold">{equipment?.length || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">rental items</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Bookings</p>
-              <p className="text-xl font-bold">0</p>
-              <p className="text-xs text-muted-foreground mt-1">this week</p>
+              <p className="text-sm text-muted-foreground">Upgrades</p>
+              <p className="text-xl font-bold">{upgrades?.length || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">installed</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Revenue</p>
-              <p className="text-xl font-bold">$0</p>
-              <p className="text-xs text-muted-foreground mt-1">this month</p>
+              <p className="text-sm text-muted-foreground">Net Revenue</p>
+              <p className="text-xl font-bold">${(totalRevenue - totalExpenses).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">this period</p>
             </CardContent>
           </Card>
         </div>
@@ -80,41 +116,54 @@ export default function RehearsalStudioBusinessManagement() {
           </TabsList>
           
           <TabsContent value="staff">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground py-8">
-                  Staff management coming soon
-                </p>
-              </CardContent>
-            </Card>
+            {studioId && <RehearsalStudioStaffManager roomId={studioId} />}
           </TabsContent>
           
           <TabsContent value="equipment">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground py-8">
-                  Equipment inventory coming soon
-                </p>
-              </CardContent>
-            </Card>
+            {studioId && <RehearsalStudioEquipmentManager roomId={studioId} />}
           </TabsContent>
           
           <TabsContent value="upgrades">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground py-8">
-                  Studio upgrades coming soon
-                </p>
-              </CardContent>
-            </Card>
+            {studioId && <RehearsalStudioUpgradesManager roomId={studioId} />}
           </TabsContent>
           
           <TabsContent value="finances">
             <Card>
               <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground py-8">
-                  Financial reports coming soon
-                </p>
+                {transactions && transactions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total Revenue</p>
+                        <p className="text-2xl font-bold text-primary">${totalRevenue.toLocaleString()}</p>
+                      </div>
+                      <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total Expenses</p>
+                        <p className="text-2xl font-bold text-destructive">${totalExpenses.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Recent Transactions</h4>
+                      {transactions.slice(0, 10).map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between p-2 border rounded">
+                          <div>
+                            <p className="text-sm font-medium capitalize">{tx.transaction_type.replace(/_/g, ' ')}</p>
+                            <p className="text-xs text-muted-foreground">{tx.description || 'No description'}</p>
+                          </div>
+                          <span className={tx.amount >= 0 ? 'text-primary' : 'text-destructive'}>
+                            {tx.amount >= 0 ? '+' : ''}${tx.amount.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <DollarSign className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No transactions yet</p>
+                    <p className="text-sm">Revenue will appear here once bands book sessions</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
