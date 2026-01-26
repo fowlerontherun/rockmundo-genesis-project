@@ -13542,26 +13542,32 @@ export type Database = {
       player_university_attendance: {
         Row: {
           attendance_date: string
+          connection_failed: boolean | null
           created_at: string | null
           enrollment_id: string
           id: string
           was_locked_out: boolean | null
+          was_remote: boolean | null
           xp_earned: number
         }
         Insert: {
           attendance_date: string
+          connection_failed?: boolean | null
           created_at?: string | null
           enrollment_id: string
           id?: string
           was_locked_out?: boolean | null
+          was_remote?: boolean | null
           xp_earned: number
         }
         Update: {
           attendance_date?: string
+          connection_failed?: boolean | null
           created_at?: string | null
           enrollment_id?: string
           id?: string
           was_locked_out?: boolean | null
+          was_remote?: boolean | null
           xp_earned?: number
         }
         Relationships: [

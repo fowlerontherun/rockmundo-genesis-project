@@ -50,6 +50,7 @@ interface Enrollment {
   id: string;
   profile_id: string;
   course_id: string;
+  university_id: string;
   scheduled_end_date: string;
   status: string;
   days_attended: number;
@@ -61,6 +62,16 @@ interface Course {
   xp_per_day_min: number;
   xp_per_day_max: number;
 }
+
+interface University {
+  id: string;
+  city: string | null;
+}
+
+// Remote learning configuration
+const REMOTE_LEARNING_XP_PENALTY = 0.10; // 10% less effective
+const CONNECTION_FAILURE_CHANCE = 0.25; // 25% chance of connection failure
+const CONNECTION_FAILURE_XP_PENALTY = 0.50; // Only get half XP if connection fails
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -85,6 +96,8 @@ serve(async (req) => {
 
   let processedCount = 0;
   let skippedCount = 0;
+  let remoteCount = 0;
+  let connectionFailedCount = 0;
   let totalXpAwarded = 0;
 
   try {
@@ -106,7 +119,7 @@ serve(async (req) => {
     // Find active enrollments with auto_attend enabled
     const { data: enrollments, error: enrollError } = await supabaseClient
       .from("player_university_enrollments")
-      .select("id, profile_id, course_id, scheduled_end_date, status, days_attended, total_xp_earned")
+      .select("id, profile_id, course_id, university_id, scheduled_end_date, status, days_attended, total_xp_earned")
       .in("status", ["enrolled", "in_progress"])
       .eq("auto_attend", true)
       .returns<Enrollment[]>();
@@ -147,6 +160,51 @@ serve(async (req) => {
         continue;
       }
 
+      // Get university location
+      const { data: university, error: uniError } = await supabaseClient
+        .from("universities")
+        .select("id, city")
+        .eq("id", enrollment.university_id)
+        .single<University>();
+
+      if (uniError) {
+        console.error(`Error fetching university: ${uniError.message}`);
+        continue;
+      }
+
+      // Get player's current city
+      const { data: playerProfile } = await supabaseClient
+        .from("profiles")
+        .select("current_city_id, cities:current_city_id(name)")
+        .eq("id", enrollment.profile_id)
+        .single();
+
+      const playerCity = (playerProfile?.cities as any)?.name || null;
+      const universityCity = university?.city || null;
+      const isRemote = playerCity && universityCity && playerCity !== universityCity;
+
+      console.log(`Player city: ${playerCity}, University city: ${universityCity}, Remote: ${isRemote}`);
+
+      // If remote, check if player is activity blocked (can't attend at all if blocked)
+      let isActivityBlocked = false;
+      if (isRemote && playerProfile) {
+        const { data: activeActivity } = await supabaseClient
+          .from("player_scheduled_activities")
+          .select("id, activity_type")
+          .eq("profile_id", enrollment.profile_id)
+          .eq("status", "active")
+          .lte("scheduled_start", now.toISOString())
+          .gte("scheduled_end", now.toISOString())
+          .maybeSingle();
+
+        if (activeActivity) {
+          console.log(`Player is activity blocked (${activeActivity.activity_type}), skipping class`);
+          isActivityBlocked = true;
+          skippedCount++;
+          continue;
+        }
+      }
+
       // Fetch player attributes for learning speed bonus
       const { data: playerAttrs } = await supabaseClient
         .from("player_attributes")
@@ -160,16 +218,33 @@ serve(async (req) => {
       console.log(`Course XP range: ${course.xp_per_day_min}-${course.xp_per_day_max}`);
 
       // Random XP between min and max, then apply learning multiplier
-      const baseXp = Math.floor(
+      let baseXp = Math.floor(
         Math.random() * (course.xp_per_day_max - course.xp_per_day_min + 1) +
           course.xp_per_day_min
       );
-      const xpEarned = Math.floor(baseXp * learningMultiplier);
+      let xpEarned = Math.floor(baseXp * learningMultiplier);
 
-      console.log(`Generated XP: ${baseXp} base * ${learningMultiplier.toFixed(2)} = ${xpEarned}`);
+      // Apply remote learning penalties
+      let connectionFailed = false;
+      if (isRemote) {
+        // 10% less effective for remote learning
+        xpEarned = Math.floor(xpEarned * (1 - REMOTE_LEARNING_XP_PENALTY));
+        console.log(`Remote learning: XP reduced by ${REMOTE_LEARNING_XP_PENALTY * 100}% to ${xpEarned}`);
+        remoteCount++;
+
+        // Check for connection failure (25% chance)
+        if (Math.random() < CONNECTION_FAILURE_CHANCE) {
+          connectionFailed = true;
+          xpEarned = Math.floor(xpEarned * CONNECTION_FAILURE_XP_PENALTY);
+          console.log(`Connection failed mid-class! XP halved to ${xpEarned}`);
+          connectionFailedCount++;
+        }
+      }
+
+      console.log(`Final XP earned: ${xpEarned}`);
       totalXpAwarded += xpEarned;
 
-      // Create attendance record - set was_locked_out to false so activity feed logs it
+      // Create attendance record
       console.log('Creating attendance record...');
       const { error: attendanceError } = await supabaseClient
         .from("player_university_attendance")
@@ -177,7 +252,9 @@ serve(async (req) => {
           enrollment_id: enrollment.id,
           attendance_date: today,
           xp_earned: xpEarned,
-          was_locked_out: false, // Changed to false so activity feed trigger fires
+          was_locked_out: false,
+          was_remote: isRemote || false,
+          connection_failed: connectionFailed,
         });
 
       if (attendanceError) {
@@ -293,6 +370,8 @@ serve(async (req) => {
           metadata: {
             enrollment_id: enrollment.id,
             completed: isCompleted,
+            was_remote: isRemote || false,
+            connection_failed: connectionFailed,
           },
         });
 
@@ -336,6 +415,8 @@ serve(async (req) => {
                   course_id: enrollment.course_id,
                   xp_earned: xpEarned,
                   auto_attended: true,
+                  was_remote: isRemote || false,
+                  connection_failed: connectionFailed,
                 },
               });
             console.log(`Created schedule entry for auto-attended class: ${courseWithHours.name}`);
@@ -344,13 +425,14 @@ serve(async (req) => {
       }
 
       processedCount++;
+      const remoteInfo = isRemote ? ` [REMOTE${connectionFailed ? ' - CONNECTION FAILED' : ''}]` : '';
       console.log(
-        `✓ Completed enrollment ${enrollment.id}: ${xpEarned} XP, days: ${newDaysAttended}, completed: ${isCompleted}`
+        `✓ Completed enrollment ${enrollment.id}: ${xpEarned} XP, days: ${newDaysAttended}, completed: ${isCompleted}${remoteInfo}`
       );
     }
 
     console.log(`\n=== University Auto-Attendance Complete ===`);
-    console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}`);
+    console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}, Remote: ${remoteCount}, Connection Failures: ${connectionFailedCount}`);
 
     await completeJobRun({
       jobName: "university-attendance",
@@ -361,6 +443,8 @@ serve(async (req) => {
       resultSummary: {
         processedCount,
         skippedCount,
+        remoteCount,
+        connectionFailedCount,
         totalXpAwarded,
       },
     });
@@ -370,6 +454,8 @@ serve(async (req) => {
         success: true,
         processed: processedCount,
         skipped: skippedCount,
+        remote: remoteCount,
+        connectionFailed: connectionFailedCount,
         totalXpAwarded,
       }),
       {
@@ -388,6 +474,8 @@ serve(async (req) => {
       resultSummary: {
         processedCount,
         skippedCount,
+        remoteCount,
+        connectionFailedCount,
         totalXpAwarded,
       },
     });

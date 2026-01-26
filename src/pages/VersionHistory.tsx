@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.521",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Education: New Summary tab showing books being read, active courses, completed courses, and skill progress" },
+      { type: 'feature', description: "Education: Yesterday's educational progress display with XP breakdown" },
+      { type: 'feature', description: "University: Remote learning via Zoom when player is in different city than university" },
+      { type: 'improvement', description: "University: Remote lessons are 10% less effective than in-person attendance" },
+      { type: 'improvement', description: "University: 25% chance of connection failure during remote class (only half XP awarded)" },
+      { type: 'improvement', description: "University: Activity-blocked players skip remote classes entirely" },
+    ],
+  },
+  {
     version: "1.0.520",
     date: "2026-01-26",
     changes: [
