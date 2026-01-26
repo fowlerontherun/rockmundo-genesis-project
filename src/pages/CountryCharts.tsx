@@ -12,14 +12,12 @@ import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { ChartHistoryDialog } from "@/components/charts/ChartHistoryDialog";
 
-const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; description: string }[] = [
-  { value: "combined", label: "Combined", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales" },
-  { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" />, description: "Ranked by weekly streams" },
-  { value: "radio_airplay", label: "Radio", icon: <Radio className="h-4 w-4" />, description: "Radio airplay chart" },
-  { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" />, description: "Digital download sales" },
-  { value: "cd_sales", label: "CD", icon: <Disc className="h-4 w-4" />, description: "Physical CD sales" },
-  { value: "vinyl_sales", label: "Vinyl", icon: <Disc className="h-4 w-4" />, description: "Vinyl record sales" },
-  { value: "cassette_sales", label: "Cassette", icon: <PlaySquare className="h-4 w-4" />, description: "Cassette tape sales" },
+const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; description: string; hasAlbumData: boolean }[] = [
+  { value: "combined", label: "Top 50", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales", hasAlbumData: true },
+  { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" />, description: "Ranked by weekly streams", hasAlbumData: true },
+  { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" />, description: "Digital download sales", hasAlbumData: true },
+  { value: "physical_sales", label: "Physical", icon: <Disc className="h-4 w-4" />, description: "CD, Vinyl & Cassette sales combined", hasAlbumData: false },
+  { value: "radio_airplay", label: "Radio", icon: <Radio className="h-4 w-4" />, description: "Radio airplay chart", hasAlbumData: false },
 ];
 
 const TIME_RANGES: { value: ChartTimeRange; label: string }[] = [
@@ -366,20 +364,23 @@ export default function CountryCharts() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Disc className="h-4 w-4 text-muted-foreground" />
-            <Select value={releaseCategory} onValueChange={(v) => setReleaseCategory(v as ReleaseCategory)}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Release type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="single">Singles</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="ep">EPs</SelectItem>
-                <SelectItem value="album">Albums</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Only show release category for chart types with album data */}
+          {currentChartInfo?.hasAlbumData && (
+            <div className="flex items-center gap-2">
+              <Disc className="h-4 w-4 text-muted-foreground" />
+              <Select value={releaseCategory} onValueChange={(v) => setReleaseCategory(v as ReleaseCategory)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Release type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Singles</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="ep">EPs</SelectItem>
+                  <SelectItem value="album">Albums</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {realSongsCount < 50 && realSongsCount > 0 && (
             <Badge variant="outline" className="text-xs">
@@ -390,8 +391,15 @@ export default function CountryCharts() {
       </div>
 
       {/* Chart Type Tabs */}
-      <Tabs value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
-        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
+      <Tabs value={chartType} onValueChange={(v) => {
+        setChartType(v as ChartType);
+        // Reset to singles for chart types without album data
+        const newType = CHART_TYPES.find(t => t.value === v);
+        if (newType && !newType.hasAlbumData && (releaseCategory === "album" || releaseCategory === "ep")) {
+          setReleaseCategory("single");
+        }
+      }}>
+        <TabsList className="grid w-full grid-cols-5 h-auto">
           {CHART_TYPES.map((type) => (
             <TabsTrigger
               key={type.value}

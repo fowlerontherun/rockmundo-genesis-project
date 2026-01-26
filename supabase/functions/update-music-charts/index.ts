@@ -899,6 +899,15 @@ serve(async (req) => {
     chartEntries.push(...radioEntries);
     console.log(`Generated ${radioEntries.length} radio airplay entries`);
 
+    // Create radio_airplay_single entries (all radio plays are for singles currently)
+    const radioSingleEntries = radioEntries.map((entry, index) => ({
+      ...entry,
+      chart_type: "radio_airplay_single",
+      rank: index + 1,
+    }));
+    chartEntries.push(...radioSingleEntries);
+    console.log(`Generated ${radioSingleEntries.length} radio_airplay_single entries`);
+
     // =========================================================================
     // STEP 8: Upsert all chart entries
     // =========================================================================

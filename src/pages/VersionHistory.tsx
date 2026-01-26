@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.528",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Charts: Fixed data display by querying correct chart types (base + scoped variants)" },
+      { type: 'improvement', description: "Charts: Simplified tabs to Top 50, Streaming, Digital, Physical, and Radio" },
+      { type: 'feature', description: "Charts: New Physical Sales tab combining CD, Vinyl, and Cassette sales" },
+      { type: 'fix', description: "Charts: Release category selector only shows for chart types with album data" },
+      { type: 'fix', description: "Charts: Added radio_airplay_single chart type generation" },
+    ],
+  },
+  {
     version: "1.0.527",
     date: "2026-01-26",
     changes: [
