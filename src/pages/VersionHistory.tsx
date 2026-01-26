@@ -14,17 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.519",
+    version: "1.0.520",
     date: "2026-01-26",
     changes: [
-      { type: 'improvement', description: "POV: C1 Small Venue crowd now shows detailed foreground hands with bracelets, rings, wristbands, visible fingernails" },
-      { type: 'improvement', description: "POV: C2 Arena crowd now shows foreground hands with jewelry, different skin tones, varied hair styles" },
-      { type: 'improvement', description: "POV: Crowd clips include phone lights, lighters, banners, devil horns, and reaching arms" },
-      { type: 'improvement', description: "POV: Background crowd stylized as silhouettes for depth, foreground highly detailed" },
+      { type: 'fix', description: "Charts: Album charts now correctly show only album data (not mixed with singles)" },
+      { type: 'fix', description: "Charts: EP charts now correctly show only EP data" },
+      { type: 'feature', description: "Charts: Year selector added - when viewing 'This Year', can now filter by specific years (2020-current)" },
+      { type: 'improvement', description: "Charts: 'All' release category now properly aggregates singles, EPs, and albums together" },
     ],
   },
   {
-    version: "1.0.518",
+    version: "1.0.519",
     date: "2026-01-26",
     changes: [
       { type: 'feature', description: "POV: AI-powered clip generation edge function (generate-pov-clip) using Gemini image model" },
