@@ -12563,6 +12563,60 @@ export type Database = {
           },
         ]
       }
+      player_inbox: {
+        Row: {
+          action_data: Json | null
+          action_type: string | null
+          category: Database["public"]["Enums"]["inbox_category"]
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_archived: boolean
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          priority: Database["public"]["Enums"]["inbox_priority"]
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type?: string | null
+          category: Database["public"]["Enums"]["inbox_category"]
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_archived?: boolean
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          priority?: Database["public"]["Enums"]["inbox_priority"]
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string | null
+          category?: Database["public"]["Enums"]["inbox_category"]
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_archived?: boolean
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          priority?: Database["public"]["Enums"]["inbox_priority"]
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_instruments: {
         Row: {
           created_at: string
@@ -22171,6 +22225,17 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
+      inbox_category:
+        | "random_event"
+        | "gig_result"
+        | "pr_media"
+        | "record_label"
+        | "sponsorship"
+        | "financial"
+        | "social"
+        | "achievement"
+        | "system"
+      inbox_priority: "low" | "normal" | "high" | "urgent"
       show_type_enum: "concert" | "festival" | "private" | "street"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
@@ -22317,6 +22382,18 @@ export const Constants = {
       chat_participant_status: ["online", "offline", "typing", "away"],
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
       friendship_status: ["pending", "accepted", "declined", "blocked"],
+      inbox_category: [
+        "random_event",
+        "gig_result",
+        "pr_media",
+        "record_label",
+        "sponsorship",
+        "financial",
+        "social",
+        "achievement",
+        "system",
+      ],
+      inbox_priority: ["low", "normal", "high", "urgent"],
       show_type_enum: ["concert", "festival", "private", "street"],
       twaater_linked_type: ["single", "album", "gig", "tour", "busking"],
       twaater_outcome_group: [

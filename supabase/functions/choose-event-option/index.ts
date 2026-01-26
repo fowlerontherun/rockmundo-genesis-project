@@ -105,6 +105,19 @@ Deno.serve(async (req) => {
       metadata: { event_id: event?.id, choice },
     });
 
+    // Create inbox message about the choice
+    await supabase.from("player_inbox").insert({
+      user_id: user.id,
+      category: "random_event",
+      priority: "normal",
+      title: `Choice Made: ${event?.title || "Event"}`,
+      message: `You chose: "${choice === "a" ? event?.option_a_text : event?.option_b_text}". The outcome will be applied tomorrow.`,
+      metadata: { event_id: event?.id, choice },
+      action_type: null,
+      related_entity_type: "player_event",
+      related_entity_id: playerEventId,
+    });
+
     console.log(`[choose-event-option] Choice recorded successfully`);
 
     return new Response(

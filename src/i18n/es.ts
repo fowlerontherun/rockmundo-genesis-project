@@ -69,6 +69,7 @@ export const es: TranslationKeys = {
   nav: {
     beta: "BETA",
     version: "Versión",
+    inbox: "Bandeja",
     dashboard: "Panel",
     advisor: "Asesor",
     character: "Personaje",

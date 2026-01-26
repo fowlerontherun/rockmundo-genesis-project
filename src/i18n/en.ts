@@ -69,6 +69,7 @@ export const en = {
   nav: {
     beta: "BETA",
     version: "Version",
+    inbox: "Inbox",
     dashboard: "Dashboard",
     advisor: "Advisor",
     character: "Character",

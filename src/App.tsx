@@ -28,6 +28,7 @@ import Sponsorships from "./pages/Sponsorships";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
+const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const OffersDashboard = lazyWithRetry(() => import("./pages/OffersDashboard"));
@@ -259,6 +260,7 @@ function App() {
                   <Route path="/song/:songId" element={<PublicSong />} />
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
+                    <Route path="inbox" element={<Inbox />} />
                     <Route path="todays-news" element={<TodaysNewsPage />} />
                     <Route path="wellness" element={<WellnessPage />} />
                     <Route path="underworld" element={<UnderworldNew />} />

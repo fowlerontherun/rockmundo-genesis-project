@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.511",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "NEW: Inbox page - centralized hub for all player messages and notifications" },
+      { type: 'feature', description: "Inbox: Random event outcomes and pending decisions" },
+      { type: 'feature', description: "Inbox: Gig results with earnings and reputation changes" },
+      { type: 'feature', description: "Inbox: PR and media appearance invites" },
+      { type: 'feature', description: "Inbox: Sponsorship and contract offers" },
+      { type: 'feature', description: "Inbox: Daily financial summary (streaming, sales, tickets)" },
+      { type: 'feature', description: "Inbox: Friend requests and band invitations" },
+      { type: 'feature', description: "Inbox: Filter messages by category" },
+      { type: 'feature', description: "Inbox: Mark as read and archive functionality" },
+      { type: 'feature', description: "Inbox: Unread count badge in navigation" },
+    ],
+  },
+  {
     version: "1.0.510",
     date: "2026-01-26",
     changes: [
