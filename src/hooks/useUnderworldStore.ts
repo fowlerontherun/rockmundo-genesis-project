@@ -179,10 +179,10 @@ export const useUnderworldStore = () => {
 
           const updates: Record<string, number> = {};
           if (effects.health) {
-            updates.health = Math.min(100, (profile?.health || 0) + (effects.health as number));
+            updates.health = Math.max(0, Math.min(100, (profile?.health || 0) + (effects.health as number)));
           }
           if (effects.energy) {
-            updates.energy = Math.min(100, (profile?.energy || 0) + (effects.energy as number));
+            updates.energy = Math.max(0, Math.min(100, (profile?.energy || 0) + (effects.energy as number)));
           }
           if (effects.xp) {
             updates.experience = (profile?.experience || 0) + (effects.xp as number);
