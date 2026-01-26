@@ -2859,6 +2859,58 @@ export type Database = {
           },
         ]
       }
+      collaboration_payments: {
+        Row: {
+          amount: number
+          collaboration_id: string
+          created_at: string
+          id: string
+          payee_profile_id: string
+          payer_user_id: string
+          payment_type: string
+        }
+        Insert: {
+          amount: number
+          collaboration_id: string
+          created_at?: string
+          id?: string
+          payee_profile_id: string
+          payer_user_id: string
+          payment_type?: string
+        }
+        Update: {
+          amount?: number
+          collaboration_id?: string
+          created_at?: string
+          id?: string
+          payee_profile_id?: string
+          payer_user_id?: string
+          payment_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_payments_collaboration_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "songwriting_collaborations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_payments_payee_profile_id_fkey"
+            columns: ["payee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_payments_payee_profile_id_fkey"
+            columns: ["payee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_feed_posts: {
         Row: {
           category: string | null
@@ -18256,6 +18308,82 @@ export type Database = {
           },
         ]
       }
+      songwriting_collaborations: {
+        Row: {
+          compensation_type: Database["public"]["Enums"]["collaboration_compensation_type"]
+          contribution_notes: string | null
+          created_at: string
+          fee_paid: boolean
+          flat_fee_amount: number | null
+          id: string
+          invited_at: string
+          invitee_profile_id: string
+          inviter_user_id: string
+          is_band_member: boolean
+          project_id: string
+          responded_at: string | null
+          royalty_percentage: number | null
+          status: Database["public"]["Enums"]["collaboration_status"]
+          updated_at: string
+        }
+        Insert: {
+          compensation_type?: Database["public"]["Enums"]["collaboration_compensation_type"]
+          contribution_notes?: string | null
+          created_at?: string
+          fee_paid?: boolean
+          flat_fee_amount?: number | null
+          id?: string
+          invited_at?: string
+          invitee_profile_id: string
+          inviter_user_id: string
+          is_band_member?: boolean
+          project_id: string
+          responded_at?: string | null
+          royalty_percentage?: number | null
+          status?: Database["public"]["Enums"]["collaboration_status"]
+          updated_at?: string
+        }
+        Update: {
+          compensation_type?: Database["public"]["Enums"]["collaboration_compensation_type"]
+          contribution_notes?: string | null
+          created_at?: string
+          fee_paid?: boolean
+          flat_fee_amount?: number | null
+          id?: string
+          invited_at?: string
+          invitee_profile_id?: string
+          inviter_user_id?: string
+          is_band_member?: boolean
+          project_id?: string
+          responded_at?: string | null
+          royalty_percentage?: number | null
+          status?: Database["public"]["Enums"]["collaboration_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songwriting_collaborations_invitee_profile_id_fkey"
+            columns: ["invitee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_collaborations_invitee_profile_id_fkey"
+            columns: ["invitee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_collaborations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "songwriting_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       songwriting_projects: {
         Row: {
           chord_progression_id: string | null
@@ -22278,6 +22406,8 @@ export type Database = {
       band_status: "active" | "on_hiatus" | "disbanded"
       book_reading_status: "reading" | "completed" | "abandoned"
       chat_participant_status: "online" | "offline" | "typing" | "away"
+      collaboration_compensation_type: "none" | "flat_fee" | "royalty"
+      collaboration_status: "pending" | "accepted" | "declined" | "expired"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       inbox_category:
@@ -22435,6 +22565,8 @@ export const Constants = {
       band_status: ["active", "on_hiatus", "disbanded"],
       book_reading_status: ["reading", "completed", "abandoned"],
       chat_participant_status: ["online", "offline", "typing", "away"],
+      collaboration_compensation_type: ["none", "flat_fee", "royalty"],
+      collaboration_status: ["pending", "accepted", "declined", "expired"],
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
       friendship_status: ["pending", "accepted", "declined", "blocked"],
       inbox_category: [

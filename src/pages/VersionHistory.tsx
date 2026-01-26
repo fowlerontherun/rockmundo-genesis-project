@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.524",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Songwriting: Collaborative songwriting - invite band members or friends to co-write songs" },
+      { type: 'feature', description: "Songwriting: Band members can join projects directly with no fee" },
+      { type: 'feature', description: "Songwriting: Friends can be offered one-off writing fees ($50-$10,000)" },
+      { type: 'feature', description: "Songwriting: Royalty split offers (5%-50%) for ongoing song earnings" },
+      { type: 'feature', description: "Songwriting: Collaborator invitation system with accept/decline workflow" },
+      { type: 'improvement', description: "Songwriting: Project cards show collaborator avatars and co-write badge" },
+      { type: 'improvement', description: "Songwriting: Collaboration payments tracked and audited" },
+    ],
+  },
+  {
     version: "1.0.523",
     date: "2026-01-26",
     changes: [
