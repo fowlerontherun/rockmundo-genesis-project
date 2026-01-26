@@ -104,6 +104,7 @@ export const adminCategories: AdminCategory[] = [
     icon: Map,
     items: [
       { path: "/admin/cities", label: "Cities", description: "City management" },
+      { path: "/admin/city-governance", label: "City Governance", description: "Mayors & elections" },
       { path: "/admin/districts", label: "Districts", description: "City districts" },
       { path: "/admin/city-studios", label: "City Studios", description: "Recording studios" },
       { path: "/admin/night-clubs", label: "Night Clubs", description: "Club venues" },
