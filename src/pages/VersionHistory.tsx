@@ -14,19 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.518",
+    version: "1.0.519",
     date: "2026-01-26",
     changes: [
-      { type: 'feature', description: "POV: Angle variations A/B for all main clip types (G1A/G1B, B1A/B1B, D1A/D1B, V1A/V1B)" },
-      { type: 'feature', description: "POV: Stage lights overlay versions A (warm orange/white) and B (cool blue/purple)" },
-      { type: 'feature', description: "POV: Camera shake intensity levels - L2A (Mild for verses) and L2B (Intense for chorus/solos)" },
-      { type: 'feature', description: "POV: Hands/sleeves skin angles H1A/H1B and instrument skin angles I1A/I1B" },
-      { type: 'improvement', description: "POV: All angle A variants tilted left, angle B variants tilted right with tighter fretboard focus" },
-      { type: 'improvement', description: "POV: Legacy variant IDs preserved for backward compatibility" },
+      { type: 'improvement', description: "POV: C1 Small Venue crowd now shows detailed foreground hands with bracelets, rings, wristbands, visible fingernails" },
+      { type: 'improvement', description: "POV: C2 Arena crowd now shows foreground hands with jewelry, different skin tones, varied hair styles" },
+      { type: 'improvement', description: "POV: Crowd clips include phone lights, lighters, banners, devil horns, and reaching arms" },
+      { type: 'improvement', description: "POV: Background crowd stylized as silhouettes for depth, foreground highly detailed" },
     ],
   },
   {
-    version: "1.0.517",
+    version: "1.0.518",
     date: "2026-01-26",
     changes: [
       { type: 'feature', description: "POV: AI-powered clip generation edge function (generate-pov-clip) using Gemini image model" },
