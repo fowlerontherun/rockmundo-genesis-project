@@ -17,6 +17,8 @@ export type ReleaseCategory = "all" | "single" | "ep" | "album";
 
 export type ChartTimeRange = "daily" | "weekly" | "monthly" | "yearly";
 
+export type ChartYear = "current" | number; // "current" or specific year like 2025
+
 export interface ChartEntry {
   id: string;
   rank: number;
@@ -83,13 +85,15 @@ export const useCountryCharts = (
   chartType: ChartType,
   releaseCategory: ReleaseCategory = "single", // Default to singles
   timeRange: ChartTimeRange = "weekly",
+  selectedYear: ChartYear = "current", // For yearly view - specific year or current
 ) => {
   return useQuery({
-    queryKey: ["country-charts", country, genre, chartType, releaseCategory, timeRange],
+    queryKey: ["country-charts", country, genre, chartType, releaseCategory, timeRange, selectedYear],
     queryFn: async (): Promise<ChartEntry[]> => {
       // Calculate date range based on timeRange
       const now = new Date();
       let startDate: Date;
+      let endDate: Date = now;
       
       switch (timeRange) {
         case "daily":
@@ -105,8 +109,14 @@ export const useCountryCharts = (
           startDate.setMonth(now.getMonth() - 1);
           break;
         case "yearly":
-          startDate = new Date(now);
-          startDate.setFullYear(now.getFullYear() - 1);
+          // If a specific year is selected, use that year's date range
+          if (selectedYear !== "current" && typeof selectedYear === "number") {
+            startDate = new Date(selectedYear, 0, 1); // Jan 1 of selected year
+            endDate = new Date(selectedYear, 11, 31); // Dec 31 of selected year
+          } else {
+            startDate = new Date(now);
+            startDate.setFullYear(now.getFullYear() - 1);
+          }
           break;
         default:
           startDate = new Date(now);
@@ -114,20 +124,26 @@ export const useCountryCharts = (
       }
 
       const startDateStr = startDate.toISOString().split("T")[0];
+      const endDateStr = endDate.toISOString().split("T")[0];
 
-      // Build chart_type values to query
+      // Build chart_type values to query - ONLY query specific category, not base type
       let chartTypeFilter: string[] = [];
       
       if (releaseCategory === "all") {
-        // Query the specific chart type directly
-        chartTypeFilter = [chartType];
+        // Query ALL category-specific types for this chart type
+        chartTypeFilter = [
+          `${chartType}_single`,
+          `${chartType}_ep`,
+          `${chartType}_album`,
+          chartType // Also include base type for backward compatibility
+        ];
       } else {
-        // Query specific category suffix
+        // Query ONLY the specific category - do NOT fall back to base type
         const suffix = `_${releaseCategory}`;
-        chartTypeFilter = [`${chartType}${suffix}`, chartType]; // Include both scoped and base
+        chartTypeFilter = [`${chartType}${suffix}`];
       }
 
-      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "from:", startDateStr, "timeRange:", timeRange);
+      console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "from:", startDateStr, "to:", endDateStr, "timeRange:", timeRange, "year:", selectedYear);
 
       // For daily, get just the latest date. For other ranges, aggregate across dates.
       if (timeRange === "daily") {
@@ -205,6 +221,7 @@ export const useCountryCharts = (
         `)
         .in("chart_type", chartTypeFilter)
         .gte("chart_date", startDateStr)
+        .lte("chart_date", endDateStr)
         .limit(1000); // Get more entries to aggregate
 
       // Handle country filter

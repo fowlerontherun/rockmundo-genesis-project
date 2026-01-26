@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle, Calendar } from "lucide-react";
-import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, ChartTimeRange, getMetricLabels } from "@/hooks/useCountryCharts";
+import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, ChartTimeRange, ChartYear, getMetricLabels } from "@/hooks/useCountryCharts";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
@@ -243,8 +243,21 @@ export default function CountryCharts() {
   const [chartType, setChartType] = useState<ChartType>("combined");
   const [releaseCategory, setReleaseCategory] = useState<ReleaseCategory>("single"); // Default to singles
   const [timeRange, setTimeRange] = useState<ChartTimeRange>("weekly");
+  const [selectedYear, setSelectedYear] = useState<ChartYear>("current");
 
-  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType, releaseCategory, timeRange);
+  // Generate available years (current year back to 2020)
+  const currentYear = new Date().getFullYear();
+  const availableYears = useMemo(() => {
+    const years: { value: ChartYear; label: string }[] = [
+      { value: "current", label: "Last 12 Months" }
+    ];
+    for (let year = currentYear; year >= 2020; year--) {
+      years.push({ value: year, label: String(year) });
+    }
+    return years;
+  }, [currentYear]);
+
+  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType, releaseCategory, timeRange, selectedYear);
   const { data: genres = ["All", ...GENRES] } = useAvailableGenres();
   const { data: countries = COUNTRIES } = useAvailableCountries();
 
@@ -269,7 +282,13 @@ export default function CountryCharts() {
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Select value={timeRange} onValueChange={(v) => setTimeRange(v as ChartTimeRange)}>
+            <Select value={timeRange} onValueChange={(v) => {
+              setTimeRange(v as ChartTimeRange);
+              // Reset year selection when changing away from yearly
+              if (v !== "yearly") {
+                setSelectedYear("current");
+              }
+            }}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Time range" />
               </SelectTrigger>
@@ -282,6 +301,27 @@ export default function CountryCharts() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Year selector - only show when yearly time range is selected */}
+          {timeRange === "yearly" && (
+            <div className="flex items-center gap-2">
+              <Select 
+                value={String(selectedYear)} 
+                onValueChange={(v) => setSelectedYear(v === "current" ? "current" : parseInt(v))}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((y) => (
+                    <SelectItem key={String(y.value)} value={String(y.value)}>
+                      {y.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-muted-foreground" />
