@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.531",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Songwriting: Added 'Invite Collaborator' button to project cards for real player co-writing" },
+      { type: 'feature', description: "Songwriting: Invite band members (free) or friends (flat fee / royalty split) to collaborate" },
+      { type: 'improvement', description: "Rehearsal Studio: Fully functional staff hiring, equipment rental, and upgrades management" },
+      { type: 'improvement', description: "Rehearsal Studio: Financial overview with revenue/expense tracking" },
+      { type: 'improvement', description: "Recording Studio: Session tracking and basic financial overview" },
+      { type: 'fix', description: "Company System: Fixed placeholder content in business management pages" },
+    ],
+  },
+  {
     version: "1.0.530",
     date: "2026-01-26",
     changes: [
