@@ -14,19 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.521",
+    version: "1.0.522",
     date: "2026-01-26",
     changes: [
-      { type: 'feature', description: "Education: New Summary tab showing books being read, active courses, completed courses, and skill progress" },
-      { type: 'feature', description: "Education: Yesterday's educational progress display with XP breakdown" },
-      { type: 'feature', description: "University: Remote learning via Zoom when player is in different city than university" },
-      { type: 'improvement', description: "University: Remote lessons are 10% less effective than in-person attendance" },
-      { type: 'improvement', description: "University: 25% chance of connection failure during remote class (only half XP awarded)" },
-      { type: 'improvement', description: "University: Activity-blocked players skip remote classes entirely" },
+      { type: 'fix', description: "Merch: Sales now properly decrement stock_quantity from inventory" },
+      { type: 'fix', description: "Merch: Sales revenue now correctly added to band earnings (net after taxes)" },
+      { type: 'feature', description: "Merch: Sales tax added for US/Canada orders (5-13% depending on location)" },
+      { type: 'feature', description: "Merch: VAT added for EU/international orders (10-25% depending on country)" },
+      { type: 'improvement', description: "Merch: Order records now track sales_tax, vat, and net_revenue separately" },
+      { type: 'improvement', description: "Merch: Band earnings metadata includes tax breakdown and stock changes" },
     ],
   },
   {
-    version: "1.0.520",
+    version: "1.0.521",
     date: "2026-01-26",
     changes: [
       { type: 'fix', description: "Charts: Album charts now correctly show only album data (not mixed with singles)" },
