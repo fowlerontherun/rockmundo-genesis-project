@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Play, Edit, Trash2, History, CheckCircle2, Clock } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users } from "lucide-react";
 import type { SongwritingProject } from "@/hooks/useSongwritingData";
 import { CompleteSongDialog } from "./CompleteSongDialog";
+import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
 
 interface SimplifiedProjectCardProps {
   project: SongwritingProject;
@@ -30,6 +32,10 @@ export const SimplifiedProjectCard = ({
   isLocked,
 }: SimplifiedProjectCardProps) => {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const { collaborators } = useCollaborationInvites(project.id);
+  
+  const acceptedCollaborators = collaborators?.filter(c => c.status === "accepted") || [];
+  const hasCollaborators = acceptedCollaborators.length > 0;
 
   // Convert 0-2000 progress to 0-100%
   const musicPercent = Math.round((project.music_progress / 2000) * 100);
@@ -88,6 +94,12 @@ export const SimplifiedProjectCard = ({
                     {project.song_themes.name}
                   </Badge>
                 )}
+                {hasCollaborators && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Users className="h-3 w-3 mr-1" />
+                    Co-write
+                  </Badge>
+                )}
               </div>
             </div>
             <Badge
@@ -139,6 +151,28 @@ export const SimplifiedProjectCard = ({
             </span>
           </div>
           
+          {/* Collaborators */}
+          {hasCollaborators && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Collaborators</span>
+              <div className="flex -space-x-2">
+                {acceptedCollaborators.slice(0, 3).map((collab) => (
+                  <Avatar key={collab.id} className="h-6 w-6 border-2 border-background">
+                    <AvatarImage src={collab.invitee_profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">
+                      {collab.invitee_profile?.username?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {acceptedCollaborators.length > 3 && (
+                  <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs border-2 border-background">
+                    +{acceptedCollaborators.length - 3}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Status */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Status</span>

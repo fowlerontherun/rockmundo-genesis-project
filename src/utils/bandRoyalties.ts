@@ -218,6 +218,57 @@ export async function addCoWriterOwnership(
 }
 
 /**
+ * Create ownership records for songwriting collaborators when a song is completed
+ * Handles both band members and external collaborators with royalty agreements
+ */
+export async function createCollaboratorOwnership(
+  songId: string,
+  bandId: string | null,
+  primaryWriterUserId: string,
+  collaborators: {
+    userId: string;
+    profileId: string;
+    percentage: number;
+    isBandMember: boolean;
+  }[]
+): Promise<void> {
+  try {
+    // Calculate primary writer's percentage
+    const totalCollaboratorPercentage = collaborators.reduce((sum, c) => sum + c.percentage, 0);
+    const primaryWriterPercentage = 100 - totalCollaboratorPercentage;
+
+    // Create ownership record for primary writer
+    if (bandId) {
+      await supabase.from("band_song_ownership").insert({
+        song_id: songId,
+        band_id: bandId,
+        user_id: primaryWriterUserId,
+        ownership_percentage: primaryWriterPercentage,
+        original_percentage: primaryWriterPercentage,
+        role: "writer",
+        is_active_member: true,
+      });
+
+      // Create ownership records for each collaborator
+      for (const collab of collaborators) {
+        await supabase.from("band_song_ownership").insert({
+          song_id: songId,
+          band_id: bandId,
+          user_id: collab.userId,
+          ownership_percentage: collab.percentage,
+          original_percentage: collab.percentage,
+          role: "co-writer",
+          is_active_member: collab.isBandMember,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error creating collaborator ownership:", error);
+    throw error;
+  }
+}
+
+/**
  * Remove a song from the band's repertoire
  * - Removes all ownership records for the song
  * - Clears band_id from the song
