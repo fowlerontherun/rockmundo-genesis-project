@@ -170,8 +170,8 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   // Crowd Variants
   C1: {
     id: 'C1',
-    name: 'Crowd – Small Venue',
-    description: 'Stage POV of small concert audience, hands in the air, silhouettes highly readable, MTV2 / Kerrang aesthetic, grainy, energetic, loopable.',
+    name: 'Crowd – Small Venue (Detailed)',
+    description: 'Stage POV of small venue concert audience, close enough to see individual hands and fingers with bracelets, rings, wristbands, heads with varied hair styles, MTV2 / Kerrang aesthetic, high contrast stage lights reflecting on arms and hair, energetic, loopable. Foreground hands detailed, background stylized silhouettes for depth.',
     role: 'crowd',
     energyRange: [0.2, 0.6],
     songSections: ['verse', 'bridge', 'intro'],
@@ -179,8 +179,8 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   },
   C2: {
     id: 'C2',
-    name: 'Crowd – Medium/Arena',
-    description: 'Stage POV of medium to large concert audience, hands waving, silhouettes readable, phone lights visible, MTV2 / Kerrang aesthetic, loopable.',
+    name: 'Crowd – Medium/Arena (Detailed)',
+    description: 'Stage POV of medium to large arena audience, foreground hands highly detailed with bracelets, rings, different skin tones, visible head shapes and varied hair styles, MTV2 / Kerrang aesthetic, phone lights and lighters visible, loopable. Background stylized silhouettes, dynamic stage lighting.',
     role: 'crowd',
     energyRange: [0.5, 1.0],
     songSections: ['chorus', 'solo', 'outro'],
