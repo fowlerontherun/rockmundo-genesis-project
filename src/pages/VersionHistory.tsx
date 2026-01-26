@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.510",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "AI Music: CRITICAL FIX - User-entered lyrics from songwriting are no longer overwritten by AI generation" },
+      { type: 'fix', description: "AI Music: Original lyrics in songwriting projects are now preserved and never replaced" },
+    ],
+  },
+  {
     version: "1.0.509",
     date: "2026-01-26",
     changes: [
