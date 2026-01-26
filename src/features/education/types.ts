@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
 export interface EducationTab {
-  value: "books" | "university" | "videos" | "mentors";
+  value: "summary" | "books" | "university" | "videos" | "mentors";
   label: string;
   icon: LucideIcon;
   description: string;

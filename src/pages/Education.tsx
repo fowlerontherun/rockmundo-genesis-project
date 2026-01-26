@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useTranslation } from "@/hooks/useTranslation";
 
+import { SummaryTab } from "@/features/education/components/SummaryTab";
 import { BooksTab } from "@/features/education/components/BooksTab";
 import { UniversityTab } from "@/features/education/components/UniversityTab";
 import { VideosTab } from "@/features/education/components/VideosTab";
@@ -11,9 +12,10 @@ import { useEducationTabs } from "@/features/education/hooks/useEducationTabs";
 const Education = () => {
   const { t } = useTranslation();
   const tabs = useEducationTabs();
-  const defaultValue = tabs[0]?.value ?? "books";
+  const defaultValue = tabs[0]?.value ?? "summary";
 
   const tabContentMap: Record<string, JSX.Element> = {
+    summary: <SummaryTab />,
     books: <BooksTab />,
     university: <UniversityTab />,
     videos: <VideosTab />,
@@ -60,7 +62,7 @@ const Education = () => {
 
         {/* Desktop: Grid tabs */}
         <div className="hidden lg:block">
-          <TabsList className="grid w-full grid-cols-4 gap-2 bg-muted/50 p-1">
+          <TabsList className="grid w-full grid-cols-5 gap-2 bg-muted/50 p-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
 

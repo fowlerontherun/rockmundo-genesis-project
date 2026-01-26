@@ -1,11 +1,17 @@
 import { useMemo } from "react";
-import { BookOpen, GraduationCap, PlaySquare, Users } from "lucide-react";
+import { BookOpen, GraduationCap, PlaySquare, Users, LayoutDashboard } from "lucide-react";
 
 import type { EducationTab } from "../types";
 
 export const useEducationTabs = (): EducationTab[] => {
   return useMemo(
     () => [
+      {
+        value: "summary",
+        label: "Summary",
+        icon: LayoutDashboard,
+        description: "Overview of your current learning journey, progress, and recent achievements."
+      },
       {
         value: "books",
         label: "Books",
