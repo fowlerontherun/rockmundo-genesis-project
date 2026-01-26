@@ -14,20 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.517",
+    version: "1.0.518",
     date: "2026-01-26",
     changes: [
-      { type: 'feature', description: "POV: NEW I1 variant - Instrument Alternate Skin for player-owned guitar/bass/drum skins" },
-      { type: 'improvement', description: "POV: All clip prompts enhanced with highly detailed textures (hands, fingers, fingernails, fabric folds, metallic reflections)" },
-      { type: 'improvement', description: "POV: Guitar G1/G2 prompts now emphasize visible pick, strings, frets, and hardware detail" },
-      { type: 'improvement', description: "POV: Bass B1 prompt updated with detailed string/fret textures and tuning peg reflections" },
-      { type: 'improvement', description: "POV: Drums D1/D2 prompts now include stick grain, glove stitching, drum head tension rods" },
-      { type: 'improvement', description: "POV: Vocalist V1 prompt updated with microphone mesh and metallic body detail" },
-      { type: 'improvement', description: "POV: H1 hands/sleeves prompt enhanced with leather grain, metal studs, fabric folds" },
+      { type: 'feature', description: "POV: Angle variations A/B for all main clip types (G1A/G1B, B1A/B1B, D1A/D1B, V1A/V1B)" },
+      { type: 'feature', description: "POV: Stage lights overlay versions A (warm orange/white) and B (cool blue/purple)" },
+      { type: 'feature', description: "POV: Camera shake intensity levels - L2A (Mild for verses) and L2B (Intense for chorus/solos)" },
+      { type: 'feature', description: "POV: Hands/sleeves skin angles H1A/H1B and instrument skin angles I1A/I1B" },
+      { type: 'improvement', description: "POV: All angle A variants tilted left, angle B variants tilted right with tighter fretboard focus" },
+      { type: 'improvement', description: "POV: Legacy variant IDs preserved for backward compatibility" },
     ],
   },
   {
-    version: "1.0.516",
+    version: "1.0.517",
     date: "2026-01-26",
     changes: [
       { type: 'feature', description: "POV: AI-powered clip generation edge function (generate-pov-clip) using Gemini image model" },

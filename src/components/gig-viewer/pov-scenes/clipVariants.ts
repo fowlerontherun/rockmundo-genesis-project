@@ -2,25 +2,25 @@
 // MTV2 / Kerrang late-night early-2000s aesthetic
 
 export type ClipVariantId = 
-  // Guitar variants
-  | 'G1' // Guitar Strumming
+  // Guitar variants with angle variations
+  | 'G1' | 'G1A' | 'G1B' // Guitar Strumming (legacy, Angle A, Angle B)
   | 'G2' // Guitar Solo Close-Up
-  // Bass variants
-  | 'B1' // Bass Groove
-  // Drums variants
-  | 'D1' // Drums Snare POV
+  // Bass variants with angle variations
+  | 'B1' | 'B1A' | 'B1B' // Bass Groove (legacy, Angle A, Angle B)
+  // Drums variants with angle variations
+  | 'D1' | 'D1A' | 'D1B' // Drums Snare POV (legacy, Angle A, Angle B)
   | 'D2' // Drums Overhead Toms POV
-  // Vocalist variants
-  | 'V1' // Vocalist Mic POV
+  // Vocalist variants with angle variations
+  | 'V1' | 'V1A' | 'V1B' // Vocalist Mic POV (legacy, Angle A, Angle B)
   // Crowd variants
   | 'C1' // Crowd Small Venue
   | 'C2' // Crowd Medium/Arena
-  // Overlay variants
-  | 'L1' // Stage Lights Overlay
-  | 'L2' // Camera Shake Overlay
-  // Skin variants
-  | 'H1' // Hands + Sleeves Alternate Skin
-  | 'I1'; // Instrument Alternate Skin
+  // Overlay variants with intensity variations
+  | 'L1' | 'L1A' | 'L1B' // Stage Lights Overlay (legacy, Version A, Version B)
+  | 'L2' | 'L2A' | 'L2B' // Camera Shake Overlay (legacy, Mild, Intense)
+  // Skin variants with angle variations
+  | 'H1' | 'H1A' | 'H1B' // Hands + Sleeves Alternate Skin (legacy, Angle A, Angle B)
+  | 'I1' | 'I1A' | 'I1B'; // Instrument Alternate Skin (legacy, Angle A, Angle B)
 
 export interface ClipVariant {
   id: ClipVariantId;
@@ -33,11 +33,29 @@ export interface ClipVariant {
 }
 
 export const clipVariants: Record<ClipVariantId, ClipVariant> = {
-  // Guitar Variants
+  // Guitar Strumming Variants
   G1: {
     id: 'G1',
-    name: 'Guitar – Strumming',
-    description: 'First-person POV of hands strumming an electric guitar during a live rock concert, early 2000s MTV2 / Kerrang late-night aesthetic, grainy handheld camera feel, high contrast overexposed stage lights, energetic but raw, close-up on guitar neck and hands, visible jacket sleeves, loopable, cinematic.',
+    name: 'Guitar – Strumming (Legacy)',
+    description: 'First-person POV of hands strumming an electric guitar, MTV2 / Kerrang late-night aesthetic, grainy handheld camera, loopable.',
+    role: 'guitarist',
+    energyRange: [0.3, 0.7],
+    songSections: ['verse', 'chorus', 'bridge'],
+    loopDuration: 4,
+  },
+  G1A: {
+    id: 'G1A',
+    name: 'Guitar – Strumming – Angle A',
+    description: 'First-person POV of hands strumming, close-up cinematic angle tilted left, MTV2 / Kerrang aesthetic, highly detailed textures on hands, fingernails, strings, frets, pick, metallic parts, leather jacket sleeve, wristbands, loopable.',
+    role: 'guitarist',
+    energyRange: [0.3, 0.7],
+    songSections: ['verse', 'chorus', 'bridge'],
+    loopDuration: 4,
+  },
+  G1B: {
+    id: 'G1B',
+    name: 'Guitar – Strumming – Angle B',
+    description: 'First-person POV of hands strumming, close-up cinematic angle tilted right, tighter on fretboard emphasizing finger positions and hand movement, MTV2 / Kerrang aesthetic, loopable.',
     role: 'guitarist',
     energyRange: [0.3, 0.7],
     songSections: ['verse', 'chorus', 'bridge'],
@@ -46,18 +64,36 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   G2: {
     id: 'G2',
     name: 'Guitar – Solo Close-Up',
-    description: 'First-person POV looking down at electric guitar playing a solo, fingers moving along the fretboard, high contrast overexposed stage lights, MTV2 / Kerrang late-night aesthetic, grainy texture, energetic handheld camera, loopable, cinematic, visible sleeves.',
+    description: 'First-person POV looking down at guitar during solo, zoomed in on fretboard, highly detailed textures on fingers, strings, frets, metallic hardware, leather jacket sleeve, loopable.',
     role: 'guitarist',
     energyRange: [0.7, 1.0],
     songSections: ['solo', 'outro'],
     loopDuration: 6,
   },
   
-  // Bass Variants
+  // Bass Groove Variants
   B1: {
     id: 'B1',
-    name: 'Bass – Groove',
-    description: 'First-person POV of hands plucking bass strings, looking down at fretboard, MTV2 / Kerrang late-night concert style, high contrast lighting, grainy texture, energetic motion, subtle camera shake, visible sleeves and wristbands, loopable, cinematic.',
+    name: 'Bass – Groove (Legacy)',
+    description: 'First-person POV of hands plucking bass strings, MTV2 / Kerrang aesthetic, grainy, energetic, loopable.',
+    role: 'bassist',
+    energyRange: [0.3, 0.8],
+    songSections: ['verse', 'chorus', 'bridge', 'intro'],
+    loopDuration: 4,
+  },
+  B1A: {
+    id: 'B1A',
+    name: 'Bass – Groove – Angle A',
+    description: 'First-person POV of hands plucking bass, cinematic angle tilted left, highly detailed textures on fingers, strings, frets, wristbands, fabric folds, metallic reflections, loopable.',
+    role: 'bassist',
+    energyRange: [0.3, 0.8],
+    songSections: ['verse', 'chorus', 'bridge', 'intro'],
+    loopDuration: 4,
+  },
+  B1B: {
+    id: 'B1B',
+    name: 'Bass – Groove – Angle B',
+    description: 'First-person POV of hands plucking bass, cinematic angle tilted right, tighter on fretboard emphasizing finger motion, loopable.',
     role: 'bassist',
     energyRange: [0.3, 0.8],
     songSections: ['verse', 'chorus', 'bridge', 'intro'],
@@ -67,8 +103,26 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   // Drums Variants
   D1: {
     id: 'D1',
-    name: 'Drums – Snare POV',
-    description: 'POV from drummer on stage, looking down at snare and hi-hat, hands holding sticks, gloves and wristbands visible, MTV2 / Kerrang late-night concert style, high contrast stage lights, grainy texture, energetic motion, loopable, cinematic.',
+    name: 'Drums – Snare POV (Legacy)',
+    description: 'POV from drummer looking down at snare and hi-hat, MTV2 / Kerrang aesthetic, grainy, high contrast, loopable.',
+    role: 'drummer',
+    energyRange: [0.3, 0.7],
+    songSections: ['verse', 'chorus', 'intro'],
+    loopDuration: 4,
+  },
+  D1A: {
+    id: 'D1A',
+    name: 'Drums – Snare POV – Angle A',
+    description: 'POV from drummer looking down at snare and hi-hat, cinematic angle slightly left, highly detailed textures on sticks, gloves, wristbands, drum heads, metallic reflections, loopable.',
+    role: 'drummer',
+    energyRange: [0.3, 0.7],
+    songSections: ['verse', 'chorus', 'intro'],
+    loopDuration: 4,
+  },
+  D1B: {
+    id: 'D1B',
+    name: 'Drums – Snare POV – Angle B',
+    description: 'POV from drummer looking down at snare, cinematic angle slightly right with more focus on hi-hat and cymbals, cymbal metallic reflections, loopable.',
     role: 'drummer',
     energyRange: [0.3, 0.7],
     songSections: ['verse', 'chorus', 'intro'],
@@ -77,7 +131,7 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   D2: {
     id: 'D2',
     name: 'Drums – Overhead Toms POV',
-    description: 'POV from drummer angled slightly forward at toms, hands holding sticks, MTV2 / Kerrang late-night concert style, energetic, high contrast stage lighting, grainy texture, loopable, cinematic.',
+    description: 'POV from drummer angled forward at toms, hands holding sticks, highly detailed textures on sticks, gloves, wristbands, drum heads, chrome hardware, loopable.',
     role: 'drummer',
     energyRange: [0.6, 1.0],
     songSections: ['solo', 'chorus', 'outro', 'fill'],
@@ -87,8 +141,26 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   // Vocalist Variants
   V1: {
     id: 'V1',
-    name: 'Vocalist – Mic POV',
-    description: 'First-person POV of a singer holding a microphone, hands visible, overexposed stage lights in background, dark crowd in distance, MTV2 / Kerrang late-night aesthetic, grainy handheld camera feel, energetic performance, visible clothing on arms, loopable, cinematic.',
+    name: 'Vocalist – Mic POV (Legacy)',
+    description: 'First-person POV of singer holding microphone, MTV2 / Kerrang aesthetic, grainy handheld camera, loopable.',
+    role: 'vocalist',
+    energyRange: [0.2, 1.0],
+    songSections: ['verse', 'chorus', 'bridge', 'intro', 'outro'],
+    loopDuration: 5,
+  },
+  V1A: {
+    id: 'V1A',
+    name: 'Vocalist – Mic POV – Angle A',
+    description: 'First-person POV of singer holding mic, cinematic angle slightly left, highly detailed textures on hands, fingers, fingernails, microphone mesh, metallic reflections, sleeves, wristbands, crowd silhouetted, loopable.',
+    role: 'vocalist',
+    energyRange: [0.2, 1.0],
+    songSections: ['verse', 'chorus', 'bridge', 'intro', 'outro'],
+    loopDuration: 5,
+  },
+  V1B: {
+    id: 'V1B',
+    name: 'Vocalist – Mic POV – Angle B',
+    description: 'First-person POV of singer holding mic, cinematic angle slightly right, tighter on hands and mic, highly detailed textures, loopable.',
     role: 'vocalist',
     energyRange: [0.2, 1.0],
     songSections: ['verse', 'chorus', 'bridge', 'intro', 'outro'],
@@ -99,7 +171,7 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   C1: {
     id: 'C1',
     name: 'Crowd – Small Venue',
-    description: 'Stage POV of a small concert audience, hands in the air, clapping and waving, silhouettes only, backlit by bright stage lights, MTV2 / Kerrang late-night early-2000s aesthetic, grainy texture, energetic, loopable.',
+    description: 'Stage POV of small concert audience, hands in the air, silhouettes highly readable, MTV2 / Kerrang aesthetic, grainy, energetic, loopable.',
     role: 'crowd',
     energyRange: [0.2, 0.6],
     songSections: ['verse', 'bridge', 'intro'],
@@ -108,47 +180,123 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   C2: {
     id: 'C2',
     name: 'Crowd – Medium/Arena',
-    description: 'Stage POV of a medium to large concert audience, hands waving and clapping, silhouettes, backlit by stage lights, MTV2 / Kerrang early-2000s aesthetic, grainy, energetic, loopable.',
+    description: 'Stage POV of medium to large concert audience, hands waving, silhouettes readable, phone lights visible, MTV2 / Kerrang aesthetic, loopable.',
     role: 'crowd',
     energyRange: [0.5, 1.0],
     songSections: ['chorus', 'solo', 'outro'],
     loopDuration: 4,
   },
   
-  // Overlay Variants
+  // Stage Lights Overlay Variants
   L1: {
     id: 'L1',
-    name: 'Stage Lights Overlay',
-    description: 'Transparent overlay of dynamic stage lights flashing in sync with energetic rock music, MTV2 / Kerrang late-night aesthetic, grainy overexposed lighting, subtle motion blur, cinematic handheld camera feel, loopable.',
+    name: 'Stage Lights Overlay (Legacy)',
+    description: 'Transparent overlay of dynamic stage lights, MTV2 / Kerrang aesthetic, loopable, designed to composite on POV clips.',
     role: 'overlay',
     energyRange: [0.0, 1.0],
     songSections: ['all'],
     loopDuration: 2,
   },
+  L1A: {
+    id: 'L1A',
+    name: 'Stage Lights Overlay – Version A',
+    description: 'Transparent overlay of dynamic stage lights, warm orange and white tones, lens flares, light beams through smoke, loopable.',
+    role: 'overlay',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 2,
+  },
+  L1B: {
+    id: 'L1B',
+    name: 'Stage Lights Overlay – Version B',
+    description: 'Transparent overlay of dynamic stage lights, cool blue and purple tones with bright white strobes, different flash pattern, loopable.',
+    role: 'overlay',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 2,
+  },
+  
+  // Camera Shake Overlay Variants
   L2: {
     id: 'L2',
-    name: 'Camera Shake Overlay',
-    description: 'Cinematic handheld camera shake effect, subtle motion blur, MTV2 / Kerrang late-night concert aesthetic, loopable, designed to simulate dynamic performance energy.',
+    name: 'Camera Shake Overlay (Legacy)',
+    description: 'Cinematic handheld camera shake effect, MTV2 / Kerrang aesthetic, loopable, designed to layer on POV clips.',
     role: 'overlay',
     energyRange: [0.4, 1.0],
     songSections: ['chorus', 'solo', 'outro'],
     loopDuration: 1,
   },
+  L2A: {
+    id: 'L2A',
+    name: 'Camera Shake Overlay – Mild',
+    description: 'Subtle handheld camera shake, mild motion blur, for verse and bridge sections, loopable.',
+    role: 'overlay',
+    energyRange: [0.2, 0.6],
+    songSections: ['verse', 'bridge', 'intro'],
+    loopDuration: 1,
+  },
+  L2B: {
+    id: 'L2B',
+    name: 'Camera Shake Overlay – Intense',
+    description: 'Pronounced handheld camera shake, intense motion blur for solo or chorus peaks, high-energy performance intensity, loopable.',
+    role: 'overlay',
+    energyRange: [0.7, 1.0],
+    songSections: ['chorus', 'solo', 'outro'],
+    loopDuration: 1,
+  },
   
-  // Skin Variants
+  // Hands + Sleeves Skin Variants
   H1: {
     id: 'H1',
-    name: 'Hands + Sleeves Alternate Skin',
-    description: 'Close-up first-person POV of hands playing guitar or bass, wearing leather jacket sleeve, gloves, wristbands, or alternate clothing skin, highly detailed textures and fabric folds, MTV2 / Kerrang late-night aesthetic, loopable, cinematic, with guitar strings, frets, or drumsticks visible. Designed for compositing in a rock concert game. Player-owned skin clearly visible.',
+    name: 'Hands + Sleeves Alternate Skin (Legacy)',
+    description: 'Close-up first-person POV of hands playing instrument, MTV2 / Kerrang aesthetic, loopable, player-owned skin visible.',
     role: 'skin',
     energyRange: [0.0, 1.0],
     songSections: ['all'],
     loopDuration: 4,
   },
+  H1A: {
+    id: 'H1A',
+    name: 'Hands + Sleeves Skin – Angle A',
+    description: 'Close-up first-person POV of hands playing guitar or bass, leather jacket sleeve, gloves, highly detailed textures on hands, fingers, fingernails, fabric folds, leather grain, metal studs, loopable.',
+    role: 'skin',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 4,
+  },
+  H1B: {
+    id: 'H1B',
+    name: 'Hands + Sleeves Skin – Angle B',
+    description: 'Close-up first-person POV of hands playing, slightly different angle for variety, leather jacket sleeve, gloves, highly detailed textures, loopable.',
+    role: 'skin',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 4,
+  },
+  
+  // Instrument Skin Variants
   I1: {
     id: 'I1',
-    name: 'Instrument Alternate Skin',
-    description: 'Close-up first-person POV of hands playing guitar, bass, or drums, instrument featuring alternate player-owned skin, highly detailed textures on instrument and strings, reflective metallic parts, MTV2 / Kerrang late-night aesthetic, loopable, cinematic, visible sleeves and hands, designed for layering on top of base POV clips in a game.',
+    name: 'Instrument Alternate Skin (Legacy)',
+    description: 'Close-up first-person POV of hands playing with alternate player-owned instrument skin, MTV2 / Kerrang aesthetic, loopable.',
+    role: 'skin',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 4,
+  },
+  I1A: {
+    id: 'I1A',
+    name: 'Instrument Skin – Angle A',
+    description: 'Close-up first-person POV of hands playing guitar, bass, or drums with alternate player-owned skin, highly detailed textures on instrument body, strings, frets, reflective metallic parts, loopable.',
+    role: 'skin',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 4,
+  },
+  I1B: {
+    id: 'I1B',
+    name: 'Instrument Skin – Angle B',
+    description: 'Close-up first-person POV of hands playing with alternate player-owned instrument skin, slightly different angle for variety, highly detailed textures, loopable.',
     role: 'skin',
     energyRange: [0.0, 1.0],
     songSections: ['all'],
