@@ -71,6 +71,7 @@ export const tr: TranslationKeys = {
   nav: {
     beta: "BETA",
     version: "Sürüm",
+    inbox: "Gelen Kutusu",
     dashboard: "Kontrol Paneli",
     advisor: "Danışman",
     character: "Karakter",

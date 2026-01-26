@@ -519,6 +519,32 @@ serve(async (req) => {
 
     console.log(`Gig ${gigId} completed successfully. Rating: ${avgRating.toFixed(1)}, Profit: $${netProfit}, New Fans: ${newFansTotal}`);
 
+    // Create inbox message for band leader
+    if (gig.bands?.leader_id) {
+      const venueName = gig.venues?.name || 'Unknown Venue';
+      const ratingStars = avgRating >= 20 ? '⭐⭐⭐⭐⭐' : avgRating >= 16 ? '⭐⭐⭐⭐' : avgRating >= 12 ? '⭐⭐⭐' : avgRating >= 8 ? '⭐⭐' : '⭐';
+      
+      await supabaseClient.from("player_inbox").insert({
+        user_id: gig.bands.leader_id,
+        category: "gig_result",
+        priority: avgRating >= 20 ? "high" : "normal",
+        title: avgRating >= 16 ? `🎸 Great Show at ${venueName}!` : `Gig Complete: ${venueName}`,
+        message: `${ratingStars} Performance Rating: ${avgRating.toFixed(1)}/25\n💰 Net Profit: $${netProfit.toLocaleString()}\n👥 New Fans: ${newFansTotal}\n🎤 Attendance: ${outcome.actual_attendance}`,
+        metadata: { 
+          gig_id: gigId, 
+          rating: avgRating, 
+          profit: netProfit, 
+          fans: newFansTotal,
+          attendance: outcome.actual_attendance,
+          merch_sold: merchItemsSold
+        },
+        action_type: "navigate",
+        action_data: { route: "/gigs" },
+        related_entity_type: "gig",
+        related_entity_id: gigId,
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

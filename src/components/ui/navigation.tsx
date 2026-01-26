@@ -15,6 +15,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
+import { useUnreadInboxCount } from "@/hooks/useInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home,
@@ -67,6 +68,7 @@ import {
   ChevronRight,
   Tv,
   Film,
+  Inbox,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -75,6 +77,7 @@ type NavItem = {
   labelKey: string;
   path: string;
   search?: string;
+  badge?: number;
 };
 
 type NavSection = {
@@ -90,6 +93,7 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { data: unreadInboxCount } = useUnreadInboxCount();
   
   // Desktop sidebar collapsed state with localStorage persistence
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(() => {
@@ -124,6 +128,7 @@ const Navigation = () => {
     {
       titleKey: "nav.home",
       items: [
+        { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
         { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
@@ -331,7 +336,7 @@ const Navigation = () => {
                     <Button
                       key={`${item.path}-${item.labelKey}`}
                       variant={isActive(item) ? "secondary" : "ghost"}
-                      className={`${collapsed ? 'w-full justify-center p-2' : 'w-full justify-start gap-3'} ${
+                      className={`${collapsed ? 'w-full justify-center p-2 relative' : 'w-full justify-start gap-3 relative'} ${
                         isActive(item)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -340,8 +345,22 @@ const Navigation = () => {
                       aria-current={isActive(item) ? "page" : undefined}
                       title={collapsed ? label : undefined}
                     >
-                      <Icon className="h-4 w-4" />
-                      {!collapsed && label}
+                      <span className="relative">
+                        <Icon className="h-4 w-4" />
+                        {item.badge && item.badge > 0 && collapsed && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+                        )}
+                      </span>
+                      {!collapsed && (
+                        <>
+                          {label}
+                          {item.badge && item.badge > 0 && (
+                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
                     </Button>
                   );
                 })}
