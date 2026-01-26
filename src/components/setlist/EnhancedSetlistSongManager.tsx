@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -209,6 +209,10 @@ export const EnhancedSetlistSongManager = ({
   const removeSongMutation = useRemoveSongFromSetlist();
   const reorderMutation = useReorderSetlistSongs();
 
+  // Ref guards to prevent rapid double-clicks causing race conditions
+  const actionInProgressRef = useRef(false);
+  const moveInProgressRef = useRef(false);
+
   // Sensors for drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -245,35 +249,66 @@ export const EnhancedSetlistSongManager = ({
 
   const addPerformanceItemMutation = useMutation({
     mutationFn: async (item: PerformanceItem) => {
-      const currentPerformanceItems = setlistSongs?.filter(s => s.item_type === 'performance_item') || [];
-      if (currentPerformanceItems.length >= 5) {
-        throw new Error('Maximum 5 performance items per setlist');
+      // Prevent rapid double-clicks
+      if (actionInProgressRef.current) {
+        throw new Error('Action in progress, please wait');
       }
+      actionInProgressRef.current = true;
       
-      // Get max position for main section only
-      const { data: maxPositionData } = await supabase
-        .from("setlist_songs")
-        .select("position")
-        .eq("setlist_id", setlistId)
-        .eq("section", "main")
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      const nextPosition = (maxPositionData?.position || 0) + 1;
-      
-      const { error } = await supabase
-        .from("setlist_songs")
-        .insert({
-          setlist_id: setlistId,
-          item_type: 'performance_item',
-          performance_item_id: item.id,
-          song_id: null,
-          position: nextPosition,
-          section: 'main',
-        });
-      
-      if (error) throw error;
+      try {
+        // Fetch fresh data from database to validate
+        const { data: freshItems, error: fetchError } = await supabase
+          .from("setlist_songs")
+          .select("id, item_type, performance_item_id, position")
+          .eq("setlist_id", setlistId);
+        
+        if (fetchError) throw fetchError;
+        
+        const currentPerformanceItems = freshItems?.filter(s => s.item_type === 'performance_item') || [];
+        if (currentPerformanceItems.length >= 5) {
+          throw new Error('Maximum 5 performance items per setlist');
+        }
+        
+        // Check if this performance item is already in the setlist
+        const alreadyExists = currentPerformanceItems.some(p => p.performance_item_id === item.id);
+        if (alreadyExists) {
+          throw new Error('This performance item is already in the setlist');
+        }
+        
+        // Get max position for main section only - fresh query
+        const mainItems = freshItems?.filter(s => s.item_type !== 'encore' && (freshItems as any[]).length === 0 || true) || [];
+        const { data: maxPositionData } = await supabase
+          .from("setlist_songs")
+          .select("position")
+          .eq("setlist_id", setlistId)
+          .eq("section", "main")
+          .order("position", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        const nextPosition = (maxPositionData?.position || 0) + 1;
+        
+        const { error } = await supabase
+          .from("setlist_songs")
+          .insert({
+            setlist_id: setlistId,
+            item_type: 'performance_item',
+            performance_item_id: item.id,
+            song_id: null,
+            position: nextPosition,
+            section: 'main',
+          });
+        
+        if (error) {
+          // Handle unique constraint violation
+          if (error.code === '23505') {
+            throw new Error('Position conflict - please try again');
+          }
+          throw error;
+        }
+      } finally {
+        actionInProgressRef.current = false;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
@@ -291,28 +326,42 @@ export const EnhancedSetlistSongManager = ({
 
   const moveToEncoreMutation = useMutation({
     mutationFn: async ({ setlistSongId }: { setlistSongId: string; itemType: string }) => {
-      // Get max position for encore section only (per-section numbering)
-      const { data: maxPositionData } = await supabase
-        .from("setlist_songs")
-        .select("position")
-        .eq("setlist_id", setlistId)
-        .eq("section", "encore")
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (moveInProgressRef.current) {
+        throw new Error('Move in progress, please wait');
+      }
+      moveInProgressRef.current = true;
       
-      const nextPosition = (maxPositionData?.position || 0) + 1;
+      try {
+        // Get max position for encore section only (per-section numbering)
+        const { data: maxPositionData } = await supabase
+          .from("setlist_songs")
+          .select("position")
+          .eq("setlist_id", setlistId)
+          .eq("section", "encore")
+          .order("position", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        const nextPosition = (maxPositionData?.position || 0) + 1;
 
-      const { error } = await supabase
-        .from("setlist_songs")
-        .update({
-          section: 'encore',
-          position: nextPosition,
-          is_encore: true
-        })
-        .eq("id", setlistSongId);
-      
-      if (error) throw error;
+        const { error } = await supabase
+          .from("setlist_songs")
+          .update({
+            section: 'encore',
+            position: nextPosition,
+            is_encore: true
+          })
+          .eq("id", setlistSongId);
+        
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error('Position conflict - please try again');
+          }
+          throw error;
+        }
+      } finally {
+        moveInProgressRef.current = false;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
@@ -329,28 +378,42 @@ export const EnhancedSetlistSongManager = ({
 
   const moveToMainMutation = useMutation({
     mutationFn: async ({ setlistSongId }: { setlistSongId: string }) => {
-      // Get max position for main section only (per-section numbering)
-      const { data: maxPositionData } = await supabase
-        .from("setlist_songs")
-        .select("position")
-        .eq("setlist_id", setlistId)
-        .eq("section", "main")
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (moveInProgressRef.current) {
+        throw new Error('Move in progress, please wait');
+      }
+      moveInProgressRef.current = true;
       
-      const nextPosition = (maxPositionData?.position || 0) + 1;
+      try {
+        // Get max position for main section only (per-section numbering)
+        const { data: maxPositionData } = await supabase
+          .from("setlist_songs")
+          .select("position")
+          .eq("setlist_id", setlistId)
+          .eq("section", "main")
+          .order("position", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        const nextPosition = (maxPositionData?.position || 0) + 1;
 
-      const { error } = await supabase
-        .from("setlist_songs")
-        .update({
-          section: 'main',
-          position: nextPosition,
-          is_encore: false
-        })
-        .eq("id", setlistSongId);
-      
-      if (error) throw error;
+        const { error } = await supabase
+          .from("setlist_songs")
+          .update({
+            section: 'main',
+            position: nextPosition,
+            is_encore: false
+          })
+          .eq("id", setlistSongId);
+        
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error('Position conflict - please try again');
+          }
+          throw error;
+        }
+      } finally {
+        moveInProgressRef.current = false;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });

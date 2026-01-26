@@ -232,6 +232,19 @@ export const useAddSongToSetlist = () => {
       section?: string;
       itemType?: string;
     }) => {
+      // Check if song already exists in this setlist (fresh query)
+      const { data: existingItem } = await supabase
+        .from("setlist_songs")
+        .select("id")
+        .eq("setlist_id", setlistId)
+        .eq("song_id", songId)
+        .eq("item_type", itemType)
+        .maybeSingle();
+      
+      if (existingItem) {
+        throw new Error("This song is already in the setlist");
+      }
+      
       // Query max position for this section only to avoid conflicts
       const { data: maxPositionData } = await supabase
         .from("setlist_songs")
@@ -260,6 +273,9 @@ export const useAddSongToSetlist = () => {
       if (error) {
         // Handle duplicate constraint specifically
         if (error.code === '23505') {
+          if (error.message?.includes('position')) {
+            throw new Error("Position conflict - please try again");
+          }
           throw new Error("This song is already in the setlist");
         }
         throw error;

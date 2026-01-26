@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.523",
+    date: "2026-01-26",
+    changes: [
+      { type: 'fix', description: "Setlists: Fixed race conditions when adding/removing/moving performance items" },
+      { type: 'fix', description: "Setlists: Added ref guards to prevent double-click errors on item operations" },
+      { type: 'fix', description: "Setlists: Fresh database queries before mutations to validate state" },
+      { type: 'improvement', description: "Setlists: Better error messages for position conflicts and duplicate items" },
+      { type: 'improvement', description: "Setlists: Pre-check for duplicate songs/items before attempting insert" },
+    ],
+  },
+  {
     version: "1.0.522",
     date: "2026-01-26",
     changes: [
