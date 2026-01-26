@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, MessageSquare, Shield, TrendingUp, Users, Save, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, MessageSquare, Shield, TrendingUp, Users, Save, Loader2, Bot, Play, RefreshCw, Zap, Clock, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +19,7 @@ const TwaaterAdmin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [triggering, setTriggering] = useState<string | null>(null);
 
   // Trending algorithm
   const [likesWeight, setLikesWeight] = useState(30);
@@ -52,6 +55,67 @@ const TwaaterAdmin = () => {
         .like("key", "twaater_%");
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Fetch bot accounts
+  const { data: botAccounts } = useQuery({
+    queryKey: ["admin-twaater-bots"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("twaater_bot_accounts")
+        .select(`
+          *,
+          account:twaater_accounts(id, handle, display_name, verified, fame_score)
+        `)
+        .order("last_posted_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch platform stats
+  const { data: stats } = useQuery({
+    queryKey: ["admin-twaater-stats"],
+    queryFn: async () => {
+      const [
+        { count: totalAccounts },
+        { count: totalTwaats },
+        { count: totalFollows },
+        { count: activeBots },
+      ] = await Promise.all([
+        supabase.from("twaater_accounts").select("*", { count: "exact", head: true }),
+        supabase.from("twaats").select("*", { count: "exact", head: true }).is("deleted_at", null),
+        supabase.from("twaater_follows").select("*", { count: "exact", head: true }),
+        supabase.from("twaater_bot_accounts").select("*", { count: "exact", head: true }).eq("is_active", true),
+      ]);
+
+      return {
+        totalAccounts: totalAccounts || 0,
+        totalTwaats: totalTwaats || 0,
+        totalFollows: totalFollows || 0,
+        activeBots: activeBots || 0,
+      };
+    },
+  });
+
+  // Fetch recent activity
+  const { data: recentTwaats } = useQuery({
+    queryKey: ["admin-twaater-recent"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("twaats")
+        .select(`
+          id,
+          body,
+          created_at,
+          account:twaater_accounts(handle, display_name, owner_type)
+        `)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(15);
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -100,6 +164,46 @@ const TwaaterAdmin = () => {
     },
     onError: () => {
       toast({ title: "Failed to save settings", variant: "destructive" });
+    },
+  });
+
+  // Trigger edge functions
+  const triggerFunction = async (functionName: string) => {
+    setTriggering(functionName);
+    try {
+      const { data, error } = await supabase.functions.invoke(functionName);
+      if (error) throw error;
+      toast({
+        title: "Function triggered",
+        description: `${functionName} completed successfully`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-twaater"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-twaater-bots"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-twaater-recent"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-twaater-stats"] });
+    } catch (err: any) {
+      toast({
+        title: "Function failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTriggering(null);
+    }
+  };
+
+  // Toggle bot active status
+  const toggleBotMutation = useMutation({
+    mutationFn: async ({ botId, isActive }: { botId: string; isActive: boolean }) => {
+      const { error } = await supabase
+        .from("twaater_bot_accounts")
+        .update({ is_active: isActive })
+        .eq("id", botId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-twaater-bots"] });
+      toast({ title: "Bot status updated" });
     },
   });
 
@@ -154,8 +258,124 @@ const TwaaterAdmin = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="trending" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{stats?.totalAccounts || 0}</p>
+                  <p className="text-xs text-muted-foreground">Total Accounts</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{stats?.totalTwaats || 0}</p>
+                  <p className="text-xs text-muted-foreground">Total Twaats</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{stats?.totalFollows || 0}</p>
+                  <p className="text-xs text-muted-foreground">Total Follows</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Bot className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{stats?.activeBots || 0}</p>
+                  <p className="text-xs text-muted-foreground">Active Bots</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Trigger Functions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Trigger Functions
+            </CardTitle>
+            <CardDescription>Manually trigger Twaater edge functions</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button
+              onClick={() => triggerFunction("generate-bot-twaats")}
+              disabled={triggering === "generate-bot-twaats"}
+            >
+              {triggering === "generate-bot-twaats" ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              Generate Bot Twaats
+            </Button>
+            <Button
+              onClick={() => triggerFunction("bot-engagement")}
+              disabled={triggering === "bot-engagement"}
+              variant="outline"
+            >
+              {triggering === "bot-engagement" ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              Bot Engagement
+            </Button>
+            <Button
+              onClick={() => triggerFunction("calculate-organic-followers")}
+              disabled={triggering === "calculate-organic-followers"}
+              variant="outline"
+            >
+              {triggering === "calculate-organic-followers" ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              Calculate Organic Followers
+            </Button>
+            <Button
+              onClick={() => triggerFunction("sync-twaater-fame")}
+              disabled={triggering === "sync-twaater-fame"}
+              variant="outline"
+            >
+              {triggering === "sync-twaater-fame" ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              Sync Fame Scores
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Tabs defaultValue="bots" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="bots" className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">Bots</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Activity</span>
+            </TabsTrigger>
             <TabsTrigger value="trending" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Trending</span>
@@ -165,7 +385,7 @@ const TwaaterAdmin = () => {
               <span className="hidden sm:inline">Engagement</span>
             </TabsTrigger>
             <TabsTrigger value="features" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
+              <Zap className="h-4 w-4" />
               <span className="hidden sm:inline">Features</span>
             </TabsTrigger>
             <TabsTrigger value="limits" className="flex items-center gap-2">
@@ -173,6 +393,103 @@ const TwaaterAdmin = () => {
               <span className="hidden sm:inline">Limits</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="bots">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bot Accounts</CardTitle>
+                <CardDescription>Manage NPC bot accounts ({botAccounts?.length || 0} total)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Handle</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Frequency</TableHead>
+                      <TableHead>Last Posted</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {botAccounts?.map((bot) => (
+                      <TableRow key={bot.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">@{bot.account?.handle}</span>
+                            {bot.account?.verified && (
+                              <CheckCircle2 className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">{bot.account?.display_name}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{bot.bot_type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{bot.posting_frequency}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {bot.last_posted_at ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Clock className="h-3 w-3" />
+                              {new Date(bot.last_posted_at).toLocaleString()}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Never</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {bot.is_active ? (
+                            <Badge className="bg-green-500">Active</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant={bot.is_active ? "destructive" : "default"}
+                            onClick={() => toggleBotMutation.mutate({ botId: bot.id, isActive: !bot.is_active })}
+                          >
+                            {bot.is_active ? "Disable" : "Enable"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>Latest twaats across the platform</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                  {recentTwaats?.map((twaat) => (
+                    <div key={twaat.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">@{twaat.account?.handle}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {twaat.account?.owner_type}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {new Date(twaat.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm line-clamp-2">{twaat.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="trending">
             <Card>

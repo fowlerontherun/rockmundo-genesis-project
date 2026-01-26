@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Templates for different bot types - expanded for more variety
-const BOT_TEMPLATES = {
+const BOT_TEMPLATES: Record<string, { chart_comment?: string[]; gig_comment?: string[]; gig_promo?: string[]; general: string[] }> = {
   critic: {
     chart_comment: [
       "📊 Interesting movement on the charts today. {song} by {artist} is {trend}. Quality production here.",
@@ -120,6 +120,156 @@ const BOT_TEMPLATES = {
       "The perfect playlist doesn't exi— *shares playlist*",
       "Music discovery is my superpower 🦸‍♀️✨",
       "About to do a live listening party for new releases. Who's in?",
+    ],
+  },
+  radio_station: {
+    chart_comment: [
+      "📻 NOW PLAYING: {song} by {artist}! Call in and request your favorites!",
+      "📊 {song} is climbing our charts! Week {positions} at the top 🏆",
+      "🎵 Chart countdown coming up! Will {song} hold the #1 spot?",
+      "🔊 New entry alert: {artist} debuts on our chart with {song}!",
+    ],
+    general: [
+      "📻 Good morning! Starting the day with some classics ☕🎵",
+      "🎧 Request hour coming up! What do YOU want to hear?",
+      "🔊 Just got an exclusive first play of a new track. Stay tuned!",
+      "📡 Broadcasting live from downtown! Come say hi 👋",
+      "🎤 Interview with a rising star coming up at 3pm!",
+      "📻 Weekend countdown starts in 1 hour! Who's tuning in?",
+      "🎵 Throwback Thursday - taking you back to the classics!",
+      "📊 This week's most requested song? You'll never guess!",
+    ],
+  },
+  festival: {
+    general: [
+      "🎪 LINEUP ANNOUNCEMENT COMING SOON! Who should headline? 👀",
+      "🎫 Early bird tickets selling FAST! Don't miss out!",
+      "⛺ Festival season is almost here! Share your camping tips below",
+      "🎤 3 headliners. 50 artists. 1 weekend you'll never forget.",
+      "🌟 This year's stage design is going to blow your mind 🤯",
+      "🎪 Volunteer applications now open! Be part of the magic ✨",
+      "🎵 Genre diversity is our thing. Something for everyone this year!",
+      "📅 Save the date! Tickets go on sale next Friday at 10am!",
+      "🎉 Last year's memories still hit different. This year will be bigger!",
+    ],
+  },
+  record_label: {
+    chart_comment: [
+      "📀 So proud of {artist} - {song} is climbing the charts!",
+      "🎵 Our roster keeps delivering. {song} is proof of that.",
+      "💿 New release alert: {artist} just dropped {song}. Stream it now!",
+    ],
+    general: [
+      "🎯 A&R team is listening. Tag an unsigned artist we should check out!",
+      "📝 Demo submissions open for the next 48 hours. Show us what you got!",
+      "💼 Just signed someone incredible. Announcement coming soon 👀",
+      "🎵 Building careers, not just releasing tracks. That's the difference.",
+      "📀 Our newest signing just finished recording. Trust us, it's special.",
+      "🎤 Studio session update: Something magical happening today 🔥",
+      "💡 Industry tip: Consistency beats virality every time.",
+      "🎧 Playlist placement is great, but a real fanbase is everything.",
+    ],
+  },
+  podcast_host: {
+    gig_comment: [
+      "🎙️ Just recorded an episode with {artist}. Drops next week!",
+      "🎧 Live from {venue}! Recording an on-location episode tonight.",
+    ],
+    general: [
+      "🎙️ New episode just dropped! This week we're diving deep into indie rock.",
+      "🎧 Behind the scenes: How I prep for each episode",
+      "🎤 Guest suggestions for next month? Drop names below!",
+      "📻 Podcast milestone: 100k downloads! Thank you all 🙏",
+      "🎵 This week's episode is our most honest conversation yet.",
+      "🎙️ The stories artists tell off-camera hit different.",
+      "🎧 Album deep-dive coming this weekend. Which album should we break down?",
+      "📝 Producer episodes are always fascinating. The technical talk is 🔥",
+    ],
+  },
+  gear_reviewer: {
+    general: [
+      "🎸 Just got my hands on the new [brand] pedal. Review incoming!",
+      "🎛️ Gear of the week: This compressor changed my life",
+      "🔊 Amp shootout video dropping tomorrow. The results surprised me.",
+      "🎹 Best budget MIDI controller? Let's discuss.",
+      "🎚️ Mixing in the box vs hardware. There's no wrong answer.",
+      "🎧 Headphone comparison review is live! Link in bio",
+      "🎸 Vintage gear appreciation post. They don't make 'em like this anymore.",
+      "🔧 DIY pedalboard build thread coming next week!",
+      "🎛️ Plugin vs hardware: The eternal debate continues",
+    ],
+  },
+  music_journalist: {
+    chart_comment: [
+      "📝 Review of {song} is now live. {artist} delivered something interesting.",
+      "🔍 Deep dive: The making of {song} and why it matters.",
+    ],
+    general: [
+      "📰 Feature story dropping tonight. This one took months to research.",
+      "📝 Hot take: The best album of the year isn't what you think it is.",
+      "🎵 Industry trends piece coming soon. The data is fascinating.",
+      "📰 Interview with an industry legend went live today. Link in bio.",
+      "🔍 Investigating a story that's been buried for years. Stay tuned.",
+      "📝 Opinion: Awards shows need a complete overhaul.",
+      "🎧 Best albums you missed this year - thread incoming",
+      "📰 The future of music journalism is reader-supported. Support the arts!",
+    ],
+  },
+  concert_photographer: {
+    gig_comment: [
+      "📸 Shot {artist} at {venue} last night. Gallery drops tomorrow!",
+      "🎤 Best pit experience in months. {artist} brings the ENERGY.",
+    ],
+    general: [
+      "📸 Golden hour soundcheck shots hit different ✨",
+      "🎤 Behind the barrier: A photographer's perspective",
+      "📷 New gallery up! 50 shots from last weekend's shows",
+      "🔥 That moment when the lights hit just right 🙌",
+      "📸 Gear talk: Why I switched to mirrorless",
+      "🎵 The trust between artist and photographer is everything",
+      "📷 Editing workflow post coming soon. You asked, I'm delivering!",
+      "🎤 Concert photography isn't just photos. It's preserving moments.",
+    ],
+  },
+  merch_collector: {
+    general: [
+      "👕 Merch drop alert! Anyone else refreshing at midnight?",
+      "📦 Package day is the best day 🙌",
+      "🧢 Vintage band tees > everything",
+      "👕 Rate my collection? Thread below 👇",
+      "💰 Merch resellers are ruining everything. Let fans buy at retail!",
+      "📦 That feeling when the limited edition actually ships ✨",
+      "👕 Hot take: Tour merch is better than studio merch",
+      "🎵 Supporting artists through merch. It's direct impact!",
+    ],
+  },
+  vinyl_collector: {
+    general: [
+      "💿 Record store day haul! Let's gooo",
+      "🎵 Spinning some classics tonight 🎶",
+      "📀 Found a first pressing in the wild. Still shaking.",
+      "🎧 There's something about the warmth of vinyl...",
+      "💿 Discogs alert: Prices on this pressing just spiked 📈",
+      "🏪 Local record store appreciation post. Support small!",
+      "🎵 Setup upgrade day! New turntable unboxing",
+      "📀 Grail acquired. 10 years of searching. Worth every second.",
+    ],
+  },
+  npc_artist: {
+    chart_comment: [
+      "Can't believe {song} is on the charts next to us!! Wild times 🙏",
+      "Shoutout to {artist} - been listening to {song} non-stop in the studio",
+    ],
+    general: [
+      "🎵 New single dropping next Friday! Been working on this one for months",
+      "🎤 Just got off stage. That crowd was INSANE! 🔥",
+      "📀 Studio update: Tracking vocals today. Feeling good!",
+      "🎸 Rehearsal selfie! Getting ready for the tour",
+      "🙏 Thank you for all the support. This journey is wild.",
+      "🎵 Writing session today. Vibes are immaculate ✨",
+      "📍 Tour bus life! Next city in 6 hours",
+      "🎤 Sound check ✓ Ready for tonight!",
+      "💜 Fan mail day. You all keep me going.",
     ],
   },
 };

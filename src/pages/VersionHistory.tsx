@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.535",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "Twaater: New 'Explore' tab for discovering trending public posts (no follows required)" },
+      { type: 'feature', description: "Twaater: Engagement-based ranking in Explore - likes, replies, retwaats weighted" },
+      { type: 'feature', description: "Twaater: Follow suggestions inline in feed to help discover accounts" },
+      { type: 'feature', description: "Twaater Admin: Bot management with enable/disable controls" },
+      { type: 'feature', description: "Twaater Admin: Manual triggers for bot twaats, engagement, and follower functions" },
+      { type: 'feature', description: "Twaater Admin: Platform stats overview (accounts, twaats, follows, bots)" },
+      { type: 'improvement', description: "Twaater: 10 new bot personality types (radio, festival, podcast, journalist, etc.)" },
+      { type: 'improvement', description: "Twaater: Recent activity feed in admin showing latest posts" },
+    ],
+  },
+  {
     version: "1.0.534",
     date: "2026-01-26",
     changes: [
