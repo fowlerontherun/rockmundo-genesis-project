@@ -2599,6 +2599,70 @@ export type Database = {
         }
         Relationships: []
       }
+      city_candidates: {
+        Row: {
+          campaign_budget: number
+          campaign_slogan: string | null
+          created_at: string
+          election_id: string
+          endorsements: string[]
+          id: string
+          profile_id: string
+          proposed_policies: Json
+          registered_at: string
+          status: Database["public"]["Enums"]["candidate_status"]
+          vote_count: number
+        }
+        Insert: {
+          campaign_budget?: number
+          campaign_slogan?: string | null
+          created_at?: string
+          election_id: string
+          endorsements?: string[]
+          id?: string
+          profile_id: string
+          proposed_policies?: Json
+          registered_at?: string
+          status?: Database["public"]["Enums"]["candidate_status"]
+          vote_count?: number
+        }
+        Update: {
+          campaign_budget?: number
+          campaign_slogan?: string | null
+          created_at?: string
+          election_id?: string
+          endorsements?: string[]
+          id?: string
+          profile_id?: string
+          proposed_policies?: Json
+          registered_at?: string
+          status?: Database["public"]["Enums"]["candidate_status"]
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_candidates_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "city_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_candidates_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_candidates_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       city_districts: {
         Row: {
           city_id: string
@@ -2639,6 +2703,322 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_election_votes: {
+        Row: {
+          candidate_id: string
+          election_id: string
+          id: string
+          voted_at: string
+          voter_profile_id: string
+        }
+        Insert: {
+          candidate_id: string
+          election_id: string
+          id?: string
+          voted_at?: string
+          voter_profile_id: string
+        }
+        Update: {
+          candidate_id?: string
+          election_id?: string
+          id?: string
+          voted_at?: string
+          voter_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_election_votes_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "city_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_election_votes_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "city_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_election_votes_voter_profile_id_fkey"
+            columns: ["voter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_election_votes_voter_profile_id_fkey"
+            columns: ["voter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_elections: {
+        Row: {
+          city_id: string
+          created_at: string
+          election_year: number
+          id: string
+          nomination_end: string
+          nomination_start: string
+          status: Database["public"]["Enums"]["election_status"]
+          total_votes: number
+          voter_turnout_pct: number | null
+          voting_end: string
+          voting_start: string
+          winner_id: string | null
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          election_year: number
+          id?: string
+          nomination_end: string
+          nomination_start: string
+          status?: Database["public"]["Enums"]["election_status"]
+          total_votes?: number
+          voter_turnout_pct?: number | null
+          voting_end: string
+          voting_start: string
+          winner_id?: string | null
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          election_year?: number
+          id?: string
+          nomination_end?: string
+          nomination_start?: string
+          status?: Database["public"]["Enums"]["election_status"]
+          total_votes?: number
+          voter_turnout_pct?: number | null
+          voting_end?: string
+          voting_start?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_elections_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_elections_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "city_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_law_history: {
+        Row: {
+          change_reason: string | null
+          changed_at: string
+          city_id: string
+          game_year: number | null
+          id: string
+          law_field: string
+          mayor_id: string | null
+          new_value: string
+          old_value: string | null
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string
+          city_id: string
+          game_year?: number | null
+          id?: string
+          law_field: string
+          mayor_id?: string | null
+          new_value: string
+          old_value?: string | null
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string
+          city_id?: string
+          game_year?: number | null
+          id?: string
+          law_field?: string
+          mayor_id?: string | null
+          new_value?: string
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_law_history_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_law_history_mayor_id_fkey"
+            columns: ["mayor_id"]
+            isOneToOne: false
+            referencedRelation: "city_mayors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_laws: {
+        Row: {
+          alcohol_legal_age: number
+          busking_license_fee: number
+          city_id: string
+          community_events_funding: number
+          created_at: string
+          drug_policy: Database["public"]["Enums"]["drug_policy_status"]
+          effective_from: string
+          effective_until: string | null
+          enacted_by_mayor_id: string | null
+          festival_permit_required: boolean
+          id: string
+          income_tax_rate: number
+          max_concert_capacity: number | null
+          noise_curfew_hour: number | null
+          prohibited_genres: string[]
+          promoted_genres: string[]
+          sales_tax_rate: number
+          travel_tax: number
+          updated_at: string
+          venue_permit_cost: number
+        }
+        Insert: {
+          alcohol_legal_age?: number
+          busking_license_fee?: number
+          city_id: string
+          community_events_funding?: number
+          created_at?: string
+          drug_policy?: Database["public"]["Enums"]["drug_policy_status"]
+          effective_from?: string
+          effective_until?: string | null
+          enacted_by_mayor_id?: string | null
+          festival_permit_required?: boolean
+          id?: string
+          income_tax_rate?: number
+          max_concert_capacity?: number | null
+          noise_curfew_hour?: number | null
+          prohibited_genres?: string[]
+          promoted_genres?: string[]
+          sales_tax_rate?: number
+          travel_tax?: number
+          updated_at?: string
+          venue_permit_cost?: number
+        }
+        Update: {
+          alcohol_legal_age?: number
+          busking_license_fee?: number
+          city_id?: string
+          community_events_funding?: number
+          created_at?: string
+          drug_policy?: Database["public"]["Enums"]["drug_policy_status"]
+          effective_from?: string
+          effective_until?: string | null
+          enacted_by_mayor_id?: string | null
+          festival_permit_required?: boolean
+          id?: string
+          income_tax_rate?: number
+          max_concert_capacity?: number | null
+          noise_curfew_hour?: number | null
+          prohibited_genres?: string[]
+          promoted_genres?: string[]
+          sales_tax_rate?: number
+          travel_tax?: number
+          updated_at?: string
+          venue_permit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_laws_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_laws_enacted_by_mayor_id_fkey"
+            columns: ["enacted_by_mayor_id"]
+            isOneToOne: false
+            referencedRelation: "city_mayors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_mayors: {
+        Row: {
+          approval_rating: number
+          city_id: string
+          created_at: string
+          election_id: string | null
+          id: string
+          is_current: boolean
+          policies_enacted: number
+          profile_id: string
+          term_end: string | null
+          term_start: string
+        }
+        Insert: {
+          approval_rating?: number
+          city_id: string
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          is_current?: boolean
+          policies_enacted?: number
+          profile_id: string
+          term_end?: string | null
+          term_start?: string
+        }
+        Update: {
+          approval_rating?: number
+          city_id?: string
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          is_current?: boolean
+          policies_enacted?: number
+          profile_id?: string
+          term_end?: string | null
+          term_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_mayors_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_mayors_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "city_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_mayors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_mayors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -22405,9 +22785,16 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       band_status: "active" | "on_hiatus" | "disbanded"
       book_reading_status: "reading" | "completed" | "abandoned"
+      candidate_status: "pending" | "approved" | "withdrawn" | "disqualified"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       collaboration_compensation_type: "none" | "flat_fee" | "royalty"
       collaboration_status: "pending" | "accepted" | "declined" | "expired"
+      drug_policy_status:
+        | "prohibited"
+        | "medical_only"
+        | "decriminalized"
+        | "legalized"
+      election_status: "nomination" | "voting" | "completed" | "cancelled"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       inbox_category:
@@ -22564,9 +22951,17 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       band_status: ["active", "on_hiatus", "disbanded"],
       book_reading_status: ["reading", "completed", "abandoned"],
+      candidate_status: ["pending", "approved", "withdrawn", "disqualified"],
       chat_participant_status: ["online", "offline", "typing", "away"],
       collaboration_compensation_type: ["none", "flat_fee", "royalty"],
       collaboration_status: ["pending", "accepted", "declined", "expired"],
+      drug_policy_status: [
+        "prohibited",
+        "medical_only",
+        "decriminalized",
+        "legalized",
+      ],
+      election_status: ["nomination", "voting", "completed", "cancelled"],
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
       friendship_status: ["pending", "accepted", "declined", "blocked"],
       inbox_category: [
