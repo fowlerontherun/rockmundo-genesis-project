@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.512",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "NEW: First-Person POV Concert Mode - experience gigs from the performer's perspective" },
+      { type: 'feature', description: "POV: Instrument-specific views (guitarist, drummer, vocalist, bassist, keyboardist)" },
+      { type: 'feature', description: "POV: MTV2/Kerrang late-night aesthetic with film grain, high contrast, desaturation" },
+      { type: 'feature', description: "POV: Handheld camera shake simulation synced to song energy" },
+      { type: 'feature', description: "POV: Dynamic overlay system (lens flares, stage lights, crowd hands, pyro)" },
+      { type: 'feature', description: "POV: Post-processing effects layer with vignette and scan lines" },
+      { type: 'feature', description: "POV: Role selector to view from any band member's perspective" },
+      { type: 'feature', description: "POV: Automatic clip cycling based on song section and energy" },
+    ],
+  },
+  {
     version: "1.0.511",
     date: "2026-01-26",
     changes: [

@@ -3,15 +3,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { X, Maximize2, Minimize2, Music, Users, Volume2, VolumeX, Play, Pause, SkipForward, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Maximize2, Minimize2, Music, Users, Volume2, VolumeX, Play, Pause, SkipForward, ChevronDown, ChevronUp, Eye, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GigAudioPlayer } from "./GigAudioPlayer";
 import { RpmAvatarImage } from "./RpmAvatarImage";
 import { SimpleStageBackground } from "./SimpleStageBackground";
 import { StageSpotlights } from "./StageSpotlights";
 import { InstrumentSilhouettes } from "./InstrumentSilhouettes";
+import { POVGigViewer } from "./POVGigViewer";
 import { useCrowdSounds } from "@/hooks/useCrowdSounds";
 import type { Database } from "@/lib/supabase-types";
+import type { InstrumentRole } from "@/hooks/usePOVClipCycler";
+
 interface ParallaxGigViewerProps {
   gigId: string;
   onClose: () => void;
@@ -54,6 +57,10 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
   const [isNightShow, setIsNightShow] = useState(true);
   const hasPlayedEntranceRef = useRef(false);
   const lastSongIndexRef = useRef(-1);
+  
+  // POV Mode state
+  const [viewMode, setViewMode] = useState<'stage' | 'pov'>('stage');
+  const [povRole, setPovRole] = useState<InstrumentRole>('vocalist');
   
   // Crowd sounds
   const { 
@@ -401,23 +408,36 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
 
   return (
     <div className="fixed inset-0 z-50 bg-black overflow-hidden">
-      {/* Stage Background */}
-      <SimpleStageBackground 
-        crowdMood={crowdMood} 
-        songSection={songSection} 
-        stageTheme={stageTheme}
-        isNightShow={isNightShow}
-      />
-      
-      {/* 2D Instrument Silhouettes Layer */}
-      <InstrumentSilhouettes 
-        bandMembers={bandMembers.map(m => ({ role: m.role, isPresent: true }))}
-        intensity={intensity}
-        songSection={songSection}
-      />
-      
-      {/* Spotlight Effects */}
-      <StageSpotlights crowdMood={crowdMood} songSection={songSection} />
+      {/* POV Mode View */}
+      {viewMode === 'pov' ? (
+        <POVGigViewer
+          playerRole={povRole}
+          intensity={intensity}
+          songSection={songSection}
+          crowdMood={crowdMood}
+          isPlaying={isAudioPlaying}
+        />
+      ) : (
+        <>
+          {/* Stage Background */}
+          <SimpleStageBackground 
+            crowdMood={crowdMood} 
+            songSection={songSection} 
+            stageTheme={stageTheme}
+            isNightShow={isNightShow}
+          />
+          
+          {/* 2D Instrument Silhouettes Layer */}
+          <InstrumentSilhouettes 
+            bandMembers={bandMembers.map(m => ({ role: m.role, isPresent: true }))}
+            intensity={intensity}
+            songSection={songSection}
+          />
+          
+          {/* Spotlight Effects */}
+          <StageSpotlights crowdMood={crowdMood} songSection={songSection} />
+        </>
+      )}
       
       {/* Audio Player - rendered outside minimize block so it keeps playing */}
       {currentSong?.song_audio_url && (
@@ -430,100 +450,102 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
         />
       )}
       
-      {/* Band Members on Stage */}
-      <div className="absolute inset-0 flex items-end justify-center pb-4" style={{ zIndex: 25 }}>
-        <div className="relative w-full max-w-6xl h-[80vh]">
-          {/* Drummer (back center - elevated) */}
-          {positionedMembers.drummer && (
-            <motion.div
-              className="absolute bottom-[45%] left-1/2 -translate-x-1/2 z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <RpmAvatarImage
-                avatarUrl={positionedMembers.drummer.avatarUrl}
-                role="drummer"
-                intensity={intensity}
-                songSection={songSection}
-                size="lg"
-              />
-            </motion.div>
-          )}
+      {/* Band Members on Stage - only in stage view */}
+      {viewMode === 'stage' && (
+        <div className="absolute inset-0 flex items-end justify-center pb-4" style={{ zIndex: 25 }}>
+          <div className="relative w-full max-w-6xl h-[80vh]">
+            {/* Drummer (back center - elevated) */}
+            {positionedMembers.drummer && (
+              <motion.div
+                className="absolute bottom-[45%] left-1/2 -translate-x-1/2 z-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <RpmAvatarImage
+                  avatarUrl={positionedMembers.drummer.avatarUrl}
+                  role="drummer"
+                  intensity={intensity}
+                  songSection={songSection}
+                  size="lg"
+                />
+              </motion.div>
+            )}
 
-          {/* Keyboardist (back left) */}
-          {positionedMembers.keyboardist && (
-            <motion.div
-              className="absolute bottom-[38%] left-[12%] z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <RpmAvatarImage
-                avatarUrl={positionedMembers.keyboardist.avatarUrl}
-                role="keyboardist"
-                intensity={intensity}
-                songSection={songSection}
-                size="lg"
-              />
-            </motion.div>
-          )}
+            {/* Keyboardist (back left) */}
+            {positionedMembers.keyboardist && (
+              <motion.div
+                className="absolute bottom-[38%] left-[12%] z-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                <RpmAvatarImage
+                  avatarUrl={positionedMembers.keyboardist.avatarUrl}
+                  role="keyboardist"
+                  intensity={intensity}
+                  songSection={songSection}
+                  size="lg"
+                />
+              </motion.div>
+            )}
 
-          {/* Guitarist (front left) */}
-          {positionedMembers.guitarist && (
-            <motion.div
-              className="absolute bottom-[10%] left-[15%] z-20"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <RpmAvatarImage
-                avatarUrl={positionedMembers.guitarist.avatarUrl}
-                role="guitarist"
-                intensity={intensity}
-                songSection={songSection}
-                size="xl"
-              />
-            </motion.div>
-          )}
+            {/* Guitarist (front left) */}
+            {positionedMembers.guitarist && (
+              <motion.div
+                className="absolute bottom-[10%] left-[15%] z-20"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <RpmAvatarImage
+                  avatarUrl={positionedMembers.guitarist.avatarUrl}
+                  role="guitarist"
+                  intensity={intensity}
+                  songSection={songSection}
+                  size="xl"
+                />
+              </motion.div>
+            )}
 
-          {/* Vocalist (front center - prominent) */}
-          {positionedMembers.vocalist && (
-            <motion.div
-              className="absolute bottom-[12%] left-1/2 -translate-x-1/2 z-30"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <RpmAvatarImage
-                avatarUrl={positionedMembers.vocalist.avatarUrl}
-                role="vocalist"
-                intensity={intensity}
-                songSection={songSection}
-                size="xl"
-              />
-            </motion.div>
-          )}
+            {/* Vocalist (front center - prominent) */}
+            {positionedMembers.vocalist && (
+              <motion.div
+                className="absolute bottom-[12%] left-1/2 -translate-x-1/2 z-30"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <RpmAvatarImage
+                  avatarUrl={positionedMembers.vocalist.avatarUrl}
+                  role="vocalist"
+                  intensity={intensity}
+                  songSection={songSection}
+                  size="xl"
+                />
+              </motion.div>
+            )}
 
-          {/* Bassist (front right) */}
-          {positionedMembers.bassist && (
-            <motion.div
-              className="absolute bottom-[10%] right-[15%] z-20"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-            >
-              <RpmAvatarImage
-                avatarUrl={positionedMembers.bassist.avatarUrl}
-                role="bassist"
-                intensity={intensity}
-                songSection={songSection}
-                size="xl"
-              />
-            </motion.div>
-          )}
+            {/* Bassist (front right) */}
+            {positionedMembers.bassist && (
+              <motion.div
+                className="absolute bottom-[10%] right-[15%] z-20"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+              >
+                <RpmAvatarImage
+                  avatarUrl={positionedMembers.bassist.avatarUrl}
+                  role="bassist"
+                  intensity={intensity}
+                  songSection={songSection}
+                  size="xl"
+                />
+              </motion.div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Enhanced Crowd Silhouettes at Bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none" style={{ zIndex: 35 }}>
@@ -705,6 +727,32 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
         </Card>
 
         <div className="flex gap-2">
+          {/* POV Mode Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setViewMode(viewMode === 'stage' ? 'pov' : 'stage')}
+            className="bg-black/60 backdrop-blur-sm hover:bg-white/20 text-white"
+            title={viewMode === 'stage' ? 'Switch to POV Mode' : 'Switch to Stage View'}
+          >
+            {viewMode === 'stage' ? <Camera className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+          
+          {/* POV Role Selector (only visible in POV mode) */}
+          {viewMode === 'pov' && (
+            <select
+              value={povRole}
+              onChange={(e) => setPovRole(e.target.value as InstrumentRole)}
+              className="bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded border border-white/20 hover:bg-white/20"
+            >
+              <option value="vocalist">Vocalist</option>
+              <option value="guitarist">Guitarist</option>
+              <option value="bassist">Bassist</option>
+              <option value="drummer">Drummer</option>
+              <option value="keyboardist">Keyboardist</option>
+            </select>
+          )}
+          
           <Button
             variant="ghost"
             size="icon"
