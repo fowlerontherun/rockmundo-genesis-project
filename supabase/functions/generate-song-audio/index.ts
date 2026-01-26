@@ -219,7 +219,11 @@ serve(async (req) => {
     const themeName = project?.song_themes?.name || null
     const themeMood = project?.song_themes?.mood || null
     // Sanitize lyrics to remove any prompt contamination
+    // Track if song originally had lyrics to avoid overwriting user content
+    const originalSongLyrics = song.lyrics
+    const originalProjectLyrics = project?.lyrics
     let rawLyrics = sanitizeLyrics(song.lyrics) || sanitizeLyrics(project?.lyrics) || null
+    const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
 
@@ -263,26 +267,23 @@ serve(async (req) => {
             rawLyrics = lyricsResult.lyrics
             console.log(`[generate-song-audio] Successfully generated ${rawLyrics.length} chars of unique lyrics`)
             
-            // Save generated lyrics to song record for future use
-            const { error: lyricsUpdateError } = await supabase
-              .from('songs')
-              .update({ lyrics: rawLyrics })
-              .eq('id', songId)
-            
-            if (lyricsUpdateError) {
-              console.error('[generate-song-audio] Failed to save lyrics to song:', lyricsUpdateError)
-            } else {
-              console.log('[generate-song-audio] Saved auto-generated lyrics to song record')
-            }
-            
-            // Also save to project if exists
-            if (song.songwriting_project_id) {
-              await supabase
-                .from('songwriting_projects')
+            // Only save generated lyrics to song record if it didn't have any originally
+            // NEVER overwrite user-entered lyrics from songwriting projects
+            if (!hadOriginalLyrics) {
+              const { error: lyricsUpdateError } = await supabase
+                .from('songs')
                 .update({ lyrics: rawLyrics })
-                .eq('id', song.songwriting_project_id)
-              console.log('[generate-song-audio] Saved auto-generated lyrics to project record')
+                .eq('id', songId)
+              
+              if (lyricsUpdateError) {
+                console.error('[generate-song-audio] Failed to save lyrics to song:', lyricsUpdateError)
+              } else {
+                console.log('[generate-song-audio] Saved auto-generated lyrics to song record (no original lyrics)')
+              }
+            } else {
+              console.log('[generate-song-audio] Skipping lyrics save - song had original user lyrics')
             }
+            // NOTE: We NEVER overwrite songwriting_projects.lyrics - that's the user's original work
           } else {
             console.error('[generate-song-audio] Lyrics response missing lyrics field:', lyricsResult)
           }
