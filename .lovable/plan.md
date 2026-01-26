@@ -1,33 +1,36 @@
 
-# Player Inbox System
+# First-Person POV Live Concert System
 
-## Version: 1.0.511
+## Version: 1.0.512
 
 ## Overview
-Create a new dedicated Inbox page at the top of navigation that consolidates all player-relevant messages, offers, and notifications into a persistent, organized interface. Messages will be stored in the database so they persist across sessions.
+Create an immersive first-person POV concert viewer that places the player on stage as if they are the performer. Features a gritty, handheld MTV2/Kerrang early-2000s aesthetic with high contrast lighting, film grain, and energetic visual effects.
 
 ---
 
-## Features
+## Core Concept
 
-### Message Categories
-The inbox will organize messages into these categories:
-1. **Random Events** - Event outcomes and pending decisions
-2. **Gig Results** - Performance outcomes, earnings, reputation changes
-3. **PR & Media** - Media appearance invites and results
-4. **Record Labels** - Contract offers and negotiations
-5. **Sponsorships** - Brand deal offers and payments
-6. **Financial** - Daily streaming revenue, record sales, ticket sales summaries
-7. **Social** - Friend requests, band invitations, Twaater mentions
-8. **Achievements** - Unlocked achievements and milestones
+The POV system shows what the player sees while performing:
+- **Guitarist POV**: Looking down at fretboard, picking hand, sleeve visible
+- **Bassist POV**: Bass neck, fingers on strings, crowd glimpses
+- **Drummer POV**: Sticks hitting drums, cymbals, crowd through kit
+- **Vocalist POV**: Microphone, hand gestures, crowd faces
+- **Keyboardist POV**: Keys, hands moving, stage monitors
 
-### Inbox Features
-- Unread count badge in navigation
-- Filter by category
-- Mark as read / Mark all as read
-- Archive/delete functionality
-- Quick action buttons (Accept/Decline/View)
-- Date grouping (Today, Yesterday, This Week, Older)
+---
+
+## Visual Aesthetic
+
+### MTV2/Kerrang Late-Night Style
+| Element | Implementation |
+|---------|----------------|
+| Film Grain | Animated noise overlay (15-25% opacity) |
+| High Contrast | CSS filter: contrast(1.3) |
+| Overexposed Highlights | White bloom overlay on bright areas |
+| Desaturation | CSS filter: saturate(0.7) |
+| Handheld Feel | Subtle random camera shake animation |
+| Scan Lines | Optional CRT-style horizontal lines |
+| Vignette | Dark corners gradient overlay |
 
 ---
 
@@ -35,150 +38,244 @@ The inbox will organize messages into these categories:
 
 ### Phase 1: Database Schema
 
-**New Migration: Create `player_inbox` table**
+**New Table: `pov_clip_templates`**
+
+Stores metadata for POV clip configurations per instrument/moment:
 
 ```sql
-CREATE TYPE inbox_category AS ENUM (
-  'random_event', 'gig_result', 'pr_media', 'record_label', 
-  'sponsorship', 'financial', 'social', 'achievement', 'system'
-);
-
-CREATE TYPE inbox_priority AS ENUM ('low', 'normal', 'high', 'urgent');
-
-CREATE TABLE player_inbox (
+CREATE TABLE pov_clip_templates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  category inbox_category NOT NULL,
-  priority inbox_priority NOT NULL DEFAULT 'normal',
-  title text NOT NULL,
-  message text NOT NULL,
-  metadata jsonb DEFAULT '{}',
-  action_type text, -- 'accept_decline', 'view_details', 'navigate', null
-  action_data jsonb, -- { route: '/gigs', offerId: 'xxx', etc }
-  related_entity_type text, -- 'gig', 'sponsorship', 'contract', etc
-  related_entity_id uuid,
-  is_read boolean NOT NULL DEFAULT false,
-  is_archived boolean NOT NULL DEFAULT false,
-  expires_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
+  instrument_role text NOT NULL, -- guitarist, bassist, drummer, vocalist, keyboardist
+  clip_type text NOT NULL, -- 'playing', 'crowd_look', 'stage_scan', 'solo_focus'
+  description text,
+  camera_position jsonb, -- { x, y, z, lookAt }
+  duration_range int[] DEFAULT ARRAY[3, 8], -- min/max seconds
+  energy_level text DEFAULT 'medium', -- low, medium, high, climax
+  overlays text[] DEFAULT '{}', -- which overlay effects to use
+  created_at timestamptz DEFAULT now()
 );
-
-CREATE INDEX idx_player_inbox_user_unread ON player_inbox(user_id, is_read) WHERE is_archived = false;
-CREATE INDEX idx_player_inbox_user_category ON player_inbox(user_id, category) WHERE is_archived = false;
-
--- RLS policies
-ALTER TABLE player_inbox ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own inbox" ON player_inbox
-  FOR SELECT USING (user_id = auth.uid());
-
-CREATE POLICY "Users can update own inbox" ON player_inbox
-  FOR UPDATE USING (user_id = auth.uid());
-
-CREATE POLICY "System can insert inbox messages" ON player_inbox
-  FOR INSERT WITH CHECK (true);
 ```
 
-### Phase 2: Create Inbox Page
+### Phase 2: POV Viewer Component
 
-**New File: `src/pages/Inbox.tsx`**
+**New File: `src/components/gig-viewer/POVGigViewer.tsx`**
+
+Main component that renders the first-person view:
+
+```typescript
+interface POVGigViewerProps {
+  gigId: string;
+  playerRole: 'guitarist' | 'bassist' | 'drummer' | 'vocalist' | 'keyboardist';
+  intensity: number;
+  songSection: string;
+  crowdMood: number;
+}
+```
 
 Features:
-- Header with unread count and "Mark all read" button
-- Category filter tabs (All, Events, Gigs, Financial, Social, etc.)
-- Message list with:
-  - Category icon and color coding
-  - Priority indicator for urgent items
-  - Title and preview text
-  - Timestamp (relative: "2 hours ago")
-  - Action buttons based on `action_type`
-  - Read/unread visual state
-- Empty state with helpful message
-- Archive/delete actions
+- Role-specific POV rendering
+- Automatic clip cycling based on song section
+- Intensity-reactive effects
 
-### Phase 3: Create Inbox Hook
+### Phase 3: Post-Processing Effects Layer
 
-**New File: `src/hooks/useInbox.ts`**
+**New File: `src/components/gig-viewer/POVPostProcessing.tsx`**
+
+Applies the MTV2/Kerrang aesthetic:
 
 ```typescript
-export function useInbox() {
-  // Fetch all inbox messages for user
-  // Provide filtering by category
-  // Mark as read mutations
-  // Archive/delete mutations
-  // Real-time subscription for new messages
-}
-
-export function useUnreadInboxCount() {
-  // Lightweight query for just the unread count
-  // Used in navigation badge
+interface POVPostProcessingProps {
+  intensity: number;
+  grainAmount: number; // 0.15-0.25
+  contrast: number; // 1.2-1.4
+  saturation: number; // 0.6-0.8
+  enableScanLines: boolean;
+  vignetteStrength: number;
 }
 ```
 
-### Phase 4: Update Navigation
+CSS Filter Stack:
+```css
+.pov-container {
+  filter: 
+    contrast(1.3) 
+    saturate(0.7) 
+    brightness(1.1);
+}
 
-**File: `src/components/ui/navigation.tsx`**
+.grain-overlay {
+  background-image: url('/textures/effects/film-grain.png');
+  animation: grain-shift 0.1s steps(10) infinite;
+  opacity: 0.2;
+  mix-blend-mode: overlay;
+}
 
-Add Inbox at the top of the Home section with unread badge:
-```typescript
-{
-  titleKey: "nav.home",
-  items: [
-    { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadCount },
-    { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
-    // ... rest
-  ],
+.vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(0,0,0,0.6) 100%
+  );
 }
 ```
 
-### Phase 5: Create Inbox Message Population
+### Phase 4: Camera Shake System
 
-**New Edge Function: `supabase/functions/create-inbox-message/index.ts`**
+**New File: `src/components/gig-viewer/CameraShake.tsx`**
 
-Helper function that other edge functions can call to create inbox messages. This centralizes message creation logic.
+Handheld camera simulation:
 
-**Update Existing Edge Functions to Create Inbox Messages:**
+```typescript
+const useHandheldShake = (intensity: number, songSection: string) => {
+  // Base micro-movement (always present)
+  const microShake = { x: random(-1, 1), y: random(-0.5, 0.5) };
+  
+  // Energy bursts during chorus/solo
+  const energyShake = songSection === 'chorus' 
+    ? { x: random(-3, 3), y: random(-2, 2) }
+    : { x: 0, y: 0 };
+  
+  // Occasional larger movements (looking around)
+  const lookShake = useInterval(() => ({ 
+    x: random(-8, 8), 
+    y: random(-4, 4) 
+  }), 3000);
+  
+  return combine(microShake, energyShake, lookShake);
+};
+```
 
-| Edge Function | Inbox Message Type |
-|---------------|-------------------|
-| `complete-gigs` | Gig result with earnings, reputation change |
-| `process-daily-updates` | Daily financial summary (streams, sales, tickets) |
-| `generate-gig-offers` | New gig offer notification |
-| `generate-sponsorship-offers` | New sponsorship offer |
-| `process-random-events` | Event triggered, outcome applied |
-| `choose-event-option` | Outcome message when applied |
+### Phase 5: Instrument POV Scenes
 
-### Phase 6: Daily Financial Summary Message
+**New Directory: `src/components/gig-viewer/pov-scenes/`**
 
-**Update: `supabase/functions/process-daily-updates/index.ts`**
+Each instrument gets its own POV component:
 
-At the end of daily processing, create a summary inbox message per player:
-- Total streaming revenue earned
-- Physical/digital sales
-- Ticket sales for upcoming gigs
-- Any significant changes
+**GuitaristPOV.tsx**
+- Fretboard in lower frame
+- Picking hand visible
+- Sleeve/wrist detail
+- Occasional crowd glimpses through hair flick
+- Solo sections: faster hand movement, face close-up to neck
 
-Example message:
-> **Daily Earnings Summary**
-> Streaming: $45.23 (12,450 streams)
-> Record Sales: $150.00 (10 CDs, 2 vinyl)
-> Ticket Sales: 47 tickets sold for upcoming gigs
+**DrummerPOV.tsx**
+- Sticks in frame, blurred motion
+- Drum heads and cymbals
+- Crowd visible through gaps in kit
+- Hi-hat foot visible bottom frame
+- Fills: rapid view switching
 
-### Phase 7: Inbox Message Components
+**VocalistPOV.tsx**
+- Microphone center frame
+- Hand gestures
+- Crowd faces (blurred, lit by phones)
+- Stage monitors
+- Between songs: band member glances
 
-**New File: `src/components/inbox/InboxMessage.tsx`**
-- Message card component with category styling
-- Action buttons (Accept/Decline/View)
-- Read/unread states
-- Archive action
+**BassistPOV.tsx**
+- Bass neck diagonal in frame
+- Fingers on frets
+- Amp stack visible side
+- Groove sections: subtle head bob
 
-**New File: `src/components/inbox/InboxFilters.tsx`**
-- Category filter tabs
-- Date range filter
-- Priority filter
+**KeyboardistPOV.tsx**
+- Keys stretching across frame
+- Hands moving
+- Synth displays
+- Side stage view
 
-**New File: `src/components/inbox/InboxEmptyState.tsx`**
-- Friendly empty state when no messages
+### Phase 6: Overlay System
+
+**New File: `src/components/gig-viewer/POVOverlays.tsx`**
+
+Layered effects that enhance the concert feel:
+
+```typescript
+type OverlayType = 
+  | 'lens_flare'      // Bright light bursts
+  | 'stage_lights'    // Colored beams
+  | 'sweat_drops'     // Subtle moisture effect
+  | 'crowd_hands'     // Arms reaching up
+  | 'pyro_flash'      // Climax moments
+  | 'strobe'          // High energy
+  | 'haze'            // Atmospheric fog
+  | 'confetti';       // Celebration moments
+```
+
+Overlay behavior by song section:
+| Section | Active Overlays |
+|---------|-----------------|
+| Intro | haze, stage_lights (dim) |
+| Verse | stage_lights, subtle lens_flare |
+| Chorus | lens_flare, crowd_hands, strobe (if high energy) |
+| Bridge | haze (heavy), stage_lights (moody) |
+| Solo | lens_flare (intense), sweat_drops |
+| Outro | confetti (if good show), crowd_hands |
+
+### Phase 7: AI-Generated POV Images
+
+**New Edge Function: `supabase/functions/generate-pov-clip/index.ts`**
+
+Uses the Lovable AI image generation API to create custom POV frames:
+
+```typescript
+const generatePOVImage = async (
+  instrument: string,
+  clipType: string,
+  energy: 'low' | 'medium' | 'high'
+) => {
+  const prompt = buildPOVPrompt(instrument, clipType, energy);
+  // "First-person POV from drummer on stage, looking down at snare drum, 
+  //  drumsticks in motion, blurred crowd visible through cymbals, 
+  //  high contrast stage lighting, film grain, MTV2 late night aesthetic,
+  //  gritty, handheld camera feel, overexposed highlights"
+  
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // ... generate image
+  });
+  
+  // Store in Supabase storage
+  return imageUrl;
+};
+```
+
+### Phase 8: Integration with Existing Viewer
+
+**Modify: `src/components/gig-viewer/ParallaxGigViewer.tsx`**
+
+Add POV mode toggle:
+
+```typescript
+const [viewMode, setViewMode] = useState<'stage' | 'pov'>('stage');
+const [povRole, setPovRole] = useState<string>('vocalist');
+
+// In render:
+{viewMode === 'pov' ? (
+  <POVGigViewer
+    gigId={gigId}
+    playerRole={povRole}
+    intensity={intensity}
+    songSection={songSection}
+    crowdMood={crowdMood}
+  />
+) : (
+  // Existing stage view
+)}
+```
+
+### Phase 9: Texture Assets
+
+**New Textures to Create:**
+
+| Texture | Purpose |
+|---------|---------|
+| `film-grain.png` | Animated grain overlay |
+| `scan-lines.png` | CRT effect |
+| `lens-dirt.png` | Realistic lens imperfections |
+| `sweat-drops.png` | Intensity effect |
+| `crowd-silhouette-pov.png` | Blurred crowd from stage |
+| `stage-light-beam.png` | Light ray overlay |
+| `pyro-flash.png` | Explosion effect |
 
 ---
 
@@ -186,79 +283,53 @@ Example message:
 
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/migrations/xxx_create_inbox.sql` | CREATE | New inbox table with RLS |
-| `src/pages/Inbox.tsx` | CREATE | Main inbox page |
-| `src/hooks/useInbox.ts` | CREATE | Inbox data hook |
-| `src/components/inbox/InboxMessage.tsx` | CREATE | Message item component |
-| `src/components/inbox/InboxFilters.tsx` | CREATE | Filter tabs component |
-| `src/components/inbox/InboxEmptyState.tsx` | CREATE | Empty state component |
-| `src/components/ui/navigation.tsx` | MODIFY | Add inbox link with badge |
-| `supabase/functions/create-inbox-message/index.ts` | CREATE | Helper for creating messages |
-| `supabase/functions/complete-gigs/index.ts` | MODIFY | Add inbox message on completion |
-| `supabase/functions/process-daily-updates/index.ts` | MODIFY | Add daily summary message |
-| `supabase/functions/choose-event-option/index.ts` | MODIFY | Add outcome message |
-| `src/App.tsx` | MODIFY | Add route for /inbox |
-| `src/components/VersionHeader.tsx` | MODIFY | Update to v1.0.511 |
-| `src/pages/VersionHistory.tsx` | MODIFY | Add changelog entry |
+| `supabase/migrations/xxx_pov_clips.sql` | CREATE | POV clip template table |
+| `src/components/gig-viewer/POVGigViewer.tsx` | CREATE | Main POV viewer |
+| `src/components/gig-viewer/POVPostProcessing.tsx` | CREATE | Visual effects layer |
+| `src/components/gig-viewer/CameraShake.tsx` | CREATE | Handheld simulation |
+| `src/components/gig-viewer/POVOverlays.tsx` | CREATE | Stage light/effect overlays |
+| `src/components/gig-viewer/pov-scenes/GuitaristPOV.tsx` | CREATE | Guitar POV |
+| `src/components/gig-viewer/pov-scenes/DrummerPOV.tsx` | CREATE | Drums POV |
+| `src/components/gig-viewer/pov-scenes/VocalistPOV.tsx` | CREATE | Vocals POV |
+| `src/components/gig-viewer/pov-scenes/BassistPOV.tsx` | CREATE | Bass POV |
+| `src/components/gig-viewer/pov-scenes/KeyboardistPOV.tsx` | CREATE | Keys POV |
+| `src/hooks/usePOVClipCycler.ts` | CREATE | Clip rotation logic |
+| `supabase/functions/generate-pov-clip/index.ts` | CREATE | AI image generation |
+| `src/components/gig-viewer/ParallaxGigViewer.tsx` | MODIFY | Add POV mode toggle |
+| `src/assets/textures/effects/film-grain.png` | CREATE | Grain texture |
+| `src/components/VersionHeader.tsx` | MODIFY | v1.0.512 |
+| `src/pages/VersionHistory.tsx` | MODIFY | Changelog |
 
 ---
 
-## UI Design
+## UI Controls
 
-### Inbox Page Layout
+### POV Mode Selector
+Add to HUD controls:
+- **View Toggle**: Stage View / POV Mode
+- **Role Selector**: Choose which band member's POV (default: player's role)
+- **Effect Intensity**: Slider for grain/contrast amount
 
-```text
-┌─────────────────────────────────────────────────┐
-│ 📥 Inbox                     [Mark all read] ⚙️  │
-├─────────────────────────────────────────────────┤
-│ [All] [Events] [Gigs] [Money] [Social] [Labels] │
-├─────────────────────────────────────────────────┤
-│ TODAY                                           │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ 🎲 Random Event               2 hours ago   │ │
-│ │ Equipment Malfunction                       │ │
-│ │ Your amp blew a fuse during practice...     │ │
-│ │                    [Make a Choice →]        │ │
-│ └─────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ 💰 Daily Summary              This morning  │ │
-│ │ Yesterday's Earnings                        │ │
-│ │ Streaming: $45 • Sales: $150 • 47 tickets   │ │
-│ │                    [View Details →]         │ │
-│ └─────────────────────────────────────────────┘ │
-│ YESTERDAY                                       │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ 🎸 Gig Result                    ✓ Read     │ │
-│ │ Great show at The Roxy!                     │ │
-│ │ Earned $1,200 • +15 reputation • 450 fans   │ │
-│ └─────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────┘
-```
+---
 
-### Category Icons & Colors
-| Category | Icon | Color |
-|----------|------|-------|
-| Random Events | 🎲 Dice | Yellow |
-| Gig Results | 🎸 Guitar | Green |
-| PR/Media | 📺 TV | Blue |
-| Record Labels | 💿 Disc | Purple |
-| Sponsorships | 🤝 Handshake | Teal |
-| Financial | 💰 Money | Green |
-| Social | 👥 Users | Pink |
-| Achievements | 🏆 Trophy | Gold |
+## Performance Considerations
+
+1. **CSS-based effects** preferred over canvas/WebGL for mobile compatibility
+2. **Preload textures** for overlay effects
+3. **Debounce camera shake** calculations
+4. **Lazy load POV scenes** based on current role
+5. **Cache AI-generated images** in Supabase storage
 
 ---
 
 ## Version History Entry
 
-**v1.0.511**
-- NEW: Inbox page - centralized hub for all player messages and notifications
-- Inbox: Random event outcomes and pending decisions
-- Inbox: Gig results with earnings and reputation changes
-- Inbox: PR and media appearance invites
-- Inbox: Sponsorship and contract offers
-- Inbox: Daily financial summary (streaming, sales, tickets)
-- Inbox: Friend requests and band invitations
-- Inbox: Filter messages by category
-- Inbox: Mark as read and archive functionality
-- Inbox: Unread count badge in navigation
+**v1.0.512**
+- NEW: First-Person POV Concert Mode - experience gigs from the performer's perspective
+- POV: Instrument-specific views (guitarist, drummer, vocalist, bassist, keyboardist)
+- POV: MTV2/Kerrang late-night aesthetic with film grain, high contrast, desaturation
+- POV: Handheld camera shake simulation synced to song energy
+- POV: Dynamic overlay system (lens flares, stage lights, crowd hands, pyro)
+- POV: Post-processing effects layer with vignette and scan lines
+- POV: Role selector to view from any band member's perspective
+- POV: AI-generated POV clip frames for variety
