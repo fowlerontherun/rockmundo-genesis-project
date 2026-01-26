@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.517",
+    date: "2026-01-26",
+    changes: [
+      { type: 'feature', description: "POV: NEW I1 variant - Instrument Alternate Skin for player-owned guitar/bass/drum skins" },
+      { type: 'improvement', description: "POV: All clip prompts enhanced with highly detailed textures (hands, fingers, fingernails, fabric folds, metallic reflections)" },
+      { type: 'improvement', description: "POV: Guitar G1/G2 prompts now emphasize visible pick, strings, frets, and hardware detail" },
+      { type: 'improvement', description: "POV: Bass B1 prompt updated with detailed string/fret textures and tuning peg reflections" },
+      { type: 'improvement', description: "POV: Drums D1/D2 prompts now include stick grain, glove stitching, drum head tension rods" },
+      { type: 'improvement', description: "POV: Vocalist V1 prompt updated with microphone mesh and metallic body detail" },
+      { type: 'improvement', description: "POV: H1 hands/sleeves prompt enhanced with leather grain, metal studs, fabric folds" },
+    ],
+  },
+  {
     version: "1.0.516",
     date: "2026-01-26",
     changes: [

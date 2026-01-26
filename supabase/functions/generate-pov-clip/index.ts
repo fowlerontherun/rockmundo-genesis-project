@@ -6,35 +6,39 @@ const corsHeaders = {
 };
 
 // POV Clip prompt templates - MTV2 / Kerrang late-night early-2000s aesthetic
+// Enhanced with highly detailed textures on hands, instruments, and accessories
 const CLIP_PROMPTS: Record<string, string> = {
-  // Guitar variants
-  'G1': 'First-person POV of hands strumming an electric guitar during a live rock concert, early 2000s MTV2 / Kerrang late-night aesthetic, grainy handheld camera feel, high contrast overexposed stage lights, energetic but raw, close-up on guitar neck and hands, visible leather jacket sleeves, loopable frame, cinematic, gritty texture, slightly desaturated colors.',
+  // Guitar variants - G1 Strumming, G2 Solo
+  'G1': 'First-person POV of hands strumming an electric guitar during a live rock concert, close-up cinematic angle, MTV2 / Kerrang late-night early-2000s aesthetic, grainy handheld camera feel, energetic but raw. Highly detailed textures on hands, fingers, and guitar, visible fingernails, strings, frets, pick, and metallic parts. Leather jacket sleeve and wristbands clearly visible, subtle reflections on guitar body, loopable, designed for layering as a video clip in a game. Background stylized, less detailed, with dynamic overexposed stage lights. Player-owned guitar skin fully visible.',
   
-  'G2': 'First-person POV looking down at electric guitar playing an intense solo, fingers moving along the fretboard, high contrast overexposed stage lights in background, MTV2 / Kerrang late-night aesthetic, grainy film texture, energetic handheld camera angle, visible jacket sleeves with studs, cinematic rock concert atmosphere, gritty and raw.',
+  'G2': 'First-person POV looking down at electric guitar playing an intense solo, fingers moving along the fretboard, close-up cinematic angle, MTV2 / Kerrang late-night aesthetic, grainy film texture. Highly detailed textures on fingers, fingernails, frets, strings, and metallic hardware. Visible jacket sleeves with studs and fabric folds, wristbands with texture detail. Background stylized with overexposed stage lights, high contrast rim lighting. Player-owned guitar skin fully visible, energetic handheld camera, loopable, cinematic.',
   
-  // Bass variants
-  'B1': 'First-person POV of hands plucking bass guitar strings, looking down at the bass fretboard, MTV2 / Kerrang late-night concert style, high contrast stage lighting with lens flares, grainy film texture, energetic motion blur, visible leather wristbands and jacket sleeves, cinematic rock performance, gritty early-2000s aesthetic.',
+  // Bass variants - B1 Groove
+  'B1': 'First-person POV of hands plucking bass guitar strings, close-up cinematic angle, MTV2 / Kerrang late-night aesthetic, grainy and energetic. Highly detailed textures on hands, fingers, fingernails, bass strings, frets, and hardware. Visible fabric folds on sleeves, metallic reflections on bass strings and tuning pegs, wristbands with detailed texture. Background stylized but minimal, with stage lighting and motion blur. Player-owned bass skin fully visible, loopable, designed for layering as a game clip.',
   
-  // Drums variants
-  'D1': 'POV from a drummer on stage, looking down at snare drum and hi-hat, hands holding drumsticks mid-strike, black fingerless gloves visible, MTV2 / Kerrang late-night concert style, high contrast stage lights creating overexposed highlights, grainy texture, energetic motion blur on sticks, cinematic rock concert frame.',
+  // Drums variants - D1 Snare, D2 Toms
+  'D1': 'First-person POV of drummer hands holding sticks, looking down at snare and hi-hat, MTV2 / Kerrang late-night concert aesthetic, grainy cinematic handheld camera, high contrast lighting, energetic motion. Highly detailed textures on drumsticks grain, black fingerless gloves with visible stitching, wristbands, drum heads with visible tension rods and hardware. Visible fabric folds on sleeves, metallic reflections on cymbals and hardware. Background stylized with overexposed stage lights. Loopable, designed for layering as a game clip.',
   
-  'D2': 'POV from drummer angled forward at tom drums, hands holding sticks about to strike, MTV2 / Kerrang late-night concert aesthetic, high contrast stage lighting with rim light effects, grainy film texture, energetic performance, visible gloves and wristbands, cinematic rock show atmosphere, gritty and raw.',
+  'D2': 'First-person POV from drummer angled forward at tom drums, hands holding sticks about to strike, MTV2 / Kerrang late-night concert aesthetic, high contrast stage lighting with rim light effects, grainy film texture, energetic performance. Highly detailed textures on sticks, gloves, wristbands, drum heads, and chrome hardware. Visible fabric folds and metallic reflections. Background stylized with overexposed lights. Player-owned drum skins or hand accessories clearly visible, loopable, cinematic.',
   
-  // Vocalist variants
-  'V1': 'First-person POV of a rock singer holding a microphone, hands gripping mic visible in frame, overexposed stage lights creating lens flares in background, dark crowd silhouettes in distance, MTV2 / Kerrang late-night aesthetic, grainy handheld camera feel, visible leather jacket sleeve, energetic performance, cinematic rock concert.',
+  // Vocalist variants - V1 Mic
+  'V1': 'First-person POV of rock singer holding a microphone, hands gripping mic visible in frame, MTV2 / Kerrang late-night aesthetic, grainy cinematic handheld camera feel, high contrast stage lights, slightly overexposed, energetic motion. Highly detailed textures on hands, fingers, fingernails, microphone mesh and metallic body with reflections. Sleeves and wristbands highly detailed with fabric folds and textures. Background stylized, crowd silhouetted, minimal detail. Player-owned gloves or skins clearly visible, loopable, designed as composable game clip.',
   
-  // Crowd variants
-  'C1': 'Stage POV looking out at a small venue rock concert audience, hands raised in the air, silhouettes only backlit by bright stage lights, MTV2 / Kerrang early-2000s late-night aesthetic, grainy film texture, energetic crowd movement, high contrast lighting, smoke and haze in air, cinematic rock show atmosphere.',
+  // Crowd variants - C1 Small Venue, C2 Arena
+  'C1': 'Stage POV of small venue concert audience, hands in the air, clapping and waving, silhouettes highly readable, MTV2 / Kerrang late-night early-2000s aesthetic, grainy, energetic. Background lights visible with dynamic overexposed stage lighting, slight motion blur, smoke and haze in air. High contrast lighting creating backlit silhouettes. Loopable, designed to layer behind first-person performer clips.',
   
-  'C2': 'Stage POV of a medium to large arena concert audience, thousands of hands waving and reaching up, silhouettes backlit by colorful stage lights, MTV2 / Kerrang early-2000s aesthetic, grainy texture, energetic crowd, phone lights visible, cinematic wide shot from performer perspective.',
+  'C2': 'Stage POV of medium to large arena concert audience, thousands of hands waving and reaching up, silhouettes highly readable, backlit by colorful stage lights, MTV2 / Kerrang early-2000s aesthetic, grainy texture, energetic. Phone lights visible in crowd, dynamic overexposed stage lighting, slight motion blur. Cinematic wide shot from performer perspective, loopable, designed to layer behind performer clips.',
   
-  // Overlay variants
-  'L1': 'Dynamic stage lights flashing during rock concert, bright lens flares and light beams cutting through smoke, MTV2 / Kerrang late-night aesthetic, overexposed highlights, motion blur on sweeping lights, grainy texture, high contrast, designed as transparent overlay, black background with light effects only.',
+  // Overlay variants - L1 Stage Lights, L2 Camera Shake
+  'L1': 'Transparent overlay of dynamic stage lights flashing in sync with energetic rock music, MTV2 / Kerrang late-night aesthetic, cinematic, grainy texture, high contrast, subtle motion blur, overexposed lighting. Bright lens flares and light beams cutting through smoke, black background with light effects only. Loopable, designed to be composited on top of first-person performer clips.',
   
-  'L2': 'Subtle camera shake motion blur effect, MTV2 / Kerrang late-night concert aesthetic, handheld camera movement simulation, slight diagonal blur lines, grainy texture, designed as transparent overlay effect, cinematic rock concert feel.',
+  'L2': 'Cinematic handheld camera shake effect for first-person POV concert, subtle motion blur, MTV2 / Kerrang late-night aesthetic, energetic, grainy, slight diagonal blur lines, handheld camera movement simulation. Designed as transparent overlay effect, loopable, to layer on POV clips to simulate stage movement and performance intensity.',
   
-  // Skin variants
-  'H1': 'Close-up first-person POV of hands playing electric guitar with custom finish, leather jacket sleeve with metal studs visible, MTV2 / Kerrang late-night concert aesthetic, high contrast stage lighting, grainy film texture, cinematic rock performance, visible wristbands and rings on fingers, energetic playing motion.',
+  // Hands + Sleeves Alternate Skin - H1
+  'H1': 'Close-up first-person POV of hands playing guitar or bass, wearing leather jacket sleeve, gloves, wristbands, or alternate clothing skin, MTV2 / Kerrang late-night aesthetic, loopable, cinematic. Highly detailed textures on hands, fingers, fingernails, fabric folds, leather grain, metal studs. Guitar strings, frets, or drumsticks visible with metallic reflections. High contrast stage lighting, grainy. Designed for compositing in a rock concert game. Player-owned skin clearly visible.',
+  
+  // Instrument Alternate Skin - I1 (NEW)
+  'I1': 'Close-up first-person POV of hands playing guitar, bass, or drums, instrument featuring alternate player-owned skin, MTV2 / Kerrang late-night aesthetic, loopable, cinematic. Highly detailed textures on instrument body, strings, frets, hardware with reflective metallic parts. Visible sleeves and hands with fabric folds, wristbands. High contrast stage lighting with rim lights, grainy film texture. Designed for layering on top of base POV clips in a game. Player-owned instrument skin fully visible and prominent.',
 };
 
 // Instrument skin modifiers

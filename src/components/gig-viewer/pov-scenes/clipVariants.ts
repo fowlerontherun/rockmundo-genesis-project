@@ -19,7 +19,8 @@ export type ClipVariantId =
   | 'L1' // Stage Lights Overlay
   | 'L2' // Camera Shake Overlay
   // Skin variants
-  | 'H1'; // Hands + Sleeves Alternate Skin
+  | 'H1' // Hands + Sleeves Alternate Skin
+  | 'I1'; // Instrument Alternate Skin
 
 export interface ClipVariant {
   id: ClipVariantId;
@@ -138,7 +139,16 @@ export const clipVariants: Record<ClipVariantId, ClipVariant> = {
   H1: {
     id: 'H1',
     name: 'Hands + Sleeves Alternate Skin',
-    description: 'Close-up first-person POV of hands playing electric guitar or bass, instrument featuring an alternate player-owned skin, MTV2 / Kerrang late-night aesthetic, energetic, loopable, cinematic, visible sleeves, designed for layering on top of base POV clips.',
+    description: 'Close-up first-person POV of hands playing guitar or bass, wearing leather jacket sleeve, gloves, wristbands, or alternate clothing skin, highly detailed textures and fabric folds, MTV2 / Kerrang late-night aesthetic, loopable, cinematic, with guitar strings, frets, or drumsticks visible. Designed for compositing in a rock concert game. Player-owned skin clearly visible.',
+    role: 'skin',
+    energyRange: [0.0, 1.0],
+    songSections: ['all'],
+    loopDuration: 4,
+  },
+  I1: {
+    id: 'I1',
+    name: 'Instrument Alternate Skin',
+    description: 'Close-up first-person POV of hands playing guitar, bass, or drums, instrument featuring alternate player-owned skin, highly detailed textures on instrument and strings, reflective metallic parts, MTV2 / Kerrang late-night aesthetic, loopable, cinematic, visible sleeves and hands, designed for layering on top of base POV clips in a game.',
     role: 'skin',
     energyRange: [0.0, 1.0],
     songSections: ['all'],
