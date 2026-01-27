@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.536",
+    date: "2026-01-27",
+    changes: [
+      { type: 'feature', description: "Elections: Full city election page with voting booth, candidate list, and real-time vote tracking" },
+      { type: 'feature', description: "Elections: Candidate registration system - players with 100+ fame can run for mayor" },
+      { type: 'feature', description: "Elections: Propose policies during registration (tax rates, regulations, genre policies)" },
+      { type: 'feature', description: "Mayor Dashboard: City law management for elected mayors to enact policies" },
+      { type: 'feature', description: "Mayor Dashboard: Configure income/sales tax, curfews, alcohol age, busking fees" },
+      { type: 'feature', description: "Mayor Dashboard: Promote or prohibit music genres, set community event funding" },
+      { type: 'feature', description: "Mayor Dashboard: Law change history tracking with full audit trail" },
+    ],
+  },
+  {
     version: "1.0.535",
     date: "2026-01-26",
     changes: [

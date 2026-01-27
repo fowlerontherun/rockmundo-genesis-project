@@ -232,6 +232,8 @@ const VersionHistory = lazyWithRetry(() => import("./pages/VersionHistory"));
 const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
 const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
+const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
+const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -319,6 +321,8 @@ function App() {
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
+                    <Route path="cities/:cityId/election" element={<CityElection />} />
+                    <Route path="cities/:cityId/mayor-dashboard" element={<MayorDashboard />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="band-vehicles" element={<BandVehicles />} />
