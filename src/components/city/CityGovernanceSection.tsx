@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Landmark, Crown, Vote, Calendar, Clock, Users, ChevronRight } from "lucide-react";
-import { useCityMayor } from "@/hooks/useMayorDashboard";
+import { Landmark, Crown, Vote, Calendar, Clock, Users, ChevronRight, Settings } from "lucide-react";
+import { useCityMayor, useIsCurrentMayor } from "@/hooks/useMayorDashboard";
 import { useCityElection } from "@/hooks/useCityElections";
 import { useCityLaws } from "@/hooks/useCityLaws";
 import { format } from "date-fns";
@@ -36,6 +36,7 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
   const { data: mayor, isLoading: mayorLoading } = useCityMayor(cityId);
   const { data: election, isLoading: electionLoading } = useCityElection(cityId);
   const { data: laws } = useCityLaws(cityId);
+  const { data: isMayor } = useIsCurrentMayor(cityId);
 
   const isLoading = mayorLoading || electionLoading;
 
@@ -64,28 +65,38 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
               </div>
             </div>
           ) : mayor ? (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                  <AvatarImage src={mayor.profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {mayor.profile?.stage_name?.charAt(0) || "M"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-semibold flex items-center gap-2">
-                    {mayor.profile?.stage_name || "Unknown Mayor"}
-                    <Crown className="h-4 w-4 text-yellow-500" />
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Term: {new Date(mayor.term_start).getFullYear()} - {mayor.term_end ? new Date(mayor.term_end).getFullYear() : "Present"}
+            <>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                    <AvatarImage src={mayor.profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {mayor.profile?.stage_name?.charAt(0) || "M"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-semibold flex items-center gap-2">
+                      {mayor.profile?.stage_name || "Unknown Mayor"}
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Term: {new Date(mayor.term_start).getFullYear()} - {mayor.term_end ? new Date(mayor.term_end).getFullYear() : "Present"}
+                    </div>
                   </div>
                 </div>
+                <Badge variant="outline" className="bg-primary/5">
+                  {mayor.approval_rating || 50}% Approval
+                </Badge>
               </div>
-              <Badge variant="outline" className="bg-primary/5">
-                {mayor.approval_rating || 50}% Approval
-              </Badge>
-            </div>
+              {isMayor && (
+                <Button size="sm" className="mt-2" asChild>
+                  <Link to={`/cities/${cityId}/mayor-dashboard`}>
+                    <Settings className="h-4 w-4 mr-1" />
+                    Manage City
+                  </Link>
+                </Button>
+              )}
+            </>
           ) : (
             <div className="p-4 rounded-lg border border-dashed text-center text-muted-foreground">
               <Crown className="h-8 w-8 mx-auto mb-2 opacity-40" />
