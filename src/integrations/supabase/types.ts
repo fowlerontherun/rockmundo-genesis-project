@@ -12076,6 +12076,48 @@ export type Database = {
           },
         ]
       }
+      player_behavior_settings: {
+        Row: {
+          afterparty_attendance: string
+          created_at: string
+          entourage_size: string
+          fan_interaction: string
+          hotel_standard: string
+          id: string
+          media_behavior: string
+          partying_intensity: string
+          travel_comfort: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          afterparty_attendance?: string
+          created_at?: string
+          entourage_size?: string
+          fan_interaction?: string
+          hotel_standard?: string
+          id?: string
+          media_behavior?: string
+          partying_intensity?: string
+          travel_comfort?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          afterparty_attendance?: string
+          created_at?: string
+          entourage_size?: string
+          fan_interaction?: string
+          hotel_standard?: string
+          id?: string
+          media_behavior?: string
+          partying_intensity?: string
+          travel_comfort?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_birthday_rewards: {
         Row: {
           cash_awarded: number

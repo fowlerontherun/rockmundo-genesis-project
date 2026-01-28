@@ -22,12 +22,27 @@ export function calculateHealthDrain(
   return Math.round(hourlyRate * hours);
 }
 
+export interface BehaviorHealthModifiers {
+  recoveryModifier: number; // -25 to +5 percent
+  restEffectiveness: number; // -10 to +20 percent
+}
+
 export function calculateHealthRecovery(
   timeSinceLastActivityMs: number,
-  isResting: boolean = false
+  isResting: boolean = false,
+  behaviorModifiers?: BehaviorHealthModifiers
 ): number {
   const hours = timeSinceLastActivityMs / (1000 * 60 * 60);
-  const rate = isResting ? 10 : 2; // Rest = 10/hr, passive = 2/hr
+  let rate = isResting ? 10 : 2; // Rest = 10/hr, passive = 2/hr
+  
+  // Apply behavior modifiers if provided
+  if (behaviorModifiers) {
+    const modifier = isResting 
+      ? (behaviorModifiers.recoveryModifier + behaviorModifiers.restEffectiveness) / 100
+      : behaviorModifiers.recoveryModifier / 100;
+    rate = rate * (1 + modifier);
+  }
+  
   return Math.min(100, Math.round(rate * hours));
 }
 
