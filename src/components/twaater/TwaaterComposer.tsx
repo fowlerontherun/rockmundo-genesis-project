@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTwaats } from "@/hooks/useTwaats";
-import { Send, Music, Calendar, MapPin, X, Disc, Clock, Route } from "lucide-react";
+import { Send, Music, Calendar, MapPin, X, Disc, Clock, Route, Hash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TwaatMediaUpload } from "./TwaatMediaUpload";
 import { QuotedTwaat } from "./QuotedTwaat";
@@ -10,6 +10,7 @@ import { LinkSongDialog } from "./LinkSongDialog";
 import { LinkReleaseDialog } from "./LinkReleaseDialog";
 import { LinkGigDialog } from "./LinkGigDialog";
 import { LinkTourDialog } from "./LinkTourDialog";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +18,53 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth-context";
 
 interface TwaaterComposerProps {
   accountId: string;
 }
 
+// Helper to generate promotional text when linking content
+const generateLinkText = (type: string, title: string, extra?: { venue?: string; city?: string }): string => {
+  switch (type) {
+    case 'single':
+      return `Check out my new single "${title}"! 🎵 `;
+    case 'album':
+      return `My new album "${title}" is here! 🎶 `;
+    case 'gig':
+      if (extra?.venue && extra?.city) {
+        return `Catch us live at ${extra.venue}, ${extra.city}! 📅 `;
+      } else if (extra?.venue) {
+        return `Catch us live at ${extra.venue}! 📅 `;
+      }
+      return `We're playing live soon! 📅 `;
+    case 'tour':
+      return `We're hitting the road! ${title} tour is coming! 🎸 `;
+    default:
+      return '';
+  }
+};
+
+// Helper to format band name as hashtag
+const formatBandHashtag = (bandName: string): string => {
+  return '#' + bandName
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+};
+
 export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
+  const { user } = useAuth();
   const [body, setBody] = useState("");
   const [linkedType, setLinkedType] = useState<"single" | "album" | "gig" | "tour" | "busking" | null>(null);
   const [linkedId, setLinkedId] = useState<string | null>(null);
@@ -41,6 +81,23 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [showReleaseDialog, setShowReleaseDialog] = useState(false);
   const [showGigDialog, setShowGigDialog] = useState(false);
   const [showTourDialog, setShowTourDialog] = useState(false);
+
+  // Fetch user's bands for hashtag feature
+  const { data: userBands = [] } = useQuery({
+    queryKey: ["user-bands-for-twaater", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("band_members")
+        .select("band_id, bands:bands(id, name)")
+        .eq("user_id", user.id)
+        .eq("member_status", "active");
+      
+      if (error) throw error;
+      return data?.map(m => m.bands).filter(Boolean) || [];
+    },
+    enabled: !!user?.id,
+  });
 
   useEffect(() => {
     const stored = sessionStorage.getItem('quoteTwaat');
@@ -79,6 +136,48 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     setLinkedType(null);
     setLinkedId(null);
     setLinkedTitle(null);
+  };
+
+  // Handle song selection with auto-text
+  const handleSongSelect = (id: string, title: string) => {
+    setLinkedType("single");
+    setLinkedId(id);
+    setLinkedTitle(title);
+    const autoText = generateLinkText("single", title);
+    setBody(prev => prev ? prev + " " + autoText : autoText);
+  };
+
+  // Handle album selection with auto-text
+  const handleAlbumSelect = (id: string, title: string) => {
+    setLinkedType("album");
+    setLinkedId(id);
+    setLinkedTitle(title);
+    const autoText = generateLinkText("album", title);
+    setBody(prev => prev ? prev + " " + autoText : autoText);
+  };
+
+  // Handle gig selection with auto-text
+  const handleGigSelect = (id: string, title: string, extra?: { venue?: string; city?: string }) => {
+    setLinkedType("gig");
+    setLinkedId(id);
+    setLinkedTitle(title);
+    const autoText = generateLinkText("gig", title, extra);
+    setBody(prev => prev ? prev + " " + autoText : autoText);
+  };
+
+  // Handle tour selection with auto-text
+  const handleTourSelect = (id: string, title: string) => {
+    setLinkedType("tour");
+    setLinkedId(id);
+    setLinkedTitle(title);
+    const autoText = generateLinkText("tour", title);
+    setBody(prev => prev ? prev + " " + autoText : autoText);
+  };
+
+  // Handle band hashtag insertion
+  const handleBandHashtag = (bandName: string) => {
+    const hashtag = formatBandHashtag(bandName);
+    setBody(prev => prev ? prev + " " + hashtag : hashtag);
   };
 
   const charCount = body.length;
@@ -160,6 +259,38 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             <span className="hidden sm:inline ml-1">Tour</span>
           </Button>
           
+          {/* Band Hashtag Button */}
+          {userBands.length === 1 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBandHashtag((userBands[0] as any)?.name || '')}
+              className="h-8"
+            >
+              <Hash className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Band</span>
+            </Button>
+          ) : userBands.length > 1 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8">
+                  <Hash className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Band</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {userBands.map((band: any) => (
+                  <DropdownMenuItem 
+                    key={band.id} 
+                    onClick={() => handleBandHashtag(band.name)}
+                  >
+                    {formatBandHashtag(band.name)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          
           <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8">
@@ -224,38 +355,22 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
       <LinkSongDialog
         open={showSongDialog}
         onOpenChange={setShowSongDialog}
-        onSelect={(id, title) => {
-          setLinkedType("single");
-          setLinkedId(id);
-          setLinkedTitle(title);
-        }}
+        onSelect={handleSongSelect}
       />
       <LinkReleaseDialog
         open={showReleaseDialog}
         onOpenChange={setShowReleaseDialog}
-        onSelect={(id, title) => {
-          setLinkedType("album");
-          setLinkedId(id);
-          setLinkedTitle(title);
-        }}
+        onSelect={handleAlbumSelect}
       />
       <LinkGigDialog
         open={showGigDialog}
         onOpenChange={setShowGigDialog}
-        onSelect={(id, title) => {
-          setLinkedType("gig");
-          setLinkedId(id);
-          setLinkedTitle(title);
-        }}
+        onSelect={handleGigSelect}
       />
       <LinkTourDialog
         open={showTourDialog}
         onOpenChange={setShowTourDialog}
-        onSelect={(id, title) => {
-          setLinkedType("tour");
-          setLinkedId(id);
-          setLinkedTitle(title);
-        }}
+        onSelect={handleTourSelect}
       />
     </div>
   );

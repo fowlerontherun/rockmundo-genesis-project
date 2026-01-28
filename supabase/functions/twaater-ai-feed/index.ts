@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     const followedIds = follows?.map(f => f.followed_account_id) || []
 
     // Fetch recent twaats from followed accounts and popular accounts
+    // Added visibility filter for public posts only
     const { data: twaats } = await supabase
       .from('twaats')
       .select(`
@@ -54,6 +55,7 @@ Deno.serve(async (req) => {
         account:twaater_accounts(id, handle, display_name, verified, fame_score, owner_type),
         metrics:twaat_metrics(likes, replies, retwaats, impressions)
       `)
+      .eq('visibility', 'public')
       .is('deleted_at', null)
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
@@ -66,19 +68,30 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Helper function to safely get metrics (handles array from join)
+    const getMetrics = (metrics: any) => {
+      if (Array.isArray(metrics) && metrics.length > 0) {
+        return metrics[0]
+      }
+      return metrics || { likes: 0, replies: 0, retwaats: 0, impressions: 0 }
+    }
+
     // Build context for AI ranking
     const context = {
       preferences: preferences || { preferred_genres: [], interaction_history: {} },
       following: followedIds.length,
-      twaats_summary: twaats.slice(0, 50).map(t => ({
-        id: t.id,
-        is_followed: followedIds.includes(t.account_id),
-        fame_score: (t.account as any).fame_score || 0,
-        verified: (t.account as any).verified || false,
-        engagement: (t.metrics as any)?.likes + (t.metrics as any)?.replies * 2 + (t.metrics as any)?.retwaats * 3 || 0,
-        has_link: !!t.linked_type,
-        hours_old: (Date.now() - new Date(t.created_at).getTime()) / (1000 * 60 * 60),
-      }))
+      twaats_summary: twaats.slice(0, 50).map(t => {
+        const m = getMetrics(t.metrics)
+        return {
+          id: t.id,
+          is_followed: followedIds.includes(t.account_id),
+          fame_score: (t.account as any)?.fame_score || 0,
+          verified: (t.account as any)?.verified || false,
+          engagement: (m.likes || 0) + (m.replies || 0) * 2 + (m.retwaats || 0) * 3,
+          has_link: !!t.linked_type,
+          hours_old: (Date.now() - new Date(t.created_at).getTime()) / (1000 * 60 * 60),
+        }
+      })
     }
 
     // Call Lovable AI for intelligent ranking
@@ -95,14 +108,12 @@ Deno.serve(async (req) => {
             role: 'system',
             content: `You are an expert social media feed algorithm. Rank twaats based on relevance, engagement, and user preferences. Consider:
 1. Posts from followed accounts (higher priority)
-2. High engagement posts (likes, replies, retwaa
-
-ts)
+2. High engagement posts (likes, replies, retwaats)
 3. Verified and high-fame accounts
 4. Posts with linked content (gigs, songs)
 5. Recency (balance fresh content with quality)
 
-Return ONLY a JSON array of twaat IDs in ranked order from most to least relevant.`
+Return ONLY a JSON array of twaat IDs in ranked order from most to least relevant. No markdown, no explanation, just the JSON array.`
           },
           {
             role: 'user',
@@ -113,25 +124,31 @@ Return ONLY a JSON array of twaat IDs in ranked order from most to least relevan
       }),
     })
 
-    if (!aiResponse.ok) {
-      console.error('AI API error:', aiResponse.status)
-      // Fallback to simple algorithm
-      const ranked = twaats
+    // Fallback algorithm function
+    const runFallbackAlgorithm = () => {
+      return twaats
         .sort((a, b) => {
+          const mA = getMetrics(a.metrics)
+          const mB = getMetrics(b.metrics)
           const scoreA = (followedIds.includes(a.account_id) ? 100 : 0) +
-                        ((a.metrics as any)?.likes || 0) * 1 +
-                        ((a.metrics as any)?.replies || 0) * 2 +
-                        ((a.metrics as any)?.retwaats || 0) * 3 +
-                        ((a.account as any).verified ? 50 : 0)
+                        (mA.likes || 0) * 1 +
+                        (mA.replies || 0) * 2 +
+                        (mA.retwaats || 0) * 3 +
+                        ((a.account as any)?.verified ? 50 : 0)
           const scoreB = (followedIds.includes(b.account_id) ? 100 : 0) +
-                        ((b.metrics as any)?.likes || 0) * 1 +
-                        ((b.metrics as any)?.replies || 0) * 2 +
-                        ((b.metrics as any)?.retwaats || 0) * 3 +
-                        ((b.account as any).verified ? 50 : 0)
+                        (mB.likes || 0) * 1 +
+                        (mB.replies || 0) * 2 +
+                        (mB.retwaats || 0) * 3 +
+                        ((b.account as any)?.verified ? 50 : 0)
           return scoreB - scoreA
         })
         .slice(0, 50)
+    }
 
+    if (!aiResponse.ok) {
+      console.error('AI API error:', aiResponse.status)
+      // Fallback to simple algorithm
+      const ranked = runFallbackAlgorithm()
       return new Response(
         JSON.stringify({ ranked_feed: ranked }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -139,7 +156,32 @@ Return ONLY a JSON array of twaat IDs in ranked order from most to least relevan
     }
 
     const aiData = await aiResponse.json()
-    const rankedIds = JSON.parse(aiData.choices[0].message.content)
+    
+    // Robust parsing of AI response
+    let rankedIds: string[] = []
+    try {
+      const content = aiData.choices?.[0]?.message?.content || '[]'
+      // Clean any markdown code blocks if present
+      const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+      rankedIds = JSON.parse(cleaned)
+      
+      // Validate it's an array of strings
+      if (!Array.isArray(rankedIds)) {
+        throw new Error('AI response is not an array')
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError)
+      // Fall through to fallback algorithm
+    }
+
+    // If AI parsing failed or returned empty, use fallback
+    if (!rankedIds.length) {
+      const ranked = runFallbackAlgorithm()
+      return new Response(
+        JSON.stringify({ ranked_feed: ranked }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Map ranked IDs back to full twaat objects
     const twaatMap = new Map(twaats.map(t => [t.id, t]))
@@ -147,6 +189,17 @@ Return ONLY a JSON array of twaat IDs in ranked order from most to least relevan
       .map((id: string) => twaatMap.get(id))
       .filter((t: any) => t)
       .slice(0, 50)
+
+    // If ranked feed is too small, supplement with fallback
+    if (rankedFeed.length < 10) {
+      const fallbackTwaats = runFallbackAlgorithm()
+      const existingIds = new Set(rankedFeed.map((t: any) => t.id))
+      for (const t of fallbackTwaats) {
+        if (!existingIds.has(t.id) && rankedFeed.length < 50) {
+          rankedFeed.push(t)
+        }
+      }
+    }
 
     // Update interaction history (async, don't await)
     if (preferences) {
