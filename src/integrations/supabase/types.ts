@@ -2199,6 +2199,74 @@ export type Database = {
           },
         ]
       }
+      character_sprite_assets: {
+        Row: {
+          anchor_x: number | null
+          anchor_y: number | null
+          asset_url: string
+          body_type_filter: string[] | null
+          category: string
+          collection_id: string | null
+          color_variants: Json | null
+          created_at: string | null
+          gender_filter: string[] | null
+          id: string
+          is_default: boolean | null
+          is_premium: boolean | null
+          layer_order: number
+          name: string
+          price: number | null
+          subcategory: string | null
+          supports_recolor: boolean | null
+        }
+        Insert: {
+          anchor_x?: number | null
+          anchor_y?: number | null
+          asset_url: string
+          body_type_filter?: string[] | null
+          category: string
+          collection_id?: string | null
+          color_variants?: Json | null
+          created_at?: string | null
+          gender_filter?: string[] | null
+          id?: string
+          is_default?: boolean | null
+          is_premium?: boolean | null
+          layer_order: number
+          name: string
+          price?: number | null
+          subcategory?: string | null
+          supports_recolor?: boolean | null
+        }
+        Update: {
+          anchor_x?: number | null
+          anchor_y?: number | null
+          asset_url?: string
+          body_type_filter?: string[] | null
+          category?: string
+          collection_id?: string | null
+          color_variants?: Json | null
+          created_at?: string | null
+          gender_filter?: string[] | null
+          id?: string
+          is_default?: boolean | null
+          is_premium?: boolean | null
+          layer_order?: number
+          name?: string
+          price?: number | null
+          subcategory?: string | null
+          supports_recolor?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_sprite_assets_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
@@ -11888,6 +11956,7 @@ export type Database = {
           age_appearance: string | null
           arm_length: number | null
           beard_style: string | null
+          body_sprite_id: string | null
           body_type: string | null
           cheekbone: number | null
           chin_prominence: number | null
@@ -11902,41 +11971,56 @@ export type Database = {
           eyebrow_color: string | null
           eyebrow_style: string | null
           eyebrow_thickness: number | null
+          eyes_sprite_id: string | null
+          face_detail_sprite_id: string | null
           face_length: number | null
           face_width: number | null
+          facial_hair_sprite_id: string | null
           gender: string | null
+          glasses_sprite_id: string | null
           hair_color: string | null
+          hair_sprite_id: string | null
           hair_style_key: string | null
+          hat_sprite_id: string | null
           height: number | null
           hip_width: number | null
           id: string
           jacket_color: string | null
           jacket_id: string | null
+          jacket_sprite_id: string | null
           jaw_shape: string | null
           leg_length: number | null
           lip_color: string | null
           lip_fullness: number | null
           lip_width: number | null
+          mouth_sprite_id: string | null
           mouth_style: string | null
           muscle_definition: number | null
           nose_bridge: number | null
           nose_length: number | null
+          nose_sprite_id: string | null
           nose_style: string | null
           nose_width: number | null
           pants_color: string | null
           pants_id: string | null
           profile_id: string
+          render_hash: string | null
+          rendered_avatar_url: string | null
           rpm_avatar_id: string | null
           rpm_avatar_url: string | null
           scar_style: string | null
+          selected_skin_tone: string | null
           shirt_color: string | null
           shirt_id: string | null
+          shirt_sprite_id: string | null
           shoes_color: string | null
           shoes_id: string | null
+          shoes_sprite_id: string | null
           shoulder_width: number | null
           skin_tone: string | null
           tattoo_style: string | null
           torso_length: number | null
+          trousers_sprite_id: string | null
           updated_at: string | null
           use_rpm_avatar: boolean | null
           weight: number | null
@@ -11947,6 +12031,7 @@ export type Database = {
           age_appearance?: string | null
           arm_length?: number | null
           beard_style?: string | null
+          body_sprite_id?: string | null
           body_type?: string | null
           cheekbone?: number | null
           chin_prominence?: number | null
@@ -11961,41 +12046,56 @@ export type Database = {
           eyebrow_color?: string | null
           eyebrow_style?: string | null
           eyebrow_thickness?: number | null
+          eyes_sprite_id?: string | null
+          face_detail_sprite_id?: string | null
           face_length?: number | null
           face_width?: number | null
+          facial_hair_sprite_id?: string | null
           gender?: string | null
+          glasses_sprite_id?: string | null
           hair_color?: string | null
+          hair_sprite_id?: string | null
           hair_style_key?: string | null
+          hat_sprite_id?: string | null
           height?: number | null
           hip_width?: number | null
           id?: string
           jacket_color?: string | null
           jacket_id?: string | null
+          jacket_sprite_id?: string | null
           jaw_shape?: string | null
           leg_length?: number | null
           lip_color?: string | null
           lip_fullness?: number | null
           lip_width?: number | null
+          mouth_sprite_id?: string | null
           mouth_style?: string | null
           muscle_definition?: number | null
           nose_bridge?: number | null
           nose_length?: number | null
+          nose_sprite_id?: string | null
           nose_style?: string | null
           nose_width?: number | null
           pants_color?: string | null
           pants_id?: string | null
           profile_id: string
+          render_hash?: string | null
+          rendered_avatar_url?: string | null
           rpm_avatar_id?: string | null
           rpm_avatar_url?: string | null
           scar_style?: string | null
+          selected_skin_tone?: string | null
           shirt_color?: string | null
           shirt_id?: string | null
+          shirt_sprite_id?: string | null
           shoes_color?: string | null
           shoes_id?: string | null
+          shoes_sprite_id?: string | null
           shoulder_width?: number | null
           skin_tone?: string | null
           tattoo_style?: string | null
           torso_length?: number | null
+          trousers_sprite_id?: string | null
           updated_at?: string | null
           use_rpm_avatar?: boolean | null
           weight?: number | null
@@ -12006,6 +12106,7 @@ export type Database = {
           age_appearance?: string | null
           arm_length?: number | null
           beard_style?: string | null
+          body_sprite_id?: string | null
           body_type?: string | null
           cheekbone?: number | null
           chin_prominence?: number | null
@@ -12020,46 +12121,131 @@ export type Database = {
           eyebrow_color?: string | null
           eyebrow_style?: string | null
           eyebrow_thickness?: number | null
+          eyes_sprite_id?: string | null
+          face_detail_sprite_id?: string | null
           face_length?: number | null
           face_width?: number | null
+          facial_hair_sprite_id?: string | null
           gender?: string | null
+          glasses_sprite_id?: string | null
           hair_color?: string | null
+          hair_sprite_id?: string | null
           hair_style_key?: string | null
+          hat_sprite_id?: string | null
           height?: number | null
           hip_width?: number | null
           id?: string
           jacket_color?: string | null
           jacket_id?: string | null
+          jacket_sprite_id?: string | null
           jaw_shape?: string | null
           leg_length?: number | null
           lip_color?: string | null
           lip_fullness?: number | null
           lip_width?: number | null
+          mouth_sprite_id?: string | null
           mouth_style?: string | null
           muscle_definition?: number | null
           nose_bridge?: number | null
           nose_length?: number | null
+          nose_sprite_id?: string | null
           nose_style?: string | null
           nose_width?: number | null
           pants_color?: string | null
           pants_id?: string | null
           profile_id?: string
+          render_hash?: string | null
+          rendered_avatar_url?: string | null
           rpm_avatar_id?: string | null
           rpm_avatar_url?: string | null
           scar_style?: string | null
+          selected_skin_tone?: string | null
           shirt_color?: string | null
           shirt_id?: string | null
+          shirt_sprite_id?: string | null
           shoes_color?: string | null
           shoes_id?: string | null
+          shoes_sprite_id?: string | null
           shoulder_width?: number | null
           skin_tone?: string | null
           tattoo_style?: string | null
           torso_length?: number | null
+          trousers_sprite_id?: string | null
           updated_at?: string | null
           use_rpm_avatar?: boolean | null
           weight?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "player_avatar_config_body_sprite_id_fkey"
+            columns: ["body_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_eyes_sprite_id_fkey"
+            columns: ["eyes_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_face_detail_sprite_id_fkey"
+            columns: ["face_detail_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_facial_hair_sprite_id_fkey"
+            columns: ["facial_hair_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_glasses_sprite_id_fkey"
+            columns: ["glasses_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_hair_sprite_id_fkey"
+            columns: ["hair_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_hat_sprite_id_fkey"
+            columns: ["hat_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_jacket_sprite_id_fkey"
+            columns: ["jacket_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_mouth_sprite_id_fkey"
+            columns: ["mouth_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_nose_sprite_id_fkey"
+            columns: ["nose_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_avatar_config_profile_id_fkey"
             columns: ["profile_id"]
@@ -12072,6 +12258,27 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_shirt_sprite_id_fkey"
+            columns: ["shirt_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_shoes_sprite_id_fkey"
+            columns: ["shoes_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_avatar_config_trousers_sprite_id_fkey"
+            columns: ["trousers_sprite_id"]
+            isOneToOne: false
+            referencedRelation: "character_sprite_assets"
             referencedColumns: ["id"]
           },
         ]

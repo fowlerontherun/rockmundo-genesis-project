@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { X, Maximize2, Minimize2, Music, Users, Volume2, VolumeX, Play, Pause, SkipForward, ChevronDown, ChevronUp, Eye, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GigAudioPlayer } from "./GigAudioPlayer";
-import { RpmAvatarImage } from "./RpmAvatarImage";
+import { CharacterAvatarImage } from "./CharacterAvatarImage";
 import { SimpleStageBackground } from "./SimpleStageBackground";
 import { StageSpotlights } from "./StageSpotlights";
 import { InstrumentSilhouettes } from "./InstrumentSilhouettes";
@@ -462,7 +462,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <RpmAvatarImage
+                <CharacterAvatarImage
                   avatarUrl={positionedMembers.drummer.avatarUrl}
                   role="drummer"
                   intensity={intensity}
@@ -480,7 +480,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
               >
-                <RpmAvatarImage
+                <CharacterAvatarImage
                   avatarUrl={positionedMembers.keyboardist.avatarUrl}
                   role="keyboardist"
                   intensity={intensity}
@@ -498,7 +498,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <RpmAvatarImage
+                <CharacterAvatarImage
                   avatarUrl={positionedMembers.guitarist.avatarUrl}
                   role="guitarist"
                   intensity={intensity}
@@ -516,7 +516,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <RpmAvatarImage
+                <CharacterAvatarImage
                   avatarUrl={positionedMembers.vocalist.avatarUrl}
                   role="vocalist"
                   intensity={intensity}
@@ -534,7 +534,7 @@ export const ParallaxGigViewer = ({ gigId, onClose }: ParallaxGigViewerProps) =>
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
               >
-                <RpmAvatarImage
+                <CharacterAvatarImage
                   avatarUrl={positionedMembers.bassist.avatarUrl}
                   role="bassist"
                   intensity={intensity}

@@ -1,44 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion, type Transition } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { SpriteLayerCanvas } from "@/components/character-creator/SpriteLayerCanvas";
+import type { CharacterSprite, CharacterConfig } from "@/hooks/useCharacterSprites";
 
-interface RpmAvatarImageProps {
-  avatarUrl: string | null;
+interface CharacterAvatarImageProps {
+  userId?: string | null;
+  avatarUrl?: string | null; // Legacy fallback for regular avatar URLs
   role: 'vocalist' | 'guitarist' | 'bassist' | 'drummer' | 'keyboardist';
   intensity: number; // 0-1
   songSection: 'intro' | 'verse' | 'chorus' | 'bridge' | 'solo' | 'outro';
   size?: 'sm' | 'md' | 'lg' | 'xl';
-}
-
-// Extract RPM avatar ID from various URL formats
-function extractRpmAvatarId(url: string): string | null {
-  // Match GLB format: models.readyplayer.me/<id>.glb
-  const glbMatch = url.match(/models\.readyplayer\.me\/([a-f0-9-]+)\.glb/i);
-  if (glbMatch) return glbMatch[1];
-  
-  // Match PNG format: models.readyplayer.me/<id>.png
-  const pngMatch = url.match(/models\.readyplayer\.me\/([a-f0-9-]+)\.png/i);
-  if (pngMatch) return pngMatch[1];
-  
-  // Match direct ID format: models.readyplayer.me/<id>
-  const idMatch = url.match(/models\.readyplayer\.me\/([a-f0-9-]+)(?:\?|$)/i);
-  if (idMatch) return idMatch[1];
-  
-  return null;
-}
-
-// Generate RPM 2D render URLs (primary and fallback)
-function getRpmRenderUrls(avatarId: string): { primary: string; fallback: string } {
-  return {
-    // Primary: fullbody camera with transparent background - larger size for better quality
-    primary: `https://models.readyplayer.me/${avatarId}.png?camera=fullbody&background=transparent&size=1024`,
-    // Fallback: simpler URL that may work better
-    fallback: `https://models.readyplayer.me/${avatarId}.png?size=1024`
-  };
-}
-
-// Check if URL is an RPM URL
-function isRpmUrl(url: string): boolean {
-  return url.includes('models.readyplayer.me') || url.includes('readyplayer.me');
 }
 
 // Proportions for full-body display - taller containers
@@ -60,12 +33,11 @@ const roleGlowColors: Record<string, string> = {
 
 // Animation variants based on role
 const getAnimationVariants = (role: string, intensity: number, songSection: string) => {
-  const baseSpeed = 0.4 + (intensity * 0.4); // 0.4-0.8s duration based on intensity
-  const bounceAmount = 3 + (intensity * 8); // 3-11px bounce
+  const baseSpeed = 0.4 + (intensity * 0.4);
+  const bounceAmount = 3 + (intensity * 8);
   
   const isChorus = songSection === 'chorus';
   const isSolo = songSection === 'solo';
-  const isIntro = songSection === 'intro';
   
   switch (role) {
     case 'vocalist':
@@ -138,7 +110,7 @@ const getAnimationVariants = (role: string, intensity: number, songSection: stri
   }
 };
 
-// Fallback avatar for session musicians (no RPM avatar available)
+// Fallback avatar for session musicians (no avatar available)
 const FallbackAvatar = ({ role, size }: { role: string; size: string }) => {
   const roleColors: Record<string, string> = {
     vocalist: 'from-purple-600/80 to-purple-900/90',
@@ -156,92 +128,100 @@ const FallbackAvatar = ({ role, size }: { role: string; size: string }) => {
     keyboardist: 'Session Keys',
   };
 
-  // Human silhouette SVG for session musicians
   return (
     <div className={`${sizeClasses[size as keyof typeof sizeClasses]} relative`}>
-      {/* Silhouette background */}
       <div className={`absolute inset-0 bg-gradient-to-b ${roleColors[role] || 'from-gray-600/80 to-gray-900/90'} rounded-lg shadow-lg overflow-hidden`}>
-        {/* Human silhouette shape */}
         <svg 
           viewBox="0 0 100 150" 
           className="w-full h-full opacity-60"
           preserveAspectRatio="xMidYMax meet"
         >
-          {/* Head */}
           <circle cx="50" cy="25" r="18" fill="black" />
-          {/* Body */}
           <ellipse cx="50" cy="75" rx="25" ry="35" fill="black" />
-          {/* Shoulders */}
           <rect x="15" y="50" width="70" height="20" rx="10" fill="black" />
         </svg>
       </div>
-      {/* Role label */}
       <div className="absolute bottom-1 left-0 right-0 text-center">
         <span className="text-[8px] text-white/70 font-medium bg-black/40 px-1 rounded">
           {roleLabels[role] || 'Session'}
         </span>
       </div>
-      {/* Glow effect */}
       <div className="absolute inset-0 bg-white/5 rounded-lg" />
     </div>
   );
 };
 
-export const RpmAvatarImage = ({ 
+export const CharacterAvatarImage = ({ 
+  userId,
   avatarUrl, 
   role, 
   intensity, 
   songSection,
   size = 'lg' 
-}: RpmAvatarImageProps) => {
+}: CharacterAvatarImageProps) => {
   const { animate, transition } = getAnimationVariants(role, intensity, songSection);
-  const [imageError, setImageError] = useState(false);
-  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
-  const [triedFallback, setTriedFallback] = useState(false);
   
-  // Determine if this is an RPM avatar and generate appropriate URLs
-  const isRpmAvatar = avatarUrl ? isRpmUrl(avatarUrl) : false;
-  const rpmAvatarId = avatarUrl ? extractRpmAvatarId(avatarUrl) : null;
-  
-  // Set up the image URL on mount or when avatarUrl changes
-  useEffect(() => {
-    if (!avatarUrl) {
-      setCurrentUrl(null);
-      return;
-    }
-    
-    setImageError(false);
-    setTriedFallback(false);
-    
-    if (rpmAvatarId) {
-      // Use the primary RPM render URL
-      const urls = getRpmRenderUrls(rpmAvatarId);
-      setCurrentUrl(urls.primary);
-    } else {
-      // Regular avatar URL - use as-is
-      setCurrentUrl(avatarUrl);
-    }
-  }, [avatarUrl, rpmAvatarId]);
-  
-  // Handle image load error with fallback for RPM avatars
-  const handleImageError = () => {
-    if (rpmAvatarId && !triedFallback) {
-      // Try the fallback URL
-      const urls = getRpmRenderUrls(rpmAvatarId);
-      setCurrentUrl(urls.fallback);
-      setTriedFallback(true);
-    } else {
-      // Both URLs failed or not an RPM avatar
-      setImageError(true);
-    }
-  };
-  
-  // Check if this is a regular avatar (not RPM) - we'll style it differently
-  const isRegularAvatar = avatarUrl && !isRpmAvatar;
-  
-  // Show fallback if no URL or image failed to load
-  const showFallback = !currentUrl || imageError;
+  // Fetch all sprites for rendering
+  const { data: sprites } = useQuery({
+    queryKey: ['character-sprites'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('character_sprite_assets')
+        .select('*')
+        .order('layer_order');
+      if (error) throw error;
+      return data as CharacterSprite[];
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
+  // Fetch player's character config if we have a userId
+  const { data: characterConfig } = useQuery({
+    queryKey: ['player-character-config', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      
+      // Get profile ID first
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      
+      if (!profile) return null;
+      
+      const { data, error } = await supabase
+        .from('player_avatar_config')
+        .select(`
+          body_sprite_id,
+          eyes_sprite_id,
+          nose_sprite_id,
+          mouth_sprite_id,
+          hair_sprite_id,
+          jacket_sprite_id,
+          shirt_sprite_id,
+          trousers_sprite_id,
+          shoes_sprite_id,
+          hat_sprite_id,
+          glasses_sprite_id,
+          facial_hair_sprite_id,
+          selected_skin_tone,
+          rendered_avatar_url
+        `)
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data as CharacterConfig | null;
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Determine what to render
+  const hasCharacterSprites = characterConfig && sprites && 
+    (characterConfig.body_sprite_id || characterConfig.rendered_avatar_url);
+  
   const glowColor = roleGlowColors[role] || 'from-white/40 via-white/20 to-transparent';
 
   return (
@@ -252,7 +232,7 @@ export const RpmAvatarImage = ({
     >
       {/* Role-based ground glow for stage presence */}
       <div 
-        className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-[120%] h-16 bg-gradient-radial ${glowColor} blur-xl opacity-80 -z-10`}
+        className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-[120%] h-16 blur-xl opacity-80 -z-10`}
         style={{
           background: `radial-gradient(ellipse at center, ${
             role === 'vocalist' ? 'rgba(168,85,247,0.6)' :
@@ -265,18 +245,41 @@ export const RpmAvatarImage = ({
         }}
       />
       
-      {!showFallback ? (
+      {hasCharacterSprites ? (
         <div className={`${sizeClasses[size]} relative`}>
-          {/* Show full avatar image for both RPM and regular avatars */}
-          <img 
-            src={currentUrl}
-            alt={`${role} avatar`}
-            className={`w-full h-full drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] ${
-              isRegularAvatar ? 'object-cover rounded-lg' : 'object-contain'
-            }`}
-            onError={handleImageError}
-          />
+          {/* Render character using sprite layers */}
+          {characterConfig.rendered_avatar_url ? (
+            <img
+              src={characterConfig.rendered_avatar_url}
+              alt={`${role} character`}
+              className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+            />
+          ) : (
+            <SpriteLayerCanvas
+              sprites={sprites}
+              config={characterConfig}
+              className="drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+              size={size}
+            />
+          )}
+          
           {/* Glow effect during high intensity */}
+          {intensity > 0.7 && (
+            <motion.div
+              className="absolute inset-0 bg-primary/20 rounded-lg blur-xl -z-10"
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            />
+          )}
+        </div>
+      ) : avatarUrl ? (
+        // Fallback to regular avatar URL (legacy support)
+        <div className={`${sizeClasses[size]} relative`}>
+          <img 
+            src={avatarUrl}
+            alt={`${role} avatar`}
+            className="w-full h-full object-cover rounded-lg drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+          />
           {intensity > 0.7 && (
             <motion.div
               className="absolute inset-0 bg-primary/20 rounded-lg blur-xl -z-10"
@@ -291,3 +294,6 @@ export const RpmAvatarImage = ({
     </motion.div>
   );
 };
+
+// Keep old export name for backward compatibility
+export { CharacterAvatarImage as RpmAvatarImage };
