@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RotateCcw, User, Shirt, Glasses, Sparkles } from "lucide-react";
+import { RotateCcw, User, Shirt, Glasses, Sparkles, Bug, Download, TestTube2 } from "lucide-react";
 import { useCharacterSprites, type SpriteCategory, type CharacterConfig } from "@/hooks/useCharacterSprites";
 import { SpriteLayerCanvas } from "./SpriteLayerCanvas";
 import { SpriteCategoryPicker } from "./SpriteCategoryPicker";
 import { SkinTonePicker } from "./SkinTonePicker";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export const PunkCharacterCreator = () => {
   const {
@@ -23,7 +24,12 @@ export const PunkCharacterCreator = () => {
   const [activeTab, setActiveTab] = useState('body');
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Required categories for a complete character
+  const REQUIRED_CATEGORIES = ['body', 'hair', 'eyes', 'nose', 'mouth', 'shirt', 'trousers', 'shoes'] as const;
+  
   // Auto-build default character when page loads (if no config exists)
   const buildDefaultCharacter = useCallback((gender: 'male' | 'female') => {
     if (!sprites || sprites.length === 0) return;
@@ -31,6 +37,8 @@ export const PunkCharacterCreator = () => {
     const getDefaultSprite = (category: string, genderFilter?: 'male' | 'female') => {
       const categorySprites = sprites.filter(s => {
         if (s.category !== category) return false;
+        // Only aligned assets (should already be filtered, but double-check)
+        if (!s.subcategory?.startsWith('aligned')) return false;
         if (genderFilter) {
           return s.gender_filter.includes(genderFilter) || s.gender_filter.includes('any');
         }
@@ -125,6 +133,69 @@ export const PunkCharacterCreator = () => {
     toast.info('Character reset to defaults');
   };
 
+  // Debug: Get selected sprite info
+  const getSelectedSprites = () => {
+    if (!sprites || !localConfig) return [];
+    const categories = ['body', 'hair', 'eyes', 'nose', 'mouth', 'shirt', 'jacket', 'trousers', 'shoes', 'hat', 'glasses', 'facial_hair'];
+    return categories.map(cat => {
+      const spriteId = localConfig[`${cat}_sprite_id` as keyof typeof localConfig];
+      const sprite = sprites.find(s => s.id === spriteId);
+      return { category: cat, sprite: sprite?.name || 'None', id: spriteId || null };
+    });
+  };
+
+  // Export composite PNG
+  const handleExportPng = async () => {
+    if (!canvasRef.current) return;
+    
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Get all visible layers in order
+      const images = canvasRef.current.querySelectorAll('img');
+      const loadPromises: Promise<void>[] = [];
+      
+      images.forEach((img) => {
+        const promise = new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve();
+          } else {
+            img.onload = () => resolve();
+          }
+        });
+        loadPromises.push(promise);
+      });
+
+      await Promise.all(loadPromises);
+
+      // Draw layers in DOM order (which respects z-index)
+      const sortedImages = Array.from(images).sort((a, b) => {
+        const zA = parseInt(a.style.zIndex || '0');
+        const zB = parseInt(b.style.zIndex || '0');
+        return zA - zB;
+      });
+
+      sortedImages.forEach((img) => {
+        ctx.drawImage(img, 0, 0, 512, 1024);
+      });
+
+      // Download
+      const link = document.createElement('a');
+      link.download = 'character-composite.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      toast.success('Character exported as PNG!');
+    } catch (err) {
+      toast.error('Failed to export PNG');
+      console.error(err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -161,7 +232,10 @@ export const PunkCharacterCreator = () => {
             <CardTitle className="text-lg">Preview</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-full aspect-[1/2] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg flex items-center justify-center overflow-hidden">
+            <div 
+              ref={canvasRef}
+              className="w-full aspect-[1/2] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg flex items-center justify-center overflow-hidden relative"
+            >
               <SpriteLayerCanvas 
                 sprites={sprites || []}
                 config={localConfig as CharacterConfig}
@@ -192,6 +266,37 @@ export const PunkCharacterCreator = () => {
               selectedTone={localConfig.selected_skin_tone || 'medium'}
               onSelect={handleSkinToneChange}
             />
+
+            {/* Debug Panel */}
+            <Collapsible open={showDebug} onOpenChange={setShowDebug} className="w-full">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground">
+                  <Bug className="h-4 w-4" />
+                  {showDebug ? 'Hide' : 'Show'} Debug Tools
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => buildDefaultCharacter(selectedGender)}>
+                    <TestTube2 className="h-4 w-4 mr-1" />
+                    Apply Test Set
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={handleExportPng}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Export PNG
+                  </Button>
+                </div>
+                <div className="text-xs bg-muted/50 rounded p-2 space-y-0.5 max-h-32 overflow-y-auto">
+                  <p className="font-semibold mb-1">Selected Layers:</p>
+                  {getSelectedSprites().map(({ category, sprite, id }) => (
+                    <div key={category} className="flex justify-between text-muted-foreground">
+                      <span className="capitalize">{category}:</span>
+                      <span className={id ? 'text-foreground' : 'text-destructive'}>{sprite}</span>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
 
