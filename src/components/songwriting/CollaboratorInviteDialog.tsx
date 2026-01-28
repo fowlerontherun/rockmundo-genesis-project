@@ -116,41 +116,37 @@ export const CollaboratorInviteDialog = ({
         });
       }
 
-      // Get friends - use correct column names: requestor_id and addressee_id
+      // Get friends - two-step fetch (no FK constraints exist on friendships table)
       const { data: friendships } = await supabase
         .from("friendships")
-        .select(`
-          requestor_id,
-          addressee_id,
-          requestor_profile:profiles!friendships_requestor_id_fkey (
-            id,
-            username,
-            avatar_url
-          ),
-          addressee_profile:profiles!friendships_addressee_id_fkey (
-            id,
-            username,
-            avatar_url
-          )
-        `)
+        .select("requestor_id, addressee_id")
         .or(`requestor_id.eq.${userProfileId},addressee_id.eq.${userProfileId}`)
         .eq("status", "accepted");
 
-      friendships?.forEach((friendship: any) => {
-        // The friend is whichever profile is NOT the current user
-        const isFriendTheAddressee = friendship.requestor_id === userProfileId;
-        const profile = isFriendTheAddressee ? friendship.addressee_profile : friendship.requestor_profile;
-        
-        if (profile && !collaboratorIds.has(profile.id) && !existingIds.has(profile.id)) {
-          collaboratorIds.add(profile.id);
-          results.push({
-            id: profile.id,
-            username: profile.username || "Unknown",
-            avatar_url: profile.avatar_url,
-            isBandMember: false,
-          });
-        }
-      });
+      // Collect friend profile IDs (the other party in each friendship)
+      const friendProfileIds = friendships
+        ?.map(f => f.requestor_id === userProfileId ? f.addressee_id : f.requestor_id)
+        .filter(id => !collaboratorIds.has(id) && !existingIds.has(id)) || [];
+
+      // Fetch friend profiles separately
+      if (friendProfileIds.length > 0) {
+        const { data: friendProfiles } = await supabase
+          .from("profiles")
+          .select("id, username, avatar_url")
+          .in("id", friendProfileIds);
+
+        friendProfiles?.forEach((profile) => {
+          if (!collaboratorIds.has(profile.id)) {
+            collaboratorIds.add(profile.id);
+            results.push({
+              id: profile.id,
+              username: profile.username || "Unknown",
+              avatar_url: profile.avatar_url,
+              isBandMember: false,
+            });
+          }
+        });
+      }
 
       setPotentialCollaborators(results);
     } catch (error) {

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.565",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Songwriting: Collaborator invite now correctly shows friends (fixed missing FK join)" },
+    ],
+  },
+  {
     version: "1.0.564",
     date: "2026-01-28",
     changes: [
