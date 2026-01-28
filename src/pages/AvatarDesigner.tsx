@@ -1,7 +1,7 @@
-import { PunkCharacterCreator } from "@/components/character-creator";
+import { SvgCharacterCreator } from "@/components/character-creator";
 
 const AvatarDesigner = () => {
-  return <PunkCharacterCreator />;
+  return <SvgCharacterCreator />;
 };
 
 export default AvatarDesigner;
