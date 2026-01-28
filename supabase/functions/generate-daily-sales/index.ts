@@ -78,7 +78,7 @@ serve(async (req) => {
         band_id,
         user_id,
         release_type,
-        bands(fame, popularity, chemistry_level, home_country),
+        bands(fame, popularity, chemistry_level, home_city_id),
         release_formats(id, format_type, retail_price, quantity),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
@@ -136,7 +136,6 @@ serve(async (req) => {
 
         const artistFame = release.bands?.[0]?.fame || profile?.fame || 0;
         const artistPopularity = release.bands?.[0]?.popularity || profile?.popularity || 0;
-        const homeCountry = (release.bands?.[0] as any)?.home_country || 'United States';
 
         // Fetch regional fame data for bands
         let regionalMultiplier = 1.0;

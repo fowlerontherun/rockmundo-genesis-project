@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.559",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Daily Sales: Fixed missing home_country column error in generate-daily-sales edge function" },
+    ],
+  },
+  {
     version: "1.0.558",
     date: "2026-01-28",
     changes: [
