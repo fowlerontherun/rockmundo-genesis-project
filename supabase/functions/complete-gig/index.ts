@@ -545,6 +545,42 @@ serve(async (req) => {
       });
     }
 
+    // Log first gig milestone if applicable
+    if (gig.bands?.leader_id) {
+      try {
+        // Check if this is the band's first completed gig
+        const { count: completedGigsCount } = await supabaseClient
+          .from('gigs')
+          .select('id', { count: 'exact', head: true })
+          .eq('band_id', gig.band_id)
+          .eq('status', 'completed');
+
+        if (completedGigsCount === 1) {
+          // This is the first gig! Log the milestone
+          const venueName = gig.venues?.name || 'Unknown Venue';
+          await supabaseClient.functions.invoke('log-career-milestone', {
+            body: {
+              profile_id: gig.bands.leader_id,
+              band_id: gig.band_id,
+              milestone_type: 'first_gig_completed',
+              title: '🎸 First Gig Completed!',
+              metadata: {
+                venue: venueName,
+                attendance: outcome.actual_attendance,
+                rating: avgRating.toFixed(1),
+                gig_id: gigId,
+              },
+              related_entity_type: 'gig',
+              related_entity_id: gigId,
+            },
+          });
+          console.log('First gig milestone logged');
+        }
+      } catch (milestoneError) {
+        console.log('Error logging milestone (non-critical):', milestoneError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
