@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.541",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Companies: Fixed subsidiary entity creation trigger (security firms, factories, logistics, labels, venues, studios now properly created)" },
+      { type: 'fix', description: "Companies: Labels created as subsidiaries now correctly inherit owner_id from parent company" },
+      { type: 'fix', description: "Companies: Fixed navigation from company cards to label management" },
+      { type: 'fix', description: "Companies: Created missing subsidiary entities for existing companies (backfill)" },
+      { type: 'feature', description: "Companies: Added recording_studio as valid company type in creation dialog" },
+      { type: 'improvement', description: "Record Labels: My Labels tab now shows both directly owned and company-owned labels" },
+    ],
+  },
+  {
     version: "1.0.540",
     date: "2026-01-28",
     changes: [

@@ -44,7 +44,7 @@ import { COMPANY_TYPE_INFO, COMPANY_CREATION_COSTS } from "@/types/company";
 
 const formSchema = z.object({
   name: z.string().min(2, "Company name must be at least 2 characters").max(50, "Company name cannot exceed 50 characters"),
-  company_type: z.enum(['holding', 'label', 'security', 'factory', 'venue', 'rehearsal', 'logistics']),
+  company_type: z.enum(['holding', 'label', 'security', 'factory', 'venue', 'rehearsal', 'logistics', 'recording_studio']),
   description: z.string().max(500, "Description cannot exceed 500 characters").optional(),
   headquarters_city_id: z.string().optional(),
   parent_company_id: z.string().optional(),
