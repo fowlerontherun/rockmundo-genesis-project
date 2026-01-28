@@ -180,6 +180,7 @@ const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEvents
 const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/CollectionItemsAdmin"));
 const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
 const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultiplier"));
+const SalesBalanceAdmin = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
 const CityGovernanceAdmin = lazyWithRetry(() => import("./pages/admin/CityGovernanceAdmin"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
@@ -445,6 +446,7 @@ function App() {
                     <Route path="admin/releases" element={<ReleasesAdmin />} />
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
                     <Route path="admin/game-balance" element={<GameBalanceAdmin />} />
+                    <Route path="admin/sales-balance" element={<SalesBalanceAdmin />} />
                     <Route path="admin/tutorials" element={<TutorialsAdmin />} />
                     <Route path="admin/vip" element={<VipManagement />} />
                     <Route path="admin/companies" element={<CompanyAdmin />} />

@@ -30,6 +30,7 @@ interface CountryFans {
   dedicated_fans: number;
   superfans: number;
   fame: number;
+  has_performed?: boolean;
 }
 
 interface CityFans {
@@ -261,7 +262,18 @@ export function FameFansOverview({ bandId }: FameFansOverviewProps) {
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{getCountryFlag(cf.country)}</span>
                           <div>
-                            <p className="font-medium">{cf.country}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{cf.country}</p>
+                              {cf.has_performed ? (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-green-500 text-green-500">
+                                  Performed
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-muted-foreground">
+                                  Spillover
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               Fame: {formatNumber(cf.fame || 0)}
                             </p>

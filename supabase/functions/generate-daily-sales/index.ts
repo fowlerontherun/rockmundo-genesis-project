@@ -43,6 +43,34 @@ serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
+    // Fetch sales config from database
+    const { data: salesConfigData } = await supabaseClient
+      .from("game_balance_config")
+      .select("key, value")
+      .eq("category", "sales");
+    
+    const salesConfig: Record<string, number> = {};
+    (salesConfigData || []).forEach((item: any) => {
+      salesConfig[item.key] = item.value as number;
+    });
+    
+    // Config values with defaults
+    const digitalMin = salesConfig.digital_base_sales_min ?? 5;
+    const digitalMax = salesConfig.digital_base_sales_max ?? 25;
+    const cdMin = salesConfig.cd_base_sales_min ?? 2;
+    const cdMax = salesConfig.cd_base_sales_max ?? 10;
+    const vinylMin = salesConfig.vinyl_base_sales_min ?? 1;
+    const vinylMax = salesConfig.vinyl_base_sales_max ?? 6;
+    const cassetteMin = salesConfig.cassette_base_sales_min ?? 1;
+    const cassetteMax = salesConfig.cassette_base_sales_max ?? 4;
+    const fameDivisor = salesConfig.fame_multiplier_divisor ?? 10000;
+    const regionalFameWeight = salesConfig.regional_fame_weight ?? 1.0;
+    const marketScarcityMinBands = salesConfig.market_scarcity_min_bands ?? 20;
+    const marketScarcityMaxMultiplier = salesConfig.market_scarcity_max_multiplier ?? 5;
+    const performedCountryBonus = salesConfig.performed_country_bonus ?? 1.2;
+    
+    console.log(`Sales config loaded: digital=${digitalMin}-${digitalMax}, fame divisor=${fameDivisor}`);
+
     const { data: releases, error: releasesError } = await supabaseClient
       .from("releases")
       .select(`
@@ -84,19 +112,18 @@ serve(async (req) => {
       .eq("status", "active");
     
     // Market scarcity bonus: fewer bands = more sales per release
-    // At 10 bands: 5x boost, at 50 bands: 2x, at 100+ bands: 1x
-    const marketMultiplier = Math.max(1, Math.min(5, 100 / Math.max(activeBandCount || 100, 20)));
+    const marketMultiplier = Math.max(1, Math.min(marketScarcityMaxMultiplier, 100 / Math.max(activeBandCount || 100, marketScarcityMinBands)));
     console.log(`Market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
     // Helper function to calculate regional sales multiplier
     function calculateRegionalSalesMultiplier(countryFame: number, hasPerformed: boolean, globalFame: number): number {
-      // Base multiplier from country fame (0.5x to 2x)
-      const countryBase = 0.5 + (countryFame / 10000) * 1.5;
-      // Bonus for having performed in the country
-      const performedBonus = hasPerformed ? 1.2 : 1.0;
+      // Base multiplier from country fame (0.5x to 2x) scaled by regional weight
+      const countryBase = 0.5 + (countryFame / 10000) * 1.5 * regionalFameWeight;
+      // Bonus for having performed in the country (configurable)
+      const performedBonusMult = hasPerformed ? performedCountryBonus : 1.0;
       // Global fame provides a floor (never go below 0.3x of what global fame would give)
-      const globalFloor = 0.3 + (globalFame / 10000) * 0.7;
-      return Math.max(countryBase * performedBonus, globalFloor);
+      const globalFloor = 0.3 + (globalFame / fameDivisor) * 0.7;
+      return Math.max(countryBase * performedBonusMult, globalFloor);
     }
 
     for (const release of releases || []) {
@@ -141,8 +168,8 @@ serve(async (req) => {
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
-        const fameMultiplier = 1 + artistFame / 10000;
-        const popularityMultiplier = 1 + artistPopularity / 10000;
+        const fameMultiplier = 1 + artistFame / fameDivisor;
+        const popularityMultiplier = 1 + artistPopularity / fameDivisor;
         const qualityMultiplier = avgQuality / 50;
 
         for (const format of release.release_formats || []) {
@@ -154,19 +181,19 @@ serve(async (req) => {
 
           switch (format.format_type) {
             case "digital":
-              baseSales = 5 + Math.floor(Math.random() * 20);
+              baseSales = digitalMin + Math.floor(Math.random() * (digitalMax - digitalMin));
               break;
             case "streaming":
               // Streaming doesn't generate direct sales, skip
               continue;
             case "cd":
-              baseSales = 2 + Math.floor(Math.random() * 8);
+              baseSales = cdMin + Math.floor(Math.random() * (cdMax - cdMin));
               break;
             case "vinyl":
-              baseSales = 1 + Math.floor(Math.random() * 5);
+              baseSales = vinylMin + Math.floor(Math.random() * (vinylMax - vinylMin));
               break;
             case "cassette":
-              baseSales = 1 + Math.floor(Math.random() * 3);
+              baseSales = cassetteMin + Math.floor(Math.random() * (cassetteMax - cassetteMin));
               break;
           }
 
