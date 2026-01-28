@@ -36,6 +36,22 @@ const MANUFACTURING_DAYS: Record<string, number> = {
 const DIGITAL_FIRST_RELEASE_FEE = 500; // $5.00 first time setup
 const DIGITAL_SUBSEQUENT_FEE = 50;     // $0.50 per release after first
 
+// Realistic default retail prices in dollars (not cents)
+const DEFAULT_RETAIL_PRICES: Record<string, number> = {
+  digital: 9.99,
+  streaming: 0,
+  cd: 14.99,
+  vinyl: 29.99,
+  cassette: 12.99,
+};
+
+// Currency conversion rates (approximate)
+const CURRENCY_RATES = {
+  USD: 1,
+  EUR: 0.92,
+  GBP: 0.79,
+};
+
 export function FormatSelectionStep({
   selectedFormats,
   onFormatsChange,
@@ -48,11 +64,11 @@ export function FormatSelectionStep({
   bandId,
 }: FormatSelectionStepProps) {
   const [formatConfigs, setFormatConfigs] = useState<Record<string, any>>({
-    digital: { release_date: "", quantity: 0, retail_price: 1000, distribution_fee_percentage: 30 },
-    streaming: { release_date: "", quantity: 0, retail_price: 0, distribution_fee_percentage: 30 },
-    cd: { release_date: "", quantity: 100, retail_price: 1500, distribution_fee_percentage: 30 },
-    vinyl: { release_date: "", quantity: 100, retail_price: 3000, distribution_fee_percentage: 30, vinyl_color: "black", is_limited_edition: false },
-    cassette: { release_date: "", quantity: 100, retail_price: 800, distribution_fee_percentage: 30 }
+    digital: { release_date: "", quantity: 0, retail_price: DEFAULT_RETAIL_PRICES.digital, distribution_fee_percentage: 30 },
+    streaming: { release_date: "", quantity: 0, retail_price: DEFAULT_RETAIL_PRICES.streaming, distribution_fee_percentage: 30 },
+    cd: { release_date: "", quantity: 100, retail_price: DEFAULT_RETAIL_PRICES.cd, distribution_fee_percentage: 30 },
+    vinyl: { release_date: "", quantity: 100, retail_price: DEFAULT_RETAIL_PRICES.vinyl, distribution_fee_percentage: 30, vinyl_color: "black", is_limited_edition: false },
+    cassette: { release_date: "", quantity: 100, retail_price: DEFAULT_RETAIL_PRICES.cassette, distribution_fee_percentage: 30 }
   });
 
   const { data: manufacturingCosts } = useQuery({
@@ -364,14 +380,24 @@ export function FormatSelectionStep({
                       )}
 
                       <div>
-                        <Label className="text-xs">Retail Price ($)</Label>
-                        <Input
-                          type="number"
-                          value={formatConfigs[fmt.type].retail_price}
-                          onChange={(e) => updateFormatConfig(fmt.type, "retail_price", e.target.value)}
-                          min="0"
-                          className="h-8"
-                        />
+                        <Label className="text-xs">Retail Price</Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={formatConfigs[fmt.type].retail_price}
+                            onChange={(e) => updateFormatConfig(fmt.type, "retail_price", parseFloat(e.target.value) || 0)}
+                            min="0"
+                            className="h-8"
+                          />
+                        </div>
+                        {formatConfigs[fmt.type].retail_price > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            €{(formatConfigs[fmt.type].retail_price * CURRENCY_RATES.EUR).toFixed(2)} | 
+                            £{(formatConfigs[fmt.type].retail_price * CURRENCY_RATES.GBP).toFixed(2)}
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-xs space-y-1">
@@ -383,7 +409,7 @@ export function FormatSelectionStep({
                               <div className="font-medium">
                                 Manufacturing: ${(cost / 100).toFixed(2)}
                                 {discountInfo && discountInfo.discountPercent > 0 && (
-                                  <span className="text-green-600 ml-1">({discountInfo.discountPercent}% volume discount)</span>
+                                  <span className="text-primary ml-1">({discountInfo.discountPercent}% volume discount)</span>
                                 )}
                               </div>
                               {discountInfo && (
