@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.551",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Character Creator: Updated SpriteLayerCanvas to import all new layered template assets" },
+      { type: 'improvement', description: "Character Creator: Base templates and layer overlays now properly resolved in canvas" },
+    ],
+  },
+  {
     version: "1.0.550",
     date: "2026-01-28",
     changes: [

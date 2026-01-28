@@ -2,13 +2,39 @@ import { useMemo } from "react";
 import type { CharacterSprite, CharacterConfig } from "@/hooks/useCharacterSprites";
 import { SKIN_TONES } from "@/hooks/useCharacterSprites";
 
-// Import local sprite assets - Bodies
+// ============ BASE TEMPLATES ============
+import baseMaleSlim from "@/assets/sprites/base-male-slim.png";
+import baseFemaleSlim from "@/assets/sprites/base-female-slim.png";
+
+// ============ LAYER OVERLAYS - HAIR ============
+import layerHairMohawkRedMale from "@/assets/sprites/layer-hair-mohawk-red-male.png";
+import layerHairMessyBlackMale from "@/assets/sprites/layer-hair-messy-black-male.png";
+import layerHairAfroMale from "@/assets/sprites/layer-hair-afro-male.png";
+import layerHairWavyBlondeFemale from "@/assets/sprites/layer-hair-wavy-blonde-female.png";
+import layerHairPixiePinkFemale from "@/assets/sprites/layer-hair-pixie-pink-female.png";
+import layerHairAfroFemale from "@/assets/sprites/layer-hair-afro-female.png";
+
+// ============ LAYER OVERLAYS - CLOTHING ============
+import layerHoodieGreyMale from "@/assets/sprites/layer-hoodie-grey-male.png";
+import layerHoodieBlackFemale from "@/assets/sprites/layer-hoodie-black-female.png";
+import layerJacketVarsityFemale from "@/assets/sprites/layer-jacket-varsity-female.png";
+import layerFlannelRedMale from "@/assets/sprites/layer-flannel-red-male.png";
+import layerShirtBlackMale from "@/assets/sprites/layer-shirt-black-male.png";
+import layerTankPurpleFemale from "@/assets/sprites/layer-tank-purple-female.png";
+
+// ============ LAYER OVERLAYS - PANTS/BOTTOMS ============
+import layerPantsSkinnyBootsMale from "@/assets/sprites/layer-pants-skinny-boots-male.png";
+import layerPantsBaggyMale from "@/assets/sprites/layer-pants-baggy-male.png";
+import layerPantsCargoMale from "@/assets/sprites/layer-pants-cargo-male.png";
+import layerPantsSkinnyFemale from "@/assets/sprites/layer-pants-skinny-female.png";
+import layerPantsJeansSneakersFemale from "@/assets/sprites/layer-pants-jeans-sneakers-female.png";
+import layerSkirtPlaidFemale from "@/assets/sprites/layer-skirt-plaid-female.png";
+
+// ============ LEGACY IMPORTS (for backwards compatibility) ============
 import bodyMaleSlim from "@/assets/sprites/body-male-slim.png";
 import bodyFemaleSlim from "@/assets/sprites/body-female-slim.png";
 import bodyMaleAthletic from "@/assets/sprites/body-male-athletic.png";
 import bodyFemaleCurvy from "@/assets/sprites/body-female-curvy.png";
-
-// Hair
 import hairMohawkRed from "@/assets/sprites/hair-mohawk-red.png";
 import hairMessyBlack from "@/assets/sprites/hair-messy-black.png";
 import hairBraidsBlack from "@/assets/sprites/hair-braids-black.png";
@@ -16,8 +42,6 @@ import hairLongWavyBlonde from "@/assets/sprites/hair-long-wavy-blonde.png";
 import hairBuzzcutBrown from "@/assets/sprites/hair-buzzcut-brown.png";
 import hairAfroBlack from "@/assets/sprites/hair-afro-black.png";
 import hairEmoBlackPurple from "@/assets/sprites/hair-emo-black-purple.png";
-
-// Facial features
 import eyesAngry from "@/assets/sprites/eyes-angry.png";
 import eyesNeutral from "@/assets/sprites/eyes-neutral.png";
 import eyesCool from "@/assets/sprites/eyes-cool.png";
@@ -29,47 +53,63 @@ import mouthSneer from "@/assets/sprites/mouth-sneer.png";
 import mouthNeutral from "@/assets/sprites/mouth-neutral.png";
 import mouthSmirk from "@/assets/sprites/mouth-smirk.png";
 import mouthSinging from "@/assets/sprites/mouth-singing.png";
-
-// Jackets
 import jacketLeather from "@/assets/sprites/jacket-leather-black.png";
 import jacketHoodieGrey from "@/assets/sprites/jacket-hoodie-grey.png";
 import jacketDenimBlue from "@/assets/sprites/jacket-denim-blue.png";
 import jacketVarsityRed from "@/assets/sprites/jacket-varsity-red.png";
-
-// Shirts
 import shirtBandTee from "@/assets/sprites/shirt-band-tee-black.png";
 import shirtGraphicWhite from "@/assets/sprites/shirt-graphic-white.png";
 import shirtFlannelRed from "@/assets/sprites/shirt-flannel-red.png";
 import shirtTankBlack from "@/assets/sprites/shirt-tank-black.png";
-
-// Trousers
 import trousersPlaid from "@/assets/sprites/trousers-plaid-red.png";
 import trousersBaggyJeans from "@/assets/sprites/trousers-baggy-jeans.png";
 import trousersSkinnyBlack from "@/assets/sprites/trousers-skinny-black.png";
 import trousersCargoGreen from "@/assets/sprites/trousers-cargo-green.png";
-
-// Shoes
 import shoesCombatBoots from "@/assets/sprites/shoes-combat-boots.png";
 import shoesSneakersWhite from "@/assets/sprites/shoes-sneakers-white.png";
 import shoesHightopsRed from "@/assets/sprites/shoes-hightops-red.png";
 import shoesChelseaBrown from "@/assets/sprites/shoes-chelsea-brown.png";
-
-// Hats
 import hatFlatcapGrey from "@/assets/sprites/hat-flatcap-grey.png";
 import hatSnapbackBlack from "@/assets/sprites/hat-snapback-black.png";
 import hatBeanieRed from "@/assets/sprites/hat-beanie-red.png";
-
-// Glasses
 import glassesAviatorGold from "@/assets/sprites/glasses-aviator-gold.png";
 import glassesRoundBlack from "@/assets/sprites/glasses-round-black.png";
-
-// Facial hair
 import facialHairBeardBrown from "@/assets/sprites/facial-hair-beard-brown.png";
 import facialHairGoateeBlack from "@/assets/sprites/facial-hair-goatee-black.png";
 import facialHairHandlebar from "@/assets/sprites/facial-hair-handlebar.png";
 
-// Map database asset names to imported images
+// Map database asset paths to imported images
 const ASSET_MAP: Record<string, string> = {
+  // ========== NEW LAYERED SYSTEM ==========
+  // Base templates
+  '/src/assets/sprites/base-male-slim.png': baseMaleSlim,
+  '/src/assets/sprites/base-female-slim.png': baseFemaleSlim,
+  
+  // Layer overlays - Hair
+  '/src/assets/sprites/layer-hair-mohawk-red-male.png': layerHairMohawkRedMale,
+  '/src/assets/sprites/layer-hair-messy-black-male.png': layerHairMessyBlackMale,
+  '/src/assets/sprites/layer-hair-afro-male.png': layerHairAfroMale,
+  '/src/assets/sprites/layer-hair-wavy-blonde-female.png': layerHairWavyBlondeFemale,
+  '/src/assets/sprites/layer-hair-pixie-pink-female.png': layerHairPixiePinkFemale,
+  '/src/assets/sprites/layer-hair-afro-female.png': layerHairAfroFemale,
+  
+  // Layer overlays - Jackets/Tops
+  '/src/assets/sprites/layer-hoodie-grey-male.png': layerHoodieGreyMale,
+  '/src/assets/sprites/layer-hoodie-black-female.png': layerHoodieBlackFemale,
+  '/src/assets/sprites/layer-jacket-varsity-female.png': layerJacketVarsityFemale,
+  '/src/assets/sprites/layer-flannel-red-male.png': layerFlannelRedMale,
+  '/src/assets/sprites/layer-shirt-black-male.png': layerShirtBlackMale,
+  '/src/assets/sprites/layer-tank-purple-female.png': layerTankPurpleFemale,
+  
+  // Layer overlays - Pants/Bottoms (includes shoes)
+  '/src/assets/sprites/layer-pants-skinny-boots-male.png': layerPantsSkinnyBootsMale,
+  '/src/assets/sprites/layer-pants-baggy-male.png': layerPantsBaggyMale,
+  '/src/assets/sprites/layer-pants-cargo-male.png': layerPantsCargoMale,
+  '/src/assets/sprites/layer-pants-skinny-female.png': layerPantsSkinnyFemale,
+  '/src/assets/sprites/layer-pants-jeans-sneakers-female.png': layerPantsJeansSneakersFemale,
+  '/src/assets/sprites/layer-skirt-plaid-female.png': layerSkirtPlaidFemale,
+  
+  // ========== LEGACY ASSETS (backwards compatibility) ==========
   // Bodies
   '/src/assets/sprites/body-male-slim.png': bodyMaleSlim,
   '/src/assets/sprites/body-female-slim.png': bodyFemaleSlim,
