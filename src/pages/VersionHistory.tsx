@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.563",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Player Level: Complete revamp with combined progress (XP + Skills + Fame)" },
+      { type: 'feature', description: "Player Level: Scaling XP curve - faster early levels, slower progression at high levels" },
+      { type: 'feature', description: "Player Level: Level 1 = 250 XP, Level 10 ≈ 5,000 XP, Level 50 ≈ 338,000 XP" },
+      { type: 'feature', description: "Player Level: Skill contribution (2 XP per skill level) and Fame contribution (1 XP per 100 fame)" },
+      { type: 'feature', description: "Player Level: New PlayerLevelBadge component with progress bar and detailed tooltip" },
+      { type: 'improvement', description: "Player Level: Max level 100 with attribute star bonuses (400 XP per star)" },
+    ],
+  },
+  {
     version: "1.0.562",
     date: "2026-01-28",
     changes: [

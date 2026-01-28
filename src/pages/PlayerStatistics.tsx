@@ -2,15 +2,24 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
+import { usePlayerLevel } from '@/hooks/usePlayerLevel';
 import { TrendingUp, Award, Music, Users, Star, DollarSign } from 'lucide-react';
 import { PlayerAchievements } from '@/components/player-stats/PlayerAchievements';
 import { PerformanceHistory } from '@/components/player-stats/PerformanceHistory';
 
 export default function PlayerStatistics() {
   const { user } = useAuth();
-  const { profile, skills, attributes } = useGameData();
+  const { profile, skills, attributes, xpWallet } = useGameData();
+  
+  const levelData = usePlayerLevel({
+    xpWallet,
+    skills,
+    fame: profile?.fame ?? 0,
+    attributeStars: 0,
+  });
 
   if (!user || !profile) {
     return (
@@ -28,9 +37,20 @@ export default function PlayerStatistics() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Player Statistics</h1>
-        <Badge variant="outline" className="text-lg px-4 py-2">
-          Level {profile.level}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-lg px-4 py-2 bg-primary/10 text-primary border-primary/30">
+            <Star className="h-4 w-4 mr-1" />
+            Level {levelData.level}
+          </Badge>
+          {levelData.level < 100 && (
+            <div className="flex flex-col gap-1 min-w-[100px]">
+              <Progress value={levelData.levelProgress} className="h-2" />
+              <span className="text-[10px] text-muted-foreground text-right">
+                {levelData.xpToNextLevel.toLocaleString()} XP to next
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -49,10 +69,13 @@ export default function PlayerStatistics() {
                 <Star className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{profile.level}</div>
+                <div className="text-2xl font-bold">{levelData.level}</div>
                 <p className="text-xs text-muted-foreground">
-                  {profile.experience} XP
+                  {levelData.effectiveXp.toLocaleString()} effective XP
                 </p>
+                {levelData.level < 100 && (
+                  <Progress value={levelData.levelProgress} className="h-1.5 mt-2" />
+                )}
               </CardContent>
             </Card>
 

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import type { Database } from "@/lib/supabase-types";
+import { computePlayerLevel } from "@/hooks/usePlayerLevel";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"] & {
   cities?: { name: string; country: string } | null;
@@ -77,6 +78,54 @@ export default function Employment() {
       return data;
     },
   });
+
+  // Fetch XP wallet for level calculation
+  const { data: xpWallet } = useQuery({
+    queryKey: ["xp-wallet-employment", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      const { data, error } = await supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Fetch skill progress for level calculation
+  const { data: skillProgress } = useQuery({
+    queryKey: ["skill-progress-employment", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from("skill_progress")
+        .select("skill_slug, current_level, current_xp")
+        .eq("profile_id", profile.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Calculate player level from combined progress
+  const playerLevel = useMemo(() => {
+    const skills: Record<string, number> = {};
+    for (const row of skillProgress ?? []) {
+      if (row.skill_slug && typeof row.current_level === 'number') {
+        skills[row.skill_slug] = row.current_level;
+      }
+    }
+    const levelData = computePlayerLevel({
+      xpWallet: xpWallet ?? null,
+      skills,
+      fame: profile?.fame ?? 0,
+      attributeStars: 0,
+    });
+    return levelData.level;
+  }, [xpWallet, skillProgress, profile?.fame]);
 
   const currentCityId = profile?.current_city_id;
   const currentCityName = (profile as any)?.cities?.name;
@@ -346,7 +395,7 @@ export default function Employment() {
   const canApply = (job: JobRow) => {
     if (!profile) return false;
     if (currentEmployment) return false;
-    if (profile.level < (job.required_level || 1)) return false;
+    if (playerLevel < (job.required_level || 1)) return false;
     if (job.max_employees && (job.current_employees || 0) >= job.max_employees) return false;
     return true;
   };
@@ -584,7 +633,7 @@ export default function Employment() {
                       >
                         {!profile ? "Login to apply" :
                          currentEmployment ? "Already employed" :
-                         (profile.level || 1) < (job.required_level || 1) ? "Level too low" :
+                         playerLevel < (job.required_level || 1) ? `Level ${job.required_level} required` :
                          job.max_employees && (job.current_employees || 0) >= job.max_employees ? "Position filled" :
                          "Apply for Job"}
                       </Button>

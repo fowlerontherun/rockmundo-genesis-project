@@ -26,13 +26,42 @@ export const SKILL_CAPS = {
 } as const;
 
 export const LEVEL_REQUIREMENTS = {
-  experiencePerLevel: 1000,
-  maxLevel: 100
+  baseXpPerLevel: 250, // First level requires 250 XP
+  scalingFactor: 1.15, // Each level requires 15% more XP than the previous
+  maxLevel: 100,
+  // Bonus contributions from other progress sources
+  fameXpValue: 0.01, // 1 XP per 100 fame
+  skillProgressXpValue: 2, // 2 XP per skill level across all skills
+  attributeStarXpValue: 400 // 400 XP equivalent per attribute star
 } as const;
 
-const ATTRIBUTE_STAR_XP_VALUE = 400;
+const ATTRIBUTE_STAR_XP_VALUE = LEVEL_REQUIREMENTS.attributeStarXpValue;
 const ATTRIBUTE_STAR_REWARD_BONUS = 0.005;
 const ATTRIBUTE_STAR_REWARD_MAX_BONUS = 0.25;
+
+/**
+ * Calculate cumulative XP required to reach a specific level
+ * Uses scaling curve: level 1 = 250 XP, level 2 = 538 XP, level 10 = 5,038 XP, level 50 = 338,427 XP
+ */
+export const getCumulativeXpForLevel = (level: number): number => {
+  if (level <= 1) return 0;
+  const base = LEVEL_REQUIREMENTS.baseXpPerLevel;
+  const factor = LEVEL_REQUIREMENTS.scalingFactor;
+  // Geometric series sum: base * (factor^n - 1) / (factor - 1)
+  return Math.floor(base * (Math.pow(factor, level - 1) - 1) / (factor - 1));
+};
+
+/**
+ * Calculate level from cumulative XP (inverse of getCumulativeXpForLevel)
+ */
+export const getLevelFromCumulativeXp = (xp: number): number => {
+  if (xp <= 0) return 1;
+  const base = LEVEL_REQUIREMENTS.baseXpPerLevel;
+  const factor = LEVEL_REQUIREMENTS.scalingFactor;
+  // Inverse of geometric series: level = log(xp * (factor - 1) / base + 1) / log(factor) + 1
+  const rawLevel = Math.log(xp * (factor - 1) / base + 1) / Math.log(factor) + 1;
+  return Math.min(LEVEL_REQUIREMENTS.maxLevel, Math.max(1, Math.floor(rawLevel)));
+};
 
 export interface ExperienceWalletSnapshot {
   xpBalance: number;
@@ -384,40 +413,101 @@ export const calculateExperienceReward = (
   return Math.max(0, Math.round(normalizedBase * totalMultiplier));
 };
 
+/**
+ * Combined Progress Level Calculation
+ * Level is determined by: Lifetime XP + Fame contribution + Skill progress + Attribute stars
+ * Uses a scaling XP curve (faster early, slower later)
+ */
 export function calculateLevel(
   progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
-  attributeStars?: number | null
+  attributeStars?: number | null,
+  additionalProgress?: { fame?: number; totalSkillLevels?: number }
 ): number;
 export function calculateLevel(experience: number): number;
 export function calculateLevel(
   progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
-  attributeStars?: number | null
+  attributeStars?: number | null,
+  additionalProgress?: { fame?: number; totalSkillLevels?: number }
 ): number {
   const totals = resolveProgressionTotals(progression, attributeStars);
-  const effectiveXp = Math.max(0, totals.lifetimeXp + totals.attributeStars * ATTRIBUTE_STAR_XP_VALUE);
-  const rawLevel = Math.floor(effectiveXp / LEVEL_REQUIREMENTS.experiencePerLevel) + 1;
-  if (!Number.isFinite(rawLevel)) {
-    return 1;
+  
+  // Base XP from wallet
+  let effectiveXp = Math.max(0, totals.lifetimeXp);
+  
+  // Add attribute star contribution
+  effectiveXp += totals.attributeStars * LEVEL_REQUIREMENTS.attributeStarXpValue;
+  
+  // Add fame contribution (1 XP per 100 fame)
+  if (additionalProgress?.fame) {
+    effectiveXp += Math.floor(additionalProgress.fame * LEVEL_REQUIREMENTS.fameXpValue);
   }
+  
+  // Add skill progress contribution (2 XP per skill level)
+  if (additionalProgress?.totalSkillLevels) {
+    effectiveXp += additionalProgress.totalSkillLevels * LEVEL_REQUIREMENTS.skillProgressXpValue;
+  }
+  
+  return getLevelFromCumulativeXp(effectiveXp);
+}
 
-  return Math.min(LEVEL_REQUIREMENTS.maxLevel, Math.max(1, rawLevel));
+/**
+ * Calculate effective XP (combined from all sources)
+ */
+export function getEffectiveXp(
+  progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
+  attributeStars?: number | null,
+  additionalProgress?: { fame?: number; totalSkillLevels?: number }
+): number {
+  const totals = resolveProgressionTotals(progression, attributeStars);
+  let effectiveXp = Math.max(0, totals.lifetimeXp);
+  effectiveXp += totals.attributeStars * LEVEL_REQUIREMENTS.attributeStarXpValue;
+  if (additionalProgress?.fame) {
+    effectiveXp += Math.floor(additionalProgress.fame * LEVEL_REQUIREMENTS.fameXpValue);
+  }
+  if (additionalProgress?.totalSkillLevels) {
+    effectiveXp += additionalProgress.totalSkillLevels * LEVEL_REQUIREMENTS.skillProgressXpValue;
+  }
+  return effectiveXp;
 }
 
 export function experienceToNextLevel(
   progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
-  attributeStars?: number | null
+  attributeStars?: number | null,
+  additionalProgress?: { fame?: number; totalSkillLevels?: number }
 ): number {
-  const totals = resolveProgressionTotals(progression, attributeStars);
-  const effectiveXp = Math.max(0, totals.lifetimeXp + totals.attributeStars * ATTRIBUTE_STAR_XP_VALUE);
-  const rawLevel = Math.floor(effectiveXp / LEVEL_REQUIREMENTS.experiencePerLevel) + 1;
-  const currentLevel = Math.min(LEVEL_REQUIREMENTS.maxLevel, Math.max(1, rawLevel));
+  const effectiveXp = getEffectiveXp(progression, attributeStars, additionalProgress);
+  const currentLevel = getLevelFromCumulativeXp(effectiveXp);
+  
   if (currentLevel >= LEVEL_REQUIREMENTS.maxLevel) {
     return 0;
   }
 
-  const nextLevelExp = currentLevel * LEVEL_REQUIREMENTS.experiencePerLevel;
-  const remaining = nextLevelExp - effectiveXp;
+  const nextLevelXp = getCumulativeXpForLevel(currentLevel + 1);
+  const remaining = nextLevelXp - effectiveXp;
   return Math.max(0, Math.ceil(remaining));
+}
+
+/**
+ * Get XP progress within current level (0-100%)
+ */
+export function getLevelProgress(
+  progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
+  attributeStars?: number | null,
+  additionalProgress?: { fame?: number; totalSkillLevels?: number }
+): number {
+  const effectiveXp = getEffectiveXp(progression, attributeStars, additionalProgress);
+  const currentLevel = getLevelFromCumulativeXp(effectiveXp);
+  
+  if (currentLevel >= LEVEL_REQUIREMENTS.maxLevel) {
+    return 100;
+  }
+
+  const currentLevelXp = getCumulativeXpForLevel(currentLevel);
+  const nextLevelXp = getCumulativeXpForLevel(currentLevel + 1);
+  const levelRange = nextLevelXp - currentLevelXp;
+  const xpIntoLevel = effectiveXp - currentLevelXp;
+  
+  return Math.min(100, Math.max(0, Math.floor((xpIntoLevel / levelRange) * 100)));
 }
 
 export interface SkillCapContext extends ProgressionSnapshotInput {
