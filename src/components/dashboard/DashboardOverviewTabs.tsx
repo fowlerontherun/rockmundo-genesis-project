@@ -43,7 +43,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
       const client: any = supabase;
       const gigsResult = await client.from("gig_outcomes").select("id").eq("user_id", user.id);
-      const songsResult = await client.from("songs").select("id, status").eq("writer_id", user.id);
+      const songsResult = await client.from("songs").select("id, status").eq("original_writer_id", user.id);
 
       const totalGigs = gigsResult.data?.length || 0;
       const totalSongs = songsResult.data?.length || 0;

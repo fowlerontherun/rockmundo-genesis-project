@@ -172,6 +172,10 @@ serve(async (req) => {
         const qualityMultiplier = avgQuality / 50;
 
         for (const format of release.release_formats || []) {
+          // Skip formats with no retail price set
+          const retailPrice = format.retail_price || 0;
+          if (retailPrice <= 0) continue;
+          
           // For physical formats, skip if no stock. For digital/streaming, always allow sales
           const isDigital = format.format_type === "digital" || format.format_type === "streaming";
           if (!isDigital && (!format.quantity || format.quantity <= 0)) continue;
@@ -204,13 +208,16 @@ serve(async (req) => {
           const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
 
           if (actualSales > 0) {
-            const revenue = actualSales * (format.retail_price || 0);
+            // Round to integers for DB columns (unit_price and total_amount are integers)
+            const unitPriceCents = Math.round(retailPrice * 100);
+            const revenue = actualSales * retailPrice;
+            const totalAmountCents = Math.round(revenue * 100);
 
             await supabaseClient.from("release_sales").insert({
               release_format_id: format.id,
               quantity_sold: actualSales,
-              unit_price: format.retail_price,
-              total_amount: revenue,
+              unit_price: unitPriceCents,
+              total_amount: totalAmountCents,
               sale_date: new Date().toISOString().split("T")[0],
               platform: isDigital ? "digital_store" : "physical_store",
             });
