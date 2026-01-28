@@ -1,275 +1,421 @@
 
-# Record Sales Tuning & Fame Breakdown Implementation Plan
 
-## Overview
+# Revised XP System - Dual Currency with Streak Bonuses
 
-This plan adds:
-1. **Admin page for Sales Balance** - Configure physical and digital record sales multipliers with live tweaking
-2. **Fame/Fans Breakdown** - Expandable regional breakdown on Dashboard and Band Manager pages showing fame and fans by country/city
+## Summary of Your Changes
 
----
-
-## Part 1: Database Schema Updates
-
-### Add Sales Balance Config to `game_balance_config`
-
-Insert new configuration entries for the sales system:
-
-| Category | Key | Value | Description | Min | Max | Unit |
-|----------|-----|-------|-------------|-----|-----|------|
-| sales | digital_base_sales_min | 5 | Minimum base digital sales per day | 0 | 50 | sales |
-| sales | digital_base_sales_max | 25 | Maximum base digital sales per day | 10 | 100 | sales |
-| sales | cd_base_sales_min | 2 | Minimum base CD sales per day | 0 | 20 | sales |
-| sales | cd_base_sales_max | 10 | Maximum base CD sales per day | 5 | 50 | sales |
-| sales | vinyl_base_sales_min | 1 | Minimum base vinyl sales per day | 0 | 10 | sales |
-| sales | vinyl_base_sales_max | 6 | Maximum base vinyl sales per day | 2 | 25 | sales |
-| sales | cassette_base_sales_min | 1 | Minimum base cassette sales per day | 0 | 5 | sales |
-| sales | cassette_base_sales_max | 4 | Maximum base cassette sales per day | 1 | 15 | sales |
-| sales | fame_multiplier_divisor | 10000 | Fame value to divide by for multiplier | 1000 | 100000 | fame |
-| sales | regional_fame_weight | 1.0 | Weight of regional fame on sales | 0.1 | 3.0 | x |
-| sales | market_scarcity_min_bands | 20 | Bands threshold for max scarcity bonus | 5 | 100 | bands |
-| sales | market_scarcity_max_multiplier | 5 | Maximum market scarcity multiplier | 1 | 10 | x |
-| sales | performed_country_bonus | 1.2 | Bonus multiplier for performed countries | 1.0 | 2.0 | x |
-| sales | unvisited_fame_cap | 100 | Fame cap for unvisited countries | 50 | 500 | fame |
-| sales | spillover_rate | 0.2 | Fame spillover rate to neighbors | 0.0 | 0.5 | % |
+| Aspect | Original Plan | Updated Plan |
+|--------|---------------|--------------|
+| Daily Stipend | Automatic | **Manual claim only** (click to collect) |
+| Activity XP | Manual award via progression | **Auto-added daily** via scheduled process |
+| Activity AP | 10-25% of XP | **40-60% of XP** |
+| Max Daily Activity XP | No cap | **250 XP cap** |
+| Streak Bonuses | None | **7, 14, 30, 100, 365 day milestones** |
 
 ---
 
-## Part 2: Admin Sales Balance Page
+## Part 1: Updated Currency Model
 
-### New File: `src/pages/admin/SalesBalanceAdmin.tsx`
+### Earning Structure
 
-A dedicated admin page for tuning record sales parameters:
+| Source | Skill XP (SXP) | Attribute Points (AP) | Collection Method |
+|--------|----------------|----------------------|-------------------|
+| **Daily Stipend** | 100 SXP | 10 AP | Manual claim (login & click) |
+| **Activity Bonus** | Up to 250 SXP/day | 40-60% of XP | Auto-added daily |
+| **Streak Bonuses** | Bonus SXP | Bonus AP | Added when claiming stipend |
 
-**Features:**
-- **Base Sales Section**: Sliders for digital, CD, vinyl, cassette min/max base sales
-- **Multiplier Section**: Fame divisor, regional weight, market scarcity settings
-- **Regional Fame Section**: Performed country bonus, unvisited cap, spillover rate
-- **Live Preview**: Show calculated example sales based on sample fame values
-- **Save All**: Batch save all changes to `game_balance_config`
+### Activity AP Rates (Updated to 40-60%)
 
-**UI Layout:**
+| Activity Type | AP Rate | Rationale |
+|---------------|---------|-----------|
+| Exercise | 60% | Physical activities strongly boost physical attributes |
+| Therapy | 60% | Deep personal development |
+| Meditation | 55% | Mental/spiritual development |
+| Mentor Sessions | 55% | Character building from guidance |
+| Busking/Gigs | 50% | Performance builds stage presence |
+| Rest | 50% | Recovery and self-care |
+| Nutrition | 50% | Physical maintenance |
+| University | 45% | Education with character growth |
+| Book Reading | 45% | Knowledge with wisdom |
+| Recording | 40% | More technical focus |
+| YouTube Videos | 40% | Passive learning |
+
+---
+
+## Part 2: Daily Stipend with Streak System
+
+### Streak Milestones & Bonuses
+
+| Streak Days | Bonus SXP | Bonus AP | Total Stipend |
+|-------------|-----------|----------|---------------|
+| 1 (base) | 0 | 0 | 100 SXP + 10 AP |
+| 7 days | +50 SXP | +10 AP | 150 SXP + 20 AP |
+| 14 days | +100 SXP | +20 AP | 200 SXP + 30 AP |
+| 30 days | +200 SXP | +40 AP | 300 SXP + 50 AP |
+| 100 days | +500 SXP | +100 AP | 600 SXP + 110 AP |
+| 365 days | +1000 SXP | +200 AP | 1100 SXP + 210 AP |
+
+### Streak Logic
+
+- Streak increments when player claims on consecutive calendar days
+- Missing a day resets streak to 0
+- Streak bonuses are **cumulative** - if you hit day 14, you get both the 7-day and 14-day bonuses
+- Streak count and last claim date stored in `profile_daily_xp_grants` or new columns on `player_xp_wallet`
+
+### UI Updates for DailyStipendCard
+
 ```text
 +------------------------------------------+
-| Sales Balance Admin                       |
-| Configure physical & digital sales        |
+| Daily Stipend                      🔥 14  |
+| 2-week streak!                           |
 +------------------------------------------+
-| [Base Sales] [Multipliers] [Regional]     |
+| Base:          100 SXP + 10 AP           |
+| 7-Day Bonus:   +50 SXP + 10 AP           |
+| 14-Day Bonus:  +100 SXP + 20 AP          |
+| ─────────────────────────────────────    |
+| Total Today:   250 SXP + 40 AP           |
 +------------------------------------------+
-| Digital Sales                             |
-| Min: [====5====] Max: [====25====]        |
-|                                           |
-| CD Sales                                  |
-| Min: [====2====] Max: [====10====]        |
-|                                           |
-| Vinyl Sales                               |
-| Min: [====1====] Max: [====6=====]        |
+| Next milestone: 30 days (16 days left)   |
+|                                          |
+| [    Claim Daily Stipend    ]            |
 +------------------------------------------+
-| Preview: Band with 50K fame, 10K regional |
-| Estimated daily: Digital 45, CD 18, Vinyl 9|
-+------------------------------------------+
-```
-
-### Add Route to `src/App.tsx`
-```typescript
-const AdminSalesBalance = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
-// Route: path="admin/sales-balance" element={<AdminSalesBalance />}
-```
-
-### Add to Admin Navigation
-Update `src/components/admin/AdminNav.tsx` to include in "Economy & Resources" category:
-```typescript
-{ path: "/admin/sales-balance", label: "Sales Balance", description: "Record sales tuning" }
-```
-
-### Add to Admin Dashboard Quick Actions
-Update `src/pages/admin/AdminDashboard.tsx`:
-```typescript
-{ label: "Sales Balance", path: "/admin/sales-balance", icon: DollarSign }
 ```
 
 ---
 
-## Part 3: Fame/Fans Regional Breakdown Component
+## Part 3: Auto Activity XP Processing
 
-### New Component: `src/components/fame/RegionalFameBreakdown.tsx`
+### New Edge Function: `process-daily-activity-xp`
 
-A compact, expandable component showing fame and fans by country and city:
+Runs automatically (scheduled or via cron) to:
 
-**Features:**
-- Collapsible accordion layout
-- Summary stats at top (countries count, top country)
-- Country list with fame bars and fan counts
-- Expandable cities within each country
-- Flag emoji for countries
-- Progress bars for relative fame comparison
+1. Calculate each player's activity XP from the previous day
+2. Cap at 250 SXP maximum
+3. Calculate AP at 40-60% based on activity type
+4. Credit to `skill_xp_balance` and `attribute_points_balance`
+5. Record in `profile_daily_xp_grants` with source = "activity_bonus"
 
-**UI Layout (Collapsed):**
-```text
-+------------------------------------------+
-| Regional Fame                     [v]     |
-| 12 countries • Top: United States 50K    |
-+------------------------------------------+
+### Processing Logic
+
+```typescript
+// For each active profile
+const activityXp = await calculateDailyActivityXp(profileId, yesterdayStart, yesterdayEnd);
+const cappedXp = Math.min(250, activityXp.totalXp);
+
+// Calculate AP based on weighted average of activities
+const totalAp = activityXp.activities.reduce((sum, act) => {
+  const apRate = AP_RATES[act.activity_type] || 0.50;
+  return sum + Math.floor(act.xp_amount * apRate);
+}, 0);
+
+// Credit to wallet
+await creditDualCurrency(profileId, cappedXp, totalAp, "activity_bonus");
 ```
 
-**UI Layout (Expanded):**
-```text
-+------------------------------------------+
-| Regional Fame                     [^]     |
-+------------------------------------------+
-| United States                            |
-| Fame: 50,000  |=================| 100%   |
-| Fans: 125K casual, 45K dedicated, 8K super|
-| [v] 8 cities                              |
-+------------------------------------------+
-| United Kingdom                           |
-| Fame: 32,000  |===========|      64%     |
-| Fans: 78K casual, 28K dedicated, 5K super |
-| [v] 5 cities                              |
-+------------------------------------------+
-| Germany                                   |
-| Fame: 18,500  |======|           37%     |
-| [+] Never performed (capped at 100)       |
-+------------------------------------------+
-```
+### Scheduling
 
-### Integration Points
-
-**1. Dashboard Fame Tab (`src/components/fame/CharacterFameOverview.tsx`):**
-- Add `RegionalFameBreakdown` component after the band section
-- Pass band_id from band membership query
-
-**2. Band Manager Fame Section (`src/components/fame/FameFansOverview.tsx`):**
-- Already has country/city tabs - enhance with expandable city details inside country rows
-- Add "has_performed" indicator with visual distinction
-
-**3. SimpleBandManager (`src/pages/SimpleBandManager.tsx`):**
-- Add a collapsible fame breakdown card in the Performance tab
+- Run daily at 00:05 UTC (or configurable)
+- Process all profiles that had activity the previous day
+- Skip profiles that already have an "activity_bonus" grant for that day
 
 ---
 
-## Part 4: Update Edge Function to Use Config
+## Part 4: Database Schema Changes
 
-### Modify: `supabase/functions/generate-daily-sales/index.ts`
+### Modify `player_xp_wallet` Table
 
-Add config fetching from `game_balance_config`:
+```sql
+-- Add dual currency columns
+ALTER TABLE player_xp_wallet ADD COLUMN IF NOT EXISTS
+  skill_xp_balance INTEGER DEFAULT 0,
+  skill_xp_lifetime INTEGER DEFAULT 0,
+  skill_xp_spent INTEGER DEFAULT 0,
+  attribute_points_balance INTEGER DEFAULT 0,
+  attribute_points_lifetime INTEGER DEFAULT 0,
+  -- Streak tracking
+  stipend_claim_streak INTEGER DEFAULT 0,
+  last_stipend_claim_date DATE;
+```
+
+### Add Configuration to `game_balance_config`
+
+| Category | Key | Value | Description |
+|----------|-----|-------|-------------|
+| dual_xp | daily_stipend_sxp | 100 | Base daily Skill XP stipend |
+| dual_xp | daily_stipend_ap | 10 | Base daily Attribute Points stipend |
+| dual_xp | daily_activity_xp_cap | 250 | Max XP from activities per day |
+| dual_xp | streak_7_bonus_sxp | 50 | 7-day streak SXP bonus |
+| dual_xp | streak_7_bonus_ap | 10 | 7-day streak AP bonus |
+| dual_xp | streak_14_bonus_sxp | 100 | 14-day streak SXP bonus |
+| dual_xp | streak_14_bonus_ap | 20 | 14-day streak AP bonus |
+| dual_xp | streak_30_bonus_sxp | 200 | 30-day streak SXP bonus |
+| dual_xp | streak_30_bonus_ap | 40 | 30-day streak AP bonus |
+| dual_xp | streak_100_bonus_sxp | 500 | 100-day streak SXP bonus |
+| dual_xp | streak_100_bonus_ap | 100 | 100-day streak AP bonus |
+| dual_xp | streak_365_bonus_sxp | 1000 | 365-day streak SXP bonus |
+| dual_xp | streak_365_bonus_ap | 200 | 365-day streak AP bonus |
+| dual_xp | exercise_ap_rate | 0.60 | Exercise AP rate |
+| dual_xp | therapy_ap_rate | 0.60 | Therapy AP rate |
+| dual_xp | meditation_ap_rate | 0.55 | Meditation AP rate |
+| dual_xp | mentor_ap_rate | 0.55 | Mentor AP rate |
+| dual_xp | performance_ap_rate | 0.50 | Gigs/Busking AP rate |
+| dual_xp | rest_ap_rate | 0.50 | Rest AP rate |
+| dual_xp | education_ap_rate | 0.45 | University/Books AP rate |
+| dual_xp | default_ap_rate | 0.50 | Default AP rate |
+
+---
+
+## Part 5: Edge Function Updates
+
+### Update `progression/handlers.ts` - `handleClaimDailyXp`
 
 ```typescript
-// Fetch sales config at start
-const { data: salesConfig } = await supabaseClient
-  .from("game_balance_config")
-  .select("key, value")
-  .eq("category", "sales");
+export async function handleClaimDailyXp(
+  client: SupabaseClient<Database>,
+  userId: string,
+  profileState: ProfileState,
+  metadata: Record<string, unknown> = {},
+): Promise<ProfileState> {
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const profileId = profileState.profile.id;
+  
+  // Check if already claimed today
+  const { data: existingGrant } = await client
+    .from("profile_daily_xp_grants")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("grant_date", todayDate)
+    .eq("source", "daily_stipend")
+    .maybeSingle();
 
-const config = Object.fromEntries(
-  (salesConfig || []).map(c => [c.key, c.value])
-);
+  if (existingGrant) {
+    throw new Error("Daily stipend already claimed today");
+  }
 
-// Use config values with fallbacks
-const digitalMin = config.digital_base_sales_min ?? 5;
-const digitalMax = config.digital_base_sales_max ?? 25;
-const fameDivisor = config.fame_multiplier_divisor ?? 10000;
-// etc...
+  // Calculate streak
+  const lastClaimDate = profileState.wallet?.last_stipend_claim_date;
+  const yesterdayDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  
+  let newStreak = 1;
+  if (lastClaimDate === yesterdayDate) {
+    // Consecutive day - increment streak
+    newStreak = (profileState.wallet?.stipend_claim_streak ?? 0) + 1;
+  }
+  // If lastClaimDate is older than yesterday, streak resets to 1
 
-// Replace hardcoded values
-switch (format.format_type) {
-  case "digital":
-    baseSales = digitalMin + Math.floor(Math.random() * (digitalMax - digitalMin));
-    break;
-  // ... other formats
+  // Calculate bonuses based on streak
+  const baseSxp = 100;
+  const baseAp = 10;
+  let bonusSxp = 0;
+  let bonusAp = 0;
+
+  if (newStreak >= 365) { bonusSxp += 1000; bonusAp += 200; }
+  if (newStreak >= 100) { bonusSxp += 500; bonusAp += 100; }
+  if (newStreak >= 30) { bonusSxp += 200; bonusAp += 40; }
+  if (newStreak >= 14) { bonusSxp += 100; bonusAp += 20; }
+  if (newStreak >= 7) { bonusSxp += 50; bonusAp += 10; }
+
+  const totalSxp = baseSxp + bonusSxp;
+  const totalAp = baseAp + bonusAp;
+
+  // Update wallet with dual currency and streak
+  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? 0;
+  const currentApBalance = profileState.wallet?.attribute_points_balance ?? 0;
+
+  await client.from("player_xp_wallet").upsert({
+    profile_id: profileId,
+    skill_xp_balance: currentSxpBalance + totalSxp,
+    skill_xp_lifetime: (profileState.wallet?.skill_xp_lifetime ?? 0) + totalSxp,
+    attribute_points_balance: currentApBalance + totalAp,
+    attribute_points_lifetime: (profileState.wallet?.attribute_points_lifetime ?? 0) + totalAp,
+    stipend_claim_streak: newStreak,
+    last_stipend_claim_date: todayDate,
+    last_recalculated: new Date().toISOString(),
+  }, { onConflict: "profile_id" });
+
+  // Record grant
+  await client.from("profile_daily_xp_grants").insert({
+    profile_id: profileId,
+    grant_date: todayDate,
+    source: "daily_stipend",
+    xp_amount: totalSxp,
+    metadata: {
+      skill_xp: totalSxp,
+      attribute_points: totalAp,
+      streak: newStreak,
+      base_sxp: baseSxp,
+      base_ap: baseAp,
+      bonus_sxp: bonusSxp,
+      bonus_ap: bonusAp,
+    },
+  });
+
+  return await fetchProfileState(client, profileId);
 }
 ```
 
+### New Edge Function: `process-daily-activity-xp/index.ts`
+
+```typescript
+// Scheduled function to auto-credit activity XP daily
+serve(async (req) => {
+  const supabaseClient = createClient<Database>(...);
+  
+  const yesterdayStart = new Date();
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  yesterdayStart.setHours(0, 0, 0, 0);
+  const yesterdayEnd = new Date(yesterdayStart);
+  yesterdayEnd.setHours(23, 59, 59, 999);
+  const grantDate = yesterdayStart.toISOString().slice(0, 10);
+
+  // Get all profiles with activity yesterday
+  const { data: activities } = await supabaseClient
+    .from("experience_ledger")
+    .select("profile_id, activity_type, xp_amount")
+    .gte("created_at", yesterdayStart.toISOString())
+    .lte("created_at", yesterdayEnd.toISOString());
+
+  // Group by profile
+  const profileActivities = groupBy(activities, "profile_id");
+
+  for (const [profileId, acts] of Object.entries(profileActivities)) {
+    // Check if already processed
+    const { data: existing } = await supabaseClient
+      .from("profile_daily_xp_grants")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("grant_date", grantDate)
+      .eq("source", "activity_bonus")
+      .maybeSingle();
+
+    if (existing) continue;
+
+    // Calculate XP and AP
+    const totalXp = acts.reduce((sum, a) => sum + a.xp_amount, 0);
+    const cappedXp = Math.min(250, totalXp);
+
+    let totalAp = 0;
+    for (const act of acts) {
+      const apRate = getApRateForActivity(act.activity_type);
+      totalAp += Math.floor(act.xp_amount * apRate);
+    }
+
+    // Credit wallet
+    await creditDualCurrency(supabaseClient, profileId, cappedXp, totalAp);
+
+    // Record grant
+    await supabaseClient.from("profile_daily_xp_grants").insert({
+      profile_id: profileId,
+      grant_date: grantDate,
+      source: "activity_bonus",
+      xp_amount: cappedXp,
+      metadata: { skill_xp: cappedXp, attribute_points: totalAp, raw_xp: totalXp },
+    });
+  }
+
+  return new Response(JSON.stringify({ success: true }), { ... });
+});
+```
+
 ---
 
-## Part 5: File Changes Summary
+## Part 6: UI Updates
+
+### Update `DailyStipendCard.tsx`
+
+- Show current streak count with fire emoji
+- Display breakdown of base + streak bonuses
+- Show next milestone and days remaining
+- Visual progress toward next streak milestone
+
+### Update `XpWalletDisplay.tsx`
+
+- Split display into Skill XP and Attribute Points sections
+- Show yesterday's activity bonus separately
+- Display streak information
+
+### New Component: `StreakProgressBar.tsx`
+
+Visual indicator showing progress toward next milestone:
+```text
+Day 18 of 30  [===============----]  12 days to go
+```
+
+---
+
+## Part 7: Files Summary
 
 ### New Files
+
 | File | Purpose |
 |------|---------|
-| `src/pages/admin/SalesBalanceAdmin.tsx` | Admin page for sales tuning |
-| `src/components/fame/RegionalFameBreakdown.tsx` | Expandable fame breakdown component |
+| `supabase/functions/process-daily-activity-xp/index.ts` | Auto-credit activity XP daily |
+| `src/components/attributes/StreakProgressBar.tsx` | Visual streak progress |
+| `src/utils/dualXpSystem.ts` | Helper functions for AP rates and streak calculations |
 
 ### Modified Files
+
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add route for SalesBalanceAdmin |
-| `src/components/admin/AdminNav.tsx` | Add Sales Balance to Economy category |
-| `src/pages/admin/AdminDashboard.tsx` | Add Sales Balance quick action |
-| `src/components/fame/CharacterFameOverview.tsx` | Add regional breakdown for bands |
-| `src/components/fame/FameFansOverview.tsx` | Add has_performed indicator, enhance city view |
-| `src/pages/SimpleBandManager.tsx` | Add collapsible fame breakdown |
-| `supabase/functions/generate-daily-sales/index.ts` | Read config from database |
-| `src/components/VersionHeader.tsx` | Bump to v1.0.539 |
+| `supabase/functions/progression/handlers.ts` | Dual currency, streak logic for claim |
+| `supabase/functions/progression/index.ts` | Updated types for dual currency |
+| `src/components/attributes/DailyStipendCard.tsx` | Streak display, bonus breakdown |
+| `src/components/attributes/XpWalletDisplay.tsx` | Dual currency display |
+| `src/components/attributes/AttributeCard.tsx` | Spend AP instead of XP |
+| `src/components/skills/CompactSkillRow.tsx` | Show SXP cost |
+| `src/pages/Wellness.tsx` | Activities write to ledger (no wallet change - processed daily) |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.540 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
 ### Database Migration
-Insert 15 new rows into `game_balance_config` for sales category.
+
+1. Add dual currency columns to `player_xp_wallet`
+2. Add streak tracking columns
+3. Add AP column to `profile_daily_xp_grants`
+4. Insert configuration values to `game_balance_config`
+5. Migrate existing XP to skill_xp_balance
 
 ---
 
-## Part 6: Technical Details
+## Part 8: Processing Flow Diagram
 
-### Sales Config Interface
-```typescript
-interface SalesConfig {
-  digital_base_sales_min: number;
-  digital_base_sales_max: number;
-  cd_base_sales_min: number;
-  cd_base_sales_max: number;
-  vinyl_base_sales_min: number;
-  vinyl_base_sales_max: number;
-  cassette_base_sales_min: number;
-  cassette_base_sales_max: number;
-  fame_multiplier_divisor: number;
-  regional_fame_weight: number;
-  market_scarcity_min_bands: number;
-  market_scarcity_max_multiplier: number;
-  performed_country_bonus: number;
-  unvisited_fame_cap: number;
-  spillover_rate: number;
-}
-```
-
-### Regional Fame Breakdown Props
-```typescript
-interface RegionalFameBreakdownProps {
-  bandId: string;
-  compact?: boolean; // For dashboard vs full page view
-  defaultExpanded?: boolean;
-}
-```
-
-### Country Flag Helper
-Use existing `getCountryFlag` function from `FameFansOverview.tsx` - can be extracted to shared util.
-
----
-
-## Part 7: Preview Calculation (Admin Page)
-
-The admin page will show a live preview of expected sales:
-
-```typescript
-const calculatePreviewSales = (config: SalesConfig, sampleFame: number, sampleRegionalFame: number) => {
-  const fameMultiplier = 1 + sampleFame / config.fame_multiplier_divisor;
-  const regionalMultiplier = 0.5 + (sampleRegionalFame / 10000) * 1.5;
-  
-  return {
-    digital: Math.round((config.digital_base_sales_min + config.digital_base_sales_max) / 2 * fameMultiplier * regionalMultiplier),
-    cd: Math.round((config.cd_base_sales_min + config.cd_base_sales_max) / 2 * fameMultiplier * regionalMultiplier),
-    vinyl: Math.round((config.vinyl_base_sales_min + config.vinyl_base_sales_max) / 2 * fameMultiplier * regionalMultiplier),
-  };
-};
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    DAILY XP FLOW                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ACTIVITIES (during day)                                    │
+│  ├── Exercise, Meditation, Busking, etc.                   │
+│  ├── Written to experience_ledger only                     │
+│  └── No immediate wallet update                            │
+│                                                             │
+│  MIDNIGHT PROCESS (automatic)                               │
+│  ├── Reads previous day's experience_ledger               │
+│  ├── Caps XP at 250 SXP                                    │
+│  ├── Calculates AP at 40-60% per activity                  │
+│  └── Credits skill_xp_balance + attribute_points_balance   │
+│                                                             │
+│  STIPEND CLAIM (manual - anytime)                          │
+│  ├── Player clicks "Claim Daily Stipend"                   │
+│  ├── Checks consecutive day streak                          │
+│  ├── Calculates base 100 SXP + 10 AP                       │
+│  ├── Adds streak bonuses (7/14/30/100/365 day)            │
+│  └── Credits to wallet + updates streak counter            │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Version Update
 
-- Version: **1.0.539**
+- Version: **1.0.540**
 - Changes:
-  - Admin: New Sales Balance page to tune physical/digital record sales parameters
-  - Admin: Configure base sales ranges, fame multipliers, regional weights, and market scarcity
-  - Dashboard: Regional fame breakdown showing fame and fans by country with expandable cities
-  - Band Manager: Enhanced fame view with has_performed indicators and city details
-  - Sales System: Edge function now reads config from database for adjustable parameters
+  - Progression: Split XP into Skill XP (SXP) for skills and Attribute Points (AP) for attributes
+  - Progression: Daily stipend is now manual claim (100 SXP + 10 AP base)
+  - Progression: Activity XP auto-credited daily with 250 XP cap
+  - Progression: Attribute Points earned at 40-60% of activity XP
+  - Progression: Added streak bonuses for 7, 14, 30, 100, and 365 consecutive claim days
+  - UI: Streak display with progress toward next milestone
+  - Admin: Configurable rates for all dual XP parameters
+
