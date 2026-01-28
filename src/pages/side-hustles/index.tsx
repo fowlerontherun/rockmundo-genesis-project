@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useGameData } from "@/hooks/useGameData";
+import { usePlayerLevel } from "@/hooks/usePlayerLevel";
 import {
   calculateProgressUpgrade,
   fetchSideHustleProgress,
@@ -99,12 +100,19 @@ const formatPercentage = (value: number) => Math.max(0, Math.min(100, Math.round
 const getDefaultProgress = () => ({ level: 1, experience: 0 });
 
 const SideHustlesPage = () => {
-  const { profile, user } = useGameData();
+  const { profile, user, xpWallet, skills } = useGameData();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [recentResults, setRecentResults] = useState<
     Record<string, MinigameAttemptResult | null>
   >({});
+  
+  const levelData = usePlayerLevel({
+    xpWallet,
+    skills,
+    fame: profile?.fame ?? 0,
+    attributeStars: 0,
+  });
 
   const progressQuery = useQuery({
     queryKey: ["side-hustle-progress", profile?.id],
@@ -132,7 +140,7 @@ const SideHustlesPage = () => {
       const currentProgress = progressMap.get(activity.id);
       const skillLevel = Math.min(
         12,
-        Math.max(1, (profile.level ?? 1) + (currentProgress?.level ?? 0)),
+        Math.max(1, levelData.level + (currentProgress?.level ?? 0)),
       );
       const focusLevel = Math.min(
         12,
