@@ -14,17 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.560",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Daily Sales: Fixed integer column errors by converting prices to cents before insert" },
+      { type: 'fix', description: "Daily Sales: Skip formats with no retail price to prevent null constraint violations" },
+      { type: 'fix', description: "Dashboard: Fixed songs query to use original_writer_id instead of non-existent writer_id column" },
+    ],
+  },
+  {
     version: "1.0.559",
     date: "2026-01-28",
     changes: [
       { type: 'fix', description: "Daily Sales: Fixed missing home_country column error in generate-daily-sales edge function" },
-    ],
-  },
-  {
-    version: "1.0.558",
-    date: "2026-01-28",
-    changes: [
-      { type: 'improvement', description: "Navigation: Removed duplicate Self PR link from Media section (already accessible via PR page)" },
     ],
   },
   {
