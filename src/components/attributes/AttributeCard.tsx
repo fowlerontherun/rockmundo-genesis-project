@@ -13,7 +13,7 @@ interface AttributeCardProps {
   label: string;
   description: string;
   currentValue: number;
-  xpBalance: number;
+  xpBalance: number; // This is now Attribute Points (AP)
   affectedSystems: string[];
   onXpSpent?: () => void;
 }
@@ -23,12 +23,12 @@ export const AttributeCard = ({
   label,
   description,
   currentValue,
-  xpBalance,
+  xpBalance, // AP balance
   affectedSystems,
   onXpSpent
 }: AttributeCardProps) => {
   const queryClient = useQueryClient();
-  const standardCost = 50; // Attributes cost 50 XP
+  const standardCost = 5; // Attributes now cost 5 AP
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
   const progress = currentValue / ATTRIBUTE_MAX_VALUE * 100;
   const canAfford = xpBalance >= cost;
@@ -40,7 +40,7 @@ export const AttributeCard = ({
       amount: cost
     }),
     onSuccess: () => {
-      toast.success(`${label} trained! +10 points`);
+      toast.success(`${label} trained! +${cost} points`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
       onXpSpent?.();
     },
@@ -80,7 +80,7 @@ export const AttributeCard = ({
           {isMaxed ? "Maxed" : (
             <>
               <TrendingUp className="w-3 h-3 mr-1" />
-              Train - {cost} XP
+              Train - {cost} AP
             </>
           )}
         </Button>

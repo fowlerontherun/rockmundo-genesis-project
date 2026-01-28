@@ -5,9 +5,58 @@ import { fetchProfileState, type ProfileState } from "./index.ts";
 // Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
 const MAX_SKILL_LEVEL = 100;
 
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"];
+// Streak milestone constants
+const STREAK_MILESTONES = [
+  { days: 7, bonusSxp: 50, bonusAp: 10 },
+  { days: 14, bonusSxp: 100, bonusAp: 20 },
+  { days: 30, bonusSxp: 200, bonusAp: 40 },
+  { days: 100, bonusSxp: 500, bonusAp: 100 },
+  { days: 365, bonusSxp: 1000, bonusAp: 200 },
+];
+
+// Base stipend amounts
+const BASE_STIPEND_SXP = 100;
+const BASE_STIPEND_AP = 10;
+
 type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
+
+/**
+ * Calculate streak bonuses based on current streak
+ */
+function calculateStreakBonuses(streak: number): { bonusSxp: number; bonusAp: number; milestones: number[] } {
+  let bonusSxp = 0;
+  let bonusAp = 0;
+  const milestones: number[] = [];
+
+  for (const milestone of STREAK_MILESTONES) {
+    if (streak >= milestone.days) {
+      bonusSxp += milestone.bonusSxp;
+      bonusAp += milestone.bonusAp;
+      milestones.push(milestone.days);
+    }
+  }
+
+  return { bonusSxp, bonusAp, milestones };
+}
+
+/**
+ * Check if two dates are consecutive days
+ */
+function areConsecutiveDays(date1: string | null, date2: string): boolean {
+  if (!date1) return false;
+  
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  
+  // Normalize to start of day
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+  
+  const diffMs = d2.getTime() - d1.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  
+  return diffDays === 1;
+}
 
 export async function handleClaimDailyXp(
   client: SupabaseClient<Database>,
@@ -24,40 +73,45 @@ export async function handleClaimDailyXp(
     .select("*")
     .eq("profile_id", profileId)
     .eq("grant_date", todayIso)
+    .eq("source", "daily_stipend")
     .maybeSingle();
 
   if (existingGrant) {
     throw new Error("Daily XP already claimed today");
   }
 
-  // Base daily amount: always 100 XP
-  const baseDailyAmount = 100;
+  // Calculate streak
+  const lastClaimDate = profileState.wallet?.last_stipend_claim_date ?? null;
+  const currentStreak = profileState.wallet?.stipend_claim_streak ?? 0;
+  
+  let newStreak = 1; // Default to 1 for new or broken streak
+  if (areConsecutiveDays(lastClaimDate, todayIso)) {
+    // Consecutive day - increment streak
+    newStreak = currentStreak + 1;
+  }
 
-  // Calculate activity bonus from previous day only
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStart = new Date(yesterday.setHours(0, 0, 0, 0)).toISOString();
-  const yesterdayEnd = new Date(yesterday.setHours(23, 59, 59, 999)).toISOString();
+  // Calculate bonuses based on new streak
+  const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
+  const totalSxp = BASE_STIPEND_SXP + bonusSxp;
+  const totalAp = BASE_STIPEND_AP + bonusAp;
 
-  const { data: yesterdayXpData } = await client
-    .from('experience_ledger')
-    .select('xp_amount')
-    .eq('profile_id', profileId)
-    .gte('created_at', yesterdayStart)
-    .lte('created_at', yesterdayEnd);
-
-  const yesterdayXp = yesterdayXpData?.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0) || 0;
-
-  // Small activity bonus: +1 XP per 50 XP earned yesterday (max 50 bonus)
-  const activityBonus = Math.min(50, Math.floor(yesterdayXp / 50));
-  const dailyAmount = baseDailyAmount + activityBonus;
+  // Get current balances (use new dual currency columns)
+  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
+  const currentSxpLifetime = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
+  const currentApBalance = profileState.wallet?.attribute_points_balance ?? 0;
+  const currentApLifetime = profileState.wallet?.attribute_points_lifetime ?? 0;
 
   // Create grant record
   const grantMetadata = {
     ...metadata,
-    base_amount: baseDailyAmount,
-    activity_bonus: activityBonus,
-    yesterday_xp: yesterdayXp
+    base_sxp: BASE_STIPEND_SXP,
+    base_ap: BASE_STIPEND_AP,
+    bonus_sxp: bonusSxp,
+    bonus_ap: bonusAp,
+    total_sxp: totalSxp,
+    total_ap: totalAp,
+    streak: newStreak,
+    milestones_reached: milestones,
   };
 
   const { error: grantError } = await client
@@ -66,7 +120,8 @@ export async function handleClaimDailyXp(
       profile_id: profileId,
       grant_date: todayIso,
       source: "daily_stipend",
-      xp_amount: dailyAmount,
+      xp_amount: totalSxp,
+      attribute_points_amount: totalAp,
       metadata: grantMetadata,
     });
 
@@ -74,16 +129,22 @@ export async function handleClaimDailyXp(
     throw new Error(grantError.message || "Failed to create daily grant");
   }
 
-  // Update wallet
-  const currentBalance = profileState.wallet?.xp_balance ?? 0;
-  const currentLifetime = profileState.wallet?.lifetime_xp ?? 0;
-
+  // Update wallet with dual currency and streak
   const { error: walletError } = await client
     .from("player_xp_wallet")
     .upsert({
       profile_id: profileId,
-      xp_balance: currentBalance + dailyAmount,
-      lifetime_xp: currentLifetime + dailyAmount,
+      // Dual currency updates
+      skill_xp_balance: currentSxpBalance + totalSxp,
+      skill_xp_lifetime: currentSxpLifetime + totalSxp,
+      attribute_points_balance: currentApBalance + totalAp,
+      attribute_points_lifetime: currentApLifetime + totalAp,
+      // Legacy columns (keep in sync for backwards compatibility)
+      xp_balance: currentSxpBalance + totalSxp,
+      lifetime_xp: currentSxpLifetime + totalSxp,
+      // Streak tracking
+      stipend_claim_streak: newStreak,
+      last_stipend_claim_date: todayIso,
       last_recalculated: new Date().toISOString(),
     }, { onConflict: "profile_id" });
 
@@ -99,20 +160,22 @@ export async function handleSpendAttributeXp(
   userId: string,
   profileState: ProfileState,
   attributeKey: string,
-  xpAmount: number,
+  apCost: number,
   metadata: Record<string, unknown> = {},
 ): Promise<ProfileState> {
   const profileId = profileState.profile.id;
-  const currentBalance = profileState.wallet?.xp_balance ?? 0;
+  
+  // Use attribute_points_balance for spending on attributes
+  const currentApBalance = profileState.wallet?.attribute_points_balance ?? 0;
 
-  console.log(`[SpendAttributeXp] Profile: ${profileId}, Attribute: ${attributeKey}, Amount: ${xpAmount}, Balance: ${currentBalance}`);
+  console.log(`[SpendAttributeXp] Profile: ${profileId}, Attribute: ${attributeKey}, Cost: ${apCost} AP, Balance: ${currentApBalance} AP`);
 
-  if (xpAmount <= 0) {
-    throw new Error("XP amount must be positive");
+  if (apCost <= 0) {
+    throw new Error("AP cost must be positive");
   }
 
-  if (currentBalance < xpAmount) {
-    throw new Error(`Insufficient XP balance. You have ${currentBalance} XP but need ${xpAmount} XP.`);
+  if (currentApBalance < apCost) {
+    throw new Error(`Insufficient Attribute Points. You have ${currentApBalance} AP but need ${apCost} AP.`);
   }
 
   // Get or create player attributes
@@ -144,15 +207,16 @@ export async function handleSpendAttributeXp(
     attrs = newAttrs;
   }
 
+  // Each AP spent increases the attribute by 1 point
   const currentValue = (attrs as any)?.[attributeKey] ?? 10;
-  const newValue = currentValue + xpAmount;
+  const newValue = currentValue + apCost;
 
   // Update attribute
   const { error: attrError } = await client
     .from("player_attributes")
     .update({
       [attributeKey]: newValue,
-      attribute_points_spent: (attrs?.attribute_points_spent ?? 0) + xpAmount,
+      attribute_points_spent: (attrs?.attribute_points_spent ?? 0) + apCost,
     })
     .eq("profile_id", profileId);
 
@@ -160,18 +224,17 @@ export async function handleSpendAttributeXp(
     throw new Error(attrError.message || "Failed to update attribute");
   }
 
-  // Deduct from wallet
+  // Deduct from AP balance
   const { error: walletError } = await client
     .from("player_xp_wallet")
     .update({
-      xp_balance: currentBalance - xpAmount,
-      xp_spent: (profileState.wallet?.xp_spent ?? 0) + xpAmount,
+      attribute_points_balance: currentApBalance - apCost,
       last_recalculated: new Date().toISOString(),
     })
     .eq("profile_id", profileId);
 
   if (walletError) {
-    throw new Error(walletError.message || "Failed to deduct XP");
+    throw new Error(walletError.message || "Failed to deduct AP");
   }
 
   return await fetchProfileState(client, profileId);
@@ -186,16 +249,18 @@ export async function handleSpendSkillXp(
   metadata: Record<string, unknown> = {},
 ): Promise<{ state: ProfileState; skillProgress: SkillProgressRow }> {
   const profileId = profileState.profile.id;
-  const currentBalance = profileState.wallet?.xp_balance ?? 0;
+  
+  // Use skill_xp_balance for spending on skills
+  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
 
-  console.log(`[SpendSkillXp] Profile: ${profileId}, Skill: ${skillSlug}, Amount: ${xpAmount}, Balance: ${currentBalance}`);
+  console.log(`[SpendSkillXp] Profile: ${profileId}, Skill: ${skillSlug}, Amount: ${xpAmount} SXP, Balance: ${currentSxpBalance} SXP`);
 
   if (xpAmount <= 0) {
     throw new Error("XP amount must be positive");
   }
 
-  if (currentBalance < xpAmount) {
-    throw new Error(`Insufficient XP balance. You have ${currentBalance} XP but need ${xpAmount} XP.`);
+  if (currentSxpBalance < xpAmount) {
+    throw new Error(`Insufficient Skill XP. You have ${currentSxpBalance} SXP but need ${xpAmount} SXP.`);
   }
 
   // Get or create skill progress
@@ -238,7 +303,7 @@ export async function handleSpendSkillXp(
       skill_slug: skillSlug,
       current_xp: remainingXp,
       current_level: newLevel,
-       required_xp: newRequiredXp,
+      required_xp: newRequiredXp,
       last_practiced_at: new Date().toISOString(),
       metadata: metadata || {},
     }, { onConflict: "profile_id,skill_slug" });
@@ -262,18 +327,21 @@ export async function handleSpendSkillXp(
     throw new Error("Updated skill progress not found");
   }
 
-  // Deduct from wallet
+  // Deduct from SXP balance
   const { error: walletError } = await client
     .from("player_xp_wallet")
     .update({
-      xp_balance: currentBalance - xpAmount,
+      skill_xp_balance: currentSxpBalance - xpAmount,
+      skill_xp_spent: (profileState.wallet?.skill_xp_spent ?? 0) + xpAmount,
+      // Keep legacy columns in sync
+      xp_balance: currentSxpBalance - xpAmount,
       xp_spent: (profileState.wallet?.xp_spent ?? 0) + xpAmount,
       last_recalculated: new Date().toISOString(),
     })
     .eq("profile_id", profileId);
 
   if (walletError) {
-    throw new Error(walletError.message || "Failed to deduct XP");
+    throw new Error(walletError.message || "Failed to deduct SXP");
   }
 
   const state = await fetchProfileState(client, profileId);
@@ -333,24 +401,11 @@ export async function handleAwardActionXp(
     }
   }
 
-  // Update wallet with new XP
-  const currentBalance = profileState.wallet?.xp_balance ?? 0;
-  const currentLifetime = profileState.wallet?.lifetime_xp ?? 0;
+  // Note: We only log to experience_ledger here
+  // The actual wallet update happens in the daily process-daily-activity-xp function
+  // This ensures activities are auto-credited the next day with the 250 SXP cap
 
-  const { error: walletError } = await client
-    .from("player_xp_wallet")
-    .upsert({
-      profile_id: profileId,
-      xp_balance: currentBalance + amount,
-      lifetime_xp: currentLifetime + amount,
-      last_recalculated: new Date().toISOString(),
-    }, { onConflict: "profile_id" });
-
-  if (walletError) {
-    throw new Error(walletError.message || "Failed to update XP wallet");
-  }
-
-  // Log the XP grant
+  // Log the XP grant to ledger (will be processed daily)
   const { error: ledgerError } = await client
     .from("experience_ledger")
     .insert({
@@ -362,6 +417,7 @@ export async function handleAwardActionXp(
         category,
         action_key: actionKey,
         health_drain: healthDrain,
+        pending_daily_process: true,
         ...metadata,
       },
     });
