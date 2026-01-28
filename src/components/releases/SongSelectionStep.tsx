@@ -32,8 +32,9 @@ interface SongWithVersion {
   version: string;
   qualityScore: number;
   recordedAt: string | null;
-  onAlbum?: string | null;
-  albumReleaseId?: string | null;
+  onRelease?: string | null;
+  releaseType?: string | null;
+  isGreatestHits?: boolean;
 }
 
 export function SongSelectionStep({
@@ -59,16 +60,16 @@ export function SongSelectionStep({
   const { min: minSongs, max: maxSongs } = getSongLimits();
   const isGreatestHits = releaseType === "greatest_hits";
 
-  // Fetch songs already on albums for exclusivity check
-  const { data: songsOnAlbums } = useQuery({
-    queryKey: ["songs-on-albums", userId, bandId],
+  // Fetch songs already on releases (singles, EPs, albums) for exclusivity check
+  const { data: songsOnReleases } = useQuery({
+    queryKey: ["songs-on-releases", userId, bandId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_songs_on_albums", {
+      const { data, error } = await supabase.rpc("get_songs_on_releases", {
         p_band_id: bandId,
         p_user_id: bandId ? null : userId
       });
       if (error) {
-        console.error("Error fetching songs on albums:", error);
+        console.error("Error fetching songs on releases:", error);
         return [];
       }
       return data || [];
@@ -156,11 +157,14 @@ export function SongSelectionStep({
         recordingSessions = sessions || [];
       }
 
-      // Build album lookup
-      const albumLookup = new Map<string, string>();
-      if (songsOnAlbums) {
-        for (const soa of songsOnAlbums) {
-          albumLookup.set(soa.song_id, soa.album_title);
+      // Build release lookup (songs used in any release - singles, EPs, albums)
+      const releaseLookup = new Map<string, { title: string; releaseType: string }>();
+      if (songsOnReleases) {
+        for (const sor of songsOnReleases) {
+          // Only store the first release found (for display purposes)
+          if (!releaseLookup.has(sor.song_id)) {
+            releaseLookup.set(sor.song_id, { title: sor.release_title, releaseType: sor.release_type });
+          }
         }
       }
 
@@ -170,7 +174,7 @@ export function SongSelectionStep({
 
       for (const song of allSongs) {
         const songSessions = recordingSessions.filter(s => s.song_id === song.id);
-        const onAlbum = albumLookup.get(song.id) || null;
+        const releaseInfo = releaseLookup.get(song.id) || null;
         
         if (songSessions.length > 0) {
           // Group by version type
@@ -195,7 +199,8 @@ export function SongSelectionStep({
                 version,
                 qualityScore: song.quality_score || 0,
                 recordedAt: session.completed_at,
-                onAlbum,
+                onRelease: releaseInfo?.title || null,
+                releaseType: releaseInfo?.releaseType || null,
               });
             }
           }
@@ -212,7 +217,8 @@ export function SongSelectionStep({
               version: "Standard",
               qualityScore: song.quality_score || 0,
               recordedAt: song.updated_at,
-              onAlbum,
+              onRelease: releaseInfo?.title || null,
+              releaseType: releaseInfo?.releaseType || null,
             });
           }
         }
@@ -237,10 +243,10 @@ export function SongSelectionStep({
 
   const isSelected = (songId: string) => selectedSongs.some(s => s.displayKey === songId);
   
-  // For albums (not greatest hits), songs already on albums are disabled
+  // Songs already on any release (single/EP/album) are disabled - except for greatest hits
   const isSongDisabled = (song: SongWithVersion) => {
     if (isGreatestHits) return false; // Greatest hits can include any released song
-    if (releaseType === "album" && song.onAlbum) return true; // Can't add to another album
+    if (song.onRelease) return true; // Can't add song that's already on a release
     return false;
   };
 
@@ -264,19 +270,19 @@ export function SongSelectionStep({
           {getReleaseTypeDescription()}
         </p>
 
-        {releaseType === "album" && (
+        {!isGreatestHits && (
           <Alert className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              Songs can only appear on one album. Songs already on an album are grayed out but can still be used in greatest hits compilations.
+              Songs can only be released once. Songs already on a release (single, EP, or album) are grayed out, but can still be used in greatest hits compilations.
             </AlertDescription>
           </Alert>
         )}
 
         {isGreatestHits && (
-          <Alert className="mb-4 border-amber-500/30 bg-amber-500/5">
+          <Alert className="mb-4 border-warning/30 bg-warning/5">
             <AlertDescription className="text-sm">
-              Greatest Hits albums can include any of your previously released songs, even if they're already on another album.
+              Greatest Hits albums can include any of your previously released songs, even if they're already on another release.
             </AlertDescription>
           </Alert>
         )}
@@ -321,10 +327,10 @@ export function SongSelectionStep({
                           <Disc3 className="h-3 w-3 mr-1" />
                           {song.version}
                         </Badge>
-                        {song.onAlbum && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50">
+                        {song.onRelease && (
+                          <Badge variant="outline" className="text-xs border-warning/50">
                             <Album className="h-3 w-3 mr-1" />
-                            On: {song.onAlbum}
+                            On: {song.onRelease} ({song.releaseType})
                           </Badge>
                         )}
                       </div>
