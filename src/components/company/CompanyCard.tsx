@@ -71,7 +71,7 @@ const getManageRoute = (company: Company): string => {
     case 'recording_studio':
       return `/recording-studio-business/${company.id}`;
     case 'label':
-      return `/labels`; // Labels have their own management section
+      return `/record-label/manage/${company.id}`; // Navigate to specific label management
     default:
       return `/company/${company.id}`;
   }

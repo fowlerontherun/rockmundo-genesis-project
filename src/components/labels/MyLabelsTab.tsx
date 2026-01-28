@@ -49,7 +49,9 @@ export function MyLabelsTab() {
 
       if (!profile) return [];
 
-      // Then get labels owned by this profile
+      // Get labels where:
+      // 1. owner_id = profile.id (directly owned)
+      // 2. OR company.owner_id = user_id (owned via company subsidiary)
       const { data, error } = await supabase
         .from("labels")
         .select(`
@@ -62,13 +64,21 @@ export function MyLabelsTab() {
           headquarters_city,
           reputation_score,
           roster_slot_capacity,
-          artist_label_contracts(id, status)
+          artist_label_contracts(id, status),
+          companies!labels_company_id_fkey(owner_id)
         `)
-        .eq("owner_id", profile.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as MyLabel[];
+      
+      // Filter to show labels where user is direct owner OR owns the parent company
+      const filteredLabels = (data || []).filter((label: any) => {
+        const isDirectOwner = label.owner_id === profile.id;
+        const ownsParentCompany = label.companies?.owner_id === user!.id;
+        return isDirectOwner || ownsParentCompany;
+      });
+      
+      return filteredLabels as MyLabel[];
     },
   });
 
