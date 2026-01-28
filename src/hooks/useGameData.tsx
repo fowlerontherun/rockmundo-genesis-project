@@ -271,6 +271,38 @@ const coerceSkillValue = (value: unknown): number | null => {
   return null;
 };
 
+/**
+ * Calculate the effective skill level from XP when current_level might be stale or unset.
+ * Uses the game's skill leveling formula: Level 0 needs 100 XP, each subsequent level needs floor(prev * 1.5) XP.
+ */
+const calculateSkillLevelFromXp = (currentXp: number, currentLevel: number, requiredXp: number | null): number => {
+  // If level is already set and > 0, trust it
+  if (currentLevel > 0) {
+    return currentLevel;
+  }
+  
+  // If no XP, level is 0
+  if (currentXp <= 0) {
+    return 0;
+  }
+  
+  // Calculate expected level from XP using the game's leveling formula
+  let level = 0;
+  let xpRemaining = currentXp;
+  let xpNeeded = requiredXp && requiredXp > 0 ? requiredXp : 100;
+  
+  // Cap at level 20 (MAX_SKILL_LEVEL from skillConstants)
+  const MAX_LEVEL = 20;
+  
+  while (level < MAX_LEVEL && xpRemaining >= xpNeeded) {
+    xpRemaining -= xpNeeded;
+    level += 1;
+    xpNeeded = Math.floor(xpNeeded * 1.5);
+  }
+  
+  return level;
+};
+
 const deriveSkillsFromProgress = (
   progress: SkillProgressRow[],
   fallback: PlayerSkills | null,
@@ -289,15 +321,20 @@ const deriveSkillsFromProgress = (
       continue;
     }
 
-    const numericValue =
+    // Get the stored level value
+    const storedLevel =
       coerceSkillValue(row.current_level) ??
-      coerceSkillValue((row.metadata as Record<string, unknown> | null | undefined)?.current_level);
+      coerceSkillValue((row.metadata as Record<string, unknown> | null | undefined)?.current_level) ??
+      0;
 
-    if (numericValue == null) {
-      continue;
-    }
+    // Get XP values for calculation
+    const currentXp = typeof row.current_xp === "number" ? row.current_xp : 0;
+    const requiredXp = typeof row.required_xp === "number" ? row.required_xp : null;
 
-    base[slug] = numericValue;
+    // Calculate effective level - handles cases where level=0 but XP has accumulated
+    const effectiveLevel = calculateSkillLevelFromXp(currentXp, storedLevel, requiredXp);
+
+    base[slug] = effectiveLevel;
 
     const legacyKey = resolveLegacySkillKey(slug);
     if (legacyKey) {
@@ -305,7 +342,7 @@ const deriveSkillsFromProgress = (
         typeof base[legacyKey] === "number" && Number.isFinite(base[legacyKey])
           ? (base[legacyKey] as number)
           : FALLBACK_SKILL_VALUE;
-      base[legacyKey] = Math.max(previous, numericValue);
+      base[legacyKey] = Math.max(previous, effectiveLevel);
     }
   }
 
