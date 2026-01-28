@@ -115,22 +115,33 @@ export function useScheduledActivities(date: Date, userId?: string) {
       
       let gigs: any[] = [];
       if (userBandIds.length > 0) {
+        // Use a broader date range to catch gigs regardless of timezone
+        const dayBefore = new Date(date);
+        dayBefore.setDate(dayBefore.getDate() - 1);
+        const dayAfter = new Date(date);
+        dayAfter.setDate(dayAfter.getDate() + 1);
+        
         const { data: bandGigs, error: gigsError } = await supabase
           .from('gigs')
           // NOTE: gigs->venues has multiple FK relationships; we must disambiguate with an explicit join
           .select('*, venues:venues!gigs_venue_id_fkey(name, city_id, cities:city_id(name)), bands:band_id(name), tours:tour_id(name)')
           .in('band_id', userBandIds)
-          // Use date cast for reliable timezone-independent comparison
-          .gte('scheduled_date', `${dateString}T00:00:00.000Z`)
-          .lt('scheduled_date', `${dateString}T23:59:59.999Z`)
+          // Use broader range then filter client-side for timezone robustness
+          .gte('scheduled_date', dayBefore.toISOString())
+          .lt('scheduled_date', dayAfter.toISOString())
           .in('status', ['scheduled', 'in_progress', 'completed', 'confirmed']);
         
         if (gigsError) {
           console.error('Error fetching gigs for schedule:', gigsError);
         } else {
-          console.log(`📅 Fetched ${bandGigs?.length || 0} gigs for ${dateString}`);
+          // Filter to only gigs on the actual requested date (client-side for timezone accuracy)
+          const filteredGigs = (bandGigs || []).filter((g: any) => {
+            const gigDate = new Date(g.scheduled_date).toISOString().split('T')[0];
+            return gigDate === dateString;
+          });
+          console.log(`📅 Fetched ${filteredGigs.length} gigs for ${dateString}`);
+          gigs = filteredGigs;
         }
-        gigs = bandGigs || [];
       }
 
       // Fetch rehearsals for user's bands

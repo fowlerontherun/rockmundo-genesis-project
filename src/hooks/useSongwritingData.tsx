@@ -296,6 +296,15 @@ export const useSongwritingData = (userId?: string | null) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       
+      // Get user's profile for scheduled activities
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!profile) throw new Error("Profile not found");
+      
       // Check how many songwriting sessions are currently active (max 2 allowed)
       const { data: activeProjects } = await supabase
         .from('songwriting_projects')
@@ -310,7 +319,16 @@ export const useSongwritingData = (userId?: string | null) => {
       
       // Fixed 1-hour duration
       const lockDuration = 1 * 60 * 60 * 1000;
-      const lockedUntil = new Date(Date.now() + lockDuration).toISOString();
+      const sessionStart = new Date();
+      const sessionEndTime = new Date(sessionStart.getTime() + lockDuration);
+      const lockedUntil = sessionEndTime.toISOString();
+      
+      // Get project title for the activity
+      const { data: projectData } = await supabase
+        .from('songwriting_projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
       
       // Lock the project
       const { error: lockError } = await supabase
@@ -321,9 +339,6 @@ export const useSongwritingData = (userId?: string | null) => {
       if (lockError) throw lockError;
       
       // Create session with locked_until timestamp
-      const sessionStart = new Date();
-      const sessionEndTime = new Date(sessionStart.getTime() + lockDuration);
-      
       const { data, error } = await supabase
         .from('songwriting_sessions')
         .insert({
@@ -340,6 +355,29 @@ export const useSongwritingData = (userId?: string | null) => {
       
       if (error) throw error;
       
+      // Create scheduled activity to block the time slot
+      const { error: activityError } = await (supabase as any)
+        .from('player_scheduled_activities')
+        .insert({
+          user_id: user.id,
+          profile_id: profile.id,
+          activity_type: 'songwriting',
+          scheduled_start: sessionStart.toISOString(),
+          scheduled_end: sessionEndTime.toISOString(),
+          status: 'in_progress',
+          title: `Songwriting: ${projectData?.title || 'Untitled'}`,
+          description: 'Working on song composition',
+          metadata: {
+            project_id: projectId,
+            session_id: data.id,
+          },
+        });
+      
+      if (activityError) {
+        console.error('Failed to create scheduled activity for songwriting:', activityError);
+        // Don't throw - songwriting can still continue, just won't show in schedule
+      }
+      
       // Log activity
       logGameActivity({
         userId,
@@ -353,6 +391,7 @@ export const useSongwritingData = (userId?: string | null) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
       toast({ title: "Session Started", description: "1-hour session in progress" });
     }
   });

@@ -72,6 +72,16 @@ export const CollaboratorInviteDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user's profile ID for friendship matching
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (!userProfile) return;
+      const userProfileId = userProfile.id;
+
       const collaboratorIds = new Set<string>();
       const results: PotentialCollaborator[] = [];
 
@@ -106,29 +116,30 @@ export const CollaboratorInviteDialog = ({
         });
       }
 
-      // Get friends
+      // Get friends - use correct column names: requestor_id and addressee_id
       const { data: friendships } = await supabase
         .from("friendships")
         .select(`
-          friend_id,
-          user_id,
-          friend_profile:profiles!friendships_friend_id_fkey (
+          requestor_id,
+          addressee_id,
+          requestor_profile:profiles!friendships_requestor_id_fkey (
             id,
             username,
             avatar_url
           ),
-          user_profile:profiles!friendships_user_id_fkey (
+          addressee_profile:profiles!friendships_addressee_id_fkey (
             id,
             username,
             avatar_url
           )
         `)
-        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .or(`requestor_id.eq.${userProfileId},addressee_id.eq.${userProfileId}`)
         .eq("status", "accepted");
 
       friendships?.forEach((friendship: any) => {
-        const isFriendProfile = friendship.friend_id !== user.id;
-        const profile = isFriendProfile ? friendship.friend_profile : friendship.user_profile;
+        // The friend is whichever profile is NOT the current user
+        const isFriendTheAddressee = friendship.requestor_id === userProfileId;
+        const profile = isFriendTheAddressee ? friendship.addressee_profile : friendship.requestor_profile;
         
         if (profile && !collaboratorIds.has(profile.id) && !existingIds.has(profile.id)) {
           collaboratorIds.add(profile.id);

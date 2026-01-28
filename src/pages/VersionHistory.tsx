@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.555",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Songwriting: Sessions now create scheduled activities and block player time" },
+      { type: 'fix', description: "Songwriting: Fixed collaborator invite - now correctly queries friendships table columns" },
+      { type: 'fix', description: "Schedule: Gigs now show reliably regardless of timezone differences" },
+      { type: 'fix', description: "Mayor Dashboard: Current mayors can now update city laws (RLS policy fixed)" },
+      { type: 'fix', description: "Admin: Sales balance config now saves properly (unique constraint + admin policy added)" },
+    ],
+  },
+  {
     version: "1.0.554",
     date: "2026-01-28",
     changes: [
