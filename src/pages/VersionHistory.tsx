@@ -17,6 +17,7 @@ const versionHistory: VersionEntry[] = [
     version: "1.0.555",
     date: "2026-01-28",
     changes: [
+      { type: 'fix', description: "Setlists: Fixed position conflict errors when adding/reordering items (deferred constraints + atomic RPC)" },
       { type: 'fix', description: "Songwriting: Sessions now create scheduled activities and block player time" },
       { type: 'fix', description: "Songwriting: Fixed collaborator invite - now correctly queries friendships table columns" },
       { type: 'fix', description: "Schedule: Gigs now show reliably regardless of timezone differences" },

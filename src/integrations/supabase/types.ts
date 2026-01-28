@@ -22803,6 +22803,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      add_setlist_item: {
+        Args: {
+          p_item_type?: string
+          p_notes?: string
+          p_performance_item_id?: string
+          p_section?: string
+          p_setlist_id: string
+          p_song_id?: string
+        }
+        Returns: string
+      }
       admin_force_complete_release: {
         Args: { p_release_id: string }
         Returns: undefined
