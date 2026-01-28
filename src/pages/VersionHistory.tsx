@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.548",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Character Creator: Added punk rock styled sprite assets (body, hair, jacket, trousers, boots)" },
+      { type: 'feature', description: "Character Creator: Comic-book illustration style inspired by 80s-90s punk zines" },
+      { type: 'fix', description: "Character Creator: Fixed sprite preview to show actual generated assets" },
+      { type: 'improvement', description: "Character Creator: Assets now properly imported and resolved from local files" },
+    ],
+  },
+  {
     version: "1.0.547",
     date: "2026-01-28",
     changes: [
