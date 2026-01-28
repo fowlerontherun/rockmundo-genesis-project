@@ -1,290 +1,358 @@
 
-# Company & Subsidiary System and Record Labels - Review and Fixes
+# RockMundo Custom Character Creator - Complete RPM Replacement
 
-## Version: 1.0.541
+## Overview
 
----
+This plan replaces the Ready Player Me (RPM) 3D avatar system with a custom 2D layered sprite character creator using the stylised punk rock comic illustration art style you've specified. The new system will use modular PNG assets that stack/layer together, making it performant, consistent, and future-proof.
 
-## Executive Summary
+## Current System Analysis
 
-The company/subsidiary system and record labels have several interconnected issues preventing them from working correctly. The core problems are:
+### What's Being Replaced
 
-1. **Trigger Schema Mismatch**: The database trigger that auto-creates subsidiary entities uses wrong column names
-2. **Missing owner_id on Subsidiary Labels**: Labels created via company trigger don't have owner_id set, making them invisible in "My Labels"
-3. **Recording Studios Table Missing**: The trigger references a non-existent `recording_studios` table
-4. **Venues Table Column Mismatch**: Missing `city` column (uses `location` instead)
-5. **Rehearsal Rooms Column Mismatch**: Missing `daily_rate` column
-6. **No navigation from Company Labels to Management**: Labels created as subsidiaries can't be managed
+The current RPM system spans these areas:
 
----
+| Area | Files | Purpose |
+|------|-------|---------|
+| **Avatar Creator** | `ReadyPlayerMeCreator.tsx`, `RpmAvatarCreator.tsx` | Embeds RPM iframe for 3D avatar creation |
+| **3D Rendering** | `ReadyPlayerMeAvatar.tsx`, `SharedRpmAvatar.tsx` | Loads .glb models via three.js/drei |
+| **Gig Viewer** | `RpmAvatarImage.tsx`, `ParallaxGigViewer.tsx` | Renders RPM 2D portraits on stage |
+| **Data** | `rpmAvatarPool.ts` | Pool of shared RPM URLs for crowd/band |
+| **Database** | `rpm_avatar_url`, `rpm_avatar_id`, `use_rpm_avatar` columns | Stores RPM model references |
+| **Hooks** | `usePlayerRpmAvatar.ts` | Fetches/saves RPM URLs |
 
-## Detailed Problem Analysis
+### What's Staying (Existing Procedural System)
 
-### Issue 1: Trigger Function Schema Mismatch
+The project already has a partial procedural avatar system:
 
-The `create_subsidiary_entity()` trigger function in the database uses column names that don't match the actual table schemas:
+- `EnhancedAvatar.tsx`, `EnhancedBody.tsx`, `EnhancedFace.tsx`, `EnhancedHair.tsx` - 3D procedural meshes
+- `BodySelector.tsx`, `FaceSelector.tsx`, `HairSelector.tsx`, `ClothingSelector.tsx` - UI for customisation
+- `usePlayerAvatar.ts` - Manages `player_avatar_config` table with ~50 customisation fields
 
-| Entity Type | Trigger Uses | Actual Columns |
-|-------------|--------------|----------------|
-| **security_firms** | `city_id`, `license_tier` | NO `city_id`, uses `license_level` |
-| **merch_factories** | `production_capacity`, `quality_rating` | Uses `quality_level`, not `quality_rating` |
-| **logistics_companies** | `city_id`, `fleet_size` | NO `city_id`, uses `fleet_capacity` |
-| **labels** | `is_subsidiary: true` but NO `owner_id` | Need to inherit owner from company |
-| **venues** | `city` column | Uses `location`, has no `city` text column |
-| **rehearsal_rooms** | `daily_rate` | Column doesn't exist |
-| **recording_studios** | Entire table | Table doesn't exist - should use `city_studios` |
-
-**Result**: All subsidiary creations silently fail, causing companies to be created without their associated business entities.
-
-### Issue 2: Labels Created as Subsidiaries Have No Owner
-
-When a company of type `label` is created, the trigger creates a label in the `labels` table but sets:
-- `owner_id: NULL` 
-- `is_subsidiary: true`
-- `company_id: {company.id}`
-
-However, the `MyLabelsTab` component queries:
-```sql
-SELECT * FROM labels WHERE owner_id = profile.id
-```
-
-This means subsidiary labels are invisible to the owner because `owner_id` is null.
-
-### Issue 3: Dual Label Creation Paths
-
-There are two ways to create labels:
-1. **Via Record Label page** (`CreateLabelDialog.tsx`) - Creates label directly with `owner_id`
-2. **Via Company system** (`CreateCompanyDialog.tsx`) - Creates company → trigger creates label without `owner_id`
-
-These paths are disconnected and create inconsistent data.
-
-### Issue 4: Missing Management Routes
-
-The `CompanyCard.tsx` routes label companies to `/labels` instead of a specific label management page. This means:
-- User creates "label" company subsidiary
-- Clicks "Manage" button
-- Goes to generic Record Label hub, not the specific label they created
-- Can't find their subsidiary label (because `owner_id` is null)
+This existing system will be **enhanced** to work with the new 2D sprite layers.
 
 ---
 
-## Solution Plan
+## New System Architecture
 
-### Part 1: Fix Database Trigger Function
+### Art Style Specification
 
-Update `create_subsidiary_entity()` to use correct column names for all entity types:
-
-```sql
-CREATE OR REPLACE FUNCTION public.create_subsidiary_entity()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_city_name TEXT;
-  v_profile_id UUID;
-BEGIN
-  -- Get city name
-  SELECT name INTO v_city_name FROM cities WHERE id = NEW.headquarters_city_id;
-  
-  -- Get owner's profile_id from companies.owner_id (which is user_id)
-  SELECT id INTO v_profile_id FROM profiles WHERE user_id = NEW.owner_id;
-  
-  -- Security Firm (fixed columns)
-  IF NEW.company_type = 'security' THEN
-    INSERT INTO security_firms (company_id, name, license_level, equipment_quality, reputation, max_guards)
-    VALUES (NEW.id, NEW.name, 1, 1, 50, 10);
-  
-  -- Merch Factory (fixed columns)
-  ELSIF NEW.company_type = 'factory' THEN
-    INSERT INTO merch_factories (company_id, name, city_id, factory_type, quality_level, production_capacity, worker_count, operating_costs_daily)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 'apparel', 1, 100, 5, 500);
-  
-  -- Logistics Company (fixed columns - no city_id)
-  ELSIF NEW.company_type = 'logistics' THEN
-    INSERT INTO logistics_companies (company_id, name, license_tier, fleet_capacity, reputation)
-    VALUES (NEW.id, NEW.name, 1, 5, 50);
-  
-  -- Record Label (CRITICAL: set owner_id from company owner)
-  ELSIF NEW.company_type = 'label' THEN
-    INSERT INTO labels (company_id, name, headquarters_city, balance, reputation_score, is_subsidiary, owner_id)
-    VALUES (NEW.id, NEW.name, COALESCE(v_city_name, 'Unknown'), NEW.balance, 50, true, v_profile_id);
-  
-  -- Venue (fixed: use location not city)
-  ELSIF NEW.company_type = 'venue' THEN
-    INSERT INTO venues (name, location, city_id, capacity, base_payment, venue_type, prestige_level)
-    VALUES (NEW.name, COALESCE(v_city_name, 'Unknown'), NEW.headquarters_city_id, 500, 5000, 'club', 1);
-  
-  -- Rehearsal Studio (fixed: use rehearsal_rooms with correct columns)
-  ELSIF NEW.company_type = 'rehearsal' THEN
-    INSERT INTO rehearsal_rooms (company_id, name, city_id, hourly_rate, capacity, quality_rating)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 50, 4, 50);
-  
-  -- Recording Studio (fixed: use city_studios table)
-  ELSIF NEW.company_type = 'recording_studio' THEN
-    INSERT INTO city_studios (company_id, name, city_id, hourly_rate, quality_rating, is_company_owned)
-    VALUES (NEW.id, NEW.name, NEW.headquarters_city_id, 200, 50, true);
-  
-  END IF;
-  
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-  RAISE WARNING 'Subsidiary entity creation failed for %: %', NEW.company_type, SQLERRM;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+```text
+Stylised illustrated punk rock character art. Hand-drawn comic-book style 
+with bold confident linework, slightly exaggerated proportions, gritty but 
+clean finish. Flat colours with subtle texture and light shading, no gradients. 
+Inspired by classic punk zine illustrations, 80s-90s underground comics, and 
+modern indie game character art. Clear outlines suitable for sprite layering.
 ```
 
-### Part 2: Fix Existing Orphaned Subsidiary Labels
+### Layering System (Bottom to Top)
 
-Update labels that have `company_id` but no `owner_id`:
-
-```sql
-UPDATE labels l
-SET owner_id = p.id
-FROM companies c
-JOIN profiles p ON p.user_id = c.owner_id
-WHERE l.company_id = c.id
-AND l.owner_id IS NULL;
+```text
+┌─────────────────────────────────────────────┐
+│  Layer 10: Accessories (hats, glasses)      │
+├─────────────────────────────────────────────┤
+│  Layer 9:  Hair (front pieces)              │
+├─────────────────────────────────────────────┤
+│  Layer 8:  Face Details (scars, makeup)     │
+├─────────────────────────────────────────────┤
+│  Layer 7:  Facial Hair (beards, stubble)    │
+├─────────────────────────────────────────────┤
+│  Layer 6:  Mouth                            │
+├─────────────────────────────────────────────┤
+│  Layer 5:  Nose                             │
+├─────────────────────────────────────────────┤
+│  Layer 4:  Eyes + Eyebrows                  │
+├─────────────────────────────────────────────┤
+│  Layer 3:  Hair (back/main)                 │
+├─────────────────────────────────────────────┤
+│  Layer 2:  Clothing (jacket/shirt)          │
+├─────────────────────────────────────────────┤
+│  Layer 1:  Body Base (with skin tone)       │
+└─────────────────────────────────────────────┘
 ```
 
-### Part 3: Create Missing Subsidiary Entities
+### Database Schema Updates
 
-For existing companies that should have subsidiary entities but don't:
+New table for sprite assets:
 
 ```sql
--- Create missing security_firms
-INSERT INTO security_firms (company_id, name, license_level, equipment_quality, reputation, max_guards)
-SELECT c.id, c.name, 1, 1, 50, 10
-FROM companies c
-LEFT JOIN security_firms sf ON sf.company_id = c.id
-WHERE c.company_type = 'security' AND sf.id IS NULL;
+CREATE TABLE character_sprite_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL, -- 'body', 'eyes', 'nose', 'mouth', 'hair', 'jacket', 'shirt', 'trousers', 'shoes', 'hat', 'glasses'
+  subcategory TEXT, -- 'male_slim', 'female_athletic', etc.
+  name TEXT NOT NULL,
+  asset_url TEXT NOT NULL, -- URL to PNG with transparent background
+  layer_order INTEGER NOT NULL, -- z-index for stacking
+  anchor_x FLOAT DEFAULT 0.5, -- normalized anchor point
+  anchor_y FLOAT DEFAULT 0.5,
+  supports_recolor BOOLEAN DEFAULT true, -- can apply tint/recolour
+  color_variants JSONB, -- pre-generated colour URLs if not recolourable
+  is_premium BOOLEAN DEFAULT false,
+  price INTEGER DEFAULT 0,
+  collection_id UUID REFERENCES skin_collections(id),
+  gender_filter TEXT[], -- ['male', 'female', 'any']
+  body_type_filter TEXT[], -- ['slim', 'athletic', 'average', etc.]
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
--- Create missing merch_factories
-INSERT INTO merch_factories (company_id, name, city_id, factory_type, quality_level, production_capacity, worker_count, operating_costs_daily)
-SELECT c.id, c.name, c.headquarters_city_id, 'apparel', 1, 100, 5, 500
-FROM companies c
-LEFT JOIN merch_factories mf ON mf.company_id = c.id
-WHERE c.company_type = 'factory' AND mf.id IS NULL;
-
--- Create missing logistics_companies
-INSERT INTO logistics_companies (company_id, name, license_tier, fleet_capacity, reputation)
-SELECT c.id, c.name, 1, 5, 50
-FROM companies c
-LEFT JOIN logistics_companies lc ON lc.company_id = c.id
-WHERE c.company_type = 'logistics' AND lc.id IS NULL;
+CREATE INDEX idx_sprite_assets_category ON character_sprite_assets(category);
+CREATE INDEX idx_sprite_assets_gender ON character_sprite_assets USING GIN(gender_filter);
 ```
 
-### Part 4: Update CompanyCard Navigation for Labels
+Updates to `player_avatar_config`:
 
-Modify `src/components/company/CompanyCard.tsx` to navigate to the actual label management:
+```sql
+ALTER TABLE player_avatar_config
+  -- Remove RPM columns (migration will handle data)
+  DROP COLUMN IF EXISTS rpm_avatar_url,
+  DROP COLUMN IF EXISTS rpm_avatar_id,
+  DROP COLUMN IF EXISTS use_rpm_avatar,
+  
+  -- Add sprite selection columns
+  ADD COLUMN body_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN eyes_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN nose_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN mouth_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN hair_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN jacket_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN shirt_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN trousers_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN shoes_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN hat_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN glasses_sprite_id UUID REFERENCES character_sprite_assets(id),
+  ADD COLUMN facial_hair_sprite_id UUID REFERENCES character_sprite_assets(id),
+  
+  -- Composite render cache
+  ADD COLUMN rendered_avatar_url TEXT, -- cached composite image
+  ADD COLUMN render_hash TEXT; -- hash of config for cache invalidation
+```
+
+Also clean up profiles table:
+
+```sql
+ALTER TABLE profiles DROP COLUMN IF EXISTS rpm_avatar_url;
+```
+
+---
+
+## Implementation Phases
+
+### Phase 1: Database & Asset Infrastructure
+
+1. **Create migration** for `character_sprite_assets` table
+2. **Update `player_avatar_config`** schema (add sprite columns, keep RPM columns temporarily for migration)
+3. **Create storage bucket** `character-sprites` for uploaded PNG assets
+4. **Seed initial assets** - Generate starter set using AI image generation:
+   - 12 male body types
+   - 12 female body types
+   - 20 eye styles
+   - 12 nose styles
+   - 15 mouth styles
+   - 25 hair styles (mohawks, liberty spikes, etc.)
+   - 10 hats
+   - 15 jackets
+   - 20 shirts/t-shirts
+   - 10 trousers
+   - 8 shoes
+   - 10 glasses
+
+### Phase 2: Sprite Asset Generator (Edge Function)
+
+Create `supabase/functions/generate-character-sprite/index.ts`:
 
 ```typescript
-const getManageRoute = (company: Company): string => {
-  switch (company.company_type) {
-    case 'label':
-      // Navigate to label finance/management using company_id to find the label
-      return `/record-label/manage/${company.id}`;
-    // ... rest stays the same
-  }
-};
+// Uses Lovable AI gateway with punk art style prompts
+// Generates individual sprite layers as PNGs
+// Uploads to storage bucket
+// Returns asset URL
+
+const PUNK_ART_STYLE = `Stylised illustrated punk rock character art. 
+Hand-drawn comic-book style with bold confident linework, slightly 
+exaggerated proportions, gritty but clean finish. Flat colours with 
+subtle texture and light shading, no gradients. Clear outlines suitable 
+for sprite layering. Transparent background.`;
+
+async function generateSprite(category: string, description: string) {
+  const prompt = buildPromptForCategory(category, description);
+  // Call Lovable AI gateway
+  // Process response, upload to storage
+  // Return asset record
+}
 ```
 
-### Part 5: Add Label Management Route
+### Phase 3: Character Creator UI
 
-Create a new page or modify existing to handle company-owned labels:
+Replace `src/pages/AvatarDesigner.tsx` with new sprite-based creator:
 
-**Option A**: Modify `MyLabelsTab` to also show labels where the user owns the parent company
-**Option B**: Create a dedicated route `/record-label/manage/:companyId` 
+**New Components:**
 
-The simpler fix is Option A:
+| Component | Purpose |
+|-----------|---------|
+| `PunkCharacterCreator.tsx` | Main page with layer preview |
+| `SpriteLayerCanvas.tsx` | Stacks sprite layers with proper z-index |
+| `SpriteCategoryPicker.tsx` | Grid of available sprites per category |
+| `SkinToneRecolorizer.tsx` | Applies CSS filters for skin tone variation |
+| `ColorVariantPicker.tsx` | Shows available colours for clothing |
+| `CharacterPreview.tsx` | Live preview with animation support |
 
-```typescript
-// In MyLabelsTab.tsx - modify query
-const { data: myLabels = [] } = useQuery({
-  queryKey: ["my-labels", user?.id],
-  enabled: !!user?.id,
-  queryFn: async () => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id, user_id")
-      .eq("user_id", user!.id)
-      .single();
+**UI Flow:**
 
-    if (!profile) return [];
-
-    // Get labels where:
-    // 1. owner_id = profile.id (directly owned)
-    // 2. OR company.owner_id = user_id (owned via company)
-    const { data, error } = await supabase
-      .from("labels")
-      .select(`
-        id, name, logo_url, balance, is_bankrupt, balance_went_negative_at,
-        headquarters_city, reputation_score, roster_slot_capacity,
-        artist_label_contracts(id, status),
-        companies!labels_company_id_fkey(owner_id)
-      `)
-      .or(`owner_id.eq.${profile.id},companies.owner_id.eq.${user.id}`)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data;
-  },
-});
+```text
+┌────────────────────────────────────────────────────────────────┐
+│  CHARACTER CREATOR                                    [Save]   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  ┌──────────────────┐  ┌─────────────────────────────────────┐ │
+│  │                  │  │ [Body] [Face] [Hair] [Clothes] [Acc]│ │
+│  │   LIVE PREVIEW   │  ├─────────────────────────────────────┤ │
+│  │                  │  │                                     │ │
+│  │   (Stacked       │  │   Grid of sprite options            │ │
+│  │    Sprites)      │  │   with colour variants              │ │
+│  │                  │  │                                     │ │
+│  │                  │  │   [Slim] [Athletic] [Muscular]...   │ │
+│  │                  │  │                                     │ │
+│  └──────────────────┘  └─────────────────────────────────────┘ │
+│                                                                │
+│  Skin Tone: [● ● ● ● ● ● ● ● ● ●]                             │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-### Part 6: Update CreateCompanyDialog Schema Validation
+### Phase 4: Composite Renderer (Edge Function)
 
-Add `recording_studio` to the allowed company types in the Zod schema:
+Create `supabase/functions/render-character-composite/index.ts`:
 
-```typescript
-company_type: z.enum(['holding', 'label', 'security', 'factory', 'venue', 'rehearsal', 'logistics', 'recording_studio']),
-```
+- Takes sprite IDs + colour selections
+- Composites all layers into single PNG using canvas/sharp
+- Caches result in storage bucket
+- Returns URL for use in gig viewer
+
+This ensures consistent rendering and reduces client-side load.
+
+### Phase 5: Gig Viewer Integration
+
+Update `RpmAvatarImage.tsx` -> `CharacterAvatarImage.tsx`:
+
+- Fetches player's `rendered_avatar_url` from `player_avatar_config`
+- Falls back to real-time layer stacking if no cached composite
+- Maintains existing animation system (bounce, sway, glow effects)
+
+Update `ParallaxGigViewer.tsx`:
+
+- Query `player_avatar_config` for sprite selections instead of RPM URLs
+- Use `CharacterAvatarImage` component
+- Session musicians use random sprites from pool instead of RPM pool
+
+### Phase 6: Cleanup & Migration
+
+1. **Data migration**: For players with existing RPM avatars, show migration prompt to create new character
+2. **Remove RPM dependencies**:
+   - Uninstall `@readyplayerme/react-avatar-creator`
+   - Delete `ReadyPlayerMeAvatar.tsx`, `SharedRpmAvatar.tsx`, `RpmAvatarCreator.tsx`
+   - Delete `rpmAvatarPool.ts`
+   - Remove RPM-related hooks
+3. **Drop RPM columns** from database after migration period
 
 ---
 
-## Files to Modify
+## File Changes Summary
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/xxx_character_sprites.sql` | New tables and schema changes |
+| `supabase/functions/generate-character-sprite/` | AI sprite generation |
+| `supabase/functions/render-character-composite/` | Layer compositing |
+| `src/components/character-creator/PunkCharacterCreator.tsx` | Main creator page |
+| `src/components/character-creator/SpriteLayerCanvas.tsx` | Layer stacking component |
+| `src/components/character-creator/SpriteCategoryPicker.tsx` | Asset selection grid |
+| `src/components/character-creator/SkinToneRecolorizer.tsx` | Skin tone system |
+| `src/components/character-creator/CharacterPreview.tsx` | Animated preview |
+| `src/hooks/useCharacterSprites.ts` | Fetches sprite assets |
+| `src/hooks/useCharacterComposite.ts` | Manages composite generation |
+| `src/data/punkSpritePool.ts` | Default sprites for NPCs/session musicians |
+
+### Modified Files
 
 | File | Changes |
 |------|---------|
-| `supabase/migrations/xxx_fix_subsidiary_trigger.sql` | Fix trigger function and create missing entities |
-| `src/components/company/CompanyCard.tsx` | Update label navigation route |
-| `src/components/labels/MyLabelsTab.tsx` | Query labels by direct ownership OR company ownership |
-| `src/components/company/CreateCompanyDialog.tsx` | Add `recording_studio` to schema |
-| `src/types/company.ts` | Already has `recording_studio` - verify consistency |
-| `src/components/VersionHeader.tsx` | Bump to v1.0.541 |
-| `src/pages/VersionHistory.tsx` | Add changelog entry |
+| `src/pages/AvatarDesigner.tsx` | Replace with PunkCharacterCreator |
+| `src/hooks/usePlayerAvatar.ts` | Remove RPM fields, add sprite fields |
+| `src/components/gig-viewer/RpmAvatarImage.tsx` | Rename & refactor to use sprites |
+| `src/components/gig-viewer/ParallaxGigViewer.tsx` | Update avatar fetching logic |
+| `src/components/bands/BandRosterTab.tsx` | Update avatar display |
+| `src/components/bands/BandMemberDetailDialog.tsx` | Update avatar display |
+
+### Deleted Files
+
+| File | Reason |
+|------|--------|
+| `src/components/avatar-system/ReadyPlayerMeAvatar.tsx` | RPM removal |
+| `src/components/avatar-system/SharedRpmAvatar.tsx` | RPM removal |
+| `src/components/avatar-system/RpmAvatarCreator.tsx` | RPM removal |
+| `src/components/avatar-designer/ReadyPlayerMeCreator.tsx` | RPM removal |
+| `src/hooks/usePlayerRpmAvatar.ts` | RPM removal |
+| `src/data/rpmAvatarPool.ts` | RPM removal |
 
 ---
 
-## Technical Details: Database Migration
+## Technical Considerations
 
-```sql
--- 1. Fix the trigger function (corrected column names)
--- 2. Fix existing orphaned labels (set owner_id from company)
--- 3. Create missing security_firms for existing security companies
--- 4. Create missing merch_factories for existing factory companies  
--- 5. Create missing logistics_companies for existing logistics companies
--- 6. Update any venues/rehearsal_rooms that need company_id connections
+### Skin Tone System
+
+Rather than generating 10 variants of every body sprite, use CSS filters:
+
+```css
+.skin-tone-1 { filter: sepia(0.2) saturate(1.1) hue-rotate(-10deg); }
+.skin-tone-2 { filter: sepia(0.3) saturate(1.0) hue-rotate(-5deg); }
+/* etc. */
 ```
 
+The body sprites are generated in a neutral base tone, and filters are applied at render time.
+
+### Colour Variants for Clothing
+
+Two approaches:
+
+1. **Pre-generated**: Generate 20 colour variants per item, store URLs in `color_variants` JSONB
+2. **Runtime recolor**: Use canvas `globalCompositeOperation` to tint grayscale base
+
+Recommendation: Pre-generated for premium items (better quality), runtime for basic items (storage efficient).
+
+### Performance
+
+- Composite images are cached in storage bucket
+- Cache key = hash of all sprite IDs + colour selections
+- Invalidate on any config change
+- Lazy load sprite grids in creator UI
+
+### Consistency Rules (From Your Spec)
+
+These will be enforced programmatically:
+
+- All assets align to same anchor points (0.5, 0.5 default)
+- Transparent backgrounds only
+- No baked-in shadows
+- Consistent line thickness (validated on upload)
+- Future skins are drop-in replacements
+
 ---
 
-## Testing Verification
+## Estimated Effort
 
-After implementation, verify:
-
-1. **Create a new "security" company** → Check `security_firms` table has matching entry
-2. **Create a new "factory" company** → Check `merch_factories` table has matching entry
-3. **Create a new "label" company** → Check `labels` table has entry WITH `owner_id` set
-4. **Go to My Labels tab** → Should see subsidiary labels
-5. **Click "Manage" on label company card** → Should navigate to correct label management
-6. **Existing subsidiary labels** → Should now appear in My Labels tab
+| Phase | Components | Complexity |
+|-------|------------|------------|
+| Phase 1: Database | 2 migrations, storage setup | Low |
+| Phase 2: Sprite Generator | 1 edge function | Medium |
+| Phase 3: Creator UI | 5 new components | High |
+| Phase 4: Composite Renderer | 1 edge function | Medium |
+| Phase 5: Gig Integration | 3 component updates | Medium |
+| Phase 6: Cleanup | File deletions, migration | Low |
 
 ---
 
-## Changelog Entry
+## Version Update
 
-**Version 1.0.541**
-- Companies: Fixed subsidiary entity creation trigger (security firms, factories, logistics, labels, venues, studios now properly created)
-- Companies: Labels created as subsidiaries now correctly inherit owner_id from parent company
-- Companies: Fixed navigation from company cards to label management
-- Companies: Created missing subsidiary entities for existing companies
-- Record Labels: My Labels tab now shows both directly owned and company-owned labels
+This will be released as **v1.0.547** with version history entry:
+
+> "Replaced Ready Player Me avatars with custom punk rock character creator. New 2D sprite layering system with modular body types, facial features, hair styles, and clothing. Art style: hand-drawn comic-book punk zine aesthetic."
