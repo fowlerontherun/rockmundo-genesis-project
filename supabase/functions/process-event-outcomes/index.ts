@@ -166,6 +166,30 @@ Deno.serve(async (req) => {
         metadata: { event_id: event.id, effects },
       });
 
+      // Create inbox message with outcome details
+      const effectsSummary: string[] = [];
+      if (effects.cash && effects.cash !== 0) effectsSummary.push(`${effects.cash > 0 ? '+' : ''}$${effects.cash}`);
+      if (effects.fame && effects.fame !== 0) effectsSummary.push(`${effects.fame > 0 ? '+' : ''}${effects.fame} fame`);
+      if (effects.fans && effects.fans !== 0) effectsSummary.push(`${effects.fans > 0 ? '+' : ''}${effects.fans} fans`);
+      if (effects.health && effects.health !== 0) effectsSummary.push(`${effects.health > 0 ? '+' : ''}${effects.health} health`);
+      if (effects.energy && effects.energy !== 0) effectsSummary.push(`${effects.energy > 0 ? '+' : ''}${effects.energy} energy`);
+      if (effects.xp && effects.xp !== 0) effectsSummary.push(`${effects.xp > 0 ? '+' : ''}${effects.xp} XP`);
+      
+      const effectsText = effectsSummary.length > 0 ? `\n\nEffects: ${effectsSummary.join(', ')}` : '';
+      
+      await supabase.from("player_inbox").insert({
+        user_id: playerEvent.user_id,
+        category: "random_event",
+        priority: "normal",
+        title: `📋 Event Outcome: ${event.title}`,
+        message: `${outcomeMessage}${effectsText}`,
+        metadata: { event_id: event.id, player_event_id: playerEvent.id, effects },
+        related_entity_type: "random_event",
+        related_entity_id: event.id,
+        action_type: null,
+        action_data: null,
+      });
+
       outcomesProcessed++;
 
       // Check for hospitalization (health < 10)
