@@ -1,7 +1,9 @@
 // Punk Rock Character Creator System
-// Replaces Ready Player Me with custom 2D sprite layering
+// SVG-based layered sprite system
 
 export { PunkCharacterCreator } from './PunkCharacterCreator';
+export { SvgCharacterCreator } from './SvgCharacterCreator';
 export { SpriteLayerCanvas, CharacterAvatar } from './SpriteLayerCanvas';
+export { SvgSpriteCanvas } from './SvgSpriteCanvas';
 export { SpriteCategoryPicker } from './SpriteCategoryPicker';
 export { SkinTonePicker } from './SkinTonePicker';

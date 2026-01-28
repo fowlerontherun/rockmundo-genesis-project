@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.554",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Character Creator: Complete rewrite using SVG-based sprites for perfect layer alignment" },
+      { type: 'feature', description: "Character Creator: 4 hair styles (Mohawk, Afro, Emo, Pixie), 2 eye types, multiple clothing options" },
+      { type: 'feature', description: "Character Creator: Proper compositing - all layers now stack correctly on 512x1024 canvas" },
+      { type: 'feature', description: "Character Creator: PNG export functionality" },
+      { type: 'improvement', description: "Character Creator: Local state management for instant feedback (no DB round-trip)" },
+      { type: 'fix', description: "Character Creator: Layers now properly align because SVGs share exact viewBox coordinates" },
+    ],
+  },
+  {
     version: "1.0.553",
     date: "2026-01-28",
     changes: [
