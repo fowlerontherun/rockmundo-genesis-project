@@ -200,3 +200,6 @@ verify_jwt = false
 
 [functions.process-daily-activity-xp]
 verify_jwt = false
+
+[functions.generate-music-video]
+verify_jwt = true

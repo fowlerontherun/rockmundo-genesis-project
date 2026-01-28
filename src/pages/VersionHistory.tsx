@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.557",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Performance skill: Now correctly calculates level from XP when stored level is 0" },
+      { type: 'feature', description: "VIP Music Videos: AI-powered video generation with scene descriptions (VIP exclusive)" },
+      { type: 'feature', description: "Music Video Creator: Visual theme, art style, mood, and up to 8 scene descriptions" },
+      { type: 'improvement', description: "Music Video page: Added VIP AI generator button for subscribers" },
+    ],
+  },
+  {
     version: "1.0.556",
     date: "2026-01-28",
     changes: [
