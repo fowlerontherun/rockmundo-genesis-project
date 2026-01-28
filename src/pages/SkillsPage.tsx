@@ -47,12 +47,13 @@ const SkillsPage = () => {
     }
   }, [profile?.id]);
 
-  // XP Wallet data
-  const xpBalance = xpWallet?.xp_balance ?? 0;
-  const lifetimeXp = xpWallet?.lifetime_xp ?? 0;
-  const attributePointsAvailable = xpWallet?.attribute_points_earned ?? 0;
+  // XP Wallet data - use dual currency columns, fallback to legacy
+  const skillXpBalance = xpWallet?.skill_xp_balance ?? xpWallet?.xp_balance ?? 0;
+  const skillXpLifetime = xpWallet?.skill_xp_lifetime ?? xpWallet?.lifetime_xp ?? 0;
+  const attributePointsBalance = xpWallet?.attribute_points_balance ?? 0;
   const attributePointsSpent = rawAttributes?.attribute_points_spent ?? 0;
-  const lastClaimDate = dailyXpGrant?.created_at;
+  const streak = xpWallet?.stipend_claim_streak ?? 0;
+  const lastClaimDate = xpWallet?.last_stipend_claim_date ?? dailyXpGrant?.created_at;
 
   const totalXP = skillProgress?.reduce((sum, skill) => sum + (skill.current_xp || 0), 0) || 0;
   const skillCount = skillProgress?.length || 0;
@@ -76,13 +77,14 @@ const SkillsPage = () => {
       </div>
 
       <XpWalletDisplay
-        xpBalance={xpBalance}
-        lifetimeXp={lifetimeXp}
-        attributePointsAvailable={attributePointsAvailable}
+        skillXpBalance={skillXpBalance}
+        skillXpLifetime={skillXpLifetime}
+        attributePointsBalance={attributePointsBalance}
         attributePointsSpent={attributePointsSpent}
+        streak={streak}
       />
 
-      <DailyStipendCard lastClaimDate={lastClaimDate} />
+      <DailyStipendCard lastClaimDate={lastClaimDate} streak={streak} />
 
       {/* Practice Restrictions Alert */}
       {restrictions && !restrictions.canPractice && (
@@ -157,7 +159,7 @@ const SkillsPage = () => {
         </TabsList>
 
         <TabsContent value="attributes" className="mt-6">
-          <AttributePanel attributes={rawAttributes} xpBalance={xpBalance} />
+          <AttributePanel attributes={rawAttributes} xpBalance={attributePointsBalance} />
         </TabsContent>
 
         <TabsContent value="tree" className="mt-6">

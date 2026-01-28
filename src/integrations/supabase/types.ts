@@ -14220,29 +14220,50 @@ export type Database = {
       }
       player_xp_wallet: {
         Row: {
+          attribute_points_balance: number | null
           attribute_points_earned: number | null
+          attribute_points_lifetime: number | null
           last_recalculated: string | null
+          last_stipend_claim_date: string | null
           lifetime_xp: number | null
           profile_id: string
           skill_points_earned: number | null
+          skill_xp_balance: number | null
+          skill_xp_lifetime: number | null
+          skill_xp_spent: number | null
+          stipend_claim_streak: number | null
           xp_balance: number | null
           xp_spent: number | null
         }
         Insert: {
+          attribute_points_balance?: number | null
           attribute_points_earned?: number | null
+          attribute_points_lifetime?: number | null
           last_recalculated?: string | null
+          last_stipend_claim_date?: string | null
           lifetime_xp?: number | null
           profile_id: string
           skill_points_earned?: number | null
+          skill_xp_balance?: number | null
+          skill_xp_lifetime?: number | null
+          skill_xp_spent?: number | null
+          stipend_claim_streak?: number | null
           xp_balance?: number | null
           xp_spent?: number | null
         }
         Update: {
+          attribute_points_balance?: number | null
           attribute_points_earned?: number | null
+          attribute_points_lifetime?: number | null
           last_recalculated?: string | null
+          last_stipend_claim_date?: string | null
           lifetime_xp?: number | null
           profile_id?: string
           skill_points_earned?: number | null
+          skill_xp_balance?: number | null
+          skill_xp_lifetime?: number | null
+          skill_xp_spent?: number | null
+          stipend_claim_streak?: number | null
           xp_balance?: number | null
           xp_spent?: number | null
         }
@@ -14924,6 +14945,7 @@ export type Database = {
       }
       profile_daily_xp_grants: {
         Row: {
+          attribute_points_amount: number | null
           created_at: string
           grant_date: string
           id: string
@@ -14933,6 +14955,7 @@ export type Database = {
           xp_amount: number
         }
         Insert: {
+          attribute_points_amount?: number | null
           created_at?: string
           grant_date?: string
           id?: string
@@ -14942,6 +14965,7 @@ export type Database = {
           xp_amount?: number
         }
         Update: {
+          attribute_points_amount?: number | null
           created_at?: string
           grant_date?: string
           id?: string

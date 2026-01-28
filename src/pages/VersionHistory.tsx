@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.540",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Progression: Split XP into Skill XP (SXP) for skills and Attribute Points (AP) for attributes" },
+      { type: 'feature', description: "Progression: Daily stipend is now manual claim only (100 SXP + 10 AP base)" },
+      { type: 'feature', description: "Progression: Activity XP auto-credited daily with 250 SXP cap and 40-60% AP conversion" },
+      { type: 'feature', description: "Progression: Streak bonuses for 7, 14, 30, 100, and 365 consecutive claim days" },
+      { type: 'feature', description: "UI: Streak display with progress toward next milestone and visual rewards breakdown" },
+      { type: 'improvement', description: "Attributes now cost Attribute Points (AP) instead of XP (5 AP per training)" },
+    ],
+  },
+  {
     version: "1.0.539",
     date: "2026-01-28",
     changes: [

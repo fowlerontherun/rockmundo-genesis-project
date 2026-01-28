@@ -31,17 +31,37 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
       setXpWallet(walletData);
     }
 
-    // Fetch daily XP grant
+    // Fetch latest daily XP grant (for last claim date)
     const { data: grantData } = await supabase
       .from("profile_daily_xp_grants")
       .select("*")
       .eq("profile_id", profile.id)
+      .eq("source", "daily_stipend")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     
     if (grantData) {
       setDailyXpGrant(grantData);
+    }
+
+    // Fetch yesterday's activity bonus
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDate = yesterday.toISOString().slice(0, 10);
+
+    const { data: activityGrant } = await supabase
+      .from("profile_daily_xp_grants")
+      .select("xp_amount")
+      .eq("profile_id", profile.id)
+      .eq("source", "activity_bonus")
+      .eq("grant_date", yesterdayDate)
+      .maybeSingle();
+
+    if (activityGrant) {
+      setActivityBonusXp(activityGrant.xp_amount || 0);
+    } else {
+      setActivityBonusXp(0);
     }
 
     // Fetch attributes
@@ -54,31 +74,6 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
     if (attrData) {
       setRawAttributes(attrData);
     }
-
-    // Fetch activity bonus XP from experience_ledger
-    const { data: activityXpData } = await supabase
-      .from("experience_ledger")
-      .select("xp_amount")
-      .eq("profile_id", profile.id)
-      .in("activity_type", [
-        "busking_session",
-        "mentor_session", 
-        "university_attendance",
-        "exercise",
-        "meditation",
-        "book_reading",
-        "rest",
-        "nutrition",
-        "therapy",
-        "admin_grant",
-        "birthday_reward",
-        "weekly_bonus"
-      ]);
-    
-    if (activityXpData) {
-      const totalBonus = activityXpData.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0);
-      setActivityBonusXp(totalBonus);
-    }
   }, [profile?.id]);
 
   useEffect(() => {
@@ -89,32 +84,43 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  const xpBalance = xpWallet?.xp_balance ?? 0;
-  const lifetimeXp = xpWallet?.lifetime_xp ?? 0;
-  const attributePointsAvailable = xpWallet?.attribute_points_earned ?? 0;
+  // Use dual currency columns, fallback to legacy
+  const skillXpBalance = xpWallet?.skill_xp_balance ?? xpWallet?.xp_balance ?? 0;
+  const skillXpLifetime = xpWallet?.skill_xp_lifetime ?? xpWallet?.lifetime_xp ?? 0;
+  const attributePointsBalance = xpWallet?.attribute_points_balance ?? 0;
   const attributePointsSpent = rawAttributes?.attribute_points_spent ?? 0;
-  const lastClaimDate = dailyXpGrant?.created_at;
+  const streak = xpWallet?.stipend_claim_streak ?? 0;
+  const lastClaimDate = xpWallet?.last_stipend_claim_date ?? dailyXpGrant?.created_at;
 
   return (
     <div className="space-y-6">
       <XpWalletDisplay
-        xpBalance={xpBalance}
-        lifetimeXp={lifetimeXp}
-        attributePointsAvailable={attributePointsAvailable}
+        skillXpBalance={skillXpBalance}
+        skillXpLifetime={skillXpLifetime}
+        attributePointsBalance={attributePointsBalance}
         attributePointsSpent={attributePointsSpent}
         activityBonusXp={activityBonusXp}
+        streak={streak}
       />
 
-      <DailyStipendCard lastClaimDate={lastClaimDate} onClaimed={handleRefresh} />
+      <DailyStipendCard 
+        lastClaimDate={lastClaimDate} 
+        streak={streak}
+        onClaimed={handleRefresh} 
+      />
 
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Attributes</h2>
-        <AttributePanel attributes={rawAttributes} xpBalance={xpBalance} onXpSpent={handleRefresh} />
+        <AttributePanel 
+          attributes={rawAttributes} 
+          xpBalance={attributePointsBalance} 
+          onXpSpent={handleRefresh} 
+        />
       </div>
 
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Skills</h2>
-        <SkillTree xpBalance={xpBalance} onXpSpent={handleRefresh} />
+        <SkillTree xpBalance={skillXpBalance} onXpSpent={handleRefresh} />
       </div>
     </div>
   );
