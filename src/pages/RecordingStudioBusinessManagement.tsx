@@ -1,29 +1,80 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Mic, Users, Package, Wrench, DollarSign, Calendar } from "lucide-react";
+import { ArrowLeft, Mic, Users, Package, Wrench, DollarSign, MapPin, Star } from "lucide-react";
 import { VipGate } from "@/components/company/VipGate";
 import { 
-  useRecordingStudioBusiness, 
   useRecordingStudioStaff, 
-  useRecordingStudioTransactions 
+  useRecordingStudioTransactions,
+  useRecordingStudioEquipment,
+  useRecordingStudioUpgrades 
 } from "@/hooks/useRecordingStudioBusiness";
+import { 
+  RecordingStudioEquipmentManager, 
+  RecordingStudioUpgradesManager 
+} from "@/components/recording-studio-business";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function RecordingStudioBusinessManagement() {
   const { studioId } = useParams();
   const navigate = useNavigate();
   
-  const { data: studio, isLoading } = useRecordingStudioBusiness(studioId);
-  const { data: staff } = useRecordingStudioStaff(studioId);
-  const { data: transactions } = useRecordingStudioTransactions(studioId);
+  // Try to fetch studio by ID first, then by company_id if it's a company's studio
+  const { data: studio, isLoading: studioLoading } = useQuery({
+    queryKey: ['recording-studio-business', studioId],
+    queryFn: async () => {
+      if (!studioId) return null;
+      
+      // First try to find by studio ID
+      let { data, error } = await supabase
+        .from('city_studios')
+        .select(`
+          *,
+          cities:city_id(name, country),
+          city_districts:district_id(name),
+          companies:company_id(name)
+        `)
+        .eq('id', studioId)
+        .single();
+      
+      // If not found, try to find by company_id
+      if (error || !data) {
+        const { data: studioByCompany, error: companyError } = await supabase
+          .from('city_studios')
+          .select(`
+            *,
+            cities:city_id(name, country),
+            city_districts:district_id(name),
+            companies:company_id(name)
+          `)
+          .eq('company_id', studioId)
+          .single();
+        
+        if (companyError) throw companyError;
+        return studioByCompany;
+      }
+      
+      return data;
+    },
+    enabled: !!studioId,
+  });
+
+  const actualStudioId = studio?.id;
+
+  const { data: staff } = useRecordingStudioStaff(actualStudioId);
+  const { data: transactions } = useRecordingStudioTransactions(actualStudioId);
+  const { data: equipment } = useRecordingStudioEquipment(actualStudioId);
+  const { data: upgrades } = useRecordingStudioUpgrades(actualStudioId);
 
   // Calculate stats
   const totalRevenue = transactions?.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0) || 0;
   const totalExpenses = transactions?.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+  const totalEquipmentValue = equipment?.reduce((sum, e) => sum + e.value, 0) || 0;
   
-  if (isLoading) {
+  if (studioLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-4">
@@ -59,14 +110,16 @@ export default function RecordingStudioBusinessManagement() {
               <Mic className="h-6 w-6" />
               {studio.name}
             </h1>
-            <p className="text-muted-foreground">
-              {studio.cities?.name}, {studio.cities?.country} • Quality: {studio.quality_rating}/100
+            <p className="text-muted-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {studio.cities?.name}, {studio.cities?.country}
+              <Badge variant="outline" className="ml-2">Quality: {studio.quality_rating}/100</Badge>
             </p>
           </div>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-4">
               <p className="text-sm text-muted-foreground">Hourly Rate</p>
@@ -83,15 +136,22 @@ export default function RecordingStudioBusinessManagement() {
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Total Sessions</p>
+              <p className="text-sm text-muted-foreground">Gear Value</p>
+              <p className="text-xl font-bold">${totalEquipmentValue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">{equipment?.length || 0} items</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-sm text-muted-foreground">Sessions</p>
               <p className="text-xl font-bold">{studio.total_sessions || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">completed</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Total Revenue</p>
-              <p className="text-xl font-bold">${(studio.total_revenue || 0).toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">Revenue</p>
+              <p className="text-xl font-bold text-primary">${(studio.total_revenue || 0).toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">lifetime</p>
             </CardContent>
           </Card>
@@ -128,6 +188,7 @@ export default function RecordingStudioBusinessManagement() {
                           <p className="font-medium">{member.name}</p>
                           <p className="text-sm text-muted-foreground capitalize">
                             {member.role.replace(/_/g, ' ')}
+                            {member.specialty && ` • ${member.specialty}`}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -149,27 +210,33 @@ export default function RecordingStudioBusinessManagement() {
           </TabsContent>
           
           <TabsContent value="gear">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center text-muted-foreground py-8">
-                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Gear inventory coming soon</p>
-                  <p className="text-sm">Manage microphones, preamps, and other studio equipment</p>
-                </div>
-              </CardContent>
-            </Card>
+            {actualStudioId ? (
+              <RecordingStudioEquipmentManager studioId={actualStudioId} />
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center text-muted-foreground py-8">
+                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Studio not loaded</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
           
           <TabsContent value="upgrades">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center text-muted-foreground py-8">
-                  <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Studio upgrades coming soon</p>
-                  <p className="text-sm">Upgrade your console, monitors, and acoustic treatment</p>
-                </div>
-              </CardContent>
-            </Card>
+            {actualStudioId ? (
+              <RecordingStudioUpgradesManager studioId={actualStudioId} />
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center text-muted-foreground py-8">
+                    <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Studio not loaded</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
           
           <TabsContent value="finances">

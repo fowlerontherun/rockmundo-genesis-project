@@ -10,11 +10,11 @@ import { LogisticsFleetManager, LogisticsDriversManager, LogisticsContractsManag
 import { LICENSE_TIER_NAMES, LICENSE_TIER_FLEET_LIMITS, LICENSE_TIER_OPERATING_RADIUS } from "@/types/logistics-business";
 
 export default function LogisticsCompanyManagement() {
-  const { logisticsId } = useParams();
+  const { companyId } = useParams();
   const navigate = useNavigate();
   
   const { data: companies, isLoading } = useLogisticsCompanies();
-  const company = companies?.find(c => c.id === logisticsId);
+  const company = companies?.find(c => c.id === companyId || c.company_id === companyId);
   
   if (isLoading) {
     return (
