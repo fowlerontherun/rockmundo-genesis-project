@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.558",
+    date: "2026-01-28",
+    changes: [
+      { type: 'improvement', description: "Navigation: Removed duplicate Self PR link from Media section (already accessible via PR page)" },
+    ],
+  },
+  {
     version: "1.0.557",
     date: "2026-01-28",
     changes: [
