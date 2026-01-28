@@ -16,8 +16,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
-import { RpmAvatarCreator } from "@/components/avatar-system/RpmAvatarCreator";
-import { usePlayerRpmAvatar } from "@/hooks/usePlayerRpmAvatar";
+import { Link } from "react-router-dom";
 
 type AttributeKey = keyof PlayerAttributes;
 
@@ -64,8 +63,7 @@ const MyCharacterEdit = () => {
   const { toast } = useToast();
   const { profile, attributes, xpWallet, loading, updateProfile, updateAttributes, updateXpWallet, refetch } =
     useGameData();
-  const { rpmAvatarUrl, isLoading: rpmLoading } = usePlayerRpmAvatar();
-  const [showRpmCreator, setShowRpmCreator] = useState(false);
+  const [showCharacterCreator, setShowCharacterCreator] = useState(false);
 
   const [allocationInputs, setAllocationInputs] = useState<Record<AttributeKey, string>>(createEmptyAllocation);
   const [allocationError, setAllocationError] = useState<string | null>(null);

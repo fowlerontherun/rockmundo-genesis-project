@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.547",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Character Creator: Replaced Ready Player Me with custom 2D punk rock sprite system" },
+      { type: 'feature', description: "Character Creator: Modular layered sprites - body, face, hair, clothes, accessories" },
+      { type: 'feature', description: "Character Creator: 9 skin tone presets with real-time preview" },
+      { type: 'feature', description: "Character Creator: Gender selection with appropriate body/facial hair options" },
+      { type: 'feature', description: "Database: New character_sprite_assets table with 50+ default punk sprite options" },
+      { type: 'improvement', description: "Gig Viewer: Updated to use new sprite-based character avatars" },
+    ],
+  },
+  {
     version: "1.0.546",
     date: "2026-01-28",
     changes: [
