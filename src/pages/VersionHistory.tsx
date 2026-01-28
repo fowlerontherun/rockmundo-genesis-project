@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.545",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Festivals: Performance outcome system with detailed reviews, highlight reel, and earnings breakdown" },
+      { type: 'feature', description: "Festivals: Post-show reviews generated based on performance score with multiple sources" },
+      { type: 'feature', description: "Festivals: Crowd projections with slot analysis, audience demographics, and genre matching" },
+      { type: 'feature', description: "Festivals: Setlist editor with time/stamina budgets and song familiarity tracking" },
+      { type: 'feature', description: "Festivals Admin: Lifecycle controls for draft/publish/postpone/cancel festival states" },
+      { type: 'feature', description: "Festivals Admin: Bulk review panel with filtering, sorting, and batch approve/reject" },
+      { type: 'feature', description: "Festivals Admin: Auto-scoring rubric calculates application scores (fame, slot match, setlist)" },
+      { type: 'improvement', description: "Festivals Admin: Consolidated into 5-tab interface with queue, bulk review, lifecycle, player, and history" },
+    ],
+  },
+  {
     version: "1.0.544",
     date: "2026-01-28",
     changes: [
