@@ -19,6 +19,7 @@ import { SongPlayer } from "@/components/audio/SongPlayer";
 import { VideoAnalytics } from "@/components/videos/VideoAnalytics";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { VipVideoCreationDialog } from "@/components/music-video/VipVideoCreationDialog";
 
 interface MusicVideo {
   id: string;
@@ -465,17 +466,26 @@ const MusicVideos = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Music Videos</h1>
           <p className="text-muted-foreground">Create, release, and track your music video success</p>
         </div>
-        <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Record New Video
-            </Button>
+        <div className="flex items-center gap-2">
+          {/* VIP AI Video Generator */}
+          <VipVideoCreationDialog
+            songs={releasedSongs}
+            isVip={profile?.is_vip || false}
+            profileCash={profile?.cash || 0}
+          />
+          
+          {/* Standard video creation */}
+          <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg">
+                <Plus className="mr-2 h-4 w-4" />
+                Record New Video
+              </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -588,6 +598,7 @@ const MusicVideos = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Stats Overview */}
