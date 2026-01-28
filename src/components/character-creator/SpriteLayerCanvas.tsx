@@ -2,172 +2,95 @@ import { useMemo } from "react";
 import type { CharacterSprite, CharacterConfig } from "@/hooks/useCharacterSprites";
 import { SKIN_TONES } from "@/hooks/useCharacterSprites";
 
-// ============ BASE TEMPLATES ============
-import baseMaleSlim from "@/assets/sprites/base-male-slim.png";
-import baseFemaleSlim from "@/assets/sprites/base-female-slim.png";
+// ============ NEW ALIGNED ASSETS (512x1024 canvas) ============
+// Base Bodies
+import alignedBaseMale from "@/assets/sprites/aligned-base-male.png";
+import alignedBaseFemale from "@/assets/sprites/aligned-base-female.png";
 
-// ============ LAYER OVERLAYS - HAIR ============
-import layerHairMohawkRedMale from "@/assets/sprites/layer-hair-mohawk-red-male.png";
-import layerHairMessyBlackMale from "@/assets/sprites/layer-hair-messy-black-male.png";
-import layerHairAfroMale from "@/assets/sprites/layer-hair-afro-male.png";
-import layerHairWavyBlondeFemale from "@/assets/sprites/layer-hair-wavy-blonde-female.png";
-import layerHairPixiePinkFemale from "@/assets/sprites/layer-hair-pixie-pink-female.png";
-import layerHairAfroFemale from "@/assets/sprites/layer-hair-afro-female.png";
+// Hair
+import alignedHairMohawk from "@/assets/sprites/aligned-hair-mohawk.png";
+import alignedHairAfro from "@/assets/sprites/aligned-hair-afro.png";
+import alignedHairEmo from "@/assets/sprites/aligned-hair-emo.png";
+import alignedHairPixie from "@/assets/sprites/aligned-hair-pixie.png";
 
-// ============ LAYER OVERLAYS - CLOTHING ============
-import layerHoodieGreyMale from "@/assets/sprites/layer-hoodie-grey-male.png";
-import layerHoodieBlackFemale from "@/assets/sprites/layer-hoodie-black-female.png";
-import layerJacketVarsityFemale from "@/assets/sprites/layer-jacket-varsity-female.png";
-import layerFlannelRedMale from "@/assets/sprites/layer-flannel-red-male.png";
-import layerShirtBlackMale from "@/assets/sprites/layer-shirt-black-male.png";
-import layerTankPurpleFemale from "@/assets/sprites/layer-tank-purple-female.png";
+// Eyes
+import alignedEyesNeutral from "@/assets/sprites/aligned-eyes-neutral.png";
+import alignedEyesAngry from "@/assets/sprites/aligned-eyes-angry.png";
 
-// ============ LAYER OVERLAYS - PANTS/BOTTOMS ============
-import layerPantsSkinnyBootsMale from "@/assets/sprites/layer-pants-skinny-boots-male.png";
-import layerPantsBaggyMale from "@/assets/sprites/layer-pants-baggy-male.png";
-import layerPantsCargoMale from "@/assets/sprites/layer-pants-cargo-male.png";
-import layerPantsSkinnyFemale from "@/assets/sprites/layer-pants-skinny-female.png";
-import layerPantsJeansSneakersFemale from "@/assets/sprites/layer-pants-jeans-sneakers-female.png";
-import layerSkirtPlaidFemale from "@/assets/sprites/layer-skirt-plaid-female.png";
+// Nose
+import alignedNoseSmall from "@/assets/sprites/aligned-nose-small.png";
 
-// ============ LEGACY IMPORTS (for backwards compatibility) ============
-import bodyMaleSlim from "@/assets/sprites/body-male-slim.png";
-import bodyFemaleSlim from "@/assets/sprites/body-female-slim.png";
-import bodyMaleAthletic from "@/assets/sprites/body-male-athletic.png";
-import bodyFemaleCurvy from "@/assets/sprites/body-female-curvy.png";
-import hairMohawkRed from "@/assets/sprites/hair-mohawk-red.png";
-import hairMessyBlack from "@/assets/sprites/hair-messy-black.png";
-import hairBraidsBlack from "@/assets/sprites/hair-braids-black.png";
-import hairLongWavyBlonde from "@/assets/sprites/hair-long-wavy-blonde.png";
-import hairBuzzcutBrown from "@/assets/sprites/hair-buzzcut-brown.png";
-import hairAfroBlack from "@/assets/sprites/hair-afro-black.png";
-import hairEmoBlackPurple from "@/assets/sprites/hair-emo-black-purple.png";
-import eyesAngry from "@/assets/sprites/eyes-angry.png";
-import eyesNeutral from "@/assets/sprites/eyes-neutral.png";
-import eyesCool from "@/assets/sprites/eyes-cool.png";
-import eyesHappy from "@/assets/sprites/eyes-happy.png";
-import noseMedium from "@/assets/sprites/nose-medium.png";
-import noseSmall from "@/assets/sprites/nose-small.png";
-import noseLarge from "@/assets/sprites/nose-large.png";
-import mouthSneer from "@/assets/sprites/mouth-sneer.png";
-import mouthNeutral from "@/assets/sprites/mouth-neutral.png";
-import mouthSmirk from "@/assets/sprites/mouth-smirk.png";
-import mouthSinging from "@/assets/sprites/mouth-singing.png";
-import jacketLeather from "@/assets/sprites/jacket-leather-black.png";
-import jacketHoodieGrey from "@/assets/sprites/jacket-hoodie-grey.png";
-import jacketDenimBlue from "@/assets/sprites/jacket-denim-blue.png";
-import jacketVarsityRed from "@/assets/sprites/jacket-varsity-red.png";
-import shirtBandTee from "@/assets/sprites/shirt-band-tee-black.png";
-import shirtGraphicWhite from "@/assets/sprites/shirt-graphic-white.png";
-import shirtFlannelRed from "@/assets/sprites/shirt-flannel-red.png";
-import shirtTankBlack from "@/assets/sprites/shirt-tank-black.png";
-import trousersPlaid from "@/assets/sprites/trousers-plaid-red.png";
-import trousersBaggyJeans from "@/assets/sprites/trousers-baggy-jeans.png";
-import trousersSkinnyBlack from "@/assets/sprites/trousers-skinny-black.png";
-import trousersCargoGreen from "@/assets/sprites/trousers-cargo-green.png";
-import shoesCombatBoots from "@/assets/sprites/shoes-combat-boots.png";
-import shoesSneakersWhite from "@/assets/sprites/shoes-sneakers-white.png";
-import shoesHightopsRed from "@/assets/sprites/shoes-hightops-red.png";
-import shoesChelseaBrown from "@/assets/sprites/shoes-chelsea-brown.png";
-import hatFlatcapGrey from "@/assets/sprites/hat-flatcap-grey.png";
-import hatSnapbackBlack from "@/assets/sprites/hat-snapback-black.png";
-import hatBeanieRed from "@/assets/sprites/hat-beanie-red.png";
-import glassesAviatorGold from "@/assets/sprites/glasses-aviator-gold.png";
-import glassesRoundBlack from "@/assets/sprites/glasses-round-black.png";
-import facialHairBeardBrown from "@/assets/sprites/facial-hair-beard-brown.png";
-import facialHairGoateeBlack from "@/assets/sprites/facial-hair-goatee-black.png";
-import facialHairHandlebar from "@/assets/sprites/facial-hair-handlebar.png";
+// Mouth
+import alignedMouthNeutral from "@/assets/sprites/aligned-mouth-neutral.png";
+import alignedMouthSmile from "@/assets/sprites/aligned-mouth-smile.png";
+
+// Jackets/Tops
+import alignedJacketLeather from "@/assets/sprites/aligned-jacket-leather.png";
+import alignedJacketHoodie from "@/assets/sprites/aligned-jacket-hoodie.png";
+import alignedJacketFlannel from "@/assets/sprites/aligned-jacket-flannel.png";
+
+// Shirts
+import alignedShirtBandtee from "@/assets/sprites/aligned-shirt-bandtee.png";
+
+// Trousers/Bottoms
+import alignedTrousersSkinny from "@/assets/sprites/aligned-trousers-skinny.png";
+import alignedTrousersCargo from "@/assets/sprites/aligned-trousers-cargo.png";
+import alignedTrousersPlaidskirt from "@/assets/sprites/aligned-trousers-plaidskirt.png";
+
+// Shoes
+import alignedShoesCombat from "@/assets/sprites/aligned-shoes-combat.png";
+import alignedShoesHightops from "@/assets/sprites/aligned-shoes-hightops.png";
+
+// Accessories
+import alignedHatBeanie from "@/assets/sprites/aligned-hat-beanie.png";
+import alignedGlassesAviator from "@/assets/sprites/aligned-glasses-aviator.png";
+import alignedFacialhairBeard from "@/assets/sprites/aligned-facialhair-beard.png";
 
 // Map database asset paths to imported images
 const ASSET_MAP: Record<string, string> = {
-  // ========== NEW LAYERED SYSTEM ==========
-  // Base templates
-  '/src/assets/sprites/base-male-slim.png': baseMaleSlim,
-  '/src/assets/sprites/base-female-slim.png': baseFemaleSlim,
+  // ========== ALIGNED ASSETS (NEW SYSTEM) ==========
+  // Base Bodies
+  '/src/assets/sprites/aligned-base-male.png': alignedBaseMale,
+  '/src/assets/sprites/aligned-base-female.png': alignedBaseFemale,
   
-  // Layer overlays - Hair
-  '/src/assets/sprites/layer-hair-mohawk-red-male.png': layerHairMohawkRedMale,
-  '/src/assets/sprites/layer-hair-messy-black-male.png': layerHairMessyBlackMale,
-  '/src/assets/sprites/layer-hair-afro-male.png': layerHairAfroMale,
-  '/src/assets/sprites/layer-hair-wavy-blonde-female.png': layerHairWavyBlondeFemale,
-  '/src/assets/sprites/layer-hair-pixie-pink-female.png': layerHairPixiePinkFemale,
-  '/src/assets/sprites/layer-hair-afro-female.png': layerHairAfroFemale,
-  
-  // Layer overlays - Jackets/Tops
-  '/src/assets/sprites/layer-hoodie-grey-male.png': layerHoodieGreyMale,
-  '/src/assets/sprites/layer-hoodie-black-female.png': layerHoodieBlackFemale,
-  '/src/assets/sprites/layer-jacket-varsity-female.png': layerJacketVarsityFemale,
-  '/src/assets/sprites/layer-flannel-red-male.png': layerFlannelRedMale,
-  '/src/assets/sprites/layer-shirt-black-male.png': layerShirtBlackMale,
-  '/src/assets/sprites/layer-tank-purple-female.png': layerTankPurpleFemale,
-  
-  // Layer overlays - Pants/Bottoms (includes shoes)
-  '/src/assets/sprites/layer-pants-skinny-boots-male.png': layerPantsSkinnyBootsMale,
-  '/src/assets/sprites/layer-pants-baggy-male.png': layerPantsBaggyMale,
-  '/src/assets/sprites/layer-pants-cargo-male.png': layerPantsCargoMale,
-  '/src/assets/sprites/layer-pants-skinny-female.png': layerPantsSkinnyFemale,
-  '/src/assets/sprites/layer-pants-jeans-sneakers-female.png': layerPantsJeansSneakersFemale,
-  '/src/assets/sprites/layer-skirt-plaid-female.png': layerSkirtPlaidFemale,
-  
-  // ========== LEGACY ASSETS (backwards compatibility) ==========
-  // Bodies
-  '/src/assets/sprites/body-male-slim.png': bodyMaleSlim,
-  '/src/assets/sprites/body-female-slim.png': bodyFemaleSlim,
-  '/src/assets/sprites/body-male-athletic.png': bodyMaleAthletic,
-  '/src/assets/sprites/body-female-curvy.png': bodyFemaleCurvy,
   // Hair
-  '/src/assets/sprites/hair-mohawk-red.png': hairMohawkRed,
-  '/src/assets/sprites/hair-messy-black.png': hairMessyBlack,
-  '/src/assets/sprites/hair-braids-black.png': hairBraidsBlack,
-  '/src/assets/sprites/hair-long-wavy-blonde.png': hairLongWavyBlonde,
-  '/src/assets/sprites/hair-buzzcut-brown.png': hairBuzzcutBrown,
-  '/src/assets/sprites/hair-afro-black.png': hairAfroBlack,
-  '/src/assets/sprites/hair-emo-black-purple.png': hairEmoBlackPurple,
+  '/src/assets/sprites/aligned-hair-mohawk.png': alignedHairMohawk,
+  '/src/assets/sprites/aligned-hair-afro.png': alignedHairAfro,
+  '/src/assets/sprites/aligned-hair-emo.png': alignedHairEmo,
+  '/src/assets/sprites/aligned-hair-pixie.png': alignedHairPixie,
+  
   // Eyes
-  '/src/assets/sprites/eyes-angry.png': eyesAngry,
-  '/src/assets/sprites/eyes-neutral.png': eyesNeutral,
-  '/src/assets/sprites/eyes-cool.png': eyesCool,
-  '/src/assets/sprites/eyes-happy.png': eyesHappy,
-  // Noses
-  '/src/assets/sprites/nose-medium.png': noseMedium,
-  '/src/assets/sprites/nose-small.png': noseSmall,
-  '/src/assets/sprites/nose-large.png': noseLarge,
-  // Mouths
-  '/src/assets/sprites/mouth-sneer.png': mouthSneer,
-  '/src/assets/sprites/mouth-neutral.png': mouthNeutral,
-  '/src/assets/sprites/mouth-smirk.png': mouthSmirk,
-  '/src/assets/sprites/mouth-singing.png': mouthSinging,
-  // Jackets
-  '/src/assets/sprites/jacket-leather-black.png': jacketLeather,
-  '/src/assets/sprites/jacket-hoodie-grey.png': jacketHoodieGrey,
-  '/src/assets/sprites/jacket-denim-blue.png': jacketDenimBlue,
-  '/src/assets/sprites/jacket-varsity-red.png': jacketVarsityRed,
+  '/src/assets/sprites/aligned-eyes-neutral.png': alignedEyesNeutral,
+  '/src/assets/sprites/aligned-eyes-angry.png': alignedEyesAngry,
+  
+  // Nose
+  '/src/assets/sprites/aligned-nose-small.png': alignedNoseSmall,
+  
+  // Mouth
+  '/src/assets/sprites/aligned-mouth-neutral.png': alignedMouthNeutral,
+  '/src/assets/sprites/aligned-mouth-smile.png': alignedMouthSmile,
+  
+  // Jackets/Tops
+  '/src/assets/sprites/aligned-jacket-leather.png': alignedJacketLeather,
+  '/src/assets/sprites/aligned-jacket-hoodie.png': alignedJacketHoodie,
+  '/src/assets/sprites/aligned-jacket-flannel.png': alignedJacketFlannel,
+  
   // Shirts
-  '/src/assets/sprites/shirt-band-tee-black.png': shirtBandTee,
-  '/src/assets/sprites/shirt-graphic-white.png': shirtGraphicWhite,
-  '/src/assets/sprites/shirt-flannel-red.png': shirtFlannelRed,
-  '/src/assets/sprites/shirt-tank-black.png': shirtTankBlack,
-  // Trousers
-  '/src/assets/sprites/trousers-plaid-red.png': trousersPlaid,
-  '/src/assets/sprites/trousers-baggy-jeans.png': trousersBaggyJeans,
-  '/src/assets/sprites/trousers-skinny-black.png': trousersSkinnyBlack,
-  '/src/assets/sprites/trousers-cargo-green.png': trousersCargoGreen,
+  '/src/assets/sprites/aligned-shirt-bandtee.png': alignedShirtBandtee,
+  
+  // Trousers/Bottoms
+  '/src/assets/sprites/aligned-trousers-skinny.png': alignedTrousersSkinny,
+  '/src/assets/sprites/aligned-trousers-cargo.png': alignedTrousersCargo,
+  '/src/assets/sprites/aligned-trousers-plaidskirt.png': alignedTrousersPlaidskirt,
+  
   // Shoes
-  '/src/assets/sprites/shoes-combat-boots.png': shoesCombatBoots,
-  '/src/assets/sprites/shoes-sneakers-white.png': shoesSneakersWhite,
-  '/src/assets/sprites/shoes-hightops-red.png': shoesHightopsRed,
-  '/src/assets/sprites/shoes-chelsea-brown.png': shoesChelseaBrown,
-  // Hats
-  '/src/assets/sprites/hat-flatcap-grey.png': hatFlatcapGrey,
-  '/src/assets/sprites/hat-snapback-black.png': hatSnapbackBlack,
-  '/src/assets/sprites/hat-beanie-red.png': hatBeanieRed,
-  // Glasses
-  '/src/assets/sprites/glasses-aviator-gold.png': glassesAviatorGold,
-  '/src/assets/sprites/glasses-round-black.png': glassesRoundBlack,
-  // Facial hair
-  '/src/assets/sprites/facial-hair-beard-brown.png': facialHairBeardBrown,
-  '/src/assets/sprites/facial-hair-goatee-black.png': facialHairGoateeBlack,
-  '/src/assets/sprites/facial-hair-handlebar.png': facialHairHandlebar,
+  '/src/assets/sprites/aligned-shoes-combat.png': alignedShoesCombat,
+  '/src/assets/sprites/aligned-shoes-hightops.png': alignedShoesHightops,
+  
+  // Accessories
+  '/src/assets/sprites/aligned-hat-beanie.png': alignedHatBeanie,
+  '/src/assets/sprites/aligned-glasses-aviator.png': alignedGlassesAviator,
+  '/src/assets/sprites/aligned-facialhair-beard.png': alignedFacialhairBeard,
 };
 
 // Resolve asset URL - use imported image if available, otherwise use URL directly
@@ -189,20 +112,20 @@ const sizeClasses = {
   xl: 'h-96 w-72',
 };
 
-// Layer ordering for proper sprite stacking
+// Layer ordering for proper sprite stacking (back to front)
 const LAYER_ORDER = [
-  'body',      // 1 - base
-  'shoes',     // 1 - base level
-  'trousers',  // 2
-  'shirt',     // 2
-  'jacket',    // 3
-  'eyes',      // 4
-  'nose',      // 5
-  'mouth',     // 6
-  'facial_hair', // 7
-  'hair',      // 9 - front hair pieces
-  'hat',       // 10
-  'glasses',   // 10
+  'body',        // 0 - base body
+  'shoes',       // 1 - shoes at feet
+  'trousers',    // 2 - pants/skirt
+  'shirt',       // 3 - shirt layer
+  'jacket',      // 4 - outer layer
+  'eyes',        // 5 - facial features
+  'nose',        // 6
+  'mouth',       // 7
+  'facial_hair', // 8
+  'hair',        // 9 - hair on top
+  'hat',         // 10 - accessories on top
+  'glasses',     // 11
 ];
 
 export const SpriteLayerCanvas = ({ 
@@ -238,13 +161,12 @@ export const SpriteLayerCanvas = ({
 
       result.push({
         sprite,
-        zIndex: sprite.layer_order || (index + 1),
+        zIndex: index,
         filter,
       });
     });
 
-    // Sort by layer order
-    return result.sort((a, b) => a.zIndex - b.zIndex);
+    return result;
   }, [config, sprites, skinToneFilter]);
 
   if (!config || layers.length === 0) {
