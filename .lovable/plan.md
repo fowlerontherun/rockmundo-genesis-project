@@ -1,205 +1,275 @@
 
-# Twaater Timeline & Content Enhancement - Implementation Plan
+# Record Sales Tuning & Fame Breakdown Implementation Plan
 
-## Problem Summary
+## Overview
 
-Based on investigation, three main issues need to be addressed:
-
-1. **Empty Timeline**: The AI feed edge function returns empty arrays even though there are 2,200+ twaats in the last 7 days and the user follows 49 accounts with active posts
-2. **Linked Content Missing Context**: When linking a song/album/gig to a twaat, only the embed appears - no automatic descriptive text is generated
-3. **Missing Band Hashtag Integration**: No way to auto-insert band name as a hashtag when composing twaats
-
-## Root Cause Analysis
-
-### Issue 1: AI Feed Returns Empty
-The `twaater-ai-feed` edge function:
-- Queries twaats correctly (200 posts from last 7 days)
-- Sends to AI for ranking
-- AI response parsing may fail (JSON.parse on potentially malformed response)
-- When AI fails, fallback runs but may return empty if `rankedIds` parsing throws
-
-The fallback chronological feed (`useTwaaterFeed`) works correctly - it just requires switching from AI mode.
-
-### Issue 2: Linked Content Has No Text
-When users link a gig/song/album, the `TwaaterComposer`:
-- Sets `linkedType` and `linkedId`
-- Shows a badge with the title
-- BUT does NOT auto-generate descriptive text for the twaat body
-
-### Issue 3: No Band Name Hashtag
-The composer has no band awareness - users must manually type their band name as a hashtag.
+This plan adds:
+1. **Admin page for Sales Balance** - Configure physical and digital record sales multipliers with live tweaking
+2. **Fame/Fans Breakdown** - Expandable regional breakdown on Dashboard and Band Manager pages showing fame and fans by country/city
 
 ---
 
-## Implementation Plan
+## Part 1: Database Schema Updates
 
-### Part 1: Fix AI Feed + Robust Fallback
+### Add Sales Balance Config to `game_balance_config`
 
-**File: `supabase/functions/twaater-ai-feed/index.ts`**
+Insert new configuration entries for the sales system:
 
-Changes:
-1. Add try-catch around AI response JSON parsing
-2. Improve fallback algorithm to always return content
-3. Add visibility filter (currently missing - should only show public posts)
-4. Ensure metrics array handling works (metrics comes as array from join)
+| Category | Key | Value | Description | Min | Max | Unit |
+|----------|-----|-------|-------------|-----|-----|------|
+| sales | digital_base_sales_min | 5 | Minimum base digital sales per day | 0 | 50 | sales |
+| sales | digital_base_sales_max | 25 | Maximum base digital sales per day | 10 | 100 | sales |
+| sales | cd_base_sales_min | 2 | Minimum base CD sales per day | 0 | 20 | sales |
+| sales | cd_base_sales_max | 10 | Maximum base CD sales per day | 5 | 50 | sales |
+| sales | vinyl_base_sales_min | 1 | Minimum base vinyl sales per day | 0 | 10 | sales |
+| sales | vinyl_base_sales_max | 6 | Maximum base vinyl sales per day | 2 | 25 | sales |
+| sales | cassette_base_sales_min | 1 | Minimum base cassette sales per day | 0 | 5 | sales |
+| sales | cassette_base_sales_max | 4 | Maximum base cassette sales per day | 1 | 15 | sales |
+| sales | fame_multiplier_divisor | 10000 | Fame value to divide by for multiplier | 1000 | 100000 | fame |
+| sales | regional_fame_weight | 1.0 | Weight of regional fame on sales | 0.1 | 3.0 | x |
+| sales | market_scarcity_min_bands | 20 | Bands threshold for max scarcity bonus | 5 | 100 | bands |
+| sales | market_scarcity_max_multiplier | 5 | Maximum market scarcity multiplier | 1 | 10 | x |
+| sales | performed_country_bonus | 1.2 | Bonus multiplier for performed countries | 1.0 | 2.0 | x |
+| sales | unvisited_fame_cap | 100 | Fame cap for unvisited countries | 50 | 500 | fame |
+| sales | spillover_rate | 0.2 | Fame spillover rate to neighbors | 0.0 | 0.5 | % |
 
-Key changes:
+---
+
+## Part 2: Admin Sales Balance Page
+
+### New File: `src/pages/admin/SalesBalanceAdmin.tsx`
+
+A dedicated admin page for tuning record sales parameters:
+
+**Features:**
+- **Base Sales Section**: Sliders for digital, CD, vinyl, cassette min/max base sales
+- **Multiplier Section**: Fame divisor, regional weight, market scarcity settings
+- **Regional Fame Section**: Performed country bonus, unvisited cap, spillover rate
+- **Live Preview**: Show calculated example sales based on sample fame values
+- **Save All**: Batch save all changes to `game_balance_config`
+
+**UI Layout:**
 ```text
-- Add .eq("visibility", "public") to twaats query
-- Wrap AI response parsing in try-catch
-- Fix metrics access: metrics?.[0]?.likes instead of metrics?.likes
-- Ensure fallback always returns the sorted twaats slice
++------------------------------------------+
+| Sales Balance Admin                       |
+| Configure physical & digital sales        |
++------------------------------------------+
+| [Base Sales] [Multipliers] [Regional]     |
++------------------------------------------+
+| Digital Sales                             |
+| Min: [====5====] Max: [====25====]        |
+|                                           |
+| CD Sales                                  |
+| Min: [====2====] Max: [====10====]        |
+|                                           |
+| Vinyl Sales                               |
+| Min: [====1====] Max: [====6=====]        |
++------------------------------------------+
+| Preview: Band with 50K fame, 10K regional |
+| Estimated daily: Digital 45, CD 18, Vinyl 9|
++------------------------------------------+
 ```
 
-**File: `src/hooks/useTwaaterAIFeed.ts`**
-
-Changes:
-1. Improve error handling when edge function returns empty
-2. Add automatic fallback to chronological when AI returns empty
-
-### Part 2: Auto-Generate Link Description Text
-
-**File: `src/components/twaater/TwaaterComposer.tsx`**
-
-Changes:
-1. When user selects a link (song/album/gig/tour), auto-insert contextual text
-2. Add a "Band" button to insert band name as hashtag
-3. Fetch user's band(s) to enable band hashtag feature
-
-New behavior when linking:
-| Link Type | Auto-inserted Text |
-|-----------|-------------------|
-| Single | "Check out my new single '{title}'! 🎵" |
-| Album | "My new album '{title}' just dropped! 🎶" |
-| Gig | "Catch us live at {venue}, {city}! 📅" |
-| Tour | "We're hitting the road! {tour_name} tour kicks off soon! 🎸" |
-
-Band hashtag button:
-- Fetches user's bands via `band_members` table
-- If one band: inserts `#BandName` (spaces removed, camelCase)
-- If multiple bands: shows dropdown to select which band
-
-### Part 3: Profile/Post History Tab
-
-**File: `src/pages/Twaater.tsx`**
-
-The Explore tab already exists and works. The main issue is the AI feed. Once fixed, users will see their timeline.
-
-Additionally, add a "My Posts" filter option to show only the user's own twaats as a quick profile view.
-
----
-
-## Technical Details
-
-### Edge Function Fix (`twaater-ai-feed/index.ts`)
-
+### Add Route to `src/App.tsx`
 ```typescript
-// Current problematic code:
-const rankedIds = JSON.parse(aiData.choices[0].message.content)
-
-// Fixed version:
-let rankedIds: string[] = []
-try {
-  const content = aiData.choices[0]?.message?.content || '[]'
-  // Clean any markdown code blocks if present
-  const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
-  rankedIds = JSON.parse(cleaned)
-} catch (parseError) {
-  console.error('Failed to parse AI response:', parseError)
-  // Fall through to fallback algorithm
-}
-
-if (!rankedIds.length) {
-  // Use fallback algorithm
-  ...
-}
+const AdminSalesBalance = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
+// Route: path="admin/sales-balance" element={<AdminSalesBalance />}
 ```
 
-### Composer Link Description Logic
-
+### Add to Admin Navigation
+Update `src/components/admin/AdminNav.tsx` to include in "Economy & Resources" category:
 ```typescript
-const generateLinkText = (type: string, title: string, extra?: any): string => {
-  switch (type) {
-    case 'single':
-      return `Check out my new single "${title}"! 🎵 `;
-    case 'album':
-      return `My new album "${title}" is here! 🎶 `;
-    case 'gig':
-      return `Catch us live at ${extra?.venue}! 📅 `;
-    case 'tour':
-      return `We're hitting the road! ${title} tour is coming! 🎸 `;
-    default:
-      return '';
-  }
-}
+{ path: "/admin/sales-balance", label: "Sales Balance", description: "Record sales tuning" }
 ```
 
-### Band Hashtag Feature
-
-New hook needed: `useUserBands()` (may already exist)
-
-Band hashtag formatting:
+### Add to Admin Dashboard Quick Actions
+Update `src/pages/admin/AdminDashboard.tsx`:
 ```typescript
-const formatBandHashtag = (bandName: string): string => {
-  // "Big Fowler and the Growlers" -> "#BigFowlerAndTheGrowlers"
-  return '#' + bandName
-    .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('')
-}
+{ label: "Sales Balance", path: "/admin/sales-balance", icon: DollarSign }
 ```
 
 ---
 
-## Files to Modify
+## Part 3: Fame/Fans Regional Breakdown Component
 
+### New Component: `src/components/fame/RegionalFameBreakdown.tsx`
+
+A compact, expandable component showing fame and fans by country and city:
+
+**Features:**
+- Collapsible accordion layout
+- Summary stats at top (countries count, top country)
+- Country list with fame bars and fan counts
+- Expandable cities within each country
+- Flag emoji for countries
+- Progress bars for relative fame comparison
+
+**UI Layout (Collapsed):**
+```text
++------------------------------------------+
+| Regional Fame                     [v]     |
+| 12 countries • Top: United States 50K    |
++------------------------------------------+
+```
+
+**UI Layout (Expanded):**
+```text
++------------------------------------------+
+| Regional Fame                     [^]     |
++------------------------------------------+
+| United States                            |
+| Fame: 50,000  |=================| 100%   |
+| Fans: 125K casual, 45K dedicated, 8K super|
+| [v] 8 cities                              |
++------------------------------------------+
+| United Kingdom                           |
+| Fame: 32,000  |===========|      64%     |
+| Fans: 78K casual, 28K dedicated, 5K super |
+| [v] 5 cities                              |
++------------------------------------------+
+| Germany                                   |
+| Fame: 18,500  |======|           37%     |
+| [+] Never performed (capped at 100)       |
++------------------------------------------+
+```
+
+### Integration Points
+
+**1. Dashboard Fame Tab (`src/components/fame/CharacterFameOverview.tsx`):**
+- Add `RegionalFameBreakdown` component after the band section
+- Pass band_id from band membership query
+
+**2. Band Manager Fame Section (`src/components/fame/FameFansOverview.tsx`):**
+- Already has country/city tabs - enhance with expandable city details inside country rows
+- Add "has_performed" indicator with visual distinction
+
+**3. SimpleBandManager (`src/pages/SimpleBandManager.tsx`):**
+- Add a collapsible fame breakdown card in the Performance tab
+
+---
+
+## Part 4: Update Edge Function to Use Config
+
+### Modify: `supabase/functions/generate-daily-sales/index.ts`
+
+Add config fetching from `game_balance_config`:
+
+```typescript
+// Fetch sales config at start
+const { data: salesConfig } = await supabaseClient
+  .from("game_balance_config")
+  .select("key, value")
+  .eq("category", "sales");
+
+const config = Object.fromEntries(
+  (salesConfig || []).map(c => [c.key, c.value])
+);
+
+// Use config values with fallbacks
+const digitalMin = config.digital_base_sales_min ?? 5;
+const digitalMax = config.digital_base_sales_max ?? 25;
+const fameDivisor = config.fame_multiplier_divisor ?? 10000;
+// etc...
+
+// Replace hardcoded values
+switch (format.format_type) {
+  case "digital":
+    baseSales = digitalMin + Math.floor(Math.random() * (digitalMax - digitalMin));
+    break;
+  // ... other formats
+}
+```
+
+---
+
+## Part 5: File Changes Summary
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/pages/admin/SalesBalanceAdmin.tsx` | Admin page for sales tuning |
+| `src/components/fame/RegionalFameBreakdown.tsx` | Expandable fame breakdown component |
+
+### Modified Files
 | File | Changes |
 |------|---------|
-| `supabase/functions/twaater-ai-feed/index.ts` | Fix AI response parsing, add visibility filter, improve fallback |
-| `src/hooks/useTwaaterAIFeed.ts` | Add fallback when AI returns empty |
-| `src/components/twaater/TwaaterComposer.tsx` | Auto-generate link text, add band hashtag button |
-| `src/components/twaater/LinkSongDialog.tsx` | Pass extra metadata for text generation |
-| `src/components/twaater/LinkReleaseDialog.tsx` | Pass extra metadata for text generation |
-| `src/components/twaater/LinkGigDialog.tsx` | Pass venue/city info for text generation |
-| `src/components/twaater/LinkTourDialog.tsx` | Pass tour dates info for text generation |
-| `src/components/VersionHeader.tsx` | Bump to v1.0.537 |
+| `src/App.tsx` | Add route for SalesBalanceAdmin |
+| `src/components/admin/AdminNav.tsx` | Add Sales Balance to Economy category |
+| `src/pages/admin/AdminDashboard.tsx` | Add Sales Balance quick action |
+| `src/components/fame/CharacterFameOverview.tsx` | Add regional breakdown for bands |
+| `src/components/fame/FameFansOverview.tsx` | Add has_performed indicator, enhance city view |
+| `src/pages/SimpleBandManager.tsx` | Add collapsible fame breakdown |
+| `supabase/functions/generate-daily-sales/index.ts` | Read config from database |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.539 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
+### Database Migration
+Insert 15 new rows into `game_balance_config` for sales category.
+
 ---
 
-## New Components
+## Part 6: Technical Details
 
-### Band Hashtag Button (in Composer)
-
-```text
-+------------------------------------------+
-| [Single] [Album] [Gig] [Tour] [#Band ▼]  |
-+------------------------------------------+
+### Sales Config Interface
+```typescript
+interface SalesConfig {
+  digital_base_sales_min: number;
+  digital_base_sales_max: number;
+  cd_base_sales_min: number;
+  cd_base_sales_max: number;
+  vinyl_base_sales_min: number;
+  vinyl_base_sales_max: number;
+  cassette_base_sales_min: number;
+  cassette_base_sales_max: number;
+  fame_multiplier_divisor: number;
+  regional_fame_weight: number;
+  market_scarcity_min_bands: number;
+  market_scarcity_max_multiplier: number;
+  performed_country_bonus: number;
+  unvisited_fame_cap: number;
+  spillover_rate: number;
+}
 ```
 
-When clicked:
-- If 1 band: inserts hashtag immediately
-- If 2+ bands: shows dropdown to pick one
-- Hashtag inserted at cursor position or end of body
+### Regional Fame Breakdown Props
+```typescript
+interface RegionalFameBreakdownProps {
+  bandId: string;
+  compact?: boolean; // For dashboard vs full page view
+  defaultExpanded?: boolean;
+}
+```
+
+### Country Flag Helper
+Use existing `getCountryFlag` function from `FameFansOverview.tsx` - can be extracted to shared util.
 
 ---
 
-## Testing Checklist
+## Part 7: Preview Calculation (Admin Page)
 
-1. Feed shows posts from followed accounts (switch to Chronological mode works)
-2. AI feed returns ranked content (or gracefully falls back)
-3. Linking a song auto-inserts promotional text
-4. Linking a gig includes venue name in auto-text
-5. Band hashtag button appears and works
-6. Band name formats correctly as hashtag (no spaces, proper casing)
+The admin page will show a live preview of expected sales:
+
+```typescript
+const calculatePreviewSales = (config: SalesConfig, sampleFame: number, sampleRegionalFame: number) => {
+  const fameMultiplier = 1 + sampleFame / config.fame_multiplier_divisor;
+  const regionalMultiplier = 0.5 + (sampleRegionalFame / 10000) * 1.5;
+  
+  return {
+    digital: Math.round((config.digital_base_sales_min + config.digital_base_sales_max) / 2 * fameMultiplier * regionalMultiplier),
+    cd: Math.round((config.cd_base_sales_min + config.cd_base_sales_max) / 2 * fameMultiplier * regionalMultiplier),
+    vinyl: Math.round((config.vinyl_base_sales_min + config.vinyl_base_sales_max) / 2 * fameMultiplier * regionalMultiplier),
+  };
+};
+```
 
 ---
 
 ## Version Update
 
-- Version: **1.0.537**
+- Version: **1.0.539**
 - Changes:
-  - Twaater: Fixed AI feed returning empty by improving response parsing and fallback
-  - Twaater: Auto-generate promotional text when linking songs, albums, gigs, or tours
-  - Twaater: Added band hashtag button to quickly add your band name as a hashtag
-  - Twaater: Improved chronological feed fallback for reliable content display
+  - Admin: New Sales Balance page to tune physical/digital record sales parameters
+  - Admin: Configure base sales ranges, fame multipliers, regional weights, and market scarcity
+  - Dashboard: Regional fame breakdown showing fame and fans by country with expandable cities
+  - Band Manager: Enhanced fame view with has_performed indicators and city details
+  - Sales System: Edge function now reads config from database for adjustable parameters
