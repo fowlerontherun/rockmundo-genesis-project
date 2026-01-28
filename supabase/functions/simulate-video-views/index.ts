@@ -150,8 +150,10 @@ serve(async (req) => {
         }
       }
 
-      // Credit to band balance
+      // Credit to band balance and create earnings record
       if (song?.band_id && dailyEarnings > 0) {
+        const bandShare = dailyEarnings * 0.7; // 70% to band
+        
         const { data: band } = await supabaseClient
           .from("bands")
           .select("band_balance, weekly_fans")
@@ -162,10 +164,26 @@ serve(async (req) => {
           await supabaseClient
             .from("bands")
             .update({ 
-              band_balance: (band.band_balance || 0) + dailyEarnings * 0.7, // 70% to band
+              band_balance: (band.band_balance || 0) + bandShare,
               weekly_fans: (band.weekly_fans || 0) + Math.round(dailyViews * 0.001),
             })
             .eq("id", song.band_id);
+
+          // Create band_earnings record for tracking
+          await supabaseClient
+            .from("band_earnings")
+            .insert({
+              band_id: song.band_id,
+              amount: bandShare,
+              source: "music_video",
+              description: `Music video views: ${video.title || "Video"}`,
+              earned_by_user_id: song.user_id || null,
+              metadata: { 
+                video_id: video.id, 
+                daily_views: dailyViews,
+                song_id: song.id,
+              },
+            });
         }
       }
 

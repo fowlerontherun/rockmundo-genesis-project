@@ -121,26 +121,30 @@ const mapGigToHighlight = (gig: GigOutcomeWithDetails): CareerGigHighlight => ({
 });
 
 export const fetchCareerOverview = async (userId: string): Promise<CareerOverview> => {
-  const { data: membership, error: membershipError } = await supabase
+  // Fetch ALL band memberships for this player
+  const { data: memberships, error: membershipError } = await supabase
     .from("band_members")
     .select(
       `band_id, band:bands (id, name, fame, popularity, weekly_fans)`
     )
     .eq("user_id", userId)
-    .order("joined_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("joined_at", { ascending: false });
 
   if (membershipError) {
     throw membershipError;
   }
 
-  const bandId = membership?.band_id ?? null;
-  const bandInfo = membership?.band ?? null;
+  // Use first (most recent) band for display info
+  const primaryMembership = memberships?.[0] ?? null;
+  const bandInfo = primaryMembership?.band ?? null;
+  
+  // Get all band IDs for aggregating gig data
+  const allBandIds = memberships?.map(m => m.band_id).filter(Boolean) ?? [];
 
   let gigRows: GigOutcomeWithDetails[] = [];
 
-  if (bandId) {
+  if (allBandIds.length > 0) {
+    // Fetch gig outcomes for ALL bands the player has been in
     const { data: gigsData, error: gigsError } = await supabase
       .from("gig_outcomes")
       .select(
@@ -150,13 +154,14 @@ export const fetchCareerOverview = async (userId: string): Promise<CareerOvervie
           completed_at,
           status,
           payment,
+          band_id,
           venue:venues(id, name, reputation),
           promoter:promoters(id, name, reputation)
         )`
       )
-      .eq("gig.band_id", bandId)
+      .in("gig.band_id", allBandIds)
       .order("completed_at", { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (gigsError) {
       throw gigsError;

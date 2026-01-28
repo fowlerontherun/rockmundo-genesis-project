@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.556",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Random event outcomes now appear in player inbox with effect details" },
+      { type: 'fix', description: "Career dashboard aggregates stats across ALL bands player has been in" },
+      { type: 'fix', description: "Music video earnings now create band_earnings records for tracking" },
+      { type: 'fix', description: "Sponsorship clarification - PR offers include podcasts/magazines/newspapers (requires fame threshold)" },
+    ],
+  },
+  {
     version: "1.0.555",
     date: "2026-01-28",
     changes: [
