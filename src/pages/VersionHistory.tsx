@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.542",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Logistics: Fixed param mismatch - company management now correctly routes using companyId" },
+      { type: 'feature', description: "Venue Business: Fully wired staff management - hire, fire, view payroll" },
+      { type: 'feature', description: "Venue Business: Booking calendar with create, update status, and history" },
+      { type: 'feature', description: "Venue Business: Upgrade system with 9 venue improvement types" },
+      { type: 'feature', description: "Venue Business: Financial tracking with revenue vs expenses breakdown" },
+      { type: 'feature', description: "Recording Studio: Equipment inventory with add gear, value tracking, condition monitoring" },
+      { type: 'feature', description: "Recording Studio: Upgrade system with 9 studio improvement tiers (console, monitors, mics, etc.)" },
+      { type: 'improvement', description: "All business pages now properly lookup by company_id when accessed from My Companies" },
+    ],
+  },
+  {
     version: "1.0.541",
     date: "2026-01-28",
     changes: [
