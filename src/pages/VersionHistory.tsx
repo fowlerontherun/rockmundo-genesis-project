@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.564",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Career Journal: Personal memoir system for documenting your band's story" },
+      { type: 'feature', description: "Career Journal: Auto-logged milestones capture career-defining moments" },
+      { type: 'feature', description: "Career Journal: Write custom notes with title, content, and category" },
+      { type: 'feature', description: "Career Journal: Beautiful timeline view grouped by date" },
+      { type: 'feature', description: "Career Journal: Pin important entries to the top of your journal" },
+      { type: 'feature', description: "Career Journal: Filter by milestones, notes, or category" },
+      { type: 'feature', description: "Career Journal: Search through all your journal entries" },
+      { type: 'improvement', description: "Navigation: Added Journal to Home section for quick access" },
+    ],
+  },
+  {
     version: "1.0.563",
     date: "2026-01-28",
     changes: [

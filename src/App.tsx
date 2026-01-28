@@ -231,6 +231,7 @@ const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const Prison = lazyWithRetry(() => import("./pages/Prison"));
 const VersionHistory = lazyWithRetry(() => import("./pages/VersionHistory"));
+const Journal = lazyWithRetry(() => import("./pages/Journal"));
 const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
 const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
@@ -332,6 +333,7 @@ function App() {
                     <Route path="public-relations" element={<PublicRelations />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
+                    <Route path="journal" element={<Journal />} />
                     <Route path="version-history" element={<VersionHistory />} />
                     <Route path="donation-success" element={<DonationSuccess />} />
                     <Route path="my-companies" element={<MyCompanies />} />

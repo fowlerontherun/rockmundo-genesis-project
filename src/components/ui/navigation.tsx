@@ -130,12 +130,13 @@ const Navigation = () => {
       items: [
         { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
         { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
+        { icon: BookOpen, labelKey: "nav.journal", path: "/journal" },
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
         { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
         { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
-        { icon: BookOpen, labelKey: "nav.statistics", path: "/statistics" },
+        { icon: History, labelKey: "nav.statistics", path: "/statistics" },
       ],
     },
     {

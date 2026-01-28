@@ -13382,6 +13382,82 @@ export type Database = {
         }
         Relationships: []
       }
+      player_journal_entries: {
+        Row: {
+          band_id: string | null
+          category: string
+          content: string | null
+          created_at: string
+          entry_type: string
+          id: string
+          is_auto_generated: boolean
+          is_pinned: boolean
+          metadata: Json | null
+          occurred_at: string
+          profile_id: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          band_id?: string | null
+          category?: string
+          content?: string | null
+          created_at?: string
+          entry_type?: string
+          id?: string
+          is_auto_generated?: boolean
+          is_pinned?: boolean
+          metadata?: Json | null
+          occurred_at?: string
+          profile_id: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string | null
+          category?: string
+          content?: string | null
+          created_at?: string
+          entry_type?: string
+          id?: string
+          is_auto_generated?: boolean
+          is_pinned?: boolean
+          metadata?: Json | null
+          occurred_at?: string
+          profile_id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_journal_entries_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_journal_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_journal_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_loans: {
         Row: {
           created_at: string | null
@@ -13565,6 +13641,55 @@ export type Database = {
             columns: ["tour_exclusive_tour_id"]
             isOneToOne: false
             referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_milestone_tracking: {
+        Row: {
+          achieved_at: string
+          band_id: string | null
+          id: string
+          metadata: Json | null
+          milestone_type: string
+          profile_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          band_id?: string | null
+          id?: string
+          metadata?: Json | null
+          milestone_type: string
+          profile_id: string
+        }
+        Update: {
+          achieved_at?: string
+          band_id?: string | null
+          id?: string
+          metadata?: Json | null
+          milestone_type?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_milestone_tracking_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_milestone_tracking_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_milestone_tracking_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
