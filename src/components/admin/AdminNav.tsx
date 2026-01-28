@@ -89,6 +89,7 @@ export const adminCategories: AdminCategory[] = [
     description: "Marketplace, gear, and economy systems",
     icon: DollarSign,
     items: [
+      { path: "/admin/sales-balance", label: "Sales Balance", description: "Record sales tuning" },
       { path: "/admin/marketplace", label: "Marketplace", description: "Item marketplace" },
       { path: "/admin/gear-items", label: "Gear Items", description: "Gear catalog" },
       { path: "/admin/brands", label: "Brands", description: "Brand management" },

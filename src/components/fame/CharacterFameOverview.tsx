@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Star, Users, TrendingUp, Globe, MapPin, Music } from "lucide-react";
+import { RegionalFameBreakdown } from "./RegionalFameBreakdown";
 
 interface CharacterFameOverviewProps {
   profileId?: string;
@@ -198,6 +199,11 @@ export const CharacterFameOverview = ({ profileId }: CharacterFameOverviewProps)
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Regional Fame Breakdown for band */}
+        {band && (
+          <RegionalFameBreakdown bandId={band.id} compact defaultExpanded={false} />
         )}
 
         {/* Fame Sources */}

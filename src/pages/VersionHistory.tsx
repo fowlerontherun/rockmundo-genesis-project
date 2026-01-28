@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.539",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Admin: New Sales Balance page to tune physical/digital record sales parameters" },
+      { type: 'feature', description: "Admin: Configure base sales ranges, fame multipliers, regional weights, and market scarcity" },
+      { type: 'feature', description: "Admin: Live preview calculator showing estimated sales based on fame values" },
+      { type: 'feature', description: "Dashboard: Regional fame breakdown showing fame and fans by country with expandable cities" },
+      { type: 'feature', description: "Fame: Countries show performed indicator and fame cap for unvisited regions" },
+      { type: 'improvement', description: "Sales System: Edge function now reads config from database for adjustable parameters" },
+    ],
+  },
+  {
     version: "1.0.538",
     date: "2026-01-28",
     changes: [
