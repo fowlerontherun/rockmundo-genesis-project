@@ -217,7 +217,6 @@ const Navigation = () => {
         { icon: Mic, labelKey: "nav.podcasts", path: "/media/podcasts" },
         { icon: Film, labelKey: "nav.films", path: "/media/films" },
         { icon: Globe, labelKey: "nav.websites", path: "/media/websites" },
-        { icon: Share2, labelKey: "nav.selfPr", path: "/media/self-promotion" },
       ],
     },
     {
