@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Truck, Users, FileText, Wrench, DollarSign } from "lucide-react";
+import { ArrowLeft, Truck, Users, FileText, Wrench } from "lucide-react";
 import { useLogisticsCompanies } from "@/hooks/useLogisticsBusiness";
 import { VipGate } from "@/components/company/VipGate";
 import { LogisticsFleetManager, LogisticsDriversManager, LogisticsContractsManager, LogisticsUpgradesManager } from "@/components/logistics-business";

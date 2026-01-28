@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.543",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Build: Removed unused DollarSign import in LogisticsCompanyManagement to fix production build" },
+    ],
+  },
+  {
     version: "1.0.542",
     date: "2026-01-28",
     changes: [
