@@ -123,10 +123,17 @@ serve(async (req) => {
           .lte('scheduled_start', endTime.toISOString())
           .gte('scheduled_end', startTime.toISOString())
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        throw new Error(
-          `Cannot accept PR offer: You have "${conflict?.title || 'another activity'}" scheduled at this time. Please decline or reschedule.`
+        // Return a 400 validation error, not 500
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'scheduling_conflict',
+            message: `You have "${conflict?.title || 'another activity'}" scheduled at this time. Please decline or reschedule.`,
+            conflictingActivity: conflict?.title,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 

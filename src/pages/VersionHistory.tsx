@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.561",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "PR Activity: Scheduling conflicts now return 400 validation error instead of 500 server error" },
+      { type: 'improvement', description: "PR Activity: Clearer conflict message shown to user when time slot is already booked" },
+    ],
+  },
+  {
     version: "1.0.560",
     date: "2026-01-28",
     changes: [
@@ -27,6 +35,13 @@ const versionHistory: VersionEntry[] = [
     date: "2026-01-28",
     changes: [
       { type: 'fix', description: "Daily Sales: Fixed missing home_country column error in generate-daily-sales edge function" },
+    ],
+  },
+  {
+    version: "1.0.558",
+    date: "2026-01-28",
+    changes: [
+      { type: 'improvement', description: "Navigation: Removed duplicate Self PR link from Media section (already accessible via PR page)" },
     ],
   },
   {
