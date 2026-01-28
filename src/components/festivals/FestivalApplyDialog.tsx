@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Music, Star, DollarSign, Clock } from "lucide-react";
+import { Music, Star, DollarSign } from "lucide-react";
 import type { Festival } from "@/hooks/useFestivals";
+import { useFestivalScheduleConflict } from "@/hooks/useFestivalScheduleConflict";
+import { FestivalScheduleConflictWarning } from "./FestivalScheduleConflictWarning";
 
 interface FestivalApplyDialogProps {
   open: boolean;
@@ -44,6 +46,13 @@ export function FestivalApplyDialog({
 }: FestivalApplyDialogProps) {
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [selectedSetlist, setSelectedSetlist] = useState<string>("");
+
+  // Check for schedule conflicts
+  const { hasConflict, conflictingActivities, isChecking } = useFestivalScheduleConflict(
+    festival.start_date,
+    festival.end_date,
+    open
+  );
 
   const availableSlots = PERFORMANCE_SLOTS.filter((slot) => bandFame >= slot.minFame);
   const selectedSlotInfo = PERFORMANCE_SLOTS.find((s) => s.id === selectedSlot);
@@ -95,6 +104,13 @@ export function FestivalApplyDialog({
               )}
             </CardContent>
           </Card>
+
+          {/* Schedule Conflict Warning */}
+          <FestivalScheduleConflictWarning
+            hasConflict={hasConflict}
+            conflictingActivities={conflictingActivities}
+            isChecking={isChecking}
+          />
 
           {/* Performance Slot Selection */}
           <div className="space-y-3">
@@ -190,10 +206,10 @@ export function FestivalApplyDialog({
           </Button>
           <Button
             onClick={handleApply}
-            disabled={!selectedSlot || isApplying}
+            disabled={!selectedSlot || isApplying || hasConflict}
             className="flex-1"
           >
-            {isApplying ? "Submitting..." : "Submit Application"}
+            {isApplying ? "Submitting..." : hasConflict ? "Conflict Detected" : "Submit Application"}
           </Button>
         </div>
       </DialogContent>

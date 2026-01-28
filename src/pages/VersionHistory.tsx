@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.544",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Festivals: Schedule conflict detection - warns when applying to festivals with existing commitments" },
+      { type: 'feature', description: "Festivals: Contract negotiation dialog with payment, merch cut, and perks sliders" },
+      { type: 'feature', description: "Festivals: Acceptance probability calculator based on demands vs slot leverage" },
+      { type: 'feature', description: "Festivals: Live performance page with crowd energy, phase progression, and scoring" },
+      { type: 'feature', description: "Festivals: Stage move mechanic to boost crowd energy during performance" },
+      { type: 'improvement', description: "Festivals: Application button disabled when schedule conflicts detected" },
+    ],
+  },
+  {
     version: "1.0.543",
     date: "2026-01-28",
     changes: [
