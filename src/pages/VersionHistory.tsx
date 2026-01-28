@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.562",
+    date: "2026-01-28",
+    changes: [
+      { type: 'improvement', description: "Releases: Realistic default retail prices (CD $14.99, Vinyl $29.99, Digital $9.99, Cassette $12.99)" },
+      { type: 'improvement', description: "Releases: Price input now in dollars with decimal support (not cents)" },
+      { type: 'feature', description: "Releases: Multi-currency display shows EUR (€) and GBP (£) equivalents" },
+    ],
+  },
+  {
     version: "1.0.561",
     date: "2026-01-28",
     changes: [
