@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 interface LinkGigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (gigId: string, gigTitle: string) => void;
+  onSelect: (gigId: string, gigTitle: string, extra?: { venue?: string; city?: string }) => void;
 }
 
 export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogProps) => {
@@ -96,7 +96,9 @@ export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogPro
                   key={gig.id}
                   onClick={() => {
                     const title = `${gig.band?.name} @ ${gig.venue?.name}`;
-                    onSelect(gig.id, title);
+                    const venueName = gig.venue?.name || '';
+                    const cityName = gig.venue?.city?.name || '';
+                    onSelect(gig.id, title, { venue: venueName, city: cityName });
                     onOpenChange(false);
                   }}
                   className="w-full p-3 rounded-lg text-left transition-colors hover:bg-[hsl(var(--twaater-hover))] border border-transparent hover:border-[hsl(var(--twaater-border))]"
