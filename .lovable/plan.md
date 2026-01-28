@@ -1,146 +1,230 @@
 
-## What’s actually going wrong (based on the code + DB)
-Right now the “layering” code is mostly correct (absolute stacking with z-index). The reason it still doesn’t produce a believable “whole character” is that **the PNGs are not truly aligned as a shared template set** at render-time.
+# Multi-Bug Fix Plan - v1.0.555
 
-Specifically:
-- `SpriteLayerCanvas` renders each PNG with `object-contain` inside the same box (`absolute inset-0 w-full h-full object-contain`).
-- If **any** layer PNG has a different intrinsic aspect ratio (ex: 1024×1024 vs 512×1024), or the content is drawn at a different scale/position inside its canvas, `object-contain` will scale it differently → layers drift.
-- The current approach assumes “all layers share the same canvas and the body is in the same place”, but we have no runtime enforcement/validation of that assumption.
-- Also, “template-only assets” is not yet strictly enforced in `useCharacterSprites.getSpritesByCategory()`—it currently pulls by `category` and `gender_filter`, but does **not** filter to `subcategory = aligned` (or an `is_aligned` flag). That means legacy assets can still leak into selection and defaults.
+## Summary
 
-The result: even though images stack, they still don’t compose into a coherent RPM replacement.
+This plan addresses 7 distinct bugs reported by the user across different game systems. I've analyzed each issue and identified root causes ranging from database schema mismatches to missing activity scheduling integration.
 
 ---
 
-## Goal (what “fully working layered replacement” means)
-1. When opening `/avatar-designer`, the app auto-builds a complete character: body + hair + face + shirt + trousers + shoes (plus optional extras).
-2. Any selection change swaps **only** that layer, without disturbing the others.
-3. Layers remain aligned and consistent across all combinations.
-4. The UI only shows the aligned template set (no legacy sprites).
-5. We can reliably reproduce and confirm correctness with a built-in “layer test” view and a screenshot/export of 1 item per layer.
+## Bug 1: Songwriting Doesn't Block Players or Show in Schedule
+
+### Root Cause
+The `useSongwritingData.tsx` hook starts songwriting sessions by locking projects but **never creates entries in `player_scheduled_activities`**. The schedule system (`useScheduledActivities.ts`) only fetches from that table plus a few specific sources (gigs, rehearsals, recordings, travel), but songwriting is not included.
+
+### Fix
+Modify `startSession` mutation in `useSongwritingData.tsx` to:
+1. Create a `player_scheduled_activities` entry with `activity_type: 'songwriting'`
+2. Include the project details in the activity metadata
+3. Set proper `scheduled_start` and `scheduled_end` times (1-hour duration)
+
+```text
+Location: src/hooks/useSongwritingData.tsx
+Changes:
+- In startSession mutation, after locking the project, INSERT into player_scheduled_activities
+- Add conflict check using check_scheduling_conflict RPC before starting
+```
 
 ---
 
-## Implementation strategy (robust + debuggable)
-Instead of relying on “all PNGs are perfect,” we will make the renderer **template-aware** and add **validation + debug tooling** so we can prove alignment.
+## Bug 2: Gigs Not Showing in Schedule
 
-### Key changes
-A) **Enforce template-only assets**
-- Filter sprites to aligned set only:
-  - Add a strict filter rule: `subcategory === 'aligned'` OR `subcategory startsWith('aligned_')` OR add an explicit DB column `is_aligned`.
-- Ensure this filter applies in:
-  - `useCharacterSprites()` fetch result (preferred: filter after fetch so all consumers are safe)
-  - `getSpritesByCategory()`
-  - `buildDefaultCharacter()` selection logic
+### Root Cause
+The gigs query in `useScheduledActivities.ts` uses timezone-based date comparison that can miss gigs. The query filters `scheduled_date` between start and end of day in UTC, but gig dates may be stored in local time.
 
-B) **Stop using `object-contain` for stacking**
-For layered sprites, we want identical pixel mapping across layers.
-- Replace `object-contain` with a rendering mode that guarantees all layers fill the same coordinate space:
-  - Use `object-fill` so every layer always maps to the container exactly (no per-layer aspect-ratio scaling differences).
-  - Lock the preview container to the template aspect ratio (512:1024 = 1:2) and ensure consistent sizing.
+### Current problematic code (lines 117-126):
+```typescript
+.gte('scheduled_date', `${dateString}T00:00:00.000Z`)
+.lt('scheduled_date', `${dateString}T23:59:59.999Z`)
+```
 
-This single change often fixes the “it’s not layering” feeling immediately when assets are slightly inconsistent.
+### Fix
+Use PostgreSQL's date casting for reliable timezone-independent comparison:
+```typescript
+.gte('scheduled_date::date', dateString)
+.lte('scheduled_date::date', dateString)
+```
 
-C) **Introduce optional anchor/offset support (safety net)**
-Even with a template system, some layers might still be slightly off. We already have `anchor_x` / `anchor_y` columns in `CharacterSprite`.
-- Use `anchor_x/anchor_y` as pixel offsets (or normalized offsets) applied via CSS transform:
-  - `transform: translate(var(--dx), var(--dy))`
-- Default to 0 offsets for aligned assets.
-- This provides a path to “fine-tune” without regenerating everything.
-
-D) **Add a “Layer Debug / Proof” mode**
-User asked for “Take a screenshot with 1 item from each layer added”.
-Because you’re reporting persistent issues, we should add an explicit in-app debug panel that:
-- Selects a known “test set” (one sprite per category) with a single click.
-- Displays a checklist showing each layer is present and which exact sprite is used.
-- Provides a “Export composite PNG” button:
-  - Draw layers onto a `<canvas>` in correct order.
-  - Export as PNG (download) and optionally store it to Supabase Storage to share a URL.
-
-This removes guesswork and gives us a definitive “this is correct/incorrect” artifact every time.
-
-E) **Default character logic tightened**
-Current default builder:
-- Does not consistently apply gender filter to all categories (hair/face etc).
-- Does not enforce aligned-only.
-We’ll update it to:
-- Only choose from aligned sprites
-- Apply gender filtering consistently where relevant
-- Ensure a complete set is always chosen (body is mandatory, shoes mandatory, trousers mandatory, etc)
-
-F) **Versioning**
-Per your project instruction: every change must bump the banner version and add a Version History entry.
+Or use a raw SQL filter with proper date casting.
 
 ---
 
-## Step-by-step plan (what I will implement next)
+## Bug 3: Inviting Players to Songwriting Returns No Players
 
-### 1) Codebase audit and alignment constraints
-- Inspect the exact set of aligned sprites available, confirm categories:
-  - `body, hair, eyes, nose, mouth, shirt, jacket, trousers, shoes, hat, glasses, facial_hair`
-- Confirm `subcategory` values and decide the exact “aligned-only” rule:
-  - Based on DB sample, `subcategory` is `aligned` for most, `aligned_male` / `aligned_female` for bodies.
-  - Rule will be: `subcategory LIKE 'aligned%'`.
+### Root Cause
+**Critical schema mismatch!** The `CollaboratorInviteDialog.tsx` queries the `friendships` table using columns `user_id` and `friend_id`, but the actual database schema uses:
+- `requestor_id` (not `user_id`)
+- `addressee_id` (not `friend_id`)
 
-### 2) Enforce template-only assets everywhere
-- Update `useCharacterSprites`:
-  - After fetching `character_sprite_assets`, filter down to aligned set only.
-  - Optionally expose `spritesAligned` vs `spritesAll` if needed, but default export should be aligned-only since you explicitly chose that.
+Additionally, the FK relationship hints used in the query (`friendships_friend_id_fkey`, `friendships_user_id_fkey`) don't exist because those columns don't exist.
 
-### 3) Fix renderer to use consistent coordinate mapping
-- Update `SpriteLayerCanvas.tsx`:
-  - Change the layer image class from `object-contain` to `object-fill`.
-  - Ensure the container itself has a stable aspect ratio (it already uses an aspect wrapper in `PunkCharacterCreator`, but we’ll ensure the internal canvas respects it).
-  - Apply optional `anchor_x/anchor_y` offset if present:
-    - Example: `style={{ transform: \`translate(${sprite.anchor_x}px, ${sprite.anchor_y}px)\` }}` (or scaled relative to rendered size if we decide normalized anchors).
+### Fix
+Update `CollaboratorInviteDialog.tsx` lines 110-127 to use correct column names:
+```typescript
+const { data: friendships } = await supabase
+  .from("friendships")
+  .select(`
+    requestor_id,
+    addressee_id,
+    requestor_profile:profiles!friendships_requestor_id_fkey (
+      id, username, avatar_url
+    ),
+    addressee_profile:profiles!friendships_addressee_id_fkey (
+      id, username, avatar_url
+    )
+  `)
+  .or(`requestor_id.eq.${userProfileId},addressee_id.eq.${userProfileId}`)
+  .eq("status", "accepted");
+```
 
-### 4) Add “Debug composite + screenshot” tooling
-- Add a small debug section to the Avatar Designer (can be behind a “Debug” toggle):
-  - “Apply test set” button: picks one default per layer.
-  - “Export PNG” button: renders a composite onto a canvas using the resolved image URLs and saves it.
-  - Also show a simple text list of selected sprite names + categories.
-
-This satisfies your request to “take a screenshot with 1 item from each layer added” in a reproducible way, even without needing my remote session logged in.
-
-### 5) Make default character truly complete and stable
-- Update `buildDefaultCharacter()` in `PunkCharacterCreator.tsx`:
-  - Ensure each category selection pulls from the aligned-only set.
-  - Ensure gender filtering for body + trousers (and facial hair).
-  - Ensure we always pick: `body, hair, eyes, nose, mouth, shirt, trousers, shoes` (jacket optional but default can include it).
-
-### 6) Validate with a known test case
-- Open `/avatar-designer`
-- Use “Apply test set”
-- Confirm:
-  - Body visible
-  - Trousers align to hips/legs
-  - Shoes align to feet
-  - Shirt aligns to torso
-  - Jacket overlays correctly
-  - Face features sit on the head
-  - Hair sits on top
-- Export PNG to confirm the composite is correct.
-
-### 7) Version bump + Version History entry
-- Update the banner version number (next patch)
-- Add a changelog entry describing:
-  - “Aligned-only filtering enforced”
-  - “Renderer changed to fill template space for consistent layering”
-  - “Added debug composite export”
-  - “Improved default auto-build to include 1 item per layer reliably”
+Also need to get user's `profile.id` (not `user.id`) for the comparison.
 
 ---
 
-## Risks / tradeoffs
-- `object-fill` can slightly distort if an asset has a different aspect ratio. For layered sprites, this is preferable to misalignment; it forces uniform mapping.
-- If assets are drastically inconsistent (not just minor), no renderer can fully fix it; we’d then regenerate the problematic layers. The debug export will tell us exactly which category is wrong.
-- Anchor offsets are a fallback; ideally aligned assets should require no offsets.
+## Bug 4: Company Types Have Issues/Errors
+
+### Root Cause
+The `create_subsidiary_entity()` trigger function was recently fixed but some edge cases may still exist. The trigger creates subsidiary entity records (labels, venues, studios, etc.) when a company is created, but errors in the trigger are caught and logged as warnings without failing.
+
+### Fix
+1. Verify the trigger is functioning correctly by testing company creation
+2. Add explicit error handling in the frontend `useCreateCompany` hook to check if the subsidiary entity was created
+3. Add a post-creation verification step that queries the subsidiary table and shows a warning if the entity wasn't created
 
 ---
 
-## Deliverable definition (what you’ll see when done)
-- The Avatar Designer immediately shows a complete character on load.
-- Changing any layer swaps cleanly without shifting others.
-- Only aligned sprites show in pickers.
-- A “Debug/Test composite” action demonstrates 1 item from each layer and can export a PNG proof.
+## Bug 5: Cron Jobs Are Failing
 
+### Analysis
+From the cron_job_runs query, I see most jobs are succeeding but one has errors:
+- `update-daily-streams`: Shows `error_count: 187` with 0 processed
+
+### Fix
+1. Check the `update-daily-streams` edge function logs for specific error messages
+2. Common causes: RLS policy blocking service role, missing data, timeout issues
+3. Add better error handling and batch processing to prevent timeout failures
+
+---
+
+## Bug 6: Admin Record Sales Options Don't Save
+
+### Root Cause
+The `game_balance_config` table query shows **no entries for category 'sales'**. The save mutation uses `upsert` with `onConflict: "category,key"`, but this requires a unique constraint on those columns.
+
+Verified the table structure has: `id, category, key, value, description, min_value, max_value, unit, created_at, updated_at`
+
+### Fix
+1. Verify unique constraint exists on `(category, key)`
+2. If missing, create the constraint via migration
+3. Add RLS policy allowing authenticated admins to INSERT/UPDATE (current policy only allows `service_role`)
+
+The current policy is:
+```sql
+ALL policyname:Service role can modify game balance qual:true
+```
+
+This only allows service role, not authenticated admins. Need to add admin policy.
+
+---
+
+## Bug 7: Elections and Mayor Rules Don't Save
+
+### Root Cause
+The `city_laws` update policy is:
+```sql
+UPDATE: Only mayors can update their city laws
+QUAL: EXISTS (SELECT 1 FROM city_mayors cm 
+  WHERE cm.id = city_laws.enacted_by_mayor_id 
+  AND cm.profile_id = (profile for auth.uid()) 
+  AND cm.is_current = true)
+```
+
+**The problem:** This policy checks if `enacted_by_mayor_id` matches the current mayor, but for newly created city_laws records, `enacted_by_mayor_id` might be NULL or set to a different value. A mayor can only update laws that were **already enacted by them**.
+
+Additionally, when querying `city_laws`, there may be no active laws record (query returned empty), so there's nothing to update.
+
+### Fix
+1. Modify the RLS policy to check if the authenticated user is the current mayor of the city, regardless of who enacted the previous law:
+```sql
+EXISTS (SELECT 1 FROM city_mayors cm 
+  WHERE cm.city_id = city_laws.city_id 
+  AND cm.profile_id = (SELECT id FROM profiles WHERE user_id = auth.uid()) 
+  AND cm.is_current = true)
+```
+
+2. Ensure default city laws are created for cities that don't have any
+
+---
+
+## Implementation Order
+
+1. **Bug 3 (Collaborator Invite)** - Simple column name fix
+2. **Bug 7 (Mayor Laws)** - RLS policy fix via migration
+3. **Bug 6 (Sales Config)** - RLS policy + constraint fix via migration
+4. **Bug 1 (Songwriting Schedule)** - Add scheduled activity creation
+5. **Bug 2 (Gigs Schedule)** - Fix date comparison
+6. **Bug 4 & 5 (Company/Cron)** - Verify and add error handling
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/components/songwriting/CollaboratorInviteDialog.tsx` | Fix column names: `requestor_id`/`addressee_id` instead of `user_id`/`friend_id` |
+| `src/hooks/useSongwritingData.tsx` | Add `player_scheduled_activities` insert in `startSession` |
+| `src/hooks/useScheduledActivities.ts` | Fix gig date filtering for timezone robustness |
+| New migration file | Fix `city_laws` UPDATE policy, add `game_balance_config` admin policy, add unique constraint |
+| `src/components/VersionHeader.tsx` | Update to v1.0.555 |
+| `src/pages/VersionHistory.tsx` | Add changelog entry |
+
+---
+
+## Technical Details
+
+### Migration SQL for RLS fixes:
+```sql
+-- Fix city_laws UPDATE policy
+DROP POLICY IF EXISTS "Only mayors can update their city laws" ON city_laws;
+CREATE POLICY "Current mayors can update city laws" ON city_laws
+FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM city_mayors cm 
+    WHERE cm.city_id = city_laws.city_id 
+    AND cm.profile_id = (SELECT id FROM profiles WHERE user_id = auth.uid()) 
+    AND cm.is_current = true
+  )
+);
+
+-- Add unique constraint for game_balance_config if missing
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'game_balance_config_category_key_key'
+  ) THEN
+    ALTER TABLE game_balance_config 
+    ADD CONSTRAINT game_balance_config_category_key_key UNIQUE (category, key);
+  END IF;
+END $$;
+
+-- Add admin write policy for game_balance_config
+CREATE POLICY "Admins can write game balance config" ON game_balance_config
+FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE user_id = auth.uid() AND is_admin = true
+  )
+);
+```
+
+---
+
+## Expected Outcome
+
+After implementation:
+- Songwriting sessions appear in the schedule and properly block conflicting activities
+- Gigs show reliably regardless of timezone differences
+- Collaborator invitations show band members and friends correctly
+- Mayors can successfully save law changes
+- Admin sales balance configuration persists correctly
+- Company subsidiary creation is more robust with proper error feedback
