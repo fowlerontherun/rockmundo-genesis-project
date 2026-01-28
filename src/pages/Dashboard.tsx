@@ -12,7 +12,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star } from "lucide-react";
+import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
@@ -24,6 +24,7 @@ import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
 import { DashboardOverviewTabs } from "@/components/dashboard/DashboardOverviewTabs";
 import { VipStatusCard } from "@/components/VipStatusCard";
+import { BehaviorSettingsTab } from "@/components/dashboard/BehaviorSettingsTab";
 
 // Advisor imports
 import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
@@ -262,7 +263,7 @@ const Dashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-7 gap-1">
+          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-8 gap-1">
             <TabsTrigger value="profile" className="flex-shrink-0">
               <User className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('common.profile')}</span>
@@ -270,6 +271,10 @@ const Dashboard = () => {
             <TabsTrigger value="fame" className="flex-shrink-0">
               <Star className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('dashboard.fame')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="behavior" className="flex-shrink-0">
+              <Flame className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Lifestyle</span>
             </TabsTrigger>
             <TabsTrigger value="skills" className="flex-shrink-0">
               <Zap className="h-4 w-4 sm:mr-2" />
@@ -326,6 +331,11 @@ const Dashboard = () => {
         {/* Fame & Fans Tab */}
         <TabsContent value="fame" className="space-y-4">
           <CharacterFameOverview />
+        </TabsContent>
+
+        {/* Behavior/Lifestyle Tab */}
+        <TabsContent value="behavior" className="space-y-4">
+          <BehaviorSettingsTab />
         </TabsContent>
 
         {/* Skills & Attributes Tab */}

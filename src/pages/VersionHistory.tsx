@@ -14,14 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.537",
+    version: "1.0.538",
     date: "2026-01-28",
     changes: [
-      { type: 'fix', description: "Twaater: Fixed empty timeline - improved AI feed response parsing and robust fallback" },
-      { type: 'feature', description: "Twaater: Auto-generate promotional text when linking songs, albums, gigs, or tours" },
-      { type: 'feature', description: "Twaater: Band hashtag button to quickly insert your band name as #YourBandName" },
-      { type: 'improvement', description: "Twaater: Gig links now include venue and city in auto-generated text" },
-      { type: 'improvement', description: "Twaater: Chronological feed fallback when AI ranking is unavailable" },
+      { type: 'feature', description: "Lifestyle: New Behavior tab on Dashboard to configure touring lifestyle" },
+      { type: 'feature', description: "Lifestyle: 7 configurable settings - travel comfort, hotel standard, partying intensity, fan interaction, media behavior, afterparty attendance, entourage size" },
+      { type: 'feature', description: "Lifestyle: Risk score calculation based on behavior settings (0-100)" },
+      { type: 'feature', description: "Lifestyle: Health modifiers from settings affect recovery rate and rest effectiveness" },
+      { type: 'feature', description: "Random Events: 30+ new lifestyle events across hotel, partying, fan encounter, and media categories" },
+      { type: 'improvement', description: "Lifestyle choices now influence which random events you encounter while touring" },
     ],
   },
   {
