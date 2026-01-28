@@ -22766,6 +22766,16 @@ export type Database = {
           song_id: string
         }[]
       }
+      get_songs_on_releases: {
+        Args: { p_band_id: string; p_user_id: string }
+        Returns: {
+          is_greatest_hits: boolean
+          release_id: string
+          release_title: string
+          release_type: string
+          song_id: string
+        }[]
+      }
       get_top_played_songs: {
         Args: { p_limit?: number }
         Returns: {

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.546",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Releases: Songs can now only be used in one release (single, EP, or album) - no duplicates allowed" },
+      { type: 'fix', description: "Releases: Song selection now shows which release a song is already on (with type indicator)" },
+      { type: 'improvement', description: "Releases: Greatest hits can still include any previously released song" },
+      { type: 'improvement', description: "Releases: Added new get_songs_on_releases RPC for comprehensive release exclusivity checking" },
+    ],
+  },
+  {
     version: "1.0.545",
     date: "2026-01-28",
     changes: [
