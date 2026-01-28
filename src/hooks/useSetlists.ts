@@ -232,46 +232,22 @@ export const useAddSongToSetlist = () => {
       section?: string;
       itemType?: string;
     }) => {
-      // Check if song already exists in this setlist (fresh query)
-      const { data: existingItem } = await supabase
-        .from("setlist_songs")
-        .select("id")
-        .eq("setlist_id", setlistId)
-        .eq("song_id", songId)
-        .eq("item_type", itemType)
-        .maybeSingle();
-      
-      if (existingItem) {
-        throw new Error("This song is already in the setlist");
-      }
-      
-      // Query max position for this section only to avoid conflicts
-      const { data: maxPositionData } = await supabase
-        .from("setlist_songs")
-        .select("position")
-        .eq("setlist_id", setlistId)
-        .eq("section", section)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      const nextPosition = (maxPositionData?.position || 0) + 1;
-      
-      const { data, error } = await supabase
-        .from("setlist_songs")
-        .insert({
-          setlist_id: setlistId,
-          song_id: songId,
-          position: nextPosition,
-          notes,
-          section,
-          item_type: itemType,
-        })
-        .select()
-        .single();
+      // Use atomic RPC to avoid race conditions with position calculation
+      const { data, error } = await supabase.rpc('add_setlist_item', {
+        p_setlist_id: setlistId,
+        p_song_id: songId,
+        p_performance_item_id: null,
+        p_item_type: itemType,
+        p_section: section,
+        p_notes: notes || null,
+      });
 
       if (error) {
-        // Handle duplicate constraint specifically
+        // Handle duplicate song error from RPC
+        if (error.message?.includes('already in the setlist')) {
+          throw new Error("This song is already in the setlist");
+        }
+        // Handle constraint violations (shouldn't happen with RPC but just in case)
         if (error.code === '23505') {
           if (error.message?.includes('position')) {
             throw new Error("Position conflict - please try again");
@@ -280,7 +256,7 @@ export const useAddSongToSetlist = () => {
         }
         throw error;
       }
-      return data;
+      return { id: data };
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", variables.setlistId] });

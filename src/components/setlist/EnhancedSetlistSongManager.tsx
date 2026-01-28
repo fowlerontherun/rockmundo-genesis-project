@@ -275,32 +275,18 @@ export const EnhancedSetlistSongManager = ({
           throw new Error('This performance item is already in the setlist');
         }
         
-        // Get max position for main section only - fresh query
-        const mainItems = freshItems?.filter(s => s.item_type !== 'encore' && (freshItems as any[]).length === 0 || true) || [];
-        const { data: maxPositionData } = await supabase
-          .from("setlist_songs")
-          .select("position")
-          .eq("setlist_id", setlistId)
-          .eq("section", "main")
-          .order("position", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        const nextPosition = (maxPositionData?.position || 0) + 1;
-        
-        const { error } = await supabase
-          .from("setlist_songs")
-          .insert({
-            setlist_id: setlistId,
-            item_type: 'performance_item',
-            performance_item_id: item.id,
-            song_id: null,
-            position: nextPosition,
-            section: 'main',
-          });
+        // Use atomic RPC to avoid race conditions with position calculation
+        const { error } = await supabase.rpc('add_setlist_item', {
+          p_setlist_id: setlistId,
+          p_song_id: null,
+          p_performance_item_id: item.id,
+          p_item_type: 'performance_item',
+          p_section: 'main',
+          p_notes: null,
+        });
         
         if (error) {
-          // Handle unique constraint violation
+          // Handle constraint violations
           if (error.code === '23505') {
             throw new Error('Position conflict - please try again');
           }
