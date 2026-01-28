@@ -1,17 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, RotateCcw, User, Shirt, Glasses, Sparkles } from "lucide-react";
+import { RotateCcw, User, Shirt, Glasses, Sparkles } from "lucide-react";
 import { useCharacterSprites, type SpriteCategory, type CharacterConfig } from "@/hooks/useCharacterSprites";
 import { SpriteLayerCanvas } from "./SpriteLayerCanvas";
 import { SpriteCategoryPicker } from "./SpriteCategoryPicker";
 import { SkinTonePicker } from "./SkinTonePicker";
 import { toast } from "sonner";
-import { useTranslation } from "@/hooks/useTranslation";
 
 export const PunkCharacterCreator = () => {
-  const { t } = useTranslation();
   const {
     sprites,
     config,
@@ -19,25 +17,86 @@ export const PunkCharacterCreator = () => {
     getSpritesByCategory,
     selectSprite,
     setSkinTone,
-    saveConfig,
-    isSaving,
   } = useCharacterSprites();
 
   const [localConfig, setLocalConfig] = useState<Partial<CharacterConfig>>({});
   const [activeTab, setActiveTab] = useState('body');
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Initialize local config from database
+  // Auto-build default character when page loads (if no config exists)
+  const buildDefaultCharacter = useCallback((gender: 'male' | 'female') => {
+    if (!sprites || sprites.length === 0) return;
+
+    const getDefaultSprite = (category: string, genderFilter?: 'male' | 'female') => {
+      const categorySprites = sprites.filter(s => {
+        if (s.category !== category) return false;
+        if (genderFilter) {
+          return s.gender_filter.includes(genderFilter) || s.gender_filter.includes('any');
+        }
+        return true;
+      });
+      // Prefer default sprite, otherwise first one
+      return categorySprites.find(s => s.is_default) || categorySprites[0];
+    };
+
+    const defaultBody = getDefaultSprite('body', gender);
+    const defaultHair = getDefaultSprite('hair');
+    const defaultEyes = getDefaultSprite('eyes');
+    const defaultNose = getDefaultSprite('nose');
+    const defaultMouth = getDefaultSprite('mouth');
+    const defaultShirt = getDefaultSprite('shirt');
+    const defaultJacket = getDefaultSprite('jacket');
+    const defaultTrousers = getDefaultSprite('trousers', gender);
+    const defaultShoes = getDefaultSprite('shoes');
+
+    const newConfig: Partial<CharacterConfig> = {
+      body_sprite_id: defaultBody?.id || null,
+      hair_sprite_id: defaultHair?.id || null,
+      eyes_sprite_id: defaultEyes?.id || null,
+      nose_sprite_id: defaultNose?.id || null,
+      mouth_sprite_id: defaultMouth?.id || null,
+      shirt_sprite_id: defaultShirt?.id || null,
+      jacket_sprite_id: defaultJacket?.id || null,
+      trousers_sprite_id: defaultTrousers?.id || null,
+      shoes_sprite_id: defaultShoes?.id || null,
+      hat_sprite_id: null,
+      glasses_sprite_id: null,
+      facial_hair_sprite_id: null,
+      selected_skin_tone: 'medium',
+    };
+
+    setLocalConfig(newConfig);
+
+    // Save each selection to database
+    Object.entries(newConfig).forEach(([key, value]) => {
+      if (key.endsWith('_sprite_id') && value) {
+        const category = key.replace('_sprite_id', '') as SpriteCategory;
+        selectSprite(category, value as string);
+      }
+    });
+    if (newConfig.selected_skin_tone) {
+      setSkinTone(newConfig.selected_skin_tone);
+    }
+  }, [sprites, selectSprite, setSkinTone]);
+
+  // Initialize local config from database or build default
   useEffect(() => {
-    if (config) {
+    if (hasInitialized || isLoading || !sprites || sprites.length === 0) return;
+
+    if (config && config.body_sprite_id) {
+      // User has existing config
       setLocalConfig(config);
-      // Detect gender from body sprite
-      const bodySprite = sprites?.find(s => s.id === config.body_sprite_id);
-      if (bodySprite?.subcategory?.includes('female')) {
+      const bodySprite = sprites.find(s => s.id === config.body_sprite_id);
+      if (bodySprite?.subcategory?.includes('female') || bodySprite?.gender_filter?.includes('female')) {
         setSelectedGender('female');
       }
+    } else {
+      // No config - build default character
+      buildDefaultCharacter('male');
     }
-  }, [config, sprites]);
+    setHasInitialized(true);
+  }, [config, sprites, isLoading, hasInitialized, buildDefaultCharacter]);
 
   const handleSpriteSelect = (category: SpriteCategory, spriteId: string | null) => {
     setLocalConfig(prev => ({
@@ -57,27 +116,13 @@ export const PunkCharacterCreator = () => {
 
   const handleGenderChange = (gender: 'male' | 'female') => {
     setSelectedGender(gender);
-    // Clear body selection when changing gender
-    setLocalConfig(prev => ({
-      ...prev,
-      body_sprite_id: null,
-      facial_hair_sprite_id: null, // Clear facial hair for female
-    }));
-    selectSprite('body', null);
-    selectSprite('facial_hair', null);
+    // Rebuild default character for new gender
+    buildDefaultCharacter(gender);
   };
 
   const handleReset = () => {
-    setLocalConfig({
-      selected_skin_tone: 'medium',
-    });
-    // Clear all sprite selections
-    const categories: SpriteCategory[] = [
-      'body', 'eyes', 'nose', 'mouth', 'hair', 'jacket', 
-      'shirt', 'trousers', 'shoes', 'hat', 'glasses', 'facial_hair'
-    ];
-    categories.forEach(cat => selectSprite(cat, null));
-    toast.info('Character reset');
+    buildDefaultCharacter(selectedGender);
+    toast.info('Character reset to defaults');
   };
 
   if (isLoading) {
@@ -89,7 +134,7 @@ export const PunkCharacterCreator = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto p-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -116,7 +161,7 @@ export const PunkCharacterCreator = () => {
             <CardTitle className="text-lg">Preview</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-full aspect-[3/4] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg flex items-center justify-center overflow-hidden">
+            <div className="w-full aspect-[1/2] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg flex items-center justify-center overflow-hidden">
               <SpriteLayerCanvas 
                 sprites={sprites || []}
                 config={localConfig as CharacterConfig}
@@ -235,7 +280,7 @@ export const PunkCharacterCreator = () => {
                 />
                 <SpriteCategoryPicker
                   category="trousers"
-                  sprites={getSpritesByCategory('trousers')}
+                  sprites={getSpritesByCategory('trousers', selectedGender)}
                   selectedSpriteId={localConfig.trousers_sprite_id || null}
                   onSelect={(id) => handleSpriteSelect('trousers', id)}
                 />

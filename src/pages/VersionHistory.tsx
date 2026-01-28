@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.552",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Character Creator: Complete aligned sprite system with 512x1024 canvas assets" },
+      { type: 'feature', description: "Character Creator: Auto-build default character on page load" },
+      { type: 'feature', description: "Character Creator: 20+ new aligned assets - body, hair, eyes, clothing, accessories" },
+      { type: 'improvement', description: "Character Creator: All sprite layers now stack correctly with consistent canvas coordinates" },
+      { type: 'improvement', description: "Character Creator: Shoes now a separate interchangeable layer" },
+      { type: 'fix', description: "Character Creator: Fixed misaligned sprite layering issue" },
+    ],
+  },
+  {
     version: "1.0.551",
     date: "2026-01-28",
     changes: [

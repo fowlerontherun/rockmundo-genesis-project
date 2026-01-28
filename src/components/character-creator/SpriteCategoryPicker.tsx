@@ -5,36 +5,56 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { CharacterSprite, SpriteCategory } from "@/hooks/useCharacterSprites";
 
-// Import local sprite assets for mapping
-import bodyMaleSlim from "@/assets/sprites/body-male-slim.png";
-import bodyFemaleSlim from "@/assets/sprites/body-female-slim.png";
-import hairMohawkRed from "@/assets/sprites/hair-mohawk-red.png";
-import hairMessyBlack from "@/assets/sprites/hair-messy-black.png";
-import eyesAngry from "@/assets/sprites/eyes-angry.png";
-import eyesNeutral from "@/assets/sprites/eyes-neutral.png";
-import noseMedium from "@/assets/sprites/nose-medium.png";
-import mouthSneer from "@/assets/sprites/mouth-sneer.png";
-import mouthNeutral from "@/assets/sprites/mouth-neutral.png";
-import jacketLeather from "@/assets/sprites/jacket-leather-black.png";
-import shirtBandTee from "@/assets/sprites/shirt-band-tee-black.png";
-import trousersPlaid from "@/assets/sprites/trousers-plaid-red.png";
-import shoesCombatBoots from "@/assets/sprites/shoes-combat-boots.png";
+// Import aligned sprite assets for thumbnails
+import alignedBaseMale from "@/assets/sprites/aligned-base-male.png";
+import alignedBaseFemale from "@/assets/sprites/aligned-base-female.png";
+import alignedHairMohawk from "@/assets/sprites/aligned-hair-mohawk.png";
+import alignedHairAfro from "@/assets/sprites/aligned-hair-afro.png";
+import alignedHairEmo from "@/assets/sprites/aligned-hair-emo.png";
+import alignedHairPixie from "@/assets/sprites/aligned-hair-pixie.png";
+import alignedEyesNeutral from "@/assets/sprites/aligned-eyes-neutral.png";
+import alignedEyesAngry from "@/assets/sprites/aligned-eyes-angry.png";
+import alignedNoseSmall from "@/assets/sprites/aligned-nose-small.png";
+import alignedMouthNeutral from "@/assets/sprites/aligned-mouth-neutral.png";
+import alignedMouthSmile from "@/assets/sprites/aligned-mouth-smile.png";
+import alignedJacketLeather from "@/assets/sprites/aligned-jacket-leather.png";
+import alignedJacketHoodie from "@/assets/sprites/aligned-jacket-hoodie.png";
+import alignedJacketFlannel from "@/assets/sprites/aligned-jacket-flannel.png";
+import alignedShirtBandtee from "@/assets/sprites/aligned-shirt-bandtee.png";
+import alignedTrousersSkinny from "@/assets/sprites/aligned-trousers-skinny.png";
+import alignedTrousersCargo from "@/assets/sprites/aligned-trousers-cargo.png";
+import alignedTrousersPlaidskirt from "@/assets/sprites/aligned-trousers-plaidskirt.png";
+import alignedShoesCombat from "@/assets/sprites/aligned-shoes-combat.png";
+import alignedShoesHightops from "@/assets/sprites/aligned-shoes-hightops.png";
+import alignedHatBeanie from "@/assets/sprites/aligned-hat-beanie.png";
+import alignedGlassesAviator from "@/assets/sprites/aligned-glasses-aviator.png";
+import alignedFacialhairBeard from "@/assets/sprites/aligned-facialhair-beard.png";
 
 // Map database asset paths to imported images
 const ASSET_MAP: Record<string, string> = {
-  '/src/assets/sprites/body-male-slim.png': bodyMaleSlim,
-  '/src/assets/sprites/body-female-slim.png': bodyFemaleSlim,
-  '/src/assets/sprites/hair-mohawk-red.png': hairMohawkRed,
-  '/src/assets/sprites/hair-messy-black.png': hairMessyBlack,
-  '/src/assets/sprites/eyes-angry.png': eyesAngry,
-  '/src/assets/sprites/eyes-neutral.png': eyesNeutral,
-  '/src/assets/sprites/nose-medium.png': noseMedium,
-  '/src/assets/sprites/mouth-sneer.png': mouthSneer,
-  '/src/assets/sprites/mouth-neutral.png': mouthNeutral,
-  '/src/assets/sprites/jacket-leather-black.png': jacketLeather,
-  '/src/assets/sprites/shirt-band-tee-black.png': shirtBandTee,
-  '/src/assets/sprites/trousers-plaid-red.png': trousersPlaid,
-  '/src/assets/sprites/shoes-combat-boots.png': shoesCombatBoots,
+  '/src/assets/sprites/aligned-base-male.png': alignedBaseMale,
+  '/src/assets/sprites/aligned-base-female.png': alignedBaseFemale,
+  '/src/assets/sprites/aligned-hair-mohawk.png': alignedHairMohawk,
+  '/src/assets/sprites/aligned-hair-afro.png': alignedHairAfro,
+  '/src/assets/sprites/aligned-hair-emo.png': alignedHairEmo,
+  '/src/assets/sprites/aligned-hair-pixie.png': alignedHairPixie,
+  '/src/assets/sprites/aligned-eyes-neutral.png': alignedEyesNeutral,
+  '/src/assets/sprites/aligned-eyes-angry.png': alignedEyesAngry,
+  '/src/assets/sprites/aligned-nose-small.png': alignedNoseSmall,
+  '/src/assets/sprites/aligned-mouth-neutral.png': alignedMouthNeutral,
+  '/src/assets/sprites/aligned-mouth-smile.png': alignedMouthSmile,
+  '/src/assets/sprites/aligned-jacket-leather.png': alignedJacketLeather,
+  '/src/assets/sprites/aligned-jacket-hoodie.png': alignedJacketHoodie,
+  '/src/assets/sprites/aligned-jacket-flannel.png': alignedJacketFlannel,
+  '/src/assets/sprites/aligned-shirt-bandtee.png': alignedShirtBandtee,
+  '/src/assets/sprites/aligned-trousers-skinny.png': alignedTrousersSkinny,
+  '/src/assets/sprites/aligned-trousers-cargo.png': alignedTrousersCargo,
+  '/src/assets/sprites/aligned-trousers-plaidskirt.png': alignedTrousersPlaidskirt,
+  '/src/assets/sprites/aligned-shoes-combat.png': alignedShoesCombat,
+  '/src/assets/sprites/aligned-shoes-hightops.png': alignedShoesHightops,
+  '/src/assets/sprites/aligned-hat-beanie.png': alignedHatBeanie,
+  '/src/assets/sprites/aligned-glasses-aviator.png': alignedGlassesAviator,
+  '/src/assets/sprites/aligned-facialhair-beard.png': alignedFacialhairBeard,
 };
 
 const resolveAssetUrl = (url: string): string => ASSET_MAP[url] || url;
