@@ -192,24 +192,35 @@ export const SpriteLayerCanvas = ({
   }
 
   return (
-    <div className={`${sizeClasses[size]} ${className} relative`}>
-      {layers.map(({ sprite, zIndex, filter }) => (
-        <img
-          key={sprite.id}
-          src={resolveAssetUrl(sprite.asset_url)}
-          alt={sprite.name}
-          className="absolute inset-0 w-full h-full object-contain"
-          style={{ 
-            zIndex,
-            filter: filter || undefined,
-          }}
-          draggable={false}
-          onError={(e) => {
-            // Hide broken images
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
-      ))}
+    <div 
+      className={`${sizeClasses[size]} ${className} relative`}
+      style={{ aspectRatio: '1 / 2' }}
+    >
+      {layers.map(({ sprite, zIndex, filter }) => {
+        // Apply anchor offsets if present (in pixels, scaled to container)
+        const anchorX = sprite.anchor_x || 0;
+        const anchorY = sprite.anchor_y || 0;
+        
+        return (
+          <img
+            key={sprite.id}
+            src={resolveAssetUrl(sprite.asset_url)}
+            alt={sprite.name}
+            className="absolute inset-0 w-full h-full"
+            style={{ 
+              zIndex,
+              filter: filter || undefined,
+              objectFit: 'fill', // Force all layers to fill same space exactly
+              transform: anchorX || anchorY ? `translate(${anchorX}%, ${anchorY}%)` : undefined,
+            }}
+            draggable={false}
+            onError={(e) => {
+              // Hide broken images
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        );
+      })}
     </div>
   );
 };

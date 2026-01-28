@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.553",
+    date: "2026-01-28",
+    changes: [
+      { type: 'fix', description: "Character Creator: Enforced aligned-only sprite filtering (subcategory LIKE 'aligned%')" },
+      { type: 'fix', description: "Character Creator: Changed renderer from object-contain to object-fill for consistent layer mapping" },
+      { type: 'feature', description: "Character Creator: Added debug panel with 'Apply Test Set' and 'Export PNG' buttons" },
+      { type: 'improvement', description: "Character Creator: Layer debug view shows selected sprite per category" },
+      { type: 'improvement', description: "Character Creator: Anchor offset support for fine-tuning layer positions" },
+    ],
+  },
+  {
     version: "1.0.552",
     date: "2026-01-28",
     changes: [

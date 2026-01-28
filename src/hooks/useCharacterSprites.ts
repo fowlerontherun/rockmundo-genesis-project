@@ -69,13 +69,14 @@ export const useCharacterSprites = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch all available sprites grouped by category
+  // Fetch all available sprites grouped by category (aligned-only)
   const { data: sprites, isLoading: spritesLoading } = useQuery({
     queryKey: ['character-sprites'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('character_sprite_assets')
         .select('*')
+        .ilike('subcategory', 'aligned%')  // Only aligned template assets
         .order('category')
         .order('name');
       
