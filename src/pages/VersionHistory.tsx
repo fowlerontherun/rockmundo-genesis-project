@@ -14,15 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.550",
+    date: "2026-01-28",
+    changes: [
+      { type: 'feature', description: "Character Creator: True layered sprite system with consistent body templates" },
+      { type: 'feature', description: "Character Creator: All clothing/hair layers align properly on male and female bases" },
+      { type: 'feature', description: "Character Creator: 20+ new layered assets - hair, jackets, shirts, pants that composite correctly" },
+      { type: 'improvement', description: "Character Creator: Replaced isolated parts with full-body layer variations" },
+    ],
+  },
+  {
     version: "1.0.549",
     date: "2026-01-28",
     changes: [
       { type: 'feature', description: "Character Creator: 33 new sprite assets across all categories (bodies, hair, faces, clothing, accessories)" },
-      { type: 'feature', description: "Character Creator: Hip-hop braids, rock wavy blonde, emo purple, afro, and buzzcut hairstyles" },
-      { type: 'feature', description: "Character Creator: Grey hoodie, denim jacket with patches, varsity jacket options" },
-      { type: 'feature', description: "Character Creator: Baggy jeans, skinny black, cargo pants for various styles" },
-      { type: 'feature', description: "Character Creator: Flatcap, snapback, beanie hats and aviator/round glasses" },
-      { type: 'feature', description: "Character Creator: Beard, goatee, and handlebar mustache facial hair" },
       { type: 'improvement', description: "Character Creator: Expanded beyond punk to include rock, hip-hop, grunge, and indie styles" },
     ],
   },
