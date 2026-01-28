@@ -23,6 +23,7 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useAuth } from "@/hooks/use-auth-context";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { FestivalPerformanceOutcome } from "@/components/festivals/FestivalPerformanceOutcome";
 
 interface PerformanceState {
   phase: "warmup" | "performing" | "climax" | "complete";
@@ -49,6 +50,11 @@ export default function FestivalPerformance() {
   });
 
   const [isPerforming, setIsPerforming] = useState(false);
+  const [showOutcome, setShowOutcome] = useState(false);
+  const [performanceResults, setPerformanceResults] = useState<{
+    earnedPayment: number;
+    earnedFame: number;
+  } | null>(null);
 
   // Fetch participation details
   const { data: participation, isLoading } = useQuery({
@@ -117,6 +123,11 @@ export default function FestivalPerformance() {
     onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: ["festival-participation"] });
       queryClient.invalidateQueries({ queryKey: ["primary-band"] });
+      setPerformanceResults({
+        earnedPayment: results.earnedPayment,
+        earnedFame: results.earnedFame,
+      });
+      setShowOutcome(true);
       toast.success(
         `Performance complete! Score: ${results.score}/100 | +${results.earnedFame} fame | +$${results.earnedPayment.toLocaleString()}`
       );
@@ -343,8 +354,22 @@ export default function FestivalPerformance() {
         </Card>
       )}
 
-      {/* Completed Performance */}
-      {hasPerformed && (
+      {/* Performance Outcome */}
+      {showOutcome && performanceResults && (
+        <FestivalPerformanceOutcome
+          performanceScore={performanceState.performanceScore}
+          crowdEnergy={performanceState.crowdEnergy}
+          festivalName={participation.festival?.title || "Festival"}
+          slotType={participation.slot_type}
+          earnedPayment={performanceResults.earnedPayment}
+          earnedFame={performanceResults.earnedFame}
+          attendanceEstimate={Math.floor(Math.random() * 10000) + 5000}
+          onShare={() => toast.success("Results shared!")}
+        />
+      )}
+
+      {/* Completed Performance (simple fallback) */}
+      {hasPerformed && !showOutcome && (
         <Card className="border-2 border-primary/30">
           <CardContent className="pt-6 text-center">
             <PartyPopper className="h-16 w-16 mx-auto mb-4 text-primary" />

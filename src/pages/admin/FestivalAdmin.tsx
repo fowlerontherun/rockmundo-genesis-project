@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Music2, Calendar, Users, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ArrowLeft, Music2, Calendar, Users, CheckCircle, XCircle, Clock, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useFestivalSlotApplications } from "@/hooks/useFestivalSlotApplications";
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FestivalLifecycleControls } from "@/components/festivals/admin/FestivalLifecycleControls";
+import { FestivalBulkReviewPanel } from "@/components/festivals/admin/FestivalBulkReviewPanel";
 
 export default function FestivalAdmin() {
   const navigate = useNavigate();
@@ -75,22 +77,26 @@ export default function FestivalAdmin() {
         </div>
 
         <Tabs defaultValue="applications" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="applications">
               <Users className="h-4 w-4 mr-2" />
-              Applications ({pendingApplications?.length || 0})
+              Queue ({pendingApplications?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="bulk-review">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Bulk Review
+            </TabsTrigger>
+            <TabsTrigger value="lifecycle">
+              <Settings className="h-4 w-4 mr-2" />
+              Lifecycle
             </TabsTrigger>
             <TabsTrigger value="player-festivals">
               <Music2 className="h-4 w-4 mr-2" />
-              Player Festivals ({playerCreatedFestivals?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="admin-festivals">
-              <Calendar className="h-4 w-4 mr-2" />
-              Admin Festivals ({adminCreatedFestivals?.length || 0})
+              Player ({playerCreatedFestivals?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="reviewed">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Reviewed ({reviewedApplications?.length || 0})
+              <Clock className="h-4 w-4 mr-2" />
+              History ({reviewedApplications?.length || 0})
             </TabsTrigger>
           </TabsList>
 
@@ -151,6 +157,36 @@ export default function FestivalAdmin() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="bulk-review" className="space-y-4">
+            <FestivalBulkReviewPanel 
+              applications={applications || []} 
+              onReviewComplete={() => {}}
+            />
+          </TabsContent>
+
+          <TabsContent value="lifecycle" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Festival Lifecycle Management</CardTitle>
+                <CardDescription>Control festival states: draft, published, postponed, cancelled</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {festivals && festivals.length > 0 ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {festivals.map((festival) => (
+                      <FestivalLifecycleControls 
+                        key={festival.id} 
+                        festival={festival}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No festivals to manage</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="player-festivals">
             <Card>
               <CardHeader>
@@ -181,32 +217,6 @@ export default function FestivalAdmin() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="admin-festivals">
-            <Card>
-              <CardHeader>
-                <CardTitle>Admin-Created Festivals</CardTitle>
-                <CardDescription>Manage admin-created festival events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {adminCreatedFestivals && adminCreatedFestivals.length > 0 ? (
-                  <div className="space-y-4">
-                    {adminCreatedFestivals.map((festival) => (
-                      <Card key={festival.id}>
-                        <CardContent className="pt-6">
-                          <h3 className="font-semibold">{festival.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {festival.city?.name}, {festival.city?.country}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No admin festivals yet</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="reviewed">
             <Card>
