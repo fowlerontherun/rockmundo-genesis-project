@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.567",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "RP Phase 2: TypeScript types, API layer, and React Query hooks for RP system" },
+      { type: 'feature', description: "Types: CharacterOrigin, PersonalityTrait, PlayerCharacterIdentity, PlayerReputation, NPCRelationship" },
+      { type: 'feature', description: "API: Full CRUD for character identity, reputation tracking with event logging, NPC relationships" },
+      { type: 'feature', description: "Hooks: useCharacterIdentity, useReputation, useNPCRelationships with pre-built reputation actions" },
+      { type: 'improvement', description: "Reputation: Pre-defined actions (acceptCorporateSponsorship, cancelGigLastMinute, etc.)" },
+    ],
+  },
+  {
     version: "1.0.566",
     date: "2026-01-29",
     changes: [
