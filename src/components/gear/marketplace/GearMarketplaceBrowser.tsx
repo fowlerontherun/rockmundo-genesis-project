@@ -15,6 +15,7 @@ import {
 import { GearListing, useGearMarketplace } from "@/hooks/useGearMarketplace";
 import { useGameData } from "@/hooks/useGameData";
 import { cn } from "@/lib/utils";
+import { getGearImage } from "@/utils/gearImages";
 
 const rarityColors: Record<string, string> = {
   common: "bg-slate-500",
@@ -217,6 +218,15 @@ export const GearMarketplaceBrowser = () => {
 
             return (
               <Card key={listing.id} className="relative overflow-hidden">
+                {/* Gear Image */}
+                <div className="w-full h-24 overflow-hidden bg-muted/30">
+                  <img 
+                    src={getGearImage(equipment?.category, equipment?.subcategory)} 
+                    alt={equipment?.name || "Gear"}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
                 {/* Rarity indicator */}
                 <div className={cn(
                   "absolute top-0 right-0 w-16 h-16 opacity-10",
@@ -225,7 +235,7 @@ export const GearMarketplaceBrowser = () => {
 
                 {/* Savings badge */}
                 {savings > 0 && (
-                  <Badge className="absolute top-2 left-2 bg-emerald-500 text-white">
+                  <Badge className="absolute top-2 left-2 bg-success text-success-foreground">
                     <TrendingDown className="h-3 w-3 mr-1" />
                     {savingsPercent}% off
                   </Badge>

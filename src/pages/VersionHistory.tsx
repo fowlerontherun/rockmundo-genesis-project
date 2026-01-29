@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.578",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "Gear: Added product images for all 130+ equipment items by category" },
+      { type: 'feature', description: "Gear: Electric guitars, acoustic guitars, bass, drums, cymbals, keyboards, amps, effects, mics, stage equipment" },
+      { type: 'improvement', description: "Gear Shop: Cards now display category-specific product images" },
+      { type: 'improvement', description: "Gear Marketplace: Listings show product images for better browsing" },
+    ],
+  },
+  {
     version: "1.0.577",
     date: "2026-01-29",
     changes: [

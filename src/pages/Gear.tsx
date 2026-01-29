@@ -32,6 +32,7 @@ import {
   Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getGearImage } from "@/utils/gearImages";
 
 const rarityColors: Record<string, string> = {
   common: "bg-slate-500",
@@ -381,6 +382,15 @@ export default function Gear() {
                                         Only {stockQty} left!
                                       </Badge>
                                     )}
+                                    
+                                    {/* Gear Image */}
+                                    <div className="w-full h-24 overflow-hidden bg-muted/30">
+                                      <img 
+                                        src={getGearImage(item.category, item.subcategory)} 
+                                        alt={item.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
                                     
                                     <CardHeader className="pb-2 pt-3">
                                       <div className="flex items-start justify-between gap-2">
