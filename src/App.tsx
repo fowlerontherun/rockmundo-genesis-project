@@ -37,7 +37,7 @@ const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 // Equipment store pages removed - replaced by EnhancedEquipmentStore
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
-const Onboarding = lazyWithRetry(() => import("./pages/onboarding/OnboardingWizard"));
+const Onboarding = lazyWithRetry(() => import("./pages/Onboarding"));
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));

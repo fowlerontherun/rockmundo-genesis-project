@@ -4,6 +4,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth-context";
 import { useOptionalGameData } from "@/hooks/useGameData";
+import { usePlayerCharacterIdentity } from "@/hooks/useCharacterIdentity";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +15,8 @@ const Index = () => {
   const profile = gameData?.profile ?? null;
   const dataLoading = gameData?.loading ?? true;
   const error = gameData?.error;
+  
+  const { data: characterIdentity, isLoading: identityLoading } = usePlayerCharacterIdentity();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -26,12 +29,20 @@ const Index = () => {
       return;
     }
 
-    if (!authLoading && !dataLoading && user) {
-      navigate("/dashboard");
+    if (!authLoading && !dataLoading && !identityLoading && user && profile) {
+      // Check if onboarding is complete
+      const hasCompletedOnboarding = characterIdentity?.onboarding_completed_at != null;
+      
+      if (!hasCompletedOnboarding) {
+        // Redirect to onboarding for new players
+        navigate("/onboarding");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [authLoading, dataLoading, gameData, navigate, user]);
+  }, [authLoading, dataLoading, identityLoading, gameData, navigate, user, profile, characterIdentity]);
 
-  if (!gameData || authLoading || dataLoading) {
+  if (!gameData || authLoading || dataLoading || identityLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
