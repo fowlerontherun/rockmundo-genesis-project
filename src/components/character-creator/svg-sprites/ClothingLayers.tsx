@@ -75,13 +75,15 @@ export const LeatherJacketSvg = () => (
 
 export const HoodieSvg = () => (
   <svg viewBox="0 0 512 1024" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    {/* Hood back */}
-    <ellipse cx="256" cy="120" rx="80" ry="50" fill="#555" />
+    {/* Hood drape - sits behind shoulders, not covering face */}
+    <path d="M180 160 L170 180 L175 200 L190 210 L256 215 L322 210 L337 200 L342 180 L332 160 Q256 150 180 160" fill="#444" />
     {/* Main body */}
     <path d="M175 175 L165 400 L195 410 L256 420 L317 410 L347 400 L337 175 Z" fill="#555" />
     {/* Sleeves */}
     <path d="M175 180 L145 195 L140 320 L165 325 L175 290 Z" fill="#555" />
     <path d="M337 180 L367 195 L372 320 L347 325 L337 290 Z" fill="#555" />
+    {/* Hood collar around neck */}
+    <path d="M200 175 L195 195 L220 200 L256 202 L292 200 L317 195 L312 175" fill="#666" stroke="#555" strokeWidth="2" />
     {/* Pocket */}
     <rect x="200" y="330" width="112" height="60" rx="5" fill="#444" />
     {/* Hood strings */}

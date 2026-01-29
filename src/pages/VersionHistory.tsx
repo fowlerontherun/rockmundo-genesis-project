@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.572",
+    date: "2026-01-29",
+    changes: [
+      { type: 'fix', description: "Character Creator: Fixed mohawk hair alignment (shifted up 35px to sit above head)" },
+      { type: 'fix', description: "Character Creator: Fixed hoodie covering face (redesigned hood to drape behind shoulders)" },
+    ],
+  },
+  {
     version: "1.0.571",
     date: "2026-01-29",
     changes: [
