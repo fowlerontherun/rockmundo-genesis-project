@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.566",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "RP Phase 1: Database foundation for role-playing enhancements and new player wizard" },
+      { type: 'feature', description: "Character Origins: 8 starting archetypes (Street Busker, Music School Grad, Garage Band Vet, Session Musician, Viral Sensation, Industry Insider, Classical Rebel, Local Legend)" },
+      { type: 'feature', description: "Personality Traits: 16 traits across 4 categories (Creative, Social, Work Ethic, Emotional) with gameplay effects" },
+      { type: 'feature', description: "Reputation System: 4-axis tracking (Authenticity, Attitude, Reliability, Creativity) from -100 to +100" },
+      { type: 'feature', description: "NPC Relationships: Dynamic affinity, trust, and respect scores with relationship stages" },
+      { type: 'feature', description: "Player Identity: Backstory, musical style, career goal, and onboarding progress tracking" },
+    ],
+  },
+  {
     version: "1.0.565",
     date: "2026-01-28",
     changes: [
