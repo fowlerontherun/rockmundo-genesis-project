@@ -14,6 +14,23 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.568",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "RP Phase 3: Complete 8-step onboarding wizard UI" },
+      { type: 'feature', description: "Onboarding: Step 1 - Welcome & name entry" },
+      { type: 'feature', description: "Onboarding: Step 2 - Character appearance (integrated sprite creator)" },
+      { type: 'feature', description: "Onboarding: Step 3 - Origin selection with 8 archetypes" },
+      { type: 'feature', description: "Onboarding: Step 4 - Personality traits (choose 2-3 with compatibility checks)" },
+      { type: 'feature', description: "Onboarding: Step 5 - Musical identity (genre selection)" },
+      { type: 'feature', description: "Onboarding: Step 6 - Career path (solo/band/join)" },
+      { type: 'feature', description: "Onboarding: Step 7 - Starting city selection" },
+      { type: 'feature', description: "Onboarding: Step 8 - AI-generated backstory with edit/regenerate" },
+      { type: 'feature', description: "Edge Function: generate-backstory for AI backstory creation" },
+      { type: 'improvement', description: "First-login redirect: New players sent to /onboarding automatically" },
+    ],
+  },
+  {
     version: "1.0.567",
     date: "2026-01-29",
     changes: [
