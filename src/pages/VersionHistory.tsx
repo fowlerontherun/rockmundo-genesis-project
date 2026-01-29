@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.571",
+    date: "2026-01-29",
+    changes: [
+      { type: 'fix', description: "City Governance: Mayor name now displays correctly (was using wrong column)" },
+      { type: 'improvement', description: "Mayor Dashboard: Save button always visible, disabled when no changes" },
+    ],
+  },
+  {
     version: "1.0.570",
     date: "2026-01-29",
     changes: [

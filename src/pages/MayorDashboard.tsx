@@ -551,45 +551,50 @@ export default function MayorDashboard() {
             </TabsContent>
           </Tabs>
 
-          {/* Change Reason & Save */}
-          {hasChanges && (
-            <div className="mt-6 pt-6 border-t space-y-4">
-              <div className="space-y-2">
-                <Label>Reason for Changes (optional)</Label>
-                <Textarea
-                  placeholder="Explain why you're making these changes..."
-                  value={changeReason}
-                  onChange={(e) => setChangeReason(e.target.value)}
-                  rows={2}
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => currentLaws && setLaws(currentLaws)}
-                >
-                  Reset All Changes
-                </Button>
-                <Button 
-                  onClick={handleSave}
-                  disabled={updateLaws.isPending}
-                >
-                  {updateLaws.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Enact Changes
-                    </>
-                  )}
-                </Button>
-              </div>
+          {/* Change Reason & Save - Always visible */}
+          <div className="mt-6 pt-6 border-t space-y-4">
+            <div className="space-y-2">
+              <Label>Reason for Changes (optional)</Label>
+              <Textarea
+                placeholder="Explain why you're making these changes..."
+                value={changeReason}
+                onChange={(e) => setChangeReason(e.target.value)}
+                rows={2}
+                disabled={!hasChanges}
+              />
             </div>
-          )}
+            
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => currentLaws && setLaws(currentLaws)}
+                disabled={!hasChanges}
+              >
+                Reset All Changes
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={updateLaws.isPending || !hasChanges}
+              >
+                {updateLaws.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Enact Changes
+                  </>
+                )}
+              </Button>
+            </div>
+            {!hasChanges && (
+              <p className="text-sm text-muted-foreground text-center">
+                Make changes to the laws above to enable saving.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
