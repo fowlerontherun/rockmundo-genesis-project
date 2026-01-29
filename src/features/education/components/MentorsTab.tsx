@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
 
@@ -129,7 +129,13 @@ export const MentorsTab = () => {
                         </Badge>
                       </div>
                       <CardDescription className="italic">
-                        {mentor.discovery_hint || "Explore cities and talk to NPCs to find this master..."}
+                        {mentor.discovery_hint || (
+                          mentor.discovery_type === 'venue_gig' 
+                            ? "Play a legendary gig to catch this master's attention..."
+                            : mentor.discovery_type === 'studio_session'
+                            ? "Record at the right studio to discover this master..."
+                            : "Explore cities and talk to NPCs to find this master..."
+                        )}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 space-y-4">
@@ -141,6 +147,23 @@ export const MentorsTab = () => {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           <span>Available: ???</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {mentor.discovery_type === 'venue_gig' ? (
+                            <Music className="h-4 w-4" />
+                          ) : mentor.discovery_type === 'studio_session' ? (
+                            <Building className="h-4 w-4" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                          <span>
+                            {mentor.discovery_type === 'venue_gig' 
+                              ? "Discovered by playing a venue"
+                              : mentor.discovery_type === 'studio_session'
+                              ? "Discovered by using a studio"
+                              : "Discovered by exploring"
+                            }
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4" />

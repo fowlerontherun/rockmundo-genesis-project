@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.575",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "Mentors: All 20 masters now have specific city locations and weekly availability days" },
+      { type: 'feature', description: "Mentors: 2 masters discovered by playing at specific venues (Ryman Auditorium, Austin City Limits)" },
+      { type: 'feature', description: "Mentors Admin: Added discovery type selection (automatic/exploration/venue_gig/studio_session)" },
+      { type: 'feature', description: "Mentors Admin: Added venue and studio selection for discovery triggers" },
+      { type: 'improvement', description: "Database: Added discovery_venue_id, discovery_studio_id, discovery_type columns" },
+    ],
+  },
+  {
     version: "1.0.574",
     date: "2026-01-29",
     changes: [
