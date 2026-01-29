@@ -12,6 +12,9 @@ import { useGameData } from "@/hooks/useGameData";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useEquipPlayerEquipment } from "@/hooks/usePlayerEquipmentMutations";
 import { useTranslation } from "@/hooks/useTranslation";
+import { GearMarketplaceBrowser } from "@/components/gear/marketplace/GearMarketplaceBrowser";
+import { GearMarketplaceListings } from "@/components/gear/marketplace/GearMarketplaceListings";
+import { GearMarketplacePurchases } from "@/components/gear/marketplace/GearMarketplacePurchases";
 import { 
   Guitar, 
   ShoppingCart, 
@@ -25,7 +28,8 @@ import {
   Zap,
   Heart,
   Brain,
-  Star
+  Star,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -186,10 +190,14 @@ export default function Gear() {
       </div>
 
       <Tabs defaultValue="shop" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="shop">
             <ShoppingCart className="h-4 w-4 mr-2" />
             Shop
+          </TabsTrigger>
+          <TabsTrigger value="marketplace">
+            <Store className="h-4 w-4 mr-2" />
+            Marketplace
           </TabsTrigger>
           <TabsTrigger value="inventory">
             <Package className="h-4 w-4 mr-2" />
@@ -491,6 +499,26 @@ export default function Gear() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Marketplace Tab */}
+        <TabsContent value="marketplace" className="space-y-6">
+          <Tabs defaultValue="browse" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="browse">Browse Used Gear</TabsTrigger>
+              <TabsTrigger value="my-listings">My Listings</TabsTrigger>
+              <TabsTrigger value="purchases">Purchase History</TabsTrigger>
+            </TabsList>
+            <TabsContent value="browse">
+              <GearMarketplaceBrowser />
+            </TabsContent>
+            <TabsContent value="my-listings">
+              <GearMarketplaceListings />
+            </TabsContent>
+            <TabsContent value="purchases">
+              <GearMarketplacePurchases />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* My Gear Tab */}

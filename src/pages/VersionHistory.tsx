@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.577",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "Gear Marketplace: Player-to-player used gear trading system" },
+      { type: 'feature', description: "Gear Marketplace: Condition-based pricing (100% = 70% of new value, lower condition = less)" },
+      { type: 'feature', description: "Gear Marketplace: Rarity affects resale value retention (Legendary +20%, Epic +10%)" },
+      { type: 'feature', description: "Gear Marketplace: Create listings from unequipped inventory items" },
+      { type: 'feature', description: "Gear Marketplace: Offer/negotiation system for price haggling" },
+      { type: 'feature', description: "Gear Marketplace: 5% platform fee on all sales" },
+      { type: 'feature', description: "Gear Marketplace: Purchase history with savings tracking" },
+      { type: 'feature', description: "Gear Marketplace: Filter by category, condition, sort by price/savings" },
+      { type: 'improvement', description: "Database: gear_marketplace_listings, gear_marketplace_transactions, gear_marketplace_offers tables" },
+      { type: 'improvement', description: "Database: process_gear_sale RPC for atomic transactions" },
+    ],
+  },
+  {
     version: "1.0.576",
     date: "2026-01-29",
     changes: [
