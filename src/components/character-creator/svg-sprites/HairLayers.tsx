@@ -1,58 +1,60 @@
-// SVG Hair Layers - properly aligned for layering on 512x1024 canvas
+// SVG Hair Layers - FIXED: properly positioned on crown (Y=20-70) for 512x1024 canvas
 
 export const MohawkHairSvg = () => (
   <svg viewBox="0 0 512 1024" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    {/* Mohawk spikes - positioned above head */}
-    <path d="M256 -5 L240 25 L250 20 L256 -10 L262 20 L272 25 Z" fill="#e63946" />
-    <path d="M256 -25 L245 10 L252 5 L256 -30 L260 5 L267 10 Z" fill="#e63946" />
-    <path d="M256 10 L235 40 L248 35 L256 5 L264 35 L277 40 Z" fill="#e63946" />
-    {/* Hair base - wraps around crown of head */}
-    <path d="M210 45 L200 75 L220 95 L256 100 L292 95 L312 75 L302 45 Q256 25 210 45" fill="#e63946" />
-    {/* Shaved sides - on temples */}
-    <ellipse cx="205" cy="65" rx="15" ry="25" fill="#d4a574" opacity="0.7" />
-    <ellipse cx="307" cy="65" rx="15" ry="25" fill="#d4a574" opacity="0.7" />
+    {/* Mohawk spikes - positioned above crown */}
+    <path d="M256 -15 L242 15 L250 10 L256 -20 L262 10 L270 15 Z" fill="#e63946" />
+    <path d="M256 -5 L246 20 L253 15 L256 -10 L259 15 L266 20 Z" fill="#e63946" />
+    <path d="M256 5 L238 30 L250 25 L256 0 L262 25 L274 30 Z" fill="#e63946" />
+    {/* Hair base - sits on crown of head */}
+    <path d="M215 35 L208 55 L220 65 L256 70 L292 65 L304 55 L297 35 Q256 20 215 35" fill="#e63946" />
+    {/* Shaved sides texture */}
+    <ellipse cx="210" cy="50" rx="12" ry="18" fill="#d4a574" opacity="0.6" />
+    <ellipse cx="302" cy="50" rx="12" ry="18" fill="#d4a574" opacity="0.6" />
   </svg>
 );
 
 export const AfroHairSvg = () => (
   <svg viewBox="0 0 512 1024" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    {/* Big afro shape */}
-    <ellipse cx="256" cy="80" rx="95" ry="80" fill="#2d1810" />
+    {/* Big afro shape - centered on crown */}
+    <ellipse cx="256" cy="35" rx="75" ry="55" fill="#2d1810" />
     {/* Texture details */}
-    <circle cx="200" cy="60" r="20" fill="#3d2820" />
-    <circle cx="256" cy="40" r="22" fill="#3d2820" />
-    <circle cx="312" cy="60" r="20" fill="#3d2820" />
-    <circle cx="180" cy="90" r="18" fill="#3d2820" />
-    <circle cx="332" cy="90" r="18" fill="#3d2820" />
-    <circle cx="220" cy="30" r="15" fill="#3d2820" />
-    <circle cx="292" cy="30" r="15" fill="#3d2820" />
+    <circle cx="210" cy="25" r="16" fill="#3d2820" />
+    <circle cx="256" cy="10" r="18" fill="#3d2820" />
+    <circle cx="302" cy="25" r="16" fill="#3d2820" />
+    <circle cx="195" cy="50" r="14" fill="#3d2820" />
+    <circle cx="317" cy="50" r="14" fill="#3d2820" />
+    <circle cx="225" cy="5" r="12" fill="#3d2820" />
+    <circle cx="287" cy="5" r="12" fill="#3d2820" />
+    {/* Lower fringe just above forehead */}
+    <ellipse cx="256" cy="65" rx="55" ry="15" fill="#2d1810" />
   </svg>
 );
 
 export const EmoHairSvg = () => (
   <svg viewBox="0 0 512 1024" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    {/* Side-swept fringe covering one eye */}
-    <path d="M200 70 L180 130 L256 145 L320 90 L300 60 Q256 50 200 70" fill="#1a1a1a" />
-    {/* Long side fringe */}
-    <path d="M180 80 L165 140 L175 155 L200 160 L210 120 Z" fill="#1a1a1a" />
-    {/* Back hair */}
-    <path d="M200 60 L185 165 L210 170 L256 175 L302 170 L327 165 L312 60 Q256 45 200 60" fill="#1a1a1a" />
+    {/* Back hair volume */}
+    <path d="M200 35 L190 55 L200 70 L256 75 L312 70 L322 55 L312 35 Q256 25 200 35" fill="#1a1a1a" />
+    {/* Side-swept fringe - covers forehead but NOT eyes (stops at Y=75) */}
+    <path d="M200 40 L185 65 L195 75 L256 78 L280 70 L290 45 L285 35 Q256 30 200 40" fill="#1a1a1a" />
+    {/* Long side fringe piece */}
+    <path d="M185 50 L175 70 L180 78 L195 80 L200 65 Z" fill="#1a1a1a" />
     {/* Purple highlights */}
-    <path d="M190 85 L175 135 L185 130 L195 90 Z" fill="#8b5cf6" />
-    <path d="M210 75 L200 125 L210 120 L215 80 Z" fill="#8b5cf6" />
+    <path d="M190 50 L180 68 L188 65 L195 52 Z" fill="#8b5cf6" />
+    <path d="M210 42 L200 62 L208 58 L214 45 Z" fill="#8b5cf6" />
   </svg>
 );
 
 export const PixieHairSvg = () => (
   <svg viewBox="0 0 512 1024" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    {/* Short pixie cut */}
-    <path d="M200 55 L190 85 L195 120 L210 130 L256 135 L302 130 L317 120 L322 85 L312 55 Q256 45 200 55" fill="#f5a623" />
-    {/* Textured top */}
-    <path d="M215 50 L205 70 L220 80 L235 65 L225 50 Z" fill="#e09520" />
-    <path d="M245 45 L235 65 L256 75 L277 65 L267 45 Z" fill="#e09520" />
-    <path d="M280 50 L270 70 L285 80 L300 65 L290 50 Z" fill="#e09520" />
-    {/* Side wisps */}
-    <path d="M195 90 L185 110 L195 115 L200 100 Z" fill="#f5a623" />
-    <path d="M317 90 L327 110 L317 115 L312 100 Z" fill="#f5a623" />
+    {/* Short pixie cut - sits on crown */}
+    <path d="M205 30 L198 50 L205 65 L220 70 L256 72 L292 70 L307 65 L314 50 L307 30 Q256 20 205 30" fill="#f5a623" />
+    {/* Textured top pieces */}
+    <path d="M220 25 L212 42 L225 50 L238 40 L230 25 Z" fill="#e09520" />
+    <path d="M245 20 L238 38 L256 48 L274 38 L267 20 Z" fill="#e09520" />
+    <path d="M278 25 L270 42 L283 50 L296 40 L288 25 Z" fill="#e09520" />
+    {/* Side wisps at temple level */}
+    <path d="M198 55 L192 68 L200 70 L205 60 Z" fill="#f5a623" />
+    <path d="M314 55 L320 68 L312 70 L307 60 Z" fill="#f5a623" />
   </svg>
 );

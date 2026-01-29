@@ -9,44 +9,176 @@ import { MohawkHairSvg, AfroHairSvg, EmoHairSvg, PixieHairSvg } from "./svg-spri
 import { NeutralEyesSvg, AngryEyesSvg, SmallNoseSvg, NeutralMouthSvg, SmileMouthSvg, BeardSvg } from "./svg-sprites";
 import { BeanieSvg, AviatorGlassesSvg, HighTopsSvg, CargoShortsSvg } from "./svg-sprites";
 
+// Import expanded content
+import {
+  LibertySpikesSvg, DreadlocksSvg, LongRockerSvg, MulletSvg, BuzzCutSvg,
+  PompadourSvg, UndercutSvg, BraidsSvg, PigtailsSvg, MessyBobSvg,
+  CurtainsSvg, ShaggySvg, SlickedBackSvg, CornrowsSvg, VikingSvg, BunSvg,
+} from "./svg-sprites";
+
+import {
+  IntenseEyesSvg, WideEyesSvg, SleepyEyesSvg, WinkingEyesSvg,
+  CatEyesSvg, SmokyEyesSvg, StarryEyesSvg,
+  SingingMouthSvg, SmirkMouthSvg, PoutMouthSvg, GrinMouthSvg, ShoutingMouthSvg, KissMouthSvg,
+  GoateeSvg, StubbleSvg, HandlebarSvg, SoulPatchSvg, MuttonChopsSvg,
+} from "./svg-sprites";
+
+import {
+  FlannelShirtSvg, HawaiianShirtSvg, RippedTeeSvg, PoloShirtSvg,
+  CropTopSvg, TankTopSvg, TurtleneckSvg, JerseySvg, TieDyeSvg, BlazerShirtSvg, MeshTopSvg,
+  DenimVestSvg, VarsityJacketSvg, MilitaryJacketSvg, TrenchCoatSvg, TrackJacketSvg, CardiganSvg,
+  RippedJeansSvg, LeatherPantsSvg, TrackPantsSvg, PleatedSkirtSvg, KiltSvg, BellBottomsSvg,
+  CowboyBootsSvg, PlatformBootsSvg, SandalsSvg, DressShoesSvg, SneakersSvg, CreepersSvg,
+} from "./svg-sprites";
+
+import {
+  FedoraSvg, CowboyHatSvg, BandanaSvg, TopHatSvg, SnapbackSvg, BeretSvg, BucketHatSvg,
+  RoundLennonsSvg, CatEyeGlassesSvg, SportWrapSvg, TinyOvalsSvg, NeonShuttersSvg,
+  HoopEarringsSvg, StudEarringsSvg, NoseRingSvg, LipRingSvg,
+  ChainNecklaceSvg, ChokerSvg, BandannaNeckSvg, HeadphonesSvg,
+} from "./svg-sprites";
+
 // Mapping from sprite IDs to SVG components
 const SVG_COMPONENT_MAP: Record<string, FC> = {
   // Bodies
   'base-male': BaseMaleSvg,
   'base-female': BaseFemaleSvg,
   
-  // Hair
+  // Hair - Original 4
   'hair-mohawk': MohawkHairSvg,
   'hair-afro': AfroHairSvg,
   'hair-emo': EmoHairSvg,
   'hair-pixie': PixieHairSvg,
+  // Hair - Expanded 16
+  'hair-libertyspikes': LibertySpikesSvg,
+  'hair-dreadlocks': DreadlocksSvg,
+  'hair-longrocker': LongRockerSvg,
+  'hair-mullet': MulletSvg,
+  'hair-buzzcut': BuzzCutSvg,
+  'hair-pompadour': PompadourSvg,
+  'hair-undercut': UndercutSvg,
+  'hair-braids': BraidsSvg,
+  'hair-pigtails': PigtailsSvg,
+  'hair-messybob': MessyBobSvg,
+  'hair-curtains': CurtainsSvg,
+  'hair-shaggy': ShaggySvg,
+  'hair-slickedback': SlickedBackSvg,
+  'hair-cornrows': CornrowsSvg,
+  'hair-viking': VikingSvg,
+  'hair-bun': BunSvg,
   
-  // Eyes
+  // Eyes - Original 2
   'eyes-neutral': NeutralEyesSvg,
   'eyes-angry': AngryEyesSvg,
+  // Eyes - Expanded 6
+  'eyes-intense': IntenseEyesSvg,
+  'eyes-wide': WideEyesSvg,
+  'eyes-sleepy': SleepyEyesSvg,
+  'eyes-winking': WinkingEyesSvg,
+  'eyes-cat': CatEyesSvg,
+  'eyes-smoky': SmokyEyesSvg,
+  'eyes-starry': StarryEyesSvg,
   
   // Nose
   'nose-small': SmallNoseSvg,
   
-  // Mouth
+  // Mouth - Original 2
   'mouth-neutral': NeutralMouthSvg,
   'mouth-smile': SmileMouthSvg,
+  // Mouth - Expanded 6
+  'mouth-singing': SingingMouthSvg,
+  'mouth-smirk': SmirkMouthSvg,
+  'mouth-pout': PoutMouthSvg,
+  'mouth-grin': GrinMouthSvg,
+  'mouth-shouting': ShoutingMouthSvg,
+  'mouth-kiss': KissMouthSvg,
   
-  // Facial Hair
+  // Facial Hair - Original 1
   'beard': BeardSvg,
+  // Facial Hair - Expanded 5
+  'facialhair-goatee': GoateeSvg,
+  'facialhair-stubble': StubbleSvg,
+  'facialhair-handlebar': HandlebarSvg,
+  'facialhair-soulpatch': SoulPatchSvg,
+  'facialhair-muttonchops': MuttonChopsSvg,
   
-  // Clothing
-  'trousers-skinny': SkinnyJeansSvg,
-  'trousers-cargo': CargoShortsSvg,
-  'shoes-combat': CombatBootsSvg,
-  'shoes-hightops': HighTopsSvg,
+  // Shirts - Original 1
   'shirt-bandtee': BandTeeSvg,
+  // Shirts - Expanded 11
+  'shirt-flannel': FlannelShirtSvg,
+  'shirt-hawaiian': HawaiianShirtSvg,
+  'shirt-rippedtee': RippedTeeSvg,
+  'shirt-polo': PoloShirtSvg,
+  'shirt-croptop': CropTopSvg,
+  'shirt-tanktop': TankTopSvg,
+  'shirt-turtleneck': TurtleneckSvg,
+  'shirt-jersey': JerseySvg,
+  'shirt-tiedye': TieDyeSvg,
+  'shirt-blazer': BlazerShirtSvg,
+  'shirt-mesh': MeshTopSvg,
+  
+  // Jackets - Original 2
   'jacket-leather': LeatherJacketSvg,
   'jacket-hoodie': HoodieSvg,
+  // Jackets - Expanded 6
+  'jacket-denimvest': DenimVestSvg,
+  'jacket-varsity': VarsityJacketSvg,
+  'jacket-military': MilitaryJacketSvg,
+  'jacket-trench': TrenchCoatSvg,
+  'jacket-track': TrackJacketSvg,
+  'jacket-cardigan': CardiganSvg,
   
-  // Accessories
+  // Trousers - Original 2
+  'trousers-skinny': SkinnyJeansSvg,
+  'trousers-cargo': CargoShortsSvg,
+  // Trousers - Expanded 6
+  'trousers-ripped': RippedJeansSvg,
+  'trousers-leather': LeatherPantsSvg,
+  'trousers-track': TrackPantsSvg,
+  'trousers-pleatedskirt': PleatedSkirtSvg,
+  'trousers-kilt': KiltSvg,
+  'trousers-bellbottoms': BellBottomsSvg,
+  
+  // Shoes - Original 2
+  'shoes-combat': CombatBootsSvg,
+  'shoes-hightops': HighTopsSvg,
+  // Shoes - Expanded 6
+  'shoes-cowboy': CowboyBootsSvg,
+  'shoes-platform': PlatformBootsSvg,
+  'shoes-sandals': SandalsSvg,
+  'shoes-dress': DressShoesSvg,
+  'shoes-sneakers': SneakersSvg,
+  'shoes-creepers': CreepersSvg,
+  
+  // Hats - Original 1
   'hat-beanie': BeanieSvg,
+  // Hats - Expanded 7
+  'hat-fedora': FedoraSvg,
+  'hat-cowboy': CowboyHatSvg,
+  'hat-bandana': BandanaSvg,
+  'hat-tophat': TopHatSvg,
+  'hat-snapback': SnapbackSvg,
+  'hat-beret': BeretSvg,
+  'hat-bucket': BucketHatSvg,
+  
+  // Glasses - Original 1
   'glasses-aviator': AviatorGlassesSvg,
+  // Glasses - Expanded 5
+  'glasses-lennon': RoundLennonsSvg,
+  'glasses-cateye': CatEyeGlassesSvg,
+  'glasses-sportwrap': SportWrapSvg,
+  'glasses-tinyovals': TinyOvalsSvg,
+  'glasses-neonshutter': NeonShuttersSvg,
+  
+  // Extras (piercings, jewelry)
+  'extra-hoopearrings': HoopEarringsSvg,
+  'extra-studearrings': StudEarringsSvg,
+  'extra-nosering': NoseRingSvg,
+  'extra-lipring': LipRingSvg,
+  'extra-chain': ChainNecklaceSvg,
+  'extra-choker': ChokerSvg,
+  'extra-bandannaneck': BandannaNeckSvg,
+  'extra-headphones': HeadphonesSvg,
 };
 
 // Layer ordering (back to front)
@@ -56,13 +188,14 @@ const LAYER_ORDER = [
   'trousers',    // 2
   'shirt',       // 3
   'jacket',      // 4
-  'eyes',        // 5
-  'nose',        // 6
-  'mouth',       // 7
-  'facial_hair', // 8
-  'hair',        // 9
-  'hat',         // 10
-  'glasses',     // 11
+  'extra',       // 5 - necklaces, etc.
+  'eyes',        // 6
+  'nose',        // 7
+  'mouth',       // 8
+  'facial_hair', // 9
+  'hair',        // 10
+  'hat',         // 11
+  'glasses',     // 12
 ];
 
 interface SvgSpriteCanvasProps {
@@ -80,6 +213,7 @@ interface SvgSpriteCanvasProps {
     shoes?: string;
     hat?: string;
     glasses?: string;
+    extra?: string;
     skinTone?: string;
   };
   className?: string;
@@ -126,6 +260,7 @@ export const SvgSpriteCanvas = ({
       { category: 'trousers', value: config.trousers },
       { category: 'shirt', value: config.shirt },
       { category: 'jacket', value: config.jacket },
+      { category: 'extra', value: config.extra },
       { category: 'eyes', value: config.eyes },
       { category: 'nose', value: config.nose },
       { category: 'mouth', value: config.mouth },

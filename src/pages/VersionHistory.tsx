@@ -14,6 +14,25 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.579",
+    date: "2026-01-29",
+    changes: [
+      { type: 'fix', description: "Character Creator: Fixed hair positioning - all 4 styles now sit on crown (Y=20-70) instead of covering eyes" },
+      { type: 'feature', description: "Character Creator: 20 hair styles (was 4) - Mohawk, Liberty Spikes, Dreadlocks, Pompadour, Mullet, Viking, Cornrows, etc." },
+      { type: 'feature', description: "Character Creator: 9 eye styles (was 2) - Cat Eye, Smoky, Starry, Winking, Sleepy, etc." },
+      { type: 'feature', description: "Character Creator: 8 mouth styles (was 2) - Singing, Shouting, Grin, Smirk, Kiss, etc." },
+      { type: 'feature', description: "Character Creator: 6 facial hair styles (was 1) - Goatee, Stubble, Handlebar, Mutton Chops, Soul Patch" },
+      { type: 'feature', description: "Character Creator: 12 shirts (was 1) - Flannel, Hawaiian, Jersey, Tie-Dye, Mesh Top, etc." },
+      { type: 'feature', description: "Character Creator: 8 jackets (was 2) - Varsity, Military, Trench Coat, Track Jacket, Cardigan" },
+      { type: 'feature', description: "Character Creator: 8 bottoms (was 2) - Ripped Jeans, Leather Pants, Kilt, Bell Bottoms, Pleated Skirt" },
+      { type: 'feature', description: "Character Creator: 8 footwear (was 2) - Platform Boots, Cowboy Boots, Creepers, Sneakers, Sandals" },
+      { type: 'feature', description: "Character Creator: 8 hats (was 1) - Fedora, Cowboy Hat, Top Hat, Snapback, Beret, Bucket Hat" },
+      { type: 'feature', description: "Character Creator: 6 glasses (was 1) - Round Lennons, Cat Eye, Sport Wrap, Neon Shutters" },
+      { type: 'feature', description: "Character Creator: NEW 8 piercings/jewelry - Earrings, Nose Ring, Lip Ring, Chain, Choker, Headphones" },
+      { type: 'improvement', description: "Character Creator: Total options expanded from 18 to 100+ across all musical genres" },
+    ],
+  },
+  {
     version: "1.0.578",
     date: "2026-01-29",
     changes: [

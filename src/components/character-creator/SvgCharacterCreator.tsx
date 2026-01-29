@@ -7,18 +7,47 @@ import { SvgSpriteCanvas } from "./SvgSpriteCanvas";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Available options for each category
+// Available options for each category - MASSIVELY EXPANDED
 const OPTIONS = {
   hair: [
-    { id: 'hair-mohawk', name: 'Mohawk', color: '#e63946' },
-    { id: 'hair-afro', name: 'Afro', color: '#2d1810' },
-    { id: 'hair-emo', name: 'Emo', color: '#1a1a1a' },
-    { id: 'hair-pixie', name: 'Pixie', color: '#f5a623' },
+    // Punk
+    { id: 'hair-mohawk', name: 'Mohawk', color: '#e63946', genre: 'Punk' },
+    { id: 'hair-libertyspikes', name: 'Liberty Spikes', color: '#22c55e', genre: 'Punk' },
+    // Rock
+    { id: 'hair-longrocker', name: 'Long Rocker', color: '#1a1a1a', genre: 'Metal' },
+    { id: 'hair-mullet', name: 'Mullet', color: '#6b4423', genre: 'Classic Rock' },
+    { id: 'hair-shaggy', name: 'Shaggy', color: '#b8956e', genre: 'Grunge' },
+    // Modern
+    { id: 'hair-pompadour', name: 'Pompadour', color: '#1a1a1a', genre: 'Rockabilly' },
+    { id: 'hair-undercut', name: 'Undercut', color: '#d4a76a', genre: 'Modern' },
+    { id: 'hair-buzzcut', name: 'Buzz Cut', color: '#2a2a2a', genre: 'Military' },
+    { id: 'hair-slickedback', name: 'Slicked Back', color: '#1a1a1a', genre: 'Disco' },
+    // Hip-Hop
+    { id: 'hair-afro', name: 'Afro', color: '#2d1810', genre: 'Funk' },
+    { id: 'hair-braids', name: 'Braids', color: '#1a1a1a', genre: 'Hip-Hop' },
+    { id: 'hair-cornrows', name: 'Cornrows', color: '#1a1a1a', genre: 'Hip-Hop' },
+    { id: 'hair-dreadlocks', name: 'Dreadlocks', color: '#4a3520', genre: 'Reggae' },
+    // Other
+    { id: 'hair-emo', name: 'Emo Fringe', color: '#1a1a1a', genre: 'Emo' },
+    { id: 'hair-pixie', name: 'Pixie', color: '#f5a623', genre: 'Pop' },
+    { id: 'hair-pigtails', name: 'Pigtails', color: '#ec4899', genre: 'Pop' },
+    { id: 'hair-messybob', name: 'Messy Bob', color: '#9a5d42', genre: 'Indie' },
+    { id: 'hair-curtains', name: 'Curtains', color: '#6b4423', genre: 'Britpop' },
+    { id: 'hair-viking', name: 'Viking', color: '#c45a28', genre: 'Folk Metal' },
+    { id: 'hair-bun', name: 'Bun', color: '#5a4030', genre: 'Various' },
   ],
   eyes: [
     { id: 'eyes-neutral', name: 'Neutral', color: '#4a3728' },
-    { id: 'eyes-angry', name: 'Intense', color: '#4a3728' },
+    { id: 'eyes-angry', name: 'Angry', color: '#4a3728' },
+    { id: 'eyes-intense', name: 'Intense', color: '#4a3728' },
+    { id: 'eyes-wide', name: 'Wide', color: '#4a3728' },
+    { id: 'eyes-sleepy', name: 'Sleepy', color: '#4a3728' },
+    { id: 'eyes-winking', name: 'Winking', color: '#4a3728' },
+    { id: 'eyes-cat', name: 'Cat Eye', color: '#22c55e' },
+    { id: 'eyes-smoky', name: 'Smoky', color: '#1a1a1a' },
+    { id: 'eyes-starry', name: 'Starry', color: '#60a5fa' },
   ],
   nose: [
     { id: 'nose-small', name: 'Small', color: '#e5c0a0' },
@@ -26,30 +55,92 @@ const OPTIONS = {
   mouth: [
     { id: 'mouth-neutral', name: 'Neutral', color: '#b8756b' },
     { id: 'mouth-smile', name: 'Smile', color: '#b8756b' },
+    { id: 'mouth-singing', name: 'Singing', color: '#8b4040' },
+    { id: 'mouth-smirk', name: 'Smirk', color: '#b8756b' },
+    { id: 'mouth-pout', name: 'Pout', color: '#c86b6b' },
+    { id: 'mouth-grin', name: 'Grin', color: '#b8756b' },
+    { id: 'mouth-shouting', name: 'Shouting', color: '#7a3030' },
+    { id: 'mouth-kiss', name: 'Kiss', color: '#c86b6b' },
   ],
   facial_hair: [
     { id: 'beard', name: 'Full Beard', color: '#3d2820' },
+    { id: 'facialhair-goatee', name: 'Goatee', color: '#3d2820' },
+    { id: 'facialhair-stubble', name: 'Stubble', color: '#3d2820' },
+    { id: 'facialhair-handlebar', name: 'Handlebar', color: '#3d2820' },
+    { id: 'facialhair-soulpatch', name: 'Soul Patch', color: '#3d2820' },
+    { id: 'facialhair-muttonchops', name: 'Mutton Chops', color: '#3d2820' },
   ],
   shirt: [
-    { id: 'shirt-bandtee', name: 'Band Tee', color: '#1a1a1a' },
+    { id: 'shirt-bandtee', name: 'Band Tee', color: '#1a1a1a', genre: 'Rock' },
+    { id: 'shirt-flannel', name: 'Flannel', color: '#b91c1c', genre: 'Grunge' },
+    { id: 'shirt-hawaiian', name: 'Hawaiian', color: '#0d9488', genre: 'Indie' },
+    { id: 'shirt-rippedtee', name: 'Ripped Tee', color: '#f5f5f5', genre: 'Punk' },
+    { id: 'shirt-polo', name: 'Polo', color: '#2563eb', genre: 'Mod' },
+    { id: 'shirt-croptop', name: 'Crop Top', color: '#ec4899', genre: 'Pop' },
+    { id: 'shirt-tanktop', name: 'Tank Top', color: '#1a1a1a', genre: 'Metal' },
+    { id: 'shirt-turtleneck', name: 'Turtleneck', color: '#1a1a1a', genre: 'Goth' },
+    { id: 'shirt-jersey', name: 'Jersey', color: '#dc2626', genre: 'Hip-Hop' },
+    { id: 'shirt-tiedye', name: 'Tie-Dye', color: '#fbbf24', genre: 'Psychedelic' },
+    { id: 'shirt-blazer', name: 'Blazer Shirt', color: '#1e3a5f', genre: 'Britpop' },
+    { id: 'shirt-mesh', name: 'Mesh Top', color: '#1a1a1a', genre: 'Rave' },
   ],
   jacket: [
-    { id: 'jacket-leather', name: 'Leather', color: '#2a2a2a' },
-    { id: 'jacket-hoodie', name: 'Hoodie', color: '#555' },
+    { id: 'jacket-leather', name: 'Leather', color: '#2a2a2a', genre: 'Punk/Metal' },
+    { id: 'jacket-hoodie', name: 'Hoodie', color: '#555', genre: 'Casual' },
+    { id: 'jacket-denimvest', name: 'Denim Vest', color: '#3b82f6', genre: 'Country' },
+    { id: 'jacket-varsity', name: 'Varsity', color: '#dc2626', genre: 'Americana' },
+    { id: 'jacket-military', name: 'Military', color: '#4d5a3a', genre: 'Industrial' },
+    { id: 'jacket-trench', name: 'Trench Coat', color: '#1a1a1a', genre: 'Goth' },
+    { id: 'jacket-track', name: 'Track Jacket', color: '#dc2626', genre: 'Hip-Hop' },
+    { id: 'jacket-cardigan', name: 'Cardigan', color: '#d4a574', genre: 'Indie' },
   ],
   trousers: [
-    { id: 'trousers-skinny', name: 'Skinny Jeans', color: '#1a1a2e' },
-    { id: 'trousers-cargo', name: 'Cargo Shorts', color: '#5a5a3a' },
+    { id: 'trousers-skinny', name: 'Skinny Jeans', color: '#1a1a2e', genre: 'Rock' },
+    { id: 'trousers-cargo', name: 'Cargo Shorts', color: '#5a5a3a', genre: 'Skate' },
+    { id: 'trousers-ripped', name: 'Ripped Jeans', color: '#3b82f6', genre: 'Punk' },
+    { id: 'trousers-leather', name: 'Leather Pants', color: '#1a1a1a', genre: 'Metal' },
+    { id: 'trousers-track', name: 'Track Pants', color: '#1a1a1a', genre: 'Hip-Hop' },
+    { id: 'trousers-pleatedskirt', name: 'Pleated Skirt', color: '#1a1a1a', genre: 'Goth' },
+    { id: 'trousers-kilt', name: 'Kilt', color: '#1a5f1a', genre: 'Celtic' },
+    { id: 'trousers-bellbottoms', name: 'Bell Bottoms', color: '#3b82f6', genre: 'Disco' },
   ],
   shoes: [
-    { id: 'shoes-combat', name: 'Combat Boots', color: '#111' },
-    { id: 'shoes-hightops', name: 'High Tops', color: '#e63946' },
+    { id: 'shoes-combat', name: 'Combat Boots', color: '#111', genre: 'Punk' },
+    { id: 'shoes-hightops', name: 'High Tops', color: '#e63946', genre: 'Skate' },
+    { id: 'shoes-cowboy', name: 'Cowboy Boots', color: '#8b4513', genre: 'Country' },
+    { id: 'shoes-platform', name: 'Platform Boots', color: '#1a1a1a', genre: 'Goth' },
+    { id: 'shoes-sandals', name: 'Sandals', color: '#8b6040', genre: 'Hippie' },
+    { id: 'shoes-dress', name: 'Dress Shoes', color: '#1a1a1a', genre: 'Mod' },
+    { id: 'shoes-sneakers', name: 'Sneakers', color: '#f5f5f5', genre: 'Hip-Hop' },
+    { id: 'shoes-creepers', name: 'Creepers', color: '#1a1a1a', genre: 'Rockabilly' },
   ],
   hat: [
-    { id: 'hat-beanie', name: 'Beanie', color: '#1a1a1a' },
+    { id: 'hat-beanie', name: 'Beanie', color: '#1a1a1a', genre: 'Various' },
+    { id: 'hat-fedora', name: 'Fedora', color: '#2a2a2a', genre: 'Ska/Jazz' },
+    { id: 'hat-cowboy', name: 'Cowboy Hat', color: '#8b6040', genre: 'Country' },
+    { id: 'hat-bandana', name: 'Bandana', color: '#dc2626', genre: 'Biker' },
+    { id: 'hat-tophat', name: 'Top Hat', color: '#1a1a1a', genre: 'Steampunk' },
+    { id: 'hat-snapback', name: 'Snapback', color: '#1a1a1a', genre: 'Hip-Hop' },
+    { id: 'hat-beret', name: 'Beret', color: '#1a1a1a', genre: 'Beatnik' },
+    { id: 'hat-bucket', name: 'Bucket Hat', color: '#5a5a3a', genre: '90s' },
   ],
   glasses: [
-    { id: 'glasses-aviator', name: 'Aviators', color: '#c9a227' },
+    { id: 'glasses-aviator', name: 'Aviators', color: '#c9a227', genre: 'Classic' },
+    { id: 'glasses-lennon', name: 'Round Lennons', color: '#c9a227', genre: '60s' },
+    { id: 'glasses-cateye', name: 'Cat Eye', color: '#1a1a1a', genre: 'Vintage' },
+    { id: 'glasses-sportwrap', name: 'Sport Wrap', color: '#1a1a1a', genre: '80s' },
+    { id: 'glasses-tinyovals', name: 'Tiny Ovals', color: '#c9a227', genre: 'Y2K' },
+    { id: 'glasses-neonshutter', name: 'Neon Shutter', color: '#22c55e', genre: 'Rave' },
+  ],
+  extra: [
+    { id: 'extra-hoopearrings', name: 'Hoop Earrings', color: '#c9a227', genre: 'Various' },
+    { id: 'extra-studearrings', name: 'Stud Earrings', color: '#c9a227', genre: 'Punk' },
+    { id: 'extra-nosering', name: 'Nose Ring', color: '#c9a227', genre: 'Punk' },
+    { id: 'extra-lipring', name: 'Lip Ring', color: '#c9a227', genre: 'Emo' },
+    { id: 'extra-chain', name: 'Chain Necklace', color: '#c9a227', genre: 'Metal' },
+    { id: 'extra-choker', name: 'Choker', color: '#1a1a1a', genre: 'Goth' },
+    { id: 'extra-bandannaneck', name: 'Bandanna', color: '#1a1a1a', genre: 'Biker' },
+    { id: 'extra-headphones', name: 'Headphones', color: '#1a1a1a', genre: 'DJ' },
   ],
 };
 
@@ -75,6 +166,7 @@ interface CharacterConfigState {
   shoes?: string;
   hat?: string;
   glasses?: string;
+  extra?: string;
   skinTone: string;
 }
 
@@ -93,7 +185,7 @@ const DEFAULT_CONFIG: CharacterConfigState = {
 
 interface OptionPickerProps {
   label: string;
-  options: Array<{ id: string; name: string; color: string }>;
+  options: Array<{ id: string; name: string; color: string; genre?: string }>;
   selected?: string;
   onSelect: (id: string | undefined) => void;
   allowNone?: boolean;
@@ -102,37 +194,39 @@ interface OptionPickerProps {
 
 const OptionPicker = ({ label, options, selected, onSelect, allowNone = true, noneLabel = "None" }: OptionPickerProps) => (
   <div className="space-y-2">
-    <Label className="text-sm font-medium capitalize">{label}</Label>
-    <div className="flex flex-wrap gap-2">
-      {allowNone && (
-        <button
-          onClick={() => onSelect(undefined)}
-          className={cn(
-            "w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all",
-            !selected ? "border-primary ring-2 ring-primary/30" : "border-muted hover:border-muted-foreground/50"
-          )}
-          title={noneLabel}
-        >
-          <span className="text-xs text-muted-foreground">∅</span>
-        </button>
-      )}
-      {options.map((opt) => (
-        <button
-          key={opt.id}
-          onClick={() => onSelect(opt.id)}
-          className={cn(
-            "w-10 h-10 rounded-lg border-2 transition-all relative",
-            selected === opt.id ? "border-primary ring-2 ring-primary/30" : "border-muted hover:border-muted-foreground/50"
-          )}
-          style={{ backgroundColor: opt.color }}
-          title={opt.name}
-        >
-          {selected === opt.id && (
-            <Check className="absolute inset-0 m-auto h-5 w-5 text-white drop-shadow-md" />
-          )}
-        </button>
-      ))}
-    </div>
+    <Label className="text-sm font-medium capitalize">{label} <span className="text-muted-foreground">({options.length})</span></Label>
+    <ScrollArea className="h-[120px]">
+      <div className="flex flex-wrap gap-2 pr-3">
+        {allowNone && (
+          <button
+            onClick={() => onSelect(undefined)}
+            className={cn(
+              "w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
+              !selected ? "border-primary ring-2 ring-primary/30" : "border-muted hover:border-muted-foreground/50"
+            )}
+            title={noneLabel}
+          >
+            <span className="text-xs text-muted-foreground">∅</span>
+          </button>
+        )}
+        {options.map((opt) => (
+          <button
+            key={opt.id}
+            onClick={() => onSelect(opt.id)}
+            className={cn(
+              "w-10 h-10 rounded-lg border-2 transition-all relative shrink-0 group",
+              selected === opt.id ? "border-primary ring-2 ring-primary/30" : "border-muted hover:border-muted-foreground/50"
+            )}
+            style={{ backgroundColor: opt.color }}
+            title={`${opt.name}${opt.genre ? ` (${opt.genre})` : ''}`}
+          >
+            {selected === opt.id && (
+              <Check className="absolute inset-0 m-auto h-5 w-5 text-white drop-shadow-md" />
+            )}
+          </button>
+        ))}
+      </div>
+    </ScrollArea>
   </div>
 );
 
@@ -162,24 +256,20 @@ export const SvgCharacterCreator = () => {
     if (!canvasRef.current) return;
     
     try {
-      // For SVG export, we need to serialize the SVG content
       const svgElements = canvasRef.current.querySelectorAll('svg');
       if (svgElements.length === 0) {
         toast.error('No character to export');
         return;
       }
 
-      // Create a canvas to draw the composite
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 1024;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Fill with transparent
       ctx.clearRect(0, 0, 512, 1024);
 
-      // For each SVG, convert to image and draw
       const loadPromises = Array.from(svgElements).map((svg, index) => {
         return new Promise<{ img: HTMLImageElement; zIndex: number }>((resolve, reject) => {
           const svgData = new XMLSerializer().serializeToString(svg);
@@ -200,13 +290,11 @@ export const SvgCharacterCreator = () => {
 
       const images = await Promise.all(loadPromises);
       
-      // Sort by z-index and draw
       images.sort((a, b) => a.zIndex - b.zIndex);
       images.forEach(({ img }) => {
         ctx.drawImage(img, 0, 0, 512, 1024);
       });
 
-      // Download
       const link = document.createElement('a');
       link.download = 'punk-character.png';
       link.href = canvas.toDataURL('image/png');
@@ -229,7 +317,7 @@ export const SvgCharacterCreator = () => {
             Character Creator
           </h1>
           <p className="text-sm text-muted-foreground">
-            Design your unique punk rock character
+            Design your unique punk rock character • 100+ options
           </p>
         </div>
         <div className="flex gap-2">
@@ -405,6 +493,12 @@ export const SvgCharacterCreator = () => {
                   options={OPTIONS.glasses}
                   selected={config.glasses}
                   onSelect={(id) => updateConfig('glasses', id)}
+                />
+                <OptionPicker
+                  label="Piercings & Jewelry"
+                  options={OPTIONS.extra}
+                  selected={config.extra}
+                  onSelect={(id) => updateConfig('extra', id)}
                 />
               </TabsContent>
             </Tabs>
