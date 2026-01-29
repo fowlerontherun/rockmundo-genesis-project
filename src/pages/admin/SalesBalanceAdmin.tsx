@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
   DollarSign, Disc, Music, Globe, Save, RotateCcw, 
-  TrendingUp, Calculator, Sparkles, Circle 
+  TrendingUp, Calculator, Sparkles, Circle, Percent, Building2 
 } from "lucide-react";
 
 interface SalesConfig {
@@ -32,6 +32,12 @@ interface SalesConfig {
   performed_country_bonus: number;
   unvisited_fame_cap: number;
   spillover_rate: number;
+  // Tax & Distribution costs
+  digital_distribution_rate: number;
+  cd_distribution_rate: number;
+  vinyl_distribution_rate: number;
+  cassette_distribution_rate: number;
+  default_sales_tax_rate: number;
 }
 
 const defaultConfig: SalesConfig = {
@@ -50,6 +56,12 @@ const defaultConfig: SalesConfig = {
   performed_country_bonus: 1.2,
   unvisited_fame_cap: 100,
   spillover_rate: 0.2,
+  // Tax & Distribution costs
+  digital_distribution_rate: 30,
+  cd_distribution_rate: 20,
+  vinyl_distribution_rate: 15,
+  cassette_distribution_rate: 15,
+  default_sales_tax_rate: 10,
 };
 
 const SalesBalanceAdmin = () => {
@@ -130,6 +142,11 @@ const SalesBalanceAdmin = () => {
       performed_country_bonus: "Bonus multiplier for performed countries",
       unvisited_fame_cap: "Fame cap for unvisited countries",
       spillover_rate: "Fame spillover rate to neighbors",
+      digital_distribution_rate: "Distribution fee % for digital sales",
+      cd_distribution_rate: "Distribution fee % for CD sales",
+      vinyl_distribution_rate: "Distribution fee % for vinyl sales",
+      cassette_distribution_rate: "Distribution fee % for cassette sales",
+      default_sales_tax_rate: "Default sales tax % when no city laws",
     };
     return descriptions[key] || key;
   };
@@ -143,6 +160,9 @@ const SalesBalanceAdmin = () => {
       fame_multiplier_divisor: 1000, regional_fame_weight: 0.1,
       market_scarcity_min_bands: 5, market_scarcity_max_multiplier: 1,
       performed_country_bonus: 1.0, unvisited_fame_cap: 50, spillover_rate: 0,
+      digital_distribution_rate: 0, cd_distribution_rate: 0,
+      vinyl_distribution_rate: 0, cassette_distribution_rate: 0,
+      default_sales_tax_rate: 0,
     };
     return mins[key] || 0;
   };
@@ -156,6 +176,9 @@ const SalesBalanceAdmin = () => {
       fame_multiplier_divisor: 100000, regional_fame_weight: 3.0,
       market_scarcity_min_bands: 100, market_scarcity_max_multiplier: 10,
       performed_country_bonus: 2.0, unvisited_fame_cap: 500, spillover_rate: 0.5,
+      digital_distribution_rate: 50, cd_distribution_rate: 50,
+      vinyl_distribution_rate: 50, cassette_distribution_rate: 50,
+      default_sales_tax_rate: 30,
     };
     return maxs[key] || 100;
   };
@@ -169,20 +192,38 @@ const SalesBalanceAdmin = () => {
     return "";
   };
 
-  // Preview calculation
+  // Preview calculation with tax/distribution breakdown
   const calculatePreviewSales = () => {
     const fameMultiplier = 1 + previewFame / config.fame_multiplier_divisor;
     const regionalMultiplier = 0.5 + (previewRegionalFame / 10000) * config.regional_fame_weight;
     
+    const digital = Math.round(((config.digital_base_sales_min + config.digital_base_sales_max) / 2) * fameMultiplier * regionalMultiplier);
+    const cd = Math.round(((config.cd_base_sales_min + config.cd_base_sales_max) / 2) * fameMultiplier * regionalMultiplier);
+    const vinyl = Math.round(((config.vinyl_base_sales_min + config.vinyl_base_sales_max) / 2) * fameMultiplier * regionalMultiplier);
+    const cassette = Math.round(((config.cassette_base_sales_min + config.cassette_base_sales_max) / 2) * fameMultiplier * regionalMultiplier);
+    
+    // Sample prices for preview
+    const prices = { digital: 9.99, cd: 14.99, vinyl: 29.99, cassette: 12.99 };
+    const taxRate = config.default_sales_tax_rate / 100;
+    
+    const calcNet = (units: number, price: number, distRate: number) => {
+      const gross = units * price;
+      const tax = gross * taxRate;
+      const dist = gross * (distRate / 100);
+      return { gross, tax, dist, net: gross - tax - dist };
+    };
+    
     return {
-      digital: Math.round(((config.digital_base_sales_min + config.digital_base_sales_max) / 2) * fameMultiplier * regionalMultiplier),
-      cd: Math.round(((config.cd_base_sales_min + config.cd_base_sales_max) / 2) * fameMultiplier * regionalMultiplier),
-      vinyl: Math.round(((config.vinyl_base_sales_min + config.vinyl_base_sales_max) / 2) * fameMultiplier * regionalMultiplier),
-      cassette: Math.round(((config.cassette_base_sales_min + config.cassette_base_sales_max) / 2) * fameMultiplier * regionalMultiplier),
+      digital: { units: digital, ...calcNet(digital, prices.digital, config.digital_distribution_rate) },
+      cd: { units: cd, ...calcNet(cd, prices.cd, config.cd_distribution_rate) },
+      vinyl: { units: vinyl, ...calcNet(vinyl, prices.vinyl, config.vinyl_distribution_rate) },
+      cassette: { units: cassette, ...calcNet(cassette, prices.cassette, config.cassette_distribution_rate) },
     };
   };
 
   const preview = calculatePreviewSales();
+  const totalGross = preview.digital.gross + preview.cd.gross + preview.vinyl.gross + preview.cassette.gross;
+  const totalNet = preview.digital.net + preview.cd.net + preview.vinyl.net + preview.cassette.net;
 
   const updateConfig = (key: keyof SalesConfig, value: number) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
@@ -293,30 +334,38 @@ const SalesBalanceAdmin = () => {
             <div className="grid grid-cols-4 gap-4 text-center">
               <div className="p-3 bg-background rounded-lg">
                 <Music className="h-5 w-5 mx-auto mb-1 text-blue-500" />
-                <p className="text-2xl font-bold">{preview.digital}</p>
+                <p className="text-2xl font-bold">{preview.digital.units}</p>
                 <p className="text-xs text-muted-foreground">Digital</p>
+                <p className="text-xs text-green-600">${preview.digital.net.toFixed(0)}</p>
               </div>
               <div className="p-3 bg-background rounded-lg">
                 <Disc className="h-5 w-5 mx-auto mb-1 text-orange-500" />
-                <p className="text-2xl font-bold">{preview.cd}</p>
+                <p className="text-2xl font-bold">{preview.cd.units}</p>
                 <p className="text-xs text-muted-foreground">CD</p>
+                <p className="text-xs text-green-600">${preview.cd.net.toFixed(0)}</p>
               </div>
               <div className="p-3 bg-background rounded-lg">
                 <Circle className="h-5 w-5 mx-auto mb-1 text-purple-500" />
-                <p className="text-2xl font-bold">{preview.vinyl}</p>
+                <p className="text-2xl font-bold">{preview.vinyl.units}</p>
                 <p className="text-xs text-muted-foreground">Vinyl</p>
+                <p className="text-xs text-green-600">${preview.vinyl.net.toFixed(0)}</p>
               </div>
               <div className="p-3 bg-background rounded-lg">
                 <Sparkles className="h-5 w-5 mx-auto mb-1 text-pink-500" />
-                <p className="text-2xl font-bold">{preview.cassette}</p>
+                <p className="text-2xl font-bold">{preview.cassette.units}</p>
                 <p className="text-xs text-muted-foreground">Cassette</p>
+                <p className="text-xs text-green-600">${preview.cassette.net.toFixed(0)}</p>
               </div>
+            </div>
+            <div className="mt-4 pt-4 border-t flex justify-between text-sm">
+              <span className="text-muted-foreground">Gross: ${totalGross.toFixed(2)}</span>
+              <span className="font-medium text-green-600">Net to Band: ${totalNet.toFixed(2)}</span>
             </div>
           </CardContent>
         </Card>
 
         <Tabs defaultValue="base-sales" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="base-sales" className="flex items-center gap-1">
               <Disc className="h-4 w-4" />
               Base Sales
@@ -328,6 +377,10 @@ const SalesBalanceAdmin = () => {
             <TabsTrigger value="regional" className="flex items-center gap-1">
               <Globe className="h-4 w-4" />
               Regional
+            </TabsTrigger>
+            <TabsTrigger value="costs" className="flex items-center gap-1">
+              <Percent className="h-4 w-4" />
+              Costs
             </TabsTrigger>
           </TabsList>
 
@@ -517,6 +570,124 @@ const SalesBalanceAdmin = () => {
                   <p className="text-xs text-muted-foreground">
                     Current: {Math.round(config.spillover_rate * 100)}% of fame spreads to neighbors
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="costs">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Percent className="h-5 w-5" />
+                  Tax & Distribution Costs
+                </CardTitle>
+                <CardDescription>
+                  Configure deductions applied to record sales. Bands receive net revenue after these costs.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    Default Sales Tax
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Tax rate when band's home city has no mayor or city laws set
+                  </p>
+                  <SliderControl 
+                    label="Default Tax Rate" 
+                    configKey="default_sales_tax_rate" 
+                    min={0} 
+                    max={30}
+                    step={1}
+                    suffix="%"
+                  />
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <h4 className="font-medium">Distribution Fees by Format</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Platform/distributor cut for each format type
+                  </p>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Music className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm font-medium">Digital</span>
+                      </div>
+                      <SliderControl 
+                        label="Distribution Rate" 
+                        configKey="digital_distribution_rate" 
+                        min={0} 
+                        max={50}
+                        step={1}
+                        suffix="%"
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Disc className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm font-medium">CD</span>
+                      </div>
+                      <SliderControl 
+                        label="Distribution Rate" 
+                        configKey="cd_distribution_rate" 
+                        min={0} 
+                        max={50}
+                        step={1}
+                        suffix="%"
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Circle className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm font-medium">Vinyl</span>
+                      </div>
+                      <SliderControl 
+                        label="Distribution Rate" 
+                        configKey="vinyl_distribution_rate" 
+                        min={0} 
+                        max={50}
+                        step={1}
+                        suffix="%"
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-pink-500" />
+                        <span className="text-sm font-medium">Cassette</span>
+                      </div>
+                      <SliderControl 
+                        label="Distribution Rate" 
+                        configKey="cassette_distribution_rate" 
+                        min={0} 
+                        max={50}
+                        step={1}
+                        suffix="%"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-medium mb-3">Example Calculation</h4>
+                  <div className="text-sm space-y-1">
+                    <p>Sale: 10 CDs at $14.99 = <span className="font-medium">$149.90 gross</span></p>
+                    <p className="text-destructive">Tax ({config.default_sales_tax_rate}%): -${(149.90 * config.default_sales_tax_rate / 100).toFixed(2)}</p>
+                    <p className="text-destructive">Distribution ({config.cd_distribution_rate}%): -${(149.90 * config.cd_distribution_rate / 100).toFixed(2)}</p>
+                    <p className="text-green-600 font-medium">
+                      Net to Band: ${(149.90 * (1 - config.default_sales_tax_rate / 100 - config.cd_distribution_rate / 100)).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
