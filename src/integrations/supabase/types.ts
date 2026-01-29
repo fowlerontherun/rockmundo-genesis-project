@@ -5153,6 +5153,9 @@ export type Database = {
           description: string
           difficulty: string
           discovery_hint: string | null
+          discovery_studio_id: string | null
+          discovery_type: string | null
+          discovery_venue_id: string | null
           focus_skill: string
           id: string
           is_active: boolean
@@ -5180,6 +5183,9 @@ export type Database = {
           description: string
           difficulty?: string
           discovery_hint?: string | null
+          discovery_studio_id?: string | null
+          discovery_type?: string | null
+          discovery_venue_id?: string | null
           focus_skill: string
           id?: string
           is_active?: boolean
@@ -5207,6 +5213,9 @@ export type Database = {
           description?: string
           difficulty?: string
           discovery_hint?: string | null
+          discovery_studio_id?: string | null
+          discovery_type?: string | null
+          discovery_venue_id?: string | null
           focus_skill?: string
           id?: string
           is_active?: boolean
@@ -5226,6 +5235,20 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_mentors_discovery_studio_id_fkey"
+            columns: ["discovery_studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_mentors_discovery_venue_id_fkey"
+            columns: ["discovery_venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]

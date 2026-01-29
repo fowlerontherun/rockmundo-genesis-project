@@ -32,7 +32,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search, MapPin, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, Search, MapPin, Calendar, Music, Building, Sparkles } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -54,12 +54,40 @@ const DAY_OPTIONS = [
   { value: "6", label: "Saturday" },
 ];
 
+const DISCOVERY_TYPE_OPTIONS = [
+  { value: "automatic", label: "Automatic (Starter)" },
+  { value: "exploration", label: "City Exploration" },
+  { value: "venue_gig", label: "Play at Venue" },
+  { value: "studio_session", label: "Use Studio" },
+];
+
 const Mentors = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMentor, setEditingMentor] = useState<any>(null);
+
+  // Extended form state for new fields - must be before queries that use them
+  const [cityId, setCityId] = useState<string | null>(null);
+  const [availableDay, setAvailableDay] = useState<string | null>(null);
+  const [loreBiography, setLoreBiography] = useState("");
+  const [loreAchievement, setLoreAchievement] = useState("");
+  const [discoveryHint, setDiscoveryHint] = useState("");
+  const [discoveryType, setDiscoveryType] = useState<string>("exploration");
+  const [discoveryVenueId, setDiscoveryVenueId] = useState<string | null>(null);
+  const [discoveryStudioId, setDiscoveryStudioId] = useState<string | null>(null);
+
+  const resetExtendedFields = () => {
+    setCityId(null);
+    setAvailableDay(null);
+    setLoreBiography("");
+    setLoreAchievement("");
+    setDiscoveryHint("");
+    setDiscoveryType("exploration");
+    setDiscoveryVenueId(null);
+    setDiscoveryStudioId(null);
+  };
 
   // Fetch cities for dropdown
   const { data: cities } = useQuery({
@@ -72,6 +100,42 @@ const Mentors = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch venues for discovery trigger dropdown
+  const { data: venues } = useQuery({
+    queryKey: ["venues-for-mentors", cityId],
+    queryFn: async () => {
+      let query = supabase
+        .from("venues")
+        .select("id, name, city_id, cities:city_id(name)")
+        .order("name");
+      if (cityId) {
+        query = query.eq("city_id", cityId);
+      }
+      const { data, error } = await query.limit(100);
+      if (error) throw error;
+      return data;
+    },
+    enabled: true,
+  });
+
+  // Fetch studios for discovery trigger dropdown
+  const { data: studios } = useQuery({
+    queryKey: ["studios-for-mentors", cityId],
+    queryFn: async () => {
+      let query = supabase
+        .from("city_studios")
+        .select("id, name, city_id, cities:city_id(name)")
+        .order("name");
+      if (cityId) {
+        query = query.eq("city_id", cityId);
+      }
+      const { data, error } = await query.limit(100);
+      if (error) throw error;
+      return data;
+    },
+    enabled: true,
   });
 
   const { data: mentors, isLoading } = useQuery({
@@ -108,21 +172,6 @@ const Mentors = () => {
     },
   });
 
-  // Extended form state for new fields
-  const [cityId, setCityId] = useState<string | null>(null);
-  const [availableDay, setAvailableDay] = useState<string | null>(null);
-  const [loreBiography, setLoreBiography] = useState("");
-  const [loreAchievement, setLoreAchievement] = useState("");
-  const [discoveryHint, setDiscoveryHint] = useState("");
-
-  const resetExtendedFields = () => {
-    setCityId(null);
-    setAvailableDay(null);
-    setLoreBiography("");
-    setLoreAchievement("");
-    setDiscoveryHint("");
-  };
-
   const createMutation = useMutation({
     mutationFn: async (values: MentorFormValues) => {
       const { error } = await supabase.from("education_mentors").insert({
@@ -135,7 +184,7 @@ const Mentors = () => {
         base_xp: values.baseXp,
         difficulty: values.difficulty,
         attribute_keys: values.attributeKeys,
-        required_skill_value: 0, // Always 0 now
+        required_skill_value: 0,
         skill_gain_ratio: values.skillGainRatio,
         bonus_description: values.bonusDescription,
         city_id: cityId || null,
@@ -143,6 +192,10 @@ const Mentors = () => {
         lore_biography: loreBiography || null,
         lore_achievement: loreAchievement || null,
         discovery_hint: discoveryHint || null,
+        discovery_type: discoveryType || 'exploration',
+        discovery_venue_id: discoveryType === 'venue_gig' ? discoveryVenueId : null,
+        discovery_studio_id: discoveryType === 'studio_session' ? discoveryStudioId : null,
+        is_discoverable: discoveryType !== 'automatic',
       });
 
       if (error) throw error;
@@ -185,6 +238,10 @@ const Mentors = () => {
           lore_biography: loreBiography || null,
           lore_achievement: loreAchievement || null,
           discovery_hint: discoveryHint || null,
+          discovery_type: discoveryType || 'exploration',
+          discovery_venue_id: discoveryType === 'venue_gig' ? discoveryVenueId : null,
+          discovery_studio_id: discoveryType === 'studio_session' ? discoveryStudioId : null,
+          is_discoverable: discoveryType !== 'automatic',
         })
         .eq("id", id);
 
@@ -246,6 +303,9 @@ const Mentors = () => {
     setLoreBiography(mentor.lore_biography || "");
     setLoreAchievement(mentor.lore_achievement || "");
     setDiscoveryHint(mentor.discovery_hint || "");
+    setDiscoveryType(mentor.discovery_type || "exploration");
+    setDiscoveryVenueId(mentor.discovery_venue_id || null);
+    setDiscoveryStudioId(mentor.discovery_studio_id || null);
     setIsDialogOpen(true);
   };
 
@@ -422,6 +482,72 @@ const Mentors = () => {
                       />
                     </div>
 
+                    {/* Discovery Type */}
+                    <div>
+                      <Label>
+                        <Sparkles className="inline h-3 w-3 mr-1" />
+                        Discovery Type
+                      </Label>
+                      <Select value={discoveryType} onValueChange={setDiscoveryType}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DISCOVERY_TYPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Discovery Venue (only shown when venue_gig selected) */}
+                    {discoveryType === 'venue_gig' && (
+                      <div>
+                        <Label>
+                          <Music className="inline h-3 w-3 mr-1" />
+                          Discovery Venue
+                        </Label>
+                        <Select value={discoveryVenueId || ""} onValueChange={(v) => setDiscoveryVenueId(v || null)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select venue..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">No venue</SelectItem>
+                            {venues?.map((venue: any) => (
+                              <SelectItem key={venue.id} value={venue.id}>
+                                {venue.name} ({venue.cities?.name || 'Unknown'})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Discovery Studio (only shown when studio_session selected) */}
+                    {discoveryType === 'studio_session' && (
+                      <div>
+                        <Label>
+                          <Building className="inline h-3 w-3 mr-1" />
+                          Discovery Studio
+                        </Label>
+                        <Select value={discoveryStudioId || ""} onValueChange={(v) => setDiscoveryStudioId(v || null)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select studio..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">No studio</SelectItem>
+                            {studios?.map((studio: any) => (
+                              <SelectItem key={studio.id} value={studio.id}>
+                                {studio.name} ({studio.cities?.name || 'Unknown'})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     <div>
                       <Label htmlFor="cost">Cost ($)</Label>
                       <Input type="number" id="cost" {...form.register("cost")} />
@@ -527,8 +653,8 @@ const Mentors = () => {
                   <TableHead>Focus Skill</TableHead>
                   <TableHead>City</TableHead>
                   <TableHead>Day</TableHead>
+                  <TableHead>Discovery</TableHead>
                   <TableHead>Cost</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -556,12 +682,20 @@ const Mentors = () => {
                         <span className="text-muted-foreground text-xs">Any</span>
                       )}
                     </TableCell>
-                    <TableCell>${mentor.cost.toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge variant={mentor.is_active ? "default" : "secondary"}>
-                        {mentor.is_active ? "Active" : "Inactive"}
+                      <Badge 
+                        variant={mentor.discovery_type === 'automatic' ? 'default' : 
+                                mentor.discovery_type === 'venue_gig' ? 'secondary' :
+                                mentor.discovery_type === 'studio_session' ? 'outline' : 'outline'}
+                        className="text-xs"
+                      >
+                        {mentor.discovery_type === 'automatic' && <Sparkles className="h-3 w-3 mr-1" />}
+                        {mentor.discovery_type === 'venue_gig' && <Music className="h-3 w-3 mr-1" />}
+                        {mentor.discovery_type === 'studio_session' && <Building className="h-3 w-3 mr-1" />}
+                        {DISCOVERY_TYPE_OPTIONS.find(d => d.value === mentor.discovery_type)?.label || 'Exploration'}
                       </Badge>
                     </TableCell>
+                    <TableCell>${mentor.cost.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
