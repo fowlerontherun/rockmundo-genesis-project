@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.570",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "Record Sales: City sales tax deduction (uses mayor-set rate, defaults to 10%)" },
+      { type: 'feature', description: "Record Sales: Format-specific distribution fees (Digital 30%, CD 20%, Vinyl/Cassette 15%)" },
+      { type: 'feature', description: "Record Sales: Bands now receive net revenue after tax + distribution costs" },
+      { type: 'feature', description: "Admin: Costs tab in Sales Balance Admin for configuring tax/distribution rates" },
+      { type: 'improvement', description: "Sales tracking: Full breakdown stored (gross, tax, distribution, net)" },
+    ],
+  },
+  {
     version: "1.0.569",
     date: "2026-01-29",
     changes: [

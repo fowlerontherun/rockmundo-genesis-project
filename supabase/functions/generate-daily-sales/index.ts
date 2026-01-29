@@ -69,7 +69,16 @@ serve(async (req) => {
     const marketScarcityMaxMultiplier = salesConfig.market_scarcity_max_multiplier ?? 5;
     const performedCountryBonus = salesConfig.performed_country_bonus ?? 1.2;
     
+    // Distribution & tax config
+    const digitalDistributionRate = (salesConfig.digital_distribution_rate ?? 30) / 100;
+    const cdDistributionRate = (salesConfig.cd_distribution_rate ?? 20) / 100;
+    const vinylDistributionRate = (salesConfig.vinyl_distribution_rate ?? 15) / 100;
+    const cassetteDistributionRate = (salesConfig.cassette_distribution_rate ?? 15) / 100;
+    const defaultSalesTaxRate = (salesConfig.default_sales_tax_rate ?? 10) / 100;
+    
     console.log(`Sales config loaded: digital=${digitalMin}-${digitalMax}, fame divisor=${fameDivisor}`);
+    console.log(`Distribution rates: digital=${digitalDistributionRate*100}%, cd=${cdDistributionRate*100}%, vinyl=${vinylDistributionRate*100}%`);
+    console.log(`Default tax rate: ${defaultSalesTaxRate*100}%`);
 
     const { data: releases, error: releasesError } = await supabaseClient
       .from("releases")
@@ -78,7 +87,7 @@ serve(async (req) => {
         band_id,
         user_id,
         release_type,
-        bands(fame, popularity, chemistry_level, home_city_id),
+        bands(id, fame, popularity, chemistry_level, home_city_id),
         release_formats(id, format_type, retail_price, quantity),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
@@ -126,6 +135,34 @@ serve(async (req) => {
       return Math.max(countryBase * performedBonusMult, globalFloor);
     }
 
+    // Helper to get distribution rate by format
+    function getDistributionRate(formatType: string): number {
+      switch (formatType) {
+        case "digital": return digitalDistributionRate;
+        case "cd": return cdDistributionRate;
+        case "vinyl": return vinylDistributionRate;
+        case "cassette": return cassetteDistributionRate;
+        default: return 0.25; // default 25%
+      }
+    }
+
+    // Helper to get city sales tax rate
+    async function getCitySalesTaxRate(cityId: string | null): Promise<number> {
+      if (!cityId) return defaultSalesTaxRate;
+      
+      const { data: cityLaws } = await supabaseClient
+        .from("city_laws")
+        .select("sales_tax_rate")
+        .eq("city_id", cityId)
+        .is("effective_until", null)
+        .maybeSingle();
+      
+      if (cityLaws?.sales_tax_rate != null) {
+        return cityLaws.sales_tax_rate / 100;
+      }
+      return defaultSalesTaxRate;
+    }
+
     for (const release of releases || []) {
       try {
         releasesProcessed += 1;
@@ -134,8 +171,13 @@ serve(async (req) => {
           ? profilesMap.get(release.user_id as string)
           : undefined;
 
-        const artistFame = release.bands?.[0]?.fame || profile?.fame || 0;
-        const artistPopularity = release.bands?.[0]?.popularity || profile?.popularity || 0;
+        const band = release.bands?.[0];
+        const artistFame = band?.fame || profile?.fame || 0;
+        const artistPopularity = band?.popularity || profile?.popularity || 0;
+        const homeCityId = band?.home_city_id || null;
+
+        // Get city sales tax rate
+        const salesTaxRate = await getCitySalesTaxRate(homeCityId);
 
         // Fetch regional fame data for bands
         let regionalMultiplier = 1.0;
@@ -208,10 +250,21 @@ serve(async (req) => {
           const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
 
           if (actualSales > 0) {
-            // Round to integers for DB columns (unit_price and total_amount are integers)
+            // Calculate gross revenue
+            const grossRevenue = actualSales * retailPrice;
+            
+            // Calculate tax and distribution deductions
+            const distributionRate = getDistributionRate(format.format_type);
+            const salesTaxAmount = Math.round(grossRevenue * salesTaxRate * 100) / 100;
+            const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
+            const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
+            
+            // Round to integers for DB columns (unit_price and total_amount are integers in cents)
             const unitPriceCents = Math.round(retailPrice * 100);
-            const revenue = actualSales * retailPrice;
-            const totalAmountCents = Math.round(revenue * 100);
+            const totalAmountCents = Math.round(grossRevenue * 100);
+            const salesTaxCents = Math.round(salesTaxAmount * 100);
+            const distributionFeeCents = Math.round(distributionFee * 100);
+            const netRevenueCents = Math.round(netRevenue * 100);
 
             await supabaseClient.from("release_sales").insert({
               release_format_id: format.id,
@@ -220,6 +273,13 @@ serve(async (req) => {
               total_amount: totalAmountCents,
               sale_date: new Date().toISOString().split("T")[0],
               platform: isDigital ? "digital_store" : "physical_store",
+              // New tax/distribution columns
+              sales_tax_amount: salesTaxCents,
+              sales_tax_rate: salesTaxRate * 100,
+              distribution_fee: distributionFeeCents,
+              distribution_rate: distributionRate * 100,
+              net_revenue: netRevenueCents,
+              city_id: homeCityId,
             });
 
             // Only decrement stock for physical formats
@@ -230,18 +290,30 @@ serve(async (req) => {
                 .eq("id", format.id);
             }
 
+            // Update release revenue with GROSS (for display purposes)
             await supabaseClient.rpc("increment_release_revenue", {
               release_id: release.id,
-              amount: revenue,
+              amount: grossRevenue,
             });
 
+            // Credit NET revenue to band (after tax + distribution)
             if (release.band_id) {
               await supabaseClient.from("band_earnings").insert({
                 band_id: release.band_id,
-                amount: revenue,
+                amount: netRevenue,
                 source: "release_sales",
-                description: `Daily sales revenue`,
-                metadata: { format: format.format_type, units: actualSales },
+                description: `Daily sales revenue (after ${Math.round(salesTaxRate * 100)}% tax + ${Math.round(distributionRate * 100)}% distribution)`,
+                metadata: { 
+                  format: format.format_type, 
+                  units: actualSales,
+                  gross_revenue: grossRevenue,
+                  sales_tax: salesTaxAmount,
+                  sales_tax_rate: salesTaxRate * 100,
+                  distribution_fee: distributionFee,
+                  distribution_rate: distributionRate * 100,
+                  net_revenue: netRevenue,
+                  city_id: homeCityId,
+                },
               });
             }
 

@@ -17179,39 +17179,64 @@ export type Database = {
       }
       release_sales: {
         Row: {
+          city_id: string | null
           country: string | null
           created_at: string
+          distribution_fee: number | null
+          distribution_rate: number | null
           id: string
+          net_revenue: number | null
           platform: string | null
           quantity_sold: number
           release_format_id: string
           sale_date: string
+          sales_tax_amount: number | null
+          sales_tax_rate: number | null
           total_amount: number
           unit_price: number
         }
         Insert: {
+          city_id?: string | null
           country?: string | null
           created_at?: string
+          distribution_fee?: number | null
+          distribution_rate?: number | null
           id?: string
+          net_revenue?: number | null
           platform?: string | null
           quantity_sold?: number
           release_format_id: string
           sale_date?: string
+          sales_tax_amount?: number | null
+          sales_tax_rate?: number | null
           total_amount: number
           unit_price: number
         }
         Update: {
+          city_id?: string | null
           country?: string | null
           created_at?: string
+          distribution_fee?: number | null
+          distribution_rate?: number | null
           id?: string
+          net_revenue?: number | null
           platform?: string | null
           quantity_sold?: number
           release_format_id?: string
           sale_date?: string
+          sales_tax_amount?: number | null
+          sales_tax_rate?: number | null
           total_amount?: number
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "release_sales_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "release_sales_release_format_id_fkey"
             columns: ["release_format_id"]
