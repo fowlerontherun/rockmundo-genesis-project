@@ -2,15 +2,15 @@
 
 export const MohawkHairSvg = () => (
   <svg viewBox="0 0 512 1024" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    {/* Mohawk spikes */}
-    <path d="M256 30 L240 60 L250 55 L256 25 L262 55 L272 60 Z" fill="#e63946" />
-    <path d="M256 10 L245 45 L252 40 L256 5 L260 40 L267 45 Z" fill="#e63946" />
-    <path d="M256 45 L235 75 L248 70 L256 40 L264 70 L277 75 Z" fill="#e63946" />
-    {/* Hair base */}
-    <path d="M210 80 L200 110 L220 130 L256 135 L292 130 L312 110 L302 80 Q256 60 210 80" fill="#e63946" />
-    {/* Shaved sides */}
-    <ellipse cx="205" cy="100" rx="15" ry="25" fill="#d4a574" opacity="0.7" />
-    <ellipse cx="307" cy="100" rx="15" ry="25" fill="#d4a574" opacity="0.7" />
+    {/* Mohawk spikes - positioned above head */}
+    <path d="M256 -5 L240 25 L250 20 L256 -10 L262 20 L272 25 Z" fill="#e63946" />
+    <path d="M256 -25 L245 10 L252 5 L256 -30 L260 5 L267 10 Z" fill="#e63946" />
+    <path d="M256 10 L235 40 L248 35 L256 5 L264 35 L277 40 Z" fill="#e63946" />
+    {/* Hair base - wraps around crown of head */}
+    <path d="M210 45 L200 75 L220 95 L256 100 L292 95 L312 75 L302 45 Q256 25 210 45" fill="#e63946" />
+    {/* Shaved sides - on temples */}
+    <ellipse cx="205" cy="65" rx="15" ry="25" fill="#d4a574" opacity="0.7" />
+    <ellipse cx="307" cy="65" rx="15" ry="25" fill="#d4a574" opacity="0.7" />
   </svg>
 );
 
