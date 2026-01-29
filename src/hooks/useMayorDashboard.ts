@@ -24,13 +24,17 @@ export function useCityMayor(cityId: string | undefined) {
       // Fetch profile separately
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, stage_name, avatar_url")
+        .select("id, display_name, avatar_url")
         .eq("id", data.profile_id)
         .single();
       
       return {
         ...data,
-        profile: profile || undefined
+        profile: profile ? {
+          id: profile.id,
+          stage_name: profile.display_name,
+          avatar_url: profile.avatar_url,
+        } : undefined
       } as unknown as CityMayor;
     },
     enabled: !!cityId,
@@ -90,13 +94,17 @@ export function useMayorHistory(cityId: string | undefined) {
         (data || []).map(async (mayor) => {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("id, stage_name, avatar_url")
+            .select("id, display_name, avatar_url")
             .eq("id", mayor.profile_id)
             .single();
           
           return {
             ...mayor,
-            profile: profile || undefined
+            profile: profile ? {
+              id: profile.id,
+              stage_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+            } : undefined
           };
         })
       );
