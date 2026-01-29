@@ -1,281 +1,271 @@
 
 
-# Massive Gear Seed & Brand System
-**Version: 1.0.576**
+# Character Creator Hair Fix & Massive Content Expansion
+**Version: 1.0.579**
 
 ## Overview
-This update will massively expand the gear catalog to match all instrument skills in the game, add brand/manufacturer support with optional logos, and introduce color variants for visual diversity.
+
+This update fixes the hair positioning issue where hair layers overlap and cover the eyes/face, and massively expands the character creator with new faces, clothing, and accessories inspired by various musical genres and fashion styles.
 
 ---
 
-## Database Schema Changes
+## Part 1: Hair Layer Positioning Fix
 
-### 1. Add New Columns to `equipment_items`
+### Root Cause Analysis
 
-```sql
-ALTER TABLE equipment_items 
-ADD COLUMN brand text,
-ADD COLUMN brand_logo_url text,
-ADD COLUMN color_options jsonb DEFAULT '[]'::jsonb,
-ADD COLUMN skill_boost_slug text;
+The current coordinate system:
+- Head center: Y = 100
+- Head top (crown): Y = 35 (100 - 65 radius)
+- Eyes: Y = 90
+- Mouth: Y = 140
+
+Current hair Y coordinates are too low:
+- Mohawk base extends to Y = 100
+- Pixie extends from Y = 45 to Y = 135
+- Emo back hair extends from Y = 60 to Y = 175 (covering entire face)
+- Afro centers at Y = 80 with radius 80 (extends to Y = 160)
+
+### Solution: Reposition All Hair Layers
+
+Hair should sit on the crown of the head (Y = 20-60 maximum), with only the very bottom edge potentially reaching the forehead area (Y = 70 maximum, well above eyes at Y = 90).
+
+```text
+Hair Layer Positioning Guide (512x1024 viewBox)
++------------------------------------------------+
+| Y = 0-20   : Hair spikes/top extensions        |
+| Y = 20-50  : Main hair mass (crown area)       |
+| Y = 50-70  : Hair base/fringe (above eyes)     |
++------------------------------------------------+
+| Y = 90     : Eyes (MUST NOT be covered)        |
+| Y = 100    : Head center                       |
+| Y = 140    : Mouth                             |
++------------------------------------------------+
 ```
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| `brand` | text | Manufacturer name (e.g., "Fender", "Gibson", "Roland") |
-| `brand_logo_url` | text | URL to brand logo image (optional) |
-| `color_options` | jsonb | Array of available colors (e.g., `["Sunburst", "Jet Black", "Arctic White"]`) |
-| `skill_boost_slug` | text | Links to skill_definitions for stat boosts |
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/character-creator/svg-sprites/HairLayers.tsx` | Reposition all 4 hair styles |
 
 ---
 
-## Brand Catalog (Real-World Inspired)
+## Part 2: Expanded Character Content
 
-### Guitars & Strings
-| Brand | Style | Price Tier |
-|-------|-------|------------|
-| Fender | American classic, versatile | Epic/Legendary |
-| Gibson | Rock heritage, warm tones | Rare/Epic |
-| PRS (Paul Reed Smith) | Premium boutique | Epic/Legendary |
-| Ibanez | Shred, metal, versatile | Uncommon/Rare |
-| Martin | Acoustic excellence | Rare/Epic |
-| Taylor | Modern acoustic | Rare/Epic |
-| Epiphone | Gibson budget line | Common/Uncommon |
-| Squier | Fender budget line | Common/Uncommon |
-| Jackson | Metal specialist | Rare |
-| ESP/LTD | Metal & rock | Rare/Epic |
-| Gretsch | Rockabilly, hollow body | Rare/Epic |
-| Rickenbacker | Jangly, British invasion | Epic |
-| Music Man | Premium, active electronics | Epic |
-| Yamaha | Reliable all-rounder | Common/Uncommon |
-| Schecter | Modern metal | Uncommon/Rare |
+### New Hair Styles (20 total, up from 4)
 
-### Bass
-| Brand | Style |
-|-------|-------|
-| Fender | P-Bass, J-Bass classics |
-| Music Man | StingRay, active tone |
-| Warwick | German precision |
-| Rickenbacker | Progressive rock |
-| Ibanez | Fast necks, modern |
+| Style | Genre/Fashion | Color |
+|-------|---------------|-------|
+| Mohawk | Punk | Red |
+| Liberty Spikes | Punk | Green |
+| Dreadlocks | Reggae | Brown |
+| Long Rocker | Metal | Black |
+| Mullet | Classic Rock | Brown |
+| Buzz Cut | Military/Skinhead | Dark |
+| Pompadour | Rockabilly | Black |
+| Undercut | Modern | Blonde |
+| Afro | Funk/Soul | Black |
+| Braids | Hip-Hop | Black |
+| Pigtails | Pop/Kawaii | Pink |
+| Messy Bob | Indie | Auburn |
+| Curtains | 90s Britpop | Brown |
+| Shaggy | Grunge | Dirty Blonde |
+| Slicked Back | Disco/Synth | Black |
+| Pixie | Pop | Blonde |
+| Emo Fringe | Emo | Black/Purple |
+| Cornrows | Hip-Hop | Black |
+| Viking | Folk Metal | Ginger |
+| Bun | Various | Brown |
 
-### Keyboards & Pianos
-| Brand | Style |
-|-------|-------|
-| Nord | Red stage keyboards |
-| Roland | Versatile, reliable |
-| Korg | Synths & workstations |
-| Yamaha | Pianos & stage keyboards |
-| Moog | Analog synth legend |
-| Sequential | Prophet synths |
-| Arturia | Hybrid analog/digital |
+### New Eye Styles (8 total, up from 2)
 
-### Drums & Percussion
-| Brand | Style |
-|-------|-------|
-| DW (Drum Workshop) | Premium American |
-| Pearl | Japanese precision |
-| Tama | Starclassic excellence |
-| Ludwig | Classic American |
-| Gretsch | Jazz heritage |
-| Zildjian | Cymbal masters |
-| Sabian | Canadian cymbals |
-| Meinl | Percussion specialist |
-| Roland | Electronic drums |
+| Style | Description |
+|-------|-------------|
+| Neutral | Default relaxed |
+| Intense | Narrowed, focused |
+| Wide | Surprised/excited |
+| Sleepy | Half-closed |
+| Winking | One eye closed |
+| Cat Eye | Stylized makeup |
+| Smoky | Heavy eyeliner |
+| Starry | Sparkle effect |
 
-### Microphones
-| Brand | Style |
-|-------|-------|
-| Shure | Industry standard |
-| Neumann | Studio legend |
-| Sennheiser | German engineering |
-| AKG | Austrian quality |
-| Audio-Technica | Value champions |
-| Rode | Australian innovation |
+### New Mouth Styles (8 total, up from 2)
 
-### Audio Equipment
-| Brand | Style |
-|-------|-------|
-| Focusrite | Scarlett interfaces |
-| Universal Audio | Premium converters |
-| PreSonus | Studio solutions |
-| Behringer | Budget gear |
-| Mackie | Mixers & monitors |
+| Style | Description |
+|-------|-------------|
+| Neutral | Default |
+| Smile | Happy |
+| Singing | Open wide |
+| Smirk | One-sided |
+| Pout | Lips pursed |
+| Grin | Teeth showing |
+| Shouting | Rock yell |
+| Kiss | Lips puckered |
 
----
+### New Facial Hair (6 total, up from 1)
 
-## Color Variants by Instrument Type
+| Style | Description |
+|-------|-------------|
+| Full Beard | Classic |
+| Goatee | Chin only |
+| Stubble | 5 o'clock shadow |
+| Handlebar | Curled mustache |
+| Soul Patch | Small chin patch |
+| Mutton Chops | Sideburns |
 
-### Guitars
-- **Solid Colors**: Jet Black, Arctic White, Candy Apple Red, Lake Placid Blue, Surf Green, Vintage Sunburst, Olympic White
-- **Wood Finishes**: Natural, Tobacco Sunburst, Cherry Burst, Honeyburst
-- **Special**: Gold Top, Silverburst, Seafoam Green, Shell Pink
+### New Shirts (12 total, up from 1)
 
-### Basses
-- Black, White, Sunburst, Natural, Vintage White, Lake Placid Blue
+| Item | Genre | Colors |
+|------|-------|--------|
+| Band Tee | Rock | Black |
+| Flannel | Grunge | Red plaid |
+| Hawaiian | Indie | Floral |
+| Ripped Tee | Punk | White torn |
+| Polo | Mod | Blue |
+| Crop Top | Pop | Pink |
+| Tank Top | Metal | Black |
+| Turtleneck | Goth | Black |
+| Jersey | Hip-Hop | Red/White |
+| Tie-Dye | Psychedelic | Rainbow |
+| Blazer Shirt | Britpop | Navy |
+| Mesh Top | Rave | Black |
 
-### Keyboards/Synths
-- Black, White, Red (Nord), Wood panels
+### New Jackets (8 total, up from 2)
 
-### Drums
-- Black, White, Red, Blue, Natural Maple, Cherry, Champagne Sparkle, Black Galaxy
+| Item | Genre | Colors |
+|------|-------|--------|
+| Leather | Punk/Metal | Black |
+| Hoodie | Casual | Gray |
+| Denim Vest | Country | Blue |
+| Varsity | Americana | Red/White |
+| Military | Industrial | Olive |
+| Trench Coat | Goth | Black |
+| Track Jacket | Hip-Hop | Red |
+| Cardigan | Indie | Beige |
 
----
+### New Bottoms (8 total, up from 2)
 
-## Seeded Instruments (Matching Skills)
+| Item | Genre | Colors |
+|------|-------|--------|
+| Skinny Jeans | Rock | Black |
+| Cargo Shorts | Skate | Khaki |
+| Ripped Jeans | Punk | Blue |
+| Leather Pants | Metal | Black |
+| Track Pants | Hip-Hop | Black/White |
+| Pleated Skirt | Goth/Kawaii | Black |
+| Kilts | Celtic | Tartan |
+| Bell Bottoms | Disco | Denim |
 
-### Electric Guitars (~20 items)
-| Item | Brand | Rarity | Price | Colors |
-|------|-------|--------|-------|--------|
-| Squier Affinity Stratocaster | Squier | Common | $250 | Black, White, Sunburst |
-| Epiphone Les Paul Standard | Epiphone | Uncommon | $450 | Cherry, Ebony |
-| Fender Player Stratocaster | Fender | Rare | $850 | Sunburst, Black, White, Blue |
-| Gibson SG Standard | Gibson | Rare | $1,600 | Cherry, Ebony |
-| PRS SE Custom 24 | PRS | Rare | $900 | Charcoal Burst, Blue |
-| Ibanez RG550 | Ibanez | Rare | $1,000 | Road Flare Red, Desert Sun Yellow |
-| Fender American Professional II | Fender | Epic | $1,800 | Sunburst, Miami Blue, Dark Night |
-| Gibson Les Paul Standard | Gibson | Epic | $2,700 | Honeyburst, Ebony, Gold Top |
-| PRS Custom 24 | PRS | Epic | $4,200 | 10-Top Quilt finishes |
-| Gibson Custom Shop 1959 Les Paul | Gibson | Legendary | $6,500 | Aged Cherry Sunburst |
-| Fender Custom Shop Stratocaster | Fender | Legendary | $5,500 | Relic finishes |
+### New Footwear (8 total, up from 2)
 
-### Acoustic Guitars (~10 items)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Yamaha FG800 | Yamaha | Common | $200 |
-| Fender CD-60S | Fender | Common | $230 |
-| Taylor 110e | Taylor | Uncommon | $800 |
-| Martin D-15M | Martin | Rare | $1,400 |
-| Taylor 314ce | Taylor | Rare | $1,900 |
-| Martin D-28 | Martin | Epic | $3,300 |
-| Gibson J-45 Standard | Gibson | Epic | $2,700 |
-| Martin D-45 | Martin | Legendary | $10,000 |
+| Item | Genre | Colors |
+|------|-------|--------|
+| Combat Boots | Punk | Black |
+| High Tops | Skate | Red |
+| Cowboy Boots | Country | Brown |
+| Platform Boots | Goth | Black |
+| Sandals | Hippie | Brown |
+| Dress Shoes | Mod | Black |
+| Sneakers | Hip-Hop | White |
+| Creepers | Rockabilly | Black/Leopard |
 
-### Bass Guitars (~10 items)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Squier Affinity P-Bass | Squier | Common | $250 |
-| Fender Player Jazz Bass | Fender | Rare | $900 |
-| Music Man StingRay Special | Music Man | Epic | $2,400 |
-| Fender American Ultra Jazz Bass | Fender | Epic | $2,200 |
-| Warwick Thumb NT | Warwick | Legendary | $5,000 |
+### New Accessories
 
-### Keyboards & Synths (~15 items)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Casio CT-S300 | Casio | Common | $150 |
-| Yamaha PSR-E373 | Yamaha | Common | $200 |
-| Roland Juno-DS61 | Roland | Uncommon | $700 |
-| Korg Minilogue XD | Korg | Rare | $650 |
-| Nord Electro 6D | Nord | Epic | $2,800 |
-| Moog Subsequent 37 | Moog | Epic | $1,800 |
-| Nord Stage 4 | Nord | Legendary | $5,500 |
-| Moog One | Moog | Legendary | $9,000 |
+**Hats (8 total):**
+| Item | Genre |
+|------|-------|
+| Beanie | Various |
+| Fedora | Ska/Jazz |
+| Cowboy Hat | Country |
+| Bandana | Biker |
+| Top Hat | Steampunk |
+| Snapback | Hip-Hop |
+| Beret | Beatnik |
+| Bucket Hat | 90s |
 
-### Drums & Percussion (~15 items)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Pearl Export EXX | Pearl | Common | $800 |
-| Tama Imperialstar | Tama | Uncommon | $1,000 |
-| Gretsch Catalina Maple | Gretsch | Rare | $1,200 |
-| DW Performance Series | DW | Epic | $3,500 |
-| Ludwig Classic Maple | Ludwig | Epic | $3,000 |
-| DW Collector's Series | DW | Legendary | $6,000 |
-| Roland TD-27KV | Roland | Rare | $3,500 |
-| Roland TD-50KV2 | Roland | Epic | $8,000 |
+**Glasses (6 total):**
+| Item | Genre |
+|------|-------|
+| Aviators | Classic |
+| Round Lennons | 60s |
+| Cat Eye | Vintage |
+| Sport Wrap | 80s |
+| Tiny Ovals | Y2K |
+| Neon Shutter | Rave |
 
-### Wind Instruments (~15 items)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Yamaha YAS-280 Alto Sax | Yamaha | Common | $1,400 |
-| Yamaha YTR-2330 Trumpet | Yamaha | Common | $600 |
-| Selmer Paris Reference 54 Alto | Selmer | Epic | $8,000 |
-| Bach Stradivarius 180S37 | Bach | Epic | $4,500 |
-| Yamaha YFL-222 Flute | Yamaha | Common | $700 |
-| Buffet Crampon R13 Clarinet | Buffet | Epic | $4,000 |
-
-### DJ & Electronic (~10 items)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Numark Mixtrack Pro FX | Numark | Common | $350 |
-| Pioneer DDJ-400 | Pioneer DJ | Uncommon | $300 |
-| Pioneer DDJ-1000 | Pioneer DJ | Rare | $1,200 |
-| Technics SL-1200MK7 | Technics | Epic | $1,100 |
-| Pioneer CDJ-3000 | Pioneer DJ | Legendary | $2,400 |
-
-### Microphones (~8 items - expand existing)
-| Item | Brand | Rarity | Price |
-|------|-------|--------|-------|
-| Audio-Technica AT2020 | Audio-Technica | Uncommon | $100 |
-| Rode NT1-A | Rode | Rare | $230 |
-| AKG C414 XLII | AKG | Epic | $1,100 |
+**Extra Accessories (New category):**
+| Item | Genre |
+|------|-------|
+| Earrings (Hoops) | Various |
+| Earrings (Studs) | Punk |
+| Nose Ring | Punk |
+| Lip Ring | Emo |
+| Chain Necklace | Metal |
+| Choker | Goth |
+| Bandanna | Biker |
+| Headphones | DJ |
 
 ---
 
-## Brand Logos (Technical Approach)
+## Part 3: Technical Implementation
 
-### Option A: Store URLs (Recommended)
-Use the `brand_logo_url` column to store URLs to brand logos. These could be:
-1. **Public CDN URLs** - Link to official brand assets (licensing concerns)
-2. **Supabase Storage** - Upload approved logos to your own bucket
-3. **Placeholder icons** - Use generic instrument icons per category
+### New Files
 
-### Option B: Icon-Based System
-Instead of real logos, use a `brand_icon` field that maps to Lucide icons:
-```typescript
-const brandIcons = {
-  "Fender": "guitar",
-  "Roland": "piano",
-  "DW": "drum",
-  // etc.
-}
-```
-
-**Recommendation**: Start with Option B (icons) to avoid trademark issues, then optionally add actual brand logos later via Supabase Storage with proper licensing.
-
----
-
-## Implementation Summary
-
-| File | Changes |
+| File | Purpose |
 |------|---------|
-| `supabase/migrations/[new].sql` | Add columns + seed ~120 items |
-| `src/types/gear.ts` | Add brand, color types |
-| `src/pages/admin/GearItemsAdmin.tsx` | Add brand/color form fields |
-| `src/components/gear/GearCard.tsx` | Display brand + color options |
-| `src/components/VersionHeader.tsx` | Version bump |
-| `src/pages/VersionHistory.tsx` | Changelog entry |
+| `svg-sprites/HairLayersExpanded.tsx` | 16 additional hair SVGs |
+| `svg-sprites/FaceLayersExpanded.tsx` | New eyes, mouths, facial hair |
+| `svg-sprites/ClothingLayersExpanded.tsx` | New shirts, jackets, bottoms, shoes |
+| `svg-sprites/AccessoryLayersExpanded.tsx` | New hats, glasses, piercings |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `svg-sprites/HairLayers.tsx` | Fix Y coordinates for all 4 existing styles |
+| `svg-sprites/index.ts` | Export new components |
+| `SvgSpriteCanvas.tsx` | Add new component mappings |
+| `SvgCharacterCreator.tsx` | Add new options to picker |
+| `VersionHeader.tsx` | Version bump to 1.0.579 |
+| `VersionHistory.tsx` | Changelog entry |
+
+### SVG Coordinate Updates Summary
+
+**Mohawk (Before -> After):**
+- Spikes: Y=-25 to Y=40 -> Y=-30 to Y=20
+- Base: Y=25 to Y=100 -> Y=10 to Y=55
+
+**Pixie (Before -> After):**
+- Main: Y=45 to Y=135 -> Y=20 to Y=60
+- Wisps: Y=90 to Y=115 -> Removed (too low)
+
+**Emo (Before -> After):**
+- Back: Y=60 to Y=175 -> Y=25 to Y=65
+- Fringe: Y=70 to Y=160 -> Y=35 to Y=70 (partial eye coverage is intentional for emo style)
+
+**Afro (Before -> After):**
+- Center: Y=80 -> Y=35
+- Radius: 80 -> 50 (prevents extending below Y=85)
 
 ---
 
-## Stat Boost Mappings
+## Summary Statistics
 
-Each instrument will boost its matching skill:
-```typescript
-// Example stat_boosts
-{ "instruments_basic_electric_guitar": 5, "performance": 2 }
-{ "instruments_professional_jazz_piano": 10, "performance": 5 }
-```
+| Category | Before | After |
+|----------|--------|-------|
+| Hair Styles | 4 | 20 |
+| Eye Styles | 2 | 8 |
+| Mouth Styles | 2 | 8 |
+| Facial Hair | 1 | 6 |
+| Shirts | 1 | 12 |
+| Jackets | 2 | 8 |
+| Bottoms | 2 | 8 |
+| Footwear | 2 | 8 |
+| Hats | 1 | 8 |
+| Glasses | 1 | 6 |
+| Piercings/Extras | 0 | 8 |
+| **Total Options** | **18** | **100** |
 
----
-
-## Total Seeded Items
-
-| Category | Count |
-|----------|-------|
-| Electric Guitars | ~20 |
-| Acoustic Guitars | ~10 |
-| Classical Guitars | ~5 |
-| Bass Guitars | ~10 |
-| Keyboards/Synths | ~15 |
-| Drums | ~10 |
-| Percussion | ~8 |
-| Saxophones | ~6 |
-| Trumpets/Brass | ~8 |
-| Flutes/Winds | ~8 |
-| Violins/Strings | ~6 |
-| DJ Equipment | ~10 |
-| Microphones | ~8 |
-| Audio Equipment | ~6 |
-| **Total** | **~130 items** |
+This creates a rich character customization system spanning multiple musical genres and fashion subcultures.
 
