@@ -6226,6 +6226,198 @@ export type Database = {
         }
         Relationships: []
       }
+      gear_marketplace_listings: {
+        Row: {
+          allow_negotiation: boolean | null
+          asking_price: number
+          condition_at_listing: number
+          condition_description: string | null
+          created_at: string | null
+          description: string | null
+          equipment_id: string
+          expires_at: string | null
+          featured: boolean | null
+          id: string
+          listing_status: string
+          min_acceptable_price: number | null
+          player_equipment_id: string
+          seller_user_id: string
+          sold_at: string | null
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          allow_negotiation?: boolean | null
+          asking_price: number
+          condition_at_listing?: number
+          condition_description?: string | null
+          created_at?: string | null
+          description?: string | null
+          equipment_id: string
+          expires_at?: string | null
+          featured?: boolean | null
+          id?: string
+          listing_status?: string
+          min_acceptable_price?: number | null
+          player_equipment_id: string
+          seller_user_id: string
+          sold_at?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          allow_negotiation?: boolean | null
+          asking_price?: number
+          condition_at_listing?: number
+          condition_description?: string | null
+          created_at?: string | null
+          description?: string | null
+          equipment_id?: string
+          expires_at?: string | null
+          featured?: boolean | null
+          id?: string
+          listing_status?: string
+          min_acceptable_price?: number | null
+          player_equipment_id?: string
+          seller_user_id?: string
+          sold_at?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_marketplace_listings_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gear_marketplace_listings_player_equipment_id_fkey"
+            columns: ["player_equipment_id"]
+            isOneToOne: true
+            referencedRelation: "player_equipment_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gear_marketplace_offers: {
+        Row: {
+          buyer_user_id: string
+          counter_amount: number | null
+          counter_message: string | null
+          created_at: string | null
+          id: string
+          listing_id: string
+          message: string | null
+          offer_amount: number
+          responded_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_user_id: string
+          counter_amount?: number | null
+          counter_message?: string | null
+          created_at?: string | null
+          id?: string
+          listing_id: string
+          message?: string | null
+          offer_amount: number
+          responded_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_user_id?: string
+          counter_amount?: number | null
+          counter_message?: string | null
+          created_at?: string | null
+          id?: string
+          listing_id?: string
+          message?: string | null
+          offer_amount?: number
+          responded_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_marketplace_offers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "gear_marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gear_marketplace_transactions: {
+        Row: {
+          buyer_user_id: string
+          condition_at_sale: number
+          created_at: string | null
+          equipment_id: string
+          id: string
+          listing_id: string
+          new_equipment_inventory_id: string | null
+          platform_fee: number | null
+          sale_price: number
+          seller_received: number
+          seller_user_id: string
+          transaction_date: string | null
+        }
+        Insert: {
+          buyer_user_id: string
+          condition_at_sale: number
+          created_at?: string | null
+          equipment_id: string
+          id?: string
+          listing_id: string
+          new_equipment_inventory_id?: string | null
+          platform_fee?: number | null
+          sale_price: number
+          seller_received: number
+          seller_user_id: string
+          transaction_date?: string | null
+        }
+        Update: {
+          buyer_user_id?: string
+          condition_at_sale?: number
+          created_at?: string | null
+          equipment_id?: string
+          id?: string
+          listing_id?: string
+          new_equipment_inventory_id?: string | null
+          platform_fee?: number | null
+          sale_price?: number
+          seller_received?: number
+          seller_user_id?: string
+          transaction_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_marketplace_transactions_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gear_marketplace_transactions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "gear_marketplace_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gear_marketplace_transactions_new_equipment_inventory_id_fkey"
+            columns: ["new_equipment_inventory_id"]
+            isOneToOne: false
+            referencedRelation: "player_equipment_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gettit_comment_votes: {
         Row: {
           comment_id: string
@@ -23514,6 +23706,10 @@ export type Database = {
         Args: { p_follower_account_id: string }
         Returns: number
       }
+      calculate_gear_market_value: {
+        Args: { p_base_price: number; p_condition: number; p_rarity: string }
+        Returns: number
+      }
       calculate_predicted_tickets: {
         Args: {
           p_band_id: string
@@ -23672,6 +23868,14 @@ export type Database = {
       }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      process_gear_sale: {
+        Args: {
+          p_buyer_user_id: string
+          p_listing_id: string
+          p_sale_price: number
+        }
+        Returns: string
+      }
       process_radio_submission: {
         Args: { p_submission_id: string }
         Returns: Json
