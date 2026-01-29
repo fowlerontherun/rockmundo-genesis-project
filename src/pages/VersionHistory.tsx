@@ -14,6 +14,27 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.576",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "Gear: Massive catalog expansion with 130+ new instruments seeded" },
+      { type: 'feature', description: "Gear: Brand support added - 50+ real-world manufacturers (Fender, Gibson, PRS, Roland, Moog, etc.)" },
+      { type: 'feature', description: "Gear: Color options for instruments (Sunburst, Lake Placid Blue, Candy Apple Red, etc.)" },
+      { type: 'feature', description: "Gear: Skill boost linking - instruments boost matching skill tracks" },
+      { type: 'feature', description: "Gear: 20 electric guitars from Squier to Gibson Custom Shop" },
+      { type: 'feature', description: "Gear: 13 acoustic guitars from Yamaha to Martin D-45" },
+      { type: 'feature', description: "Gear: 12 bass guitars from Ibanez to Fodera Emperor" },
+      { type: 'feature', description: "Gear: 16 keyboards/synths including Nord Stage 4, Moog One, Prophet-6" },
+      { type: 'feature', description: "Gear: 16 drums including DW Collectors, Roland TD-50KV2, Meinl cymbals" },
+      { type: 'feature', description: "Gear: 12 wind instruments (saxophones, flutes, clarinets, harmonicas)" },
+      { type: 'feature', description: "Gear: 10 brass instruments (trumpets, trombones, French horns)" },
+      { type: 'feature', description: "Gear: 11 DJ/electronic items (Pioneer CDJ-3000, Technics SL-1200MK7)" },
+      { type: 'feature', description: "Gear: 10 microphones (Shure SM7B, Neumann U87, AKG C414)" },
+      { type: 'feature', description: "Gear: 9 audio interfaces (Focusrite Scarlett, Universal Audio Apollo)" },
+      { type: 'improvement', description: "Database: Added brand, brand_logo_url, color_options, skill_boost_slug, price_cash, price_fame columns" },
+    ],
+  },
+  {
     version: "1.0.575",
     date: "2026-01-29",
     changes: [

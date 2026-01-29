@@ -5407,40 +5407,58 @@ export type Database = {
       }
       equipment_items: {
         Row: {
+          brand: string | null
+          brand_logo_url: string | null
           category: string
+          color_options: Json | null
           created_at: string | null
           description: string | null
           id: string
           image_url: string | null
           name: string
           price: number
+          price_cash: number | null
+          price_fame: number | null
           rarity: string | null
+          skill_boost_slug: string | null
           stat_boosts: Json | null
           stock: number | null
           subcategory: string | null
         }
         Insert: {
+          brand?: string | null
+          brand_logo_url?: string | null
           category: string
+          color_options?: Json | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           name: string
           price: number
+          price_cash?: number | null
+          price_fame?: number | null
           rarity?: string | null
+          skill_boost_slug?: string | null
           stat_boosts?: Json | null
           stock?: number | null
           subcategory?: string | null
         }
         Update: {
+          brand?: string | null
+          brand_logo_url?: string | null
           category?: string
+          color_options?: Json | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           name?: string
           price?: number
+          price_cash?: number | null
+          price_fame?: number | null
           rarity?: string | null
+          skill_boost_slug?: string | null
           stat_boosts?: Json | null
           stock?: number | null
           subcategory?: string | null
