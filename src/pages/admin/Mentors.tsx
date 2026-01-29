@@ -32,7 +32,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, MapPin, Calendar } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -44,6 +44,16 @@ import {
 } from "./mentors.helpers";
 import { Checkbox } from "@/components/ui/checkbox";
 
+const DAY_OPTIONS = [
+  { value: "0", label: "Sunday" },
+  { value: "1", label: "Monday" },
+  { value: "2", label: "Tuesday" },
+  { value: "3", label: "Wednesday" },
+  { value: "4", label: "Thursday" },
+  { value: "5", label: "Friday" },
+  { value: "6", label: "Saturday" },
+];
+
 const Mentors = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -51,12 +61,28 @@ const Mentors = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMentor, setEditingMentor] = useState<any>(null);
 
+  // Fetch cities for dropdown
+  const { data: cities } = useQuery({
+    queryKey: ["cities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id, name, country")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: mentors, isLoading } = useQuery({
     queryKey: ["education_mentors"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("education_mentors")
-        .select("*")
+        .select(`
+          *,
+          city:cities(id, name, country)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -71,16 +97,31 @@ const Mentors = () => {
       focusSkill: focusSkillOptions[0]?.value ?? "",
       description: "",
       specialty: "",
-      cost: 0,
-      cooldownHours: 24,
-      baseXp: 100,
-      difficulty: "beginner",
+      cost: 15000,
+      cooldownHours: 168, // 1 week
+      baseXp: 500,
+      difficulty: "advanced",
       attributeKeys: [],
       requiredSkillValue: 0,
-      skillGainRatio: 1.0,
+      skillGainRatio: 2.0,
       bonusDescription: "",
     },
   });
+
+  // Extended form state for new fields
+  const [cityId, setCityId] = useState<string | null>(null);
+  const [availableDay, setAvailableDay] = useState<string | null>(null);
+  const [loreBiography, setLoreBiography] = useState("");
+  const [loreAchievement, setLoreAchievement] = useState("");
+  const [discoveryHint, setDiscoveryHint] = useState("");
+
+  const resetExtendedFields = () => {
+    setCityId(null);
+    setAvailableDay(null);
+    setLoreBiography("");
+    setLoreAchievement("");
+    setDiscoveryHint("");
+  };
 
   const createMutation = useMutation({
     mutationFn: async (values: MentorFormValues) => {
@@ -94,22 +135,28 @@ const Mentors = () => {
         base_xp: values.baseXp,
         difficulty: values.difficulty,
         attribute_keys: values.attributeKeys,
-        required_skill_value: values.requiredSkillValue,
+        required_skill_value: 0, // Always 0 now
         skill_gain_ratio: values.skillGainRatio,
         bonus_description: values.bonusDescription,
+        city_id: cityId || null,
+        available_day: availableDay ? parseInt(availableDay) : null,
+        lore_biography: loreBiography || null,
+        lore_achievement: loreAchievement || null,
+        discovery_hint: discoveryHint || null,
       });
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["education_mentors"] });
-      toast({ title: "Mentor created successfully" });
+      toast({ title: "Master created successfully" });
       setIsDialogOpen(false);
       form.reset();
+      resetExtendedFields();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error creating mentor",
+        title: "Error creating master",
         description: error.message,
         variant: "destructive",
       });
@@ -130,9 +177,14 @@ const Mentors = () => {
           base_xp: values.baseXp,
           difficulty: values.difficulty,
           attribute_keys: values.attributeKeys,
-          required_skill_value: values.requiredSkillValue,
+          required_skill_value: 0,
           skill_gain_ratio: values.skillGainRatio,
           bonus_description: values.bonusDescription,
+          city_id: cityId || null,
+          available_day: availableDay ? parseInt(availableDay) : null,
+          lore_biography: loreBiography || null,
+          lore_achievement: loreAchievement || null,
+          discovery_hint: discoveryHint || null,
         })
         .eq("id", id);
 
@@ -140,14 +192,15 @@ const Mentors = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["education_mentors"] });
-      toast({ title: "Mentor updated successfully" });
+      toast({ title: "Master updated successfully" });
       setIsDialogOpen(false);
       setEditingMentor(null);
       form.reset();
+      resetExtendedFields();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error updating mentor",
+        title: "Error updating master",
         description: error.message,
         variant: "destructive",
       });
@@ -161,11 +214,11 @@ const Mentors = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["education_mentors"] });
-      toast({ title: "Mentor deleted successfully" });
+      toast({ title: "Master deleted successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error deleting mentor",
+        title: "Error deleting master",
         description: error.message,
         variant: "destructive",
       });
@@ -188,6 +241,11 @@ const Mentors = () => {
       skillGainRatio: mentor.skill_gain_ratio,
       bonusDescription: mentor.bonus_description,
     });
+    setCityId(mentor.city_id || null);
+    setAvailableDay(mentor.available_day?.toString() || null);
+    setLoreBiography(mentor.lore_biography || "");
+    setLoreAchievement(mentor.lore_achievement || "");
+    setDiscoveryHint(mentor.discovery_hint || "");
     setIsDialogOpen(true);
   };
 
@@ -210,34 +268,35 @@ const Mentors = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Mentor Management</CardTitle>
-              <CardDescription>Create and manage education mentors</CardDescription>
+              <CardTitle>Legendary Masters Management</CardTitle>
+              <CardDescription>Create and manage legendary masters with city locations and availability</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) {
                 setEditingMentor(null);
                 form.reset();
+                resetExtendedFields();
               }
             }}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Mentor
+                  Add Master
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingMentor ? "Edit Mentor" : "Create Mentor"}</DialogTitle>
+                  <DialogTitle>{editingMentor ? "Edit Master" : "Create Master"}</DialogTitle>
                   <DialogDescription>
-                    {editingMentor ? "Update mentor details" : "Add a new mentor to the system"}
+                    {editingMentor ? "Update master details" : "Add a new legendary master"}
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <Label htmlFor="name">Name</Label>
-                      <Input id="name" {...form.register("name")} />
+                      <Input id="name" {...form.register("name")} placeholder="e.g., Marcus Stone" />
                       {form.formState.errors.name && (
                         <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                       )}
@@ -263,9 +322,6 @@ const Mentors = () => {
                           </Select>
                         )}
                       />
-                      {form.formState.errors.focusSkill && (
-                        <p className="text-sm text-destructive">{form.formState.errors.focusSkill.message}</p>
-                      )}
                     </div>
 
                     <div>
@@ -290,65 +346,100 @@ const Mentors = () => {
                       />
                     </div>
 
+                    {/* New: City Selection */}
+                    <div>
+                      <Label>
+                        <MapPin className="inline h-3 w-3 mr-1" />
+                        City Location
+                      </Label>
+                      <Select value={cityId || ""} onValueChange={(v) => setCityId(v || null)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select city..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No specific city</SelectItem>
+                          {cities?.map((city) => (
+                            <SelectItem key={city.id} value={city.id}>
+                              {city.name}, {city.country}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* New: Available Day */}
+                    <div>
+                      <Label>
+                        <Calendar className="inline h-3 w-3 mr-1" />
+                        Available Day
+                      </Label>
+                      <Select value={availableDay || ""} onValueChange={(v) => setAvailableDay(v || null)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Any day..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Any day</SelectItem>
+                          {DAY_OPTIONS.map((day) => (
+                            <SelectItem key={day.value} value={day.value}>
+                              {day.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="col-span-2">
                       <Label htmlFor="specialty">Specialty</Label>
-                      <Input id="specialty" {...form.register("specialty")} />
-                      {form.formState.errors.specialty && (
-                        <p className="text-sm text-destructive">{form.formState.errors.specialty.message}</p>
-                      )}
+                      <Input id="specialty" {...form.register("specialty")} placeholder="e.g., Fingerstyle guitar legend" />
                     </div>
 
                     <div className="col-span-2">
                       <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" {...form.register("description")} rows={3} />
-                      {form.formState.errors.description && (
-                        <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
-                      )}
+                      <Textarea id="description" {...form.register("description")} rows={2} />
+                    </div>
+
+                    {/* New: Lore Biography */}
+                    <div className="col-span-2">
+                      <Label htmlFor="loreBiography">Lore / Biography</Label>
+                      <Textarea 
+                        id="loreBiography" 
+                        value={loreBiography}
+                        onChange={(e) => setLoreBiography(e.target.value)}
+                        rows={2}
+                        placeholder="A legendary guitarist who toured with..."
+                      />
+                    </div>
+
+                    {/* New: Discovery Hint */}
+                    <div className="col-span-2">
+                      <Label htmlFor="discoveryHint">Discovery Hint (shown to undiscovered)</Label>
+                      <Textarea 
+                        id="discoveryHint" 
+                        value={discoveryHint}
+                        onChange={(e) => setDiscoveryHint(e.target.value)}
+                        rows={2}
+                        placeholder="They say a guitar legend teaches in the jazz clubs of Nashville..."
+                      />
                     </div>
 
                     <div>
                       <Label htmlFor="cost">Cost ($)</Label>
                       <Input type="number" id="cost" {...form.register("cost")} />
-                      {form.formState.errors.cost && (
-                        <p className="text-sm text-destructive">{form.formState.errors.cost.message}</p>
-                      )}
                     </div>
 
                     <div>
                       <Label htmlFor="cooldownHours">Cooldown (hours)</Label>
                       <Input type="number" id="cooldownHours" {...form.register("cooldownHours")} />
-                      {form.formState.errors.cooldownHours && (
-                        <p className="text-sm text-destructive">{form.formState.errors.cooldownHours.message}</p>
-                      )}
                     </div>
 
                     <div>
                       <Label htmlFor="baseXp">Base XP</Label>
                       <Input type="number" id="baseXp" {...form.register("baseXp")} />
-                      {form.formState.errors.baseXp && (
-                        <p className="text-sm text-destructive">{form.formState.errors.baseXp.message}</p>
-                      )}
                     </div>
 
                     <div>
-                      <Label htmlFor="requiredSkillValue">Required Skill Level</Label>
-                      <Input type="number" id="requiredSkillValue" {...form.register("requiredSkillValue")} />
-                      {form.formState.errors.requiredSkillValue && (
-                        <p className="text-sm text-destructive">{form.formState.errors.requiredSkillValue.message}</p>
-                      )}
-                    </div>
-
-                    <div className="col-span-2">
                       <Label htmlFor="skillGainRatio">Skill Gain Ratio</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        id="skillGainRatio"
-                        {...form.register("skillGainRatio")}
-                      />
-                      {form.formState.errors.skillGainRatio && (
-                        <p className="text-sm text-destructive">{form.formState.errors.skillGainRatio.message}</p>
-                      )}
+                      <Input type="number" step="0.1" id="skillGainRatio" {...form.register("skillGainRatio")} />
                     </div>
 
                     <div className="col-span-2">
@@ -380,17 +471,11 @@ const Mentors = () => {
                           </div>
                         )}
                       />
-                      {form.formState.errors.attributeKeys && (
-                        <p className="text-sm text-destructive">{form.formState.errors.attributeKeys.message}</p>
-                      )}
                     </div>
 
                     <div className="col-span-2">
                       <Label htmlFor="bonusDescription">Bonus Description</Label>
                       <Textarea id="bonusDescription" {...form.register("bonusDescription")} rows={2} />
-                      {form.formState.errors.bonusDescription && (
-                        <p className="text-sm text-destructive">{form.formState.errors.bonusDescription.message}</p>
-                      )}
                     </div>
                   </div>
 
@@ -402,6 +487,7 @@ const Mentors = () => {
                         setIsDialogOpen(false);
                         setEditingMentor(null);
                         form.reset();
+                        resetExtendedFields();
                       }}
                     >
                       Cancel
@@ -423,7 +509,7 @@ const Mentors = () => {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search mentors..."
+                placeholder="Search masters..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -439,9 +525,9 @@ const Mentors = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Focus Skill</TableHead>
-                  <TableHead>Difficulty</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead>Day</TableHead>
                   <TableHead>Cost</TableHead>
-                  <TableHead>Base XP</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -450,12 +536,27 @@ const Mentors = () => {
                 {filteredMentors?.map((mentor) => (
                   <TableRow key={mentor.id}>
                     <TableCell className="font-medium">{mentor.name}</TableCell>
-                    <TableCell>{mentor.focus_skill}</TableCell>
+                    <TableCell className="text-xs">{mentor.focus_skill}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{mentor.difficulty}</Badge>
+                      {mentor.city ? (
+                        <Badge variant="outline" className="text-xs">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {mentor.city.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Any</span>
+                      )}
                     </TableCell>
-                    <TableCell>${mentor.cost}</TableCell>
-                    <TableCell>{mentor.base_xp} XP</TableCell>
+                    <TableCell>
+                      {mentor.available_day !== null ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {DAY_OPTIONS.find(d => d.value === mentor.available_day?.toString())?.label || 'Unknown'}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Any</span>
+                      )}
+                    </TableCell>
+                    <TableCell>${mentor.cost.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant={mentor.is_active ? "default" : "secondary"}>
                         {mentor.is_active ? "Active" : "Inactive"}
@@ -474,7 +575,7 @@ const Mentors = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            if (confirm("Are you sure you want to delete this mentor?")) {
+                            if (confirm("Are you sure you want to delete this master?")) {
                               deleteMutation.mutate(mentor.id);
                             }
                           }}
