@@ -2199,6 +2199,60 @@ export type Database = {
           },
         ]
       }
+      character_origins: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          reputation_modifiers: Json
+          skill_bonuses: Json
+          starting_cash: number
+          starting_fame: number
+          tagline: string
+          unlock_requirements: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          reputation_modifiers?: Json
+          skill_bonuses?: Json
+          starting_cash?: number
+          starting_fame?: number
+          tagline: string
+          unlock_requirements?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          reputation_modifiers?: Json
+          skill_bonuses?: Json
+          starting_cash?: number
+          starting_fame?: number
+          tagline?: string
+          unlock_requirements?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       character_sprite_assets: {
         Row: {
           anchor_x: number | null
@@ -11359,6 +11413,72 @@ export type Database = {
           },
         ]
       }
+      npc_relationships: {
+        Row: {
+          affinity_score: number
+          created_at: string
+          id: string
+          interaction_count: number
+          last_interaction_at: string | null
+          notes: Json | null
+          npc_id: string
+          npc_name: string
+          npc_type: string
+          profile_id: string
+          relationship_stage: string
+          respect_score: number
+          trust_score: number
+          updated_at: string
+        }
+        Insert: {
+          affinity_score?: number
+          created_at?: string
+          id?: string
+          interaction_count?: number
+          last_interaction_at?: string | null
+          notes?: Json | null
+          npc_id: string
+          npc_name: string
+          npc_type: string
+          profile_id: string
+          relationship_stage?: string
+          respect_score?: number
+          trust_score?: number
+          updated_at?: string
+        }
+        Update: {
+          affinity_score?: number
+          created_at?: string
+          id?: string
+          interaction_count?: number
+          last_interaction_at?: string | null
+          notes?: Json | null
+          npc_id?: string
+          npc_name?: string
+          npc_type?: string
+          profile_id?: string
+          relationship_stage?: string
+          respect_score?: number
+          trust_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "npc_relationships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_relationships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       open_mic_performances: {
         Row: {
           band_id: string | null
@@ -11779,6 +11899,51 @@ export type Database = {
           required_genre?: string | null
           required_skill?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      personality_traits: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          display_order: number
+          gameplay_effects: Json
+          icon: string | null
+          id: string
+          incompatible_with: string[] | null
+          is_active: boolean
+          key: string
+          name: string
+          reputation_tendencies: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          display_order?: number
+          gameplay_effects?: Json
+          icon?: string | null
+          id?: string
+          incompatible_with?: string[] | null
+          is_active?: boolean
+          key: string
+          name: string
+          reputation_tendencies?: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          gameplay_effects?: Json
+          icon?: string | null
+          id?: string
+          incompatible_with?: string[] | null
+          is_active?: boolean
+          key?: string
+          name?: string
+          reputation_tendencies?: Json
         }
         Relationships: []
       }
@@ -12524,6 +12689,86 @@ export type Database = {
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "player_book_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_character_identity: {
+        Row: {
+          backstory_generated_at: string | null
+          backstory_text: string | null
+          career_goal: string | null
+          created_at: string
+          custom_answers: Json | null
+          id: string
+          musical_style: string | null
+          onboarding_completed_at: string | null
+          onboarding_step: number
+          origin_id: string | null
+          profile_id: string
+          starting_city_id: string | null
+          trait_ids: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          backstory_generated_at?: string | null
+          backstory_text?: string | null
+          career_goal?: string | null
+          created_at?: string
+          custom_answers?: Json | null
+          id?: string
+          musical_style?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number
+          origin_id?: string | null
+          profile_id: string
+          starting_city_id?: string | null
+          trait_ids?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          backstory_generated_at?: string | null
+          backstory_text?: string | null
+          career_goal?: string | null
+          created_at?: string
+          custom_answers?: Json | null
+          id?: string
+          musical_style?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number
+          origin_id?: string | null
+          profile_id?: string
+          starting_city_id?: string | null
+          trait_ids?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_character_identity_origin_id_fkey"
+            columns: ["origin_id"]
+            isOneToOne: false
+            referencedRelation: "character_origins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_character_identity_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_character_identity_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_character_identity_starting_city_id_fkey"
+            columns: ["starting_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]
@@ -13872,6 +14117,54 @@ export type Database = {
             columns: ["imprisonment_id"]
             isOneToOne: false
             referencedRelation: "player_imprisonments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_reputation: {
+        Row: {
+          attitude_score: number
+          authenticity_score: number
+          created_at: string
+          creativity_score: number
+          id: string
+          last_updated_at: string
+          profile_id: string
+          reliability_score: number
+        }
+        Insert: {
+          attitude_score?: number
+          authenticity_score?: number
+          created_at?: string
+          creativity_score?: number
+          id?: string
+          last_updated_at?: string
+          profile_id: string
+          reliability_score?: number
+        }
+        Update: {
+          attitude_score?: number
+          authenticity_score?: number
+          created_at?: string
+          creativity_score?: number
+          id?: string
+          last_updated_at?: string
+          profile_id?: string
+          reliability_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_reputation_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_reputation_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -17140,6 +17433,66 @@ export type Database = {
             columns: ["label_contract_id"]
             isOneToOne: false
             referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reputation_events: {
+        Row: {
+          axis: string
+          change_amount: number
+          created_at: string
+          event_source: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_value: number
+          previous_value: number
+          profile_id: string
+          reason: string | null
+          source_id: string | null
+        }
+        Insert: {
+          axis: string
+          change_amount: number
+          created_at?: string
+          event_source: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_value: number
+          previous_value: number
+          profile_id: string
+          reason?: string | null
+          source_id?: string | null
+        }
+        Update: {
+          axis?: string
+          change_amount?: number
+          created_at?: string
+          event_source?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: number
+          previous_value?: number
+          profile_id?: string
+          reason?: string | null
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reputation_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reputation_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
