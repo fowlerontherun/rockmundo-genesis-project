@@ -5141,18 +5141,24 @@ export type Database = {
       education_mentors: {
         Row: {
           attribute_keys: Json
+          available_day: number | null
           available_seasons: string[] | null
           base_xp: number
           bonus_description: string | null
+          city_id: string | null
           cooldown_hours: number
           cost: number
           created_at: string
           current_students: number | null
           description: string
           difficulty: string
+          discovery_hint: string | null
           focus_skill: string
           id: string
           is_active: boolean
+          is_discoverable: boolean | null
+          lore_achievement: string | null
+          lore_biography: string | null
           max_students: number | null
           name: string
           required_skill_value: number
@@ -5162,18 +5168,24 @@ export type Database = {
         }
         Insert: {
           attribute_keys?: Json
+          available_day?: number | null
           available_seasons?: string[] | null
           base_xp?: number
           bonus_description?: string | null
+          city_id?: string | null
           cooldown_hours?: number
           cost?: number
           created_at?: string
           current_students?: number | null
           description: string
           difficulty?: string
+          discovery_hint?: string | null
           focus_skill: string
           id?: string
           is_active?: boolean
+          is_discoverable?: boolean | null
+          lore_achievement?: string | null
+          lore_biography?: string | null
           max_students?: number | null
           name: string
           required_skill_value?: number
@@ -5183,18 +5195,24 @@ export type Database = {
         }
         Update: {
           attribute_keys?: Json
+          available_day?: number | null
           available_seasons?: string[] | null
           base_xp?: number
           bonus_description?: string | null
+          city_id?: string | null
           cooldown_hours?: number
           cost?: number
           created_at?: string
           current_students?: number | null
           description?: string
           difficulty?: string
+          discovery_hint?: string | null
           focus_skill?: string
           id?: string
           is_active?: boolean
+          is_discoverable?: boolean | null
+          lore_achievement?: string | null
+          lore_biography?: string | null
           max_students?: number | null
           name?: string
           required_skill_value?: number
@@ -5202,7 +5220,15 @@ export type Database = {
           specialty?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "education_mentors_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       education_youtube_resources: {
         Row: {
@@ -13750,6 +13776,55 @@ export type Database = {
           weekly_payment?: number
         }
         Relationships: []
+      }
+      player_master_discoveries: {
+        Row: {
+          discovered_at: string | null
+          discovery_metadata: Json | null
+          discovery_method: string | null
+          id: string
+          mentor_id: string
+          profile_id: string
+        }
+        Insert: {
+          discovered_at?: string | null
+          discovery_metadata?: Json | null
+          discovery_method?: string | null
+          id?: string
+          mentor_id: string
+          profile_id: string
+        }
+        Update: {
+          discovered_at?: string | null
+          discovery_metadata?: Json | null
+          discovery_method?: string | null
+          id?: string
+          mentor_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_master_discoveries_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "education_mentors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_master_discoveries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_master_discoveries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_mentor_sessions: {
         Row: {
@@ -23466,6 +23541,15 @@ export type Database = {
         Args: { amount: number; merch_id: string }
         Returns: undefined
       }
+      discover_master: {
+        Args: {
+          p_mentor_id: string
+          p_metadata?: Json
+          p_method?: string
+          p_profile_id: string
+        }
+        Returns: boolean
+      }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
       get_band_country_fame: {
@@ -23540,6 +23624,10 @@ export type Database = {
       increment_release_revenue: {
         Args: { amount: number; release_id: string }
         Returns: undefined
+      }
+      is_master_discovered: {
+        Args: { p_mentor_id: string; p_profile_id: string }
+        Returns: boolean
       }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }

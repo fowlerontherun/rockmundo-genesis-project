@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.573",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "Mentors: Complete overhaul - now 'Legendary Masters' with city locations and day availability" },
+      { type: 'feature', description: "Mentors: No skill requirements - barrier is cost ($15k-$250k+) and location" },
+      { type: 'feature', description: "Mentors: Discovery system - explore cities to find masters before training" },
+      { type: 'feature', description: "Mentors: Each master has lore, biography, and discovery hints" },
+      { type: 'feature', description: "Mentors: Filter by Discovered, Available Now, or All Masters" },
+      { type: 'improvement', description: "Mentors: UI shows city badges, day availability, and travel requirements" },
+    ],
+  },
+  {
     version: "1.0.572",
     date: "2026-01-29",
     changes: [
