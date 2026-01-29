@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.569",
+    date: "2026-01-29",
+    changes: [
+      { type: 'feature', description: "RP Phase 4: Reputation UI components + Dashboard integration" },
+      { type: 'feature', description: "ReputationAxisBar: Visual bar showing -100 to +100 score with center marker" },
+      { type: 'feature', description: "ReputationCard: Full 4-axis reputation display with overall vibe badge" },
+      { type: 'feature', description: "ReputationSummary: Compact widget showing reputation at a glance" },
+      { type: 'feature', description: "ReputationEventsList: Scrollable history of reputation changes with reasons" },
+      { type: 'feature', description: "CharacterIdentityCard: Shows origin archetype, traits, style, and career goal" },
+      { type: 'feature', description: "CharacterBackstoryCard: Displays AI-generated backstory with scrollable text" },
+      { type: 'improvement', description: "Dashboard: Added Character Identity and Reputation cards to Profile tab" },
+    ],
+  },
+  {
     version: "1.0.568",
     date: "2026-01-29",
     changes: [

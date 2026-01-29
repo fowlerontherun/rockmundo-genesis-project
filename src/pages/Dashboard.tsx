@@ -25,6 +25,8 @@ import { GigLocationWarning } from "@/components/notifications/GigLocationWarnin
 import { DashboardOverviewTabs } from "@/components/dashboard/DashboardOverviewTabs";
 import { VipStatusCard } from "@/components/VipStatusCard";
 import { BehaviorSettingsTab } from "@/components/dashboard/BehaviorSettingsTab";
+import { CharacterIdentityCard } from "@/components/character";
+import { ReputationCard } from "@/components/reputation";
 
 // Advisor imports
 import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
@@ -313,6 +315,12 @@ const Dashboard = () => {
 
           {/* VIP Status Card */}
           <VipStatusCard />
+
+          {/* Character Identity & Reputation Cards */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <CharacterIdentityCard />
+            <ReputationCard />
+          </div>
 
           {/* Overview Tabs */}
           <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
