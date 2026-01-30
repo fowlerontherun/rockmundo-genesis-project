@@ -7,6 +7,7 @@ export interface RehearsalLevel {
   maxMinutes: number | null;
 }
 
+// Thresholds aligned to user expectations: 4h = Familiar, 6h = Perfected
 export const REHEARSAL_LEVELS: RehearsalLevel[] = [
   {
     level: 0,
@@ -22,30 +23,30 @@ export const REHEARSAL_LEVELS: RehearsalLevel[] = [
     variant: "outline",
     performanceModifier: -0.1,
     minMinutes: 60,
-    maxMinutes: 299,
+    maxMinutes: 179,  // 1-3 hours
   },
   {
     level: 2,
     name: "Familiar",
     variant: "secondary",
     performanceModifier: 0,
-    minMinutes: 300,
-    maxMinutes: 899,
+    minMinutes: 180,
+    maxMinutes: 299,  // 3-5 hours
   },
   {
     level: 3,
     name: "Well Rehearsed",
     variant: "default",
     performanceModifier: 0.1,
-    minMinutes: 900,
-    maxMinutes: 1799,
+    minMinutes: 300,
+    maxMinutes: 359,  // 5-6 hours
   },
   {
     level: 4,
     name: "Perfected",
     variant: "default",
     performanceModifier: 0.2,
-    minMinutes: 1800,
+    minMinutes: 360,  // 6+ hours
     maxMinutes: null,
   },
 ];

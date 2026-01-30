@@ -5,22 +5,24 @@
 
 export type RehearsalStage = 'unlearned' | 'learning' | 'familiar' | 'well_rehearsed' | 'perfected';
 
+// Thresholds aligned to user expectations: 4h = Familiar, 6h = Perfected
 export const STAGE_THRESHOLDS = {
   unlearned: { min: 0, max: 59 },
-  learning: { min: 60, max: 299 },
-  familiar: { min: 300, max: 899 },
-  well_rehearsed: { min: 900, max: 1799 },
-  perfected: { min: 1800, max: Infinity },
+  learning: { min: 60, max: 179 },      // 1-3 hours
+  familiar: { min: 180, max: 299 },     // 3-5 hours
+  well_rehearsed: { min: 300, max: 359 }, // 5-6 hours
+  perfected: { min: 360, max: Infinity }, // 6+ hours
 } as const;
 
 /**
  * Calculate the rehearsal stage based on total minutes practiced.
  * Returns a database-compliant stage value.
+ * Aligned with user expectations: 6 hours = Perfected
  */
 export function calculateRehearsalStage(totalMinutes: number): RehearsalStage {
-  if (totalMinutes >= 1800) return 'perfected';
-  if (totalMinutes >= 900) return 'well_rehearsed';
-  if (totalMinutes >= 300) return 'familiar';
+  if (totalMinutes >= 360) return 'perfected';
+  if (totalMinutes >= 300) return 'well_rehearsed';
+  if (totalMinutes >= 180) return 'familiar';
   if (totalMinutes >= 60) return 'learning';
   return 'unlearned';
 }

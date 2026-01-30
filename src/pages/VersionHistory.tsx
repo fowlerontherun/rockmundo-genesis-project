@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.580",
+    date: "2026-01-30",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed invalid stage values ('mastered', 'practicing') causing DB constraint violations" },
+      { type: 'fix', description: "Rehearsals: Aligned all 3 code paths (manual, auto, edge function) to use same threshold logic" },
+      { type: 'improvement', description: "Rehearsals: Reduced thresholds - 6 hours = Perfected (was 30 hours)" },
+      { type: 'improvement', description: "Rehearsals: Learning=1h, Familiar=3h, Well Rehearsed=5h, Perfected=6h" },
+      { type: 'improvement', description: "Rehearsals: Added setlist time-split explanation in booking dialog" },
+      { type: 'improvement', description: "Rehearsals: Database percentage now aligned with 6h=100% threshold" },
+    ],
+  },
+  {
     version: "1.0.579",
     date: "2026-01-29",
     changes: [

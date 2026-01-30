@@ -10,6 +10,7 @@ import type { Database } from '@/lib/supabase-types';
 import { RehearsalBookingDialog } from './RehearsalBookingDialog';
 import { format } from 'date-fns';
 import { useRehearsalBooking } from '@/hooks/useRehearsalBooking';
+import { calculateRehearsalStage } from '@/utils/rehearsalStageCalculation';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'] & {
   city?: { id: string; name: string } | null;
@@ -267,19 +268,9 @@ export function RehearsalsTab() {
 
         const newMinutes = (existing?.familiarity_minutes || 0) + familiarityGained;
         
-        // Calculate percentage for determining stage (600 minutes = 100%)
-        // Note: familiarity_percentage is a generated column in DB, so we don't write it
-        const calculatedPercentage = Math.min(100, Math.floor((newMinutes / 600) * 100));
-        
-        // Determine rehearsal stage based on percentage
-        let rehearsalStage = 'learning';
-        if (calculatedPercentage >= 90) {
-          rehearsalStage = 'mastered';
-        } else if (calculatedPercentage >= 60) {
-          rehearsalStage = 'familiar';
-        } else if (calculatedPercentage >= 30) {
-          rehearsalStage = 'practicing';
-        }
+        // Use shared utility to calculate database-compliant stage
+        // Thresholds: 60m=learning, 180m=familiar, 300m=well_rehearsed, 360m=perfected
+        const rehearsalStage = calculateRehearsalStage(newMinutes);
         
         if (existing) {
           await supabase
