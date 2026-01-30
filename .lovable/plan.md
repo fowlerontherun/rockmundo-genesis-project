@@ -1,271 +1,218 @@
 
 
-# Character Creator Hair Fix & Massive Content Expansion
-**Version: 1.0.579**
+# Rehearsal System - Level & Time Tracking Fix
+**Version: 1.0.580**
 
-## Overview
+## Problem Analysis
 
-This update fixes the hair positioning issue where hair layers overlap and cover the eyes/face, and massively expands the character creator with new faces, clothing, and accessories inspired by various musical genres and fashion styles.
+Based on code review, I've identified **5 critical issues** causing incorrect rehearsal level updates and time mismatches:
 
 ---
 
-## Part 1: Hair Layer Positioning Fix
+### Issue 1: Conflicting Threshold Systems
 
-### Root Cause Analysis
+**Current State:** The codebase has **3 different threshold systems** that don't align:
 
-The current coordinate system:
-- Head center: Y = 100
-- Head top (crown): Y = 35 (100 - 65 radius)
-- Eyes: Y = 90
-- Mouth: Y = 140
+| Location | Thresholds | Problem |
+|----------|------------|---------|
+| **Database Trigger** (`update_rehearsal_stage`) | 60/300/900/1800 min | Correct - used for auto-calculating stage |
+| **`rehearsalLevels.ts`** (UI) | 60/300/900/1800 min | Correct - matches database |
+| **`RehearsalsTab.tsx` (Manual complete)** | Uses percentage: 30%/60%/90% of 600 min | **WRONG** - uses 'mastered'/'practicing' which violate DB constraint! |
 
-Current hair Y coordinates are too low:
-- Mohawk base extends to Y = 100
-- Pixie extends from Y = 45 to Y = 135
-- Emo back hair extends from Y = 60 to Y = 175 (covering entire face)
-- Afro centers at Y = 80 with radius 80 (extends to Y = 160)
-
-### Solution: Reposition All Hair Layers
-
-Hair should sit on the crown of the head (Y = 20-60 maximum), with only the very bottom edge potentially reaching the forehead area (Y = 70 maximum, well above eyes at Y = 90).
-
-```text
-Hair Layer Positioning Guide (512x1024 viewBox)
-+------------------------------------------------+
-| Y = 0-20   : Hair spikes/top extensions        |
-| Y = 20-50  : Main hair mass (crown area)       |
-| Y = 50-70  : Hair base/fringe (above eyes)     |
-+------------------------------------------------+
-| Y = 90     : Eyes (MUST NOT be covered)        |
-| Y = 100    : Head center                       |
-| Y = 140    : Mouth                             |
-+------------------------------------------------+
+**Code with Bug (lines 274-282):**
+```typescript
+// RehearsalsTab.tsx - Using INVALID stage values!
+let rehearsalStage = 'learning';
+if (calculatedPercentage >= 90) {
+  rehearsalStage = 'mastered';      // INVALID - constraint allows only 'perfected'
+} else if (calculatedPercentage >= 60) {
+  rehearsalStage = 'familiar';
+} else if (calculatedPercentage >= 30) {
+  rehearsalStage = 'practicing';    // INVALID - constraint allows only 'learning'
+}
 ```
 
-### Files Modified
+**Database Constraint:**
+```sql
+CHECK (rehearsal_stage IN ('unlearned', 'learning', 'familiar', 'well_rehearsed', 'perfected'))
+```
+
+This causes silent failures or constraint violations when manually completing rehearsals!
+
+---
+
+### Issue 2: User Expectation Mismatch
+
+**User Expectation:** 
+- 4 hours = Fully Learned (Familiar)
+- 6 hours = Perfected
+
+**Current Thresholds:**
+- 1 hour (60 min) = Learning
+- 5 hours (300 min) = Familiar  
+- 15 hours (900 min) = Well Rehearsed
+- 30 hours (1800 min) = Perfected
+
+**Gap:** Current system requires **30 hours** to perfect a song, but user expects **6 hours**.
+
+---
+
+### Issue 3: Percentage Calculation Mismatch
+
+**Database Generated Column:**
+```sql
+familiarity_percentage = LEAST(100, (familiarity_minutes * 100) / 600)
+```
+This makes 100% = 600 minutes (10 hours).
+
+**But the level system uses 1800 minutes for "Perfected"!**
+
+Songs show 100% progress but are only "Familiar" stage - confusing users.
+
+---
+
+### Issue 4: Setlist Rehearsal Time Split
+
+When rehearsing a **full setlist**, time is split across all songs:
+```typescript
+const minutesPerSong = Math.floor(durationMinutes / songsToUpdate.length);
+```
+
+A 4-hour rehearsal with 10 songs = only 24 minutes per song, meaning songs barely progress. This may be intentional but needs clearer UI feedback.
+
+---
+
+### Issue 5: Multiple Completion Paths
+
+There are **3 different code paths** for completing rehearsals:
+1. `useAutoRehearsalCompletion.ts` - Auto-completion hook (uses correct stages)
+2. `complete-rehearsals` edge function - Cron job (uses correct stages)
+3. `RehearsalsTab.tsx` - Manual "Complete Rehearsal" button (uses WRONG stages)
+
+Each has slightly different logic, causing inconsistencies.
+
+---
+
+## Proposed Solution
+
+### Part 1: Align Thresholds to User Expectations
+
+Update all threshold systems to match user expectations (4h learned, 6h perfected):
+
+| Stage | Old (minutes) | New (minutes) |
+|-------|---------------|---------------|
+| Unlearned | 0-59 | 0-59 |
+| Learning | 60-299 | 60-179 (1-3 hours) |
+| Familiar | 300-899 | 180-299 (3-5 hours) |
+| Well Rehearsed | 900-1799 | 300-359 (5-6 hours) |
+| Perfected | 1800+ | 360+ (6+ hours) |
+
+**Note:** This is a significant change from 30h to 6h for Perfected. If you prefer the original longer progression, I can instead update only the UI messaging to clarify the expected time investment.
+
+### Part 2: Fix Invalid Stage Values
+
+Update `RehearsalsTab.tsx` to use the shared utility:
+
+```typescript
+import { calculateRehearsalStage } from '@/utils/rehearsalStageCalculation';
+
+// Replace lines 274-282 with:
+const rehearsalStage = calculateRehearsalStage(newMinutes);
+```
+
+### Part 3: Align Percentage Calculation
+
+Update the database generated column to match the stage thresholds:
+- 100% should equal "Perfected" threshold (either 360 or 1800 minutes)
+
+### Part 4: Consolidate Completion Logic
+
+Create a single shared function for all rehearsal completion paths:
 
 | File | Change |
 |------|--------|
-| `src/components/character-creator/svg-sprites/HairLayers.tsx` | Reposition all 4 hair styles |
+| `src/utils/rehearsalCompletion.ts` | New shared completion logic |
+| `RehearsalsTab.tsx` | Use shared function |
+| `useAutoRehearsalCompletion.ts` | Use shared function |
+| `complete-rehearsals/index.ts` | Use same threshold constants |
+
+### Part 5: Improve UI Feedback for Setlist Rehearsals
+
+Add clearer messaging about time distribution:
+- "4h rehearsal for 10-song setlist = 24 min per song"
+- Show expected progress per song before booking
 
 ---
 
-## Part 2: Expanded Character Content
+## Files to Modify
 
-### New Hair Styles (20 total, up from 4)
-
-| Style | Genre/Fashion | Color |
-|-------|---------------|-------|
-| Mohawk | Punk | Red |
-| Liberty Spikes | Punk | Green |
-| Dreadlocks | Reggae | Brown |
-| Long Rocker | Metal | Black |
-| Mullet | Classic Rock | Brown |
-| Buzz Cut | Military/Skinhead | Dark |
-| Pompadour | Rockabilly | Black |
-| Undercut | Modern | Blonde |
-| Afro | Funk/Soul | Black |
-| Braids | Hip-Hop | Black |
-| Pigtails | Pop/Kawaii | Pink |
-| Messy Bob | Indie | Auburn |
-| Curtains | 90s Britpop | Brown |
-| Shaggy | Grunge | Dirty Blonde |
-| Slicked Back | Disco/Synth | Black |
-| Pixie | Pop | Blonde |
-| Emo Fringe | Emo | Black/Purple |
-| Cornrows | Hip-Hop | Black |
-| Viking | Folk Metal | Ginger |
-| Bun | Various | Brown |
-
-### New Eye Styles (8 total, up from 2)
-
-| Style | Description |
-|-------|-------------|
-| Neutral | Default relaxed |
-| Intense | Narrowed, focused |
-| Wide | Surprised/excited |
-| Sleepy | Half-closed |
-| Winking | One eye closed |
-| Cat Eye | Stylized makeup |
-| Smoky | Heavy eyeliner |
-| Starry | Sparkle effect |
-
-### New Mouth Styles (8 total, up from 2)
-
-| Style | Description |
-|-------|-------------|
-| Neutral | Default |
-| Smile | Happy |
-| Singing | Open wide |
-| Smirk | One-sided |
-| Pout | Lips pursed |
-| Grin | Teeth showing |
-| Shouting | Rock yell |
-| Kiss | Lips puckered |
-
-### New Facial Hair (6 total, up from 1)
-
-| Style | Description |
-|-------|-------------|
-| Full Beard | Classic |
-| Goatee | Chin only |
-| Stubble | 5 o'clock shadow |
-| Handlebar | Curled mustache |
-| Soul Patch | Small chin patch |
-| Mutton Chops | Sideburns |
-
-### New Shirts (12 total, up from 1)
-
-| Item | Genre | Colors |
-|------|-------|--------|
-| Band Tee | Rock | Black |
-| Flannel | Grunge | Red plaid |
-| Hawaiian | Indie | Floral |
-| Ripped Tee | Punk | White torn |
-| Polo | Mod | Blue |
-| Crop Top | Pop | Pink |
-| Tank Top | Metal | Black |
-| Turtleneck | Goth | Black |
-| Jersey | Hip-Hop | Red/White |
-| Tie-Dye | Psychedelic | Rainbow |
-| Blazer Shirt | Britpop | Navy |
-| Mesh Top | Rave | Black |
-
-### New Jackets (8 total, up from 2)
-
-| Item | Genre | Colors |
-|------|-------|--------|
-| Leather | Punk/Metal | Black |
-| Hoodie | Casual | Gray |
-| Denim Vest | Country | Blue |
-| Varsity | Americana | Red/White |
-| Military | Industrial | Olive |
-| Trench Coat | Goth | Black |
-| Track Jacket | Hip-Hop | Red |
-| Cardigan | Indie | Beige |
-
-### New Bottoms (8 total, up from 2)
-
-| Item | Genre | Colors |
-|------|-------|--------|
-| Skinny Jeans | Rock | Black |
-| Cargo Shorts | Skate | Khaki |
-| Ripped Jeans | Punk | Blue |
-| Leather Pants | Metal | Black |
-| Track Pants | Hip-Hop | Black/White |
-| Pleated Skirt | Goth/Kawaii | Black |
-| Kilts | Celtic | Tartan |
-| Bell Bottoms | Disco | Denim |
-
-### New Footwear (8 total, up from 2)
-
-| Item | Genre | Colors |
-|------|-------|--------|
-| Combat Boots | Punk | Black |
-| High Tops | Skate | Red |
-| Cowboy Boots | Country | Brown |
-| Platform Boots | Goth | Black |
-| Sandals | Hippie | Brown |
-| Dress Shoes | Mod | Black |
-| Sneakers | Hip-Hop | White |
-| Creepers | Rockabilly | Black/Leopard |
-
-### New Accessories
-
-**Hats (8 total):**
-| Item | Genre |
-|------|-------|
-| Beanie | Various |
-| Fedora | Ska/Jazz |
-| Cowboy Hat | Country |
-| Bandana | Biker |
-| Top Hat | Steampunk |
-| Snapback | Hip-Hop |
-| Beret | Beatnik |
-| Bucket Hat | 90s |
-
-**Glasses (6 total):**
-| Item | Genre |
-|------|-------|
-| Aviators | Classic |
-| Round Lennons | 60s |
-| Cat Eye | Vintage |
-| Sport Wrap | 80s |
-| Tiny Ovals | Y2K |
-| Neon Shutter | Rave |
-
-**Extra Accessories (New category):**
-| Item | Genre |
-|------|-------|
-| Earrings (Hoops) | Various |
-| Earrings (Studs) | Punk |
-| Nose Ring | Punk |
-| Lip Ring | Emo |
-| Chain Necklace | Metal |
-| Choker | Goth |
-| Bandanna | Biker |
-| Headphones | DJ |
-
----
-
-## Part 3: Technical Implementation
-
-### New Files
-
-| File | Purpose |
+| File | Changes |
 |------|---------|
-| `svg-sprites/HairLayersExpanded.tsx` | 16 additional hair SVGs |
-| `svg-sprites/FaceLayersExpanded.tsx` | New eyes, mouths, facial hair |
-| `svg-sprites/ClothingLayersExpanded.tsx` | New shirts, jackets, bottoms, shoes |
-| `svg-sprites/AccessoryLayersExpanded.tsx` | New hats, glasses, piercings |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `svg-sprites/HairLayers.tsx` | Fix Y coordinates for all 4 existing styles |
-| `svg-sprites/index.ts` | Export new components |
-| `SvgSpriteCanvas.tsx` | Add new component mappings |
-| `SvgCharacterCreator.tsx` | Add new options to picker |
-| `VersionHeader.tsx` | Version bump to 1.0.579 |
-| `VersionHistory.tsx` | Changelog entry |
-
-### SVG Coordinate Updates Summary
-
-**Mohawk (Before -> After):**
-- Spikes: Y=-25 to Y=40 -> Y=-30 to Y=20
-- Base: Y=25 to Y=100 -> Y=10 to Y=55
-
-**Pixie (Before -> After):**
-- Main: Y=45 to Y=135 -> Y=20 to Y=60
-- Wisps: Y=90 to Y=115 -> Removed (too low)
-
-**Emo (Before -> After):**
-- Back: Y=60 to Y=175 -> Y=25 to Y=65
-- Fringe: Y=70 to Y=160 -> Y=35 to Y=70 (partial eye coverage is intentional for emo style)
-
-**Afro (Before -> After):**
-- Center: Y=80 -> Y=35
-- Radius: 80 -> 50 (prevents extending below Y=85)
+| `src/utils/rehearsalLevels.ts` | Adjust thresholds |
+| `src/utils/rehearsalStageCalculation.ts` | Adjust thresholds |
+| `src/components/performance/RehearsalsTab.tsx` | Fix invalid stage values, use shared utility |
+| `supabase/migrations/[new].sql` | Update DB trigger thresholds + percentage calculation |
+| `supabase/functions/complete-rehearsals/index.ts` | Align with new thresholds |
+| `src/components/performance/RehearsalBookingDialog.tsx` | Add setlist time-split info |
+| `src/components/VersionHeader.tsx` | Version bump |
+| `src/pages/VersionHistory.tsx` | Changelog |
 
 ---
 
-## Summary Statistics
+## Technical Details
 
-| Category | Before | After |
-|----------|--------|-------|
-| Hair Styles | 4 | 20 |
-| Eye Styles | 2 | 8 |
-| Mouth Styles | 2 | 8 |
-| Facial Hair | 1 | 6 |
-| Shirts | 1 | 12 |
-| Jackets | 2 | 8 |
-| Bottoms | 2 | 8 |
-| Footwear | 2 | 8 |
-| Hats | 1 | 8 |
-| Glasses | 1 | 6 |
-| Piercings/Extras | 0 | 8 |
-| **Total Options** | **18** | **100** |
+### New Threshold Constants
 
-This creates a rich character customization system spanning multiple musical genres and fashion subcultures.
+```typescript
+// src/utils/rehearsalLevels.ts
+export const REHEARSAL_LEVELS: RehearsalLevel[] = [
+  { level: 0, name: "Unlearned", minMinutes: 0, maxMinutes: 59 },
+  { level: 1, name: "Learning", minMinutes: 60, maxMinutes: 179 },      // 1-3 hours
+  { level: 2, name: "Familiar", minMinutes: 180, maxMinutes: 299 },     // 3-5 hours  
+  { level: 3, name: "Well Rehearsed", minMinutes: 300, maxMinutes: 359 }, // 5-6 hours
+  { level: 4, name: "Perfected", minMinutes: 360, maxMinutes: null },   // 6+ hours
+];
+```
+
+### Database Migration
+
+```sql
+-- Update trigger function with new thresholds
+CREATE OR REPLACE FUNCTION update_rehearsal_stage()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.rehearsal_stage := CASE
+    WHEN NEW.familiarity_minutes >= 360 THEN 'perfected'
+    WHEN NEW.familiarity_minutes >= 300 THEN 'well_rehearsed'
+    WHEN NEW.familiarity_minutes >= 180 THEN 'familiar'
+    WHEN NEW.familiarity_minutes >= 60 THEN 'learning'
+    ELSE 'unlearned'
+  END;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Update percentage calculation (100% at 360 minutes = 6 hours)
+ALTER TABLE band_song_familiarity 
+DROP COLUMN familiarity_percentage;
+
+ALTER TABLE band_song_familiarity 
+ADD COLUMN familiarity_percentage integer 
+GENERATED ALWAYS AS (LEAST(100, (familiarity_minutes * 100) / 360)) STORED;
+
+-- Recalculate all existing records
+UPDATE band_song_familiarity SET familiarity_minutes = familiarity_minutes;
+```
+
+---
+
+## Summary
+
+| Issue | Fix |
+|-------|-----|
+| Invalid stage names ('mastered', 'practicing') | Use shared `calculateRehearsalStage()` utility |
+| 30h for Perfected vs user expecting 6h | Reduce thresholds to 6h for Perfected |
+| Percentage shows 100% before Perfected | Align percentage calculation with stage thresholds |
+| Inconsistent completion logic | Consolidate into shared utility |
+| Unclear setlist time-split | Add UI feedback in booking dialog |
 
