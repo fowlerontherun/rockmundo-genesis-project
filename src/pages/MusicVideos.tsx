@@ -20,6 +20,7 @@ import { VideoAnalytics } from "@/components/videos/VideoAnalytics";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VipVideoCreationDialog } from "@/components/music-video/VipVideoCreationDialog";
+import { MusicVideoViewerDialog } from "@/components/music-video/MusicVideoViewerDialog";
 
 interface MusicVideo {
   id: string;
@@ -105,6 +106,7 @@ const MusicVideos = () => {
   const [tvShowsDialogOpen, setTvShowsDialogOpen] = useState(false);
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
   const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
+  const [viewerDialogOpen, setViewerDialogOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<MusicVideo | null>(null);
 
   // Form state for new video
@@ -464,6 +466,11 @@ const MusicVideos = () => {
     setAnalyticsDialogOpen(true);
   };
 
+  const openViewer = (video: MusicVideo) => {
+    setSelectedVideo(video);
+    setViewerDialogOpen(true);
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -676,10 +683,18 @@ const MusicVideos = () => {
                 return (
                   <Card key={video.id} className="overflow-hidden">
                     <div 
-                      className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center cursor-pointer hover:from-primary/30 hover:to-secondary/30 transition-colors"
-                      onClick={() => video.status === "released" && openAnalytics(video)}
+                      className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center cursor-pointer hover:from-primary/30 hover:to-secondary/30 transition-colors relative group"
+                      onClick={() => video.status === "released" && openViewer(video)}
                     >
                       <Film className="h-16 w-16 text-muted-foreground/50" />
+                      {video.status === "released" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-2 text-white font-semibold">
+                            <Play className="h-8 w-8 fill-white" />
+                            <span>Watch Video</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <CardHeader>
                       <div className="flex items-start justify-between gap-2">
@@ -750,6 +765,18 @@ const MusicVideos = () => {
                             </div>
                           )}
 
+                          {isMyVideo && (
+                            <div className="flex gap-2 flex-wrap">
+                              <Button size="sm" className="flex-1" onClick={() => openViewer(video)}>
+                                <Play className="mr-2 h-3 w-3" />
+                                Watch
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => openAnalytics(video)}>
+                                <BarChart3 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                          
                           {isMyVideo && (
                             <div className="flex gap-2">
                               <Button variant="outline" size="sm" className="flex-1" onClick={() => openTvShows(video)}>
@@ -917,6 +944,23 @@ const MusicVideos = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Music Video Viewer Dialog */}
+      <MusicVideoViewerDialog
+        video={selectedVideo}
+        open={viewerDialogOpen}
+        onOpenChange={setViewerDialogOpen}
+        onViewLogged={() => {
+          // Increment view count when watched for 10+ seconds
+          if (selectedVideo) {
+            supabase
+              .from("music_videos")
+              .update({ views_count: selectedVideo.views_count + 1 })
+              .eq("id", selectedVideo.id)
+              .then(() => queryClient.invalidateQueries({ queryKey: ["music-videos"] }));
+          }
+        }}
+      />
     </div>
   );
 };

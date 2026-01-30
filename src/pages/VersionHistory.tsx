@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.581",
+    date: "2026-01-30",
+    changes: [
+      { type: 'fix', description: "Music Videos: Added video viewer dialog - AI music videos are now watchable" },
+      { type: 'feature', description: "Music Videos: Video player with audio visualizer, floating particles, and visual effects" },
+      { type: 'feature', description: "Music Videos: Visual themes applied from AI metadata (Cyberpunk, Nature, Vintage, Urban)" },
+      { type: 'feature', description: "Music Videos: Play/pause controls, volume slider, progress bar, fullscreen button" },
+      { type: 'feature', description: "Music Videos: Watch button on video cards, hover overlay for released videos" },
+      { type: 'improvement', description: "Music Videos: Scene descriptions displayed in viewer from AI storyboard" },
+      { type: 'improvement', description: "Music Videos: View count increments after 10 seconds of watching" },
+    ],
+  },
+  {
     version: "1.0.580",
     date: "2026-01-30",
     changes: [
