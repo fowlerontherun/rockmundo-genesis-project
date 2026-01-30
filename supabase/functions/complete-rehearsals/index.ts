@@ -175,12 +175,13 @@ Deno.serve(async (req) => {
           
           // Calculate rehearsal stage using database-compliant values
           // Valid stages: 'unlearned', 'learning', 'familiar', 'well_rehearsed', 'perfected'
+          // Aligned with user expectations: 6 hours (360min) = Perfected
           let rehearsalStage = 'unlearned'
-          if (newMinutes >= 1800) {
+          if (newMinutes >= 360) {
             rehearsalStage = 'perfected'
-          } else if (newMinutes >= 900) {
-            rehearsalStage = 'well_rehearsed'
           } else if (newMinutes >= 300) {
+            rehearsalStage = 'well_rehearsed'
+          } else if (newMinutes >= 180) {
             rehearsalStage = 'familiar'
           } else if (newMinutes >= 60) {
             rehearsalStage = 'learning'

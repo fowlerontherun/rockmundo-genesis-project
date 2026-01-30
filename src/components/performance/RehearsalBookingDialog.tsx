@@ -500,8 +500,23 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
                       <Music2 className="h-4 w-4" />
                       Song Familiarity
                     </span>
-                    <span className="font-semibold text-purple-500">+{familiarityGain} min</span>
+                    <span className="font-semibold text-purple-500">
+                      +{familiarityGain} min {practiceType === 'song' ? '' : '(total)'}
+                    </span>
                   </div>
+                  
+                  {/* Setlist time-split explanation */}
+                  {practiceType === 'setlist' && selectedSetlistId && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs text-muted-foreground">
+                        <strong>Note:</strong> Time is split across all songs in the setlist. 
+                        A {selectedDuration}h session with multiple songs = less time per song.
+                      </p>
+                      <p className="text-xs text-primary mt-1">
+                        💡 Tip: 6 hours of practice per song = Perfected level
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
