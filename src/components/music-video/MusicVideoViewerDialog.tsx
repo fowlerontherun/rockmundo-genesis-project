@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Play,
   Pause,
@@ -27,6 +26,7 @@ interface MusicVideo {
   id: string;
   title: string;
   description: string | null;
+  video_url?: string | null;
   production_quality: number;
   views_count: number;
   earnings: number;
@@ -46,7 +46,7 @@ interface MusicVideoViewerDialogProps {
   onViewLogged?: () => void;
 }
 
-// Simple audio visualizer bars
+// Simple audio visualizer bars (for audio-only mode)
 const AudioVisualizer = ({ isPlaying, quality }: { isPlaying: boolean; quality: number }) => {
   const barCount = 32;
   const bars = Array.from({ length: barCount });
@@ -127,6 +127,7 @@ export function MusicVideoViewerDialog({
   onViewLogged,
 }: MusicVideoViewerDialogProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -135,7 +136,12 @@ export function MusicVideoViewerDialog({
   const [hasLoggedView, setHasLoggedView] = useState(false);
 
   const audioUrl = video?.songs?.audio_url;
+  const videoUrl = video?.video_url;
+  
+  // Determine playback mode: real video, audio-only, or none
+  const hasRealVideo = !!videoUrl;
   const hasAudio = !!audioUrl;
+  const hasPlayableContent = hasRealVideo || hasAudio;
 
   // Parse description for AI metadata
   const aiMetadata = video?.description ? (() => {
@@ -155,22 +161,28 @@ export function MusicVideoViewerDialog({
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
     }
   }, [open]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
+    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    if (mediaElement) {
+      mediaElement.volume = volume / 100;
     }
-  }, [volume]);
+  }, [volume, hasRealVideo]);
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
+    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    if (!mediaElement) return;
     
     if (isPlaying) {
-      audioRef.current.pause();
+      mediaElement.pause();
     } else {
-      audioRef.current.play();
+      mediaElement.play();
       // Log view after 10 seconds of watching
       if (!hasLoggedView) {
         setTimeout(() => {
@@ -183,28 +195,42 @@ export function MusicVideoViewerDialog({
   };
 
   const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
+    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    if (mediaElement) {
+      mediaElement.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    if (mediaElement) {
+      setCurrentTime(mediaElement.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    if (mediaElement) {
+      setDuration(mediaElement.duration);
     }
   };
 
   const handleSeek = (value: number[]) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
+    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    if (mediaElement) {
+      mediaElement.currentTime = value[0];
       setCurrentTime(value[0]);
+    }
+  };
+
+  const handleFullscreen = () => {
+    if (hasRealVideo && videoRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoRef.current.requestFullscreen();
+      }
     }
   };
 
@@ -228,92 +254,115 @@ export function MusicVideoViewerDialog({
                 AI Generated
               </Badge>
             )}
+            {hasRealVideo && (
+              <Badge className="bg-green-600 shrink-0">
+                Real Video
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Video Display Area */}
+        {/* Video/Audio Display Area */}
         <div className="relative aspect-video bg-gradient-to-br from-background via-muted to-background overflow-hidden">
-          {/* Background visual effects based on AI metadata */}
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: aiMetadata?.visual_theme === "neon_cyberpunk"
-                ? "linear-gradient(135deg, hsl(var(--primary)/0.3), hsl(280 70% 30% / 0.3), hsl(var(--primary)/0.3))"
-                : aiMetadata?.visual_theme === "nature_ethereal"
-                ? "linear-gradient(135deg, hsl(120 40% 20% / 0.5), hsl(180 40% 30% / 0.5))"
-                : aiMetadata?.visual_theme === "vintage_retro"
-                ? "linear-gradient(135deg, hsl(30 50% 30% / 0.5), hsl(40 40% 25% / 0.5))"
-                : aiMetadata?.visual_theme === "urban_gritty"
-                ? "linear-gradient(135deg, hsl(0 0% 20% / 0.7), hsl(0 0% 15% / 0.7))"
-                : "linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--secondary)/0.2))",
-            }}
-          />
+          {hasRealVideo ? (
+            // Real video player
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              className="absolute inset-0 w-full h-full object-contain"
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={() => setIsPlaying(false)}
+              onClick={togglePlay}
+            />
+          ) : (
+            <>
+              {/* Background visual effects based on AI metadata (for audio-only mode) */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: aiMetadata?.visual_theme === "neon_cyberpunk"
+                    ? "linear-gradient(135deg, hsl(var(--primary)/0.3), hsl(280 70% 30% / 0.3), hsl(var(--primary)/0.3))"
+                    : aiMetadata?.visual_theme === "nature_ethereal"
+                    ? "linear-gradient(135deg, hsl(120 40% 20% / 0.5), hsl(180 40% 30% / 0.5))"
+                    : aiMetadata?.visual_theme === "vintage_retro"
+                    ? "linear-gradient(135deg, hsl(30 50% 30% / 0.5), hsl(40 40% 25% / 0.5))"
+                    : aiMetadata?.visual_theme === "urban_gritty"
+                    ? "linear-gradient(135deg, hsl(0 0% 20% / 0.7), hsl(0 0% 15% / 0.7))"
+                    : "linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--secondary)/0.2))",
+                }}
+              />
 
-          {/* Floating particles */}
-          <FloatingParticles isPlaying={isPlaying} hype={video.hype_score} />
+              {/* Floating particles */}
+              <FloatingParticles isPlaying={isPlaying} hype={video.hype_score} />
 
-          {/* Center content */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              {!isPlaying ? (
-                <motion.div
-                  key="paused"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="text-center space-y-4"
-                >
-                  <div className="relative">
+              {/* Center content */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                  {!isPlaying ? (
                     <motion.div
-                      className="w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center backdrop-blur-sm border border-primary/30"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
+                      key="paused"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="text-center space-y-4"
                     >
-                      <Music className="h-16 w-16 text-primary" />
+                      <div className="relative">
+                        <motion.div
+                          className="w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center backdrop-blur-sm border border-primary/30"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Music className="h-16 w-16 text-primary" />
+                        </motion.div>
+                        <motion.div
+                          className="absolute inset-0 rounded-full border-2 border-primary/50"
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      </div>
+                      <div className="text-white/80">
+                        <p className="font-semibold text-lg">{video.songs?.title || "Music Video"}</p>
+                        {aiMetadata?.visual_theme && (
+                          <p className="text-sm text-white/60 capitalize">
+                            {aiMetadata.visual_theme.replace(/_/g, " ")} • {aiMetadata.art_style?.replace(/_/g, " ")}
+                          </p>
+                        )}
+                        <p className="text-xs text-yellow-500 mt-2">
+                          Audio-only mode (no video file generated)
+                        </p>
+                      </div>
                     </motion.div>
+                  ) : (
                     <motion.div
-                      className="absolute inset-0 rounded-full border-2 border-primary/50"
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                  </div>
-                  <div className="text-white/80">
-                    <p className="font-semibold text-lg">{video.songs?.title || "Music Video"}</p>
-                    {aiMetadata?.visual_theme && (
-                      <p className="text-sm text-white/60 capitalize">
-                        {aiMetadata.visual_theme.replace(/_/g, " ")} • {aiMetadata.art_style?.replace(/_/g, " ")}
-                      </p>
-                    )}
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="playing"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center"
-                >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    className="w-24 h-24 rounded-full border-4 border-primary/30 flex items-center justify-center"
-                    style={{
-                      background: "radial-gradient(circle, hsl(var(--primary)/0.3), transparent)",
-                    }}
-                  >
-                    <Music className="h-10 w-10 text-primary" />
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                      key="playing"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center"
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                        className="w-24 h-24 rounded-full border-4 border-primary/30 flex items-center justify-center"
+                        style={{
+                          background: "radial-gradient(circle, hsl(var(--primary)/0.3), transparent)",
+                        }}
+                      >
+                        <Music className="h-10 w-10 text-primary" />
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-          {/* Audio visualizer */}
-          <AudioVisualizer isPlaying={isPlaying} quality={video.production_quality} />
+              {/* Audio visualizer */}
+              <AudioVisualizer isPlaying={isPlaying} quality={video.production_quality} />
+            </>
+          )}
 
           {/* Stats overlay */}
-          <div className="absolute top-16 right-4 space-y-2 text-white/80 text-sm">
+          <div className="absolute top-16 right-4 space-y-2 text-white/80 text-sm z-20">
             <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full">
               <Eye className="h-4 w-4" />
               {video.views_count.toLocaleString()}
@@ -328,8 +377,8 @@ export function MusicVideoViewerDialog({
             </div>
           </div>
 
-          {/* Hidden audio element */}
-          {hasAudio && (
+          {/* Hidden audio element (for audio-only mode) */}
+          {!hasRealVideo && hasAudio && (
             <audio
               ref={audioRef}
               src={audioUrl}
@@ -350,7 +399,7 @@ export function MusicVideoViewerDialog({
               max={duration || 100}
               step={0.1}
               onValueChange={handleSeek}
-              disabled={!hasAudio}
+              disabled={!hasPlayableContent}
               className="flex-1"
             />
             <span className="text-xs text-white/60 w-10">{formatTime(duration)}</span>
@@ -363,7 +412,7 @@ export function MusicVideoViewerDialog({
                 variant="ghost"
                 size="icon"
                 onClick={togglePlay}
-                disabled={!hasAudio}
+                disabled={!hasPlayableContent}
                 className="text-white hover:bg-white/20"
               >
                 {isPlaying ? (
@@ -377,7 +426,7 @@ export function MusicVideoViewerDialog({
                 variant="ghost"
                 size="icon"
                 onClick={toggleMute}
-                disabled={!hasAudio}
+                disabled={!hasPlayableContent}
                 className="text-white hover:bg-white/20"
               >
                 {isMuted ? (
@@ -396,16 +445,18 @@ export function MusicVideoViewerDialog({
                     setVolume(v[0]);
                     setIsMuted(v[0] === 0);
                   }}
-                  disabled={!hasAudio}
+                  disabled={!hasPlayableContent}
                 />
               </div>
             </div>
 
             <div className="text-white/60 text-sm">
-              {hasAudio ? (
-                <span>Quality: {video.production_quality}%</span>
+              {hasRealVideo ? (
+                <span className="text-green-400">AI Video • Quality: {video.production_quality}%</span>
+              ) : hasAudio ? (
+                <span className="text-yellow-500">Audio-only mode</span>
               ) : (
-                <span className="text-yellow-500">No audio available - generate song first</span>
+                <span className="text-red-400">No media available - generate video first</span>
               )}
             </div>
 
@@ -413,9 +464,8 @@ export function MusicVideoViewerDialog({
               variant="ghost"
               size="icon"
               className="text-white hover:bg-white/20"
-              onClick={() => {
-                // Could implement fullscreen here
-              }}
+              onClick={handleFullscreen}
+              disabled={!hasRealVideo}
             >
               <Maximize2 className="h-5 w-5" />
             </Button>
