@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.583",
+    date: "2026-01-31",
+    changes: [
+      { type: 'feature', description: "Music Videos: 'Generate AI Video' button for existing videos without video files" },
+      { type: 'feature', description: "Music Videos: VIPs can regenerate AI videos for any released music video" },
+      { type: 'improvement', description: "Music Videos: 'AI Video Ready' badge shown when video file exists" },
+      { type: 'improvement', description: "Music Videos: Uses existing metadata (visual theme, art style, scenes) if available" },
+    ],
+  },
+  {
     version: "1.0.582",
     date: "2026-01-31",
     changes: [

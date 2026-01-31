@@ -27,10 +27,11 @@ interface MusicVideo {
   song_id: string;
   title: string;
   description: string | null;
+  video_url?: string | null;
   budget: number;
   production_quality: number;
   director_id: string | null;
-  status: "planning" | "production" | "released";
+  status: "planning" | "production" | "released" | "generating";
   release_date: string | null;
   views_count: number;
   earnings: number;
@@ -433,6 +434,59 @@ const MusicVideos = () => {
     },
   });
 
+  // Generate AI video for existing music video
+  const generateAiVideoMutation = useMutation({
+    mutationFn: async (video: MusicVideo) => {
+      if (!profile?.is_vip) throw new Error("VIP subscription required");
+      
+      // Parse existing metadata
+      let metadata: any = {};
+      try {
+        metadata = video.description ? JSON.parse(video.description) : {};
+      } catch {
+        metadata = {};
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke('generate-music-video', {
+        body: {
+          videoId: video.id,
+          songTitle: video.songs?.title || video.title,
+          visualTheme: metadata.visual_theme || "cinematic",
+          artStyle: metadata.art_style || "professional",
+          sceneDescriptions: metadata.scene_descriptions || [
+            "Performance footage with dramatic lighting",
+            "Dynamic camera movements",
+            "High energy concert visuals"
+          ],
+          mood: metadata.mood || "energetic",
+          songAudioUrl: video.songs?.audio_url,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["music-videos"] });
+      toast({
+        title: "AI Video Generation Started!",
+        description: data?.videoUrl 
+          ? "Your video has been generated successfully!" 
+          : "Your video is being generated. Check back soon!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate video",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setSelectedSong("");
     setVideoTitle("");
@@ -788,6 +842,28 @@ const MusicVideos = () => {
                                 Promote
                               </Button>
                             </div>
+                          )}
+
+                          {/* Generate AI Video button for videos without video_url */}
+                          {isMyVideo && profile?.is_vip && !video.video_url && (
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => generateAiVideoMutation.mutate(video)}
+                              disabled={generateAiVideoMutation.isPending}
+                            >
+                              <Film className="mr-2 h-3 w-3" />
+                              {generateAiVideoMutation.isPending ? "Generating..." : "Generate AI Video"}
+                            </Button>
+                          )}
+
+                          {/* Show badge if video already has AI video */}
+                          {video.video_url && (
+                            <Badge className="bg-green-600 w-full justify-center">
+                              <Film className="mr-1 h-3 w-3" />
+                              AI Video Ready
+                            </Badge>
                           )}
                         </>
                       )}
