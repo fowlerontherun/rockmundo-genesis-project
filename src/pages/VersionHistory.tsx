@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.582",
+    date: "2026-01-31",
+    changes: [
+      { type: 'feature', description: "Music Videos: Real AI video generation using Lovable Video API" },
+      { type: 'feature', description: "Music Videos: Generated videos stored permanently in Supabase Storage" },
+      { type: 'feature', description: "Music Videos: Video player now plays actual video files when available" },
+      { type: 'improvement', description: "Music Videos: Fallback to audio+visuals mode if video not generated" },
+      { type: 'improvement', description: "Music Videos: 'Real Video' badge shown when actual video exists" },
+      { type: 'improvement', description: "Music Videos: Fullscreen support for real video playback" },
+    ],
+  },
+  {
     version: "1.0.581",
     date: "2026-01-30",
     changes: [

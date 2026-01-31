@@ -15,6 +15,7 @@ interface VideoGenerationRequest {
   artStyle: string;
   sceneDescriptions: string[];
   mood?: string;
+  songAudioUrl?: string;
 }
 
 serve(async (req) => {
@@ -71,7 +72,7 @@ serve(async (req) => {
     }
 
     const body: VideoGenerationRequest = await req.json();
-    const { videoId, songTitle, songGenre, visualTheme, artStyle, sceneDescriptions, mood } = body;
+    const { videoId, songTitle, songGenre, visualTheme, artStyle, sceneDescriptions, mood, songAudioUrl } = body;
 
     if (!videoId || !songTitle || !visualTheme || !sceneDescriptions?.length) {
       return new Response(
@@ -80,7 +81,7 @@ serve(async (req) => {
       );
     }
 
-    // Verify the video exists and belongs to this user
+    // Verify the video exists
     const { data: video, error: videoError } = await supabaseClient
       .from("music_videos")
       .select("id, song_id, title, status")
@@ -94,18 +95,15 @@ serve(async (req) => {
       );
     }
 
-    // Build the video generation prompt from scene descriptions
-    const scenePrompt = sceneDescriptions
-      .map((scene, idx) => `Scene ${idx + 1}: ${scene}`)
-      .join(". ");
-
-    const fullPrompt = `Music video for "${songTitle}"${songGenre ? ` (${songGenre})` : ""}. 
+    // Build video generation prompt from scene descriptions
+    const scenePrompt = sceneDescriptions.slice(0, 3).join(". ");
+    
+    const videoPrompt = `Cinematic music video for "${songTitle}"${songGenre ? ` (${songGenre} music)` : ""}. 
 Visual theme: ${visualTheme}. Art style: ${artStyle}. ${mood ? `Mood: ${mood}.` : ""}
 ${scenePrompt}
-Create a cinematic, professional music video with smooth transitions between scenes. 
-The video should feel dynamic and sync with the energy of the music.`;
+Professional music video with dynamic camera movements, dramatic lighting, and smooth transitions. High energy performance footage.`;
 
-    console.log("Generating video with prompt:", fullPrompt.substring(0, 200) + "...");
+    console.log("Generating video with prompt:", videoPrompt.substring(0, 200) + "...");
 
     // Update video status to "generating"
     await supabaseClient
@@ -122,12 +120,13 @@ The video should feel dynamic and sync with the energy of the music.`;
       })
       .eq("id", videoId);
 
-    // Call the AI video generation API (Lovable AI Gateway)
+    // Use Lovable Video Generation API
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
-      // Fall back to simulated generation for now
+      console.error("LOVABLE_API_KEY not configured - falling back to storyboard-only mode");
+      
+      // Fall back to storyboard generation
       await supabaseClient
         .from("music_videos")
         .update({
@@ -137,8 +136,9 @@ The video should feel dynamic and sync with the energy of the music.`;
             art_style: artStyle,
             scene_descriptions: sceneDescriptions,
             mood,
-            ai_generated: true,
-            generation_prompt: fullPrompt,
+            ai_generated: false,
+            generation_prompt: videoPrompt,
+            fallback_reason: "LOVABLE_API_KEY not configured",
           }),
         })
         .eq("id", videoId);
@@ -147,41 +147,36 @@ The video should feel dynamic and sync with the energy of the music.`;
         JSON.stringify({
           success: true,
           videoId,
-          message: "Video generation queued. The AI will create your video based on your scene descriptions.",
+          message: "Video queued for production (storyboard mode). Real AI video generation requires API key.",
           status: "production",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Use Lovable AI to generate a creative brief that could be used for video
-    // Note: Actual video generation would require a video-specific API
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Generate AI video using Lovable Video API
+    console.log("Calling Lovable Video Generation API...");
+    
+    const videoResponse = await fetch("https://ai.gateway.lovable.dev/v1/video/generate", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: "You are a creative director for music videos. Generate a detailed shot list and visual storyboard description based on the provided prompt. Be cinematic and creative.",
-          },
-          {
-            role: "user",
-            content: fullPrompt,
-          },
-        ],
+        prompt: videoPrompt,
+        duration: 10, // 10 seconds
+        resolution: "1080p",
+        aspect_ratio: "16:9",
+        ...(songAudioUrl && { starting_frame: songAudioUrl }), // Optional: use album art as starting frame
       }),
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI API error:", aiResponse.status, errorText);
+    if (!videoResponse.ok) {
+      const errorText = await videoResponse.text();
+      console.error("Video API error:", videoResponse.status, errorText);
       
-      // Still proceed with production status
+      // Still proceed with production status, but mark as failed generation
       await supabaseClient
         .from("music_videos")
         .update({
@@ -191,16 +186,78 @@ The video should feel dynamic and sync with the energy of the music.`;
             art_style: artStyle,
             scene_descriptions: sceneDescriptions,
             mood,
+            ai_generated: false,
+            generation_prompt: videoPrompt,
+            generation_error: `API error ${videoResponse.status}: ${errorText.substring(0, 200)}`,
+          }),
+        })
+        .eq("id", videoId);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          videoId,
+          message: "Video generation API unavailable. Video moved to production with storyboard.",
+          status: "production",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const videoData = await videoResponse.json();
+    const generatedVideoUrl = videoData.video_url || videoData.url;
+
+    console.log("Video generated successfully:", generatedVideoUrl?.substring(0, 100));
+
+    if (generatedVideoUrl) {
+      // Upload video to Supabase Storage for permanent storage
+      let permanentVideoUrl = generatedVideoUrl;
+      
+      try {
+        const videoFetchResponse = await fetch(generatedVideoUrl);
+        const videoBuffer = await videoFetchResponse.arrayBuffer();
+        const videoFileName = `music-videos/${videoId}_${Date.now()}.mp4`;
+        
+        const { error: uploadError } = await supabaseClient.storage
+          .from("music")
+          .upload(videoFileName, videoBuffer, {
+            contentType: "video/mp4",
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const { data: publicUrlData } = supabaseClient.storage
+            .from("music")
+            .getPublicUrl(videoFileName);
+          
+          permanentVideoUrl = publicUrlData.publicUrl;
+          console.log("Video uploaded to permanent storage:", permanentVideoUrl);
+        } else {
+          console.error("Upload error, using original URL:", uploadError);
+        }
+      } catch (uploadErr) {
+        console.error("Error uploading video to storage:", uploadErr);
+      }
+
+      // Update video with generated URL
+      await supabaseClient
+        .from("music_videos")
+        .update({
+          status: "production",
+          video_url: permanentVideoUrl,
+          description: JSON.stringify({
+            visual_theme: visualTheme,
+            art_style: artStyle,
+            scene_descriptions: sceneDescriptions,
+            mood,
             ai_generated: true,
-            generation_prompt: fullPrompt,
+            generation_prompt: videoPrompt,
+            generated_at: new Date().toISOString(),
           }),
         })
         .eq("id", videoId);
     } else {
-      const aiData = await aiResponse.json();
-      const storyboard = aiData.choices?.[0]?.message?.content || "";
-
-      // Update video with AI-generated storyboard
+      // No video URL returned - use storyboard mode
       await supabaseClient
         .from("music_videos")
         .update({
@@ -210,9 +267,8 @@ The video should feel dynamic and sync with the energy of the music.`;
             art_style: artStyle,
             scene_descriptions: sceneDescriptions,
             mood,
-            ai_generated: true,
-            generation_prompt: fullPrompt,
-            ai_storyboard: storyboard,
+            ai_generated: false,
+            generation_prompt: videoPrompt,
           }),
         })
         .eq("id", videoId);
@@ -222,16 +278,23 @@ The video should feel dynamic and sync with the energy of the music.`;
     await supabaseClient.from("activity_feed").insert({
       user_id: user.id,
       activity_type: "video_generation_started",
-      message: `AI video generation started for "${video.title}"`,
-      metadata: { video_id: videoId, visual_theme: visualTheme },
+      message: `AI video generation ${generatedVideoUrl ? "completed" : "started"} for "${video.title}"`,
+      metadata: { 
+        video_id: videoId, 
+        visual_theme: visualTheme,
+        has_video_url: !!generatedVideoUrl,
+      },
     });
 
     return new Response(
       JSON.stringify({
         success: true,
         videoId,
-        message: "Video generation started! Your AI-powered music video is being created.",
+        message: generatedVideoUrl 
+          ? "AI video generated successfully!" 
+          : "Video generation started. Your music video is being created.",
         status: "production",
+        videoUrl: generatedVideoUrl || null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
