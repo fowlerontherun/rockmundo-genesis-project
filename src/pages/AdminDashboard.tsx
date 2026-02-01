@@ -74,7 +74,7 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/production-notes'}>
             <CardHeader>
               <CardTitle>Production Notes</CardTitle>
@@ -85,6 +85,12 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle>Song Gifts</CardTitle>
               <CardDescription>Gift songs to bands</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/music-videos'}>
+            <CardHeader>
+              <CardTitle>AI Music Videos</CardTitle>
+              <CardDescription>Debug & manage video generation</CardDescription>
             </CardHeader>
           </Card>
         </div>
