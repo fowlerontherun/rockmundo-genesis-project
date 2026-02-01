@@ -11436,6 +11436,8 @@ export type Database = {
           description: string | null
           director_id: string | null
           earnings: number
+          generation_error: string | null
+          generation_started_at: string | null
           hype_score: number
           id: string
           production_quality: number
@@ -11445,6 +11447,7 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          video_url: string | null
           views_count: number
         }
         Insert: {
@@ -11453,6 +11456,8 @@ export type Database = {
           description?: string | null
           director_id?: string | null
           earnings?: number
+          generation_error?: string | null
+          generation_started_at?: string | null
           hype_score?: number
           id?: string
           production_quality?: number
@@ -11462,6 +11467,7 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          video_url?: string | null
           views_count?: number
         }
         Update: {
@@ -11470,6 +11476,8 @@ export type Database = {
           description?: string | null
           director_id?: string | null
           earnings?: number
+          generation_error?: string | null
+          generation_started_at?: string | null
           hype_score?: number
           id?: string
           production_quality?: number
@@ -11479,6 +11487,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          video_url?: string | null
           views_count?: number
         }
         Relationships: [

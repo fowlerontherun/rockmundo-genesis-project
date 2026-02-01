@@ -177,6 +177,7 @@ const TutorialsAdmin = lazyWithRetry(() => import("./pages/admin/TutorialsAdmin"
 const VipManagement = lazyWithRetry(() => import("./pages/admin/VipManagement"));
 const SkinCollectionsAdmin = lazyWithRetry(() => import("./pages/admin/SkinCollectionsAdmin"));
 const AISongGeneration = lazyWithRetry(() => import("./pages/admin/AISongGeneration"));
+const MusicVideosAdmin = lazyWithRetry(() => import("./pages/admin/MusicVideosAdmin"));
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
 const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/CollectionItemsAdmin"));
 const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
@@ -412,6 +413,7 @@ function App() {
                     <Route path="admin/rehearsal-rooms" element={<AdminRehearsalRooms />} />
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
+                    <Route path="admin/music-videos" element={<MusicVideosAdmin />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
                     <Route path="admin/eurovision" element={<EurovisionAdminPage />} />
                     <Route path="admin/awards" element={<AwardsAdmin />} />

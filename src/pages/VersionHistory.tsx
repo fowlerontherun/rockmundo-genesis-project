@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.584",
+    date: "2026-02-01",
+    changes: [
+      { type: 'feature', description: "Admin: AI Music Videos debug panel at /admin/music-videos" },
+      { type: 'feature', description: "Admin: View all music videos with generation status, video URLs, and metadata" },
+      { type: 'feature', description: "Admin: Trigger AI video generation for existing entries" },
+      { type: 'fix', description: "Database: Added video_url column to music_videos table" },
+      { type: 'improvement', description: "Admin: Reset stuck 'generating' status, clear video URLs for regeneration" },
+    ],
+  },
+  {
     version: "1.0.583",
     date: "2026-01-31",
     changes: [
