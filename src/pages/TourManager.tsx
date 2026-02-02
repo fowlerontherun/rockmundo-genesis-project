@@ -277,34 +277,42 @@ const TourManager = () => {
         ? await supabase.from('gig_outcomes').select('gig_id, overall_rating, performance_grade, ticket_revenue, net_profit').in('gig_id', gigIds)
         : { data: [] };
       
-      const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
-      const citiesMap: Record<string, { id: string; name: string; country: string }> = {};
-      const gigsMap: Record<string, { 
-        id: string; 
-        setlist_id: string | null; 
-        setlist_name: string | null; 
-        setlist_song_count: number | null;
-        tickets_sold: number | null;
-        payment: number | null;
-        status: string | null;
-      }> = {};
+       const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
+       const citiesMap: Record<string, { id: string; name: string; country: string }> = {};
+       // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
+       const gigsMap: Record<string, {
+         id: string;
+         setlist_id: string | null;
+         setlist_name: string | null;
+         setlist_song_count: number | null;
+         tickets_sold: number | null;
+         payment: number | null;
+         status: string | null;
+       }> = {};
       const outcomesMap: Record<string, { overall_rating: number | null; performance_grade: string | null; ticket_revenue: number | null; net_profit: number | null }> = {};
+
+       const dayKey = (iso: string | null | undefined) => {
+         if (!iso) return "";
+         // Use local date formatting consistently (tour_venues dates are stored at 00:00 UTC).
+         return format(new Date(iso), "yyyy-MM-dd");
+       };
       
       (venuesResult.data || []).forEach(v => { venuesMap[v.id] = v; });
       (citiesResult.data || []).forEach(c => { citiesMap[c.id] = c; });
-      (gigsResult.data || []).forEach((g: any) => { 
-        if (g.venue_id) {
-          gigsMap[g.venue_id] = { 
-            id: g.id, 
-            setlist_id: g.setlist_id, 
-            setlist_name: g.setlists?.name || null,
-            setlist_song_count: g.setlists?.song_count || null,
-            tickets_sold: g.tickets_sold || null,
-            payment: g.payment || null,
-            status: g.status || null,
-          }; 
-        }
-      });
+       (gigsResult.data || []).forEach((g: any) => {
+         if (g.venue_id) {
+           const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
+           gigsMap[key] = {
+             id: g.id,
+             setlist_id: g.setlist_id,
+             setlist_name: g.setlists?.name || null,
+             setlist_song_count: g.setlists?.song_count || null,
+             tickets_sold: g.tickets_sold ?? null,
+             payment: g.payment ?? null,
+             status: g.status ?? null,
+           };
+         }
+       });
       (outcomesResult.data || []).forEach((o: any) => {
         outcomesMap[o.gig_id] = {
           overall_rating: o.overall_rating,
@@ -314,10 +322,11 @@ const TourManager = () => {
         };
       });
       
-      return (data || []).map(tv => {
+       return (data || []).map(tv => {
         const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
         const city = venue?.city_id ? citiesMap[venue.city_id] : (tv.city_id ? citiesMap[tv.city_id] : null);
-        const gig = tv.venue_id ? gigsMap[tv.venue_id] : null;
+         const gigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` : "";
+         const gig = gigKey ? gigsMap[gigKey] : null;
         const outcome = gig?.id ? outcomesMap[gig.id] : null;
         return {
           ...tv,
