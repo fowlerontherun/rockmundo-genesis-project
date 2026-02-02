@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.586",
+    date: "2026-02-02",
+    changes: [
+      { type: 'fix', description: "Tour Details: Correctly matches tour stops to gigs by venue + date, so tickets sold/revenue/ratings display for the right show" },
+    ],
+  },
+  {
     version: "1.0.585",
     date: "2026-02-02",
     changes: [
