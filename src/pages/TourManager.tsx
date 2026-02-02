@@ -56,6 +56,16 @@ interface TourVenue {
       country: string;
     } | null;
   } | null;
+  // Gig-specific data
+  gig_id: string | null;
+  gig_status: string | null;
+  gig_tickets_sold: number | null;
+  gig_revenue: number | null;
+  overall_rating: number | null;
+  performance_grade: string | null;
+  setlist_id: string | null;
+  setlist_name: string | null;
+  setlist_song_count: number | null;
 }
 
 const OTHER_TOURS_PER_PAGE = 10;
@@ -248,13 +258,38 @@ const TourManager = () => {
         cityIds.length > 0
           ? supabase.from('cities').select('id, name, country').in('id', cityIds)
           : { data: [] },
-        // Fetch gigs for this tour to get setlist info
-        supabase.from('gigs').select('id, venue_id, scheduled_date, setlist_id, setlists(id, name, song_count)').eq('tour_id', selectedTour.id)
+        // Fetch gigs for this tour to get setlist info, tickets_sold, status, and payment
+        supabase.from('gigs').select(`
+          id, 
+          venue_id, 
+          scheduled_date, 
+          setlist_id, 
+          tickets_sold, 
+          payment, 
+          status,
+          setlists(id, name, song_count)
+        `).eq('tour_id', selectedTour.id)
       ]);
+      
+      // Fetch gig outcomes for ratings
+      const gigIds = (gigsResult.data || []).map((g: any) => g.id);
+      const outcomesResult = gigIds.length > 0 
+        ? await supabase.from('gig_outcomes').select('gig_id, overall_rating, performance_grade, ticket_revenue, net_profit').in('gig_id', gigIds)
+        : { data: [] };
       
       const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
       const citiesMap: Record<string, { id: string; name: string; country: string }> = {};
-      const gigsMap: Record<string, { id: string; setlist_id: string | null; setlist_name: string | null; setlist_song_count: number | null }> = {};
+      const gigsMap: Record<string, { 
+        id: string; 
+        setlist_id: string | null; 
+        setlist_name: string | null; 
+        setlist_song_count: number | null;
+        tickets_sold: number | null;
+        payment: number | null;
+        status: string | null;
+      }> = {};
+      const outcomesMap: Record<string, { overall_rating: number | null; performance_grade: string | null; ticket_revenue: number | null; net_profit: number | null }> = {};
+      
       (venuesResult.data || []).forEach(v => { venuesMap[v.id] = v; });
       (citiesResult.data || []).forEach(c => { citiesMap[c.id] = c; });
       (gigsResult.data || []).forEach((g: any) => { 
@@ -263,15 +298,27 @@ const TourManager = () => {
             id: g.id, 
             setlist_id: g.setlist_id, 
             setlist_name: g.setlists?.name || null,
-            setlist_song_count: g.setlists?.song_count || null
+            setlist_song_count: g.setlists?.song_count || null,
+            tickets_sold: g.tickets_sold || null,
+            payment: g.payment || null,
+            status: g.status || null,
           }; 
         }
+      });
+      (outcomesResult.data || []).forEach((o: any) => {
+        outcomesMap[o.gig_id] = {
+          overall_rating: o.overall_rating,
+          performance_grade: o.performance_grade,
+          ticket_revenue: o.ticket_revenue,
+          net_profit: o.net_profit,
+        };
       });
       
       return (data || []).map(tv => {
         const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
         const city = venue?.city_id ? citiesMap[venue.city_id] : (tv.city_id ? citiesMap[tv.city_id] : null);
         const gig = tv.venue_id ? gigsMap[tv.venue_id] : null;
+        const outcome = gig?.id ? outcomesMap[gig.id] : null;
         return {
           ...tv,
           venue: venue ? {
@@ -280,11 +327,16 @@ const TourManager = () => {
             city: city ? { name: city.name, country: city.country } : null
           } : null,
           gig_id: gig?.id || null,
+          gig_status: gig?.status || null,
+          gig_tickets_sold: gig?.tickets_sold || null,
+          gig_revenue: outcome?.ticket_revenue || gig?.payment || null,
+          overall_rating: outcome?.overall_rating || null,
+          performance_grade: outcome?.performance_grade || null,
           setlist_id: gig?.setlist_id || null,
           setlist_name: gig?.setlist_name || null,
           setlist_song_count: gig?.setlist_song_count || null,
         };
-      }) as (TourVenue & { gig_id: string | null; setlist_id: string | null; setlist_name: string | null; setlist_song_count: number | null })[];
+      }) as TourVenue[];
     },
     enabled: !!selectedTour?.id,
   });
@@ -719,73 +771,137 @@ const TourManager = () => {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {tourVenues.map((tv: any, index: number) => (
-                        <div 
-                          key={tv.id} 
-                          className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <p className="font-medium">{tv.venue?.name || 'Unknown Venue'}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {tv.venue?.city?.name}, {tv.venue?.city?.country} • {format(new Date(tv.date), 'MMM d, yyyy')}
-                              </p>
-                              {tv.setlist_name && (
-                                <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
-                                  <ListMusic className="h-3 w-3" />
-                                  {tv.setlist_name} ({tv.setlist_song_count || 0} songs)
+                      {tourVenues.map((tv: TourVenue, index: number) => {
+                        // Use gig data if available, fall back to tour_venues data
+                        const ticketsSold = tv.gig_tickets_sold ?? tv.tickets_sold ?? 0;
+                        const revenue = tv.gig_revenue ?? tv.revenue ?? 0;
+                        const isCompleted = tv.gig_status === 'completed';
+                        
+                        return (
+                          <div 
+                            key={tv.id} 
+                            className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{tv.venue?.name || 'Unknown Venue'}</p>
+                                  {isCompleted && tv.overall_rating !== null && (
+                                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                                      {tv.overall_rating.toFixed(1)}/25
+                                    </Badge>
+                                  )}
+                                  {tv.gig_status && (
+                                    <Badge variant={
+                                      tv.gig_status === 'completed' ? 'default' :
+                                      tv.gig_status === 'scheduled' ? 'secondary' :
+                                      tv.gig_status === 'in_progress' ? 'default' : 'outline'
+                                    } className="text-xs">
+                                      {tv.gig_status}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {tv.venue?.city?.name}, {tv.venue?.city?.country} • {format(new Date(tv.date), 'MMM d, yyyy')}
                                 </p>
-                              )}
+                                {tv.setlist_name && (
+                                  <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                                    <ListMusic className="h-3 w-3" />
+                                    {tv.setlist_name} ({tv.setlist_song_count || 0} songs)
+                                  </p>
+                                )}
+                                {isCompleted && tv.performance_grade && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    Performance: {tv.performance_grade}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="flex items-center gap-1 text-sm">
+                                <Ticket className="h-3 w-3" />
+                                <span>{ticketsSold.toLocaleString()} / {tv.venue?.capacity?.toLocaleString() || '?'}</span>
+                              </div>
+                              <p className="text-xs text-accent-foreground">
+                                ${revenue.toLocaleString()}
+                              </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-1 text-sm">
-                              <Ticket className="h-3 w-3" />
-                              <span>{tv.tickets_sold || 0} / {tv.venue?.capacity || '?'}</span>
-                            </div>
-                            <p className="text-xs text-accent-foreground">
-                              ${(tv.revenue || 0).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* Ticket Sales Summary */}
-                {tourVenues.length > 0 && (
-                  <Card className="bg-muted/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Ticket Sales Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <p className="text-2xl font-bold">
-                            {tourVenues.reduce((sum, tv) => sum + (tv.tickets_sold || 0), 0).toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Tickets Sold</p>
+                {/* Ticket Sales & Performance Summary */}
+                {tourVenues.length > 0 && (() => {
+                  // Calculate totals using gig data when available
+                  const totalTicketsSold = tourVenues.reduce((sum, tv) => 
+                    sum + (tv.gig_tickets_sold ?? tv.tickets_sold ?? 0), 0);
+                  const totalCapacity = tourVenues.reduce((sum, tv) => 
+                    sum + (tv.venue?.capacity || 0), 0);
+                  const totalRevenue = tourVenues.reduce((sum, tv) => 
+                    sum + (tv.gig_revenue ?? tv.revenue ?? 0), 0);
+                  
+                  // Calculate average rating from completed gigs
+                  const completedGigs = tourVenues.filter(tv => 
+                    tv.gig_status === 'completed' && tv.overall_rating !== null);
+                  const avgRating = completedGigs.length > 0 
+                    ? completedGigs.reduce((sum, tv) => sum + (tv.overall_rating || 0), 0) / completedGigs.length
+                    : null;
+                  
+                  return (
+                    <Card className="bg-muted/30">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Tour Performance Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                          <div>
+                            <p className="text-2xl font-bold">
+                              {totalTicketsSold.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Tickets Sold</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold">
+                              {totalCapacity.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Total Capacity</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-accent-foreground">
+                              ${totalRevenue.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Revenue</p>
+                          </div>
+                          <div>
+                            {avgRating !== null ? (
+                              <>
+                                <p className="text-2xl font-bold flex items-center justify-center gap-1">
+                                  <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                                  {avgRating.toFixed(1)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Avg Rating ({completedGigs.length} shows)
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-2xl font-bold text-muted-foreground">—</p>
+                                <p className="text-xs text-muted-foreground">No ratings yet</p>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-2xl font-bold">
-                            {tourVenues.reduce((sum, tv) => sum + (tv.venue?.capacity || 0), 0).toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Total Capacity</p>
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold text-accent-foreground">
-                            ${tourVenues.reduce((sum, tv) => sum + (tv.revenue || 0), 0).toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Revenue</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* Cancel Tour Button - only for own tours */}
                 {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.585",
+    date: "2026-02-02",
+    changes: [
+      { type: 'fix', description: "Tour Details: Now displays actual tickets sold from gigs instead of tour_venues placeholder data" },
+      { type: 'fix', description: "Tour Details: Gig ratings and performance grades now shown for completed shows" },
+      { type: 'improvement', description: "Tour Details: Shows gig status badges (completed, scheduled, in_progress)" },
+      { type: 'improvement', description: "Tour Details: Summary includes average rating across completed tour gigs" },
+    ],
+  },
+  {
     version: "1.0.584",
     date: "2026-02-01",
     changes: [
