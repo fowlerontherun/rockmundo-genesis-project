@@ -187,6 +187,8 @@ Deno.serve(async (req) => {
             rehearsalStage = 'learning'
           }
 
+          // Use upsert with ignoreDuplicates false to force update on conflict
+          // Note: onConflict with column names works, but we need to ensure proper update
           const { error: familiarityError } = await supabase
             .from('band_song_familiarity')
             .upsert(
@@ -194,12 +196,14 @@ Deno.serve(async (req) => {
                 band_id: rehearsal.band_id,
                 song_id: songId,
                 familiarity_minutes: newMinutes,
+                familiarity_percentage: Math.min(100, Math.floor((newMinutes * 100) / 360)),
                 rehearsal_stage: rehearsalStage,
                 last_rehearsed_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
               {
                 onConflict: 'band_id,song_id',
+                ignoreDuplicates: false,
               }
             )
 
