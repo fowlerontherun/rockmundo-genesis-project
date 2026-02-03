@@ -45,6 +45,7 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
         `)
         .eq('user_id', userId)
         .in('status', ['draft', 'recorded'])
+        .neq('archived', true)
         .order('created_at', { ascending: false });
       
       if (error) throw error;

@@ -72,6 +72,7 @@ export const SetlistSongManager = ({
         .select("id, title, genre, quality_score, duration_seconds, duration_display, version, parent_song_id")
         .eq("band_id", bandId)
         .in("status", ["draft", "recorded"])
+        .neq("archived", true)
         .order("title");
 
       if (bandError) throw bandError;
@@ -90,6 +91,7 @@ export const SetlistSongManager = ({
           .in("user_id", memberUserIds)
           .is("band_id", null)
           .in("status", ["draft", "recorded"])
+          .neq("archived", true)
           .order("title");
 
         if (!memberError && memberSongs) {
