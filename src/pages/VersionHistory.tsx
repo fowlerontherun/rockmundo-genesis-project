@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.588",
+    date: "2026-02-03",
+    changes: [
+      { type: 'feature', description: "Songs: Added ability to permanently delete songs or archive them to hide from all lists" },
+      { type: 'improvement', description: "Songs: Archived songs are now excluded from recording, setlist, and rehearsal selectors" },
+    ],
+  },
+  {
     version: "1.0.587",
     date: "2026-02-03",
     changes: [

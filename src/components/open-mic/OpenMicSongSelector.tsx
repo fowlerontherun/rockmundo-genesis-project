@@ -47,6 +47,7 @@ export function OpenMicSongSelector({
         .select('id, title, duration_seconds, quality_score, genre')
         .eq('band_id', bandId)
         .eq('status', 'recorded')
+        .neq('archived', true)
         .order('quality_score', { ascending: false });
 
       if (error) throw error;

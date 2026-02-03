@@ -61,6 +61,7 @@ const BandRepertoire = () => {
           revenue
         `)
         .eq("band_id", bandId)
+        .neq("archived", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

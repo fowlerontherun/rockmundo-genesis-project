@@ -43,6 +43,7 @@ export const LinkSongDialog = ({ open, onOpenChange, onSelect }: LinkSongDialogP
         .select("id, title, genre, quality_score, audio_url, status, band:bands(id, name)")
         .or(`band_id.in.(${bandIds.join(",")}),user_id.eq.${user.id}`)
         .in("status", ["recorded", "released"])
+        .neq("archived", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

@@ -344,13 +344,15 @@ const SongManager = () => {
                     </Badge>
                   )}
 
-                  {/* Archive Button */}
+                  {/* Archive/Delete Button */}
                   <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                     <SongArchiveButton 
-                      songId={song.id} 
+                      songId={song.id}
+                      songTitle={song.title}
                       isArchived={song.archived || false}
                       variant="ghost"
                       size="sm"
+                      showDelete={!song.archived}
                     />
                   </div>
                 </div>
