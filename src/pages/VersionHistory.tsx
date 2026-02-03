@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.587",
+    date: "2026-02-03",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed song familiarity not being updated when rehearsals complete" },
+      { type: 'feature', description: "Recording Studio: Added search and filters for song selection (by recorded status and rehearsal level)" },
+    ],
+  },
+  {
     version: "1.0.586",
     date: "2026-02-02",
     changes: [
