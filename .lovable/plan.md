@@ -1,406 +1,552 @@
 
-# Plan: Modeling Offers System with Enhanced Film Lifecycle and Sequel Logic
+# Plan: Major Festival System Expansion - v1.0.598
 
 ## Overview
 
-This plan implements a new **Modeling Offers** system that complements the existing Film offers, linked to the player's **Looks attribute** and utilizing the existing **sponsorship_brands** catalog. We'll also enhance the Film system with a complete lifecycle (casting → filming → premiere) and introduce sequel logic for returning actors.
+This plan transforms festivals from a supplementary feature into a **core gameplay pillar** with deep integration across performances, tours, reputation, and revenue systems. The expansion covers:
+
+1. **Festival Performance System** - Live "Perform Now" minigame with real-time scoring
+2. **Festival History & Analytics** - Track all past performances with detailed metrics
+3. **Enhanced Festival Discovery** - Festival map view, attendance projections, and tour routing
+4. **Festival Sponsorships** - Brand partnerships that affect rewards and audience reception
+5. **Festival Rivalry System** - Compete against other bands for best performance
+6. **Post-Performance Reviews** - Critic reviews and fan reactions that affect reputation
+7. **Festival Merch & Revenue** - Detailed merch sales tracking per festival
+8. **Database & Edge Function Updates** - New tables and automated processing
 
 ---
 
-## Part 1: Modeling System Tables
+## Part 1: Live Festival Performance System
 
-### New Tables
+### New "Perform Now" Minigame
 
-**modeling_agencies** - Fashion agencies that book models
-```sql
-CREATE TABLE modeling_agencies (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  tier TEXT CHECK (tier IN ('local', 'national', 'international', 'elite')) DEFAULT 'local',
-  region TEXT,
-  min_looks_required INTEGER DEFAULT 30,
-  prestige_level INTEGER DEFAULT 1,
-  description TEXT,
-  logo_url TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+Create an interactive performance loop when clicking "Perform Now":
+
+**Performance Phases:**
+1. **Soundcheck Phase** (1 min) - Quick-time events to tune/prepare
+2. **Opening** - Energy building, crowd warming
+3. **Main Set** - Core performance with song execution
+4. **Crowd Interaction** - Fan engagement moments
+5. **Climax/Encore** - High-energy finale
+
+**Scoring Factors:**
+- Song familiarity percentage (from rehearsals)
+- Band chemistry level
+- Equipped gear quality
+- Setlist energy flow
+- Crowd energy management
+- Random event responses (technical issues, crowd surfers)
+
+**UI Components:**
+```
+src/components/festivals/performance/
+  FestivalPerformanceLoop.tsx     - Main minigame container
+  PerformanceSoundcheck.tsx       - Soundcheck phase UI
+  PerformanceSongExecution.tsx    - Song-by-song performance
+  CrowdEnergyMeter.tsx           - Real-time crowd visualization
+  PerformanceEventHandler.tsx    - Random events during set
+  PerformanceScoreBreakdown.tsx  - Post-performance scoring
 ```
 
-**modeling_gigs** - Available modeling jobs
-```sql
-CREATE TABLE modeling_gigs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agency_id UUID REFERENCES modeling_agencies(id),
-  brand_id UUID REFERENCES sponsorship_brands(id),
-  gig_type TEXT CHECK (gig_type IN ('photo_shoot', 'runway', 'commercial', 'music_video_cameo', 'cover_shoot', 'brand_ambassador')) DEFAULT 'photo_shoot',
-  title TEXT NOT NULL,
-  description TEXT,
-  min_looks_required INTEGER DEFAULT 40,
-  min_fame_required INTEGER DEFAULT 0,
-  compensation_min INTEGER DEFAULT 500,
-  compensation_max INTEGER DEFAULT 50000,
-  fame_boost INTEGER DEFAULT 100,
-  looks_boost INTEGER DEFAULT 0,
-  duration_hours INTEGER DEFAULT 4,
-  event_id UUID, -- Link to fashion_events for runway shows
-  is_available BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+---
 
-**fashion_events** - Fashion weeks and special events
-```sql
-CREATE TABLE fashion_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  event_type TEXT CHECK (event_type IN ('fashion_week', 'runway_show', 'gala', 'photoshoot_event', 'brand_launch')) DEFAULT 'fashion_week',
-  city_id UUID REFERENCES cities(id),
-  starts_at DATE NOT NULL,
-  ends_at DATE NOT NULL,
-  prestige_level INTEGER DEFAULT 1,
-  min_looks_required INTEGER DEFAULT 50,
-  min_fame_required INTEGER DEFAULT 10000,
-  description TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+## Part 2: Festival Performance History
 
-**player_modeling_contracts** - Player's modeling history
+### New Database Table: `festival_performance_history`
+
 ```sql
-CREATE TABLE player_modeling_contracts (
+CREATE TABLE festival_performance_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  gig_id UUID REFERENCES modeling_gigs(id) ON DELETE CASCADE NOT NULL,
-  brand_id UUID REFERENCES sponsorship_brands(id),
-  status TEXT DEFAULT 'offered' CHECK (status IN ('offered', 'accepted', 'shooting', 'completed', 'declined', 'cancelled')),
-  gig_type TEXT,
-  compensation INTEGER,
-  fame_boost INTEGER,
-  looks_boost INTEGER,
-  shoot_date DATE,
-  completed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  participation_id UUID REFERENCES festival_participants(id),
+  band_id UUID REFERENCES bands(id),
+  festival_id UUID REFERENCES game_events(id),
+  user_id UUID REFERENCES auth.users(id),
   
-  CONSTRAINT unique_modeling_contract UNIQUE (user_id, gig_id)
+  -- Performance Metrics
+  performance_score INTEGER DEFAULT 0,
+  crowd_energy_peak INTEGER DEFAULT 0,
+  crowd_energy_avg INTEGER DEFAULT 0,
+  songs_performed INTEGER DEFAULT 0,
+  setlist_id UUID REFERENCES setlists(id),
+  
+  -- Rewards Earned
+  payment_earned INTEGER DEFAULT 0,
+  fame_earned INTEGER DEFAULT 0,
+  merch_revenue INTEGER DEFAULT 0,
+  new_fans_gained INTEGER DEFAULT 0,
+  
+  -- Reviews
+  critic_score INTEGER, -- 0-100
+  fan_score INTEGER,   -- 0-100
+  review_headline TEXT,
+  review_summary TEXT,
+  
+  -- Highlights
+  highlight_moments JSONB DEFAULT '[]',
+  
+  -- Context
+  slot_type TEXT,
+  stage_name TEXT,
+  performance_date TIMESTAMPTZ,
+  attendance_estimate INTEGER,
+  weather_conditions TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
+### Festival History UI
+
+Create a new tab in the Festival Browser showing performance history:
+
+```
+src/pages/FestivalHistory.tsx        - Dedicated history page
+src/components/festivals/history/
+  FestivalHistoryCard.tsx            - Single performance summary
+  FestivalHistoryStats.tsx           - Aggregated career stats
+  FestivalComparisonChart.tsx        - Compare performances over time
+```
+
+**Career Festival Stats to Track:**
+- Total festivals performed
+- Average performance score
+- Total earnings from festivals
+- Highest-rated performance
+- Most fans gained at single festival
+- Headline slots achieved
+- Unique festivals played
+
 ---
 
-## Part 2: Modeling Offer Generation
+## Part 3: Festival Discovery & Map View
 
-### Edge Function: `generate-modeling-offers`
+### Festival Map Component
 
-Similar pattern to `generate-pr-offers`:
+Interactive map showing festivals with:
+- Geographic location markers
+- Travel cost calculations from player's current city
+- Distance and travel time estimates
+- Filter by date/genre/capacity
+- Tour routing suggestions (if multiple festivals nearby)
 
-1. Fetch players with `looks` attribute above threshold (30+)
-2. Match against `modeling_gigs` where player qualifies by:
-   - `looks >= min_looks_required`
-   - `fame >= min_fame_required`
-3. Check cooldowns per brand (can't do same brand within 30 days)
-4. Create offers in `pr_media_offers` with `media_type: 'modeling'` OR a dedicated table
+```
+src/components/festivals/discovery/
+  FestivalMapView.tsx          - Interactive map with festival markers
+  FestivalRouteOptimizer.tsx   - Suggest efficient tour routing
+  FestivalTravelCost.tsx       - Show travel costs to each festival
+  FestivalGenreMatch.tsx       - Show genre compatibility percentage
+```
 
-**Looks-Based Tiering:**
-| Looks Score | Available Gig Types |
-|-------------|-------------------|
-| 30-50 | Photo shoots (local brands) |
-| 50-70 | Commercials, music video cameos |
-| 70-85 | Runway shows, cover shoots |
-| 85-100 | Fashion Week, brand ambassador |
+### Attendance Projections Integration
 
-**Offer Generation Logic:**
-```typescript
-const looksScore = playerAttributes.looks || 0;
-const eligibleGigs = modelingGigs.filter(gig => 
-  looksScore >= gig.min_looks_required &&
-  fame >= gig.min_fame_required
+Connect `FestivalCrowdProjections` component to actual festival data:
+- Pull real genre match from band profile
+- Calculate attendance based on historical data
+- Show competitor bands in same time slots
+- Recommend optimal slot based on band's draw power
+
+---
+
+## Part 4: Festival Sponsorship System
+
+### New Database Table: `festival_sponsorships`
+
+```sql
+CREATE TABLE festival_sponsorships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  festival_id UUID REFERENCES game_events(id),
+  brand_id UUID REFERENCES sponsorship_brands(id),
+  sponsorship_type TEXT CHECK (sponsorship_type IN ('title', 'presenting', 'stage', 'category')),
+  
+  -- Financial
+  sponsorship_amount INTEGER DEFAULT 0,
+  revenue_share_percent NUMERIC DEFAULT 0,
+  
+  -- Impact
+  crowd_mood_modifier INTEGER DEFAULT 0, -- Positive or negative
+  merch_sales_modifier NUMERIC DEFAULT 1.0,
+  fame_modifier NUMERIC DEFAULT 1.0,
+  
+  -- Exclusivity
+  is_exclusive BOOLEAN DEFAULT false,
+  required_mentions INTEGER DEFAULT 0, -- Stage mentions during set
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
----
+### How Sponsorships Work
 
-## Part 3: Seed Fashion Brands (30+ new brands)
+**For Performers:**
+- Some sponsors boost certain genres (+10% rock crowd at energy drink sponsor)
+- Brand alignment affects crowd reception
+- Meeting mention requirements provides bonus payment
+- Sponsor conflicts (competing brands) can reduce rewards
 
-Expand `sponsorship_brands` with fashion-specific entries:
-
-**Luxury Tier (wealth_tier 5):**
-- Versace, Gucci, Louis Vuitton, Chanel, Prada, Dior, Balenciaga
-
-**Premium Tier (wealth_tier 4):**
-- Calvin Klein, Tommy Hilfiger, Hugo Boss, Ralph Lauren, Armani
-
-**Mid-Tier (wealth_tier 3):**
-- Zara, H&M, Uniqlo, Mango, ASOS, Forever 21
-
-**Streetwear Tier (wealth_tier 2-3):**
-- Supreme, Off-White, Palace, Stussy, Bape
-
-**Indie/Local Tier (wealth_tier 1-2):**
-- Indie fashion labels, vintage boutiques, local designers
+**Sponsor Tiers:**
+| Tier | Example Brands | Modifier Effect |
+|------|---------------|-----------------|
+| Title | Red Bull, Heineken | +15% fame, +20% merch |
+| Presenting | Spotify, Apple Music | +10% fame |
+| Stage | Gibson, Fender | +10% performance (matching gear) |
+| Category | Monster Energy, Budweiser | +5% crowd energy |
 
 ---
 
-## Part 4: Fashion Events (Fashion Weeks)
+## Part 5: Festival Rivalry System
 
-Seed major fashion events:
+### Rivalry Objectives
 
-| Event | City | Dates | Prestige | Min Looks |
-|-------|------|-------|----------|-----------|
-| Paris Fashion Week | Paris | Mar/Sep | 5 | 85 |
-| Milan Fashion Week | Milan | Feb/Sep | 5 | 80 |
-| New York Fashion Week | New York | Feb/Sep | 5 | 75 |
-| London Fashion Week | London | Feb/Sep | 4 | 70 |
-| Tokyo Fashion Week | Tokyo | Mar/Oct | 4 | 65 |
-| Berlin Fashion Week | Berlin | Jan/Jul | 3 | 60 |
-| São Paulo Fashion Week | São Paulo | Apr/Oct | 3 | 55 |
+When multiple bands play the same festival, introduce competition:
 
-**Annual Schedule:**
-- Events repeat yearly with random gig slots
-- Players can only do 1 show per fashion week
-- Fame/Looks boosted significantly for elite events
-
----
-
-## Part 5: Enhanced Film System
-
-### Film Lifecycle States
-
-Expand `player_film_contracts.status`:
+**New Table: `festival_rivalries`**
 ```sql
-ALTER TABLE player_film_contracts 
-ALTER COLUMN status SET DEFAULT 'offered';
-
--- New states: offered → casting → filming → post_production → premiere → completed
-ALTER TABLE player_film_contracts 
-DROP CONSTRAINT IF EXISTS player_film_contracts_status_check;
-
-ALTER TABLE player_film_contracts 
-ADD CONSTRAINT player_film_contracts_status_check 
-CHECK (status IN ('offered', 'casting', 'filming', 'post_production', 'premiere', 'completed', 'declined'));
+CREATE TABLE festival_rivalries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  festival_id UUID REFERENCES game_events(id),
+  band_a_id UUID REFERENCES bands(id),
+  band_b_id UUID REFERENCES bands(id),
+  
+  rivalry_type TEXT CHECK (rivalry_type IN ('genre_clash', 'fame_battle', 'crowd_favorite', 'critical_acclaim')),
+  
+  winner_band_id UUID REFERENCES bands(id),
+  band_a_score INTEGER,
+  band_b_score INTEGER,
+  
+  fame_stakes INTEGER DEFAULT 500, -- Loser loses this, winner gains
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-Add new columns:
-```sql
-ALTER TABLE player_film_contracts ADD COLUMN IF NOT EXISTS
-  casting_date DATE,
-  premiere_date DATE,
-  premiere_city_id UUID REFERENCES cities(id),
-  box_office_gross INTEGER DEFAULT 0,
-  sequel_eligible BOOLEAN DEFAULT false,
-  parent_film_id UUID REFERENCES film_productions(id);
+**Rivalry Types:**
+- **Genre Clash**: Similar genre bands compete for same audience
+- **Fame Battle**: Close fame levels compete head-to-head
+- **Crowd Favorite**: Most audience engagement wins
+- **Critical Acclaim**: Best critic score wins
+
+**UI Component:**
+```
+src/components/festivals/rivalry/
+  FestivalRivalryCard.tsx     - Show rivalry matchups
+  RivalryScoreboard.tsx       - Live scoring during festival
+  RivalryOutcome.tsx          - Post-festival rivalry results
 ```
 
-### Film Phases
+---
 
-| Phase | Duration | Player Activity |
-|-------|----------|-----------------|
-| Casting | 1 day | Audition (schedule block) |
-| Filming | 7-30 days | On location (schedule block) |
-| Post-Production | 60-90 days | No player involvement |
-| Premiere | 1 day | Red carpet event (fame boost) |
-| Completed | - | Film removed from active |
+## Part 6: Post-Performance Reviews System
 
-### Sequel Logic
+### Enhanced Review Generation
 
-After a film is completed:
-1. Check `box_office_gross` (simulated based on role type + fame)
-2. If successful (gross > threshold), mark `sequel_eligible = true`
-3. Next year, 30% chance of sequel offer for eligible players
-4. Sequel films reference `parent_film_id` for continuity
+Expand beyond the current mock reviews in `FestivalPerformanceOutcome`:
 
-**Sequel Offer Generation:**
+**New Table: `festival_reviews`**
+```sql
+CREATE TABLE festival_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  performance_id UUID REFERENCES festival_performance_history(id),
+  band_id UUID REFERENCES bands(id),
+  
+  reviewer_type TEXT CHECK (reviewer_type IN ('critic', 'fan', 'industry', 'blog')),
+  publication_name TEXT,
+  
+  score INTEGER, -- 0-100
+  headline TEXT,
+  review_text TEXT,
+  sentiment TEXT CHECK (sentiment IN ('positive', 'neutral', 'negative', 'mixed')),
+  
+  -- Reputation Effects
+  fame_impact INTEGER DEFAULT 0,
+  genre_cred_impact INTEGER DEFAULT 0,
+  
+  -- Visibility
+  is_featured BOOLEAN DEFAULT false,
+  view_count INTEGER DEFAULT 0,
+  
+  published_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Review Sources:**
+| Source | Weight | Fame Impact Range |
+|--------|--------|-------------------|
+| Major Critic (NME, Pitchfork) | High | -500 to +1000 |
+| Industry Blog | Medium | -100 to +300 |
+| Fan Forum | Low | -50 to +150 |
+| Social Media Buzz | Variable | -200 to +500 |
+
+### Review UI
+```
+src/components/festivals/reviews/
+  FestivalReviewCard.tsx       - Individual review display
+  ReviewAggregator.tsx         - Combined review score
+  ReviewReputation.tsx         - Show reputation effects
+```
+
+---
+
+## Part 7: Festival Merch & Revenue Integration
+
+### Detailed Merch Tracking
+
+Connect festival performances to merch sales:
+
+**New Table: `festival_merch_sales`**
+```sql
+CREATE TABLE festival_merch_sales (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  performance_id UUID REFERENCES festival_performance_history(id),
+  band_id UUID REFERENCES bands(id),
+  festival_id UUID REFERENCES game_events(id),
+  
+  -- Sales Data
+  tshirts_sold INTEGER DEFAULT 0,
+  posters_sold INTEGER DEFAULT 0,
+  albums_sold INTEGER DEFAULT 0,
+  other_items_sold INTEGER DEFAULT 0,
+  
+  gross_revenue INTEGER DEFAULT 0,
+  festival_cut INTEGER DEFAULT 0,
+  net_revenue INTEGER DEFAULT 0,
+  
+  -- Context
+  merch_booth_location TEXT,
+  weather_impact NUMERIC DEFAULT 1.0,
+  performance_boost NUMERIC DEFAULT 1.0, -- Based on performance score
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Revenue Formula:**
 ```typescript
-// Check for sequel-eligible contracts from previous year
-const eligibleForSequels = await getEligibleSequelContracts(userId, previousYear);
+const merchRevenue = baseMerchSales 
+  * (1 + performanceScore / 200)     // Good performance = +50% max
+  * (1 + crowdEnergy / 100)          // High energy = +100% max
+  * festivalAttendanceMultiplier     // Larger festivals = more sales
+  * sponsorMerchModifier;            // Sponsor boosts
+```
 
-for (const contract of eligibleForSequels) {
-  if (Math.random() < 0.3) { // 30% sequel chance
-    createSequelOffer(contract.film_id, userId);
-  }
+---
+
+## Part 8: Database & Edge Function Updates
+
+### New Tables Summary
+
+| Table | Purpose |
+|-------|---------|
+| `festival_performance_history` | Track all performances with detailed metrics |
+| `festival_sponsorships` | Brand partnerships per festival |
+| `festival_rivalries` | Band competitions at festivals |
+| `festival_reviews` | Critic and fan reviews |
+| `festival_merch_sales` | Merch revenue tracking |
+
+### Enhanced Columns for Existing Tables
+
+**`festival_participants`** additions:
+```sql
+ALTER TABLE festival_participants ADD COLUMN IF NOT EXISTS
+  setlist_id UUID REFERENCES setlists(id),
+  stage_name TEXT,
+  performance_time TIME,
+  soundcheck_time TIME,
+  tech_rider_approved BOOLEAN DEFAULT false,
+  is_confirmed_attendance BOOLEAN DEFAULT false,
+  arrival_confirmed_at TIMESTAMPTZ;
+```
+
+**`game_events`** additions for festivals:
+```sql
+ALTER TABLE game_events ADD COLUMN IF NOT EXISTS
+  festival_status TEXT DEFAULT 'draft',
+  total_stages INTEGER DEFAULT 1,
+  headliner_count INTEGER DEFAULT 1,
+  venue_id UUID REFERENCES venues(id),
+  weather_forecast TEXT,
+  attendance_projection INTEGER,
+  sponsor_ids JSONB DEFAULT '[]';
+```
+
+### Edge Function: `complete-festival-performance`
+
+Process festival performances:
+
+1. Calculate final performance score
+2. Generate reviews based on score
+3. Calculate merch sales
+4. Distribute payments
+5. Update fame/fans
+6. Resolve rivalries
+7. Store performance history
+8. Send inbox notifications
+
+---
+
+## Part 9: UI Enhancements
+
+### Enhanced Festival Browser
+
+Update `FestivalBrowser.tsx` with new tabs:
+
+```typescript
+<Tabs>
+  <TabsTrigger value="browse">Discover</TabsTrigger>
+  <TabsTrigger value="map">Map View</TabsTrigger>       // NEW
+  <TabsTrigger value="my-festivals">My Festivals</TabsTrigger>
+  <TabsTrigger value="history">History</TabsTrigger>    // NEW
+  <TabsTrigger value="offers">Offers</TabsTrigger>
+</Tabs>
+```
+
+### Festival Detail Page
+
+Create dedicated festival detail page:
+
+```
+src/pages/FestivalDetail.tsx
+```
+
+Shows:
+- Full lineup with stages and times
+- Attendance projections
+- Sponsor information
+- Genre match analysis
+- Travel cost from current location
+- Rivalry matchups
+- Weather forecast
+
+---
+
+## Part 10: Files to Create/Modify
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/festivals/performance/FestivalPerformanceLoop.tsx` | Main performance minigame |
+| `src/components/festivals/performance/CrowdEnergyMeter.tsx` | Real-time crowd visualization |
+| `src/components/festivals/performance/PerformanceScoreBreakdown.tsx` | Post-performance scoring |
+| `src/components/festivals/discovery/FestivalMapView.tsx` | Interactive festival map |
+| `src/components/festivals/history/FestivalHistoryCard.tsx` | Performance history display |
+| `src/components/festivals/rivalry/FestivalRivalryCard.tsx` | Rivalry matchups |
+| `src/components/festivals/reviews/FestivalReviewCard.tsx` | Review display |
+| `src/pages/FestivalDetail.tsx` | Dedicated festival page |
+| `src/pages/FestivalHistory.tsx` | Performance history page |
+| `src/hooks/useFestivalPerformance.ts` | Performance minigame logic |
+| `src/hooks/useFestivalHistory.ts` | Fetch performance history |
+| `supabase/functions/complete-festival-performance/index.ts` | Process performances |
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/FestivalBrowser.tsx` | Add Map and History tabs |
+| `src/hooks/useFestivals.ts` | Add history queries |
+| `src/components/festivals/FestivalCard.tsx` | Add rivalry/sponsor badges |
+| `src/components/festivals/FestivalPerformanceOutcome.tsx` | Connect to real data |
+| `src/App.tsx` | Add new festival routes |
+| `src/components/VersionHeader.tsx` | Version bump |
+| `src/pages/VersionHistory.tsx` | Changelog entry |
+
+---
+
+## Implementation Sequence
+
+### Phase 1: Database Foundation
+1. Create new tables with RLS policies
+2. Add columns to existing tables
+3. Create indexes for performance
+
+### Phase 2: Performance History
+1. Create history tracking tables
+2. Build `useFestivalHistory` hook
+3. Create history UI components
+4. Update performance mutation to store history
+
+### Phase 3: Enhanced Performance Loop
+1. Build `FestivalPerformanceLoop` component
+2. Add crowd energy visualization
+3. Create scoring breakdown UI
+4. Connect to existing setlist system
+
+### Phase 4: Discovery & Map
+1. Create map view component
+2. Add travel cost calculations
+3. Build genre match display
+4. Integrate with existing city data
+
+### Phase 5: Sponsorships & Rivalries
+1. Seed sponsor data
+2. Create rivalry detection logic
+3. Build rivalry UI components
+4. Connect to performance scoring
+
+### Phase 6: Reviews & Merch
+1. Create review generation logic
+2. Build review display components
+3. Add merch tracking
+4. Update revenue calculations
+
+---
+
+## Technical Notes
+
+### Performance Score Formula
+```typescript
+function calculateFestivalPerformanceScore(
+  songFamiliarity: number,      // 0-100, from rehearsals
+  gearQuality: number,          // 0-100, from equipment
+  bandChemistry: number,        // 0-100, from chemistry system
+  setlistFlow: number,          // 0-100, calculated from energy curve
+  crowdManagement: number,      // 0-100, from minigame performance
+  eventResponses: number        // 0-100, how well handled random events
+): number {
+  const weights = {
+    songFamiliarity: 0.25,
+    gearQuality: 0.15,
+    bandChemistry: 0.20,
+    setlistFlow: 0.15,
+    crowdManagement: 0.15,
+    eventResponses: 0.10
+  };
+  
+  return Math.round(
+    songFamiliarity * weights.songFamiliarity +
+    gearQuality * weights.gearQuality +
+    bandChemistry * weights.bandChemistry +
+    setlistFlow * weights.setlistFlow +
+    crowdManagement * weights.crowdManagement +
+    eventResponses * weights.eventResponses
+  );
 }
 ```
 
----
-
-## Part 6: Seed More Film Productions (50+ new films)
-
-Expand from 12 to 50+ films with diversity:
-
-**Cameo Roles (fame 5000-25000):**
-- Music documentaries, concert films
-- Indie dramas, comedy cameos
-- TV movies, streaming specials
-
-**Supporting Roles (fame 25000-75000):**
-- Festival comedies, band biopics
-- Action movie musicians
-- Romantic comedies
-
-**Lead Roles (fame 75000+):**
-- Rockstar biopics (Freddie Mercury-style)
-- Music industry thrillers
-- Coming-of-age musician stories
-- Documentary features
-
-**Film Studios to Add:**
-- Netflix Studios, Amazon Studios, Apple Films
-- A24, Focus Features, Searchlight Pictures
-- Legendary Pictures, Lionsgate, MGM
-
----
-
-## Part 7: UI Components
-
-### ModelingOffersPanel.tsx
-Similar to FilmOffersPanel:
-- Shows pending modeling gig offers
-- Displays looks requirement progress
-- Fashion event calendar
-- Contract history
-
-### FashionEventsBrowser.tsx
-- Browse upcoming fashion weeks
-- Filter by city, date, prestige
-- Show eligible events based on looks/fame
-
-### FilmDetailView.tsx
-Enhanced film card showing:
-- Current phase (casting/filming/etc.)
-- Days remaining in phase
-- Premiere countdown
-- Sequel indicator
-
----
-
-## Part 8: Integration Points
-
-### Looks Attribute Connection
+### Crowd Energy Curve
 ```typescript
-// In modeling offer generation
-const looks = playerAttributes.looks || 0;
-const fameMultiplier = 1 + (fame / 100000);
-const compensation = baseCompensation * (looks / 50) * fameMultiplier;
-```
-
-### Brand Link (Existing System)
-Use `sponsorship_brands` for modeling gigs:
-- Same brand can offer modeling AND sponsorship deals
-- Modeling builds relationship with brand
-- Better relationship = better sponsorship terms
-
-### Schedule Integration
-- Modeling shoots block 4-8 hours
-- Runway shows block 2-3 days (travel + show + afterparty)
-- Fashion weeks block 1-7 days depending on bookings
-
----
-
-## Part 9: Files to Create/Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `supabase/migrations/XXXX_modeling_system.sql` | Create | New tables, constraints, seed data |
-| `supabase/functions/generate-modeling-offers/index.ts` | Create | Generate offers based on looks |
-| `src/components/modeling/ModelingOffersPanel.tsx` | Create | Display modeling offers |
-| `src/components/modeling/FashionEventsBrowser.tsx` | Create | Browse fashion events |
-| `src/pages/media/ModelingBrowser.tsx` | Create | Browse modeling opportunities |
-| `src/pages/PublicRelations.tsx` | Modify | Add Modeling tab |
-| `src/components/pr/FilmOffersPanel.tsx` | Modify | Show film lifecycle phases |
-| `supabase/functions/generate-pr-offers/index.ts` | Modify | Add sequel check logic |
-| `supabase/functions/process-scheduled-activities/index.ts` | Modify | Handle modeling completions |
-| `src/components/VersionHeader.tsx` | Modify | Version bump to 1.0.597 |
-| `src/pages/VersionHistory.tsx` | Modify | Add changelog entry |
-
----
-
-## Part 10: Seed Data Summary
-
-### Fashion Brands (30 new)
-```sql
--- Luxury
-INSERT INTO sponsorship_brands (name, category, size, wealth_tier, min_fame_required) VALUES
-('Versace', 'fashion', 'major', 5, 75000),
-('Gucci', 'fashion', 'major', 5, 80000),
-('Louis Vuitton', 'fashion', 'major', 5, 100000),
--- ... etc
-```
-
-### Modeling Agencies (15 new)
-```sql
-INSERT INTO modeling_agencies (name, tier, region, min_looks_required) VALUES
-('Elite Model Management', 'elite', 'global', 85),
-('IMG Models', 'elite', 'global', 80),
-('Ford Models', 'international', 'North America', 70),
--- ... etc
-```
-
-### Modeling Gigs (40 new)
-```sql
-INSERT INTO modeling_gigs (agency_id, brand_id, gig_type, title, min_looks_required, compensation_min) VALUES
--- Photo shoots, runway shows, commercials, etc.
-```
-
-### Fashion Events (20 new)
-```sql
-INSERT INTO fashion_events (name, event_type, city_id, starts_at, ends_at, prestige_level) VALUES
-('Paris Fashion Week Spring', 'fashion_week', (SELECT id FROM cities WHERE name = 'Paris'), '2026-03-01', '2026-03-08', 5),
--- ... etc
-```
-
-### Film Productions (40 new)
-```sql
-INSERT INTO film_productions (studio_id, title, film_type, genre, min_fame_required, compensation_min, compensation_max) VALUES
--- Diverse range of films across all role types
+// Energy should flow: Build -> Peak -> Sustain -> Climax
+function calculateSetlistFlow(songs: Song[]): number {
+  const idealCurve = [0.3, 0.5, 0.7, 0.8, 0.85, 0.9, 0.85, 0.95, 1.0];
+  const actualCurve = songs.map(s => s.energy_level / 100);
+  
+  // Compare curves and score similarity
+  return calculateCurveSimilarity(idealCurve, actualCurve);
+}
 ```
 
 ---
 
 ## Expected Outcomes
 
-- **Modeling System**: Players with high Looks can pursue modeling career
-- **Fashion Events**: Runway shows at major fashion weeks
-- **Brand Integration**: Modeling builds brand relationships
-- **Film Lifecycle**: Films now progress through realistic phases
-- **Sequels**: Successful films can spawn sequel opportunities
-- **More Content**: 50+ new films, 30+ fashion brands, 20 fashion events
+- **Meaningful Festival Choice**: Players strategically select festivals based on genre match, travel cost, and rivalry opportunities
+- **Engaging Performance Loop**: Active gameplay during festival performances rather than passive simulation
+- **Career Tracking**: Complete history of all festival performances with metrics
+- **Reputation Integration**: Reviews and rivalries directly affect band reputation
+- **Economic Depth**: Merch sales, sponsorships, and payouts create revenue strategy
+- **Map Exploration**: Visual discovery of festivals encourages tour planning
 
 ---
 
-## Technical Notes
+## Version
 
-### Looks-to-Compensation Formula
-```typescript
-function calculateModelingPay(looks: number, basePay: number, brandTier: number): number {
-  const looksMultiplier = Math.pow(looks / 50, 1.5); // Exponential scaling
-  const tierMultiplier = 1 + (brandTier * 0.2);
-  return Math.floor(basePay * looksMultiplier * tierMultiplier);
-}
-```
-
-### Film Box Office Simulation
-```typescript
-function simulateBoxOffice(roleType: string, playerFame: number): number {
-  const baseGross = { cameo: 5_000_000, supporting: 25_000_000, lead: 100_000_000 };
-  const fameMultiplier = 1 + (playerFame / 500_000);
-  const variance = 0.5 + Math.random(); // 50%-150% variance
-  return Math.floor(baseGross[roleType] * fameMultiplier * variance);
-}
-```
-
-### Sequel Eligibility
-```typescript
-const SEQUEL_THRESHOLD = {
-  cameo: 10_000_000,
-  supporting: 50_000_000,
-  lead: 150_000_000
-};
-
-function checkSequelEligibility(contract: FilmContract): boolean {
-  const threshold = SEQUEL_THRESHOLD[contract.role_type] || 50_000_000;
-  return contract.box_office_gross >= threshold;
-}
-```
-
-**Version**: 1.0.597
+**v1.0.598** - Festival System Major Expansion
