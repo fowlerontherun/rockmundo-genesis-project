@@ -1,397 +1,406 @@
 
-# Plan: Comprehensive Company System Expansion and Game Integration
+# Plan: Modeling Offers System with Enhanced Film Lifecycle and Sequel Logic
 
 ## Overview
 
-This plan transforms the company system from a collection of isolated management pages into an interconnected business empire that directly impacts all aspects of gameplay. Each company type will have meaningful upgrades, customizable pricing, and tangible effects on gigs, tours, recordings, and merchandise.
+This plan implements a new **Modeling Offers** system that complements the existing Film offers, linked to the player's **Looks attribute** and utilizing the existing **sponsorship_brands** catalog. We'll also enhance the Film system with a complete lifecycle (casting → filming → premiere) and introduce sequel logic for returning actors.
 
 ---
 
-## Part 1: Unified Equipment Catalog for Recording Studios
+## Part 1: Modeling System Tables
 
-### Current Problem
-Recording studio equipment is manually entered as free-form text (equipment_name, brand, model) with no connection to the existing `equipment_items` catalog that contains 142+ real-world products.
+### New Tables
 
-### Solution
-Link recording studio equipment purchases to the existing `equipment_items` table, creating a unified gear ecosystem.
-
-**Database Changes:**
-```
-ALTER TABLE recording_studio_equipment
-ADD COLUMN equipment_item_id uuid REFERENCES equipment_items(id);
-```
-
-**New Categories for equipment_items:**
-- `studio_mic` - Studio microphones (U87, SM7B, etc.)
-- `studio_preamp` - Preamps and channel strips
-- `studio_compressor` - Hardware compressors
-- `studio_console` - Mixing consoles
-- `studio_monitor` - Studio monitors
-- `studio_reverb` - Hardware reverb units
-- `studio_outboard` - Outboard processors
-
-**UI Changes:**
-- Modify `RecordingStudioEquipmentManager` to browse from `equipment_items` catalog
-- Show real product images, brands, and stat_boosts
-- Equipment purchases deduct from company balance
-
----
-
-## Part 2: Upgrade Systems That Affect Quality
-
-### Current State
-Companies have upgrade systems, but upgrades don't meaningfully affect gameplay outcomes.
-
-### Recording Studio Upgrades Impact
-
-| Upgrade Type | Current Effect | New Effect |
-|-------------|---------------|------------|
-| Console | +X% Quality label | +X% song quality bonus during recording |
-| Monitors | Label only | +X% mixing accuracy (affects final quality) |
-| Microphones | Label only | +X% vocal/instrument capture quality |
-| Live Room | Label only | +X% to live instrument recordings |
-| Mastering Suite | Label only | +X% to mastering quality, faster turnaround |
-
-**Implementation:**
-- Add `get_studio_quality_modifier(studio_id)` RPC that calculates total bonus
-- Hook into recording completion flow to apply modifiers
-- Display modifiers in studio selection UI when booking recordings
-
-### Venue Upgrades Impact
-
-| Upgrade Type | Current Effect | New Effect |
-|-------------|---------------|------------|
-| Sound System | Label only | +X% gig performance score for bands |
-| Lighting | Label only | +X% crowd engagement/atmosphere |
-| Capacity | Label only | Actually increases venue.capacity |
-| Backstage | Label only | +X% band satisfaction, chemistry boost |
-| Security System | Label only | Reduces security guard requirements |
-
-**Implementation:**
-- Add `get_venue_quality_modifier(venue_id)` RPC
-- Hook into `gigExecution.ts` to apply venue upgrade bonuses
-- Display "Venue Bonus" section in gig summary
-
-### Security Firm Upgrades (New)
-
-Add missing upgrade system for security firms:
-
-| Upgrade Type | Cost | Effect |
-|-------------|------|--------|
-| Basic Training | $10,000 | +5% guard effectiveness |
-| Crowd Control | $25,000 | +10% large venue capability |
-| VIP Protection | $50,000 | Unlock celebrity/artist protection contracts |
-| Emergency Response | $35,000 | Reduce incident penalties by 25% |
-| Equipment Upgrade | $20,000 | Better radios, protective gear |
-
-### Logistics Upgrades Impact
-
-| Upgrade Type | Current Effect | New Effect |
-|-------------|---------------|------------|
-| GPS Tracking | Label only | +5% on-time delivery, visible in tour tracking |
-| Climate Control | Label only | Protects sensitive equipment, +10% condition preservation |
-| Fleet Expansion | Slot increase | Actually enables more concurrent contracts |
-| Premium Insurance | Label only | Reduces damage liability costs |
-
-### Merch Factory Upgrades (New)
-
-Add upgrade system for factories:
-
-| Upgrade Type | Cost | Effect |
-|-------------|------|--------|
-| Print Quality | $15,000 | +10% merchandise quality rating |
-| Speed Lines | $30,000 | +25% production speed |
-| Custom Packaging | $20,000 | +5% merchandise sale price |
-| Eco-Friendly Materials | $25,000 | +10% with eco-conscious fans |
-| Design Studio | $40,000 | Unlock custom design capability |
-
----
-
-## Part 3: Customizable Service Pricing
-
-Each company type should allow the owner to set prices for their services.
-
-### Recording Studios
-Add to management page:
-- **Hourly Rate** slider: $50 - $500/hr (affects booking attractiveness)
-- **Rush Fee** toggle: 2x rate for same-day bookings
-- **Mixing Rate**: Separate rate for mixing-only sessions
-- **Mastering Rate**: Separate rate for mastering services
-
-**Database:**
-```
-ALTER TABLE city_studios
-ADD COLUMN mixing_hourly_rate integer DEFAULT 150,
-ADD COLUMN mastering_hourly_rate integer DEFAULT 200,
-ADD COLUMN rush_fee_multiplier numeric DEFAULT 2.0,
-ADD COLUMN minimum_booking_hours integer DEFAULT 2;
+**modeling_agencies** - Fashion agencies that book models
+```sql
+CREATE TABLE modeling_agencies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  tier TEXT CHECK (tier IN ('local', 'national', 'international', 'elite')) DEFAULT 'local',
+  region TEXT,
+  min_looks_required INTEGER DEFAULT 30,
+  prestige_level INTEGER DEFAULT 1,
+  description TEXT,
+  logo_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-### Rehearsal Studios
-- **Hourly Rate** slider: $10 - $100/hr
-- **Equipment Rental Package** options (basic/pro/premium)
-- **After Hours Rate**: 1.5x for late-night bookings
-
-### Venues
-- **Venue Cut %** slider: 20-50% of ticket revenue
-- **Bar Revenue Share %**: 10-40%
-- **Private Event Rate**: Flat fee for rentals
-- **Minimum Guarantee**: Require minimum payment
-
-### Security Firms
-- **Guard Rate per Event**: $50 - $300/guard
-- **Contract Rates**: Weekly/monthly discounts
-- **VIP Premium**: Higher rate for celebrity protection
-
-### Logistics Companies
-- **Per-km Rate**: $0.50 - $2.00/km
-- **Per-day Rate**: Flat daily charge
-- **Equipment Value Insurance %**: 0.1% - 0.5% of cargo value
-
-### Merch Factories
-- **Per-unit Manufacturing Cost**: Markup over base
-- **Rush Order Fee**: Expedited production
-- **Bulk Discount Thresholds**: 100/500/1000 unit breaks
-
----
-
-## Part 4: Deep Game Integration
-
-### Security Firms Integration
-
-**Hook into Gigs:**
-When a band books a gig at a venue requiring security:
-1. Check if venue has `security_required = true`
-2. Query available security firms in the city
-3. Display firm options with reputation, price, guard count
-4. Player-owned firms get "In-House" badge with discounts
-5. Security quality affects:
-   - Incident prevention (mosh pit injuries, crowd crush)
-   - VIP area management
-   - Revenue protection (reduce theft)
-
-**Hook into Tours:**
-- Tour planning shows "Security Required" for large venues
-- Can hire same firm for entire tour (contract discount)
-- Security firm reputation affects tour prestige
-
-### Logistics Integration
-
-**Hook into Tours:**
-When booking a tour:
-1. Show logistics options for equipment transport
-2. Calculate costs based on:
-   - Distance between cities
-   - Equipment weight (stage equipment owned)
-   - Time sensitivity
-3. Logistics quality affects:
-   - Equipment arrival time (late = scramble penalty)
-   - Equipment condition on arrival
-   - Merch delivery timing
-
-**Hook into Merch Delivery:**
-- Factories produce merch
-- Logistics delivers to venue before gig
-- Late delivery = reduced merch available for sale
-
-### Recording Studio Integration
-
-**Studio Quality Affects:**
-1. Song quality_score bonus during recording
-2. Producer effectiveness multiplier
-3. Orchestra/session musician quality
-4. Mastering polish level
-
-**Formula:**
-```
-final_quality = base_quality * (1 + studio_quality_modifier)
-studio_quality_modifier = sum(upgrade_effects) + (equipment_value / 100000 * 0.1)
+**modeling_gigs** - Available modeling jobs
+```sql
+CREATE TABLE modeling_gigs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agency_id UUID REFERENCES modeling_agencies(id),
+  brand_id UUID REFERENCES sponsorship_brands(id),
+  gig_type TEXT CHECK (gig_type IN ('photo_shoot', 'runway', 'commercial', 'music_video_cameo', 'cover_shoot', 'brand_ambassador')) DEFAULT 'photo_shoot',
+  title TEXT NOT NULL,
+  description TEXT,
+  min_looks_required INTEGER DEFAULT 40,
+  min_fame_required INTEGER DEFAULT 0,
+  compensation_min INTEGER DEFAULT 500,
+  compensation_max INTEGER DEFAULT 50000,
+  fame_boost INTEGER DEFAULT 100,
+  looks_boost INTEGER DEFAULT 0,
+  duration_hours INTEGER DEFAULT 4,
+  event_id UUID, -- Link to fashion_events for runway shows
+  is_available BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-### Venue Integration
+**fashion_events** - Fashion weeks and special events
+```sql
+CREATE TABLE fashion_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  event_type TEXT CHECK (event_type IN ('fashion_week', 'runway_show', 'gala', 'photoshoot_event', 'brand_launch')) DEFAULT 'fashion_week',
+  city_id UUID REFERENCES cities(id),
+  starts_at DATE NOT NULL,
+  ends_at DATE NOT NULL,
+  prestige_level INTEGER DEFAULT 1,
+  min_looks_required INTEGER DEFAULT 50,
+  min_fame_required INTEGER DEFAULT 10000,
+  description TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-**Venue Quality Affects:**
-1. Gig performance multiplier
-2. Band chemistry boost/drain
-3. Crowd capacity and energy
-4. Merch sales opportunity
-5. Recording capability (live albums)
-
-**Company-Owned Venue Benefits:**
-- Set your own booking rates
-- Priority booking for owned label's bands
-- Keep 100% of venue revenue (no external cut)
-- Upgrade revenue goes back to company
-
-### Factory Integration
-
-**Factory Quality Affects:**
-1. Merchandise production speed
-2. Item quality rating (affects price point)
-3. Maximum batch sizes
-4. Custom design capability
-
-**Owned Factory Benefits:**
-- Reduced per-unit costs
-- Priority queue for urgent orders
-- Custom exclusive designs
-- Bulk production for tours
-
----
-
-## Part 5: Synergy System Activation
-
-The `SYNERGY_DEFINITIONS` exist but aren't actively applied. Make them real:
-
-### Label-Venue Partnership
-When label books its artists at owned venue:
-- 15% discount on venue fee
-- Priority time slot booking
-- Shared marketing bonus (+5% attendance)
-
-### Venue-Security Synergy
-When venue uses owned security firm:
-- 25% discount on security costs
-- Faster contract approval
-- Dedicated guard pool
-
-### Factory-Logistics Synergy
-When factory ships via owned logistics:
-- 20% shipping discount
-- Guaranteed delivery times
-- Real-time tracking integration
-
-### Full Integration Bonus
-Owning all company types:
-- 35% discount on all internal services
-- Empire Dashboard showing cross-company metrics
-- Exclusive "Vertical Integration" achievement
+**player_modeling_contracts** - Player's modeling history
+```sql
+CREATE TABLE player_modeling_contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  gig_id UUID REFERENCES modeling_gigs(id) ON DELETE CASCADE NOT NULL,
+  brand_id UUID REFERENCES sponsorship_brands(id),
+  status TEXT DEFAULT 'offered' CHECK (status IN ('offered', 'accepted', 'shooting', 'completed', 'declined', 'cancelled')),
+  gig_type TEXT,
+  compensation INTEGER,
+  fame_boost INTEGER,
+  looks_boost INTEGER,
+  shoot_date DATE,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  CONSTRAINT unique_modeling_contract UNIQUE (user_id, gig_id)
+);
+```
 
 ---
 
-## Part 6: UI/UX Enhancements
+## Part 2: Modeling Offer Generation
 
-### Company Dashboard Improvements
+### Edge Function: `generate-modeling-offers`
 
-Add to `MyCompanies.tsx`:
-- **Empire Overview** card showing:
-  - Total company value
-  - Combined daily revenue
-  - Active synergies
-  - Employee count across all subsidiaries
+Similar pattern to `generate-pr-offers`:
 
-### Per-Company Settings Tab
+1. Fetch players with `looks` attribute above threshold (30+)
+2. Match against `modeling_gigs` where player qualifies by:
+   - `looks >= min_looks_required`
+   - `fame >= min_fame_required`
+3. Check cooldowns per brand (can't do same brand within 30 days)
+4. Create offers in `pr_media_offers` with `media_type: 'modeling'` OR a dedicated table
 
-Add "Settings" tab to each management page:
-- Pricing configuration
-- Service availability hours
-- Auto-accept contract rules
-- Notification preferences
+**Looks-Based Tiering:**
+| Looks Score | Available Gig Types |
+|-------------|-------------------|
+| 30-50 | Photo shoots (local brands) |
+| 50-70 | Commercials, music video cameos |
+| 70-85 | Runway shows, cover shoots |
+| 85-100 | Fashion Week, brand ambassador |
 
-### Contract Discovery
-
-Companies should receive automatic contract offers:
-- Security firms get gig security requests
-- Logistics get tour transport requests
-- Studios get recording session requests
-- Factories get merch production requests
-
-Display in a unified "Incoming Contracts" section.
-
----
-
-## Implementation Sequence
-
-### Phase 1: Database Foundations
-1. Add new columns for pricing to relevant tables
-2. Create upgrade tables for security/factory
-3. Add `equipment_item_id` to studio equipment
-4. Seed studio equipment to `equipment_items`
-
-### Phase 2: Upgrade Effects
-1. Create quality modifier RPCs for each company type
-2. Hook modifiers into gigExecution.ts
-3. Hook modifiers into recording completion
-4. Display modifiers in booking UIs
-
-### Phase 3: Pricing Systems
-1. Add pricing sliders to each management page
-2. Update booking flows to use custom prices
-3. Add "Set Prices" tab to management pages
-
-### Phase 4: Cross-Company Integration
-1. Implement security firm selection in gig booking
-2. Implement logistics selection in tour planning
-3. Implement factory-logistics delivery tracking
-4. Activate synergy discounts
-
-### Phase 5: Contract Generation
-1. Create cron job for contract offer generation
-2. Build unified contract inbox UI
-3. Add auto-accept rules configuration
+**Offer Generation Logic:**
+```typescript
+const looksScore = playerAttributes.looks || 0;
+const eligibleGigs = modelingGigs.filter(gig => 
+  looksScore >= gig.min_looks_required &&
+  fame >= gig.min_fame_required
+);
+```
 
 ---
 
-## Files to Create/Modify
+## Part 3: Seed Fashion Brands (30+ new brands)
+
+Expand `sponsorship_brands` with fashion-specific entries:
+
+**Luxury Tier (wealth_tier 5):**
+- Versace, Gucci, Louis Vuitton, Chanel, Prada, Dior, Balenciaga
+
+**Premium Tier (wealth_tier 4):**
+- Calvin Klein, Tommy Hilfiger, Hugo Boss, Ralph Lauren, Armani
+
+**Mid-Tier (wealth_tier 3):**
+- Zara, H&M, Uniqlo, Mango, ASOS, Forever 21
+
+**Streetwear Tier (wealth_tier 2-3):**
+- Supreme, Off-White, Palace, Stussy, Bape
+
+**Indie/Local Tier (wealth_tier 1-2):**
+- Indie fashion labels, vintage boutiques, local designers
+
+---
+
+## Part 4: Fashion Events (Fashion Weeks)
+
+Seed major fashion events:
+
+| Event | City | Dates | Prestige | Min Looks |
+|-------|------|-------|----------|-----------|
+| Paris Fashion Week | Paris | Mar/Sep | 5 | 85 |
+| Milan Fashion Week | Milan | Feb/Sep | 5 | 80 |
+| New York Fashion Week | New York | Feb/Sep | 5 | 75 |
+| London Fashion Week | London | Feb/Sep | 4 | 70 |
+| Tokyo Fashion Week | Tokyo | Mar/Oct | 4 | 65 |
+| Berlin Fashion Week | Berlin | Jan/Jul | 3 | 60 |
+| São Paulo Fashion Week | São Paulo | Apr/Oct | 3 | 55 |
+
+**Annual Schedule:**
+- Events repeat yearly with random gig slots
+- Players can only do 1 show per fashion week
+- Fame/Looks boosted significantly for elite events
+
+---
+
+## Part 5: Enhanced Film System
+
+### Film Lifecycle States
+
+Expand `player_film_contracts.status`:
+```sql
+ALTER TABLE player_film_contracts 
+ALTER COLUMN status SET DEFAULT 'offered';
+
+-- New states: offered → casting → filming → post_production → premiere → completed
+ALTER TABLE player_film_contracts 
+DROP CONSTRAINT IF EXISTS player_film_contracts_status_check;
+
+ALTER TABLE player_film_contracts 
+ADD CONSTRAINT player_film_contracts_status_check 
+CHECK (status IN ('offered', 'casting', 'filming', 'post_production', 'premiere', 'completed', 'declined'));
+```
+
+Add new columns:
+```sql
+ALTER TABLE player_film_contracts ADD COLUMN IF NOT EXISTS
+  casting_date DATE,
+  premiere_date DATE,
+  premiere_city_id UUID REFERENCES cities(id),
+  box_office_gross INTEGER DEFAULT 0,
+  sequel_eligible BOOLEAN DEFAULT false,
+  parent_film_id UUID REFERENCES film_productions(id);
+```
+
+### Film Phases
+
+| Phase | Duration | Player Activity |
+|-------|----------|-----------------|
+| Casting | 1 day | Audition (schedule block) |
+| Filming | 7-30 days | On location (schedule block) |
+| Post-Production | 60-90 days | No player involvement |
+| Premiere | 1 day | Red carpet event (fame boost) |
+| Completed | - | Film removed from active |
+
+### Sequel Logic
+
+After a film is completed:
+1. Check `box_office_gross` (simulated based on role type + fame)
+2. If successful (gross > threshold), mark `sequel_eligible = true`
+3. Next year, 30% chance of sequel offer for eligible players
+4. Sequel films reference `parent_film_id` for continuity
+
+**Sequel Offer Generation:**
+```typescript
+// Check for sequel-eligible contracts from previous year
+const eligibleForSequels = await getEligibleSequelContracts(userId, previousYear);
+
+for (const contract of eligibleForSequels) {
+  if (Math.random() < 0.3) { // 30% sequel chance
+    createSequelOffer(contract.film_id, userId);
+  }
+}
+```
+
+---
+
+## Part 6: Seed More Film Productions (50+ new films)
+
+Expand from 12 to 50+ films with diversity:
+
+**Cameo Roles (fame 5000-25000):**
+- Music documentaries, concert films
+- Indie dramas, comedy cameos
+- TV movies, streaming specials
+
+**Supporting Roles (fame 25000-75000):**
+- Festival comedies, band biopics
+- Action movie musicians
+- Romantic comedies
+
+**Lead Roles (fame 75000+):**
+- Rockstar biopics (Freddie Mercury-style)
+- Music industry thrillers
+- Coming-of-age musician stories
+- Documentary features
+
+**Film Studios to Add:**
+- Netflix Studios, Amazon Studios, Apple Films
+- A24, Focus Features, Searchlight Pictures
+- Legendary Pictures, Lionsgate, MGM
+
+---
+
+## Part 7: UI Components
+
+### ModelingOffersPanel.tsx
+Similar to FilmOffersPanel:
+- Shows pending modeling gig offers
+- Displays looks requirement progress
+- Fashion event calendar
+- Contract history
+
+### FashionEventsBrowser.tsx
+- Browse upcoming fashion weeks
+- Filter by city, date, prestige
+- Show eligible events based on looks/fame
+
+### FilmDetailView.tsx
+Enhanced film card showing:
+- Current phase (casting/filming/etc.)
+- Days remaining in phase
+- Premiere countdown
+- Sequel indicator
+
+---
+
+## Part 8: Integration Points
+
+### Looks Attribute Connection
+```typescript
+// In modeling offer generation
+const looks = playerAttributes.looks || 0;
+const fameMultiplier = 1 + (fame / 100000);
+const compensation = baseCompensation * (looks / 50) * fameMultiplier;
+```
+
+### Brand Link (Existing System)
+Use `sponsorship_brands` for modeling gigs:
+- Same brand can offer modeling AND sponsorship deals
+- Modeling builds relationship with brand
+- Better relationship = better sponsorship terms
+
+### Schedule Integration
+- Modeling shoots block 4-8 hours
+- Runway shows block 2-3 days (travel + show + afterparty)
+- Fashion weeks block 1-7 days depending on bookings
+
+---
+
+## Part 9: Files to Create/Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `supabase/migrations/XXXX_company_system_expansion.sql` | Create | Schema changes, new upgrade tables |
-| `src/hooks/useCompanyQualityModifiers.ts` | Create | Calculate quality bonuses |
-| `src/utils/gigExecution.ts` | Modify | Apply venue/security modifiers |
-| `src/hooks/useRecordingData.tsx` | Modify | Apply studio quality modifiers |
-| `src/components/recording-studio-business/RecordingStudioEquipmentManager.tsx` | Modify | Link to equipment_items |
-| `src/pages/SecurityFirmManagement.tsx` | Modify | Add upgrades and pricing tabs |
-| `src/pages/MerchFactoryManagement.tsx` | Modify | Add upgrades tab |
-| `src/components/security/SecurityUpgradesManager.tsx` | Create | Security firm upgrades UI |
-| `src/components/merch-factory/FactoryUpgradesManager.tsx` | Create | Factory upgrades UI |
-| `src/components/company/CompanyPricingSettings.tsx` | Create | Reusable pricing configuration |
-| `src/components/company/CompanySynergies.tsx` | Create | Display active synergies |
-| `src/pages/MyCompanies.tsx` | Modify | Add empire overview |
-| `src/components/gig/SecuritySelection.tsx` | Create | Choose security for gigs |
-| `src/components/tour/LogisticsSelection.tsx` | Create | Choose logistics for tours |
-| `src/components/VersionHeader.tsx` | Modify | Version bump |
-| `src/pages/VersionHistory.tsx` | Modify | Changelog entry |
+| `supabase/migrations/XXXX_modeling_system.sql` | Create | New tables, constraints, seed data |
+| `supabase/functions/generate-modeling-offers/index.ts` | Create | Generate offers based on looks |
+| `src/components/modeling/ModelingOffersPanel.tsx` | Create | Display modeling offers |
+| `src/components/modeling/FashionEventsBrowser.tsx` | Create | Browse fashion events |
+| `src/pages/media/ModelingBrowser.tsx` | Create | Browse modeling opportunities |
+| `src/pages/PublicRelations.tsx` | Modify | Add Modeling tab |
+| `src/components/pr/FilmOffersPanel.tsx` | Modify | Show film lifecycle phases |
+| `supabase/functions/generate-pr-offers/index.ts` | Modify | Add sequel check logic |
+| `supabase/functions/process-scheduled-activities/index.ts` | Modify | Handle modeling completions |
+| `src/components/VersionHeader.tsx` | Modify | Version bump to 1.0.597 |
+| `src/pages/VersionHistory.tsx` | Modify | Add changelog entry |
+
+---
+
+## Part 10: Seed Data Summary
+
+### Fashion Brands (30 new)
+```sql
+-- Luxury
+INSERT INTO sponsorship_brands (name, category, size, wealth_tier, min_fame_required) VALUES
+('Versace', 'fashion', 'major', 5, 75000),
+('Gucci', 'fashion', 'major', 5, 80000),
+('Louis Vuitton', 'fashion', 'major', 5, 100000),
+-- ... etc
+```
+
+### Modeling Agencies (15 new)
+```sql
+INSERT INTO modeling_agencies (name, tier, region, min_looks_required) VALUES
+('Elite Model Management', 'elite', 'global', 85),
+('IMG Models', 'elite', 'global', 80),
+('Ford Models', 'international', 'North America', 70),
+-- ... etc
+```
+
+### Modeling Gigs (40 new)
+```sql
+INSERT INTO modeling_gigs (agency_id, brand_id, gig_type, title, min_looks_required, compensation_min) VALUES
+-- Photo shoots, runway shows, commercials, etc.
+```
+
+### Fashion Events (20 new)
+```sql
+INSERT INTO fashion_events (name, event_type, city_id, starts_at, ends_at, prestige_level) VALUES
+('Paris Fashion Week Spring', 'fashion_week', (SELECT id FROM cities WHERE name = 'Paris'), '2026-03-01', '2026-03-08', 5),
+-- ... etc
+```
+
+### Film Productions (40 new)
+```sql
+INSERT INTO film_productions (studio_id, title, film_type, genre, min_fame_required, compensation_min, compensation_max) VALUES
+-- Diverse range of films across all role types
+```
 
 ---
 
 ## Expected Outcomes
 
-- **Meaningful Ownership**: Each company type directly impacts gameplay outcomes
-- **Economic Integration**: Custom pricing creates player-driven market dynamics  
-- **Upgrade Investment**: Spending on upgrades provides tangible returns
-- **Synergy Rewards**: Vertical integration provides real competitive advantages
-- **Cross-System Effects**: Companies affect gigs, tours, recordings, and merch
-- **Unified Equipment**: Recording studio gear shares catalog with player gear
+- **Modeling System**: Players with high Looks can pursue modeling career
+- **Fashion Events**: Runway shows at major fashion weeks
+- **Brand Integration**: Modeling builds brand relationships
+- **Film Lifecycle**: Films now progress through realistic phases
+- **Sequels**: Successful films can spawn sequel opportunities
+- **More Content**: 50+ new films, 30+ fashion brands, 20 fashion events
 
 ---
 
 ## Technical Notes
 
-### Quality Modifier Formula
+### Looks-to-Compensation Formula
 ```typescript
-function getStudioQualityModifier(studioId: string): number {
-  // Sum upgrade effects (each level = +2% typically)
-  const upgradeBonus = upgrades.reduce((sum, u) => sum + u.effect_value, 0);
-  
-  // Equipment value bonus (every $100k = +5%)
-  const equipmentBonus = (totalEquipmentValue / 100000) * 5;
-  
-  // Staff skill bonus (average skill / 20)
-  const staffBonus = avgStaffSkill / 20;
-  
-  return Math.min(50, upgradeBonus + equipmentBonus + staffBonus);
+function calculateModelingPay(looks: number, basePay: number, brandTier: number): number {
+  const looksMultiplier = Math.pow(looks / 50, 1.5); // Exponential scaling
+  const tierMultiplier = 1 + (brandTier * 0.2);
+  return Math.floor(basePay * looksMultiplier * tierMultiplier);
 }
 ```
 
-### Synergy Detection
+### Film Box Office Simulation
 ```typescript
-function detectSynergies(companyId: string): SynergyType[] {
-  const subsidiaryTypes = getSubsidiaryTypes(companyId);
-  return Object.entries(SYNERGY_DEFINITIONS)
-    .filter(([_, def]) => def.requires.every(r => subsidiaryTypes.includes(r)))
-    .map(([type]) => type as SynergyType);
+function simulateBoxOffice(roleType: string, playerFame: number): number {
+  const baseGross = { cameo: 5_000_000, supporting: 25_000_000, lead: 100_000_000 };
+  const fameMultiplier = 1 + (playerFame / 500_000);
+  const variance = 0.5 + Math.random(); // 50%-150% variance
+  return Math.floor(baseGross[roleType] * fameMultiplier * variance);
 }
 ```
 
-**Version**: 1.0.596
+### Sequel Eligibility
+```typescript
+const SEQUEL_THRESHOLD = {
+  cameo: 10_000_000,
+  supporting: 50_000_000,
+  lead: 150_000_000
+};
+
+function checkSequelEligibility(contract: FilmContract): boolean {
+  const threshold = SEQUEL_THRESHOLD[contract.role_type] || 50_000_000;
+  return contract.box_office_gross >= threshold;
+}
+```
+
+**Version**: 1.0.597
