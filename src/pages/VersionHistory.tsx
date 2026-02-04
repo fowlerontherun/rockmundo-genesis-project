@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.593",
+    date: "2026-02-04",
+    changes: [
+      { type: 'fix', description: "Music Videos: Fixed AI video generation - now uses Replicate's MiniMax video model with async webhook callback" },
+      { type: 'feature', description: "Music Videos: Real 10-second 1080p AI videos now generated and stored permanently in Supabase Storage" },
+      { type: 'improvement', description: "Music Videos: Added 'Generating' status with progress indicator and estimated time (2-5 minutes)" },
+      { type: 'improvement', description: "Music Videos: Failed generations now show error message and refund $75,000 automatically" },
+      { type: 'improvement', description: "Music Videos: Retry button available for failed AI video generations" },
+    ],
+  },
+  {
     version: "1.0.592",
     date: "2026-02-04",
     changes: [
