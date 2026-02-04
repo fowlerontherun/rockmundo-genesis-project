@@ -34,6 +34,7 @@ export function DepartureTimePicker({
   maxDaysAhead = 14,
 }: DepartureTimePickerProps) {
   const schedule = getTransportSchedule(transportType);
+  const isPrivateJet = transportType.toLowerCase() === 'private_jet';
   
   // Generate available dates (today + next N days)
   const availableDates = useMemo(() => {
@@ -59,7 +60,7 @@ export function DepartureTimePicker({
     return calculateArrivalTime(selectedDate, selectedHour, durationHours);
   }, [selectedDate, selectedHour, durationHours]);
 
-  // Handle "Next Available" button
+  // Handle "Next Available" / immediate departure
   const handleNextAvailable = () => {
     const next = getNextAvailableDeparture(transportType);
     onDateChange(next.date);
@@ -79,6 +80,44 @@ export function DepartureTimePicker({
 
   // Check if slot is selected
   const isSlotSelected = (hour: number) => selectedHour === hour;
+
+  // Private jet: Auto-select immediate departure and show simplified UI
+  if (isPrivateJet) {
+    // Auto-set departure on mount if not set
+    if (!selectedDate || selectedHour === null) {
+      setTimeout(() => handleNextAvailable(), 0);
+    }
+    
+    const now = new Date();
+    const jetArrival = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+    
+    return (
+      <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-yellow-500/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-amber-500">
+            <Zap className="h-4 w-4" />
+            Immediate Departure
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Your private jet is ready when you are</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <div className="flex-1">
+              <div className="text-xs text-muted-foreground">Depart</div>
+              <div className="font-semibold text-amber-500">Now</div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-amber-500" />
+            <div className="flex-1 text-right">
+              <div className="text-xs text-muted-foreground">Arrive</div>
+              <div className="font-semibold text-amber-500">
+                {format(jetArrival, "h:mm a")} ({durationHours}h)
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-primary/20">

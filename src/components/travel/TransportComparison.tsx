@@ -1,4 +1,4 @@
-import { Clock, DollarSign, Sparkles, AlertCircle, Plane, Train, Bus, Ship, Check } from "lucide-react";
+import { Clock, DollarSign, Sparkles, AlertCircle, Plane, Train, Bus, Ship, Check, Crown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const TRANSPORT_ICONS = {
   plane: Plane,
   bus: Bus,
   ship: Ship,
+  private_jet: Crown,
 } as const;
 
 const TRANSPORT_LABELS = {
@@ -24,6 +25,7 @@ const TRANSPORT_LABELS = {
   train: { name: "Train", emoji: "🚄", description: "Fast and comfortable, regional routes" },
   plane: { name: "Plane", emoji: "✈️", description: "Fastest option for long distances" },
   ship: { name: "Ship", emoji: "🚢", description: "Scenic coastal routes" },
+  private_jet: { name: "Private Jet", emoji: "🛩️", description: "Instant departure, any destination" },
 } as const;
 
 function formatDuration(hours: number): string {
@@ -73,6 +75,7 @@ export function TransportComparison({
           const isCheapest = option === cheapest && availableOptions.length > 1;
           const isFastest = option === fastest && availableOptions.length > 1;
           const isMostComfortable = option === mostComfortable && availableOptions.length > 1;
+          const isPrivateJet = option.mode === 'private_jet';
 
           return (
             <Card
@@ -83,7 +86,7 @@ export function TransportComparison({
                   : canAfford
                   ? "hover:border-primary/50"
                   : "opacity-60"
-              }`}
+              } ${isPrivateJet ? "bg-gradient-to-r from-amber-500/5 to-yellow-500/5 border-amber-500/30" : ""}`}
               onClick={() => canAfford && onSelectMode(option.mode)}
             >
               <CardContent className="p-4">
@@ -92,14 +95,21 @@ export function TransportComparison({
                   <div className="flex gap-3">
                     <div
                       className={`p-3 rounded-lg ${
-                        isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                        isSelected ? "bg-primary text-primary-foreground" : 
+                        isPrivateJet ? "bg-amber-500/20 text-amber-600" : "bg-muted"
                       }`}
                     >
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold">{label?.name || option.mode}</h4>
+                        <h4 className={`font-semibold ${isPrivateJet ? "text-amber-500" : ""}`}>{label?.name || option.mode}</h4>
+                        {isPrivateJet && (
+                          <Badge className="text-xs bg-gradient-to-r from-amber-500 to-yellow-500 text-black">
+                            <Crown className="h-3 w-3 mr-0.5" />
+                            VIP
+                          </Badge>
+                        )}
                         {isCheapest && (
                           <Badge variant="secondary" className="text-xs">
                             <DollarSign className="h-3 w-3 mr-0.5" />
