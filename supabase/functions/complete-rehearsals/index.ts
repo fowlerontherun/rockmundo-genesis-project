@@ -163,54 +163,74 @@ Deno.serve(async (req) => {
 
         // Update familiarity for each song
         for (const songId of songsToUpdate) {
-          const { data: existingFamiliarity } = await supabase
-            .from('band_song_familiarity')
-            .select('familiarity_minutes')
-            .eq('band_id', rehearsal.band_id)
-            .eq('song_id', songId)
-            .maybeSingle()
+          try {
+            const { data: existingFamiliarity, error: fetchError } = await supabase
+              .from('band_song_familiarity')
+              .select('id, familiarity_minutes')
+              .eq('band_id', rehearsal.band_id)
+              .eq('song_id', songId)
+              .maybeSingle()
 
-          const currentMinutes = existingFamiliarity?.familiarity_minutes || 0
-          const newMinutes = currentMinutes + minutesPerSong
-          
-          // Calculate rehearsal stage using database-compliant values
-          // Valid stages: 'unlearned', 'learning', 'familiar', 'well_rehearsed', 'perfected'
-          // Aligned with user expectations: 6 hours (360min) = Perfected
-          let rehearsalStage = 'unlearned'
-          if (newMinutes >= 360) {
-            rehearsalStage = 'perfected'
-          } else if (newMinutes >= 300) {
-            rehearsalStage = 'well_rehearsed'
-          } else if (newMinutes >= 180) {
-            rehearsalStage = 'familiar'
-          } else if (newMinutes >= 60) {
-            rehearsalStage = 'learning'
-          }
+            if (fetchError) {
+              console.error(`[complete-rehearsals] Error fetching familiarity for song ${songId}:`, fetchError)
+              continue
+            }
 
-          // Use upsert with ignoreDuplicates false to force update on conflict
-          // Note: onConflict with column names works, but we need to ensure proper update
-          const { error: familiarityError } = await supabase
-            .from('band_song_familiarity')
-            .upsert(
-              {
-                band_id: rehearsal.band_id,
-                song_id: songId,
-                familiarity_minutes: newMinutes,
-                familiarity_percentage: Math.min(100, Math.floor((newMinutes * 100) / 360)),
-                rehearsal_stage: rehearsalStage,
-                last_rehearsed_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                onConflict: 'band_id,song_id',
-                ignoreDuplicates: false,
+            const currentMinutes = existingFamiliarity?.familiarity_minutes || 0
+            const newMinutes = currentMinutes + minutesPerSong
+            
+            // Calculate rehearsal stage using database-compliant values
+            let rehearsalStage = 'unlearned'
+            if (newMinutes >= 360) {
+              rehearsalStage = 'perfected'
+            } else if (newMinutes >= 300) {
+              rehearsalStage = 'well_rehearsed'
+            } else if (newMinutes >= 180) {
+              rehearsalStage = 'familiar'
+            } else if (newMinutes >= 60) {
+              rehearsalStage = 'learning'
+            }
+
+            if (existingFamiliarity?.id) {
+              // Update existing record
+              const { error: updateError } = await supabase
+                .from('band_song_familiarity')
+                .update({
+                  familiarity_minutes: newMinutes,
+                  familiarity_percentage: Math.min(100, Math.floor((newMinutes * 100) / 360)),
+                  rehearsal_stage: rehearsalStage,
+                  last_rehearsed_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingFamiliarity.id)
+
+              if (updateError) {
+                console.error(`[complete-rehearsals] Error updating familiarity for song ${songId}:`, updateError)
+              } else {
+                console.log(`[complete-rehearsals] Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} mins (${rehearsalStage})`)
               }
-            )
+            } else {
+              // Insert new record
+              const { error: insertError } = await supabase
+                .from('band_song_familiarity')
+                .insert({
+                  band_id: rehearsal.band_id,
+                  song_id: songId,
+                  familiarity_minutes: newMinutes,
+                  familiarity_percentage: Math.min(100, Math.floor((newMinutes * 100) / 360)),
+                  rehearsal_stage: rehearsalStage,
+                  last_rehearsed_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
 
-          if (familiarityError) {
-            console.error(`[complete-rehearsals] Error updating familiarity for song ${songId}:`, familiarityError)
-          } else {
-            console.log(`[complete-rehearsals] Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} mins (${rehearsalStage})`)
+              if (insertError) {
+                console.error(`[complete-rehearsals] Error inserting familiarity for song ${songId}:`, insertError)
+              } else {
+                console.log(`[complete-rehearsals] Created familiarity for song ${songId}: ${newMinutes} mins (${rehearsalStage})`)
+              }
+            }
+          } catch (songError) {
+            console.error(`[complete-rehearsals] Unexpected error processing song ${songId}:`, songError)
           }
 
           // Update song_rehearsals table for tracking

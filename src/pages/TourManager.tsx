@@ -171,7 +171,85 @@ const TourManager = () => {
     },
   });
 
-  // Fetch other bands' tours with filtering and pagination
+  // Regenerate missing travel legs mutation
+  const regenerateTravelLegsMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      // Get tour venues ordered by date
+      const { data: tourVenuesData, error: venuesError } = await supabase
+        .from('tour_venues')
+        .select('venue_id, city_id, date')
+        .eq('tour_id', tourId)
+        .order('date', { ascending: true });
+      
+      if (venuesError) throw venuesError;
+      if (!tourVenuesData || tourVenuesData.length < 2) {
+        return { count: 0, message: 'Tour needs at least 2 venues to create travel legs' };
+      }
+
+      // Check if travel legs already exist
+      const { data: existingLegs } = await supabase
+        .from('tour_travel_legs')
+        .select('id')
+        .eq('tour_id', tourId);
+      
+      if (existingLegs && existingLegs.length > 0) {
+        return { count: existingLegs.length, message: 'Travel legs already exist' };
+      }
+
+      // Get tour travel mode
+      const { data: tour } = await supabase
+        .from('tours')
+        .select('travel_mode')
+        .eq('id', tourId)
+        .single();
+
+      // Create travel legs between consecutive venues
+      const travelLegs = [];
+      for (let i = 0; i < tourVenuesData.length - 1; i++) {
+        const fromVenue = tourVenuesData[i];
+        const toVenue = tourVenuesData[i + 1];
+        
+        const departureDate = new Date(fromVenue.date);
+        departureDate.setDate(departureDate.getDate() + 1);
+        const arrivalDate = new Date(toVenue.date);
+        
+        // Ensure travel_mode is a valid value
+        let travelMode = tour?.travel_mode || 'bus';
+        if (!['bus', 'train', 'plane', 'ship', 'tour_bus'].includes(travelMode)) {
+          travelMode = 'bus';
+        }
+        
+        travelLegs.push({
+          tour_id: tourId,
+          from_city_id: fromVenue.city_id,
+          to_city_id: toVenue.city_id,
+          travel_mode: travelMode,
+          travel_cost: 0,
+          departure_date: departureDate.toISOString(),
+          arrival_date: arrivalDate.toISOString(),
+          sequence_order: i,
+        });
+      }
+
+      if (travelLegs.length > 0) {
+        const { error: insertError } = await supabase
+          .from('tour_travel_legs')
+          .insert(travelLegs);
+        if (insertError) throw insertError;
+      }
+
+      return { count: travelLegs.length, message: `Created ${travelLegs.length} travel legs` };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['tour-travel-legs'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      toast.success(result.message);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to regenerate travel legs: ${error.message}`);
+    },
+  });
+
   const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
     queryKey: ['other-tours', currentBandId, fameFilter, genreFilter, otherToursPage],
     queryFn: async () => {
@@ -911,6 +989,23 @@ const TourManager = () => {
                     </Card>
                   );
                 })()}
+
+                {/* Regenerate Travel Legs Button - only if missing */}
+                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => regenerateTravelLegsMutation.mutate(selectedTour.id)}
+                    disabled={regenerateTravelLegsMutation.isPending}
+                  >
+                    {regenerateTravelLegsMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Map className="h-4 w-4 mr-2" />
+                    )}
+                    Regenerate Travel Schedule
+                  </Button>
+                )}
 
                 {/* Cancel Tour Button - only for own tours */}
                 {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (

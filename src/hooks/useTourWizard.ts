@@ -317,7 +317,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     }
     
     // Travel costs (simplified)
-    const travelCosts = state.travelMode === 'manual' ? 0 : venueMatches.length * 100;
+    const travelCosts = venueMatches.length * 100;
     
     // Tour bus costs (static rate)
     const tourBusCosts = state.travelMode === 'tour_bus'
