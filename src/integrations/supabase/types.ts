@@ -5929,38 +5929,135 @@ export type Database = {
           },
         ]
       }
+      festival_merch_sales: {
+        Row: {
+          albums_sold: number | null
+          band_id: string | null
+          created_at: string | null
+          festival_cut: number | null
+          festival_id: string | null
+          gross_revenue: number | null
+          id: string
+          merch_booth_location: string | null
+          net_revenue: number | null
+          other_items_sold: number | null
+          performance_boost: number | null
+          performance_id: string | null
+          posters_sold: number | null
+          tshirts_sold: number | null
+          weather_impact: number | null
+        }
+        Insert: {
+          albums_sold?: number | null
+          band_id?: string | null
+          created_at?: string | null
+          festival_cut?: number | null
+          festival_id?: string | null
+          gross_revenue?: number | null
+          id?: string
+          merch_booth_location?: string | null
+          net_revenue?: number | null
+          other_items_sold?: number | null
+          performance_boost?: number | null
+          performance_id?: string | null
+          posters_sold?: number | null
+          tshirts_sold?: number | null
+          weather_impact?: number | null
+        }
+        Update: {
+          albums_sold?: number | null
+          band_id?: string | null
+          created_at?: string | null
+          festival_cut?: number | null
+          festival_id?: string | null
+          gross_revenue?: number | null
+          id?: string
+          merch_booth_location?: string | null
+          net_revenue?: number | null
+          other_items_sold?: number | null
+          performance_boost?: number | null
+          performance_id?: string | null
+          posters_sold?: number | null
+          tshirts_sold?: number | null
+          weather_impact?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_merch_sales_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_merch_sales_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_merch_sales_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "festival_performance_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_participants: {
         Row: {
+          arrival_confirmed_at: string | null
           band_id: string
           created_at: string | null
           event_id: string
           id: string
+          is_confirmed_attendance: boolean | null
           payout_amount: number | null
           performance_date: string | null
+          performance_time: string | null
+          setlist_id: string | null
           slot_type: string
+          soundcheck_time: string | null
+          stage_name: string | null
           status: string | null
+          tech_rider_approved: boolean | null
           updated_at: string | null
         }
         Insert: {
+          arrival_confirmed_at?: string | null
           band_id: string
           created_at?: string | null
           event_id: string
           id?: string
+          is_confirmed_attendance?: boolean | null
           payout_amount?: number | null
           performance_date?: string | null
+          performance_time?: string | null
+          setlist_id?: string | null
           slot_type: string
+          soundcheck_time?: string | null
+          stage_name?: string | null
           status?: string | null
+          tech_rider_approved?: boolean | null
           updated_at?: string | null
         }
         Update: {
+          arrival_confirmed_at?: string | null
           band_id?: string
           created_at?: string | null
           event_id?: string
           id?: string
+          is_confirmed_attendance?: boolean | null
           payout_amount?: number | null
           performance_date?: string | null
+          performance_time?: string | null
+          setlist_id?: string | null
           slot_type?: string
+          soundcheck_time?: string | null
+          stage_name?: string | null
           status?: string | null
+          tech_rider_approved?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -5976,6 +6073,126 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_participants_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_performance_history: {
+        Row: {
+          attendance_estimate: number | null
+          band_id: string | null
+          created_at: string | null
+          critic_score: number | null
+          crowd_energy_avg: number | null
+          crowd_energy_peak: number | null
+          fame_earned: number | null
+          fan_score: number | null
+          festival_id: string | null
+          highlight_moments: Json | null
+          id: string
+          merch_revenue: number | null
+          new_fans_gained: number | null
+          participation_id: string | null
+          payment_earned: number | null
+          performance_date: string | null
+          performance_score: number | null
+          review_headline: string | null
+          review_summary: string | null
+          setlist_id: string | null
+          slot_type: string | null
+          songs_performed: number | null
+          stage_name: string | null
+          user_id: string | null
+          weather_conditions: string | null
+        }
+        Insert: {
+          attendance_estimate?: number | null
+          band_id?: string | null
+          created_at?: string | null
+          critic_score?: number | null
+          crowd_energy_avg?: number | null
+          crowd_energy_peak?: number | null
+          fame_earned?: number | null
+          fan_score?: number | null
+          festival_id?: string | null
+          highlight_moments?: Json | null
+          id?: string
+          merch_revenue?: number | null
+          new_fans_gained?: number | null
+          participation_id?: string | null
+          payment_earned?: number | null
+          performance_date?: string | null
+          performance_score?: number | null
+          review_headline?: string | null
+          review_summary?: string | null
+          setlist_id?: string | null
+          slot_type?: string | null
+          songs_performed?: number | null
+          stage_name?: string | null
+          user_id?: string | null
+          weather_conditions?: string | null
+        }
+        Update: {
+          attendance_estimate?: number | null
+          band_id?: string | null
+          created_at?: string | null
+          critic_score?: number | null
+          crowd_energy_avg?: number | null
+          crowd_energy_peak?: number | null
+          fame_earned?: number | null
+          fan_score?: number | null
+          festival_id?: string | null
+          highlight_moments?: Json | null
+          id?: string
+          merch_revenue?: number | null
+          new_fans_gained?: number | null
+          participation_id?: string | null
+          payment_earned?: number | null
+          performance_date?: string | null
+          performance_score?: number | null
+          review_headline?: string | null
+          review_summary?: string | null
+          setlist_id?: string | null
+          slot_type?: string | null
+          songs_performed?: number | null
+          stage_name?: string | null
+          user_id?: string | null
+          weather_conditions?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_performance_history_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_performance_history_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_performance_history_participation_id_fkey"
+            columns: ["participation_id"]
+            isOneToOne: false
+            referencedRelation: "festival_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_performance_history_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
             referencedColumns: ["id"]
           },
         ]
@@ -6006,6 +6223,203 @@ export type Database = {
           {
             foreignKeyName: "festival_revenue_streams_event_id_fkey"
             columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_reviews: {
+        Row: {
+          band_id: string | null
+          fame_impact: number | null
+          genre_cred_impact: number | null
+          headline: string | null
+          id: string
+          is_featured: boolean | null
+          performance_id: string | null
+          publication_name: string | null
+          published_at: string | null
+          review_text: string | null
+          reviewer_type: string | null
+          score: number | null
+          sentiment: string | null
+          view_count: number | null
+        }
+        Insert: {
+          band_id?: string | null
+          fame_impact?: number | null
+          genre_cred_impact?: number | null
+          headline?: string | null
+          id?: string
+          is_featured?: boolean | null
+          performance_id?: string | null
+          publication_name?: string | null
+          published_at?: string | null
+          review_text?: string | null
+          reviewer_type?: string | null
+          score?: number | null
+          sentiment?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          band_id?: string | null
+          fame_impact?: number | null
+          genre_cred_impact?: number | null
+          headline?: string | null
+          id?: string
+          is_featured?: boolean | null
+          performance_id?: string | null
+          publication_name?: string | null
+          published_at?: string | null
+          review_text?: string | null
+          reviewer_type?: string | null
+          score?: number | null
+          sentiment?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_reviews_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_reviews_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "festival_performance_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_rivalries: {
+        Row: {
+          band_a_id: string | null
+          band_a_score: number | null
+          band_b_id: string | null
+          band_b_score: number | null
+          created_at: string | null
+          fame_stakes: number | null
+          festival_id: string | null
+          id: string
+          resolved_at: string | null
+          rivalry_type: string | null
+          winner_band_id: string | null
+        }
+        Insert: {
+          band_a_id?: string | null
+          band_a_score?: number | null
+          band_b_id?: string | null
+          band_b_score?: number | null
+          created_at?: string | null
+          fame_stakes?: number | null
+          festival_id?: string | null
+          id?: string
+          resolved_at?: string | null
+          rivalry_type?: string | null
+          winner_band_id?: string | null
+        }
+        Update: {
+          band_a_id?: string | null
+          band_a_score?: number | null
+          band_b_id?: string | null
+          band_b_score?: number | null
+          created_at?: string | null
+          fame_stakes?: number | null
+          festival_id?: string | null
+          id?: string
+          resolved_at?: string | null
+          rivalry_type?: string | null
+          winner_band_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_rivalries_band_a_id_fkey"
+            columns: ["band_a_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_rivalries_band_b_id_fkey"
+            columns: ["band_b_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_rivalries_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_rivalries_winner_band_id_fkey"
+            columns: ["winner_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_sponsorships: {
+        Row: {
+          brand_id: string | null
+          created_at: string | null
+          crowd_mood_modifier: number | null
+          fame_modifier: number | null
+          festival_id: string | null
+          id: string
+          is_exclusive: boolean | null
+          merch_sales_modifier: number | null
+          required_mentions: number | null
+          revenue_share_percent: number | null
+          sponsorship_amount: number | null
+          sponsorship_type: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string | null
+          crowd_mood_modifier?: number | null
+          fame_modifier?: number | null
+          festival_id?: string | null
+          id?: string
+          is_exclusive?: boolean | null
+          merch_sales_modifier?: number | null
+          required_mentions?: number | null
+          revenue_share_percent?: number | null
+          sponsorship_amount?: number | null
+          sponsorship_type?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string | null
+          crowd_mood_modifier?: number | null
+          fame_modifier?: number | null
+          festival_id?: string | null
+          id?: string
+          is_exclusive?: boolean | null
+          merch_sales_modifier?: number | null
+          required_mentions?: number | null
+          revenue_share_percent?: number | null
+          sponsorship_amount?: number | null
+          sponsorship_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_sponsorships_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_sponsorships_festival_id_fkey"
+            columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "game_events"
             referencedColumns: ["id"]
@@ -6258,48 +6672,77 @@ export type Database = {
       }
       game_events: {
         Row: {
+          attendance_projection: number | null
           created_at: string | null
           current_participants: number | null
           description: string | null
           end_date: string
           event_type: string
+          festival_status: string | null
+          headliner_count: number | null
           id: string
           is_active: boolean | null
           max_participants: number | null
           requirements: Json | null
           rewards: Json | null
+          sponsor_ids: Json | null
           start_date: string
           title: string
+          total_stages: number | null
+          venue_id: string | null
+          weather_forecast: string | null
         }
         Insert: {
+          attendance_projection?: number | null
           created_at?: string | null
           current_participants?: number | null
           description?: string | null
           end_date: string
           event_type: string
+          festival_status?: string | null
+          headliner_count?: number | null
           id?: string
           is_active?: boolean | null
           max_participants?: number | null
           requirements?: Json | null
           rewards?: Json | null
+          sponsor_ids?: Json | null
           start_date: string
           title: string
+          total_stages?: number | null
+          venue_id?: string | null
+          weather_forecast?: string | null
         }
         Update: {
+          attendance_projection?: number | null
           created_at?: string | null
           current_participants?: number | null
           description?: string | null
           end_date?: string
           event_type?: string
+          festival_status?: string | null
+          headliner_count?: number | null
           id?: string
           is_active?: boolean | null
           max_participants?: number | null
           requirements?: Json | null
           rewards?: Json | null
+          sponsor_ids?: Json | null
           start_date?: string
           title?: string
+          total_stages?: number | null
+          venue_id?: string | null
+          weather_forecast?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "game_events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gear_marketplace_listings: {
         Row: {
