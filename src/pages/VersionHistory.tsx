@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.589",
+    date: "2026-02-04",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed song familiarity not updating - uses explicit update instead of upsert" },
+      { type: 'fix', description: "Tours: Fixed travel legs not being created - 'auto' travel mode now defaults to 'bus'" },
+      { type: 'feature', description: "Tour Manager: Added 'Regenerate Travel Schedule' button to fix tours missing travel legs" },
+      { type: 'fix', description: "Tours: Travel mode type now only allows valid database values (bus, train, plane, ship, tour_bus)" },
+    ],
+  },
+  {
     version: "1.0.588",
     date: "2026-02-03",
     changes: [

@@ -1,7 +1,7 @@
 // Tour system types and constants
 
 export type TourScope = 'country' | 'continent' | 'world';
-export type TravelMode = 'manual' | 'auto' | 'tour_bus';
+export type TravelMode = 'bus' | 'train' | 'plane' | 'ship' | 'tour_bus';
 export type StageSetupTier = 'basic' | 'enhanced' | 'professional' | 'premium' | 'spectacular';
 
 export const STAGE_SETUP_TIERS = {
@@ -161,7 +161,7 @@ export const DEFAULT_WIZARD_STATE: TourWizardState = {
   customTicketPrice: null,
   ticketOperatorId: null,
   stageSetupTier: 'basic',
-  travelMode: 'auto',
+  travelMode: 'bus',
   tourBusDailyCost: TOUR_BUS_DAILY_COST,
   supportBandId: null,
   supportBandName: null,
