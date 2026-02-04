@@ -8,13 +8,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useFestivals, Festival, FestivalParticipant } from "@/hooks/useFestivals";
+import { useFestivalHistory } from "@/hooks/useFestivalHistory";
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useSetlists } from "@/hooks/useSetlists";
 import { FestivalSlotOffers } from "@/components/festivals/FestivalSlotOffers";
+import { FestivalHistoryCard } from "@/components/festivals/history/FestivalHistoryCard";
+import { FestivalHistoryStats } from "@/components/festivals/history/FestivalHistoryStats";
 import { 
   Calendar, MapPin, Users, Music, Star, Clock, 
-  DollarSign, Trophy, CheckCircle, XCircle, Loader2, Mail 
+  DollarSign, Trophy, CheckCircle, XCircle, Loader2, Mail, History
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns";
 
@@ -45,8 +48,9 @@ export default function FestivalBrowser() {
   } = useFestivals(user?.id, band?.id);
   
   const { data: setlists } = useSetlists(band?.id);
+  const { performances, stats, isLoading: historyLoading } = useFestivalHistory(band?.id);
 
-  const [activeTab, setActiveTab] = useState<"browse" | "my-festivals" | "offers">("browse");
+  const [activeTab, setActiveTab] = useState<"browse" | "my-festivals" | "offers" | "history">("browse");
   const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -154,12 +158,16 @@ export default function FestivalBrowser() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-xl grid-cols-4">
           <TabsTrigger value="browse">Browse</TabsTrigger>
           <TabsTrigger value="my-festivals">My Festivals</TabsTrigger>
           <TabsTrigger value="offers" className="flex items-center gap-1">
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline">Offers</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-1">
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">History</span>
           </TabsTrigger>
         </TabsList>
 
@@ -367,6 +375,35 @@ export default function FestivalBrowser() {
                 </Button>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="mt-6">
+          {historyLoading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+              </CardContent>
+            </Card>
+          ) : performances.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No performance history yet</p>
+                <p className="text-sm mt-2">Perform at festivals to build your track record!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              <FestivalHistoryStats stats={stats} />
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Past Performances</h3>
+                {performances.map((performance) => (
+                  <FestivalHistoryCard key={performance.id} performance={performance} />
+                ))}
+              </div>
+            </div>
           )}
         </TabsContent>
       </Tabs>

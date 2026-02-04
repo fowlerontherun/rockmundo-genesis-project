@@ -14,6 +14,23 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.598",
+    date: "2026-02-04",
+    changes: [
+      { type: 'feature', description: "Festivals: Major expansion - now a core gameplay pillar" },
+      { type: 'feature', description: "Festivals: Live 'Perform Now' minigame with phases (Soundcheck, Opening, Main Set, Crowd Interaction, Climax)" },
+      { type: 'feature', description: "Festivals: Real-time crowd energy meter with interactive boost/slow controls" },
+      { type: 'feature', description: "Festivals: Random performance events (technical issues, crowd surfers, encore requests) with choice-based scoring" },
+      { type: 'feature', description: "Festivals: Performance scoring based on song familiarity, gear quality, band chemistry, setlist flow" },
+      { type: 'feature', description: "Festivals: Complete performance history tracking with career stats" },
+      { type: 'feature', description: "Festivals: Critic and fan scores with generated review headlines" },
+      { type: 'feature', description: "Festivals: Rivalry system - compete against other bands at the same festival" },
+      { type: 'feature', description: "Festivals: Sponsorship system with brand modifiers for fame, merch, and crowd mood" },
+      { type: 'feature', description: "Festivals: Merch sales tracking linked to performance quality" },
+      { type: 'feature', description: "Festivals: New History tab in Festival Browser with aggregated career metrics" },
+    ],
+  },
+  {
     version: "1.0.597",
     date: "2026-02-04",
     changes: [
