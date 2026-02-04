@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.597",
+    date: "2026-02-04",
+    changes: [
+      { type: 'feature', description: "Modeling: New modeling offers system linked to player Looks attribute" },
+      { type: 'feature', description: "Modeling: 15 modeling agencies from local to elite tier (Elite, IMG, Ford, Storm, etc.)" },
+      { type: 'feature', description: "Modeling: 6 gig types - photo shoots, runway, commercial, cover shoot, brand ambassador, music video cameo" },
+      { type: 'feature', description: "Fashion Events: Paris, Milan, New York, London Fashion Weeks and Met Gala" },
+      { type: 'feature', description: "Fashion Brands: 30 new brands (Gucci, Versace, Louis Vuitton, Supreme, H&M, etc.)" },
+      { type: 'feature', description: "Films: Enhanced lifecycle with casting, filming, premiere phases and sequel eligibility" },
+      { type: 'feature', description: "Films: 15 new film studios including Netflix, A24, Universal, Warner Bros" },
+    ],
+  },
+  {
     version: "1.0.596",
     date: "2026-02-04",
     changes: [

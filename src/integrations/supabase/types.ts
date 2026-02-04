@@ -5876,6 +5876,59 @@ export type Database = {
         }
         Relationships: []
       }
+      fashion_events: {
+        Row: {
+          city_id: string | null
+          created_at: string | null
+          description: string | null
+          ends_at: string
+          event_type: string | null
+          id: string
+          is_active: boolean | null
+          min_fame_required: number | null
+          min_looks_required: number | null
+          name: string
+          prestige_level: number | null
+          starts_at: string
+        }
+        Insert: {
+          city_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          ends_at: string
+          event_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          min_looks_required?: number | null
+          name: string
+          prestige_level?: number | null
+          starts_at: string
+        }
+        Update: {
+          city_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          ends_at?: string
+          event_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_fame_required?: number | null
+          min_looks_required?: number | null
+          name?: string
+          prestige_level?: number | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fashion_events_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_participants: {
         Row: {
           band_id: string
@@ -11408,6 +11461,121 @@ export type Database = {
           },
         ]
       }
+      modeling_agencies: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          min_looks_required: number | null
+          name: string
+          prestige_level: number | null
+          region: string | null
+          tier: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_looks_required?: number | null
+          name: string
+          prestige_level?: number | null
+          region?: string | null
+          tier?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_looks_required?: number | null
+          name?: string
+          prestige_level?: number | null
+          region?: string | null
+          tier?: string | null
+        }
+        Relationships: []
+      }
+      modeling_gigs: {
+        Row: {
+          agency_id: string | null
+          brand_id: string | null
+          compensation_max: number | null
+          compensation_min: number | null
+          created_at: string | null
+          description: string | null
+          duration_hours: number | null
+          event_id: string | null
+          fame_boost: number | null
+          gig_type: string | null
+          id: string
+          is_available: boolean | null
+          looks_boost: number | null
+          min_fame_required: number | null
+          min_looks_required: number | null
+          title: string
+        }
+        Insert: {
+          agency_id?: string | null
+          brand_id?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          duration_hours?: number | null
+          event_id?: string | null
+          fame_boost?: number | null
+          gig_type?: string | null
+          id?: string
+          is_available?: boolean | null
+          looks_boost?: number | null
+          min_fame_required?: number | null
+          min_looks_required?: number | null
+          title: string
+        }
+        Update: {
+          agency_id?: string | null
+          brand_id?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          duration_hours?: number | null
+          event_id?: string | null
+          fame_boost?: number | null
+          gig_type?: string | null
+          id?: string
+          is_available?: boolean | null
+          looks_boost?: number | null
+          min_fame_required?: number | null
+          min_looks_required?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modeling_gigs_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "modeling_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modeling_gigs_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modeling_gigs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "fashion_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       multiplayer_events: {
         Row: {
           created_at: string | null
@@ -13530,6 +13698,8 @@ export type Database = {
         Row: {
           accepted_at: string | null
           band_id: string | null
+          box_office_gross: number | null
+          casting_date: string | null
           compensation: number | null
           completed_at: string | null
           contract_year: number
@@ -13537,16 +13707,22 @@ export type Database = {
           fame_boost: number | null
           fan_boost: number | null
           film_id: string
+          filming_end: string | null
           filming_end_date: string | null
+          filming_start: string | null
           filming_start_date: string | null
           id: string
+          premiere_date: string | null
           role_type: string | null
+          sequel_eligible: boolean | null
           status: string | null
           user_id: string
         }
         Insert: {
           accepted_at?: string | null
           band_id?: string | null
+          box_office_gross?: number | null
+          casting_date?: string | null
           compensation?: number | null
           completed_at?: string | null
           contract_year: number
@@ -13554,16 +13730,22 @@ export type Database = {
           fame_boost?: number | null
           fan_boost?: number | null
           film_id: string
+          filming_end?: string | null
           filming_end_date?: string | null
+          filming_start?: string | null
           filming_start_date?: string | null
           id?: string
+          premiere_date?: string | null
           role_type?: string | null
+          sequel_eligible?: boolean | null
           status?: string | null
           user_id: string
         }
         Update: {
           accepted_at?: string | null
           band_id?: string | null
+          box_office_gross?: number | null
+          casting_date?: string | null
           compensation?: number | null
           completed_at?: string | null
           contract_year?: number
@@ -13571,10 +13753,14 @@ export type Database = {
           fame_boost?: number | null
           fan_boost?: number | null
           film_id?: string
+          filming_end?: string | null
           filming_end_date?: string | null
+          filming_start?: string | null
           filming_start_date?: string | null
           id?: string
+          premiere_date?: string | null
           role_type?: string | null
+          sequel_eligible?: boolean | null
           status?: string | null
           user_id?: string
         }
@@ -14395,6 +14581,72 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_modeling_contracts: {
+        Row: {
+          brand_id: string | null
+          compensation: number | null
+          completed_at: string | null
+          created_at: string | null
+          fame_boost: number | null
+          gig_id: string
+          gig_type: string | null
+          id: string
+          looks_boost: number | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          shoot_date: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          brand_id?: string | null
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          fame_boost?: number | null
+          gig_id: string
+          gig_type?: string | null
+          id?: string
+          looks_boost?: number | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          shoot_date?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          brand_id?: string | null
+          compensation?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          fame_boost?: number | null
+          gig_id?: string
+          gig_type?: string | null
+          id?: string
+          looks_boost?: number | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          shoot_date?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_modeling_contracts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_modeling_contracts_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "modeling_gigs"
             referencedColumns: ["id"]
           },
         ]
