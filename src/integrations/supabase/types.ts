@@ -5152,6 +5152,7 @@ export type Database = {
           current_students: number | null
           description: string
           difficulty: string
+          discovery_achievement_id: string | null
           discovery_hint: string | null
           discovery_studio_id: string | null
           discovery_type: string | null
@@ -5182,6 +5183,7 @@ export type Database = {
           current_students?: number | null
           description: string
           difficulty?: string
+          discovery_achievement_id?: string | null
           discovery_hint?: string | null
           discovery_studio_id?: string | null
           discovery_type?: string | null
@@ -5212,6 +5214,7 @@ export type Database = {
           current_students?: number | null
           description?: string
           difficulty?: string
+          discovery_achievement_id?: string | null
           discovery_hint?: string | null
           discovery_studio_id?: string | null
           discovery_type?: string | null
@@ -5235,6 +5238,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_mentors_discovery_achievement_id_fkey"
+            columns: ["discovery_achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
             referencedColumns: ["id"]
           },
           {

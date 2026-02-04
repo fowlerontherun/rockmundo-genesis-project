@@ -25,6 +25,7 @@ import {
   type ChemistryMoment,
   type ChemistryEffects 
 } from "./bandChemistryEffects";
+import { checkVenueGigDiscovery, type MentorDiscoveryResult } from "./mentorDiscovery";
 
 interface GigExecutionData {
   gigId: string;
@@ -535,6 +536,32 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error generating chemistry moments:', chemError);
   }
 
+  // Check for mentor discoveries via venue gig
+  let mentorDiscovery: MentorDiscoveryResult | null = null;
+  try {
+    const venueId = (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id;
+    if (venueId) {
+      // Get a profile ID from band members to check discovery
+      const memberUserId = members[0]?.user_id;
+      if (memberUserId) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', memberUserId)
+          .single();
+        
+        if (profileData?.id) {
+          mentorDiscovery = await checkVenueGigDiscovery(profileData.id, venueId);
+          if (mentorDiscovery?.success) {
+            console.log(`[GigExecution] Mentor discovered: ${mentorDiscovery.mentor?.name}`);
+          }
+        }
+      }
+    }
+  } catch (discoveryError) {
+    console.error('Error checking mentor discovery:', discoveryError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -552,5 +579,6 @@ export async function executeGigPerformance(data: GigExecutionData) {
     chemistryEffects,
     chemistryLevel: bandChemistry,
     chemistryChange: chemistryImpact,
+    mentorDiscovery,
   };
 }
