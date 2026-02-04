@@ -11446,6 +11446,7 @@ export type Database = {
           description: string | null
           director_id: string | null
           earnings: number
+          generation_completed_at: string | null
           generation_error: string | null
           generation_started_at: string | null
           hype_score: number
@@ -11466,6 +11467,7 @@ export type Database = {
           description?: string | null
           director_id?: string | null
           earnings?: number
+          generation_completed_at?: string | null
           generation_error?: string | null
           generation_started_at?: string | null
           hype_score?: number
@@ -11486,6 +11488,7 @@ export type Database = {
           description?: string | null
           director_id?: string | null
           earnings?: number
+          generation_completed_at?: string | null
           generation_error?: string | null
           generation_started_at?: string | null
           hype_score?: number

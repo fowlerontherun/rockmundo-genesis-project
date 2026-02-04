@@ -31,12 +31,15 @@ interface MusicVideo {
   budget: number;
   production_quality: number;
   director_id: string | null;
-  status: "planning" | "production" | "released" | "generating";
+  status: "planning" | "production" | "released" | "generating" | "failed";
   release_date: string | null;
   views_count: number;
   earnings: number;
   hype_score: number;
   created_at: string;
+  generation_started_at?: string | null;
+  generation_completed_at?: string | null;
+  generation_error?: string | null;
   songs?: {
     title: string;
     audio_url?: string;
@@ -227,7 +230,7 @@ const MusicVideos = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("music_videos")
-        .select("*")
+        .select("*, generation_started_at, generation_completed_at, generation_error")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -243,6 +246,11 @@ const MusicVideos = () => {
         ...video,
         songs: songs?.find((s) => s.id === video.song_id) || null,
       })) as MusicVideo[];
+    },
+    // Auto-refetch every 10 seconds if there are videos being generated
+    refetchInterval: (data) => {
+      const hasGenerating = data?.state?.data?.some((v: MusicVideo) => v.status === "generating");
+      return hasGenerating ? 10 * 1000 : false;
     },
   });
 
@@ -472,10 +480,10 @@ const MusicVideos = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["music-videos"] });
       toast({
-        title: "AI Video Generation Started!",
-        description: data?.videoUrl 
-          ? "Your video has been generated successfully!" 
-          : "Your video is being generated. Check back soon!",
+        title: "🎬 AI Video Generation Started!",
+        description: data?.estimatedTime 
+          ? `Your video is being generated. This typically takes ${data.estimatedTime}.` 
+          : "Your video is being generated. This typically takes 2-5 minutes.",
       });
     },
     onError: (error: any) => {
@@ -757,9 +765,18 @@ const MusicVideos = () => {
                           <CardDescription className="truncate">{video.songs?.title || "Unknown Song"}</CardDescription>
                         </div>
                         <Badge
-                          variant={video.status === "released" ? "default" : video.status === "production" ? "secondary" : "outline"}
+                          variant={
+                            video.status === "released" ? "default" : 
+                            video.status === "production" ? "secondary" : 
+                            video.status === "generating" ? "outline" :
+                            video.status === "failed" ? "destructive" :
+                            "outline"
+                          }
+                          className={video.status === "generating" ? "animate-pulse" : ""}
                         >
-                          {video.status}
+                          {video.status === "generating" ? "🎬 Generating..." : 
+                           video.status === "failed" ? "⚠️ Failed" :
+                           video.status}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -860,12 +877,54 @@ const MusicVideos = () => {
 
                           {/* Show badge if video already has AI video */}
                           {video.video_url && (
-                            <Badge className="bg-green-600 w-full justify-center">
+                            <Badge className="bg-primary/20 text-primary border-primary/30 w-full justify-center">
                               <Film className="mr-1 h-3 w-3" />
                               AI Video Ready
                             </Badge>
                           )}
                         </>
+                      )}
+
+                      {video.status === "generating" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">AI Video Generating...</p>
+                              <p className="text-xs text-muted-foreground">
+                                This typically takes 2-5 minutes. The video will appear automatically.
+                              </p>
+                            </div>
+                          </div>
+                          {video.generation_started_at && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              Started {formatDistanceToNow(new Date(video.generation_started_at), { addSuffix: true })}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {video.status === "failed" && (
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                            <p className="text-sm font-medium text-destructive">Video Generation Failed</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {video.generation_error || "An error occurred during generation. Your funds have been refunded."}
+                            </p>
+                          </div>
+                          {isMyVideo && profile?.is_vip && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => generateAiVideoMutation.mutate(video)}
+                              disabled={generateAiVideoMutation.isPending}
+                            >
+                              <Film className="mr-2 h-3 w-3" />
+                              Retry AI Video Generation
+                            </Button>
+                          )}
+                        </div>
                       )}
 
                       {video.status === "production" && productionInfo && (
