@@ -78,6 +78,18 @@ export const TRANSPORT_MODES = {
       ['Oceania', 'Oceania'],     // Australia/NZ
     ],
   },
+  private_jet: {
+    speedKmh: 900,          // Faster than commercial (no layovers)
+    costPerKm: 0,           // Fixed cost, not distance-based
+    comfort: 100,           // Ultimate luxury
+    minDistance: 0,         // Any distance
+    maxDistance: 99999,     // Unlimited range
+    icon: 'private_jet',
+    baseCost: 75000,        // Fixed $75,000 cost
+    // No restrictions - available everywhere
+    fixedDuration: 3,       // Always 3 hours (direct flight, no waiting)
+    isImmediate: true,      // No departure schedules - leaves immediately
+  },
 } as const;
 
 // Countries that share land borders/rail connections (for train routes)
@@ -268,6 +280,11 @@ export function calculateModeCost(distanceKm: number, mode: keyof typeof TRANSPO
   const config = TRANSPORT_MODES[mode];
   const baseCost = config.baseCost;
   
+  // Private jet has fixed cost regardless of distance
+  if (mode === 'private_jet') {
+    return baseCost;
+  }
+  
   // Add distance-based cost
   let cost = baseCost + distanceKm * config.costPerKm;
   
@@ -289,6 +306,11 @@ export function calculateModeCost(distanceKm: number, mode: keyof typeof TRANSPO
 // Calculate duration for a given distance and mode
 export function calculateDuration(distanceKm: number, mode: keyof typeof TRANSPORT_MODES): number {
   const config = TRANSPORT_MODES[mode];
+  
+  // Private jet has fixed duration - skip all the waiting
+  if (mode === 'private_jet' && 'fixedDuration' in config) {
+    return config.fixedDuration;
+  }
   
   // Add buffer time for boarding, etc.
   let bufferHours = 0;

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.594",
+    date: "2026-02-04",
+    changes: [
+      { type: 'feature', description: "Travel: Added Private Jet option - instant departure to ANY city in 3 hours for $75,000" },
+      { type: 'improvement', description: "Travel: Private jet bypasses all transport restrictions (distance, schedules, regions)" },
+      { type: 'improvement', description: "Travel: Private jet features VIP styling with gold accents and 100% comfort rating" },
+    ],
+  },
+  {
     version: "1.0.593",
     date: "2026-02-04",
     changes: [

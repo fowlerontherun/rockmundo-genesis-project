@@ -42,6 +42,11 @@ export const TRANSPORT_SCHEDULES: Record<string, TransportSchedule> = {
     label: "Flights at 6am, 10am, 2pm, 6pm, 10pm",
     interval: 4,
   },
+  private_jet: {
+    departures: [], // Empty - departs immediately on demand
+    label: "Departs immediately on demand",
+    interval: 0,
+  },
 };
 
 export interface DepartureSlot {
@@ -105,6 +110,13 @@ export function getNextAvailableDeparture(
   fromDate: Date = new Date()
 ): { date: Date; hour: number } {
   const schedule = getTransportSchedule(transportType);
+  
+  // Private jet departs immediately - use current hour
+  if (transportType.toLowerCase() === 'private_jet' || schedule.departures.length === 0) {
+    const now = new Date();
+    return { date: now, hour: now.getHours() };
+  }
+  
   const currentHour = fromDate.getHours();
   const currentMinutes = fromDate.getMinutes();
 
@@ -165,6 +177,11 @@ export function isValidDeparture(
   transportType: string
 ): boolean {
   const schedule = getTransportSchedule(transportType);
+  
+  // Private jet - always valid (departs immediately)
+  if (transportType.toLowerCase() === 'private_jet' || schedule.departures.length === 0) {
+    return true;
+  }
   
   // Check if hour is in schedule
   if (!schedule.departures.includes(hour)) {

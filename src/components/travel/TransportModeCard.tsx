@@ -1,4 +1,4 @@
-import { Train, Plane, Bus, Ship, Clock, DollarSign, Star } from "lucide-react";
+import { Train, Plane, Bus, Ship, Clock, DollarSign, Star, Crown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const TRANSPORT_ICONS = {
   plane: Plane,
   bus: Bus,
   ship: Ship,
+  private_jet: Crown,
 } as const;
 
 const TRANSPORT_COLORS = {
@@ -24,6 +25,7 @@ const TRANSPORT_COLORS = {
   plane: "text-purple-400 bg-purple-500/10 border-purple-500/20",
   bus: "text-green-400 bg-green-500/10 border-green-500/20",
   ship: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  private_jet: "text-amber-400 bg-amber-500/10 border-amber-500/20",
 } as const;
 
 export function TransportModeCard({ option, selected, onSelect, canAfford }: TransportModeCardProps) {
@@ -37,12 +39,15 @@ export function TransportModeCard({ option, selected, onSelect, canAfford }: Tra
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
+  const isPrivateJet = option.mode === 'private_jet';
+
   return (
     <Card 
       className={cn(
         "cursor-pointer transition-all hover:scale-[1.02]",
         selected ? "ring-2 ring-primary border-primary" : "hover:border-primary/50",
-        !canAfford && "opacity-50"
+        !canAfford && "opacity-50",
+        isPrivateJet && "bg-gradient-to-r from-amber-500/5 to-yellow-500/5 border-amber-500/30"
       )}
       onClick={canAfford ? onSelect : undefined}
     >
@@ -54,13 +59,21 @@ export function TransportModeCard({ option, selected, onSelect, canAfford }: Tra
           
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-semibold capitalize">{option.mode}</h4>
+              <h4 className={cn("font-semibold capitalize", isPrivateJet && "text-amber-500")}>
+                {option.mode === 'private_jet' ? 'Private Jet' : option.mode}
+              </h4>
               {selected && (
                 <Badge variant="default" className="text-xs">Selected</Badge>
               )}
+              {isPrivateJet && (
+                <Badge className="text-xs bg-gradient-to-r from-amber-500 to-yellow-500 text-black">
+                  <Crown className="h-3 w-3 mr-0.5" />
+                  VIP
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {option.distanceKm.toLocaleString()} km
+              {isPrivateJet ? "Instant departure, any destination" : `${option.distanceKm.toLocaleString()} km`}
             </p>
           </div>
           
