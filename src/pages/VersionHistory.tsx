@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.592",
+    date: "2026-02-04",
+    changes: [
+      { type: 'feature', description: "Education: Added 28 new Legendary Masters across global cities (Memphis, Kingston, Havana, Detroit, and more)" },
+      { type: 'feature', description: "Masters: New genre specialists (Blues, Latin, Jazz, K-Pop, EDM) and production mentors now discoverable" },
+      { type: 'feature', description: "Discovery System: Mentors can now be discovered by playing gigs at specific venues" },
+      { type: 'feature', description: "Discovery Modal: Dramatic reveal animation when discovering a new master" },
+      { type: 'feature', description: "Random Events: Added 5 new 'Master Encounter' events that hint at mentor discoveries" },
+      { type: 'improvement', description: "Masters: Each mentor now has rich lore biography and discovery hints" },
+    ],
+  },
+  {
     version: "1.0.591",
     date: "2026-02-04",
     changes: [
