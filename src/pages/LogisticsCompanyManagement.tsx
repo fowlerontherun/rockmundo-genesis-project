@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Truck, Users, FileText, Wrench } from "lucide-react";
-import { useLogisticsCompanies } from "@/hooks/useLogisticsBusiness";
+import { useLogisticsCompanyById } from "@/hooks/useLogisticsBusiness";
 import { VipGate } from "@/components/company/VipGate";
 import { LogisticsFleetManager, LogisticsDriversManager, LogisticsContractsManager, LogisticsUpgradesManager } from "@/components/logistics-business";
 import { LICENSE_TIER_NAMES, LICENSE_TIER_FLEET_LIMITS, LICENSE_TIER_OPERATING_RADIUS } from "@/types/logistics-business";
@@ -13,8 +13,8 @@ export default function LogisticsCompanyManagement() {
   const { companyId } = useParams();
   const navigate = useNavigate();
   
-  const { data: companies, isLoading } = useLogisticsCompanies();
-  const company = companies?.find(c => c.id === companyId || c.company_id === companyId);
+  // Use dual lookup hook - finds by id OR company_id
+  const { data: company, isLoading } = useLogisticsCompanyById(companyId);
   
   if (isLoading) {
     return (

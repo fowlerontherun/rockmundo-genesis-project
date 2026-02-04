@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.595",
+    date: "2026-02-04",
+    changes: [
+      { type: 'fix', description: "Companies: Fixed 'Manage' button for Record Labels - now navigates to dedicated label management page" },
+      { type: 'fix', description: "Companies: Fixed Logistics Company management page not loading (dual lookup by id OR company_id)" },
+      { type: 'fix', description: "Companies: Fixed Rehearsal Studio management page not loading (dual lookup pattern)" },
+      { type: 'feature', description: "Labels: New dedicated label management page at /labels/:id/manage with roster, demos, contracts, and finances tabs" },
+    ],
+  },
+  {
     version: "1.0.594",
     date: "2026-02-04",
     changes: [
