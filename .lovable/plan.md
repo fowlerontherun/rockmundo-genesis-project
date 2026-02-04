@@ -1,218 +1,212 @@
 
+# Plan: Expand Legendary Masters with Engaging Discovery Mechanics
 
-# Rehearsal System - Level & Time Tracking Fix
-**Version: 1.0.580**
-
-## Problem Analysis
-
-Based on code review, I've identified **5 critical issues** causing incorrect rehearsal level updates and time mismatches:
+## Overview
+This plan expands the mentor system with 30+ new masters across underserved cities and skill categories, plus implements active discovery mechanics that make finding masters feel like meaningful narrative moments rather than passive unlocks.
 
 ---
 
-### Issue 1: Conflicting Threshold Systems
+## Part 1: Seed New Legendary Masters (Database)
 
-**Current State:** The codebase has **3 different threshold systems** that don't align:
+### New Mentors by Category
 
-| Location | Thresholds | Problem |
-|----------|------------|---------|
-| **Database Trigger** (`update_rehearsal_stage`) | 60/300/900/1800 min | Correct - used for auto-calculating stage |
-| **`rehearsalLevels.ts`** (UI) | 60/300/900/1800 min | Correct - matches database |
-| **`RehearsalsTab.tsx` (Manual complete)** | Uses percentage: 30%/60%/90% of 600 min | **WRONG** - uses 'mastered'/'practicing' which violate DB constraint! |
+**Production & Recording Masters (6 new)**
+| Name | City | Skill | Discovery Type | Hint |
+|------|------|-------|---------------|------|
+| Dr. Dub | Kingston (Jamaica)* | Basic Mixing & Mastering | Studio Session | Record at a reggae studio to meet the dub architect |
+| Nina Frequency | Berlin | Basic Sound Design | Exploration | Thursday nights in Kreuzberg, follow the bassline |
+| The Architect | Los Angeles | Basic Record Production | Studio Session | The Hollywood studios know his number |
+| DJ Phantom | Ibiza | Basic DJ Controller | Venue Gig | Headline at Amnesia to catch his attention |
+| Madame Analog | Tokyo | Basic DAW Use | Exploration | She only teaches those who respect the old ways |
+| The Sampler King | New York | Basic Sampling & Remixing | Exploration | Brooklyn warehouses hold his secrets |
 
-**Code with Bug (lines 274-282):**
-```typescript
-// RehearsalsTab.tsx - Using INVALID stage values!
-let rehearsalStage = 'learning';
-if (calculatedPercentage >= 90) {
-  rehearsalStage = 'mastered';      // INVALID - constraint allows only 'perfected'
-} else if (calculatedPercentage >= 60) {
-  rehearsalStage = 'familiar';
-} else if (calculatedPercentage >= 30) {
-  rehearsalStage = 'practicing';    // INVALID - constraint allows only 'learning'
-}
+**Genre Specialists (8 new)**
+| Name | City | Skill | Discovery Type | Hint |
+|------|------|-------|---------------|------|
+| Bluesman Jack | Memphis* | Basic Blues | Venue Gig | Play Beale Street to earn his respect |
+| Salsa Queen Rosa | Havana* | Basic Latin | Exploration | She dances on Friday evenings by the Malecón |
+| MC Prophet | New York | Basic Hip Hop | Exploration | The Bronx remembers those who pay homage |
+| Count Jazzula | New Orleans | Basic Jazz | Venue Gig | Midnight at Preservation Hall reveals him |
+| Synth Lord | Berlin | Basic EDM | Venue Gig | Pack Berghain and he'll find you |
+| Punk Patriarch | London | Basic Punk Rock | Exploration | Camden Market punks whisper his name |
+| Samba Master Rafa | Rio de Janeiro | Basic Latin | Exploration | Carnival knows his rhythm |
+| K-Pop Sensei | Seoul* | Basic K-Pop/J-Pop | Studio Session | The trainees know where he teaches |
+
+**Performance & Showmanship (4 new)**
+| Name | City | Skill | Discovery Type | Hint |
+|------|------|-------|---------------|------|
+| The Hypnotist | Las Vegas | Basic Crowd Interaction | Venue Gig | Fill an arena on The Strip |
+| Madam Mystique | Paris | Basic Showmanship | Exploration | She observes from Le Marais cafes |
+| Loop Wizard | Amsterdam | Basic Live Looping | Exploration | The canals echo his experiments |
+| Viral Vince | Los Angeles | Basic Social Media Performance | Achievement | Reach 100k followers to unlock |
+
+**Instrument Virtuosos (6 new)**
+| Name | City | Skill | Discovery Type | Hint |
+|------|------|-------|---------------|------|
+| Ivory Empress | Vienna | Basic Keyboard | Venue Gig | Play the Musikverein to earn an audience |
+| String Theory | Prague | Basic Strings | Exploration | The classical halls know her touch |
+| Brass Baron | New Orleans | Basic Brass | Exploration | Second Line parades reveal him |
+| Percussion Prophet | Lagos | Basic Percussions | Exploration | The talking drums carry his message |
+| Steel Fingers | Nashville | Basic Acoustic Guitar | Venue Gig | Country legends remember his sessions |
+| Bass Prophet | Detroit | Basic Bass Guitar | Exploration | Motown echoes speak of him |
+
+**Vocal & Lyrics Coaches (4 new)**
+| Name | City | Skill | Discovery Type | Hint |
+|------|------|-------|---------------|------|
+| The Wordsmith | Dublin | Basic Lyrics | Exploration | Temple Bar poets trade in his verses |
+| Soul Sister Supreme | Memphis | Basic Singing | Exploration | Gospel choirs carry her legacy |
+| Rhyme Oracle | Atlanta | Basic Rapping | Achievement | Chart a hip-hop track to prove your worth |
+| Harmony Queen | Nashville | Basic Singing | Studio Session | Recording engineers know her booth |
+
+*Note: Cities marked with * may need to be added to the cities table first
+
+---
+
+## Part 2: Active Discovery System
+
+### 2.1 Venue-Based Discovery Trigger
+**Location**: `src/utils/gigExecution.ts`
+
+Add logic after gig completion to check if the venue triggers a mentor discovery:
+
+```text
+After gig completion:
+1. Query education_mentors where discovery_venue_id matches venue
+2. Check if player already discovered this mentor
+3. If not discovered, call discover_master RPC
+4. Show dramatic discovery notification with mentor lore
 ```
 
-**Database Constraint:**
+### 2.2 Studio-Based Discovery Trigger
+**Location**: Recording flow completion
+
+When a player completes a recording session at a studio:
+1. Check if any mentor has discovery_studio_id matching the studio
+2. Trigger discovery with narrative popup
+
+### 2.3 Achievement-Based Discovery
+**New mechanism**: Link discoveries to achievement unlocks
+
+Add `discovery_achievement_id` column to education_mentors for achievements like:
+- First #1 hit unlocks "The Hitmaker"
+- 100k social followers unlocks "Viral Vince"
+- Complete a world tour unlocks "The Road Warrior"
+
+### 2.4 Exploration Discovery Events
+**New random event type**: "Master Encounter"
+
+Create new random events that can fire when in specific cities:
+- "A street musician hands you a card: 'My teacher wants to meet you'"
+- "A venue owner mentions a legendary local who's been watching your career"
+- "An NPC at the bar says they know someone who could help your sound"
+
+---
+
+## Part 3: Discovery Storytelling UI
+
+### 3.1 Master Discovery Modal
+**New Component**: `MasterDiscoveryModal.tsx`
+
+When a master is discovered, show a dramatic modal with:
+- Master portrait/silhouette reveal animation
+- Lore biography reading
+- Achievement callout (their claim to fame)
+- City connection story
+- "Journey to [City] to begin training" CTA
+
+### 3.2 Discovery Hints Enhancement
+Update `MentorsTab.tsx` undiscovered card to show:
+- Atmospheric hint text with flavor
+- Discovery method icon with tooltip
+- City name (teaser without full location)
+- Skill they teach (helps players target discoveries)
+
+### 3.3 Discovery Log
+Add a "Discovery Journal" tab showing:
+- Timeline of discoveries with dates
+- How each master was found
+- Upcoming hints for undiscovered masters in visited cities
+
+---
+
+## Part 4: Database Changes
+
+### Migration 1: Add New Cities (if needed)
 ```sql
-CHECK (rehearsal_stage IN ('unlearned', 'learning', 'familiar', 'well_rehearsed', 'perfected'))
+INSERT INTO cities (name, country, ...) VALUES
+  ('Memphis', 'USA', ...),
+  ('Kingston', 'Jamaica', ...),
+  ('Havana', 'Cuba', ...),
+  ('Seoul', 'South Korea', ...);
 ```
 
-This causes silent failures or constraint violations when manually completing rehearsals!
-
----
-
-### Issue 2: User Expectation Mismatch
-
-**User Expectation:** 
-- 4 hours = Fully Learned (Familiar)
-- 6 hours = Perfected
-
-**Current Thresholds:**
-- 1 hour (60 min) = Learning
-- 5 hours (300 min) = Familiar  
-- 15 hours (900 min) = Well Rehearsed
-- 30 hours (1800 min) = Perfected
-
-**Gap:** Current system requires **30 hours** to perfect a song, but user expects **6 hours**.
-
----
-
-### Issue 3: Percentage Calculation Mismatch
-
-**Database Generated Column:**
+### Migration 2: Add Achievement Discovery Column
 ```sql
-familiarity_percentage = LEAST(100, (familiarity_minutes * 100) / 600)
+ALTER TABLE education_mentors
+ADD COLUMN discovery_achievement_id uuid REFERENCES achievements(id);
 ```
-This makes 100% = 600 minutes (10 hours).
 
-**But the level system uses 1800 minutes for "Perfected"!**
+### Migration 3: Seed New Mentors
+Insert 28+ new mentors with:
+- Rich lore_biography (2-3 sentences)
+- Evocative discovery_hint
+- Appropriate difficulty scaling
+- Varied costs ($15k-$150k)
+- Different available_days for variety
 
-Songs show 100% progress but are only "Familiar" stage - confusing users.
+### Migration 4: Create Master Encounter Events
+```sql
+INSERT INTO random_events (...)
+VALUES 
+  ('master_encounter_jazz', 'A Whisper in the Smoky Club', ...),
+  ('master_encounter_hip_hop', 'Street Corner Respect', ...);
+```
 
 ---
 
-### Issue 4: Setlist Rehearsal Time Split
+## Part 5: Implementation Sequence
 
-When rehearsing a **full setlist**, time is split across all songs:
-```typescript
-const minutesPerSong = Math.floor(durationMinutes / songsToUpdate.length);
-```
+1. **Database Migrations** (first)
+   - Add missing cities
+   - Add achievement discovery column
+   - Seed new mentors with full lore
+   - Create master encounter random events
 
-A 4-hour rehearsal with 10 songs = only 24 minutes per song, meaning songs barely progress. This may be intentional but needs clearer UI feedback.
+2. **Discovery Triggers** (backend logic)
+   - Hook venue-based discovery into gigExecution.ts
+   - Hook studio-based discovery into recording completion
+   - Hook achievement-based discovery into achievement unlock flow
+
+3. **UI Enhancements**
+   - Create MasterDiscoveryModal component
+   - Update MentorsTab undiscovered cards
+   - Add discovery journal/log
+
+4. **Testing**
+   - Verify gig at specific venue triggers discovery
+   - Verify discovery modal shows correctly
+   - Verify mentor becomes bookable after discovery
 
 ---
 
-### Issue 5: Multiple Completion Paths
+## Files to Create/Modify
 
-There are **3 different code paths** for completing rehearsals:
-1. `useAutoRehearsalCompletion.ts` - Auto-completion hook (uses correct stages)
-2. `complete-rehearsals` edge function - Cron job (uses correct stages)
-3. `RehearsalsTab.tsx` - Manual "Complete Rehearsal" button (uses WRONG stages)
-
-Each has slightly different logic, causing inconsistencies.
-
----
-
-## Proposed Solution
-
-### Part 1: Align Thresholds to User Expectations
-
-Update all threshold systems to match user expectations (4h learned, 6h perfected):
-
-| Stage | Old (minutes) | New (minutes) |
-|-------|---------------|---------------|
-| Unlearned | 0-59 | 0-59 |
-| Learning | 60-299 | 60-179 (1-3 hours) |
-| Familiar | 300-899 | 180-299 (3-5 hours) |
-| Well Rehearsed | 900-1799 | 300-359 (5-6 hours) |
-| Perfected | 1800+ | 360+ (6+ hours) |
-
-**Note:** This is a significant change from 30h to 6h for Perfected. If you prefer the original longer progression, I can instead update only the UI messaging to clarify the expected time investment.
-
-### Part 2: Fix Invalid Stage Values
-
-Update `RehearsalsTab.tsx` to use the shared utility:
-
-```typescript
-import { calculateRehearsalStage } from '@/utils/rehearsalStageCalculation';
-
-// Replace lines 274-282 with:
-const rehearsalStage = calculateRehearsalStage(newMinutes);
-```
-
-### Part 3: Align Percentage Calculation
-
-Update the database generated column to match the stage thresholds:
-- 100% should equal "Perfected" threshold (either 360 or 1800 minutes)
-
-### Part 4: Consolidate Completion Logic
-
-Create a single shared function for all rehearsal completion paths:
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/utils/rehearsalCompletion.ts` | New shared completion logic |
-| `RehearsalsTab.tsx` | Use shared function |
-| `useAutoRehearsalCompletion.ts` | Use shared function |
-| `complete-rehearsals/index.ts` | Use same threshold constants |
-
-### Part 5: Improve UI Feedback for Setlist Rehearsals
-
-Add clearer messaging about time distribution:
-- "4h rehearsal for 10-song setlist = 24 min per song"
-- Show expected progress per song before booking
+| `supabase/migrations/XXXX_seed_legendary_masters.sql` | Create - Add cities, mentors, events |
+| `src/utils/gigExecution.ts` | Modify - Add venue discovery trigger |
+| `src/components/education/MasterDiscoveryModal.tsx` | Create - Dramatic reveal UI |
+| `src/features/education/components/MentorsTab.tsx` | Modify - Enhanced undiscovered cards |
+| `src/hooks/useMentorSessions.ts` | Modify - Add discovery notification |
+| `src/components/VersionHeader.tsx` | Modify - Version bump |
+| `src/pages/VersionHistory.tsx` | Modify - Changelog entry |
 
 ---
 
-## Files to Modify
+## Expected Outcomes
 
-| File | Changes |
-|------|---------|
-| `src/utils/rehearsalLevels.ts` | Adjust thresholds |
-| `src/utils/rehearsalStageCalculation.ts` | Adjust thresholds |
-| `src/components/performance/RehearsalsTab.tsx` | Fix invalid stage values, use shared utility |
-| `supabase/migrations/[new].sql` | Update DB trigger thresholds + percentage calculation |
-| `supabase/functions/complete-rehearsals/index.ts` | Align with new thresholds |
-| `src/components/performance/RehearsalBookingDialog.tsx` | Add setlist time-split info |
-| `src/components/VersionHeader.tsx` | Version bump |
-| `src/pages/VersionHistory.tsx` | Changelog |
-
----
-
-## Technical Details
-
-### New Threshold Constants
-
-```typescript
-// src/utils/rehearsalLevels.ts
-export const REHEARSAL_LEVELS: RehearsalLevel[] = [
-  { level: 0, name: "Unlearned", minMinutes: 0, maxMinutes: 59 },
-  { level: 1, name: "Learning", minMinutes: 60, maxMinutes: 179 },      // 1-3 hours
-  { level: 2, name: "Familiar", minMinutes: 180, maxMinutes: 299 },     // 3-5 hours  
-  { level: 3, name: "Well Rehearsed", minMinutes: 300, maxMinutes: 359 }, // 5-6 hours
-  { level: 4, name: "Perfected", minMinutes: 360, maxMinutes: null },   // 6+ hours
-];
-```
-
-### Database Migration
-
-```sql
--- Update trigger function with new thresholds
-CREATE OR REPLACE FUNCTION update_rehearsal_stage()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.rehearsal_stage := CASE
-    WHEN NEW.familiarity_minutes >= 360 THEN 'perfected'
-    WHEN NEW.familiarity_minutes >= 300 THEN 'well_rehearsed'
-    WHEN NEW.familiarity_minutes >= 180 THEN 'familiar'
-    WHEN NEW.familiarity_minutes >= 60 THEN 'learning'
-    ELSE 'unlearned'
-  END;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Update percentage calculation (100% at 360 minutes = 6 hours)
-ALTER TABLE band_song_familiarity 
-DROP COLUMN familiarity_percentage;
-
-ALTER TABLE band_song_familiarity 
-ADD COLUMN familiarity_percentage integer 
-GENERATED ALWAYS AS (LEAST(100, (familiarity_minutes * 100) / 360)) STORED;
-
--- Recalculate all existing records
-UPDATE band_song_familiarity SET familiarity_minutes = familiarity_minutes;
-```
-
----
-
-## Summary
-
-| Issue | Fix |
-|-------|-----|
-| Invalid stage names ('mastered', 'practicing') | Use shared `calculateRehearsalStage()` utility |
-| 30h for Perfected vs user expecting 6h | Reduce thresholds to 6h for Perfected |
-| Percentage shows 100% before Perfected | Align percentage calculation with stage thresholds |
-| Inconsistent completion logic | Consolidate into shared utility |
-| Unclear setlist time-split | Add UI feedback in booking dialog |
-
+- **50+ Legendary Masters** across global cities
+- **Active discovery** through gameplay (gigs, studios, achievements)
+- **Narrative immersion** with rich lore and dramatic reveals
+- **Player motivation** to explore cities and try new activities
+- **Skill variety** covering production, genres, and modern music skills
