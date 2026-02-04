@@ -12,9 +12,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Zap, Heart, DollarSign, Users, Star, Sparkles, AlertTriangle, Clock } from "lucide-react";
 import { usePendingEvent, useChooseEventOption, type PlayerEvent } from "@/hooks/usePlayerEvents";
 
+// Effect value can be a plain number or a range object {min, max}
+type EffectValue = number | { min: number; max: number };
+
 interface EffectDisplayProps {
-  effects: Record<string, number>;
+  effects: Record<string, EffectValue>;
   label: string;
+}
+
+// Helper to format effect values - handles both plain numbers and {min, max} ranges
+function formatEffectValue(value: EffectValue): { display: string; isPositive: boolean; isNonZero: boolean } {
+  if (typeof value === 'number') {
+    return { 
+      display: `${value > 0 ? '+' : ''}${value}`,
+      isPositive: value > 0,
+      isNonZero: value !== 0
+    };
+  }
+  
+  // It's a range object {min, max}
+  if (typeof value === 'object' && value !== null && 'min' in value && 'max' in value) {
+    const avgValue = (value.min + value.max) / 2;
+    return {
+      display: `${avgValue > 0 ? '+' : ''}${value.min}-${value.max}`,
+      isPositive: avgValue > 0,
+      isNonZero: value.min !== 0 || value.max !== 0
+    };
+  }
+  
+  // Fallback for unexpected types
+  return { display: '?', isPositive: true, isNonZero: false };
 }
 
 function EffectDisplay({ effects, label }: EffectDisplayProps) {
@@ -27,7 +54,10 @@ function EffectDisplay({ effects, label }: EffectDisplayProps) {
     xp: { icon: Sparkles, label: "XP" },
   };
 
-  const effectEntries = Object.entries(effects).filter(([_, value]) => value !== 0);
+  const effectEntries = Object.entries(effects).filter(([_, value]) => {
+    const formatted = formatEffectValue(value);
+    return formatted.isNonZero;
+  });
 
   if (effectEntries.length === 0) return null;
 
@@ -37,7 +67,7 @@ function EffectDisplay({ effects, label }: EffectDisplayProps) {
         const config = effectIcons[key];
         if (!config) return null;
         const Icon = config.icon;
-        const isPositive = value > 0;
+        const { display, isPositive } = formatEffectValue(value);
 
         return (
           <Badge
@@ -50,8 +80,7 @@ function EffectDisplay({ effects, label }: EffectDisplayProps) {
             }`}
           >
             <Icon className="h-3 w-3 mr-1" />
-            {isPositive ? "+" : ""}
-            {value} {config.label}
+            {display} {config.label}
           </Badge>
         );
       })}

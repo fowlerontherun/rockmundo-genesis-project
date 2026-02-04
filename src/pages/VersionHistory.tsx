@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.590",
+    date: "2026-02-04",
+    changes: [
+      { type: 'fix', description: "Events: Fixed crash when displaying event effects with min/max ranges (e.g., sports theme songs)" },
+      { type: 'improvement', description: "Events: Effect displays now show ranges like '+4000-10000 Cash' for variable rewards" },
+    ],
+  },
+  {
     version: "1.0.589",
     date: "2026-02-04",
     changes: [
