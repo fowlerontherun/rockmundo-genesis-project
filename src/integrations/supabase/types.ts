@@ -3225,11 +3225,15 @@ export type Database = {
           id: string
           is_company_owned: boolean | null
           mastering_capable: boolean | null
+          mastering_hourly_rate: number | null
           max_tracks: number | null
+          minimum_booking_hours: number | null
+          mixing_hourly_rate: number | null
           monthly_rent: number | null
           name: string
           quality_rating: number | null
           reputation: number | null
+          rush_fee_multiplier: number | null
           sessions_completed: number | null
           specialties: string[] | null
           total_revenue: number | null
@@ -3252,11 +3256,15 @@ export type Database = {
           id?: string
           is_company_owned?: boolean | null
           mastering_capable?: boolean | null
+          mastering_hourly_rate?: number | null
           max_tracks?: number | null
+          minimum_booking_hours?: number | null
+          mixing_hourly_rate?: number | null
           monthly_rent?: number | null
           name: string
           quality_rating?: number | null
           reputation?: number | null
+          rush_fee_multiplier?: number | null
           sessions_completed?: number | null
           specialties?: string[] | null
           total_revenue?: number | null
@@ -3279,11 +3287,15 @@ export type Database = {
           id?: string
           is_company_owned?: boolean | null
           mastering_capable?: boolean | null
+          mastering_hourly_rate?: number | null
           max_tracks?: number | null
+          minimum_booking_hours?: number | null
+          mixing_hourly_rate?: number | null
           monthly_rent?: number | null
           name?: string
           quality_rating?: number | null
           reputation?: number | null
+          rush_fee_multiplier?: number | null
           sessions_completed?: number | null
           specialties?: string[] | null
           total_revenue?: number | null
@@ -9507,10 +9519,13 @@ export type Database = {
           fleet_capacity: number
           id: string
           insurance_coverage: number | null
+          insurance_percent: number | null
           license_tier: number
           name: string
           on_time_delivery_rate: number | null
           operating_regions: string[] | null
+          per_day_rate: number | null
+          per_km_rate: number | null
           reputation: number | null
           service_quality_rating: number | null
           specializations: string[] | null
@@ -9525,10 +9540,13 @@ export type Database = {
           fleet_capacity?: number
           id?: string
           insurance_coverage?: number | null
+          insurance_percent?: number | null
           license_tier?: number
           name: string
           on_time_delivery_rate?: number | null
           operating_regions?: string[] | null
+          per_day_rate?: number | null
+          per_km_rate?: number | null
           reputation?: number | null
           service_quality_rating?: number | null
           specializations?: string[] | null
@@ -9543,10 +9561,13 @@ export type Database = {
           fleet_capacity?: number
           id?: string
           insurance_coverage?: number | null
+          insurance_percent?: number | null
           license_tier?: number
           name?: string
           on_time_delivery_rate?: number | null
           operating_regions?: string[] | null
+          per_day_rate?: number | null
+          per_km_rate?: number | null
           reputation?: number | null
           service_quality_rating?: number | null
           specializations?: string[] | null
@@ -9560,6 +9581,53 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_company_upgrades: {
+        Row: {
+          cost: number
+          created_at: string | null
+          effect_description: string | null
+          effect_value: number
+          id: string
+          installed_at: string | null
+          level: number
+          logistics_company_id: string
+          name: string
+          upgrade_type: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number
+          id?: string
+          installed_at?: string | null
+          level?: number
+          logistics_company_id: string
+          name: string
+          upgrade_type: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number
+          id?: string
+          installed_at?: string | null
+          level?: number
+          logistics_company_id?: string
+          name?: string
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_company_upgrades_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
             referencedColumns: ["id"]
           },
         ]
@@ -10786,6 +10854,9 @@ export type Database = {
       }
       merch_factories: {
         Row: {
+          bulk_discount_100: number | null
+          bulk_discount_1000: number | null
+          bulk_discount_500: number | null
           city_id: string | null
           company_id: string | null
           created_at: string
@@ -10794,15 +10865,20 @@ export type Database = {
           factory_type: string
           id: string
           is_operational: boolean
+          markup_percent: number | null
           name: string
           operating_costs_daily: number
           production_capacity: number
           quality_level: number
+          rush_fee_percent: number | null
           updated_at: string
           worker_count: number
           worker_skill_avg: number
         }
         Insert: {
+          bulk_discount_100?: number | null
+          bulk_discount_1000?: number | null
+          bulk_discount_500?: number | null
           city_id?: string | null
           company_id?: string | null
           created_at?: string
@@ -10811,15 +10887,20 @@ export type Database = {
           factory_type?: string
           id?: string
           is_operational?: boolean
+          markup_percent?: number | null
           name: string
           operating_costs_daily?: number
           production_capacity?: number
           quality_level?: number
+          rush_fee_percent?: number | null
           updated_at?: string
           worker_count?: number
           worker_skill_avg?: number
         }
         Update: {
+          bulk_discount_100?: number | null
+          bulk_discount_1000?: number | null
+          bulk_discount_500?: number | null
           city_id?: string | null
           company_id?: string | null
           created_at?: string
@@ -10828,10 +10909,12 @@ export type Database = {
           factory_type?: string
           id?: string
           is_operational?: boolean
+          markup_percent?: number | null
           name?: string
           operating_costs_daily?: number
           production_capacity?: number
           quality_level?: number
+          rush_fee_percent?: number | null
           updated_at?: string
           worker_count?: number
           worker_skill_avg?: number
@@ -10917,6 +11000,53 @@ export type Database = {
           {
             foreignKeyName: "merch_factory_contracts_factory_id_fkey"
             columns: ["factory_id"]
+            isOneToOne: false
+            referencedRelation: "merch_factories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_factory_upgrades: {
+        Row: {
+          cost: number
+          created_at: string | null
+          effect_description: string | null
+          effect_value: number
+          id: string
+          installed_at: string | null
+          level: number
+          merch_factory_id: string
+          name: string
+          upgrade_type: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number
+          id?: string
+          installed_at?: string | null
+          level?: number
+          merch_factory_id: string
+          name: string
+          upgrade_type: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number
+          id?: string
+          installed_at?: string | null
+          level?: number
+          merch_factory_id?: string
+          name?: string
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_factory_upgrades_merch_factory_id_fkey"
+            columns: ["merch_factory_id"]
             isOneToOne: false
             referencedRelation: "merch_factories"
             referencedColumns: ["id"]
@@ -16949,6 +17079,7 @@ export type Database = {
           brand: string | null
           condition: number | null
           created_at: string | null
+          equipment_item_id: string | null
           equipment_name: string
           equipment_type: string
           hourly_rental_rate: number | null
@@ -16964,6 +17095,7 @@ export type Database = {
           brand?: string | null
           condition?: number | null
           created_at?: string | null
+          equipment_item_id?: string | null
           equipment_name: string
           equipment_type: string
           hourly_rental_rate?: number | null
@@ -16979,6 +17111,7 @@ export type Database = {
           brand?: string | null
           condition?: number | null
           created_at?: string | null
+          equipment_item_id?: string | null
           equipment_name?: string
           equipment_type?: string
           hourly_rental_rate?: number | null
@@ -16991,6 +17124,13 @@ export type Database = {
           value?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "recording_studio_equipment_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recording_studio_equipment_studio_id_fkey"
             columns: ["studio_id"]
@@ -17334,6 +17474,8 @@ export type Database = {
       }
       rehearsal_rooms: {
         Row: {
+          after_hours_multiplier: number | null
+          allows_recording: boolean | null
           amenities: Json | null
           capacity: number | null
           city_id: string | null
@@ -17343,6 +17485,7 @@ export type Database = {
           description: string | null
           district_id: string | null
           equipment_quality: number | null
+          equipment_rental_tier: string | null
           hourly_rate: number
           id: string
           is_company_owned: boolean | null
@@ -17360,6 +17503,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          after_hours_multiplier?: number | null
+          allows_recording?: boolean | null
           amenities?: Json | null
           capacity?: number | null
           city_id?: string | null
@@ -17369,6 +17514,7 @@ export type Database = {
           description?: string | null
           district_id?: string | null
           equipment_quality?: number | null
+          equipment_rental_tier?: string | null
           hourly_rate?: number
           id?: string
           is_company_owned?: boolean | null
@@ -17386,6 +17532,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          after_hours_multiplier?: number | null
+          allows_recording?: boolean | null
           amenities?: Json | null
           capacity?: number | null
           city_id?: string | null
@@ -17395,6 +17543,7 @@ export type Database = {
           description?: string | null
           district_id?: string | null
           equipment_quality?: number | null
+          equipment_rental_tier?: string | null
           hourly_rate?: number
           id?: string
           is_company_owned?: boolean | null
@@ -18125,11 +18274,59 @@ export type Database = {
           },
         ]
       }
+      security_firm_upgrades: {
+        Row: {
+          cost: number
+          created_at: string | null
+          effect_description: string | null
+          effect_value: number
+          id: string
+          installed_at: string | null
+          level: number
+          name: string
+          security_firm_id: string
+          upgrade_type: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number
+          id?: string
+          installed_at?: string | null
+          level?: number
+          name: string
+          security_firm_id: string
+          upgrade_type: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          effect_description?: string | null
+          effect_value?: number
+          id?: string
+          installed_at?: string | null
+          level?: number
+          name?: string
+          security_firm_id?: string
+          upgrade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_firm_upgrades_security_firm_id_fkey"
+            columns: ["security_firm_id"]
+            isOneToOne: false
+            referencedRelation: "security_firms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_firms: {
         Row: {
           company_id: string
           created_at: string | null
           equipment_quality: number | null
+          guard_rate_per_event: number | null
           id: string
           license_level: number | null
           max_guards: number | null
@@ -18137,11 +18334,14 @@ export type Database = {
           reputation: number | null
           total_contracts_completed: number | null
           updated_at: string | null
+          vip_premium_multiplier: number | null
+          weekly_discount_percent: number | null
         }
         Insert: {
           company_id: string
           created_at?: string | null
           equipment_quality?: number | null
+          guard_rate_per_event?: number | null
           id?: string
           license_level?: number | null
           max_guards?: number | null
@@ -18149,11 +18349,14 @@ export type Database = {
           reputation?: number | null
           total_contracts_completed?: number | null
           updated_at?: string | null
+          vip_premium_multiplier?: number | null
+          weekly_discount_percent?: number | null
         }
         Update: {
           company_id?: string
           created_at?: string | null
           equipment_quality?: number | null
+          guard_rate_per_event?: number | null
           id?: string
           license_level?: number | null
           max_guards?: number | null
@@ -18161,6 +18364,8 @@ export type Database = {
           reputation?: number | null
           total_contracts_completed?: number | null
           updated_at?: string | null
+          vip_premium_multiplier?: number | null
+          weekly_discount_percent?: number | null
         }
         Relationships: [
           {
@@ -23006,6 +23211,7 @@ export type Database = {
           avg_attendance_rate: number | null
           backstage_quality: number | null
           band_revenue_share: number | null
+          bar_revenue_share_percent: number | null
           base_payment: number | null
           capacity: number | null
           city_id: string | null
@@ -23026,10 +23232,12 @@ export type Database = {
           lighting_rating: number | null
           location: string | null
           min_security_guards: number | null
+          minimum_guarantee: number | null
           monthly_rent: number | null
           name: string
           parking_spaces: number | null
           prestige_level: number | null
+          private_event_rate: number | null
           reputation: number | null
           reputation_score: number | null
           requirements: Json | null
@@ -23042,6 +23250,7 @@ export type Database = {
           total_gigs_hosted: number | null
           total_revenue_lifetime: number | null
           venue_cut: number | null
+          venue_cut_percent: number | null
           venue_type: string | null
         }
         Insert: {
@@ -23051,6 +23260,7 @@ export type Database = {
           avg_attendance_rate?: number | null
           backstage_quality?: number | null
           band_revenue_share?: number | null
+          bar_revenue_share_percent?: number | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
@@ -23071,10 +23281,12 @@ export type Database = {
           lighting_rating?: number | null
           location?: string | null
           min_security_guards?: number | null
+          minimum_guarantee?: number | null
           monthly_rent?: number | null
           name: string
           parking_spaces?: number | null
           prestige_level?: number | null
+          private_event_rate?: number | null
           reputation?: number | null
           reputation_score?: number | null
           requirements?: Json | null
@@ -23087,6 +23299,7 @@ export type Database = {
           total_gigs_hosted?: number | null
           total_revenue_lifetime?: number | null
           venue_cut?: number | null
+          venue_cut_percent?: number | null
           venue_type?: string | null
         }
         Update: {
@@ -23096,6 +23309,7 @@ export type Database = {
           avg_attendance_rate?: number | null
           backstage_quality?: number | null
           band_revenue_share?: number | null
+          bar_revenue_share_percent?: number | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
@@ -23116,10 +23330,12 @@ export type Database = {
           lighting_rating?: number | null
           location?: string | null
           min_security_guards?: number | null
+          minimum_guarantee?: number | null
           monthly_rent?: number | null
           name?: string
           parking_spaces?: number | null
           prestige_level?: number | null
+          private_event_rate?: number | null
           reputation?: number | null
           reputation_score?: number | null
           requirements?: Json | null
@@ -23132,6 +23348,7 @@ export type Database = {
           total_gigs_hosted?: number | null
           total_revenue_lifetime?: number | null
           venue_cut?: number | null
+          venue_cut_percent?: number | null
           venue_type?: string | null
         }
         Relationships: [

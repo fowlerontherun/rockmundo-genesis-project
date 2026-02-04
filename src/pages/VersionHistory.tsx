@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.596",
+    date: "2026-02-04",
+    changes: [
+      { type: 'feature', description: "Companies: Major expansion - all company types now have customizable pricing settings" },
+      { type: 'feature', description: "Companies: Upgrade systems for Security Firms and Merch Factories with gameplay effects" },
+      { type: 'feature', description: "Companies: Quality modifiers - upgrades and equipment now affect gig/recording outcomes" },
+      { type: 'feature', description: "Companies: Empire Synergies - own multiple business types for automatic discounts" },
+      { type: 'feature', description: "Recording Studios: Equipment now links to unified gear catalog (25 new studio items)" },
+      { type: 'feature', description: "Database: New upgrade tables for security, factory, logistics, and venues" },
+    ],
+  },
+  {
     version: "1.0.595",
     date: "2026-02-04",
     changes: [
