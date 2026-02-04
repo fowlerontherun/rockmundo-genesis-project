@@ -30,6 +30,28 @@ export function useLogisticsCompanies(companyId?: string) {
   });
 }
 
+// Single logistics company lookup with dual ID pattern (by id OR company_id)
+export function useLogisticsCompanyById(idOrCompanyId?: string) {
+  return useQuery({
+    queryKey: ["logistics-company", idOrCompanyId],
+    queryFn: async () => {
+      if (!idOrCompanyId) return null;
+      
+      // Dual lookup pattern: try by id OR company_id for subsidiary navigation
+      const { data, error } = await supabase
+        .from("logistics_companies")
+        .select("*")
+        .or(`id.eq.${idOrCompanyId},company_id.eq.${idOrCompanyId}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as LogisticsCompany | null;
+    },
+    enabled: !!idOrCompanyId,
+  });
+}
+
 export function useLogisticsFleet(logisticsCompanyId?: string) {
   return useQuery({
     queryKey: ["logistics-fleet", logisticsCompanyId],

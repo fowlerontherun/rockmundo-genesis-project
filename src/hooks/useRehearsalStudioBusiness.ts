@@ -39,6 +39,7 @@ export function useRehearsalStudio(studioId: string | undefined) {
     queryFn: async () => {
       if (!studioId) return null;
       
+      // Dual lookup pattern: try by id OR company_id for subsidiary navigation
       const { data, error } = await supabase
         .from('rehearsal_rooms')
         .select(`
@@ -47,8 +48,9 @@ export function useRehearsalStudio(studioId: string | undefined) {
           city_districts:district_id(name),
           companies:company_id(name)
         `)
-        .eq('id', studioId)
-        .single();
+        .or(`id.eq.${studioId},company_id.eq.${studioId}`)
+        .limit(1)
+        .maybeSingle();
       
       if (error) throw error;
       return data as RehearsalStudioBusiness;

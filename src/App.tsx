@@ -124,6 +124,7 @@ const LogisticsCompanyManagement = lazyWithRetry(() => import("./pages/Logistics
 const VenueBusinessManagement = lazyWithRetry(() => import("./pages/VenueBusinessManagement"));
 const RehearsalStudioBusinessManagement = lazyWithRetry(() => import("./pages/RehearsalStudioBusinessManagement"));
 const RecordingStudioBusinessManagement = lazyWithRetry(() => import("./pages/RecordingStudioBusinessManagement"));
+const LabelManagement = lazyWithRetry(() => import("./pages/LabelManagement"));
 const CompanyAdmin = lazyWithRetry(() => import("./pages/admin/CompanyAdmin"));
 const SecurityFirmsAdmin = lazyWithRetry(() => import("./pages/admin/SecurityFirmsAdmin"));
 const MerchFactoriesAdmin = lazyWithRetry(() => import("./pages/admin/MerchFactoriesAdmin"));
@@ -380,6 +381,7 @@ function App() {
                     <Route path="avatar-designer" element={<AvatarDesigner />} />
                     <Route path="skin-store" element={<SkinStore />} />
                     <Route path="labels" element={<RecordLabel />} />
+                    <Route path="labels/:labelId/manage" element={<LabelManagement />} />
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="company/:companyId" element={<CompanyDetail />} />
                     <Route path="security-firm/:companyId" element={<SecurityFirmManagement />} />
