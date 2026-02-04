@@ -1,179 +1,334 @@
 
-# Plan: Fix Company Subsidiary Management Navigation and Data Loading
+# Plan: Comprehensive Company System Expansion and Game Integration
 
-## Problem Summary
+## Overview
 
-Three critical issues prevent VIP users from managing their company subsidiaries:
-
-1. **Record Label (404 Error)**: The "Manage" button navigates to `/record-label/manage/:companyId` which doesn't exist as a route
-2. **Logistics Company (Nothing loads)**: Query hook is called without required parameter, causing it to be disabled  
-3. **Rehearsal Studio (Nothing loads)**: Query looks up by wrong ID - uses company ID instead of looking up by company_id foreign key
+This plan transforms the company system from a collection of isolated management pages into an interconnected business empire that directly impacts all aspects of gameplay. Each company type will have meaningful upgrades, customizable pricing, and tangible effects on gigs, tours, recordings, and merchandise.
 
 ---
 
-## Root Cause Analysis
+## Part 1: Unified Equipment Catalog for Recording Studios
 
-### Issue 1: Labels Route
-```text
-CompanyCard.tsx navigation:
-  case 'label': return `/record-label/manage/${company.id}`
+### Current Problem
+Recording studio equipment is manually entered as free-form text (equipment_name, brand, model) with no connection to the existing `equipment_items` catalog that contains 142+ real-world products.
 
-Available routes in App.tsx:
-  - /labels (RecordLabel page with tabs)
-  - No /record-label/manage/:id route exists
+### Solution
+Link recording studio equipment purchases to the existing `equipment_items` table, creating a unified gear ecosystem.
+
+**Database Changes:**
+```
+ALTER TABLE recording_studio_equipment
+ADD COLUMN equipment_item_id uuid REFERENCES equipment_items(id);
 ```
 
-The `companies` table contains entries with `company_type: 'label'`, but the actual label data lives in the `labels` table with a `company_id` foreign key pointing to the company.
+**New Categories for equipment_items:**
+- `studio_mic` - Studio microphones (U87, SM7B, etc.)
+- `studio_preamp` - Preamps and channel strips
+- `studio_compressor` - Hardware compressors
+- `studio_console` - Mixing consoles
+- `studio_monitor` - Studio monitors
+- `studio_reverb` - Hardware reverb units
+- `studio_outboard` - Outboard processors
 
-### Issue 2: Logistics Query Disabled
-```typescript
-// LogisticsCompanyManagement.tsx
-const { data: companies } = useLogisticsCompanies(); // No parameter passed
-
-// useLogisticsBusiness.ts  
-export function useLogisticsCompanies(companyId?: string) {
-  return useQuery({
-    // ...
-    enabled: !!companyId  // FALSE when no companyId = query never runs
-  });
-}
-```
-
-### Issue 3: Rehearsal Room ID Mismatch
-```text
-Database structure:
-- companies table: id = 'd17da751...' (company_type: 'rehearsal')
-- rehearsal_rooms table: id = '179e890d...', company_id = 'd17da751...'
-
-Current query in useRehearsalStudio:
-  .eq('id', studioId)  // Looks for rehearsal_rooms.id = company.id = FAILS
-
-Should query:
-  .or(`id.eq.${studioId},company_id.eq.${studioId}`)
-```
+**UI Changes:**
+- Modify `RecordingStudioEquipmentManager` to browse from `equipment_items` catalog
+- Show real product images, brands, and stat_boosts
+- Equipment purchases deduct from company balance
 
 ---
 
-## Solution
+## Part 2: Upgrade Systems That Affect Quality
 
-### Fix 1: Labels - Create Dedicated Management Page or Fix Navigation
+### Current State
+Companies have upgrade systems, but upgrades don't meaningfully affect gameplay outcomes.
 
-**Option A (Recommended)**: Create a dedicated label management page at `/labels/:labelId/manage`
+### Recording Studio Upgrades Impact
 
-**Option B**: Change navigation to use the labels table ID and navigate to `/labels` with pre-selected label
+| Upgrade Type | Current Effect | New Effect |
+|-------------|---------------|------------|
+| Console | +X% Quality label | +X% song quality bonus during recording |
+| Monitors | Label only | +X% mixing accuracy (affects final quality) |
+| Microphones | Label only | +X% vocal/instrument capture quality |
+| Live Room | Label only | +X% to live instrument recordings |
+| Mastering Suite | Label only | +X% to mastering quality, faster turnaround |
 
-We'll implement **Option A** for consistency with other subsidiary types.
+**Implementation:**
+- Add `get_studio_quality_modifier(studio_id)` RPC that calculates total bonus
+- Hook into recording completion flow to apply modifiers
+- Display modifiers in studio selection UI when booking recordings
 
-**Files to modify/create:**
-- Create `src/pages/LabelManagement.tsx` - Dedicated label management page
-- Update `src/App.tsx` - Add route `/labels/:labelId/manage`
-- Update `src/components/company/CompanyCard.tsx` - Fix navigation to lookup the labels table ID first, or navigate to a page that handles the lookup
+### Venue Upgrades Impact
 
-### Fix 2: Logistics - Dual Lookup Pattern
+| Upgrade Type | Current Effect | New Effect |
+|-------------|---------------|------------|
+| Sound System | Label only | +X% gig performance score for bands |
+| Lighting | Label only | +X% crowd engagement/atmosphere |
+| Capacity | Label only | Actually increases venue.capacity |
+| Backstage | Label only | +X% band satisfaction, chemistry boost |
+| Security System | Label only | Reduces security guard requirements |
 
-Update the `LogisticsCompanyManagement` page to implement the same dual-lookup pattern documented in memory (matching other subsidiaries):
+**Implementation:**
+- Add `get_venue_quality_modifier(venue_id)` RPC
+- Hook into `gigExecution.ts` to apply venue upgrade bonuses
+- Display "Venue Bonus" section in gig summary
 
-```typescript
-// Try to fetch by direct ID first, then by company_id
-const { data: companies } = useLogisticsCompaniesWithDualLookup(companyId);
-```
+### Security Firm Upgrades (New)
 
-**Files to modify:**
-- `src/hooks/useLogisticsBusiness.ts` - Add new hook or modify existing to support dual lookup
-- `src/pages/LogisticsCompanyManagement.tsx` - Use the corrected query pattern
+Add missing upgrade system for security firms:
 
-### Fix 3: Rehearsal Studio - Dual Lookup Pattern
+| Upgrade Type | Cost | Effect |
+|-------------|------|--------|
+| Basic Training | $10,000 | +5% guard effectiveness |
+| Crowd Control | $25,000 | +10% large venue capability |
+| VIP Protection | $50,000 | Unlock celebrity/artist protection contracts |
+| Emergency Response | $35,000 | Reduce incident penalties by 25% |
+| Equipment Upgrade | $20,000 | Better radios, protective gear |
 
-Update the `useRehearsalStudio` hook to check both the `id` column and the `company_id` column:
+### Logistics Upgrades Impact
 
-```typescript
-// Try by ID first, then by company_id
-const { data: directMatch } = await supabase
-  .from('rehearsal_rooms')
-  .select('*')
-  .or(`id.eq.${studioId},company_id.eq.${studioId}`)
-  .limit(1)
-  .single();
-```
+| Upgrade Type | Current Effect | New Effect |
+|-------------|---------------|------------|
+| GPS Tracking | Label only | +5% on-time delivery, visible in tour tracking |
+| Climate Control | Label only | Protects sensitive equipment, +10% condition preservation |
+| Fleet Expansion | Slot increase | Actually enables more concurrent contracts |
+| Premium Insurance | Label only | Reduces damage liability costs |
 
-**Files to modify:**
-- `src/hooks/useRehearsalStudioBusiness.ts` - Update `useRehearsalStudio` hook
+### Merch Factory Upgrades (New)
+
+Add upgrade system for factories:
+
+| Upgrade Type | Cost | Effect |
+|-------------|------|--------|
+| Print Quality | $15,000 | +10% merchandise quality rating |
+| Speed Lines | $30,000 | +25% production speed |
+| Custom Packaging | $20,000 | +5% merchandise sale price |
+| Eco-Friendly Materials | $25,000 | +10% with eco-conscious fans |
+| Design Studio | $40,000 | Unlock custom design capability |
 
 ---
 
-## Implementation Details
+## Part 3: Customizable Service Pricing
 
-### Step 1: Fix Rehearsal Studio Hook
+Each company type should allow the owner to set prices for their services.
 
-Update `useRehearsalStudio` to use `OR` condition for dual lookup:
+### Recording Studios
+Add to management page:
+- **Hourly Rate** slider: $50 - $500/hr (affects booking attractiveness)
+- **Rush Fee** toggle: 2x rate for same-day bookings
+- **Mixing Rate**: Separate rate for mixing-only sessions
+- **Mastering Rate**: Separate rate for mastering services
 
-```typescript
-export function useRehearsalStudio(studioId: string | undefined) {
-  return useQuery({
-    queryKey: ['rehearsal-studio', studioId],
-    queryFn: async () => {
-      if (!studioId) return null;
-      
-      const { data, error } = await supabase
-        .from('rehearsal_rooms')
-        .select(`*,
-          cities:city_id(name, country),
-          city_districts:district_id(name),
-          companies:company_id(name)
-        `)
-        .or(`id.eq.${studioId},company_id.eq.${studioId}`)
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as RehearsalStudioBusiness;
-    },
-    enabled: !!studioId,
-  });
-}
+**Database:**
+```
+ALTER TABLE city_studios
+ADD COLUMN mixing_hourly_rate integer DEFAULT 150,
+ADD COLUMN mastering_hourly_rate integer DEFAULT 200,
+ADD COLUMN rush_fee_multiplier numeric DEFAULT 2.0,
+ADD COLUMN minimum_booking_hours integer DEFAULT 2;
 ```
 
-### Step 2: Fix Logistics Hook
+### Rehearsal Studios
+- **Hourly Rate** slider: $10 - $100/hr
+- **Equipment Rental Package** options (basic/pro/premium)
+- **After Hours Rate**: 1.5x for late-night bookings
 
-Add a new query that fetches all logistics companies without requiring a companyId filter, OR modify the existing hook to support fetching by the logistics company's own ID:
+### Venues
+- **Venue Cut %** slider: 20-50% of ticket revenue
+- **Bar Revenue Share %**: 10-40%
+- **Private Event Rate**: Flat fee for rentals
+- **Minimum Guarantee**: Require minimum payment
 
-```typescript
-export function useLogisticsCompanyById(idOrCompanyId?: string) {
-  return useQuery({
-    queryKey: ["logistics-company", idOrCompanyId],
-    queryFn: async () => {
-      if (!idOrCompanyId) return null;
-      
-      const { data, error } = await supabase
-        .from("logistics_companies")
-        .select("*")
-        .or(`id.eq.${idOrCompanyId},company_id.eq.${idOrCompanyId}`)
-        .limit(1)
-        .maybeSingle();
+### Security Firms
+- **Guard Rate per Event**: $50 - $300/guard
+- **Contract Rates**: Weekly/monthly discounts
+- **VIP Premium**: Higher rate for celebrity protection
 
-      if (error) throw error;
-      return data as LogisticsCompany;
-    },
-    enabled: !!idOrCompanyId,
-  });
-}
+### Logistics Companies
+- **Per-km Rate**: $0.50 - $2.00/km
+- **Per-day Rate**: Flat daily charge
+- **Equipment Value Insurance %**: 0.1% - 0.5% of cargo value
+
+### Merch Factories
+- **Per-unit Manufacturing Cost**: Markup over base
+- **Rush Order Fee**: Expedited production
+- **Bulk Discount Thresholds**: 100/500/1000 unit breaks
+
+---
+
+## Part 4: Deep Game Integration
+
+### Security Firms Integration
+
+**Hook into Gigs:**
+When a band books a gig at a venue requiring security:
+1. Check if venue has `security_required = true`
+2. Query available security firms in the city
+3. Display firm options with reputation, price, guard count
+4. Player-owned firms get "In-House" badge with discounts
+5. Security quality affects:
+   - Incident prevention (mosh pit injuries, crowd crush)
+   - VIP area management
+   - Revenue protection (reduce theft)
+
+**Hook into Tours:**
+- Tour planning shows "Security Required" for large venues
+- Can hire same firm for entire tour (contract discount)
+- Security firm reputation affects tour prestige
+
+### Logistics Integration
+
+**Hook into Tours:**
+When booking a tour:
+1. Show logistics options for equipment transport
+2. Calculate costs based on:
+   - Distance between cities
+   - Equipment weight (stage equipment owned)
+   - Time sensitivity
+3. Logistics quality affects:
+   - Equipment arrival time (late = scramble penalty)
+   - Equipment condition on arrival
+   - Merch delivery timing
+
+**Hook into Merch Delivery:**
+- Factories produce merch
+- Logistics delivers to venue before gig
+- Late delivery = reduced merch available for sale
+
+### Recording Studio Integration
+
+**Studio Quality Affects:**
+1. Song quality_score bonus during recording
+2. Producer effectiveness multiplier
+3. Orchestra/session musician quality
+4. Mastering polish level
+
+**Formula:**
+```
+final_quality = base_quality * (1 + studio_quality_modifier)
+studio_quality_modifier = sum(upgrade_effects) + (equipment_value / 100000 * 0.1)
 ```
 
-Then update `LogisticsCompanyManagement.tsx` to use this new hook.
+### Venue Integration
 
-### Step 3: Fix Label Navigation
+**Venue Quality Affects:**
+1. Gig performance multiplier
+2. Band chemistry boost/drain
+3. Crowd capacity and energy
+4. Merch sales opportunity
+5. Recording capability (live albums)
 
-**Option A - Recommended**: Create a wrapper component that handles the lookup
+**Company-Owned Venue Benefits:**
+- Set your own booking rates
+- Priority booking for owned label's bands
+- Keep 100% of venue revenue (no external cut)
+- Upgrade revenue goes back to company
 
-The `CompanyCard` will navigate to `/labels/:companyId/manage`. This page will:
-1. Take the `companyId` from URL params
-2. Query the `labels` table for `company_id = companyId`
-3. Display full label management functionality
+### Factory Integration
 
-**Files:**
-- Create `src/pages/LabelManagement.tsx`
-- Add route in `src/App.tsx`: `<Route path="labels/:labelId/manage" element={<LabelManagement />} />`
-- Update `CompanyCard.tsx` navigation: `case 'label': return `/labels/${company.id}/manage``
+**Factory Quality Affects:**
+1. Merchandise production speed
+2. Item quality rating (affects price point)
+3. Maximum batch sizes
+4. Custom design capability
+
+**Owned Factory Benefits:**
+- Reduced per-unit costs
+- Priority queue for urgent orders
+- Custom exclusive designs
+- Bulk production for tours
+
+---
+
+## Part 5: Synergy System Activation
+
+The `SYNERGY_DEFINITIONS` exist but aren't actively applied. Make them real:
+
+### Label-Venue Partnership
+When label books its artists at owned venue:
+- 15% discount on venue fee
+- Priority time slot booking
+- Shared marketing bonus (+5% attendance)
+
+### Venue-Security Synergy
+When venue uses owned security firm:
+- 25% discount on security costs
+- Faster contract approval
+- Dedicated guard pool
+
+### Factory-Logistics Synergy
+When factory ships via owned logistics:
+- 20% shipping discount
+- Guaranteed delivery times
+- Real-time tracking integration
+
+### Full Integration Bonus
+Owning all company types:
+- 35% discount on all internal services
+- Empire Dashboard showing cross-company metrics
+- Exclusive "Vertical Integration" achievement
+
+---
+
+## Part 6: UI/UX Enhancements
+
+### Company Dashboard Improvements
+
+Add to `MyCompanies.tsx`:
+- **Empire Overview** card showing:
+  - Total company value
+  - Combined daily revenue
+  - Active synergies
+  - Employee count across all subsidiaries
+
+### Per-Company Settings Tab
+
+Add "Settings" tab to each management page:
+- Pricing configuration
+- Service availability hours
+- Auto-accept contract rules
+- Notification preferences
+
+### Contract Discovery
+
+Companies should receive automatic contract offers:
+- Security firms get gig security requests
+- Logistics get tour transport requests
+- Studios get recording session requests
+- Factories get merch production requests
+
+Display in a unified "Incoming Contracts" section.
+
+---
+
+## Implementation Sequence
+
+### Phase 1: Database Foundations
+1. Add new columns for pricing to relevant tables
+2. Create upgrade tables for security/factory
+3. Add `equipment_item_id` to studio equipment
+4. Seed studio equipment to `equipment_items`
+
+### Phase 2: Upgrade Effects
+1. Create quality modifier RPCs for each company type
+2. Hook modifiers into gigExecution.ts
+3. Hook modifiers into recording completion
+4. Display modifiers in booking UIs
+
+### Phase 3: Pricing Systems
+1. Add pricing sliders to each management page
+2. Update booking flows to use custom prices
+3. Add "Set Prices" tab to management pages
+
+### Phase 4: Cross-Company Integration
+1. Implement security firm selection in gig booking
+2. Implement logistics selection in tour planning
+3. Implement factory-logistics delivery tracking
+4. Activate synergy discounts
+
+### Phase 5: Contract Generation
+1. Create cron job for contract offer generation
+2. Build unified contract inbox UI
+3. Add auto-accept rules configuration
 
 ---
 
@@ -181,35 +336,62 @@ The `CompanyCard` will navigate to `/labels/:companyId/manage`. This page will:
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/hooks/useRehearsalStudioBusiness.ts` | Modify | Dual lookup by id OR company_id |
-| `src/hooks/useLogisticsBusiness.ts` | Modify | Add new hook for single company lookup |
-| `src/pages/LogisticsCompanyManagement.tsx` | Modify | Use new single-company hook |
-| `src/pages/LabelManagement.tsx` | Create | Dedicated label management page |
-| `src/App.tsx` | Modify | Add label management route |
-| `src/components/company/CompanyCard.tsx` | Modify | Fix label navigation path |
+| `supabase/migrations/XXXX_company_system_expansion.sql` | Create | Schema changes, new upgrade tables |
+| `src/hooks/useCompanyQualityModifiers.ts` | Create | Calculate quality bonuses |
+| `src/utils/gigExecution.ts` | Modify | Apply venue/security modifiers |
+| `src/hooks/useRecordingData.tsx` | Modify | Apply studio quality modifiers |
+| `src/components/recording-studio-business/RecordingStudioEquipmentManager.tsx` | Modify | Link to equipment_items |
+| `src/pages/SecurityFirmManagement.tsx` | Modify | Add upgrades and pricing tabs |
+| `src/pages/MerchFactoryManagement.tsx` | Modify | Add upgrades tab |
+| `src/components/security/SecurityUpgradesManager.tsx` | Create | Security firm upgrades UI |
+| `src/components/merch-factory/FactoryUpgradesManager.tsx` | Create | Factory upgrades UI |
+| `src/components/company/CompanyPricingSettings.tsx` | Create | Reusable pricing configuration |
+| `src/components/company/CompanySynergies.tsx` | Create | Display active synergies |
+| `src/pages/MyCompanies.tsx` | Modify | Add empire overview |
+| `src/components/gig/SecuritySelection.tsx` | Create | Choose security for gigs |
+| `src/components/tour/LogisticsSelection.tsx` | Create | Choose logistics for tours |
 | `src/components/VersionHeader.tsx` | Modify | Version bump |
-| `src/pages/VersionHistory.tsx` | Modify | Add changelog entry |
+| `src/pages/VersionHistory.tsx` | Modify | Changelog entry |
 
 ---
 
-## Testing Checklist
+## Expected Outcomes
 
-After implementation, verify:
-
-- [ ] Clicking "Manage" on a Rehearsal Studio company navigates and loads the studio data
-- [ ] Clicking "Manage" on a Logistics company navigates and loads the company data  
-- [ ] Clicking "Manage" on a Label company navigates and loads label management
-- [ ] All subsidiary management pages show correct stats and tabs
-- [ ] Going back from management pages returns to company list
+- **Meaningful Ownership**: Each company type directly impacts gameplay outcomes
+- **Economic Integration**: Custom pricing creates player-driven market dynamics  
+- **Upgrade Investment**: Spending on upgrades provides tangible returns
+- **Synergy Rewards**: Vertical integration provides real competitive advantages
+- **Cross-System Effects**: Companies affect gigs, tours, recordings, and merch
+- **Unified Equipment**: Recording studio gear shares catalog with player gear
 
 ---
 
 ## Technical Notes
 
-The key insight is that when a subsidiary company is created through the company system:
-- A record is created in `companies` table (e.g., `id: 'd17da751...'`, `company_type: 'rehearsal'`)
-- A database trigger creates a corresponding record in the entity table (e.g., `rehearsal_rooms.id: '179e890d...'`, `rehearsal_rooms.company_id: 'd17da751...'`)
+### Quality Modifier Formula
+```typescript
+function getStudioQualityModifier(studioId: string): number {
+  // Sum upgrade effects (each level = +2% typically)
+  const upgradeBonus = upgrades.reduce((sum, u) => sum + u.effect_value, 0);
+  
+  // Equipment value bonus (every $100k = +5%)
+  const equipmentBonus = (totalEquipmentValue / 100000) * 5;
+  
+  // Staff skill bonus (average skill / 20)
+  const staffBonus = avgStaffSkill / 20;
+  
+  return Math.min(50, upgradeBonus + equipmentBonus + staffBonus);
+}
+```
 
-The navigation uses the `companies.id`, but the entity tables have their own primary `id`. The solution is to always query entities using `OR(id, company_id)` to handle both access patterns.
+### Synergy Detection
+```typescript
+function detectSynergies(companyId: string): SynergyType[] {
+  const subsidiaryTypes = getSubsidiaryTypes(companyId);
+  return Object.entries(SYNERGY_DEFINITIONS)
+    .filter(([_, def]) => def.requires.every(r => subsidiaryTypes.includes(r)))
+    .map(([type]) => type as SynergyType);
+}
+```
 
-**Version**: 1.0.595
+**Version**: 1.0.596
