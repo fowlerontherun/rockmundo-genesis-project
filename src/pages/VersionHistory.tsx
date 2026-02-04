@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.591",
+    date: "2026-02-04",
+    changes: [
+      { type: 'fix', description: "Activity XP: Added missing cron job to credit daily activity XP to wallets automatically" },
+      { type: 'improvement', description: "Activity XP: Players now receive SXP and AP from activities daily at 05:00 UTC (capped at 250 SXP)" },
+    ],
+  },
+  {
     version: "1.0.590",
     date: "2026-02-04",
     changes: [
