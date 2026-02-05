@@ -47,7 +47,7 @@ export interface FestivalCareerStats {
 
 export function useFestivalHistory(bandId?: string, userId?: string) {
   // Fetch all performance history for the band
-  const { data: performances = [], isLoading, error } = useQuery({
+  const { data: performances = [], isLoading, error, refetch } = useQuery({
     queryKey: ["festival-performance-history", bandId, userId],
     queryFn: async () => {
       let query = (supabase as any)
@@ -97,6 +97,7 @@ export function useFestivalHistory(bandId?: string, userId?: string) {
     stats,
     isLoading,
     error,
+    refetch,
   };
 }
 
@@ -151,7 +152,7 @@ export function useFestivalRivalries(festivalId?: string, bandId?: string) {
 // Fetch sponsorships for a festival
 export function useFestivalSponsorships(festivalId?: string) {
   return useQuery({
-    queryKey: ["festival-sponsorships", festivalId],
+    queryKey: ["festival-sponsorships-detail", festivalId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("festival_sponsorships")
@@ -165,5 +166,23 @@ export function useFestivalSponsorships(festivalId?: string) {
       return data || [];
     },
     enabled: !!festivalId,
+  });
+}
+
+// Fetch merch sales for a performance
+export function useFestivalMerchSales(performanceId?: string) {
+  return useQuery({
+    queryKey: ["festival-merch-sales", performanceId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("festival_merch_sales")
+        .select("*")
+        .eq("performance_id", performanceId)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
+    },
+    enabled: !!performanceId,
   });
 }

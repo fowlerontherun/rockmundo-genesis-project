@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.600",
+    date: "2026-02-05",
+    changes: [
+      { type: 'feature', description: "Festivals: Edge function for complete festival performance processing" },
+      { type: 'feature', description: "Festivals: Auto-generated reviews from 8 publications (NME, Pitchfork, Rolling Stone, etc.)" },
+      { type: 'feature', description: "Festivals: Review cards with sentiment analysis and fame impact display" },
+      { type: 'feature', description: "Festivals: Merchandise sales breakdown component with item counts and revenue split" },
+      { type: 'feature', description: "Festivals: Review aggregator showing overall sentiment and average score" },
+      { type: 'improvement', description: "Festivals: Performance results now save detailed merch sales data (t-shirts, posters, albums)" },
+      { type: 'improvement', description: "Festivals: Inbox notifications sent after each festival performance" },
+    ],
+  },
+  {
     version: "1.0.599",
     date: "2026-02-05",
     changes: [
