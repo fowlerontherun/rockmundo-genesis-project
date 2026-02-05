@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.599",
+    date: "2026-02-05",
+    changes: [
+      { type: 'feature', description: "Festivals: New Map View tab with geographic visualization of festivals worldwide" },
+      { type: 'feature', description: "Festivals: Interactive map markers with region filtering and search" },
+      { type: 'feature', description: "Festivals: Dedicated Festival Detail page with lineup, sponsors, and rivalries tabs" },
+      { type: 'feature', description: "Festivals: Genre match analysis showing compatibility with your band" },
+      { type: 'feature', description: "Festivals: Travel cost estimates displayed on map view" },
+      { type: 'improvement', description: "Festivals: Performance page now uses enhanced interactive performance loop" },
+      { type: 'improvement', description: "Festivals: Weather forecast display on festival detail pages" },
+    ],
+  },
+  {
     version: "1.0.598",
     date: "2026-02-04",
     changes: [

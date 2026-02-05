@@ -15,9 +15,10 @@ import { useSetlists } from "@/hooks/useSetlists";
 import { FestivalSlotOffers } from "@/components/festivals/FestivalSlotOffers";
 import { FestivalHistoryCard } from "@/components/festivals/history/FestivalHistoryCard";
 import { FestivalHistoryStats } from "@/components/festivals/history/FestivalHistoryStats";
+import { FestivalMapView } from "@/components/festivals/discovery/FestivalMapView";
 import { 
   Calendar, MapPin, Users, Music, Star, Clock, 
-  DollarSign, Trophy, CheckCircle, XCircle, Loader2, Mail, History
+  DollarSign, Trophy, CheckCircle, XCircle, Loader2, Mail, History, Map
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns";
 
@@ -50,7 +51,7 @@ export default function FestivalBrowser() {
   const { data: setlists } = useSetlists(band?.id);
   const { performances, stats, isLoading: historyLoading } = useFestivalHistory(band?.id);
 
-  const [activeTab, setActiveTab] = useState<"browse" | "my-festivals" | "offers" | "history">("browse");
+  const [activeTab, setActiveTab] = useState<"browse" | "map" | "my-festivals" | "offers" | "history">("browse");
   const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -158,8 +159,12 @@ export default function FestivalBrowser() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full max-w-xl grid-cols-4">
+        <TabsList className="grid w-full max-w-2xl grid-cols-5">
           <TabsTrigger value="browse">Browse</TabsTrigger>
+          <TabsTrigger value="map" className="flex items-center gap-1">
+            <Map className="h-4 w-4" />
+            <span className="hidden sm:inline">Map</span>
+          </TabsTrigger>
           <TabsTrigger value="my-festivals">My Festivals</TabsTrigger>
           <TabsTrigger value="offers" className="flex items-center gap-1">
             <Mail className="h-4 w-4" />
@@ -283,6 +288,17 @@ export default function FestivalBrowser() {
               })}
             </div>
           )}
+        </TabsContent>
+
+        {/* Map Tab */}
+        <TabsContent value="map" className="mt-6">
+          <FestivalMapView 
+            festivals={festivals} 
+            onApply={(festival) => {
+              setSelectedFestival(festival);
+              setShowApplyDialog(true);
+            }}
+          />
         </TabsContent>
 
         {/* My Festivals Tab */}

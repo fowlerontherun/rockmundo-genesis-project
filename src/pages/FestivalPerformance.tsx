@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FestivalPerformanceOutcome } from "@/components/festivals/FestivalPerformanceOutcome";
+import { FestivalPerformanceLoop } from "@/components/festivals/performance/FestivalPerformanceLoop";
 
 interface PerformanceState {
   phase: "warmup" | "performing" | "climax" | "complete";
@@ -55,6 +56,7 @@ export default function FestivalPerformance() {
     earnedPayment: number;
     earnedFame: number;
   } | null>(null);
+  const [useNewLoop, setUseNewLoop] = useState(true);
 
   // Fetch participation details
   const { data: participation, isLoading } = useQuery({
@@ -231,6 +233,41 @@ export default function FestivalPerformance() {
 
   const canPerform = participation.status === "confirmed" || participation.status === "pending" || participation.status === "invited";
   const hasPerformed = participation.status === "performed";
+
+  // Use new performance loop if enabled
+  if (canPerform && !hasPerformed && useNewLoop) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Music className="h-6 w-6" />
+              {participation.festival?.title || "Festival Performance"}
+            </h1>
+            <p className="text-muted-foreground">
+              {participation.slot_type} slot • {primaryBand?.name}
+            </p>
+          </div>
+          <Badge>{participation.status}</Badge>
+        </div>
+        
+        <FestivalPerformanceLoop
+          participationId={participationId!}
+          bandId={primaryBand?.id}
+          festivalTitle={participation.festival?.title || "Festival"}
+          slotType={participation.slot_type || "main"}
+          onComplete={() => {
+            queryClient.invalidateQueries({ queryKey: ["festival-participation"] });
+            queryClient.invalidateQueries({ queryKey: ["primary-band"] });
+            navigate("/festivals");
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
