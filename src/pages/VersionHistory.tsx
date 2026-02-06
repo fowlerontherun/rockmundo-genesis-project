@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.610",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Music Videos: Fixed 404 'Video not found' error when generating AI videos — edge function referenced non-existent cover_art_url column on songs table" },
+    ],
+  },
+  {
     version: "1.0.609",
     date: "2026-02-06",
     changes: [
