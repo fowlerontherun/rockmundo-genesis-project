@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.609",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Music Videos: Viewer now auto-plays audio when opened instead of requiring manual play button click" },
+      { type: 'fix', description: "Music Videos: Clicking anywhere in the viewer display area now toggles play/pause" },
+      { type: 'improvement', description: "Music Videos: Completely redesigned audio-only visualizer with spinning vinyl disc, pulsing rings, and shaped equalizer bars" },
+      { type: 'improvement', description: "Music Videos: Removed confusing 'no video file generated' message, replaced with clean play prompt" },
+      { type: 'improvement', description: "Music Videos: Video cards now show decorative waveform thumbnails, formatted view counts, and status-specific icons" },
+      { type: 'improvement', description: "Music Videos: Dynamic gradient backgrounds on cards based on video status (released/production/generating)" },
+    ],
+  },
+  {
     version: "1.0.608",
     date: "2026-02-06",
     changes: [

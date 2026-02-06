@@ -745,17 +745,65 @@ const MusicVideos = () => {
                 return (
                   <Card key={video.id} className="overflow-hidden">
                     <div 
-                      className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center cursor-pointer hover:from-primary/30 hover:to-secondary/30 transition-colors relative group"
-                      onClick={() => video.status === "released" && openViewer(video)}
+                      className="aspect-video flex items-center justify-center cursor-pointer relative group overflow-hidden"
+                      style={{
+                        background: video.status === "released"
+                          ? "linear-gradient(135deg, hsl(var(--primary) / 0.25) 0%, hsl(var(--secondary) / 0.15) 50%, hsl(var(--primary) / 0.1) 100%)"
+                          : video.status === "production"
+                          ? "linear-gradient(135deg, hsl(var(--secondary) / 0.2) 0%, hsl(var(--muted) / 0.3) 100%)"
+                          : video.status === "generating"
+                          ? "linear-gradient(135deg, hsl(var(--primary) / 0.15) 0%, hsl(280 50% 30% / 0.2) 100%)"
+                          : "linear-gradient(135deg, hsl(var(--muted) / 0.3) 0%, hsl(var(--muted) / 0.2) 100%)",
+                      }}
+                      onClick={() => (video.status === "released" || video.status === "generating") && openViewer(video)}
                     >
-                      <Film className="h-16 w-16 text-muted-foreground/50" />
-                      {video.status === "released" && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="flex items-center gap-2 text-white font-semibold">
-                            <Play className="h-8 w-8 fill-white" />
-                            <span>Watch Video</span>
+                      {/* Decorative waveform lines */}
+                      <div className="absolute inset-0 flex items-end justify-center gap-[2px] px-4 pb-3 opacity-30">
+                        {Array.from({ length: 24 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1 rounded-t bg-primary/50"
+                            style={{
+                              height: `${15 + Math.sin(i * 0.5 + (video.hype_score || 0) * 0.1) * 25 + Math.random() * 10}%`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      
+                      {/* Center play icon */}
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        {video.status === "released" ? (
+                          <div className="w-14 h-14 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-sm group-hover:bg-primary/30 group-hover:scale-110 transition-all">
+                            <Play className="h-7 w-7 text-primary fill-primary/30 ml-0.5" />
                           </div>
+                        ) : video.status === "generating" ? (
+                          <div className="w-14 h-14 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center animate-pulse">
+                            <Film className="h-7 w-7 text-primary/70" />
+                          </div>
+                        ) : video.status === "production" ? (
+                          <div className="w-14 h-14 rounded-full bg-secondary/20 border border-secondary/30 flex items-center justify-center">
+                            <Clock className="h-7 w-7 text-muted-foreground/70" />
+                          </div>
+                        ) : (
+                          <Film className="h-12 w-12 text-muted-foreground/40" />
+                        )}
+                      </div>
+
+                      {/* Views count overlay for released */}
+                      {video.status === "released" && video.views_count > 0 && (
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded text-xs text-white/80 backdrop-blur-sm">
+                          <Eye className="h-3 w-3" />
+                          {video.views_count >= 1000000
+                            ? `${(video.views_count / 1000000).toFixed(1)}M`
+                            : video.views_count >= 1000
+                            ? `${(video.views_count / 1000).toFixed(0)}K`
+                            : video.views_count}
                         </div>
+                      )}
+
+                      {/* Hover overlay */}
+                      {video.status === "released" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                       )}
                     </div>
                     <CardHeader>
