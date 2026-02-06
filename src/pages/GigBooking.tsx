@@ -313,7 +313,9 @@ const GigBooking = () => {
     selectedDate,
     selectedSlot,
     attendanceForecast,
-    estimatedRevenue
+    estimatedRevenue,
+    riderId,
+    venuePayout,
   }: GigBookingSubmission) => {
     if (!band || !bookingVenue) return;
 
@@ -446,7 +448,7 @@ const GigBooking = () => {
         scheduled_date: scheduledDateTime.toISOString(),
         status: 'scheduled',
         show_type: bookingVenue.venue_type ?? 'concert',
-        payment: 0, // No upfront payment - bands earn from ticket sales
+        payment: venuePayout || 0, // Venue payment based on fame/fans/venue size
         booking_fee: bookingFee,
         setlist_id: setlistId,
         ticket_price: ticketPrice,
@@ -461,6 +463,7 @@ const GigBooking = () => {
         predicted_tickets: predictedTickets,
         tickets_sold: 0,
         last_ticket_update: new Date().toISOString(),
+        rider_id: riderId || null,
       }).select().single();
 
       if (error) {

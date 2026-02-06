@@ -8,14 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
-import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle, Target, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { calculateAttendanceForecast } from "@/utils/gigPerformanceCalculator";
+import { calculateVenuePayout, getPayoutTier } from "@/utils/venuePayoutCalculator";
 import { GIG_SLOTS, getSlotBadgeVariant } from "@/utils/gigSlots";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
+import { useBandRiders, useVenueRiderCompatibility } from "@/hooks/useBandRiders";
 import { checkBandLockout } from "@/utils/bandLockout";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -24,7 +26,6 @@ import type { Database } from "@/lib/supabase-types";
 import { calculateSetlistDuration, validateSetlistForSlot } from "@/utils/setlistDuration";
 import { useSetlistSongs } from "@/hooks/useSetlists";
 import { TicketOperatorSelector } from "@/components/gig/TicketOperatorSelector";
-import { TICKET_OPERATORS } from "@/data/ticketOperators";
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type BandRow = Database['public']['Tables']['bands']['Row'];
@@ -55,6 +56,8 @@ export interface GigBookingSubmission {
   attendanceForecast: BookingForecast;
   estimatedRevenue: number;
   ticketOperatorId?: string;
+  riderId?: string;
+  venuePayout?: number;
 }
 
 interface GigBookingDialogProps {
@@ -75,15 +78,35 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
+  const [selectedRiderId, setSelectedRiderId] = useState<string>("none");
 
   // Check if venue is large enough for ticket operators (200+ capacity)
   const canUseTicketOperator = (venue?.capacity || 0) >= 200;
+
+  // Fetch band's riders
+  const { riders, ridersLoading } = useBandRiders(band?.id || null);
+
+  // Check rider compatibility with venue
+  const { data: riderCompatibility } = useVenueRiderCompatibility(
+    venue?.id || null,
+    selectedRiderId !== "none" ? selectedRiderId : null
+  );
 
   useEffect(() => {
     if (initialDate) {
       setSelectedDate(new Date(initialDate));
     }
   }, [initialDate]);
+
+  // Auto-select default rider
+  useEffect(() => {
+    if (riders && riders.length > 0 && selectedRiderId === "none") {
+      const defaultRider = riders.find(r => r.is_default);
+      if (defaultRider) {
+        setSelectedRiderId(defaultRider.id);
+      }
+    }
+  }, [riders, selectedRiderId]);
 
   // Check band lockout status
   useEffect(() => {
@@ -133,6 +156,20 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     if (!setlistDuration || !selectedSlot) return null;
     return validateSetlistForSlot(setlistDuration.totalSeconds, selectedSlot);
   }, [setlistDuration, selectedSlot]);
+
+  // Calculate venue payout based on band stats and venue
+  const payoutBreakdown = useMemo(() => {
+    if (!venue || !selectedSlotData) return null;
+    return calculateVenuePayout({
+      bandFame: band.fame || 0,
+      bandTotalFans: band.total_fans || 0,
+      venueCapacity: venue.capacity || 100,
+      venuePrestige: venue.prestige_level || 1,
+      venueBasePayment: venue.base_payment || 0,
+      slotPaymentMultiplier: selectedSlotData.paymentMultiplier,
+      riderCost: riderCompatibility?.totalCost || 0,
+    });
+  }, [band.fame, band.total_fans, venue, selectedSlotData, riderCompatibility?.totalCost]);
 
   const { attendanceForecast, estimatedRevenue, suggestedTicketPrice, priceRating } = useMemo(() => {
     if (!venue) {
@@ -204,6 +241,8 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       attendanceForecast,
       estimatedRevenue,
       ticketOperatorId: selectedOperatorId || undefined,
+      riderId: selectedRiderId !== "none" ? selectedRiderId : undefined,
+      venuePayout: payoutBreakdown?.netPayout,
     });
   };
 
@@ -221,6 +260,8 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     bandLockout.isLocked ||
     durationValidation?.valid === false ||
     operatorRequired;
+
+  const payoutTier = payoutBreakdown ? getPayoutTier(payoutBreakdown.netPayout) : null;
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -265,8 +306,17 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
               <RadioGroup value={selectedSlot} onValueChange={setSelectedSlot}>
                 {slotAvailability?.map(({ slot, isAvailable, isBooked, bookedByBand, meetsRequirements, requirementsNotMet }) => {
                   const isDisabled = !isAvailable || !meetsRequirements;
-                  const paymentMultiplier = slot.paymentMultiplier;
-                  const estimatedPayment = Math.round((venue.base_payment || 0) * paymentMultiplier);
+
+                  // Calculate payout preview for this slot
+                  const slotPayout = calculateVenuePayout({
+                    bandFame: band.fame || 0,
+                    bandTotalFans: band.total_fans || 0,
+                    venueCapacity: venue.capacity || 100,
+                    venuePrestige: venue.prestige_level || 1,
+                    venueBasePayment: venue.base_payment || 0,
+                    slotPaymentMultiplier: slot.paymentMultiplier,
+                    riderCost: 0,
+                  });
 
                   return (
                     <div
@@ -290,19 +340,18 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                         </div>
                         <p className="text-sm text-muted-foreground">{slot.description}</p>
 
-                        {/* Attendance & Payment preview */}
-                        {selectedSlot === slot.id && (
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              <span>~{attendanceForecast.realistic} attendees</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              <span>${estimatedPayment.toLocaleString()} base pay</span>
-                            </div>
+                        {/* Venue payout preview for each slot */}
+                        <div className="flex items-center gap-3 text-xs">
+                          <div className="flex items-center gap-1 text-green-600">
+                            <DollarSign className="h-3 w-3" />
+                            <span className="font-medium">${slotPayout.grossPayout.toLocaleString()} venue pay</span>
                           </div>
-                        )}
+                          {slotPayout.fameBonus > 0 && (
+                            <span className="text-muted-foreground">
+                              (${slotPayout.basePay} base + ${slotPayout.fameBonus} fame + ${slotPayout.fanDrawBonus} fans)
+                            </span>
+                          )}
+                        </div>
 
                         {/* Status badges */}
                         {isBooked && (
@@ -396,6 +445,92 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
             )}
           </div>
 
+          {/* Rider Selection */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Band Rider
+              </Label>
+              {riders && riders.length === 0 && (
+                <Button asChild size="sm" variant="ghost" className="text-xs">
+                  <Link to="/band-riders">Create Rider</Link>
+                </Button>
+              )}
+            </div>
+            
+            <Select value={selectedRiderId} onValueChange={setSelectedRiderId} disabled={ridersLoading}>
+              <SelectTrigger>
+                <SelectValue placeholder={ridersLoading ? "Loading riders..." : "No rider selected"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No rider (basic setup)</SelectItem>
+                {riders?.map((rider) => (
+                  <SelectItem key={rider.id} value={rider.id}>
+                    <span className="flex items-center gap-2">
+                      {rider.name}
+                      {rider.is_default && <Star className="h-3 w-3 text-amber-500" />}
+                      <span className="text-muted-foreground">
+                        (~${rider.total_cost_estimate?.toLocaleString()})
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Rider Compatibility Preview */}
+            {selectedRiderId !== "none" && riderCompatibility && (
+              <Card className="bg-muted/30 border-dashed">
+                <CardContent className="pt-4 pb-3 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Venue Fulfillment</span>
+                    <Badge variant={riderCompatibility.fulfillmentPercentage >= 80 ? "default" : riderCompatibility.fulfillmentPercentage >= 50 ? "secondary" : "destructive"}>
+                      {riderCompatibility.fulfillmentPercentage}%
+                    </Badge>
+                  </div>
+                  <Progress value={riderCompatibility.fulfillmentPercentage} className="h-2" />
+                  
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="text-center">
+                      <div className="text-muted-foreground">Technical</div>
+                      <div className="font-semibold">{riderCompatibility.technicalFulfillment}%</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-muted-foreground">Hospitality</div>
+                      <div className="font-semibold">{riderCompatibility.hospitalityFulfillment}%</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-muted-foreground">Backstage</div>
+                      <div className="font-semibold">{riderCompatibility.backstageFulfillment}%</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs border-t pt-2">
+                    <span className="text-muted-foreground">Rider cost (venue covers)</span>
+                    <span className="font-medium">${riderCompatibility.totalCost.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex gap-2 text-xs">
+                    <Badge variant="outline" className="gap-1">
+                      Performance: {riderCompatibility.performanceModifier >= 1 ? '+' : ''}{Math.round((riderCompatibility.performanceModifier - 1) * 100)}%
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      Morale: {riderCompatibility.moraleModifier >= 1 ? '+' : ''}{Math.round((riderCompatibility.moraleModifier - 1) * 100)}%
+                    </Badge>
+                  </div>
+
+                  {riderCompatibility.missing.length > 0 && (
+                    <div className="text-xs text-amber-600">
+                      <AlertTriangle className="h-3 w-3 inline mr-1" />
+                      {riderCompatibility.missing.length} item{riderCompatibility.missing.length !== 1 ? 's' : ''} not available at this venue
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
           {/* Ticket Pricing */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -441,7 +576,7 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
               </div>
             </div>
 
-            {/* Revenue & Attendance Forecast */}
+            {/* Revenue & Payout Forecast */}
             {selectedSlot && selectedSetlistId && (
               <Card className="bg-muted/50">
                 <CardContent className="pt-6">
@@ -471,29 +606,78 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                     </div>
                     
                     <Separator />
-                    
+
+                    {/* Ticket Revenue */}
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Estimated Revenue</span>
-                      <span className="text-lg font-bold text-green-600">
+                      <span className="text-sm font-medium">Ticket Revenue</span>
+                      <span className="font-semibold text-green-600">
                         ${estimatedRevenue.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Venue Base Payment</span>
-                      <span className="font-semibold text-green-600">
-                        +${Math.round((venue.base_payment || 0) * (selectedSlotData?.paymentMultiplier || 1)).toLocaleString()}
-                      </span>
-                    </div>
+
+                    {/* Venue Payout Breakdown */}
+                    {payoutBreakdown && (
+                      <>
+                        <div className="space-y-1.5 rounded-lg bg-background/50 p-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium flex items-center gap-1.5">
+                              <DollarSign className="h-4 w-4" />
+                              Venue Payment
+                              {payoutTier && (
+                                <Badge variant="outline" className={cn("text-xs", payoutTier.color)}>
+                                  {payoutTier.label}
+                                </Badge>
+                              )}
+                            </span>
+                          </div>
+                          <div className="text-xs space-y-1 text-muted-foreground pl-5">
+                            <div className="flex justify-between">
+                              <span>Base pay ({(payoutBreakdown.slotMultiplier * 100).toFixed(0)}% slot)</span>
+                              <span>${payoutBreakdown.basePay.toLocaleString()}</span>
+                            </div>
+                            {payoutBreakdown.fameBonus > 0 && (
+                              <div className="flex justify-between">
+                                <span>Fame bonus</span>
+                                <span className="text-green-600">+${payoutBreakdown.fameBonus.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {payoutBreakdown.fanDrawBonus > 0 && (
+                              <div className="flex justify-between">
+                                <span>Fan draw bonus</span>
+                                <span className="text-green-600">+${payoutBreakdown.fanDrawBonus.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {payoutBreakdown.prestigeMultiplier > 1.0 && (
+                              <div className="flex justify-between">
+                                <span>Prestige ×{payoutBreakdown.prestigeMultiplier.toFixed(2)}</span>
+                                <span className="text-blue-500">applied</span>
+                              </div>
+                            )}
+                            {payoutBreakdown.riderCost > 0 && (
+                              <div className="flex justify-between">
+                                <span>Rider cost (venue covers)</span>
+                                <span className="text-amber-600">-${payoutBreakdown.riderCost.toLocaleString()}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center pt-1 border-t text-sm font-semibold">
+                            <span>Net venue pay</span>
+                            <span className="text-green-600">${payoutBreakdown.netPayout.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
                     <Separator />
                     <div className="flex justify-between items-center text-lg">
                       <span className="font-semibold">Total Projected Earnings</span>
                       <span className="font-bold text-primary">
-                        ${(estimatedRevenue + Math.round((venue.base_payment || 0) * (selectedSlotData?.paymentMultiplier || 1))).toLocaleString()}
+                        ${(estimatedRevenue + (payoutBreakdown?.netPayout || 0)).toLocaleString()}
                       </span>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground italic mt-4">
-                    * Conservative estimates based on your band's current stats and venue prestige.
+                    * Conservative estimates based on your band's fame, fans, and venue prestige.
                   </p>
                 </CardContent>
               </Card>
