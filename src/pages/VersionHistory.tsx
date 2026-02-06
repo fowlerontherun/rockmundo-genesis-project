@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.604",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Gig Booking: Times now correctly use venue's city timezone - booking 8 PM in Nashville stores 8 PM Nashville time, not browser local time" },
+    ],
+  },
+  {
     version: "1.0.603",
     date: "2026-02-06",
     changes: [

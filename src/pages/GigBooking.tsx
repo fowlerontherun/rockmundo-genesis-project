@@ -24,6 +24,7 @@ import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
 import { formatDistanceToNow, differenceInDays, startOfDay, endOfDay } from 'date-fns';
 import { predictTotalTicketSales } from '@/utils/ticketSalesSimulation';
+import { buildDateInTimezone } from '@/utils/timezoneUtils';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
@@ -104,7 +105,7 @@ const GigBooking = () => {
       .from('venues')
       .select(`
         *,
-        cities!city_id (id, name, country)
+        cities!city_id (id, name, country, timezone)
       `)
       .order('prestige_level', { ascending: true });
 
@@ -352,10 +353,27 @@ const GigBooking = () => {
         throw new Error('Invalid slot selected');
       }
 
-      // Combine date with slot start time
-      const scheduledDateTime = new Date(selectedDate);
+      // Combine date with slot start time in the VENUE's timezone
+      // so "8 PM" means 8 PM in Nashville, not 8 PM in the user's browser
+      const venueCity = (bookingVenue as VenueWithCity).cities;
+      const venueTimezone = venueCity?.timezone;
+      
       const [hours, minutes] = slot.startTime.split(':');
-      scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      let scheduledDateTime: Date;
+      
+      if (venueTimezone) {
+        // Interpret the selected date+time as being in the venue's timezone
+        scheduledDateTime = buildDateInTimezone(
+          selectedDate,
+          parseInt(hours),
+          parseInt(minutes),
+          venueTimezone
+        );
+      } else {
+        // Fallback: use local browser time if no timezone available
+        scheduledDateTime = new Date(selectedDate);
+        scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
 
       // Check for double-booking: ensure band doesn't have another gig at the same date/time
       const { data: conflictingGig } = await supabase
@@ -364,8 +382,8 @@ const GigBooking = () => {
         .eq('band_id', band.id)
         .eq('time_slot', selectedSlot)
         .in('status', ['scheduled', 'in_progress'])
-        .gte('scheduled_date', startOfDay(scheduledDateTime).toISOString())
-        .lt('scheduled_date', endOfDay(scheduledDateTime).toISOString())
+        .gte('scheduled_date', startOfDay(selectedDate).toISOString())
+        .lt('scheduled_date', endOfDay(selectedDate).toISOString())
         .maybeSingle();
 
       if (conflictingGig) {
@@ -450,19 +468,21 @@ const GigBooking = () => {
       }
 
       // Create scheduled activity for ALL band members (blocks everyone during performance)
-      const gigEndTime = new Date(scheduledDateTime);
-      const [endHours, endMinutes] = slot.endTime.split(':');
-      gigEndTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+      let gigEndTime: Date;
+      if (venueTimezone) {
+        gigEndTime = buildDateInTimezone(
+          selectedDate,
+          parseInt(slot.endTime.split(':')[0]),
+          parseInt(slot.endTime.split(':')[1]),
+          venueTimezone
+        );
+      } else {
+        gigEndTime = new Date(scheduledDateTime);
+        const [endHours, endMinutes] = slot.endTime.split(':');
+        gigEndTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+      }
 
-      // Fetch venue's city timezone for proper time display
-      const { data: venueWithCity } = await supabase
-        .from('venues')
-        .select('cities(timezone, name)')
-        .eq('id', bookingVenue.id)
-        .single();
-      
-      const venueTimezone = (venueWithCity?.cities as any)?.timezone;
-      const venueCityName = (venueWithCity?.cities as any)?.name;
+      const venueCityName = venueCity?.name;
 
       // Import and use band-wide scheduling
       const { createBandScheduledActivities } = await import('@/utils/bandActivityScheduling');
