@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Camera, Sparkles, DollarSign, Star, Clock, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { createScheduledActivity } from "@/hooks/useActivityBooking";
 
 interface ModelingOffersPanelProps {
   userId: string;
@@ -90,6 +91,9 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: Modelin
         gig.compensation_min + Math.random() * (gig.compensation_max - gig.compensation_min)
       );
 
+      const shootDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const shootEnd = new Date(shootDate.getTime() + gig.duration_hours * 60 * 60 * 1000);
+
       const { error } = await supabase.from("player_modeling_contracts").insert({
         user_id: userId,
         gig_id: gig.id,
@@ -98,15 +102,36 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: Modelin
         gig_type: gig.gig_type,
         compensation,
         fame_boost: gig.fame_boost,
-        shoot_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        shoot_date: shootDate.toISOString().split("T")[0],
       });
 
       if (error) throw error;
+
+      // Block schedule for the shoot
+      try {
+        await createScheduledActivity({
+          userId,
+          activityType: "pr_appearance",
+          scheduledStart: shootDate,
+          scheduledEnd: shootEnd,
+          title: `Modeling: ${gig.title}`,
+          description: `${gigTypeLabels[gig.gig_type] || gig.gig_type} for ${gig.brand?.name || gig.agency?.name || "brand"}`,
+          metadata: {
+            gig_id: gig.id,
+            gig_type: gig.gig_type,
+            compensation,
+          },
+        });
+      } catch (scheduleError) {
+        console.warn("Failed to create schedule entry for modeling gig:", scheduleError);
+      }
+
       return { compensation };
     },
     onSuccess: (data) => {
       toast.success(`Modeling gig accepted! You'll earn $${data.compensation.toLocaleString()}`);
       queryClient.invalidateQueries({ queryKey: ["modeling-contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to accept gig");

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createScheduledActivity } from "@/hooks/useActivityBooking";
 
 export interface Festival {
   id: string;
@@ -130,7 +131,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
           event_id: application.festival_id,
           band_id: application.band_id,
           slot_type: application.performance_slot,
-          performance_date: application.stage, // Using stage field as performance_date
+          performance_date: application.stage,
           payout_amount: application.payment_amount || 0,
           status: "pending",
         })
@@ -139,13 +140,39 @@ export const useFestivals = (userId?: string, bandId?: string) => {
 
       if (error) throw error;
 
+      // Create a scheduled activity for the festival dates
+      if (userId) {
+        try {
+          const festival = festivals.find(f => f.id === application.festival_id);
+          if (festival) {
+            await createScheduledActivity({
+              userId,
+              bandId: application.band_id,
+              activityType: "other",
+              scheduledStart: new Date(festival.start_date),
+              scheduledEnd: new Date(festival.end_date),
+              title: `Festival: ${festival.title}`,
+              description: `Performing at ${festival.title} (${application.performance_slot} slot)`,
+              location: festival.location,
+              metadata: {
+                festival_id: application.festival_id,
+                participation_id: data.id,
+                slot_type: application.performance_slot,
+              },
+            });
+          }
+        } catch (scheduleError) {
+          console.warn("Failed to create schedule entry for festival:", scheduleError);
+        }
+      }
+
       return data;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });
       queryClient.invalidateQueries({ queryKey: FESTIVALS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: LINEUP_QUERY_KEY(variables.festival_id) });
-      toast.success("Festival application submitted!");
+      toast.success("Festival application submitted! Added to your schedule.");
     },
     onError: (error: any) => {
       toast.error("Failed to apply", { description: error.message });

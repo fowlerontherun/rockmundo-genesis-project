@@ -266,10 +266,10 @@ export default function FestivalBrowser() {
                         {participation && (participation.status === "confirmed" || participation.status === "invited") && (
                           <Button
                             className="flex-1"
-                            onClick={() => performAtFestival.mutate(participation.id)}
-                            disabled={isPerforming || isUpcoming}
+                            onClick={() => navigate(`/festival-performance/${participation.id}`)}
+                            disabled={isUpcoming}
                           >
-                            {isUpcoming ? "Waiting..." : "Perform"}
+                            {isUpcoming ? "Waiting..." : "Perform Now"}
                           </Button>
                         )}
                         {!band && (
@@ -358,8 +358,7 @@ export default function FestivalBrowser() {
                         {(participation.status === "confirmed" || participation.status === "invited") && (
                           <Button
                             size="sm"
-                            onClick={() => performAtFestival.mutate(participation.id)}
-                            disabled={isPerforming}
+                            onClick={() => navigate(`/festival-performance/${participation.id}`)}
                           >
                             Perform Now
                           </Button>

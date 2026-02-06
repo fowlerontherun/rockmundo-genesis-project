@@ -97,6 +97,51 @@ const RANDOM_EVENTS: Omit<PerformanceEvent, "id" | "timestamp">[] = [
       { label: "Take a break", score: 30 },
     ],
   },
+  {
+    type: "technical_issue",
+    description: "The stage lights flicker and go out!",
+    options: [
+      { label: "Use phone flashlights from fans", score: 85 },
+      { label: "Play through it", score: 65 },
+      { label: "Wait for crew fix", score: 35 },
+    ],
+  },
+  {
+    type: "crowd_surfer",
+    description: "A fan throws a shirt on stage!",
+    options: [
+      { label: "Put it on and keep playing", score: 90 },
+      { label: "Hold it up and cheer", score: 75 },
+      { label: "Toss it back", score: 50 },
+    ],
+  },
+  {
+    type: "crowd_chant",
+    description: "Someone proposes to their partner in the crowd!",
+    options: [
+      { label: "Dedicate the next song to them", score: 95 },
+      { label: "Congratulate from stage", score: 80 },
+      { label: "Keep playing", score: 45 },
+    ],
+  },
+  {
+    type: "technical_issue",
+    description: "It starts raining at the outdoor stage!",
+    options: [
+      { label: "Play harder and embrace it", score: 90 },
+      { label: "Cover the equipment quickly", score: 60 },
+      { label: "Ask for stage cover", score: 40 },
+    ],
+  },
+  {
+    type: "crowd_chant",
+    description: "A rival band's fans start booing!",
+    options: [
+      { label: "Win them over with energy", score: 85 },
+      { label: "Ignore and focus on fans", score: 70 },
+      { label: "Call them out", score: 30 },
+    ],
+  },
 ];
 
 const REVIEW_HEADLINES = {
