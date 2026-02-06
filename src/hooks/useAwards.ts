@@ -21,6 +21,11 @@ export interface AwardShow {
   broadcast_partners: string[];
   status: string;
   created_at: string;
+  ceremony_date?: string;
+  prestige_level: number;
+  attendance_fame_boost: number;
+  winner_fame_boost: number;
+  winner_prize_money: number;
 }
 
 export interface AwardNomination {

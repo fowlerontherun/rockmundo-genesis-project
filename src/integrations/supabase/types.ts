@@ -624,6 +624,321 @@ export type Database = {
         }
         Relationships: []
       }
+      award_nominations: {
+        Row: {
+          award_show_id: string
+          band_id: string | null
+          category_name: string
+          created_at: string | null
+          id: string
+          nominee_id: string
+          nominee_name: string
+          nominee_type: string
+          status: string
+          submission_data: Json | null
+          user_id: string
+          vote_count: number
+        }
+        Insert: {
+          award_show_id: string
+          band_id?: string | null
+          category_name: string
+          created_at?: string | null
+          id?: string
+          nominee_id: string
+          nominee_name: string
+          nominee_type?: string
+          status?: string
+          submission_data?: Json | null
+          user_id: string
+          vote_count?: number
+        }
+        Update: {
+          award_show_id?: string
+          band_id?: string | null
+          category_name?: string
+          created_at?: string | null
+          id?: string
+          nominee_id?: string
+          nominee_name?: string
+          nominee_type?: string
+          status?: string
+          submission_data?: Json | null
+          user_id?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_nominations_award_show_id_fkey"
+            columns: ["award_show_id"]
+            isOneToOne: false
+            referencedRelation: "award_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_nominations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      award_performance_bookings: {
+        Row: {
+          award_show_id: string
+          band_id: string
+          created_at: string | null
+          id: string
+          rehearsal_scheduled: string | null
+          slot_label: string
+          song_ids: string[] | null
+          stage: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          award_show_id: string
+          band_id: string
+          created_at?: string | null
+          id?: string
+          rehearsal_scheduled?: string | null
+          slot_label: string
+          song_ids?: string[] | null
+          stage: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          award_show_id?: string
+          band_id?: string
+          created_at?: string | null
+          id?: string
+          rehearsal_scheduled?: string | null
+          slot_label?: string
+          song_ids?: string[] | null
+          stage?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_performance_bookings_award_show_id_fkey"
+            columns: ["award_show_id"]
+            isOneToOne: false
+            referencedRelation: "award_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_performance_bookings_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      award_red_carpet_events: {
+        Row: {
+          award_show_id: string
+          created_at: string | null
+          fame_gain: number
+          id: string
+          media_interactions: number
+          outfit_choice: string
+          participant_id: string
+          participant_type: string
+        }
+        Insert: {
+          award_show_id: string
+          created_at?: string | null
+          fame_gain?: number
+          id?: string
+          media_interactions?: number
+          outfit_choice?: string
+          participant_id: string
+          participant_type?: string
+        }
+        Update: {
+          award_show_id?: string
+          created_at?: string | null
+          fame_gain?: number
+          id?: string
+          media_interactions?: number
+          outfit_choice?: string
+          participant_id?: string
+          participant_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_red_carpet_events_award_show_id_fkey"
+            columns: ["award_show_id"]
+            isOneToOne: false
+            referencedRelation: "award_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      award_shows: {
+        Row: {
+          attendance_fame_boost: number
+          broadcast_partners: string[] | null
+          categories: Json
+          ceremony_date: string | null
+          city_id: string | null
+          created_at: string | null
+          district: string | null
+          id: string
+          overview: string | null
+          performance_slots: Json | null
+          prestige_level: number
+          rewards: Json | null
+          show_name: string
+          status: string
+          venue: string | null
+          voting_breakdown: Json | null
+          winner_fame_boost: number
+          winner_prize_money: number
+          year: number
+        }
+        Insert: {
+          attendance_fame_boost?: number
+          broadcast_partners?: string[] | null
+          categories?: Json
+          ceremony_date?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          district?: string | null
+          id?: string
+          overview?: string | null
+          performance_slots?: Json | null
+          prestige_level?: number
+          rewards?: Json | null
+          show_name: string
+          status?: string
+          venue?: string | null
+          voting_breakdown?: Json | null
+          winner_fame_boost?: number
+          winner_prize_money?: number
+          year?: number
+        }
+        Update: {
+          attendance_fame_boost?: number
+          broadcast_partners?: string[] | null
+          categories?: Json
+          ceremony_date?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          district?: string | null
+          id?: string
+          overview?: string | null
+          performance_slots?: Json | null
+          prestige_level?: number
+          rewards?: Json | null
+          show_name?: string
+          status?: string
+          venue?: string | null
+          voting_breakdown?: Json | null
+          winner_fame_boost?: number
+          winner_prize_money?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_shows_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      award_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          nomination_id: string
+          voter_id: string
+          voter_type: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nomination_id: string
+          voter_id: string
+          voter_type?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nomination_id?: string
+          voter_id?: string
+          voter_type?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_votes_nomination_id_fkey"
+            columns: ["nomination_id"]
+            isOneToOne: false
+            referencedRelation: "award_nominations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      award_wins: {
+        Row: {
+          award_show_id: string
+          band_id: string | null
+          category_name: string
+          fame_boost: number
+          id: string
+          prize_money: number
+          user_id: string
+          winner_name: string
+          won_at: string | null
+        }
+        Insert: {
+          award_show_id: string
+          band_id?: string | null
+          category_name: string
+          fame_boost?: number
+          id?: string
+          prize_money?: number
+          user_id: string
+          winner_name: string
+          won_at?: string | null
+        }
+        Update: {
+          award_show_id?: string
+          band_id?: string | null
+          category_name?: string
+          fame_boost?: number
+          id?: string
+          prize_money?: number
+          user_id?: string
+          winner_name?: string
+          won_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_wins_award_show_id_fkey"
+            columns: ["award_show_id"]
+            isOneToOne: false
+            referencedRelation: "award_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_wins_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_activity_lockouts: {
         Row: {
           activity_type: string
