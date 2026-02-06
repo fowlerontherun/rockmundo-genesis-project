@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.614",
+    date: "2026-02-06",
+    changes: [
+      { type: 'feature', description: "Gigs: Rider selection added to gig booking dialog — pick a rider to send to venues with fulfillment preview" },
+      { type: 'feature', description: "Gigs: New venue payout system — venues now pay based on band fame, fan draw power, venue capacity, and prestige level" },
+      { type: 'feature', description: "Gigs: Venue payout breakdown shows base pay, fame bonus, fan draw bonus, prestige multiplier, and rider costs" },
+      { type: 'improvement', description: "Gigs: Each time slot now shows estimated venue payment preview before selecting" },
+      { type: 'improvement', description: "Gigs: Rider compatibility preview shows technical/hospitality/backstage fulfillment percentages and performance/morale modifiers" },
+      { type: 'improvement', description: "Gigs: Total projected earnings now combines ticket revenue + venue payment for accurate forecasting" },
+    ],
+  },
+  {
     version: "1.0.613",
     date: "2026-02-06",
     changes: [
