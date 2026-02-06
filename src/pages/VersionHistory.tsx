@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.605",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Awards: Fixed 'Cannot find name primaryBand' build error - corrected variable reference to userBand" },
+    ],
+  },
+  {
     version: "1.0.604",
     date: "2026-02-06",
     changes: [
