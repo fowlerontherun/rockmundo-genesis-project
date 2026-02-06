@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.602",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "AI Songs: Reset 4 stuck songs that were permanently in 'generating' status" },
+      { type: 'fix', description: "AI Songs: Retry now properly resets status to 'failed' before re-invoking generation" },
+      { type: 'feature', description: "AI Songs: Added Reset button when generation has been running for 5+ minutes" },
+      { type: 'improvement', description: "AI Songs: Timed-out songs (10+ min) now show both Reset and Retry buttons" },
+    ],
+  },
+  {
     version: "1.0.601",
     date: "2026-02-06",
     changes: [

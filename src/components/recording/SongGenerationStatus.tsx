@@ -33,6 +33,33 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   
   const { data: limits } = useSongGenerationLimits();
 
+  const handleReset = async () => {
+    if (!user?.id) return;
+    setRetrying(true);
+    try {
+      // Reset the stuck status to 'failed' so it can be retried
+      const { error } = await supabase
+        .from('songs')
+        .update({ audio_generation_status: 'failed' })
+        .eq('id', songId);
+
+      if (error) {
+        console.error('Reset generation status error:', error);
+        toast.error("Failed to reset generation status");
+      } else {
+        toast.success("Generation status reset", {
+          description: "You can now retry generating audio."
+        });
+        queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
+      }
+    } catch (err) {
+      console.error('Reset failed:', err);
+      toast.error("Failed to reset generation status");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleRetry = async () => {
     if (!user?.id || !canRegenerate) return;
 
@@ -46,6 +73,16 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
 
     setRetrying(true);
     try {
+      // First reset status to 'failed' to clear stuck state
+      const { error: resetError } = await supabase
+        .from('songs')
+        .update({ audio_generation_status: 'failed' })
+        .eq('id', songId);
+
+      if (resetError) {
+        console.error('Reset before retry error:', resetError);
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
         body: { songId, userId: user.id }
       });
@@ -91,7 +128,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     );
   }
 
-  // Currently generating
+  // Currently generating - show reset button if timed out client-side
   if (isGenerating && !isTimedOut) {
     const startedAt = status.audio_generation_started_at 
       ? new Date(status.audio_generation_started_at) 
@@ -107,9 +144,26 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
           <span>
             Generating AI audio for "{songTitle}"...
           </span>
-          <span className="text-xs text-muted-foreground">
-            {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
+            </span>
+            {minutes >= 5 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleReset}
+                disabled={retrying}
+              >
+                {retrying ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                )}
+                Reset
+              </Button>
+            )}
+          </div>
         </AlertDescription>
       </Alert>
     );
