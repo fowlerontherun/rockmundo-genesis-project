@@ -11119,6 +11119,7 @@ export type Database = {
           buyout_price: number | null
           created_at: string
           current_bid: number | null
+          current_bidder_user_id: string | null
           description: string | null
           expires_at: string | null
           id: string
@@ -11136,6 +11137,7 @@ export type Database = {
           buyout_price?: number | null
           created_at?: string
           current_bid?: number | null
+          current_bidder_user_id?: string | null
           description?: string | null
           expires_at?: string | null
           id?: string
@@ -11153,6 +11155,7 @@ export type Database = {
           buyout_price?: number | null
           created_at?: string
           current_bid?: number | null
+          current_bidder_user_id?: string | null
           description?: string | null
           expires_at?: string | null
           id?: string
@@ -20800,6 +20803,7 @@ export type Database = {
           hype: number | null
           id: string
           is_extended_featured: boolean | null
+          is_purchased: boolean
           last_radio_play: string | null
           lyrics: string | null
           lyrics_progress: number | null
@@ -20812,6 +20816,8 @@ export type Database = {
           parent_song_id: string | null
           production_potential: number | null
           profile_id: string | null
+          purchased_at: string | null
+          purchased_from_user_id: string | null
           quality_score: number
           rating_revealed_at: string | null
           release_date: string | null
@@ -20855,6 +20861,7 @@ export type Database = {
           hype?: number | null
           id?: string
           is_extended_featured?: boolean | null
+          is_purchased?: boolean
           last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
@@ -20867,6 +20874,8 @@ export type Database = {
           parent_song_id?: string | null
           production_potential?: number | null
           profile_id?: string | null
+          purchased_at?: string | null
+          purchased_from_user_id?: string | null
           quality_score?: number
           rating_revealed_at?: string | null
           release_date?: string | null
@@ -20910,6 +20919,7 @@ export type Database = {
           hype?: number | null
           id?: string
           is_extended_featured?: boolean | null
+          is_purchased?: boolean
           last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
@@ -20922,6 +20932,8 @@ export type Database = {
           parent_song_id?: string | null
           production_potential?: number | null
           profile_id?: string | null
+          purchased_at?: string | null
+          purchased_from_user_id?: string | null
           quality_score?: number
           rating_revealed_at?: string | null
           release_date?: string | null
@@ -25010,6 +25022,14 @@ export type Database = {
         Returns: Json
       }
       cleanup_timed_out_generations: { Args: never; Returns: number }
+      complete_song_sale: {
+        Args: {
+          p_buyer_user_id: string
+          p_listing_id: string
+          p_sale_price: number
+        }
+        Returns: Json
+      }
       create_default_habits_for_user: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -25117,6 +25137,14 @@ export type Database = {
       }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      place_song_bid: {
+        Args: {
+          p_bid_amount: number
+          p_bidder_user_id: string
+          p_listing_id: string
+        }
+        Returns: Json
+      }
       process_gear_sale: {
         Args: {
           p_buyer_user_id: string
