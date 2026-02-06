@@ -160,17 +160,17 @@ export default function Awards() {
                   onVote={() => { setSelectedShow(show); setShowVotingDialog(true); }}
                   onRedCarpet={() => { setSelectedShow(show); setShowRedCarpetDialog(true); }}
                   onNominate={() => {
-                    if (!primaryBand || !user) return;
+                    if (!userBand || !user) return;
                     submitNomination({
                       award_show_id: show.id,
                       category_name: (show.categories as any[])?.[0]?.name || "Best Live Act",
                       nominee_type: "band",
-                      nominee_id: primaryBand.id,
-                      nominee_name: primaryBand.name,
-                      band_id: primaryBand.id,
+                      nominee_id: userBand.id,
+                      nominee_name: userBand.name,
+                      band_id: userBand.id,
                     });
                   }}
-                  canNominate={!!primaryBand && show.status === 'nominations_open'}
+                  canNominate={!!userBand && show.status === 'nominations_open'}
                   canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
                   canAttend={show.status === 'live'}
                   isSubmitting={isSubmitting}
