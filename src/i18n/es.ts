@@ -156,6 +156,15 @@ export const es: TranslationKeys = {
     selfPr: "Auto-Promoción",
     websites: "Sitios Web",
     journal: "Diario",
+    offers: "Ofertas",
+    songManager: "Gestor de Canciones",
+    songMarket: "Mercado de Canciones",
+    bandBrowser: "Explorar Bandas",
+    bandVehicles: "Vehículos de Banda",
+    bandRiders: "Riders de Banda",
+    playerSearch: "Buscar Jugadores",
+    modeling: "Modelaje",
+    competitiveCharts: "Charts Competitivos",
   },
   
   todaysNews: {

@@ -23,6 +23,7 @@ const RedirectTo = ({ to }: { to: string }) => {
 };
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
+const Modeling = lazyWithRetry(() => import("./pages/Modeling"));
 import InventoryManager from "./pages/InventoryManager";
 import Sponsorships from "./pages/Sponsorships";
 
@@ -392,6 +393,8 @@ function App() {
                     <Route path="venue-business/:venueId" element={<VenueBusinessManagement />} />
                     <Route path="rehearsal-studio-business/:studioId" element={<RehearsalStudioBusinessManagement />} />
                     <Route path="recording-studio-business/:studioId" element={<RecordingStudioBusinessManagement />} />
+                    
+                    <Route path="modeling" element={<Modeling />} />
                     
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />

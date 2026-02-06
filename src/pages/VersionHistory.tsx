@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.612",
+    date: "2026-02-06",
+    changes: [
+      { type: 'feature', description: "Navigation: Added Awards, Schedule, Offers Dashboard, Song Manager, Song Market, Band Browser, Band Vehicles, Band Riders, Player Search, World Pulse, Modeling, Competitive Charts, and Legacy to the sidebar navigation" },
+      { type: 'feature', description: "Modeling: Created dedicated Modeling page at /modeling wrapping the ModelingOffersPanel component" },
+      { type: 'fix', description: "Navigation: Multiple major features (Awards, Modeling, Schedule, Offers) were previously inaccessible due to missing navigation entries" },
+    ],
+  },
+  {
     version: "1.0.611",
     date: "2026-02-06",
     changes: [
