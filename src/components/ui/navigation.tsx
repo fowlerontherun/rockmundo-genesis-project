@@ -103,12 +103,15 @@ const Navigation = () => {
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     home: true,
+    character: true,
     music: true,
     band: true,
-    performance: true,
+    live: true,
+    events: true,
     world: true,
     social: true,
-    business: true,
+    career: true,
+    commerce: true,
     media: true,
     admin: true,
   });
@@ -128,17 +131,22 @@ const Navigation = () => {
     {
       titleKey: "nav.home",
       items: [
-        { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
         { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
+        { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
+        { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
+        { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
         { icon: BookOpen, labelKey: "nav.journal", path: "/journal" },
+      ],
+    },
+    {
+      titleKey: "nav.character",
+      items: [
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
-        { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
         { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
         { icon: History, labelKey: "nav.statistics", path: "/statistics" },
-        { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
-        { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
+        { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy" },
       ],
     },
     {
@@ -167,7 +175,7 @@ const Navigation = () => {
       ],
     },
     {
-      titleKey: "nav.performance",
+      titleKey: "nav.live",
       items: [
         { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
         { icon: Mic, labelKey: "nav.openMic", path: "/open-mic" },
@@ -175,10 +183,15 @@ const Navigation = () => {
         { icon: Music, labelKey: "nav.busking", path: "/busking" },
         { icon: Music, labelKey: "nav.rehearsals", path: "/rehearsals" },
         { icon: ListMusic, labelKey: "nav.setlists", path: "/setlists" },
-        { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
-        { icon: Star, labelKey: "nav.eurovision", path: "/events/eurovision" },
         { icon: Wrench, labelKey: "nav.stageEquipment", path: "/stage-equipment" },
+      ],
+    },
+    {
+      titleKey: "nav.events",
+      items: [
+        { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
         { icon: Award, labelKey: "nav.awards", path: "/awards" },
+        { icon: Star, labelKey: "nav.eurovision", path: "/events/eurovision" },
       ],
     },
     {
@@ -188,6 +201,7 @@ const Navigation = () => {
         { icon: Plane, labelKey: "nav.travel", path: "/travel" },
         { icon: Bus, labelKey: "nav.tours", path: "/tour-manager" },
         { icon: Building2, labelKey: "nav.currentCity", path: cityOverviewPath },
+        { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse" },
       ],
     },
     {
@@ -197,25 +211,29 @@ const Navigation = () => {
         { icon: Video, labelKey: "nav.dikcok", path: "/dikcok" },
         { icon: Heart, labelKey: "nav.relationships", path: "/relationships" },
         { icon: HandHeart, labelKey: "nav.gettit", path: "/gettit" },
-        { icon: Sparkles, labelKey: "nav.underworld", path: "/underworld" },
         { icon: UserPlus, labelKey: "nav.playerSearch", path: "/players/search" },
-        { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse" },
+        { icon: Sparkles, labelKey: "nav.underworld", path: "/underworld" },
       ],
     },
     {
-      titleKey: "nav.business",
+      titleKey: "nav.career",
       items: [
-        { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies" },
         { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
         { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
-        { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
-        { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
-        { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
-        { icon: Building, labelKey: "nav.venues", path: "/venues" },
+        { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies" },
         { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
         { icon: Disc, labelKey: "nav.recordLabels", path: "/labels" },
         { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling" },
-        { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy" },
+        { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
+        { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
+        { icon: Building, labelKey: "nav.venues", path: "/venues" },
+      ],
+    },
+    {
+      titleKey: "nav.commerce",
+      items: [
+        { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
+        { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
       ],
     },
     {

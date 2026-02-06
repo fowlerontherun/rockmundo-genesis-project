@@ -165,6 +165,10 @@ export const es: TranslationKeys = {
     playerSearch: "Buscar Jugadores",
     modeling: "Modelaje",
     competitiveCharts: "Charts Competitivos",
+    live: "En Vivo",
+    events: "Eventos",
+    career: "Carrera",
+    commerce: "Comercio",
   },
   
   todaysNews: {

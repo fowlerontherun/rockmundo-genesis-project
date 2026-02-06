@@ -167,6 +167,10 @@ export const tr: TranslationKeys = {
     playerSearch: "Oyuncu Ara",
     modeling: "Modellik",
     competitiveCharts: "Rekabetçi Listeler",
+    live: "Canlı",
+    events: "Etkinlikler",
+    career: "Kariyer",
+    commerce: "Ticaret",
   },
   
   // Today's News Page

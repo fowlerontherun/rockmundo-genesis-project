@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.613",
+    date: "2026-02-06",
+    changes: [
+      { type: 'improvement', description: "Navigation: Reorganized sidebar into 12 logical sections — Home, Character, Music, Band, Live, Events, World, Social, Career, Commerce, Media, Admin" },
+      { type: 'improvement', description: "Navigation: Split bloated Home section into Home (essentials) and Character (avatar, gear, wellness, stats, legacy)" },
+      { type: 'improvement', description: "Navigation: Created Events section for Festivals, Awards, and Eurovision" },
+      { type: 'improvement', description: "Navigation: Renamed Performance → Live, Business → Career, added Commerce section for Inventory & Merchandise" },
+      { type: 'improvement', description: "Navigation: Moved World Pulse to World section, Legacy to Character section, Offers to Career section" },
+      { type: 'fix', description: "Navigation: Removed Song Manager, Competitive Charts, and Band Browser from sidebar" },
+    ],
+  },
+  {
     version: "1.0.612",
     date: "2026-02-06",
     changes: [
