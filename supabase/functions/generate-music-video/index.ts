@@ -152,7 +152,7 @@ Smooth camera movement, professional lighting, high production value. Single con
         prompt: videoPrompt,
       },
       webhook: webhookUrl,
-      webhook_events_filter: ["completed", "failed"],
+      webhook_events_filter: ["completed"],
     });
 
     console.log("[generate-music-video] Replicate prediction created:", prediction.id);

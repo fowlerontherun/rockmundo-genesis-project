@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.611",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Music Videos: Fixed 500 error from Replicate API — removed invalid 'failed' value from webhook_events_filter (only 'start', 'output', 'logs', 'completed' are valid)" },
+    ],
+  },
+  {
     version: "1.0.610",
     date: "2026-02-06",
     changes: [
