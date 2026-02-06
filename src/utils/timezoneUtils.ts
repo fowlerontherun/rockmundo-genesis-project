@@ -1,5 +1,5 @@
 // Timezone utility functions for displaying times in city local time
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 /**
  * Format a date/time in a specific city's timezone
@@ -72,4 +72,44 @@ export function formatTimeRangeInTimezone(
     const end = new Date(endDate);
     return `${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
   }
+}
+
+/**
+ * Convert a local date/time in a specific timezone to a UTC Date.
+ * Use this when the user picks "8 PM" and you want to store that as 8 PM
+ * in the venue's timezone, not the browser's timezone.
+ */
+export function localTimeToUTC(
+  localDate: Date,
+  timezone: string
+): Date {
+  try {
+    return fromZonedTime(localDate, timezone);
+  } catch (error) {
+    console.warn('Timezone conversion to UTC failed, using local date:', error);
+    return localDate;
+  }
+}
+
+/**
+ * Build a Date representing a specific date + time in a given timezone,
+ * then return the equivalent UTC Date for storage.
+ * 
+ * @param date - The calendar date the user selected (only year/month/day used)
+ * @param hours - The hour in the venue's local time (0-23)
+ * @param minutes - The minutes in the venue's local time (0-59)
+ * @param timezone - The IANA timezone of the venue's city
+ */
+export function buildDateInTimezone(
+  date: Date,
+  hours: number,
+  minutes: number,
+  timezone: string
+): Date {
+  // Create a date with the user's selected calendar date + desired time
+  const localDate = new Date(date);
+  localDate.setHours(hours, minutes, 0, 0);
+  
+  // Convert from the venue's local time to UTC
+  return localTimeToUTC(localDate, timezone);
 }
