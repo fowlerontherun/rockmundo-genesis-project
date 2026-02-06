@@ -54,7 +54,9 @@ export default function Awards() {
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
   const [showVotingDialog, setShowVotingDialog] = useState(false);
   const [showRedCarpetDialog, setShowRedCarpetDialog] = useState(false);
+  const [showNominateDialog, setShowNominateDialog] = useState(false);
   const [outfitChoice, setOutfitChoice] = useState("standard");
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   // Fetch nominations when a show is selected for voting
   const { data: showNominations = [], isLoading: nominationsLoading } = useQuery({
@@ -160,15 +162,9 @@ export default function Awards() {
                   onVote={() => { setSelectedShow(show); setShowVotingDialog(true); }}
                   onRedCarpet={() => { setSelectedShow(show); setShowRedCarpetDialog(true); }}
                   onNominate={() => {
-                    if (!userBand || !user) return;
-                    submitNomination({
-                      award_show_id: show.id,
-                      category_name: (show.categories as any[])?.[0]?.name || "Best Live Act",
-                      nominee_type: "band",
-                      nominee_id: userBand.id,
-                      nominee_name: userBand.name,
-                      band_id: userBand.id,
-                    });
+                    setSelectedShow(show);
+                    setSelectedCategory("");
+                    setShowNominateDialog(true);
                   }}
                   canNominate={!!userBand && show.status === 'nominations_open'}
                   canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
@@ -315,13 +311,71 @@ export default function Awards() {
                   </div>
                 </SelectItem>
               </SelectContent>
-            </Select>
+           </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRedCarpetDialog(false)}>Cancel</Button>
             <Button onClick={handleRedCarpet} disabled={isAttending}>
               <Sparkles className="h-4 w-4 mr-2" />
               Walk the Red Carpet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nomination Dialog */}
+      <Dialog open={showNominateDialog} onOpenChange={setShowNominateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Medal className="h-5 w-5" />
+              Nominate - {selectedShow?.show_name}
+            </DialogTitle>
+            <DialogDescription>
+              Select a category to nominate your band for
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {((selectedShow?.categories as any[]) || []).map((cat: any, i: number) => (
+                  <SelectItem key={i} value={cat.name}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {userBand && (
+              <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                <p className="text-sm font-medium">Nominating: {userBand.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Fame: {userBand.fame?.toLocaleString() || 0} | Genre: {(userBand as any).genre || "Unknown"}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNominateDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!userBand || !user || !selectedCategory || !selectedShow) return;
+                submitNomination({
+                  award_show_id: selectedShow.id,
+                  category_name: selectedCategory,
+                  nominee_type: "band",
+                  nominee_id: userBand.id,
+                  nominee_name: userBand.name,
+                  band_id: userBand.id,
+                });
+                setShowNominateDialog(false);
+              }}
+              disabled={isSubmitting || !selectedCategory}
+            >
+              <Trophy className="h-4 w-4 mr-2" />
+              Submit Nomination
             </Button>
           </DialogFooter>
         </DialogContent>

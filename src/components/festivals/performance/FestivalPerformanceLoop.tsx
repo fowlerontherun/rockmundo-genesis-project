@@ -199,25 +199,31 @@ export function FestivalPerformanceLoop({
       {/* Crowd Energy */}
       <CrowdEnergyMeter energy={crowdEnergy} history={crowdEnergyHistory} />
 
-      {/* Crowd Interaction Buttons */}
+      {/* Stage Movement & Crowd Interaction */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Crowd Interaction</CardTitle>
+          <CardTitle className="text-base">Stage Actions</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={() => adjustCrowdEnergy(10)} className="text-green-500">
-            <Zap className="h-4 w-4 mr-2" />
-            Hype the Crowd!
-          </Button>
-          <Button variant="outline" onClick={() => adjustCrowdEnergy(5)} className="text-blue-500">
-            <Users className="h-4 w-4 mr-2" />
-            Engage Fans
-          </Button>
-          <Button variant="outline" onClick={() => adjustCrowdEnergy(-5)} className="text-yellow-500">
-            <Pause className="h-4 w-4 mr-2" />
-            Slow Down
-          </Button>
-          <Button variant="secondary" onClick={() => advancePhase()} disabled={currentPhase >= phases.length - 1}>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(12)} className="text-green-500">
+              <Zap className="h-4 w-4 mr-2" />
+              Jump & Hype!
+            </Button>
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(8)} className="text-blue-500">
+              <Users className="h-4 w-4 mr-2" />
+              Engage Fans
+            </Button>
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(6)} className="text-purple-500">
+              <Mic className="h-4 w-4 mr-2" />
+              Stage Dive
+            </Button>
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(-3)} className="text-yellow-500">
+              <Pause className="h-4 w-4 mr-2" />
+              Build Tension
+            </Button>
+          </div>
+          <Button variant="secondary" onClick={() => advancePhase()} disabled={currentPhase >= phases.length - 1} className="w-full">
             <SkipForward className="h-4 w-4 mr-2" />
             Next Phase
           </Button>

@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.606",
+    date: "2026-02-06",
+    changes: [
+      { type: 'feature', description: "Festivals: Performing now navigates to the interactive performance minigame instead of instant-completing" },
+      { type: 'feature', description: "Festivals: Applications now create player_scheduled_activities entries to block the festival dates" },
+      { type: 'feature', description: "Festivals: 5 new random performance events (rain, lights out, fan proposal, rival boos, shirt thrown)" },
+      { type: 'feature', description: "Festivals: Stage Dive action added to performance interaction buttons" },
+      { type: 'feature', description: "Modeling: Accepting gigs now blocks your schedule with a pr_appearance activity" },
+      { type: 'feature', description: "Awards: Nomination dialog with category selection instead of auto-picking first category" },
+      { type: 'improvement', description: "Festivals: Performance interaction UI improved with more expressive stage actions" },
+      { type: 'improvement', description: "Awards: Enhanced ceremony experience with dedicated nomination flow" },
+    ],
+  },
+  {
     version: "1.0.605",
     date: "2026-02-06",
     changes: [
