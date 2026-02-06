@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.601",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Rehearsals: Fixed song familiarity not updating - now uses database trigger + edge function with service role" },
+      { type: 'fix', description: "Tours: Fixed tour gigs not showing on player schedule - activity type changed from 'tour_gig' to 'gig'" },
+      { type: 'feature', description: "Rehearsals: Database trigger auto-updates familiarity when rehearsal status changes to 'completed'" },
+      { type: 'feature', description: "Rehearsals: Backfilled familiarity for all rehearsals from the last 14 days" },
+      { type: 'feature', description: "Tours: Backfilled missing schedule entries for all existing tour gigs" },
+      { type: 'improvement', description: "Rehearsals: Edge function uses service role to bypass RLS restrictions" },
+      { type: 'improvement', description: "Rehearsals: Client-side fallback with retry logic if edge function fails" },
+    ],
+  },
+  {
     version: "1.0.600",
     date: "2026-02-05",
     changes: [

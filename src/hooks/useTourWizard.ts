@@ -514,7 +514,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         try {
           await createBandScheduledActivities({
             bandId: state.bandId!,
-            activityType: 'tour_gig',
+            activityType: 'gig',
             scheduledStart: gigDate,
             scheduledEnd: gigEnd,
             title: `Tour: ${state.name} - ${venue?.venueName || 'Show'}`,
@@ -525,6 +525,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
               venueId: gig.venue_id,
               venueCity: venue?.cityName,
               isHeadliner: true,
+              isTourGig: true,
             },
           });
         } catch (e) {
@@ -536,7 +537,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           try {
             await createBandScheduledActivities({
               bandId: state.supportBandId,
-              activityType: 'tour_gig',
+              activityType: 'gig',
               scheduledStart: gigDate,
               scheduledEnd: gigEnd,
               title: `Tour (Support): ${state.name} - ${venue?.venueName || 'Show'}`,
@@ -548,6 +549,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
                 venueCity: venue?.cityName,
                 isHeadliner: false,
                 headlinerBandId: state.bandId,
+                isTourGig: true,
               },
             });
           } catch (e) {
