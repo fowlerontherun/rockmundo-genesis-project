@@ -137,6 +137,8 @@ const Navigation = () => {
         { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
         { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
         { icon: History, labelKey: "nav.statistics", path: "/statistics" },
+        { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
+        { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
       ],
     },
     {
@@ -149,6 +151,8 @@ const Navigation = () => {
         { icon: Radio, labelKey: "nav.streaming", path: "/streaming-platforms" },
         { icon: Video, labelKey: "nav.musicVideos", path: "/music-videos" },
         { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
+        { icon: ListMusic, labelKey: "nav.songManager", path: "/song-manager" },
+        { icon: Store, labelKey: "nav.songMarket", path: "/song-market" },
       ],
     },
     {
@@ -159,6 +163,9 @@ const Navigation = () => {
         { icon: Globe, labelKey: "nav.bandFinder", path: "/bands/finder" },
         { icon: Trophy, labelKey: "nav.bandRankings", path: "/band-rankings" },
         { icon: UserPlus, labelKey: "nav.bandCrew", path: "/band-crew" },
+        { icon: Users, labelKey: "nav.bandBrowser", path: "/bands/browse" },
+        { icon: Bus, labelKey: "nav.bandVehicles", path: "/band-vehicles" },
+        { icon: Target, labelKey: "nav.bandRiders", path: "/band-riders" },
       ],
     },
     {
@@ -173,6 +180,7 @@ const Navigation = () => {
         { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
         { icon: Star, labelKey: "nav.eurovision", path: "/events/eurovision" },
         { icon: Wrench, labelKey: "nav.stageEquipment", path: "/stage-equipment" },
+        { icon: Award, labelKey: "nav.awards", path: "/awards" },
       ],
     },
     {
@@ -192,6 +200,8 @@ const Navigation = () => {
         { icon: Heart, labelKey: "nav.relationships", path: "/relationships" },
         { icon: HandHeart, labelKey: "nav.gettit", path: "/gettit" },
         { icon: Sparkles, labelKey: "nav.underworld", path: "/underworld" },
+        { icon: UserPlus, labelKey: "nav.playerSearch", path: "/players/search" },
+        { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse" },
       ],
     },
     {
@@ -206,6 +216,9 @@ const Navigation = () => {
         { icon: Building, labelKey: "nav.venues", path: "/venues" },
         { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
         { icon: Disc, labelKey: "nav.recordLabels", path: "/labels" },
+        { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling" },
+        { icon: TrendingUp, labelKey: "nav.competitiveCharts", path: "/competitive-charts" },
+        { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy" },
       ],
     },
     {

@@ -158,6 +158,15 @@ export const tr: TranslationKeys = {
     selfPr: "Kendi Tanıtımın",
     websites: "Web Siteleri",
     journal: "Günlük",
+    offers: "Teklifler",
+    songManager: "Şarkı Yöneticisi",
+    songMarket: "Şarkı Pazarı",
+    bandBrowser: "Grup Tarayıcı",
+    bandVehicles: "Grup Araçları",
+    bandRiders: "Grup Rider'ları",
+    playerSearch: "Oyuncu Ara",
+    modeling: "Modellik",
+    competitiveCharts: "Rekabetçi Listeler",
   },
   
   // Today's News Page

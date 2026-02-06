@@ -156,6 +156,15 @@ export const en = {
     selfPr: "Self-PR",
     websites: "Websites",
     journal: "Journal",
+    offers: "Offers",
+    songManager: "Song Manager",
+    songMarket: "Song Market",
+    bandBrowser: "Band Browser",
+    bandVehicles: "Band Vehicles",
+    bandRiders: "Band Riders",
+    playerSearch: "Player Search",
+    modeling: "Modeling",
+    competitiveCharts: "Competitive Charts",
   },
 
   // Journal Page
