@@ -95,7 +95,7 @@ serve(async (req) => {
     // Verify the video exists and get song info
     const { data: video, error: videoError } = await supabaseClient
       .from("music_videos")
-      .select("id, song_id, title, status, songs(audio_url, cover_art_url)")
+      .select("id, song_id, title, status, songs(audio_url)")
       .eq("id", videoId)
       .single();
 
@@ -150,8 +150,6 @@ Smooth camera movement, professional lighting, high production value. Single con
       model: "minimax/video-01-live",
       input: {
         prompt: videoPrompt,
-        // If we have cover art, use it as starting frame for consistency
-        ...(video.songs?.cover_art_url && { first_frame_image: video.songs.cover_art_url }),
       },
       webhook: webhookUrl,
       webhook_events_filter: ["completed", "failed"],
