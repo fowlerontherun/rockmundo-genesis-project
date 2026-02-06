@@ -440,5 +440,8 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
     completePerformance,
     isCompleting: completePerformance.isPending,
     performanceResult: completePerformance.data,
+    // Expose data for readiness check
+    familiarityData: familiarityData || 50,
+    bandData: bandData || { chemistry: 50, gearQuality: 50, fame: 0 },
   };
 }

@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.607",
+    date: "2026-02-06",
+    changes: [
+      { type: 'feature', description: "Festivals: Performance readiness check shows song familiarity, chemistry, gear quality before performing" },
+      { type: 'feature', description: "Festivals: 2 new stage actions - Guitar Solo (+15 energy) and Dedicate Song (+6 energy)" },
+      { type: 'feature', description: "Awards: Full ceremony attendance experience with red carpet, opening, categories, performance, and finale phases" },
+      { type: 'feature', description: "Awards: 5 outfit choices for red carpet from Casual Rockstar to Outrageous Statement" },
+      { type: 'feature', description: "Awards: Performance booking at ceremonies with 4 slot types (Opener through Closer)" },
+      { type: 'feature', description: "Modeling: Career progression system with 5 tiers (Amateur to Fashion Icon)" },
+      { type: 'feature', description: "Modeling: Fashion Week events unlocked at Supermodel tier (NYFW, Milan, Paris, Met Gala)" },
+      { type: 'improvement', description: "Festivals: Pre-performance UI now shows readiness metrics instead of bullet list" },
+      { type: 'improvement', description: "Awards: Ceremony dialog with interactive phase navigation" },
+    ],
+  },
+  {
     version: "1.0.606",
     date: "2026-02-06",
     changes: [

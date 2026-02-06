@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp } from "lucide-react";
+import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp, PartyPopper } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { AwardCeremonyExperience } from "@/components/awards/AwardCeremonyExperience";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   upcoming: { label: "Upcoming", variant: "outline" },
@@ -47,14 +48,15 @@ export default function Awards() {
   const {
     shows, showsLoading, nominations, wins,
     fetchShowNominations, fetchVoteCountForShow,
-    submitNomination, castVote, attendRedCarpet,
-    isSubmitting, isVoting, isAttending,
+    submitNomination, castVote, bookPerformance, attendRedCarpet,
+    isSubmitting, isVoting, isBooking, isAttending,
   } = useAwards(user?.id, userBand?.id);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
   const [showVotingDialog, setShowVotingDialog] = useState(false);
   const [showRedCarpetDialog, setShowRedCarpetDialog] = useState(false);
   const [showNominateDialog, setShowNominateDialog] = useState(false);
+  const [showCeremonyDialog, setShowCeremonyDialog] = useState(false);
   const [outfitChoice, setOutfitChoice] = useState("standard");
   const [selectedCategory, setSelectedCategory] = useState("");
 
@@ -165,6 +167,10 @@ export default function Awards() {
                     setSelectedShow(show);
                     setSelectedCategory("");
                     setShowNominateDialog(true);
+                  }}
+                  onAttendCeremony={() => {
+                    setSelectedShow(show);
+                    setShowCeremonyDialog(true);
                   }}
                   canNominate={!!userBand && show.status === 'nominations_open'}
                   canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
@@ -380,6 +386,44 @@ export default function Awards() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Ceremony Experience Dialog */}
+      <Dialog open={showCeremonyDialog} onOpenChange={setShowCeremonyDialog}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PartyPopper className="h-5 w-5 text-amber-500" />
+              {selectedShow?.show_name} — Ceremony
+            </DialogTitle>
+          </DialogHeader>
+          {selectedShow && (
+            <AwardCeremonyExperience
+              show={selectedShow}
+              bandName={userBand?.name}
+              bandId={userBand?.id}
+              hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
+              onAttendRedCarpet={(outfit) => {
+                attendRedCarpet({
+                  award_show_id: selectedShow.id,
+                  outfit_choice: outfit,
+                  participant_type: "user",
+                });
+              }}
+              onBookPerformance={(slotLabel, stage) => {
+                if (!userBand) return;
+                bookPerformance({
+                  award_show_id: selectedShow.id,
+                  band_id: userBand.id,
+                  slot_label: slotLabel,
+                  stage,
+                  song_ids: [],
+                });
+              }}
+              isAttending={isAttending}
+              isBooking={isBooking}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -393,6 +437,7 @@ interface AwardShowCardProps {
   onVote?: () => void;
   onRedCarpet?: () => void;
   onNominate?: () => void;
+  onAttendCeremony?: () => void;
   canNominate?: boolean;
   canVote?: boolean;
   canAttend?: boolean;
@@ -401,7 +446,7 @@ interface AwardShowCardProps {
 }
 
 function AwardShowCard({
-  show, hasNomination, hasWin, onVote, onRedCarpet, onNominate,
+  show, hasNomination, hasWin, onVote, onRedCarpet, onNominate, onAttendCeremony,
   canNominate, canVote, canAttend, isSubmitting, compact,
 }: AwardShowCardProps) {
   const categories = (show.categories as any[]) || [];
@@ -505,6 +550,12 @@ function AwardShowCard({
               <Button size="sm" variant="outline" onClick={onRedCarpet}>
                 <Sparkles className="h-4 w-4 mr-1" />
                 Red Carpet
+              </Button>
+            )}
+            {canAttend && onAttendCeremony && (
+              <Button size="sm" variant="secondary" onClick={onAttendCeremony}>
+                <PartyPopper className="h-4 w-4 mr-1" />
+                Ceremony
               </Button>
             )}
           </div>

@@ -6,11 +6,13 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { 
   Play, Pause, SkipForward, Music, Mic, Zap, 
-  AlertTriangle, CheckCircle, XCircle, Users, Volume2 
+  AlertTriangle, CheckCircle, XCircle, Users, Volume2,
+  Guitar, HandMetal, Heart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CrowdEnergyMeter } from "./CrowdEnergyMeter";
 import { PerformanceScoreBreakdown } from "./PerformanceScoreBreakdown";
+import { PerformanceReadinessCheck } from "./PerformanceReadinessCheck";
 import { useFestivalPerformance, type PerformanceEvent } from "@/hooks/useFestivalPerformance";
 
 interface FestivalPerformanceLoopProps {
@@ -43,6 +45,8 @@ export function FestivalPerformanceLoop({
     completePerformance,
     isCompleting,
     performanceResult,
+    familiarityData,
+    bandData,
   } = useFestivalPerformance(participationId, bandId);
 
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -105,33 +109,36 @@ export function FestivalPerformanceLoop({
 
   if (!isPerforming && !performanceResult) {
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2">
-            <Music className="h-6 w-6" />
-            Festival Performance
-          </CardTitle>
-          <CardDescription>
-            {festivalTitle} - {slotType} Slot
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <p className="text-muted-foreground">
-            Ready to perform? This interactive minigame will determine your festival score based on:
-          </p>
-          <ul className="text-sm text-left max-w-xs mx-auto space-y-1">
-            <li>• Song familiarity from rehearsals</li>
-            <li>• Band chemistry level</li>
-            <li>• Equipment quality</li>
-            <li>• Crowd energy management</li>
-            <li>• Random event responses</li>
-          </ul>
-          <Button size="lg" onClick={startPerformance} className="mt-4">
-            <Play className="h-5 w-5 mr-2" />
-            Start Performance
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="max-w-2xl mx-auto space-y-4">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Music className="h-6 w-6" />
+              Festival Performance
+            </CardTitle>
+            <CardDescription>
+              {festivalTitle} - {slotType} Slot
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Ready to perform? Your score is based on preparation, crowd management, and stage presence.
+            </p>
+            <Button size="lg" onClick={startPerformance} className="mt-4">
+              <Play className="h-5 w-5 mr-2" />
+              Take the Stage
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Readiness Check */}
+        <PerformanceReadinessCheck
+          songFamiliarity={familiarityData || 50}
+          bandChemistry={bandData?.chemistry || 50}
+          gearQuality={bandData?.gearQuality || 50}
+          setlistCount={8}
+        />
+      </div>
     );
   }
 
@@ -214,9 +221,17 @@ export function FestivalPerformanceLoop({
               <Users className="h-4 w-4 mr-2" />
               Engage Fans
             </Button>
-            <Button variant="outline" onClick={() => adjustCrowdEnergy(6)} className="text-purple-500">
-              <Mic className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(10)} className="text-purple-500">
+              <HandMetal className="h-4 w-4 mr-2" />
               Stage Dive
+            </Button>
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(6)} className="text-pink-500">
+              <Heart className="h-4 w-4 mr-2" />
+              Dedicate Song
+            </Button>
+            <Button variant="outline" onClick={() => adjustCrowdEnergy(15)} className="text-amber-500">
+              <Guitar className="h-4 w-4 mr-2" />
+              Guitar Solo
             </Button>
             <Button variant="outline" onClick={() => adjustCrowdEnergy(-3)} className="text-yellow-500">
               <Pause className="h-4 w-4 mr-2" />
