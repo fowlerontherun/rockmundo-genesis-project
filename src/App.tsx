@@ -486,6 +486,7 @@ function App() {
                     <Route path="gear-shop" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
+                    <Route path="my-character" element={<MyCharacterEdit />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>

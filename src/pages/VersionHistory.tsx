@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.603",
+    date: "2026-02-06",
+    changes: [
+      { type: 'fix', description: "Character: Fixed 404 error when clicking Character Identity card - added missing /my-character route" },
+    ],
+  },
+  {
     version: "1.0.602",
     date: "2026-02-06",
     changes: [
