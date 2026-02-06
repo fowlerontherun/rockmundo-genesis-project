@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.608",
+    date: "2026-02-06",
+    changes: [
+      { type: 'feature', description: "Modeling: Career progression component wired into the Modeling Offers panel replacing the static looks score card" },
+      { type: 'improvement', description: "Modeling: Panel now shows current tier, progress to next tier, Fashion Week events, and all career tiers overview" },
+    ],
+  },
+  {
     version: "1.0.607",
     date: "2026-02-06",
     changes: [

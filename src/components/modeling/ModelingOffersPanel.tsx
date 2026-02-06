@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Camera, Sparkles, DollarSign, Star, Clock, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
+import { ModelingCareerProgress } from "./ModelingCareerProgress";
 
 interface ModelingOffersPanelProps {
   userId: string;
@@ -153,20 +154,18 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: Modelin
     return `${format(min)} - ${format(max)}`;
   };
 
+  const completedCount = activeContracts?.filter(c => c.status === 'completed').length ?? 0;
+  const totalEarnings = activeContracts?.reduce((sum, c) => sum + (c.compensation || 0), 0) ?? 0;
+
   return (
     <div className="space-y-6">
-      {/* Looks Requirement Info */}
-      <Card className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 border-pink-500/20">
-        <CardContent className="flex items-center gap-4 p-4">
-          <Sparkles className="h-8 w-8 text-pink-400" />
-          <div>
-            <p className="font-medium">Your Looks Score: {playerLooks}</p>
-            <p className="text-sm text-muted-foreground">
-              Higher looks unlocks better modeling opportunities
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Career Progress */}
+      <ModelingCareerProgress
+        totalGigsCompleted={completedCount}
+        totalEarnings={totalEarnings}
+        playerLooks={playerLooks}
+        currentTier=""
+      />
 
       {/* Active Contracts */}
       {activeContracts && activeContracts.length > 0 && (
