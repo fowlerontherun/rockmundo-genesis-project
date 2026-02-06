@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.615",
+    date: "2026-02-06",
+    changes: [
+      { type: 'feature', description: "Song Market: Full auction system — list songs with starting bid, duration, and optional buyout price" },
+      { type: 'feature', description: "Song Market: Place bids on auctions with 5% minimum increment, anti-sniping extension in final 5 minutes" },
+      { type: 'feature', description: "Song Market: Buy Now option for fixed-price listings and auction buyouts" },
+      { type: 'feature', description: "Song Market: Atomic sale completion — money transfers from buyer to seller (10% marketplace fee), song ownership transfers" },
+      { type: 'feature', description: "Song Market: Purchased Songs tab shows all acquired songs with permanent non-resale restriction" },
+      { type: 'feature', description: "Song Market: Sellers can accept bids early or wait for auction to end" },
+      { type: 'improvement', description: "Song Market: Completely rebuilt Browse, My Listings, and Purchased Songs tabs with real data" },
+    ],
+  },
+  {
     version: "1.0.614",
     date: "2026-02-06",
     changes: [
