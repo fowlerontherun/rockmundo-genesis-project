@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.626",
+    date: "2026-02-07",
+    changes: [
+      { type: 'improvement', description: "How to Play: Complete overhaul — added new Skills tab with all 12+ categories and gameplay impact details" },
+      { type: 'improvement', description: "How to Play: Updated Recording, Rehearsal, and Gig sections to explain skill-based bonuses" },
+      { type: 'feature', description: "How to Play: Added sections for Employment, Labels, Relationships, Underworld, and passive growth" },
+      { type: 'improvement', description: "How to Play: Refreshed tips to reflect skill-driven career progression" },
+    ],
+  },
+  {
     version: "1.0.625",
     date: "2026-02-07",
     changes: [
