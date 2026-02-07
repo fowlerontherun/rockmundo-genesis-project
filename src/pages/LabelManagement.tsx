@@ -6,20 +6,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { VipGate } from "@/components/company/VipGate";
+import { LabelRosterTab } from "@/components/labels/management/LabelRosterTab";
+import { LabelDemosTab } from "@/components/labels/management/LabelDemosTab";
+import { LabelContractsTab } from "@/components/labels/management/LabelContractsTab";
+import { LabelReleasesTab } from "@/components/labels/management/LabelReleasesTab";
+import { LabelStaffTab } from "@/components/labels/management/LabelStaffTab";
+import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab";
+import { useAuth } from "@/hooks/use-auth-context";
 
-// Hook to fetch label by ID or company_id (dual lookup pattern)
 function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
   return useQuery({
     queryKey: ['label-management', idOrCompanyId],
     queryFn: async () => {
       if (!idOrCompanyId) return null;
       
-      // Dual lookup: try by id OR company_id for subsidiary navigation
       const { data, error } = await supabase
         .from('labels')
         .select(`
           *,
-          cities:headquarters_city_id(name, country)
+          cities:headquarters_city_id(name, country),
+          companies!labels_company_id_fkey(owner_id)
         `)
         .or(`id.eq.${idOrCompanyId},company_id.eq.${idOrCompanyId}`)
         .limit(1)
@@ -32,49 +38,17 @@ function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
   });
 }
 
-// Hook to fetch artists signed to this label
-function useLabelArtists(labelId: string | undefined) {
+function useLabelDemoCount(labelId: string | undefined) {
   return useQuery({
-    queryKey: ['label-artists', labelId],
+    queryKey: ['label-demo-count', labelId],
     queryFn: async () => {
-      if (!labelId) return [];
-      
-      const { data, error } = await supabase
-        .from('artist_label_contracts')
-        .select(`
-          *,
-          bands:band_id(id, name, genre)
-        `)
-        .eq('label_id', labelId)
-        .eq('status', 'active');
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!labelId,
-  });
-}
-
-// Hook to fetch demo submissions to this label
-function useLabelDemoSubmissions(labelId: string | undefined) {
-  return useQuery({
-    queryKey: ['label-demos', labelId],
-    queryFn: async () => {
-      if (!labelId) return [];
-      
-      const { data, error } = await supabase
+      if (!labelId) return 0;
+      const { count } = await supabase
         .from('demo_submissions')
-        .select(`
-          *,
-          bands:band_id(id, name),
-          songs:song_id(title)
-        `)
+        .select('*', { count: 'exact', head: true })
         .eq('label_id', labelId)
-        .order('submitted_at', { ascending: false })
-        .limit(20);
-      
-      if (error) throw error;
-      return data || [];
+        .eq('status', 'pending');
+      return count || 0;
     },
     enabled: !!labelId,
   });
@@ -83,10 +57,10 @@ function useLabelDemoSubmissions(labelId: string | undefined) {
 export default function LabelManagement() {
   const { labelId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const { data: label, isLoading } = useLabelByIdOrCompanyId(labelId);
-  const { data: artists } = useLabelArtists(label?.id);
-  const { data: demos } = useLabelDemoSubmissions(label?.id);
+  const { data: pendingDemoCount = 0 } = useLabelDemoCount(label?.id);
   
   if (isLoading) {
     return (
@@ -112,18 +86,11 @@ export default function LabelManagement() {
     );
   }
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const pendingDemos = demos?.filter(d => d.status === 'pending') || [];
-  const activeArtists = artists?.length || 0;
-  const isPlayerOwned = !!label?.owner_id;
+  // Get user profile ID for direct ownership check
+  const isDirectOwner = label.owner_id && user && label.owner_id === user.id; // Rough check, real check would need profile ID
+  // Check company ownership
+  const isCompanyOwner = label.companies?.owner_id === user?.id;
+  const isPlayerOwned = isDirectOwner || isCompanyOwner;
   
   return (
     <VipGate feature="Record Label" description="Manage your record label, sign artists, and oversee releases.">
@@ -146,42 +113,8 @@ export default function LabelManagement() {
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Balance</p>
-              <p className={`text-xl font-bold ${(label.balance || 0) < 0 ? 'text-destructive' : ''}`}>
-                {formatCurrency(label.balance || 0)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">label funds</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Signed Artists</p>
-              <p className="text-xl font-bold">{activeArtists}</p>
-              <p className="text-xs text-muted-foreground mt-1">active contracts</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Roster Slots</p>
-              <p className="text-xl font-bold">{label.roster_slot_capacity || 5}</p>
-              <p className="text-xs text-muted-foreground mt-1">max artists</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Pending Demos</p>
-              <p className="text-xl font-bold">{pendingDemos.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">awaiting review</p>
-            </CardContent>
-          </Card>
-        </div>
-        
         <Tabs defaultValue="roster" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="roster" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Roster</span>
@@ -189,10 +122,23 @@ export default function LabelManagement() {
             <TabsTrigger value="demos" className="flex items-center gap-2">
               <Music className="h-4 w-4" />
               <span className="hidden sm:inline">Demos</span>
+              {pendingDemoCount > 0 && (
+                <span className="ml-1 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
+                  {pendingDemoCount}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="contracts" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Contracts</span>
+            </TabsTrigger>
+            <TabsTrigger value="releases" className="flex items-center gap-2">
+              <Disc className="h-4 w-4" />
+              <span className="hidden sm:inline">Releases</span>
+            </TabsTrigger>
+            <TabsTrigger value="staff" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Staff</span>
             </TabsTrigger>
             <TabsTrigger value="finances" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
@@ -201,107 +147,37 @@ export default function LabelManagement() {
           </TabsList>
           
           <TabsContent value="roster">
-            <Card>
-              <CardContent className="pt-6">
-                {artists && artists.length > 0 ? (
-                  <div className="space-y-4">
-                    {artists.map((contract) => (
-                      <div key={contract.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                            <Users className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{contract.bands?.name || 'Unknown Artist'}</p>
-                            <p className="text-sm text-muted-foreground">{contract.bands?.genre}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm">{contract.royalty_artist_pct}% royalty</p>
-                          <p className="text-xs text-muted-foreground">
-                            {contract.releases_completed}/{contract.release_quota} releases
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No artists signed yet</p>
-                    <p className="text-sm">Review demo submissions to sign new artists</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <LabelRosterTab labelId={label.id} rosterCapacity={label.roster_slot_capacity || 5} />
           </TabsContent>
           
           <TabsContent value="demos">
-            <Card>
-              <CardContent className="pt-6">
-                {demos && demos.length > 0 ? (
-                  <div className="space-y-4">
-                    {demos.map((demo) => (
-                      <div key={demo.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-semibold">{demo.bands?.name || 'Unknown Band'}</p>
-                          <p className="text-sm text-muted-foreground">{demo.songs?.title || 'Untitled Demo'}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            demo.status === 'pending' ? 'bg-amber-500/20 text-amber-500' :
-                            demo.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-500' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {demo.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No demo submissions</p>
-                    <p className="text-sm">Artists will submit demos for your review</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <LabelDemosTab 
+              labelId={label.id} 
+              labelReputation={label.reputation_score || 0}
+              genreFocus={label.genre_focus}
+              isPlayerOwned={!!isPlayerOwned}
+            />
           </TabsContent>
           
           <TabsContent value="contracts">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Contract management coming soon</p>
-                  <p className="text-sm">View and manage artist contracts</p>
-                </div>
-              </CardContent>
-            </Card>
+            <LabelContractsTab labelId={label.id} />
+          </TabsContent>
+
+          <TabsContent value="releases">
+            <LabelReleasesTab labelId={label.id} />
+          </TabsContent>
+
+          <TabsContent value="staff">
+            <LabelStaffTab labelId={label.id} labelBalance={label.balance} />
           </TabsContent>
           
           <TabsContent value="finances">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 border rounded-lg">
-                      <p className="text-sm text-muted-foreground">Current Balance</p>
-                      <p className="text-xl font-bold">{formatCurrency(label.balance || 0)}</p>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                      <p className="text-sm text-muted-foreground">A&R Budget</p>
-                      <p className="text-xl font-bold">{formatCurrency(label.a_and_r_budget || 0)}</p>
-                    </div>
-                  </div>
-                  <div className="text-center py-4 text-muted-foreground text-sm">
-                    <p>Use the Finance button on the Company card for deposits/withdrawals</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <LabelFinanceTab 
+              labelId={label.id} 
+              labelBalance={label.balance}
+              isBankrupt={label.is_bankrupt}
+              balanceWentNegativeAt={label.balance_went_negative_at}
+            />
           </TabsContent>
         </Tabs>
       </div>

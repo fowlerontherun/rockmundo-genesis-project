@@ -8,16 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Building2, 
-  DollarSign, 
   Settings, 
   AlertTriangle, 
   Users,
   MapPin,
   TrendingUp,
-  Banknote
+  Banknote,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LabelFinanceDialog } from "./LabelFinanceDialog";
+import { useNavigate } from "react-router-dom";
 
 interface MyLabel {
   id: string;
@@ -34,7 +34,7 @@ interface MyLabel {
 
 export function MyLabelsTab() {
   const { user } = useAuth();
-  const [selectedLabel, setSelectedLabel] = useState<{ id: string; name: string } | null>(null);
+  const navigate = useNavigate();
 
   const { data: myLabels = [], isLoading } = useQuery<MyLabel[]>({
     queryKey: ["my-labels", user?.id],
@@ -124,96 +124,86 @@ export function MyLabelsTab() {
   }
 
   return (
-    <>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {myLabels.map((label) => {
-          const activeContracts = label.artist_label_contracts?.filter(
-            (c) => c.status !== "terminated"
-          ).length ?? 0;
-          const status = getBalanceStatus(label.balance, label.is_bankrupt, label.balance_went_negative_at);
+    <div className="grid gap-4 lg:grid-cols-2">
+      {myLabels.map((label) => {
+        const activeContracts = label.artist_label_contracts?.filter(
+          (c) => c.status !== "terminated"
+        ).length ?? 0;
+        const status = getBalanceStatus(label.balance, label.is_bankrupt, label.balance_went_negative_at);
 
-          return (
-            <Card key={label.id} className={cn(label.is_bankrupt && "border-destructive")}>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border">
-                    <AvatarImage src={label.logo_url || undefined} />
-                    <AvatarFallback>
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{label.name}</CardTitle>
-                      {label.is_bankrupt && (
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
-                      )}
-                    </div>
-                    {label.headquarters_city && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        {label.headquarters_city}
-                      </div>
+        return (
+          <Card key={label.id} className={cn(label.is_bankrupt && "border-destructive")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 border">
+                  <AvatarImage src={label.logo_url || undefined} />
+                  <AvatarFallback>
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">{label.name}</CardTitle>
+                    {label.is_bankrupt && (
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
                     )}
                   </div>
-                  <Badge className={cn(status.bg, status.color, "border-0")}>
-                    {status.label}
-                  </Badge>
+                  {label.headquarters_city && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {label.headquarters_city}
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
+                <Badge className={cn(status.bg, status.color, "border-0")}>
+                  {status.label}
+                </Badge>
+              </div>
+            </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                      <Banknote className="h-4 w-4" />
-                    </div>
-                    <p className={cn("text-lg font-bold", status.color)}>
-                      ${(label.balance / 1000).toFixed(0)}k
-                    </p>
-                    <p className="text-xs text-muted-foreground">Balance</p>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                    <Banknote className="h-4 w-4" />
                   </div>
-                  <div>
-                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                    </div>
-                    <p className="text-lg font-bold">
-                      {activeContracts}/{label.roster_slot_capacity ?? 5}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Roster</p>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                      <TrendingUp className="h-4 w-4" />
-                    </div>
-                    <p className="text-lg font-bold">{label.reputation_score ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Reputation</p>
-                  </div>
+                  <p className={cn("text-lg font-bold", status.color)}>
+                    ${(label.balance / 1000).toFixed(0)}k
+                  </p>
+                  <p className="text-xs text-muted-foreground">Balance</p>
                 </div>
-              </CardContent>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <p className="text-lg font-bold">
+                    {activeContracts}/{label.roster_slot_capacity ?? 5}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Roster</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <p className="text-lg font-bold">{label.reputation_score ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Reputation</p>
+                </div>
+              </div>
+            </CardContent>
 
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  onClick={() => setSelectedLabel({ id: label.id, name: label.name })}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Manage Label
-                </Button>
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
-
-      {selectedLabel && (
-        <LabelFinanceDialog
-          open={!!selectedLabel}
-          onOpenChange={(open) => !open && setSelectedLabel(null)}
-          labelId={selectedLabel.id}
-          labelName={selectedLabel.name}
-        />
-      )}
-    </>
+            <CardFooter>
+              <Button 
+                className="w-full" 
+                onClick={() => navigate(`/label-management/${label.id}`)}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Manage Label
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+      })}
+    </div>
   );
 }

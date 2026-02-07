@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.623",
+    date: "2026-02-07",
+    changes: [
+      { type: 'feature', description: "Labels: Complete label management overhaul — owners can now review demos, manage contracts, release music, and hire staff." },
+      { type: 'feature', description: "Labels: New Demo Submission system — send songs to labels and receive AI-generated contract offers based on your fame and song quality." },
+      { type: 'feature', description: "Labels: Added AI logic for demo acceptance/rejection based on label reputation and genre fit." },
+      { type: 'improvement', description: "Labels: Enhanced financial management with deposit/withdrawal and upgrade systems integrated directly into the dashboard." },
+      { type: 'improvement', description: "Labels: Improved navigation and UI for the My Labels tab." },
+    ],
+  },
+  {
     version: "1.0.622",
     date: "2026-02-07",
     changes: [
