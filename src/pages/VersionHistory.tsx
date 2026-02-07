@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.634",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Avatar: Camera photos now work reliably — images are auto-compressed/resized to 1024px before sending to AI, preventing size-related failures" },
+      { type: 'fix', description: "Avatar: Saved avatars now persist when navigating away and returning — the component loads the current avatar from the profile on mount" },
+      { type: 'improvement', description: "Avatar: Returning users see their current avatar displayed when visiting the designer, with clear option to upload a new photo" },
+    ],
+  },
+  {
     version: "1.0.633",
     date: "2026-02-07",
     changes: [
