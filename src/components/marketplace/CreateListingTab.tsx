@@ -87,7 +87,7 @@ export const CreateListingTab = ({ userId }: CreateListingTabProps) => {
             </Select>
             {sellableSongs.length === 0 && !sellableLoading && (
               <p className="text-sm text-muted-foreground">
-                No eligible songs. Complete songs first, and note: purchased songs cannot be resold.
+                No eligible songs. Write a song first, and note: purchased and archived songs cannot be listed.
               </p>
             )}
           </div>
