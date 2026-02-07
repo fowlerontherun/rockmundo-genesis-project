@@ -203,3 +203,6 @@ verify_jwt = false
 
 [functions.generate-music-video]
 verify_jwt = true
+
+[functions.generate-photo-avatar]
+verify_jwt = false
