@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.630",
+    date: "2026-02-07",
+    changes: [
+      { type: 'improvement', description: "Today's News: Gig results now show ALL bands (not just other bands), renamed to 'Today's Gig Results'" },
+      { type: 'feature', description: "Today's News: Players can now view full gig outcome reports for any band's gig via a 'View' button" },
+    ],
+  },
+  {
     version: "1.0.629",
     date: "2026-02-07",
     changes: [
