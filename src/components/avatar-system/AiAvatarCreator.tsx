@@ -73,7 +73,7 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
       const { data } = await supabase
         .from("profiles")
         .select("avatar_url, avatar_generation_count, cash")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single();
       return data;
     },
