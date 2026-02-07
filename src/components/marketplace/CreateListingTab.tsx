@@ -189,7 +189,7 @@ export const CreateListingTab = ({ userId }: CreateListingTabProps) => {
             </div>
             <div className="flex justify-between font-medium">
               <span>You receive (min)</span>
-              <span className="text-green-600">${Math.round(askingPrice * 0.9).toLocaleString()}</span>
+              <span className="text-success">${Math.round(askingPrice * 0.9).toLocaleString()}</span>
             </div>
           </div>
         </div>

@@ -41,7 +41,7 @@ const CAREER_TIERS: CareerTier[] = [
     minLooks: 40,
     icon: TrendingUp,
     perks: ["National campaigns", "Runway shows", "Better compensation"],
-    color: "text-blue-500",
+    color: "text-primary",
   },
   {
     id: "established",
@@ -50,7 +50,7 @@ const CAREER_TIERS: CareerTier[] = [
     minLooks: 60,
     icon: Star,
     perks: ["International work", "Cover shoots", "Brand ambassadorships"],
-    color: "text-purple-500",
+    color: "text-accent",
   },
   {
     id: "supermodel",
@@ -59,7 +59,7 @@ const CAREER_TIERS: CareerTier[] = [
     minLooks: 80,
     icon: Crown,
     perks: ["Fashion Week invites", "Elite agency representation", "Designer collaborations"],
-    color: "text-amber-500",
+    color: "text-warning",
   },
   {
     id: "icon",
@@ -68,7 +68,7 @@ const CAREER_TIERS: CareerTier[] = [
     minLooks: 90,
     icon: Gem,
     perks: ["Met Gala attendance", "Own fashion line", "Global brand deals"],
-    color: "text-pink-500",
+    color: "text-destructive",
   },
 ];
 
@@ -116,11 +116,11 @@ export function ModelingCareerProgress({
   return (
     <div className="space-y-4">
       {/* Current Tier Card */}
-      <Card className="bg-gradient-to-r from-pink-500/5 to-purple-500/5 border-pink-500/20">
+      <Card className="bg-gradient-to-r from-destructive/5 to-accent/5 border-destructive/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className={cn("w-14 h-14 rounded-full bg-background flex items-center justify-center border-2", 
-              tier.id === "icon" ? "border-pink-500" : tier.id === "supermodel" ? "border-amber-500" : "border-primary"
+              tier.id === "icon" ? "border-destructive" : tier.id === "supermodel" ? "border-warning" : "border-primary"
             )}>
               <TierIcon className={cn("h-7 w-7", tier.color)} />
             </div>
@@ -180,7 +180,7 @@ export function ModelingCareerProgress({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-pink-500" />
+              <Sparkles className="h-4 w-4 text-destructive" />
               Fashion Week Events
             </CardTitle>
           </CardHeader>
@@ -193,7 +193,7 @@ export function ModelingCareerProgress({
                 </div>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: event.prestige }, (_, j) => (
-                    <Star key={j} className="h-3 w-3 text-amber-400 fill-amber-400" />
+                    <Star key={j} className="h-3 w-3 text-warning fill-warning" />
                   ))}
                 </div>
               </div>

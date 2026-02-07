@@ -52,7 +52,7 @@ export const RoyaltiesTab = ({ userId }: RoyaltiesTabProps) => {
             Royalty Earnings
           </CardTitle>
           <div className="flex items-center gap-2 mt-2">
-            <TrendingUp className="h-5 w-5 text-green-500" />
+            <TrendingUp className="h-5 w-5 text-success" />
             <span className="text-2xl font-bold">${totalEarned.toLocaleString()}</span>
             <span className="text-sm text-muted-foreground">Total Earned</span>
           </div>
@@ -79,7 +79,7 @@ export const RoyaltiesTab = ({ userId }: RoyaltiesTabProps) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-green-600">
+                    <div className="text-lg font-bold text-success">
                       +${payment.amount?.toLocaleString()}
                     </div>
                     {payment.streams_count && (

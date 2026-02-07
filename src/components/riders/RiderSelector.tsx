@@ -22,11 +22,11 @@ interface RiderSelectorProps {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  basic: 'bg-slate-500',
-  standard: 'bg-blue-500',
-  professional: 'bg-purple-500',
-  star: 'bg-amber-500',
-  legendary: 'bg-gradient-to-r from-amber-500 to-orange-500',
+  basic: 'bg-muted-foreground',
+  standard: 'bg-primary',
+  professional: 'bg-accent',
+  star: 'bg-warning',
+  legendary: 'bg-gradient-to-r from-warning to-destructive',
 };
 
 export function RiderSelector({ 
@@ -120,8 +120,8 @@ function RiderOption({ rider, venueId, isSelected, onSelect }: RiderOptionProps)
   const tierConfig = RIDER_TIERS.find(t => t.id === rider.tier);
 
   const getFulfillmentIcon = (pct: number) => {
-    if (pct >= 80) return <CheckCircle className="h-4 w-4 text-green-500" />;
-    if (pct >= 50) return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    if (pct >= 80) return <CheckCircle className="h-4 w-4 text-success" />;
+    if (pct >= 50) return <AlertTriangle className="h-4 w-4 text-warning" />;
     return <XCircle className="h-4 w-4 text-destructive" />;
   };
 
@@ -205,11 +205,11 @@ function RiderOption({ rider, venueId, isSelected, onSelect }: RiderOptionProps)
 
                   {isSelected && (
                     <div className="flex gap-4 pt-2 text-xs">
-                      <div className="flex items-center gap-1 text-green-600">
+                      <div className="flex items-center gap-1 text-success">
                         <TrendingUp className="h-3 w-3" />
                         <span>+{Math.round((compatibility.performanceModifier - 1) * 100)}% performance</span>
                       </div>
-                      <div className="flex items-center gap-1 text-blue-600">
+                      <div className="flex items-center gap-1 text-primary">
                         <Users className="h-3 w-3" />
                         <span>+{Math.round((compatibility.moraleModifier - 1) * 100)}% morale</span>
                       </div>
@@ -217,7 +217,7 @@ function RiderOption({ rider, venueId, isSelected, onSelect }: RiderOptionProps)
                   )}
 
                   {compatibility.missing.length > 0 && isSelected && (
-                    <div className="text-xs text-amber-600 pt-1">
+                    <div className="text-xs text-warning pt-1">
                       {compatibility.missing.length} item(s) unavailable at this venue
                     </div>
                   )}

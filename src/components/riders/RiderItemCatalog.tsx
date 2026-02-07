@@ -29,9 +29,9 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
-  technical: "bg-blue-500/10 text-blue-600",
-  hospitality: "bg-green-500/10 text-green-600",
-  backstage: "bg-purple-500/10 text-purple-600",
+  technical: "bg-primary/10 text-primary",
+  hospitality: "bg-success/10 text-success",
+  backstage: "bg-accent/10 text-accent",
 };
 
 export const RiderItemCatalog = ({
