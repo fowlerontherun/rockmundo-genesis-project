@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.621",
+    date: "2026-02-07",
+    changes: [
+      { type: 'feature', description: "Avatar: Added 'Save as Profile Avatar' button to persist generated avatar to profile" },
+      { type: 'improvement', description: "Avatar: Removed classic avatar creator — AI avatar is now the sole creator" },
+    ],
+  },
+  {
     version: "1.0.620",
     date: "2026-02-07",
     changes: [
