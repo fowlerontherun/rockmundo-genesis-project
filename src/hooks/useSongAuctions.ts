@@ -119,33 +119,52 @@ export const useSongAuctions = (userId?: string) => {
     enabled: !!userId,
   });
 
-  // My sellable songs (owned, not purchased, not already listed)
+  // My sellable songs (owned, draft only, not recorded/rehearsed/in setlist)
   const { data: sellableSongs = [], isLoading: sellableLoading } = useQuery({
     queryKey: ["song-market-sellable", userId],
     queryFn: async () => {
       if (!userId) return [];
 
-      // Get songs I own that are NOT purchased and NOT already listed
+      // Get draft songs I own that are NOT purchased
       const { data: songs, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type")
         .eq("user_id", userId)
         .neq("ownership_type", "purchased")
-        .in("status", ["draft", "recorded"])
+        .eq("status", "draft")
         .neq("archived", true)
         .order("title");
 
       if (error) throw error;
+      if (!songs || songs.length === 0) return [];
 
-      // Filter out already actively listed songs
-      const { data: activeListings } = await supabase
-        .from("marketplace_listings")
-        .select("song_id")
-        .eq("seller_user_id", userId)
-        .eq("listing_status", "active");
+      const songIds = songs.map(s => s.id);
 
-      const activeSongIds = new Set((activeListings || []).map(l => l.song_id));
-      return (songs || []).filter(s => !activeSongIds.has(s.id));
+      // Exclude songs that are actively listed, in a setlist, or have been rehearsed
+      const [activeListingsRes, setlistSongsRes, rehearsedSongsRes] = await Promise.all([
+        supabase
+          .from("marketplace_listings")
+          .select("song_id")
+          .eq("seller_user_id", userId)
+          .eq("listing_status", "active"),
+        supabase
+          .from("setlist_songs")
+          .select("song_id")
+          .in("song_id", songIds),
+        supabase
+          .from("band_song_familiarity")
+          .select("song_id")
+          .in("song_id", songIds)
+          .gt("familiarity_minutes", 0),
+      ]);
+
+      const excludedIds = new Set([
+        ...(activeListingsRes.data || []).map(l => l.song_id),
+        ...(setlistSongsRes.data || []).map(s => s.song_id),
+        ...(rehearsedSongsRes.data || []).map(r => r.song_id),
+      ]);
+
+      return songs.filter(s => !excludedIds.has(s.id));
     },
     enabled: !!userId,
   });

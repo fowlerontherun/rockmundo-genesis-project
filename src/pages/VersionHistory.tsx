@@ -14,10 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.628",
+    date: "2026-02-07",
+    changes: [
+      { type: 'improvement', description: "Song Market: Only unrecorded draft songs can be listed — songs that have been recorded, added to a setlist, or rehearsed are now excluded" },
+    ],
+  },
+  {
     version: "1.0.627",
     date: "2026-02-07",
     changes: [
-      { type: 'fix', description: "Song Market: Fixed song selection — draft and recorded songs are now eligible for listing (was incorrectly filtering for non-existent statuses)" },
+      { type: 'fix', description: "Song Market: Fixed song selection — draft songs are now eligible for listing" },
       { type: 'fix', description: "Song Market: Archived songs are now excluded from the sellable songs list" },
     ],
   },
