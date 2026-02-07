@@ -86,8 +86,8 @@ serve(async (req) => {
     // Check generation count for cost
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("avatar_generation_count, cash")
-      .eq("id", userId)
+      .select("id, avatar_generation_count, cash")
+      .eq("user_id", userId)
       .single();
 
     if (profileError || !profile) {
@@ -222,7 +222,7 @@ OUTPUT: Single character, clean illustration, game-avatar quality, suitable as a
     const { error: updateError } = await supabase
       .from("profiles")
       .update(updates)
-      .eq("id", userId);
+      .eq("user_id", userId);
 
     if (updateError) {
       console.error("Profile update error:", updateError);
