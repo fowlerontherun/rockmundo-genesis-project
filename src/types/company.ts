@@ -1,22 +1,36 @@
-// Company System Types - Phase 1 & 2
+// Company System Types
 
 export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal' | 'recording_studio';
 
-// Company creation costs and starting balances - aligned with independent business costs
-export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number }> = {
-  holding: { creationCost: 500_000, startingBalance: 1_000_000 },
-  label: { creationCost: 1_000_000, startingBalance: 1_000_000 },
-  security: { creationCost: 250_000, startingBalance: 500_000 },
-  factory: { creationCost: 500_000, startingBalance: 750_000 },
-  logistics: { creationCost: 300_000, startingBalance: 500_000 },
-  venue: { creationCost: 750_000, startingBalance: 1_000_000 },
-  rehearsal: { creationCost: 200_000, startingBalance: 300_000 },
-  recording_studio: { creationCost: 400_000, startingBalance: 600_000 },
+// Company creation costs, starting balances, and weekly operating costs
+export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number; weeklyOperatingCosts: number }> = {
+  holding: { creationCost: 500_000, startingBalance: 1_000_000, weeklyOperatingCosts: 2_500 },
+  label: { creationCost: 1_000_000, startingBalance: 1_000_000, weeklyOperatingCosts: 8_000 },
+  security: { creationCost: 250_000, startingBalance: 500_000, weeklyOperatingCosts: 3_500 },
+  factory: { creationCost: 500_000, startingBalance: 750_000, weeklyOperatingCosts: 6_000 },
+  logistics: { creationCost: 300_000, startingBalance: 500_000, weeklyOperatingCosts: 4_500 },
+  venue: { creationCost: 750_000, startingBalance: 1_000_000, weeklyOperatingCosts: 7_000 },
+  rehearsal: { creationCost: 200_000, startingBalance: 300_000, weeklyOperatingCosts: 2_000 },
+  recording_studio: { creationCost: 400_000, startingBalance: 600_000, weeklyOperatingCosts: 5_000 },
 };
+
+// Corporate tax rates by company type
+export const CORPORATE_TAX_RATES: Record<CompanyType, number> = {
+  holding: 0.25,
+  label: 0.22,
+  security: 0.20,
+  factory: 0.18,
+  logistics: 0.20,
+  venue: 0.22,
+  rehearsal: 0.15,
+  recording_studio: 0.18,
+};
+
 export type CompanyStatus = 'active' | 'suspended' | 'bankrupt' | 'dissolved';
 export type EmployeeRole = 'ceo' | 'manager' | 'accountant' | 'security_guard' | 'technician' | 'producer' | 'promoter' | 'receptionist';
 export type EmployeeStatus = 'active' | 'on_leave' | 'terminated';
 export type TransactionType = 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'salary' | 'investment' | 'dividend';
+export type TransactionCategory = 'operations' | 'payroll' | 'subsidiary_revenue' | 'subsidiary_operations' | 'tax' | 'owner_transfer' | 'general';
 
 export interface Company {
   id: string;
@@ -36,6 +50,7 @@ export interface Company {
   description: string | null;
   created_at: string;
   updated_at: string;
+  negative_balance_since: string | null;
   // Joined fields
   headquarters_city?: {
     id: string;
@@ -61,7 +76,6 @@ export interface CompanyEmployee {
   performance_rating: number | null;
   created_at: string;
   updated_at: string;
-  // Joined fields
   profile?: {
     id: string;
     stage_name: string;
@@ -76,6 +90,7 @@ export interface CompanyTransaction {
   transaction_type: TransactionType;
   amount: number;
   description: string | null;
+  category: TransactionCategory | null;
   related_entity_id: string | null;
   related_entity_type: string | null;
   created_at: string;
@@ -84,6 +99,7 @@ export interface CompanyTransaction {
 export interface CompanySettings {
   company_id: string;
   auto_pay_salaries: boolean;
+  auto_pay_taxes: boolean;
   dividend_payout_percent: number;
   reinvestment_percent: number;
   allow_subsidiary_creation: boolean;
@@ -109,6 +125,8 @@ export interface CompanyFinancialSummary {
   monthly_net: number;
   total_employees: number;
   total_subsidiaries: number;
+  pending_taxes: number;
+  effective_tax_rate: number;
 }
 
 export interface CompanyLabel {
@@ -174,13 +192,13 @@ export const COMPANY_TYPE_INFO: Record<CompanyType, { label: string; icon: strin
   },
 };
 
-export const EMPLOYEE_ROLE_INFO: Record<EmployeeRole, { label: string; description: string }> = {
-  ceo: { label: 'CEO', description: 'Chief Executive Officer - runs the company' },
-  manager: { label: 'Manager', description: 'Oversees day-to-day operations' },
-  accountant: { label: 'Accountant', description: 'Handles finances and bookkeeping' },
-  security_guard: { label: 'Security Guard', description: 'Provides security services' },
-  technician: { label: 'Technician', description: 'Technical and equipment support' },
-  producer: { label: 'Producer', description: 'Music production and A&R' },
-  promoter: { label: 'Promoter', description: 'Marketing and event promotion' },
-  receptionist: { label: 'Receptionist', description: 'Front desk and customer service' },
+export const EMPLOYEE_ROLE_INFO: Record<EmployeeRole, { label: string; description: string; baseSalary: number }> = {
+  ceo: { label: 'CEO', description: 'Chief Executive Officer - runs the company', baseSalary: 15000 },
+  manager: { label: 'Manager', description: 'Oversees day-to-day operations', baseSalary: 8000 },
+  accountant: { label: 'Accountant', description: 'Handles finances and bookkeeping', baseSalary: 6000 },
+  security_guard: { label: 'Security Guard', description: 'Provides security services', baseSalary: 3500 },
+  technician: { label: 'Technician', description: 'Technical and equipment support', baseSalary: 5000 },
+  producer: { label: 'Producer', description: 'Music production and A&R', baseSalary: 10000 },
+  promoter: { label: 'Promoter', description: 'Marketing and event promotion', baseSalary: 7000 },
+  receptionist: { label: 'Receptionist', description: 'Front desk and customer service', baseSalary: 3000 },
 };

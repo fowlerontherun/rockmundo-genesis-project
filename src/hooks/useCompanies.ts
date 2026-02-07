@@ -122,7 +122,7 @@ export const useCreateCompany = () => {
         if (deductError) throw deductError;
       }
 
-      // Create company with starting balance
+      // Create company with starting balance and operating costs
       const { data, error } = await supabase
         .from("companies")
         .insert({
@@ -133,6 +133,7 @@ export const useCreateCompany = () => {
           headquarters_city_id: input.headquarters_city_id || null,
           parent_company_id: input.parent_company_id || null,
           balance: costs.startingBalance,
+          weekly_operating_costs: costs.weeklyOperatingCosts,
         })
         .select()
         .single();
@@ -238,20 +239,21 @@ export const useCompanyFinancialSummary = () => {
           monthly_net: 0,
           total_employees: 0,
           total_subsidiaries: 0,
+          pending_taxes: 0,
+          effective_tax_rate: 0,
         };
       }
 
       // Get all companies owned by user
       const { data: companies, error: companiesError } = await supabase
         .from("companies")
-        .select("id, balance, weekly_operating_costs")
+        .select("id, balance, weekly_operating_costs, company_type")
         .eq("owner_id", user.id);
 
       if (companiesError) throw companiesError;
 
       const companyIds = (companies || []).map(c => c.id);
       const totalBalance = (companies || []).reduce((sum, c) => sum + Number(c.balance), 0);
-      const weeklyExpenses = (companies || []).reduce((sum, c) => sum + Number(c.weekly_operating_costs), 0);
 
       // Get employee count
       let employeeCount = 0;
@@ -267,19 +269,62 @@ export const useCompanyFinancialSummary = () => {
         }
       }
 
-      // Count subsidiaries (companies with parent_company_id set)
-      const subsidiaryCount = (companies || []).filter(c => c.id).length > 1 ? companyIds.length - 1 : 0;
+      // Count subsidiaries (non-holding companies)
+      const subsidiaryCount = (companies || []).filter(c => c.company_type !== 'holding').length;
 
-      // Calculate monthly estimates (4.33 weeks per month)
-      const monthlyExpenses = weeklyExpenses * 4.33;
+      // Calculate actual monthly income & expenses from last 30 days of transactions
+      let monthlyIncome = 0;
+      let monthlyExpenses = 0;
+
+      if (companyIds.length > 0) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { data: recentTxns } = await supabase
+          .from("company_transactions")
+          .select("amount")
+          .in("company_id", companyIds)
+          .gte("created_at", thirtyDaysAgo.toISOString());
+
+        monthlyIncome = (recentTxns || [])
+          .filter(t => Number(t.amount) > 0)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        monthlyExpenses = Math.abs(
+          (recentTxns || [])
+            .filter(t => Number(t.amount) < 0)
+            .reduce((sum, t) => sum + Number(t.amount), 0)
+        );
+      }
+
+      // Get pending taxes
+      let pendingTaxes = 0;
+      if (companyIds.length > 0) {
+        const { data: taxRecords } = await supabase
+          .from("company_tax_records")
+          .select("tax_amount, penalty_amount")
+          .in("company_id", companyIds)
+          .in("status", ["pending", "overdue"]);
+
+        pendingTaxes = (taxRecords || []).reduce(
+          (sum, t) => sum + Number(t.tax_amount) + (Number(t.penalty_amount) || 0), 0
+        );
+      }
+
+      // Calculate effective tax rate
+      const effectiveTaxRate = monthlyIncome > 0 
+        ? pendingTaxes / monthlyIncome 
+        : 0;
 
       return {
         total_balance: totalBalance,
-        monthly_income: 0, // Will be calculated from transactions in Phase 9
+        monthly_income: monthlyIncome,
         monthly_expenses: monthlyExpenses,
-        monthly_net: -monthlyExpenses,
+        monthly_net: monthlyIncome - monthlyExpenses,
         total_employees: employeeCount,
         total_subsidiaries: subsidiaryCount,
+        pending_taxes: pendingTaxes,
+        effective_tax_rate: effectiveTaxRate,
       };
     },
     enabled: !!user?.id,
