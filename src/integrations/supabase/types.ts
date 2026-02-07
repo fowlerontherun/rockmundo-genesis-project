@@ -4502,10 +4502,12 @@ export type Database = {
           gross_revenue: number | null
           id: string
           paid_at: string | null
+          penalty_amount: number | null
           status: string | null
           tax_amount: number
           tax_period: string
           tax_rate: number | null
+          tax_type: string | null
           taxable_income: number | null
         }
         Insert: {
@@ -4516,10 +4518,12 @@ export type Database = {
           gross_revenue?: number | null
           id?: string
           paid_at?: string | null
+          penalty_amount?: number | null
           status?: string | null
           tax_amount?: number
           tax_period: string
           tax_rate?: number | null
+          tax_type?: string | null
           taxable_income?: number | null
         }
         Update: {
@@ -4530,10 +4534,12 @@ export type Database = {
           gross_revenue?: number | null
           id?: string
           paid_at?: string | null
+          penalty_amount?: number | null
           status?: string | null
           tax_amount?: number
           tax_period?: string
           tax_rate?: number | null
+          tax_type?: string | null
           taxable_income?: number | null
         }
         Relationships: [
@@ -4549,6 +4555,7 @@ export type Database = {
       company_transactions: {
         Row: {
           amount: number
+          category: string | null
           company_id: string
           created_at: string
           description: string | null
@@ -4559,6 +4566,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          category?: string | null
           company_id: string
           created_at?: string
           description?: string | null
@@ -4569,6 +4577,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          category?: string | null
           company_id?: string
           created_at?: string
           description?: string | null

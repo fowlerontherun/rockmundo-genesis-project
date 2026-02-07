@@ -9,6 +9,7 @@ export interface CompanyTransaction {
   transaction_type: string;
   amount: number;
   description: string | null;
+  category: string | null;
   created_at: string;
 }
 
@@ -21,6 +22,8 @@ export interface CompanyTaxRecord {
   taxable_income: number;
   tax_rate: number;
   tax_amount: number;
+  tax_type: string;
+  penalty_amount: number;
   status: 'pending' | 'paid' | 'overdue';
   due_date: string;
   paid_at: string | null;
@@ -34,7 +37,7 @@ export const useCompanyBalance = (companyId: string | undefined) => {
       if (!companyId) return null;
       const { data, error } = await supabase
         .from("companies")
-        .select("id, name, balance, weekly_operating_costs, is_bankrupt, negative_balance_since")
+        .select("id, name, balance, weekly_operating_costs, is_bankrupt, negative_balance_since, company_type")
         .eq("id", companyId)
         .single();
       
@@ -45,9 +48,9 @@ export const useCompanyBalance = (companyId: string | undefined) => {
   });
 };
 
-export const useCompanyTransactions = (companyId: string | undefined) => {
+export const useCompanyTransactions = (companyId: string | undefined, limit = 50) => {
   return useQuery<CompanyTransaction[]>({
-    queryKey: ["company-transactions", companyId],
+    queryKey: ["company-transactions", companyId, limit],
     queryFn: async () => {
       if (!companyId) return [];
       const { data, error } = await supabase
@@ -55,10 +58,45 @@ export const useCompanyTransactions = (companyId: string | undefined) => {
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(limit);
       
       if (error) throw error;
       return data as CompanyTransaction[];
+    },
+    enabled: !!companyId,
+  });
+};
+
+export const useCompanyIncomeExpenses = (companyId: string | undefined) => {
+  return useQuery({
+    queryKey: ["company-income-expenses", companyId],
+    queryFn: async () => {
+      if (!companyId) return { monthlyIncome: 0, monthlyExpenses: 0, dailyIncome: 0, dailyExpenses: 0, recentTransactions: [] as CompanyTransaction[] };
+
+      // Get transactions from last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data, error } = await supabase
+        .from("company_transactions")
+        .select("*")
+        .eq("company_id", companyId)
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const txns = (data || []) as CompanyTransaction[];
+      const totalIncome = txns.filter(t => t.amount > 0).reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalExpenses = Math.abs(txns.filter(t => t.amount < 0).reduce((sum, t) => sum + Number(t.amount), 0));
+
+      return {
+        monthlyIncome: totalIncome,
+        monthlyExpenses: totalExpenses,
+        dailyIncome: totalIncome / 30,
+        dailyExpenses: totalExpenses / 30,
+        recentTransactions: txns,
+      };
     },
     enabled: !!companyId,
   });
@@ -80,6 +118,25 @@ export const useCompanyTaxRecords = (companyId: string | undefined) => {
       return data as CompanyTaxRecord[];
     },
     enabled: !!companyId,
+  });
+};
+
+export const useAllCompanyTaxRecords = (companyIds: string[]) => {
+  return useQuery<CompanyTaxRecord[]>({
+    queryKey: ["all-company-tax-records", companyIds],
+    queryFn: async () => {
+      if (companyIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("company_tax_records")
+        .select("*")
+        .in("company_id", companyIds)
+        .in("status", ["pending", "overdue"])
+        .order("due_date", { ascending: true });
+      
+      if (error) throw error;
+      return data as CompanyTaxRecord[];
+    },
+    enabled: companyIds.length > 0,
   });
 };
 
@@ -109,7 +166,6 @@ export const useDepositToCompany = () => {
   
   return useMutation({
     mutationFn: async ({ companyId, amount, profileId }: { companyId: string; amount: number; profileId: string }) => {
-      // Start transaction: Deduct from player, add to company
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
@@ -119,7 +175,6 @@ export const useDepositToCompany = () => {
       if (profileError) throw profileError;
       if (Number(profile.cash) < amount) throw new Error("Insufficient funds");
       
-      // Update profile cash
       const { error: updateProfileError } = await supabase
         .from("profiles")
         .update({ cash: Number(profile.cash) - amount })
@@ -127,7 +182,6 @@ export const useDepositToCompany = () => {
       
       if (updateProfileError) throw updateProfileError;
       
-      // Update company balance
       const { data: company, error: companyError } = await supabase
         .from("companies")
         .select("balance")
@@ -140,13 +194,12 @@ export const useDepositToCompany = () => {
         .from("companies")
         .update({ 
           balance: Number(company.balance) + amount,
-          negative_balance_since: null // Clear negative status if depositing
+          negative_balance_since: null
         })
         .eq("id", companyId);
       
       if (updateCompanyError) throw updateCompanyError;
       
-      // Record transaction
       const { error: transactionError } = await supabase
         .from("company_transactions")
         .insert({
@@ -154,6 +207,7 @@ export const useDepositToCompany = () => {
           transaction_type: "investment",
           amount: amount,
           description: "Owner deposit",
+          category: "owner_transfer",
         });
       
       if (transactionError) throw transactionError;
@@ -163,8 +217,10 @@ export const useDepositToCompany = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["company-balance", variables.companyId] });
       queryClient.invalidateQueries({ queryKey: ["company-transactions", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-income-expenses", variables.companyId] });
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       queryClient.invalidateQueries({ queryKey: ["company", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-financial-summary"] });
       toast({
         title: "Deposit Successful",
         description: `$${variables.amount.toLocaleString()} deposited to company.`,
@@ -183,11 +239,10 @@ export const useDepositToCompany = () => {
 export const useWithdrawFromCompany = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const MINIMUM_BALANCE = 10_000; // $10k minimum balance after withdrawal
+  const MINIMUM_BALANCE = 10_000;
   
   return useMutation({
     mutationFn: async ({ companyId, amount, profileId }: { companyId: string; amount: number; profileId: string }) => {
-      // Get company balance
       const { data: company, error: companyError } = await supabase
         .from("companies")
         .select("balance")
@@ -201,7 +256,6 @@ export const useWithdrawFromCompany = () => {
         throw new Error(`Minimum balance of $${MINIMUM_BALANCE.toLocaleString()} required`);
       }
       
-      // Update company balance
       const { error: updateCompanyError } = await supabase
         .from("companies")
         .update({ balance: newBalance })
@@ -209,7 +263,6 @@ export const useWithdrawFromCompany = () => {
       
       if (updateCompanyError) throw updateCompanyError;
       
-      // Update profile cash
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
@@ -225,7 +278,6 @@ export const useWithdrawFromCompany = () => {
       
       if (updateProfileError) throw updateProfileError;
       
-      // Record transaction
       const { error: transactionError } = await supabase
         .from("company_transactions")
         .insert({
@@ -233,6 +285,7 @@ export const useWithdrawFromCompany = () => {
           transaction_type: "dividend",
           amount: -amount,
           description: "Owner withdrawal",
+          category: "owner_transfer",
         });
       
       if (transactionError) throw transactionError;
@@ -242,8 +295,10 @@ export const useWithdrawFromCompany = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["company-balance", variables.companyId] });
       queryClient.invalidateQueries({ queryKey: ["company-transactions", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-income-expenses", variables.companyId] });
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       queryClient.invalidateQueries({ queryKey: ["company", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-financial-summary"] });
       toast({
         title: "Withdrawal Successful",
         description: `$${variables.amount.toLocaleString()} withdrawn from company.`,
@@ -265,17 +320,17 @@ export const usePayCompanyTax = () => {
   
   return useMutation({
     mutationFn: async ({ taxRecordId, companyId }: { taxRecordId: string; companyId: string }) => {
-      // Get tax record
       const { data: taxRecord, error: taxError } = await supabase
         .from("company_tax_records")
-        .select("tax_amount, status")
+        .select("tax_amount, penalty_amount, status, tax_period")
         .eq("id", taxRecordId)
         .single();
       
       if (taxError) throw taxError;
       if (taxRecord.status === 'paid') throw new Error("Tax already paid");
       
-      // Get company balance
+      const totalDue = Number(taxRecord.tax_amount) + (Number(taxRecord.penalty_amount) || 0);
+      
       const { data: company, error: companyError } = await supabase
         .from("companies")
         .select("balance")
@@ -284,20 +339,17 @@ export const usePayCompanyTax = () => {
       
       if (companyError) throw companyError;
       
-      const taxAmount = Number(taxRecord.tax_amount);
-      if (Number(company.balance) < taxAmount) {
+      if (Number(company.balance) < totalDue) {
         throw new Error("Insufficient company funds to pay tax");
       }
       
-      // Deduct from company
       const { error: updateError } = await supabase
         .from("companies")
-        .update({ balance: Number(company.balance) - taxAmount })
+        .update({ balance: Number(company.balance) - totalDue })
         .eq("id", companyId);
       
       if (updateError) throw updateError;
       
-      // Mark tax as paid
       const { error: taxUpdateError } = await supabase
         .from("company_tax_records")
         .update({ status: 'paid', paid_at: new Date().toISOString() })
@@ -305,14 +357,18 @@ export const usePayCompanyTax = () => {
       
       if (taxUpdateError) throw taxUpdateError;
       
-      // Record transaction
+      const penaltyNote = Number(taxRecord.penalty_amount) > 0 
+        ? ` + $${Number(taxRecord.penalty_amount).toFixed(0)} late penalty` 
+        : '';
+      
       const { error: transactionError } = await supabase
         .from("company_transactions")
         .insert({
           company_id: companyId,
           transaction_type: "expense",
-          amount: -taxAmount,
-          description: "Tax payment",
+          amount: -totalDue,
+          description: `Corporate tax payment (${taxRecord.tax_period})${penaltyNote}`,
+          category: "tax",
         });
       
       if (transactionError) throw transactionError;
@@ -322,7 +378,9 @@ export const usePayCompanyTax = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["company-balance", variables.companyId] });
       queryClient.invalidateQueries({ queryKey: ["company-tax-records", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["all-company-tax-records"] });
       queryClient.invalidateQueries({ queryKey: ["company-transactions", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-financial-summary"] });
       toast({
         title: "Tax Paid",
         description: "Tax payment processed successfully.",
