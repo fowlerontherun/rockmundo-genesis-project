@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Zap, Heart, Star, Sparkles, BookOpen, Package, Clock, Loader2 } from "lucide-react";
+import { Zap, Heart, Star, Sparkles, BookOpen, Package, Clock, Loader2, DollarSign } from "lucide-react";
 import type { InventoryItem } from "@/hooks/useUnderworldInventory";
 
 const rarityStyles: Record<string, string> = {
@@ -48,6 +48,7 @@ export const ItemDetailDialog = ({
       energy: "Energy",
       xp: "Experience",
       fame: "Fame",
+      cash: "Cash",
       xp_multiplier: "XP Multiplier",
       fame_multiplier: "Fame Multiplier",
       energy_regen: "Energy Regen",
@@ -63,6 +64,7 @@ export const ItemDetailDialog = ({
     energy: Zap,
     xp: Star,
     fame: Sparkles,
+    cash: DollarSign,
   };
 
   return (

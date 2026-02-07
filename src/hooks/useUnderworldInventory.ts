@@ -73,10 +73,10 @@ export const useUnderworldInventory = () => {
         : {};
 
       // Apply instant effects to profile
-      if (effects.health || effects.energy || effects.xp || effects.fame) {
+      if (effects.health || effects.energy || effects.xp || effects.fame || effects.cash) {
         const { data: profile, error: profileFetchError } = await supabase
           .from("profiles")
-          .select("health, energy, experience, fame")
+          .select("health, energy, experience, fame, cash")
           .eq("user_id", user.id)
           .single();
 
@@ -94,6 +94,9 @@ export const useUnderworldInventory = () => {
         }
         if (effects.fame) {
           updates.fame = (profile?.fame || 0) + (effects.fame as number);
+        }
+        if (effects.cash) {
+          updates.cash = Math.max(0, (profile?.cash || 0) + (effects.cash as number));
         }
 
         if (Object.keys(updates).length > 0) {
@@ -147,9 +150,11 @@ export const useUnderworldInventory = () => {
       return { success: true, product };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["underworld-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["underworld-inventory", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["purchase-history"] });
+      queryClient.invalidateQueries({ queryKey: ["user-cash-balance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-history", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["active-boosts", user?.id] });
 
       toast({
         title: "Item Used",
