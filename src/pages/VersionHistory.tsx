@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.618",
+    date: "2026-02-07",
+    changes: [
+      { type: 'improvement', description: "Infrastructure: Removed 6 unused edge functions (generate-character-sprite, generate-gig-commentary, manual-complete-gig, complete-festival-performance, create-inbox-message, grant-vip) to free deployment slots" },
+      { type: 'feature', description: "Avatar: AI Photo Avatar edge function now deployed and operational" },
+    ],
+  },
+  {
     version: "1.0.617",
     date: "2026-02-07",
     changes: [
