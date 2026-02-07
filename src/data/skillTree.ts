@@ -318,29 +318,7 @@ const songwritingProductionConfigs: TieredSkillConfig[] = [
       }
     }
   },
-  {
-    prefix: "songwriting",
-    category: "Songwriting & Production",
-    track: "Live Looping",
-    icon: "songwriting",
-    tiers: {
-      Basic: {
-        name: "Basic Live Looping",
-        description: "Build layered performances with timing and overdub discipline.",
-        slug: "songwriting_basic_live_looping"
-      },
-      Professional: {
-        name: "Professional Live Looping",
-        description: "Design immersive solo shows with complex loop arrangements.",
-        slug: "songwriting_professional_live_looping"
-      },
-      Mastery: {
-        name: "Live Looping Mastery",
-        description: "Command loop-based performances that captivate audiences.",
-        slug: "songwriting_mastery_live_looping"
-      }
-    }
-  },
+  // Live Looping removed — consolidated into Loop Station (Electronic instruments)
   {
     prefix: "songwriting",
     category: "Songwriting & Production",
@@ -2570,24 +2548,7 @@ const worldFolkConfigs: TieredSkillConfig[] = [
 // LEGACY INSTRUMENT CONFIGS (preserved for backward compatibility)
 // ============================================================================
 const legacyInstrumentsConfigs: TieredSkillConfig[] = [
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Singing",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Basic Singing",
-        description: "Build pitch, breath control, and vocal confidence.",
-        slug: createSlug("instruments", "Basic", "Singing")
-      },
-      Professional: {
-        name: "Professional Singing",
-        description: "Deliver stage-ready vocals with dynamics and stylistic nuance.",
-        slug: createSlug("instruments", "Professional", "Singing")
-      }
-    }
-  },
+  // Singing removed — consolidated into Vocal & Performance Skills
   {
     prefix: "instruments",
     category: "Instruments & Performance",
@@ -2603,6 +2564,11 @@ const legacyInstrumentsConfigs: TieredSkillConfig[] = [
         name: "Professional Rapping",
         description: "Master breath control, double-time flows, and live crowd energy.",
         slug: createSlug("instruments", "Professional", "Rapping")
+      },
+      Mastery: {
+        name: "Rapping Mastery",
+        description: "Deliver legendary freestyle performances with innovative cadences and wordplay.",
+        slug: createSlug("instruments", "Mastery", "Rapping")
       }
     }
   },
@@ -2628,30 +2594,8 @@ const legacyInstrumentsConfigs: TieredSkillConfig[] = [
         slug: "instruments_mastery_vocal_performance"
       }
     }
-  },
-  {
-    prefix: "instruments",
-    category: "Instruments & Performance",
-    track: "Vocal Effects & Technology",
-    icon: "performance",
-    tiers: {
-      Basic: {
-        name: "Vocal Effects & Technology",
-        description: "Explore auto-tune, harmonizers, and vocal FX chains in live settings.",
-        slug: "instruments_basic_vocal_fx"
-      },
-      Professional: {
-        name: "Professional Vocal FX",
-        description: "Configure real-time vocal FX rigs with confident signal routing.",
-        slug: "instruments_professional_vocal_fx"
-      },
-      Mastery: {
-        name: "Vocal Effects Mastery",
-        description: "Orchestrate creative vocal FX layering, live timing, and adaptive routing strategies.",
-        slug: "instruments_mastery_vocal_fx"
-      }
-    }
   }
+  // Vocal Effects & Technology removed — consolidated into Vocal Production (Songwriting)
 ];
 
 // ============================================================================
@@ -2670,10 +2614,9 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         description: "Command center-stage vocals with endurance, charisma, and precision.",
         slug: createSlug("instruments", "Mastery", "Lead Vocals"),
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Singing"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Rapping"), requiredValue: 600 },
           { slug: "instruments_professional_vocal_performance", requiredValue: 650 },
-          { slug: "instruments_professional_vocal_fx", requiredValue: 600 }
+          { slug: createSlug("instruments", "Professional", "Rapping"), requiredValue: 600 },
+          { slug: "songwriting_professional_vocal_production", requiredValue: 600 }
         ]
       }
     }
@@ -2922,6 +2865,335 @@ const stageShowmanshipConfigs: TieredSkillConfig[] = [
 ];
 
 // ============================================================================
+// MUSIC THEORY & EAR TRAINING
+// ============================================================================
+const musicTheoryConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "theory",
+    category: "Music Theory",
+    track: "Harmony & Theory",
+    icon: "theory",
+    tiers: {
+      Basic: {
+        name: "Basic Music Theory",
+        description: "Learn intervals, scales, chord construction, and sight reading fundamentals.",
+        slug: "theory_basic_harmony"
+      },
+      Professional: {
+        name: "Professional Music Theory",
+        description: "Master advanced harmony, counterpoint, modal interchange, and analysis.",
+        slug: "theory_professional_harmony"
+      },
+      Mastery: {
+        name: "Music Theory Mastery",
+        description: "Command composition theory, orchestration, and genre-crossing harmonic language.",
+        slug: "theory_mastery_harmony"
+      }
+    }
+  },
+  {
+    prefix: "theory",
+    category: "Music Theory",
+    track: "Ear Training",
+    icon: "theory",
+    tiers: {
+      Basic: {
+        name: "Basic Ear Training",
+        description: "Identify intervals, chord qualities, and basic rhythmic patterns by ear.",
+        slug: "theory_basic_ear_training"
+      },
+      Professional: {
+        name: "Professional Ear Training",
+        description: "Transcribe melodies, detect tuning issues, and hear complex harmonic progressions.",
+        slug: "theory_professional_ear_training"
+      },
+      Mastery: {
+        name: "Ear Training Mastery",
+        description: "Possess perfect relative pitch and instantly analyze any musical passage.",
+        slug: "theory_mastery_ear_training"
+      }
+    }
+  },
+  {
+    prefix: "theory",
+    category: "Music Theory",
+    track: "Sight Reading",
+    icon: "theory",
+    tiers: {
+      Basic: {
+        name: "Basic Sight Reading",
+        description: "Read simple melodies, rhythms, and chord charts at tempo.",
+        slug: "theory_basic_sight_reading"
+      },
+      Professional: {
+        name: "Professional Sight Reading",
+        description: "Navigate complex notation, lead sheets, and orchestral parts fluently.",
+        slug: "theory_professional_sight_reading"
+      },
+      Mastery: {
+        name: "Sight Reading Mastery",
+        description: "Perform any written music at sight with minimal preparation.",
+        slug: "theory_mastery_sight_reading"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// MUSIC BUSINESS & INDUSTRY
+// ============================================================================
+const musicBusinessConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "business",
+    category: "Music Business",
+    track: "Contracts & Rights",
+    icon: "business",
+    tiers: {
+      Basic: {
+        name: "Basic Contract Knowledge",
+        description: "Understand publishing splits, royalty types, and basic deal terms.",
+        slug: "business_basic_contracts"
+      },
+      Professional: {
+        name: "Professional Negotiation",
+        description: "Negotiate label deals, licensing terms, and distribution agreements.",
+        slug: "business_professional_contracts"
+      },
+      Mastery: {
+        name: "Deal-Making Mastery",
+        description: "Structure complex multi-territory deals and maximize career leverage.",
+        slug: "business_mastery_contracts"
+      }
+    }
+  },
+  {
+    prefix: "business",
+    category: "Music Business",
+    track: "Marketing & Branding",
+    icon: "business",
+    tiers: {
+      Basic: {
+        name: "Basic Music Marketing",
+        description: "Build a brand identity, manage social presence, and plan releases.",
+        slug: "business_basic_marketing"
+      },
+      Professional: {
+        name: "Professional Brand Strategy",
+        description: "Execute cross-platform campaigns, PR strategies, and audience targeting.",
+        slug: "business_professional_marketing"
+      },
+      Mastery: {
+        name: "Brand Empire Mastery",
+        description: "Build cultural movements and industry-shaping brand empires.",
+        slug: "business_mastery_marketing"
+      }
+    }
+  },
+  {
+    prefix: "business",
+    category: "Music Business",
+    track: "Booking & Touring",
+    icon: "business",
+    tiers: {
+      Basic: {
+        name: "Basic Booking Knowledge",
+        description: "Understand venue types, guarantees, and routing fundamentals.",
+        slug: "business_basic_booking"
+      },
+      Professional: {
+        name: "Professional Tour Management",
+        description: "Plan efficient tour routes, manage budgets, and negotiate rider requirements.",
+        slug: "business_professional_booking"
+      },
+      Mastery: {
+        name: "Touring Mastery",
+        description: "Orchestrate world tours with optimal logistics, sponsorships, and profitability.",
+        slug: "business_mastery_booking"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// IMPROVISATION
+// ============================================================================
+const improvisationConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "improv",
+    category: "Improvisation",
+    track: "Musical Improvisation",
+    icon: "improv",
+    tiers: {
+      Basic: {
+        name: "Basic Improvisation",
+        description: "Improvise simple melodies over chord changes and respond to call-and-response.",
+        slug: "improv_basic_musical"
+      },
+      Professional: {
+        name: "Professional Improvisation",
+        description: "Sustain extended improvisations, cross genre boundaries, and lead jam sessions.",
+        slug: "improv_professional_musical"
+      },
+      Mastery: {
+        name: "Improvisation Mastery",
+        description: "Deliver legendary spontaneous performances that define concerts.",
+        slug: "improv_mastery_musical"
+      }
+    }
+  },
+  {
+    prefix: "improv",
+    category: "Improvisation",
+    track: "Recovery & Adaptation",
+    icon: "improv",
+    tiers: {
+      Basic: {
+        name: "Basic Stage Recovery",
+        description: "Cover mistakes, adapt to technical issues, and maintain composure on stage.",
+        slug: "improv_basic_recovery"
+      },
+      Professional: {
+        name: "Professional Adaptation",
+        description: "Turn mishaps into crowd-pleasing moments and adapt setlists on the fly.",
+        slug: "improv_professional_recovery"
+      },
+      Mastery: {
+        name: "Adaptation Mastery",
+        description: "Transform any unexpected situation into a legendary performance moment.",
+        slug: "improv_mastery_recovery"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// AUDIENCE PSYCHOLOGY & MARKETING
+// ============================================================================
+const audiencePsychologyConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "audience",
+    category: "Audience Psychology",
+    track: "Fan Engagement",
+    icon: "audience",
+    tiers: {
+      Basic: {
+        name: "Basic Fan Engagement",
+        description: "Understand fan motivations, build community, and manage social channels.",
+        slug: "audience_basic_engagement"
+      },
+      Professional: {
+        name: "Professional Fan Strategy",
+        description: "Segment audiences, create viral content, and optimize fan conversion.",
+        slug: "audience_professional_engagement"
+      },
+      Mastery: {
+        name: "Fan Empire Mastery",
+        description: "Build devoted fanbases that transcend music into cultural movements.",
+        slug: "audience_mastery_engagement"
+      }
+    }
+  },
+  {
+    prefix: "audience",
+    category: "Audience Psychology",
+    track: "Trend Analysis",
+    icon: "audience",
+    tiers: {
+      Basic: {
+        name: "Basic Trend Awareness",
+        description: "Track streaming trends, social media patterns, and emerging genres.",
+        slug: "audience_basic_trends"
+      },
+      Professional: {
+        name: "Professional Trend Strategy",
+        description: "Predict market shifts, time releases for maximum impact, and spot opportunities.",
+        slug: "audience_professional_trends"
+      },
+      Mastery: {
+        name: "Cultural Trendsetting",
+        description: "Set trends rather than follow them — become a cultural tastemaker.",
+        slug: "audience_mastery_trends"
+      }
+    }
+  }
+];
+
+// ============================================================================
+// MUSIC HEALTH & ENDURANCE
+// ============================================================================
+const musicHealthConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "health",
+    category: "Music Health",
+    track: "Physical Conditioning",
+    icon: "health",
+    tiers: {
+      Basic: {
+        name: "Basic Musician Fitness",
+        description: "Warm-up routines, posture correction, and hearing protection habits.",
+        slug: "health_basic_conditioning"
+      },
+      Professional: {
+        name: "Professional Touring Stamina",
+        description: "Sustain energy through long tours, manage jet lag, and prevent injuries.",
+        slug: "health_professional_conditioning"
+      },
+      Mastery: {
+        name: "Peak Performer Conditioning",
+        description: "Maintain elite physical and mental condition for marathon performances.",
+        slug: "health_mastery_conditioning"
+      }
+    }
+  },
+  {
+    prefix: "health",
+    category: "Music Health",
+    track: "Vocal Health",
+    icon: "health",
+    tiers: {
+      Basic: {
+        name: "Basic Vocal Care",
+        description: "Protect your voice with hydration, rest, and proper technique.",
+        slug: "health_basic_vocal"
+      },
+      Professional: {
+        name: "Professional Vocal Maintenance",
+        description: "Manage vocal fatigue, recover between shows, and prevent strain injuries.",
+        slug: "health_professional_vocal"
+      },
+      Mastery: {
+        name: "Vocal Longevity Mastery",
+        description: "Maintain vocal power across decades with expert self-care protocols.",
+        slug: "health_mastery_vocal"
+      }
+    }
+  },
+  {
+    prefix: "health",
+    category: "Music Health",
+    track: "Mental Resilience",
+    icon: "health",
+    tiers: {
+      Basic: {
+        name: "Basic Mental Wellness",
+        description: "Manage performance anxiety, stage fright, and creative blocks.",
+        slug: "health_basic_mental"
+      },
+      Professional: {
+        name: "Professional Mental Resilience",
+        description: "Handle industry pressure, criticism, and maintain work-life balance on tour.",
+        slug: "health_professional_mental"
+      },
+      Mastery: {
+        name: "Mental Mastery",
+        description: "Achieve unshakeable focus and creative flow in any environment.",
+        slug: "health_mastery_mental"
+      }
+    }
+  }
+];
+
+// ============================================================================
 // BUILD AND EXPORT
 // ============================================================================
 const { definitions, relationships } = buildSkillTree([
@@ -2936,7 +3208,12 @@ const { definitions, relationships } = buildSkillTree([
   ...worldFolkConfigs,
   ...legacyInstrumentsConfigs,
   ...instrumentMasteryConfigs,
-  ...stageShowmanshipConfigs
+  ...stageShowmanshipConfigs,
+  ...musicTheoryConfigs,
+  ...musicBusinessConfigs,
+  ...improvisationConfigs,
+  ...audiencePsychologyConfigs,
+  ...musicHealthConfigs
 ]);
 
 export const SKILL_TREE_DEFINITIONS: SkillDefinitionRecord[] = definitions;

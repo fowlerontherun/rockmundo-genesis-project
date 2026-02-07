@@ -9,6 +9,8 @@ import {
   formatConflictMessage 
 } from '@/utils/bandActivityScheduling';
 import { validateFutureTime } from '@/utils/timeSlotValidation';
+import { calculateRehearsalEfficiency } from '@/utils/skillRehearsalEfficiency';
+import type { SkillProgressEntry } from '@/utils/skillGearPerformance';
 
 interface BookRehearsalParams {
   bandId: string;
@@ -25,7 +27,7 @@ interface BookRehearsalParams {
   roomLocation: string;
 }
 
-// Helper to manually complete rehearsal (since cron may not trigger)
+// Helper to manually complete rehearsal with skill efficiency
 async function completeRehearsalDirectly(
   rehearsalId: string,
   bandId: string,
@@ -33,6 +35,47 @@ async function completeRehearsalDirectly(
   durationMinutes: number
 ) {
   if (!songId) return;
+
+  // Fetch band members' skill progress for efficiency calculation
+  let efficiencyMultiplier = 1.0;
+  try {
+    const { data: members } = await supabase
+      .from('band_members')
+      .select('user_id, instrument_role')
+      .eq('band_id', bandId)
+      .eq('is_touring_member', false);
+
+    if (members && members.length > 0) {
+      const memberUserIds = members.map(m => m.user_id).filter(Boolean) as string[];
+      const roles = members.map(m => m.instrument_role || 'Vocals');
+
+      // Get profile IDs for band members
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('user_id', memberUserIds);
+
+      if (profiles && profiles.length > 0) {
+        const profileIds = profiles.map(p => p.id);
+        const { data: skillData } = await supabase
+          .from('skill_progress')
+          .select('skill_slug, current_level')
+          .in('profile_id', profileIds);
+
+        const efficiency = calculateRehearsalEfficiency(
+          (skillData || []) as SkillProgressEntry[],
+          roles
+        );
+        efficiencyMultiplier = efficiency.multiplier;
+        console.log(`Rehearsal efficiency: ${efficiencyMultiplier.toFixed(2)}x (instrument: +${efficiency.instrumentBonus}, theory: +${efficiency.theoryBonus})`);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not calculate rehearsal efficiency, using baseline:', e);
+  }
+
+  // Apply efficiency multiplier to effective minutes
+  const effectiveMinutes = Math.round(durationMinutes * efficiencyMultiplier);
   
   // Fetch existing familiarity
   const { data: existing } = await supabase
@@ -43,7 +86,7 @@ async function completeRehearsalDirectly(
     .maybeSingle();
   
   const currentMinutes = existing?.familiarity_minutes || 0;
-  const newMinutes = currentMinutes + durationMinutes;
+  const newMinutes = currentMinutes + effectiveMinutes;
   
   // Upsert familiarity record
   await supabase
@@ -58,7 +101,7 @@ async function completeRehearsalDirectly(
       onConflict: 'band_id,song_id',
     });
     
-  console.log(`Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} minutes`);
+  console.log(`Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} minutes (${durationMinutes}min × ${efficiencyMultiplier.toFixed(2)}x efficiency)`);
 }
 
 export function useRehearsalBooking() {

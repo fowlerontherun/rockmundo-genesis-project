@@ -10,6 +10,8 @@ export interface PerformanceFactors {
   gearReliabilityBonus?: number; // 0-0.05 (reduces negative variance swings)
   momentum?: number;          // -3 to +3 momentum from previous songs
   songPosition?: number;      // Position in setlist (1-indexed)
+  stageSkillAverage?: number; // 0-100 from showmanship, crowd, tech skills
+  improvisationLevel?: number; // 0-20 from improv skill level
 }
 
 export interface SongPerformanceResult {
@@ -21,6 +23,7 @@ export interface SongPerformanceResult {
     equipment: number;
     crew: number;
     memberSkills: number;
+    stageSkills: number;
   };
   crowdResponse: 'ecstatic' | 'enthusiastic' | 'engaged' | 'mixed' | 'disappointed';
 }
@@ -29,15 +32,17 @@ const WEIGHTS = {
   songQuality: 0.25,      // 25% - the song itself
   rehearsal: 0.20,        // 20% - how well they know it
   chemistry: 0.15,        // 15% - band cohesion
-  equipment: 0.15,        // 15% - stage gear quality
-  crew: 0.10,             // 10% - production team
-  memberSkills: 0.15      // 15% - player abilities
+  equipment: 0.12,        // 12% - stage gear quality
+  crew: 0.08,             // 8% - production team
+  memberSkills: 0.10,     // 10% - instrument abilities
+  stageSkills: 0.10       // 10% - showmanship, crowd engagement, stage tech
 };
 
 export function calculateSongPerformance(factors: PerformanceFactors): SongPerformanceResult {
   // Normalize all factors to 0-100 scale
   const normalizedSongQuality = Math.min(100, (factors.songQuality / 1000) * 100);
   const normalizedMemberSkills = Math.min(100, (factors.memberSkillAverage / 150) * 100);
+  const normalizedStageSkills = Math.min(100, factors.stageSkillAverage ?? 50);
   
   // Calculate individual contributions
   const songQualityContrib = normalizedSongQuality * WEIGHTS.songQuality;
@@ -46,6 +51,7 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
   const equipmentContrib = factors.equipmentQuality * WEIGHTS.equipment;
   const crewContrib = factors.crewSkillLevel * WEIGHTS.crew;
   const memberSkillsContrib = normalizedMemberSkills * WEIGHTS.memberSkills;
+  const stageSkillsContrib = normalizedStageSkills * WEIGHTS.stageSkills;
   
   // Calculate weighted average (0-100 scale)
   const baseScore = 
@@ -54,7 +60,8 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
     chemistryContrib +
     equipmentContrib +
     crewContrib +
-    memberSkillsContrib;
+    memberSkillsContrib +
+    stageSkillsContrib;
   
   // Venue capacity bonus/penalty
   let capacityMultiplier = 1.0;
@@ -89,17 +96,16 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
     positionMultiplier = 1.05; // Crowd is warmed up
   }
   
-  // Random event chance (20%) - can significantly swing the score
+  // Random event chance — improvisation skill reduces bad rolls, increases good ones
+  const improvLevel = factors.improvisationLevel ?? 0;
+  const improvShift = improvLevel * 0.002; // 0 to 0.04 shift toward positive events
   let eventMultiplier = 1.0;
   const eventRoll = Math.random();
-  if (eventRoll < 0.08) {
-    // 8% chance of amazing moment (+15-25%)
+  if (eventRoll < 0.08 + improvShift) {
     eventMultiplier = 1.15 + Math.random() * 0.10;
-  } else if (eventRoll < 0.14) {
-    // 6% chance of minor issue (-10-20%)
+  } else if (eventRoll < 0.14 - improvShift) {
     eventMultiplier = 0.80 + Math.random() * 0.10;
-  } else if (eventRoll < 0.20) {
-    // 6% chance of crowd singalong/special moment (+8-15%)
+  } else if (eventRoll < 0.20 + improvShift) {
     eventMultiplier = 1.08 + Math.random() * 0.07;
   }
   
@@ -133,7 +139,8 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
       chemistry: (chemistryContrib / 100) * 25,
       equipment: (equipmentContrib / 100) * 25,
       crew: (crewContrib / 100) * 25,
-      memberSkills: (memberSkillsContrib / 100) * 25
+      memberSkills: (memberSkillsContrib / 100) * 25,
+      stageSkills: (stageSkillsContrib / 100) * 25
     },
     crowdResponse
   };

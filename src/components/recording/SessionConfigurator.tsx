@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Clock, DollarSign, TrendingUp, Music2, Users, Wallet, AlertCircle, CalendarIcon } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Music2, Users, Wallet, AlertCircle, CalendarIcon, Sparkles } from "lucide-react";
 import { useCreateRecordingSession, calculateRecordingQuality, ORCHESTRA_OPTIONS, type RecordingProducer } from "@/hooks/useRecordingData";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,8 @@ import { STUDIO_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
 import { useStudioAvailability } from "@/hooks/useStudioAvailability";
 import { isSlotInPast } from "@/utils/timeSlotValidation";
 import { cn } from "@/lib/utils";
+import { calculateRecordingSkillBonus, type RecordingSkillBonus } from "@/utils/skillRecordingBonus";
+import type { SkillProgressEntry } from "@/utils/skillGearPerformance";
 
 interface SessionConfiguratorProps {
   userId: string;
@@ -43,7 +45,11 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     penalty: number;
   } | null>(null);
   const [showRehearsalWarning, setShowRehearsalWarning] = useState(false);
-  
+  const [skillBonus, setSkillBonus] = useState<RecordingSkillBonus>({
+    multiplier: 1.0,
+    totalBonusPercent: 0,
+    breakdown: { mixing: 0, daw: 0, production: 0, vocalProduction: 0, theory: 0 },
+  });
   const createSession = useCreateRecordingSession();
 
   // Fetch slot availability
@@ -89,11 +95,24 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('cash')
+        .select('cash, id')
         .eq('user_id', userId)
         .single();
       
       setPersonalCash(profile?.cash || 0);
+
+      // Fetch player skill progress for recording bonus
+      if (profile?.id) {
+        const { data: skillData } = await supabase
+          .from('skill_progress')
+          .select('skill_slug, current_level')
+          .eq('profile_id', profile.id);
+        
+        const bonus = calculateRecordingSkillBonus(
+          (skillData || []) as SkillProgressEntry[]
+        );
+        setSkillBonus(bonus);
+      }
     };
     fetchData();
   }, [bandId, userId, song.id]);
@@ -114,7 +133,8 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     producerQualityBonus,
     durationHours,
     orchestraOption?.bonus,
-    rehearsalBonus
+    rehearsalBonus,
+    skillBonus.totalBonusPercent
   );
 
   const studioCost = studioHourlyRate * durationHours;
