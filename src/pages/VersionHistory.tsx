@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.619",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Avatar: Fixed photo upload only showing camera — now has separate 'Take Photo' and 'Upload' buttons" },
+      { type: 'fix', description: "Avatar: Fixed page reload when taking a photo on mobile (removed capture attribute from upload input)" },
+    ],
+  },
+  {
     version: "1.0.618",
     date: "2026-02-07",
     changes: [
