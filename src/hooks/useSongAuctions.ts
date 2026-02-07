@@ -131,7 +131,8 @@ export const useSongAuctions = (userId?: string) => {
         .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type")
         .eq("user_id", userId)
         .neq("ownership_type", "purchased")
-        .in("status", ["completed", "released"])
+        .in("status", ["draft", "recorded"])
+        .neq("archived", true)
         .order("title");
 
       if (error) throw error;
