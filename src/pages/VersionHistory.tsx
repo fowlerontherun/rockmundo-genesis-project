@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.624",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Underworld: Fixed items not disappearing from inventory after use — query cache invalidation mismatch corrected" },
+      { type: 'fix', description: "Underworld: Items are now strictly single-use — once used, they are consumed and removed from inventory" },
+      { type: 'feature', description: "Underworld: Cash effect now supported on consumable items (adds/removes cash on use)" },
+      { type: 'improvement', description: "Underworld: All item effects (health, energy, XP, fame, cash, skill XP) now correctly applied on use" },
+    ],
+  },
+  {
     version: "1.0.623",
     date: "2026-02-07",
     changes: [
