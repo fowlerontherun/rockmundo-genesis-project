@@ -17077,6 +17077,7 @@ export type Database = {
       profiles: {
         Row: {
           age: number
+          avatar_generation_count: number | null
           avatar_url: string | null
           bio: string | null
           cash: number | null
@@ -17122,6 +17123,7 @@ export type Database = {
         }
         Insert: {
           age?: number
+          avatar_generation_count?: number | null
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
@@ -17167,6 +17169,7 @@ export type Database = {
         }
         Update: {
           age?: number
+          avatar_generation_count?: number | null
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null

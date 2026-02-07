@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.617",
+    date: "2026-02-07",
+    changes: [
+      { type: 'feature', description: "Avatar: New AI Photo-to-Avatar system — upload a selfie to generate a stylized cartoon avatar" },
+      { type: 'feature', description: "Avatar: Genre-influenced outfits — avatars wear exaggerated outfits based on your band's genre (Metal, Hip Hop, Punk, etc.)" },
+      { type: 'feature', description: "Avatar: Manual genre override — pick any genre style for your avatar regardless of band genre" },
+      { type: 'feature', description: "Avatar: First generation is free, subsequent re-generations cost $500 in-game cash" },
+      { type: 'feature', description: "Avatar: Side-by-side preview of uploaded photo and generated avatar" },
+      { type: 'improvement', description: "Avatar: Avatar Designer page now has AI Photo Avatar and Classic Creator tabs" },
+      { type: 'improvement', description: "Avatar: Onboarding appearance step updated with AI avatar option and classic fallback" },
+    ],
+  },
+  {
     version: "1.0.616",
     date: "2026-02-07",
     changes: [
