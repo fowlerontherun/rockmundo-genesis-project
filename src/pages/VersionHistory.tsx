@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.622",
+    date: "2026-02-07",
+    changes: [
+      { type: 'feature', description: "World: Added 48 new cities across UK (Leeds, Cardiff, Brighton, Sheffield, etc.), USA (Boston, Philadelphia, Denver, DC, etc.), Europe (Paris, Belgrade, Tallinn, Porto, etc.), and rest of world (Accra, Medellín, Perth, etc.)" },
+      { type: 'feature', description: "World: 170+ new districts with unique vibes, safety ratings, music scene ratings, and rent costs for every new city" },
+      { type: 'feature', description: "World: 60+ transport routes seeded for UK internal, US East Coast corridor, European high-speed rail, and key global connections" },
+      { type: 'improvement', description: "Travel: Extended land-border connections for Baltic states, Balkans, and Central Europe (15+ new country pairs)" },
+      { type: 'improvement', description: "Travel: Updated coastal city list with 20+ newly added coastal cities for ship route availability" },
+      { type: 'fix', description: "World: Corrected is_coastal and has_train_network flags for 50+ existing cities" },
+    ],
+  },
+  {
     version: "1.0.621",
     date: "2026-02-07",
     changes: [

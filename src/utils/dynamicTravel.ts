@@ -95,24 +95,34 @@ export const TRANSPORT_MODES = {
 // Countries that share land borders/rail connections (for train routes)
 const CONNECTED_COUNTRIES: Record<string, string[]> = {
   // Europe
-  'United Kingdom': ['France', 'Belgium', 'Netherlands'], // Eurostar
+  'United Kingdom': ['France', 'Belgium', 'Netherlands', 'Ireland'], // Eurostar + ferries
   'France': ['United Kingdom', 'Belgium', 'Germany', 'Spain', 'Italy', 'Switzerland', 'Netherlands'],
   'Germany': ['France', 'Netherlands', 'Belgium', 'Austria', 'Switzerland', 'Poland', 'Czech Republic', 'Denmark'],
   'Spain': ['France', 'Portugal'],
-  'Italy': ['France', 'Switzerland', 'Austria', 'Germany'],
+  'Italy': ['France', 'Switzerland', 'Austria', 'Germany', 'Slovenia'],
   'Netherlands': ['Germany', 'Belgium', 'France', 'United Kingdom'],
   'Belgium': ['France', 'Netherlands', 'Germany', 'United Kingdom'],
-  'Austria': ['Germany', 'Italy', 'Switzerland', 'Czech Republic', 'Hungary'],
+  'Austria': ['Germany', 'Italy', 'Switzerland', 'Czech Republic', 'Hungary', 'Slovakia', 'Slovenia'],
   'Switzerland': ['France', 'Germany', 'Italy', 'Austria'],
-  'Poland': ['Germany', 'Czech Republic'],
-  'Czech Republic': ['Germany', 'Austria', 'Poland'],
-  'Sweden': ['Norway', 'Denmark'],
+  'Poland': ['Germany', 'Czech Republic', 'Slovakia', 'Lithuania'],
+  'Czech Republic': ['Germany', 'Austria', 'Poland', 'Slovakia'],
+  'Sweden': ['Norway', 'Denmark', 'Finland'],
   'Norway': ['Sweden'],
   'Denmark': ['Germany', 'Sweden'],
   'Portugal': ['Spain'],
-  'Hungary': ['Austria'],
-  'Greece': [],
-  'Ireland': [],
+  'Hungary': ['Austria', 'Slovakia', 'Romania', 'Serbia', 'Croatia', 'Slovenia'],
+  'Greece': ['Bulgaria', 'Turkey'],
+  'Ireland': ['United Kingdom'],
+  'Estonia': ['Latvia', 'Finland'],
+  'Latvia': ['Estonia', 'Lithuania'],
+  'Lithuania': ['Latvia', 'Poland'],
+  'Romania': ['Hungary', 'Bulgaria', 'Serbia'],
+  'Bulgaria': ['Romania', 'Serbia', 'Greece'],
+  'Serbia': ['Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Bosnia and Herzegovina'],
+  'Croatia': ['Slovenia', 'Hungary', 'Serbia', 'Bosnia and Herzegovina'],
+  'Slovenia': ['Italy', 'Austria', 'Hungary', 'Croatia'],
+  'Slovakia': ['Czech Republic', 'Poland', 'Austria', 'Hungary'],
+  'Finland': ['Sweden', 'Estonia', 'Russia'],
   // Asia
   'Japan': [], // Island nation - no train connections outside
   'South Korea': [], // DMZ blocks North Korea
@@ -258,17 +268,20 @@ export function getAvailableModes(
 function isDefaultCoastal(cityName: string): boolean {
   const coastalCities = [
     'London', 'Liverpool', 'Bristol', 'Glasgow', 'Edinburgh', 'Brighton',
+    'Cardiff', 'Belfast', 'Newcastle', 'Portsmouth',
     'Sydney', 'Melbourne', 'Brisbane', 'Perth',
     'Tokyo', 'Osaka', 'Yokohama', 'Fukuoka', 'Nagoya',
     'Miami', 'San Francisco', 'Seattle', 'Los Angeles', 'San Diego', 'Boston', 'New York',
+    'Houston', 'Honolulu',
     'Vancouver', 'Toronto',
     'Hong Kong', 'Singapore', 'Mumbai', 'Chennai', 'Kolkata',
-    'Rio de Janeiro', 'São Paulo', 'Buenos Aires', 'Lima',
+    'Rio de Janeiro', 'São Paulo', 'Buenos Aires', 'Lima', 'Montevideo',
     'Barcelona', 'Marseille', 'Naples', 'Venice', 'Lisbon', 'Porto',
+    'Nice', 'Bordeaux', 'Seville',
     'Athens', 'Istanbul', 'Dubai', 'Tel Aviv',
-    'Cape Town', 'Lagos', 'Cairo', 'Casablanca',
+    'Cape Town', 'Lagos', 'Cairo', 'Casablanca', 'Accra',
     'Copenhagen', 'Stockholm', 'Oslo', 'Helsinki', 'Amsterdam', 'Rotterdam',
-    'Hamburg', 'Gdansk',
+    'Hamburg', 'Gdansk', 'Gothenburg', 'Antwerp', 'Tallinn', 'Riga',
     'Shanghai', 'Shenzhen', 'Guangzhou', 'Busan', 'Taipei',
     'Bangkok', 'Ho Chi Minh City', 'Jakarta', 'Manila', 'Kuala Lumpur',
   ];
