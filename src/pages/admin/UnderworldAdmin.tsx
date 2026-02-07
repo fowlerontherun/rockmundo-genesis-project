@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Coins, Plus, TrendingUp, TrendingDown, Package, Edit, Trash2, Shuffle, History, ShoppingCart } from "lucide-react";
+import { Coins, Plus, TrendingUp, TrendingDown, Package, Edit, Trash2, Shuffle, History, ShoppingCart, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+import { 
+  UnderworldEffectsEditor, 
+  type ProductEffects, 
+  DEFAULT_EFFECTS, 
+  parseEffects, 
+  serializeEffects, 
+  getEffectLabels 
+} from "@/components/admin/UnderworldEffectsEditor";
 
 interface UnderworldProduct {
   id: string;
@@ -28,6 +36,7 @@ interface UnderworldProduct {
   effects: Record<string, number | string>;
   duration_hours: number | null;
   is_available: boolean;
+  is_legal: boolean;
   icon_name: string | null;
 }
 
@@ -46,26 +55,6 @@ const UnderworldAdmin = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Build grouped skill options from skill tree
-  const skillOptions = useMemo(() => {
-    const grouped: Record<string, { slug: string; name: string }[]> = {};
-    
-    SKILL_TREE_DEFINITIONS.forEach(def => {
-      const category = (def.metadata?.category as string) || 'Other';
-      if (!grouped[category]) grouped[category] = [];
-      grouped[category].push({
-        slug: def.slug,
-        name: def.display_name
-      });
-    });
-    
-    return Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([category, skills]) => ({
-        category,
-        skills: skills.sort((a, b) => a.name.localeCompare(b.name))
-      }));
-  }, []);
   const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
   const [editTokenDialogOpen, setEditTokenDialogOpen] = useState(false);
   const [editingToken, setEditingToken] = useState<CryptoToken | null>(null);
@@ -99,17 +88,9 @@ const UnderworldAdmin = () => {
     price_cash: 500,
     duration_hours: null as number | null,
     is_available: true,
+    is_legal: false,
     icon_name: "Package",
-    effects: {
-      health: 0,
-      energy: 0,
-      xp: 0,
-      fame: 0,
-      xp_multiplier: 0,
-      fame_multiplier: 0,
-      skill_slug: "",
-      skill_xp: 0,
-    },
+    effects: { ...DEFAULT_EFFECTS },
   });
 
   // Fetch tokens
@@ -294,17 +275,7 @@ const UnderworldAdmin = () => {
   // Product mutations
   const saveProduct = useMutation({
     mutationFn: async (productData: typeof newProduct & { id?: string }) => {
-      const effects: Record<string, number | string> = {};
-      if (productData.effects.health) effects.health = productData.effects.health;
-      if (productData.effects.energy) effects.energy = productData.effects.energy;
-      if (productData.effects.xp) effects.xp = productData.effects.xp;
-      if (productData.effects.fame) effects.fame = productData.effects.fame;
-      if (productData.effects.xp_multiplier) effects.xp_multiplier = productData.effects.xp_multiplier;
-      if (productData.effects.fame_multiplier) effects.fame_multiplier = productData.effects.fame_multiplier;
-      if (productData.effects.skill_slug && productData.effects.skill_xp) {
-        effects.skill_slug = productData.effects.skill_slug;
-        effects.skill_xp = productData.effects.skill_xp;
-      }
+      const effects = serializeEffects(productData.effects);
 
       const payload = {
         name: productData.name,
@@ -315,6 +286,7 @@ const UnderworldAdmin = () => {
         price_cash: productData.price_cash,
         duration_hours: productData.duration_hours,
         is_available: productData.is_available,
+        is_legal: productData.is_legal,
         icon_name: productData.icon_name,
         effects,
       };
@@ -381,23 +353,14 @@ const UnderworldAdmin = () => {
       price_cash: 500,
       duration_hours: null,
       is_available: true,
+      is_legal: false,
       icon_name: "Package",
-      effects: {
-        health: 0,
-        energy: 0,
-        xp: 0,
-        fame: 0,
-        xp_multiplier: 0,
-        fame_multiplier: 0,
-        skill_slug: "",
-        skill_xp: 0,
-      },
+      effects: { ...DEFAULT_EFFECTS },
     });
   };
 
   const openEditProduct = (product: UnderworldProduct) => {
     setEditingProduct(product);
-    const effects = product.effects || {};
     setNewProduct({
       name: product.name,
       description: product.description || "",
@@ -407,17 +370,9 @@ const UnderworldAdmin = () => {
       price_cash: product.price_cash || 500,
       duration_hours: product.duration_hours,
       is_available: product.is_available,
+      is_legal: product.is_legal ?? false,
       icon_name: product.icon_name || "Package",
-      effects: {
-        health: (effects.health as number) || 0,
-        energy: (effects.energy as number) || 0,
-        xp: (effects.xp as number) || 0,
-        fame: (effects.fame as number) || 0,
-        xp_multiplier: (effects.xp_multiplier as number) || 0,
-        fame_multiplier: (effects.fame_multiplier as number) || 0,
-        skill_slug: (effects.skill_slug as string) || "",
-        skill_xp: (effects.skill_xp as number) || 0,
-      },
+      effects: parseEffects(product.effects),
     });
     setProductDialogOpen(true);
   };
@@ -599,130 +554,31 @@ const UnderworldAdmin = () => {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Instant Effects</h4>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div>
-                        <Label>Health</Label>
-                        <Input
-                          type="number"
-                          value={newProduct.effects.health || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, health: parseInt(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Energy</Label>
-                        <Input
-                          type="number"
-                          value={newProduct.effects.energy || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, energy: parseInt(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label>XP</Label>
-                        <Input
-                          type="number"
-                          value={newProduct.effects.xp || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, xp: parseInt(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Fame</Label>
-                        <Input
-                          type="number"
-                          value={newProduct.effects.fame || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, fame: parseInt(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
+                  {/* Legal checkbox */}
+                  <div className="flex items-center gap-3 rounded-md border border-border p-3">
+                    <Checkbox
+                      id="is_legal"
+                      checked={newProduct.is_legal}
+                      onCheckedChange={(checked) => setNewProduct({ ...newProduct, is_legal: !!checked })}
+                    />
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      <Label htmlFor="is_legal" className="cursor-pointer">
+                        Legal Item
+                      </Label>
                     </div>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {newProduct.is_legal ? "Visible in legal stores" : "Underworld only"}
+                    </span>
                   </div>
 
+                  {/* Effects Editor */}
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Multiplier Effects (for boosters)</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>XP Multiplier (1.5 = +50%)</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={newProduct.effects.xp_multiplier || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, xp_multiplier: parseFloat(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Fame Multiplier (1.5 = +50%)</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={newProduct.effects.fame_multiplier || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, fame_multiplier: parseFloat(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Skill XP Effect (for skill books)</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Skill Slug</Label>
-                        <Select
-                          value={newProduct.effects.skill_slug as string || ""}
-                          onValueChange={(v) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, skill_slug: v === "__none__" ? "" : v }
-                          })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a skill..." />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            <SelectItem value="__none__">None</SelectItem>
-                            {skillOptions.map(group => (
-                              <React.Fragment key={group.category}>
-                                <SelectItem disabled value={`__group_${group.category}`} className="font-semibold text-muted-foreground">
-                                  ── {group.category} ──
-                                </SelectItem>
-                                {group.skills.map(skill => (
-                                  <SelectItem key={skill.slug} value={skill.slug}>
-                                    {skill.name}
-                                  </SelectItem>
-                                ))}
-                              </React.Fragment>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Skill XP Amount</Label>
-                        <Input
-                          type="number"
-                          value={newProduct.effects.skill_xp || ""}
-                          onChange={(e) => setNewProduct({
-                            ...newProduct,
-                            effects: { ...newProduct.effects, skill_xp: parseInt(e.target.value) || 0 }
-                          })}
-                        />
-                      </div>
-                    </div>
+                    <h4 className="font-semibold mb-3">Effects</h4>
+                    <UnderworldEffectsEditor
+                      effects={newProduct.effects}
+                      onChange={(effects) => setNewProduct({ ...newProduct, effects })}
+                    />
                   </div>
 
                   <Button 
@@ -753,21 +609,14 @@ const UnderworldAdmin = () => {
                     <TableHead>Rarity</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Effects</TableHead>
+                    <TableHead>Legal</TableHead>
                     <TableHead>Available</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {products.map((product) => {
-                    const effects = product.effects || {};
-                    const effectsList: string[] = [];
-                    if (effects.health) effectsList.push(`+${effects.health} HP`);
-                    if (effects.energy) effectsList.push(`+${effects.energy} EN`);
-                    if (effects.xp) effectsList.push(`+${effects.xp} XP`);
-                    if (effects.fame) effectsList.push(`+${effects.fame} Fame`);
-                    if (effects.xp_multiplier) effectsList.push(`${((effects.xp_multiplier as number) - 1) * 100}% XP`);
-                    if (effects.fame_multiplier) effectsList.push(`${((effects.fame_multiplier as number) - 1) * 100}% Fame`);
-                    if (effects.skill_xp) effectsList.push(`+${effects.skill_xp} Skill XP`);
+                    const effectsList = getEffectLabels(product.effects || {});
 
                     return (
                       <TableRow key={product.id}>
@@ -788,6 +637,13 @@ const UnderworldAdmin = () => {
                               <Badge variant="outline" className="text-xs">+{effectsList.length - 3}</Badge>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {product.is_legal ? (
+                            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Switch

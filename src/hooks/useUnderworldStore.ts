@@ -255,6 +255,21 @@ export const useUnderworldStore = () => {
         } else if (effects.all_multiplier) {
           boostType = "all_multiplier";
           boostValue = effects.all_multiplier as number;
+        } else if (effects.gig_quality_boost) {
+          boostType = "gig_quality_boost";
+          boostValue = effects.gig_quality_boost as number;
+        } else if (effects.gig_earnings_boost) {
+          boostType = "gig_earnings_boost";
+          boostValue = effects.gig_earnings_boost as number;
+        } else if (effects.recording_quality_boost) {
+          boostType = "recording_quality_boost";
+          boostValue = effects.recording_quality_boost as number;
+        } else if (effects.songwriting_quality_boost) {
+          boostType = "songwriting_quality_boost";
+          boostValue = effects.songwriting_quality_boost as number;
+        } else if (effects.creativity_boost) {
+          boostType = "creativity_boost";
+          boostValue = effects.creativity_boost as number;
         }
 
         const { error: boostError } = await supabase
