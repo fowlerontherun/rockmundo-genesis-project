@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.636",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Song Marketplace: Fixed song title, artist, and quality not visible to buyers — added RLS policy so marketplace-listed songs are readable by all players" },
+    ],
+  },
+  {
     version: "1.0.635",
     date: "2026-02-07",
     changes: [
