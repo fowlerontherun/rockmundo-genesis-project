@@ -1,48 +1,87 @@
 
-# v1.0.618 — Delete Unused Edge Functions and Deploy AI Avatar
+
+# v1.0.622 -- Massive World Expansion: Cities, Districts, and Transport Routes
 
 ## Overview
 
-Delete 6 confirmed-unused edge functions to free up deployment slots, then deploy the `generate-photo-avatar` function that was blocked by the function limit. Bump version to 1.0.618.
+A large-scale seed migration to dramatically expand the game world with more countries, cities (especially in the UK, USA, and Europe), districts for all new cities, and transport routes for key corridors.
 
-## Step 1: Delete Unused Edge Functions
+## What's Being Added
 
-The following 6 functions have **zero references** in the frontend (`src/`) and are **not listed** in `supabase/config.toml`. They are fully orphaned:
+### New Cities (50+ new cities)
 
-| Function | Reason for removal |
+**United Kingdom (8 new, bringing total from 7 to 15)**
+- Leeds, Cardiff, Brighton, Nottingham, Newcastle, Belfast, Portsmouth, Sheffield
+
+**USA (10 new, bringing total from ~12 unique to ~22)**
+- Boston, Philadelphia, Denver, Minneapolis, Dallas, Houston, San Diego, Phoenix, Washington DC, Honolulu
+
+**Europe (20+ new cities across new and existing countries)**
+- Gothenburg (Sweden), Antwerp (Belgium), Seville (Spain), Porto (Portugal), Naples (Italy), Florence (Italy), Gdansk (Poland), Tallinn (Estonia), Riga (Latvia), Vilnius (Lithuania), Bucharest (Romania), Sofia (Bulgaria), Belgrade (Serbia), Zagreb (Croatia), Ljubljana (Slovenia), Bratislava (Slovakia), Nice (France), Bordeaux (France), Toulouse (France), Edinburgh festival data update
+
+**Rest of World (10+ new cities filling gaps)**
+- Kuala Lumpur (Malaysia), Ho Chi Minh City (Vietnam), Accra (Ghana), Marrakech (Morocco), Casablanca (Morocco), Addis Ababa (Ethiopia), Medell&iacute;n (Colombia), Montevideo (Uruguay), Perth (Australia), Brisbane (Australia)
+
+### Districts for All New Cities
+
+Each new city will receive 3-5 unique, thematically appropriate districts in the `city_districts` table with:
+- Name, description, vibe
+- Safety rating, music scene rating, rent cost
+- Tailored to reflect each city's real-world music and cultural identity
+
+### Transport Routes for Key Corridors
+
+Seed `city_transport_routes` with popular/important connections:
+- **UK internal**: London to/from Manchester, Birmingham, Edinburgh, Liverpool, Glasgow, Bristol, Leeds, Brighton, Cardiff, Newcastle (bus, train, plane)
+- **US East Coast corridor**: NYC to/from Boston, Philadelphia, Washington DC (bus, train, plane)
+- **European high-speed rail**: London-Paris, Paris-Brussels, Paris-Amsterdam, Berlin-Prague, Madrid-Barcelona, Rome-Milan
+- **Other key routes**: Sydney-Melbourne, Tokyo-Osaka, Toronto-Montreal
+
+### Data Fixes
+
+- Remove duplicate city entries for Atlanta, Detroit, Nashville (keeping the one with more data)
+- Set `is_coastal` and `has_train_network` flags correctly for all new cities
+
+## Technical Details
+
+### Migration File
+
+A single new SQL migration file will be created at:
+`supabase/migrations/[timestamp]_world_expansion_seed.sql`
+
+Structure:
+1. **Deduplicate existing cities** -- delete rows with duplicate names, keeping the most complete entry
+2. **Insert new cities** with `ON CONFLICT (name) DO UPDATE` to safely upsert
+3. **Insert districts** using subqueries to look up city IDs by name
+4. **Insert transport routes** using subqueries for city ID lookups
+5. **Update coastal/train flags** for accuracy
+
+### Version Bump
+
+- `src/components/VersionHeader.tsx` -- bump to `1.0.622`
+- `src/pages/VersionHistory.tsx` -- add changelog entry documenting the world expansion
+
+### Connected Countries Update
+
+- `src/utils/dynamicTravel.ts` -- extend the `CONNECTED_COUNTRIES` map with new country connections (Estonia-Latvia, Latvia-Lithuania, Croatia-Slovenia, Serbia-Bulgaria, Romania-Hungary, etc.)
+
+### Coastal Cities Update
+
+- `src/utils/dynamicTravel.ts` -- add new coastal cities to the `isDefaultCoastal` fallback list (Brighton, Cardiff, Belfast, Newcastle, Portsmouth, Naples, Nice, Bordeaux, etc.)
+
+### Files Modified
+
+| File | Change |
 |---|---|
-| `generate-character-sprite` | Replaced by `generate-photo-avatar` (v1.0.617) |
-| `generate-gig-commentary` | No frontend or backend callers |
-| `manual-complete-gig` | Superseded by `complete-gig` |
-| `complete-festival-performance` | No frontend or backend callers |
-| `create-inbox-message` | No external callers found |
-| `grant-vip` | No frontend or stripe-webhook callers |
+| `supabase/migrations/[new]_world_expansion_seed.sql` | New migration with all cities, districts, routes |
+| `src/utils/dynamicTravel.ts` | Extend CONNECTED_COUNTRIES and coastal city list |
+| `src/components/VersionHeader.tsx` | Version to 1.0.622 |
+| `src/pages/VersionHistory.tsx` | Changelog entry |
 
-**Actions:**
-- Delete the code folders for all 6 functions from `supabase/functions/`
-- Call the Supabase delete tool to remove deployed versions from the platform
+### Scale Estimate
 
-## Step 2: Deploy `generate-photo-avatar`
+- ~50-60 new cities
+- ~200+ new districts (3-5 per new city)
+- ~60-80 new transport route entries (bidirectional pairs)
+- ~15 new country connections in the travel logic
 
-Once slots are freed, deploy the edge function that was created in v1.0.617 but failed due to the function limit.
-
-## Step 3: Version Bump to 1.0.618
-
-- Update `src/components/VersionHeader.tsx` version string to `1.0.618`
-- Add a changelog entry in `src/pages/VersionHistory.tsx` documenting:
-  - Cleanup of 6 unused edge functions
-  - Successful deployment of the AI Photo Avatar generator
-
-## Files to Delete
-
-- `supabase/functions/generate-character-sprite/` (entire directory)
-- `supabase/functions/generate-gig-commentary/` (entire directory)
-- `supabase/functions/manual-complete-gig/` (entire directory)
-- `supabase/functions/complete-festival-performance/` (entire directory)
-- `supabase/functions/create-inbox-message/` (entire directory)
-- `supabase/functions/grant-vip/` (entire directory)
-
-## Files to Modify
-
-- `src/components/VersionHeader.tsx` — version to `1.0.618`
-- `src/pages/VersionHistory.tsx` — add changelog entry
