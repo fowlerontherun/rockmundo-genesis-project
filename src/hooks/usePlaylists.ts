@@ -79,6 +79,73 @@ export const usePlaylists = (userId?: string) => {
     enabled: !!userId,
   });
 
+  // Auto-process a submission (simulate curator review)
+  const processSubmission = async (submissionId: string, playlistId: string, releaseId: string) => {
+    // Get the song's quality score
+    const { data: releaseData } = await supabase
+      .from("song_releases")
+      .select("song_id, songs(quality_score, genre)")
+      .eq("id", releaseId)
+      .maybeSingle();
+
+    const qualityScore = (releaseData?.songs as any)?.quality_score || 50;
+
+    // Get playlist acceptance criteria
+    const playlist = playlists.find(p => p.id === playlistId);
+    const minQuality = playlist?.acceptance_criteria?.min_quality || 40;
+    
+    // Calculate acceptance probability:
+    // Higher quality song relative to min = higher chance
+    // Bigger playlists are harder to get into
+    const qualityFactor = Math.min(1, qualityScore / Math.max(minQuality, 1));
+    const sizePenalty = playlist ? Math.max(0.3, 1 - (playlist.follower_count / 5000000)) : 0.5;
+    const acceptChance = Math.min(0.85, qualityFactor * sizePenalty * 0.8 + 0.15);
+    
+    // Random delay to simulate "curator review time" (1-3 seconds)
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+    
+    const accepted = Math.random() < acceptChance;
+    const status = accepted ? "accepted" : "rejected";
+    
+    const { error } = await supabase
+      .from("playlist_submissions")
+      .update({ 
+        submission_status: status,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", submissionId);
+
+    if (error) {
+      console.error("Error processing submission:", error);
+      return;
+    }
+
+    // If accepted, boost the release streams
+    if (accepted && playlist) {
+      const boostStreams = Math.floor(playlist.follower_count * 0.01 * (playlist.boost_multiplier || 1));
+      const boostRevenue = Number((boostStreams * 0.004).toFixed(2));
+      
+      await supabase
+        .from("song_releases")
+        .update({
+          total_streams: (releaseData as any)?.total_streams || 0 + boostStreams,
+          total_revenue: (releaseData as any)?.total_revenue || 0 + boostRevenue,
+        })
+        .eq("id", releaseId);
+    }
+
+    // Refresh submissions
+    queryClient.invalidateQueries({ queryKey: ["playlist-submissions", userId] });
+
+    toast({
+      title: accepted ? "🎉 Playlist Accepted!" : "Playlist Rejected",
+      description: accepted 
+        ? `Your song was added to "${playlist?.playlist_name}"! Expect a stream boost.`
+        : `"${playlist?.playlist_name}" didn't accept this submission. Try another playlist or improve your song quality.`,
+      variant: accepted ? "default" : "destructive",
+    });
+  };
+
   // Submit song to playlist - requires a song_release ID
   const submitToPlaylist = useMutation({
     mutationFn: async ({ playlistId, releaseId }: { playlistId: string; releaseId: string }) => {
@@ -126,14 +193,16 @@ export const usePlaylists = (userId?: string) => {
       }
 
       // Insert submission record
-      const { error: insertError } = await supabase
+      const { data: submission, error: insertError } = await supabase
         .from("playlist_submissions")
         .insert({
           playlist_id: playlistId,
           release_id: releaseId,
           user_id: userId,
           submission_status: "pending",
-        });
+        })
+        .select("id")
+        .single();
 
       if (insertError) {
         // Refund on failure
@@ -158,16 +227,19 @@ export const usePlaylists = (userId?: string) => {
         },
       });
 
-      return { playlistId, releaseId };
+      return { playlistId, releaseId, submissionId: submission.id };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["playlist-submissions", userId] });
       queryClient.invalidateQueries({ queryKey: ["game-profile"] });
-      const playlist = playlists.find(p => p.id === variables.playlistId);
+      const playlist = playlists.find(p => p.id === data.playlistId);
       toast({
-        title: "Submission Successful",
-        description: `Your song has been submitted to "${playlist?.playlist_name}". You'll be notified of the curator's decision.`,
+        title: "Submission Sent! 📨",
+        description: `Your song was submitted to "${playlist?.playlist_name}". The curator is reviewing it...`,
       });
+
+      // Auto-process the submission after a short delay (simulates curator review)
+      processSubmission(data.submissionId, data.playlistId, data.releaseId);
     },
     onError: (error: Error) => {
       toast({
@@ -178,6 +250,16 @@ export const usePlaylists = (userId?: string) => {
     },
   });
 
+  // Also process any existing pending submissions on load
+  const processPendingSubmissions = useMutation({
+    mutationFn: async () => {
+      const pendingSubmissions = userSubmissions.filter(s => s.submission_status === "pending");
+      for (const sub of pendingSubmissions) {
+        await processSubmission(sub.id, sub.playlist_id, sub.release_id);
+      }
+    },
+  });
+
   return {
     playlists,
     userSubmissions,
@@ -185,5 +267,7 @@ export const usePlaylists = (userId?: string) => {
     isLoadingSubmissions,
     submitToPlaylist: submitToPlaylist.mutate,
     isSubmitting: submitToPlaylist.isPending,
+    processPending: processPendingSubmissions.mutate,
+    isProcessingPending: processPendingSubmissions.isPending,
   };
 };

@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.633",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Streaming: Fixed listener demographics, average listeners, completion rate, and skip rate always showing empty — data now generated with realistic values" },
+      { type: 'fix', description: "Streaming: Backfilled all 1337 existing analytics rows with demographics (age groups, regions), skip rates, completion rates, and listener counts" },
+      { type: 'feature', description: "Playlists: Submissions are now auto-processed by curators — acceptance based on song quality vs playlist criteria, with stream boosts on acceptance" },
+      { type: 'fix', description: "Playlists: Release selector now correctly filters to the player's own songs and band songs instead of showing all releases" },
+      { type: 'feature', description: "Playlists: Added 'Check Status' button to process any pending submissions that weren't auto-reviewed" },
+    ],
+  },
+  {
     version: "1.0.632",
     date: "2026-02-07",
     changes: [
