@@ -45,11 +45,7 @@ const GENRE_STYLE_DESCRIPTIONS: Record<string, string> = {
   Goth: "All black Victorian, dark makeup, silver jewelry",
 };
 
-interface AiAvatarCreatorProps {
-  onSwitchToClassic?: () => void;
-}
-
-export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
+export function AiAvatarCreator() {
   const { user } = useAuth();
   const { data: band } = useUserBand();
   const queryClient = useQueryClient();
@@ -60,6 +56,7 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
   const [generatedAvatar, setGeneratedAvatar] = useState<string | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
 
   const activeGenre = selectedGenre || band?.genre || "Rock";
@@ -113,6 +110,28 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
     // Reset input so same file can be re-selected
     e.target.value = "";
   }, [processFile]);
+
+  const handleSaveAvatar = async () => {
+    if (!generatedAvatar || !user?.id) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: generatedAvatar })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["profile-avatar"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Avatar saved to your profile!");
+    } catch (err) {
+      console.error("Save avatar error:", err);
+      toast.error("Failed to save avatar. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!uploadedPhoto || !user?.id) return;
@@ -367,26 +386,33 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
             )}
           </Button>
 
+          {generatedAvatar && (
+            <Button
+              onClick={handleSaveAvatar}
+              disabled={isSaving}
+              variant="secondary"
+              className="w-full"
+              size="lg"
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save as Profile Avatar
+                </>
+              )}
+            </Button>
+          )}
+
           {!canAfford && cost > 0 && (
             <p className="text-xs text-destructive text-center">
               Not enough cash. You need ${cost} to regenerate.
             </p>
           )}
-        </div>
-      )}
-
-      {/* Switch to Classic */}
-      {onSwitchToClassic && (
-        <div className="flex justify-center pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSwitchToClassic}
-            className="text-muted-foreground text-xs"
-          >
-            <Palette className="mr-1.5 h-3 w-3" />
-            Use Classic Avatar Creator
-          </Button>
         </div>
       )}
     </div>
