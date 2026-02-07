@@ -54,6 +54,7 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
   const { data: band } = useUserBand();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
   const [generatedAvatar, setGeneratedAvatar] = useState<string | null>(null);
@@ -83,10 +84,7 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
   const cost = generationCount > 0 ? 500 : 0;
   const canAfford = cost === 0 || (profile?.cash ?? 0) >= cost;
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
@@ -102,8 +100,19 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
       setUploadedPhoto(reader.result as string);
       setGeneratedAvatar(null);
     };
+    reader.onerror = () => {
+      toast.error("Failed to read image file");
+    };
     reader.readAsDataURL(file);
   }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processFile(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  }, [processFile]);
 
   const handleGenerate = async () => {
     if (!uploadedPhoto || !user?.id) return;
@@ -182,8 +191,17 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
       {/* Upload Zone */}
       <Card className="border-dashed border-2 border-border bg-card/50">
         <CardContent className="p-6">
+          {/* File upload input - NO capture attribute so gallery/files appear */}
           <input
             ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          {/* Camera capture input - separate with capture attribute */}
+          <input
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="user"
@@ -192,12 +210,9 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
           />
 
           {!uploadedPhoto ? (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex flex-col items-center gap-4 py-8 text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <div className="w-full flex flex-col items-center gap-4 py-8">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Camera className="h-8 w-8 text-primary" />
+                <ImageIcon className="h-8 w-8 text-primary" />
               </div>
               <div className="text-center">
                 <p className="font-medium text-foreground">Upload Your Photo</p>
@@ -205,15 +220,23 @@ export function AiAvatarCreator({ onSwitchToClassic }: AiAvatarCreatorProps) {
                   Take a selfie or upload a photo to create your avatar
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs">
-                  <Camera className="mr-1 h-3 w-3" /> Camera
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Upload className="mr-1 h-3 w-3" /> Upload
-                </Badge>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera className="mr-1.5 h-4 w-4" /> Take Photo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-1.5 h-4 w-4" /> Upload
+                </Button>
               </div>
-            </button>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
