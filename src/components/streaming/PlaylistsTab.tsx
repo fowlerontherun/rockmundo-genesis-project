@@ -16,14 +16,22 @@ interface PlaylistsTabProps {
 
 export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
   const { user } = useAuth();
-  const { playlists, userSubmissions, isLoadingPlaylists, isLoadingSubmissions, submitToPlaylist, isSubmitting } = usePlaylists(user?.id);
+  const { playlists, userSubmissions, isLoadingPlaylists, isLoadingSubmissions, submitToPlaylist, isSubmitting, processPending, isProcessingPending } = usePlaylists(user?.id);
   const [selectedRelease, setSelectedRelease] = useState<string>("");
 
   // Fetch user's active streaming releases (song_releases) - these are what get submitted
   const { data: userReleases = [], isLoading: isLoadingReleases } = useQuery({
     queryKey: ["user-streaming-releases", userId],
     queryFn: async () => {
-      const { data } = await supabase
+      // First get user's band IDs
+      const { data: bandMembers } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("user_id", userId);
+      
+      const bandIds = bandMembers?.map(b => b.band_id) || [];
+
+      let query = supabase
         .from("song_releases")
         .select(`
           id,
@@ -32,10 +40,16 @@ export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
         `)
         .eq("release_type", "streaming")
         .eq("is_active", true);
-      
-      // Filter to user's songs
-      const filtered = (data || []).filter((r: any) => r.song?.id);
-      return filtered;
+
+      // Filter to user's own releases or their band's releases
+      if (bandIds.length > 0) {
+        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+      } else {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data } = await query;
+      return (data || []).filter((r: any) => r.song?.id);
     },
     enabled: !!userId,
   });
@@ -144,8 +158,18 @@ export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
         <Skeleton className="h-32 w-full" />
       ) : userSubmissions.length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Your Submissions</CardTitle>
+            {userSubmissions.some(s => s.submission_status === 'pending') && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => processPending()}
+                disabled={isProcessingPending}
+              >
+                {isProcessingPending ? "Processing..." : "Check Status"}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

@@ -72,12 +72,23 @@ Deno.serve(async (req) => {
     const marketMultiplier = Math.max(1, Math.min(5, 100 / Math.max(activeBandCount || 100, 20)));
     console.log(`Stream market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
+    const AGE_GROUPS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
+    const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ', 'Middle East', 'Africa', 'South East Asia'];
+
     for (const release of streamingReleases || []) {
       try {
         const baseStreams = Math.floor(Math.random() * 4900) + 100;
         const dailyStreams = Math.floor(baseStreams * marketMultiplier);
         // Use decimal revenue instead of floor to avoid $0 at low stream counts
         const dailyRevenue = Number((dailyStreams * 0.004).toFixed(2));
+
+        // Generate realistic listener metrics
+        const listenerRatio = 0.4 + Math.random() * 0.4; // 40-80% unique listeners
+        const uniqueListeners = Math.max(1, Math.floor(dailyStreams * listenerRatio));
+        const skipRate = Number((10 + Math.random() * 25).toFixed(1)); // 10-35%
+        const completionRate = Number((55 + Math.random() * 35).toFixed(1)); // 55-90%
+        const ageGroup = AGE_GROUPS[Math.floor(Math.random() * AGE_GROUPS.length)];
+        const region = REGIONS[Math.floor(Math.random() * REGIONS.length)];
 
         const { error: updateError } = await supabase
           .from('song_releases')
@@ -97,6 +108,11 @@ Deno.serve(async (req) => {
           daily_streams: dailyStreams,
           daily_revenue: Math.floor(dailyRevenue), // Convert to integer for DB column
           platform_id: release.platform_id,
+          unique_listeners: uniqueListeners,
+          skip_rate: skipRate,
+          completion_rate: completionRate,
+          listener_age_group: ageGroup,
+          listener_region: region,
         });
 
         // Update song fame based on streams (1 fame per 1000 streams)
