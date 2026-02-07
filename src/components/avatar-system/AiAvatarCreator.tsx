@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { Camera, Upload, Sparkles, RefreshCw, Save, Palette, ChevronDown, ImageIcon } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Camera, Upload, Sparkles, RefreshCw, Save, Palette, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,46 @@ const GENRE_STYLE_DESCRIPTIONS: Record<string, string> = {
   Goth: "All black Victorian, dark makeup, silver jewelry",
 };
 
+/**
+ * Resize and compress an image to ensure it's within the AI gateway's limits.
+ * Camera photos can be 8-12MB raw which becomes even larger as base64.
+ * This resizes to max 1024px and compresses to JPEG ~0.8 quality.
+ */
+function compressImage(dataUrl: string, maxSize = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+
+      // Scale down if larger than maxSize
+      if (width > maxSize || height > maxSize) {
+        const ratio = Math.min(maxSize / width, maxSize / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not create canvas context"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Compress to JPEG at 0.8 quality — keeps base64 small
+      const compressed = canvas.toDataURL("image/jpeg", 0.8);
+      console.log(
+        `[AiAvatar] Compressed image: ${Math.round(dataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB (${width}x${height})`
+      );
+      resolve(compressed);
+    };
+    img.onerror = () => reject(new Error("Failed to load image for compression"));
+    img.src = dataUrl;
+  });
+}
+
 export function AiAvatarCreator() {
   const { user } = useAuth();
   const { data: band } = useUserBand();
@@ -77,12 +117,19 @@ export function AiAvatarCreator() {
     enabled: !!user?.id,
   });
 
+  // Restore saved avatar when profile loads (persistence fix)
+  useEffect(() => {
+    if (profile?.avatar_url && !generatedAvatar && !uploadedPhoto) {
+      setGeneratedAvatar(profile.avatar_url);
+    }
+  }, [profile?.avatar_url]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const generationCount = profile?.avatar_generation_count ?? 0;
   const cost = generationCount > 0 ? 500 : 0;
   const canAfford = cost === 0 || (profile?.cash ?? 0) >= cost;
 
-  const processFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
+  const processFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/") && !file.name.match(/\.(heic|heif)$/i)) {
       toast.error("Please select an image file");
       return;
     }
@@ -93,9 +140,19 @@ export function AiAvatarCreator() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setUploadedPhoto(reader.result as string);
-      setGeneratedAvatar(null);
+    reader.onload = async () => {
+      try {
+        const rawDataUrl = reader.result as string;
+        // Compress to ensure consistent size for both camera & upload
+        const compressed = await compressImage(rawDataUrl);
+        setUploadedPhoto(compressed);
+        setGeneratedAvatar(null);
+      } catch (err) {
+        console.error("[AiAvatar] Compression error:", err);
+        // Fallback: use raw image if compression fails
+        setUploadedPhoto(reader.result as string);
+        setGeneratedAvatar(null);
+      }
     };
     reader.onerror = () => {
       toast.error("Failed to read image file");
@@ -144,7 +201,6 @@ export function AiAvatarCreator() {
     setIsGenerating(true);
     setGenerationProgress(10);
 
-    // Simulate progress
     const progressInterval = setInterval(() => {
       setGenerationProgress((prev) => {
         if (prev >= 85) return prev;
@@ -164,7 +220,6 @@ export function AiAvatarCreator() {
       clearInterval(progressInterval);
 
       if (response.error) {
-        // Check for specific HTTP error codes
         const status = (response.error as any)?.status;
         if (status === 429) {
           toast.error("AI service is busy. Please try again in a moment.");
@@ -186,7 +241,6 @@ export function AiAvatarCreator() {
       setGenerationProgress(100);
       setGeneratedAvatar(data.avatarUrl);
 
-      // Invalidate profile queries to refresh count/cash
       queryClient.invalidateQueries({ queryKey: ["profile-avatar"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
@@ -205,8 +259,30 @@ export function AiAvatarCreator() {
     }
   };
 
+  // Determine if we have a saved avatar but no new photo yet (returning user state)
+  const hasSavedAvatar = !!generatedAvatar && !uploadedPhoto;
+
   return (
     <div className="space-y-6">
+      {/* Current Avatar Display (when returning to page with saved avatar) */}
+      {hasSavedAvatar && (
+        <Card className="border-border bg-card/50">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Current Avatar</p>
+              <div className="w-40 h-52 overflow-hidden rounded-lg border border-border bg-muted">
+                <img
+                  src={generatedAvatar}
+                  alt="Current avatar"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">Upload a new photo to regenerate</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Upload Zone */}
       <Card className="border-dashed border-2 border-border bg-card/50">
         <CardContent className="p-6">
@@ -234,7 +310,9 @@ export function AiAvatarCreator() {
                 <ImageIcon className="h-8 w-8 text-primary" />
               </div>
               <div className="text-center">
-                <p className="font-medium text-foreground">Upload Your Photo</p>
+                <p className="font-medium text-foreground">
+                  {hasSavedAvatar ? "Upload a New Photo" : "Upload Your Photo"}
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Take a selfie or upload a photo to create your avatar
                 </p>
@@ -303,7 +381,7 @@ export function AiAvatarCreator() {
                 size="sm"
                 onClick={() => {
                   setUploadedPhoto(null);
-                  setGeneratedAvatar(null);
+                  setGeneratedAvatar(profile?.avatar_url ?? null);
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
                 className="text-muted-foreground"
