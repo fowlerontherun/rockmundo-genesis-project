@@ -157,7 +157,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
       crewSkillLevel,
       memberSkillAverage,
       venueCapacityUsed,
-      gearReliabilityBonus: gearEffects.reliabilityStability
+      gearReliabilityBonus: gearEffects.reliabilityStability,
+      stageSkillAverage: 50, // Default baseline; full skill fetch would add latency
+      improvisationLevel: 0,
     };
 
     const result = calculateSongPerformance(factors);

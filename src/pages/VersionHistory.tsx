@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.625",
+    date: "2026-02-07",
+    changes: [
+      { type: 'improvement', description: "Skills: Removed 3 duplicate skill tracks (Singing → Vocal Performance, Live Looping → Loop Station, Vocal FX → Vocal Production)" },
+      { type: 'feature', description: "Skills: Added Rapping Mastery tier for complete 3-tier progression" },
+      { type: 'feature', description: "Skills: 5 new skill categories — Music Theory & Ear Training, Music Business & Industry, Improvisation, Audience Psychology, Music Health & Endurance" },
+      { type: 'feature', description: "Recording: Player skills (mixing, DAW, production, theory) now boost recording quality by up to 30%" },
+      { type: 'feature', description: "Rehearsals: Skill-based efficiency — higher instrument and theory skills mean faster familiarity gains (up to 1.6x)" },
+      { type: 'feature', description: "Gigs: Stage skills (showmanship, crowd engagement, stage tech) now contribute 10% to gig performance alongside instrument skills" },
+      { type: 'feature', description: "Gigs: Improvisation skill reduces chance of bad performance rolls and increases chance of great moments" },
+    ],
+  },
+  {
     version: "1.0.624",
     date: "2026-02-07",
     changes: [

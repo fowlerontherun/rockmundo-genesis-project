@@ -58,9 +58,7 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
   "Vocals": [
     "instruments_basic_vocal_performance",
     "instruments_professional_vocal_performance",
-    "instruments_mastery_vocal_performance",
-    "instruments_basic_singing",
-    "instruments_professional_singing"
+    "instruments_mastery_vocal_performance"
   ],
   "Lead Vocals": [
     "instruments_basic_vocal_performance",
@@ -140,7 +138,7 @@ export const EQUIPMENT_SKILL_CATEGORIES: Record<string, string[]> = {
   "synth": ["analog_synth", "digital_synth", "eurorack"],
   "drums": ["rock_drums", "jazz_drums", "electronic_drums"],
   "percussion": ["latin_percussion", "african_drums", "cajon", "tabla"],
-  "microphone": ["vocal_performance", "singing"],
+  "microphone": ["vocal_performance"],
   "wind": ["flute", "clarinet", "saxophone"],
   "brass": ["trumpet", "trombone", "french_horn"],
   "strings": ["violin", "viola", "cello"],
