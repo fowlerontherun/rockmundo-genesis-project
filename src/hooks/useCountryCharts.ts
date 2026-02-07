@@ -261,11 +261,75 @@ export const useCountryCharts = (
         query = query.eq("genre", genre);
       }
 
-      const { data, error } = await query;
+      let { data, error } = await query;
 
       if (error) {
         console.error("[useCountryCharts] Error fetching chart entries:", error);
         return [];
+      }
+
+      // FALLBACK: If no data in the requested date range, fetch the latest available chart date
+      if (!data || data.length === 0) {
+        console.log("[useCountryCharts] No data in range, falling back to latest available chart data");
+        
+        const { data: latestDateData } = await supabase
+          .from("chart_entries")
+          .select("chart_date")
+          .in("chart_type", chartTypeFilter)
+          .order("chart_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestDateData?.chart_date) {
+          console.log("[useCountryCharts] Falling back to latest chart_date:", latestDateData.chart_date);
+          
+          // For weekly fallback, get the 7 days ending at the latest available date
+          const latestDate = new Date(latestDateData.chart_date + "T00:00:00Z");
+          const fallbackStart = new Date(latestDate);
+          
+          if (timeRange === "weekly") {
+            fallbackStart.setUTCDate(latestDate.getUTCDate() - 6);
+          } else if (timeRange === "monthly") {
+            fallbackStart.setUTCMonth(latestDate.getUTCMonth() - 1);
+          } else {
+            fallbackStart.setUTCFullYear(latestDate.getUTCFullYear() - 1);
+          }
+          
+          const fallbackStartStr = fallbackStart.toISOString().split("T")[0];
+          const fallbackEndStr = latestDateData.chart_date;
+          
+          let fallbackQuery = supabase
+            .from("chart_entries")
+            .select(`
+              *,
+              songs(
+                title,
+                genre,
+                audio_url,
+                audio_generation_status,
+                bands(name, artist_name)
+              )
+            `)
+            .in("chart_type", chartTypeFilter)
+            .gte("chart_date", fallbackStartStr)
+            .lte("chart_date", fallbackEndStr)
+            .limit(1000);
+
+          if (country !== "Global") {
+            fallbackQuery = fallbackQuery.or(`country.eq.${country},country.eq.all`);
+          }
+          if (genre !== "All") {
+            fallbackQuery = fallbackQuery.eq("genre", genre);
+          }
+
+          const fallbackResult = await fallbackQuery;
+          if (fallbackResult.error) {
+            console.error("[useCountryCharts] Fallback query error:", fallbackResult.error);
+            return [];
+          }
+          data = fallbackResult.data;
+          console.log("[useCountryCharts] Fallback found entries:", data?.length || 0);
+        }
       }
 
       console.log("[useCountryCharts] Found raw entries:", data?.length || 0);

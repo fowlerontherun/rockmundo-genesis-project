@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.632",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Charts: Fixed singles/streaming/combined charts showing empty when no chart data exists for the current week — now falls back to the latest available chart data" },
+      { type: 'improvement', description: "Charts: Weekly/monthly/yearly views automatically find and display the most recent chart period when current range has no entries" },
+    ],
+  },
+  {
     version: "1.0.631",
     date: "2026-02-07",
     changes: [
