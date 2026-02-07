@@ -353,7 +353,7 @@ const Dashboard = () => {
 
         {/* Friends Tab with Chat */}
         <TabsContent value="friends" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-5">
+          <div className="grid gap-4 lg:grid-cols-5 overflow-hidden">
             <Card className="lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.629",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Dashboard: Friends chat section now fits on mobile — channel list scrolls horizontally and chat uses viewport-relative height" },
+    ],
+  },
+  {
     version: "1.0.628",
     date: "2026-02-07",
     changes: [
