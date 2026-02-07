@@ -97,7 +97,7 @@ export default function DikCok() {
               </SelectContent>
             </Select>
           )}
-          {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} />}
+          {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} bandGenre={selectedBand.genre} />}
         </div>
       </div>
 

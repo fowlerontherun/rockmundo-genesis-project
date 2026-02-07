@@ -206,3 +206,6 @@ verify_jwt = true
 
 [functions.generate-photo-avatar]
 verify_jwt = false
+
+[functions.generate-dikcok-thumbnail]
+verify_jwt = false

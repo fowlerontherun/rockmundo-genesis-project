@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, Sparkles } from "lucide-react";
+import { Video, Sparkles, Image } from "lucide-react";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,10 @@ interface DikCokCreateDialogProps {
   bandId: string;
   userId: string;
   bandName: string;
+  bandGenre?: string;
 }
 
-export const DikCokCreateDialog = ({ bandId, userId, bandName }: DikCokCreateDialogProps) => {
+export const DikCokCreateDialog = ({ bandId, userId, bandName, bandGenre }: DikCokCreateDialogProps) => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -25,6 +26,8 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName }: DikCokCreateDia
 
   const { videoTypes } = useDikCokVideoTypes();
   const { createVideo, isCreating } = useDikCokVideos(bandId);
+
+  const selectedType = videoTypes?.find(vt => vt.id === videoTypeId);
 
   const handleSubmit = () => {
     if (!title || !videoTypeId) return;
@@ -36,6 +39,9 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName }: DikCokCreateDia
       title,
       description,
       trending_tag: trendingTag || undefined,
+      bandName,
+      bandGenre,
+      videoTypeName: selectedType?.name,
     });
 
     setOpen(false);
@@ -44,8 +50,6 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName }: DikCokCreateDia
     setVideoTypeId("");
     setTrendingTag("");
   };
-
-  const selectedType = videoTypes?.find(vt => vt.id === videoTypeId);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -60,6 +64,10 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName }: DikCokCreateDia
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
             Create DikCok Video - {bandName}
+            <Badge variant="outline" className="gap-1 text-xs ml-2">
+              <Image className="h-3 w-3" />
+              AI Thumbnail
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -123,6 +131,11 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName }: DikCokCreateDia
               maxLength={30}
             />
           </div>
+
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Image className="h-3 w-3" />
+            An AI-generated thumbnail will be created automatically based on your video title and genre.
+          </p>
 
           <Button
             onClick={handleSubmit}

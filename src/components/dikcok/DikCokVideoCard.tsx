@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, TrendingUp, Users } from "lucide-react";
+import { Eye, TrendingUp, Users, ImageOff } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface DikCokVideoCardProps {
@@ -13,6 +13,7 @@ interface DikCokVideoCardProps {
     fan_gain: number;
     trending_tag?: string;
     engagement_velocity?: string;
+    thumbnail_url?: string;
     band?: {
       name: string;
       genre?: string;
@@ -34,10 +35,21 @@ export const DikCokVideoCard = ({ video, onView }: DikCokVideoCardProps) => {
       className="cursor-pointer"
     >
       <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-        <div className="aspect-[9/16] bg-gradient-to-br from-primary/20 to-secondary/20 relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-6xl opacity-20">▶</div>
-          </div>
+        <div className="aspect-[9/16] relative overflow-hidden">
+          {video.thumbnail_url ? (
+            <img
+              src={video.thumbnail_url}
+              alt={video.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <ImageOff className="h-10 w-10 text-muted-foreground/30" />
+            </div>
+          )}
+          
+          {/* Overlay badges */}
           {video.trending_tag && (
             <Badge className="absolute top-2 left-2 bg-accent">
               #{video.trending_tag}
@@ -48,6 +60,13 @@ export const DikCokVideoCard = ({ video, onView }: DikCokVideoCardProps) => {
               🔥 Viral
             </Badge>
           )}
+          
+          {/* Play button overlay */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+              <div className="ml-1 w-0 h-0 border-l-[16px] border-l-primary border-y-[10px] border-y-transparent" />
+            </div>
+          </div>
         </div>
         <CardContent className="p-3 space-y-2">
           <div>

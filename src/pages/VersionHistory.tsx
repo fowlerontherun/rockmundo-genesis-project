@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.631",
+    date: "2026-02-07",
+    changes: [
+      { type: 'feature', description: "DikCok: AI-generated thumbnails — each new video gets a unique, genre-styled thumbnail via Lovable AI (Gemini image model)" },
+      { type: 'feature', description: "DikCok: Thumbnails are stored permanently in Supabase Storage and displayed on video cards and detail views" },
+      { type: 'improvement', description: "DikCok: Video cards now show thumbnail images instead of gradient placeholders, with hover play button overlay" },
+    ],
+  },
+  {
     version: "1.0.630",
     date: "2026-02-07",
     changes: [

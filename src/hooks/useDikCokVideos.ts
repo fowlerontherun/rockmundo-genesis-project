@@ -56,22 +56,51 @@ export const useDikCokVideos = (bandId?: string) => {
       title: string;
       description?: string;
       trending_tag?: string;
+      bandName?: string;
+      bandGenre?: string;
+      videoTypeName?: string;
+      songTitle?: string;
     }) => {
+      // Extract metadata before inserting (not DB columns)
+      const { bandName, bandGenre, videoTypeName, songTitle, ...insertData } = videoData;
+
       const { data, error } = await supabase
         .from("dikcok_videos")
-        .insert(videoData)
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
+
+      // Fire-and-forget thumbnail generation
+      supabase.functions.invoke("generate-dikcok-thumbnail", {
+        body: {
+          videoId: data.id,
+          title: data.title,
+          description: data.description || undefined,
+          bandName,
+          bandGenre,
+          videoType: videoTypeName,
+          songTitle,
+        },
+      }).then((result) => {
+        if (result.error) {
+          console.warn("Thumbnail generation failed:", result.error);
+        } else {
+          console.log("Thumbnail generated:", result.data);
+          queryClient.invalidateQueries({ queryKey: ["dikcok-videos"] });
+          queryClient.invalidateQueries({ queryKey: ["dikcok-trending"] });
+        }
+      });
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dikcok-videos"] });
       queryClient.invalidateQueries({ queryKey: ["dikcok-trending"] });
       toast({
-        title: "Video created!",
-        description: "Your DikCok video is now live.",
+        title: "Video created! 🎬",
+        description: "Your DikCok video is live. AI thumbnail generating...",
       });
     },
     onError: (error: any) => {
