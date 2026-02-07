@@ -23762,6 +23762,7 @@ export type Database = {
           icon_name: string | null
           id: string
           is_available: boolean | null
+          is_legal: boolean
           lore: string | null
           name: string
           price_cash: number | null
@@ -23782,6 +23783,7 @@ export type Database = {
           icon_name?: string | null
           id?: string
           is_available?: boolean | null
+          is_legal?: boolean
           lore?: string | null
           name: string
           price_cash?: number | null
@@ -23802,6 +23804,7 @@ export type Database = {
           icon_name?: string | null
           id?: string
           is_available?: boolean | null
+          is_legal?: boolean
           lore?: string | null
           name?: string
           price_cash?: number | null

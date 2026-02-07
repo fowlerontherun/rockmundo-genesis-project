@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.635",
+    date: "2026-02-07",
+    changes: [
+      { type: 'feature', description: "Underworld Admin: Added 'Legal Item' checkbox — items can now be flagged as legal for store visibility" },
+      { type: 'feature', description: "Underworld Admin: New activity boost effects — Next Gig Quality, Gig Earnings, Recording Quality, Songwriting Quality, and Creativity boosts" },
+      { type: 'improvement', description: "Underworld Admin: Replaced JSON-based effects editing with dropdown-based UI — all effects are now toggle-and-configure, no manual JSON required" },
+      { type: 'improvement', description: "Underworld: New boost types (gig/recording/songwriting) are properly registered as active boosts when purchased" },
+    ],
+  },
+  {
     version: "1.0.634",
     date: "2026-02-07",
     changes: [
