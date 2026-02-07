@@ -180,8 +180,8 @@ export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
               </p>
             </div>
 
-            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-sm">
-              <p className="font-medium text-amber-700">⚠ Bidding is a commitment</p>
+            <div className="rounded-lg bg-warning/10 border border-warning/20 p-3 text-sm">
+              <p className="font-medium text-warning">⚠ Bidding is a commitment</p>
               <p className="text-xs text-muted-foreground mt-1">
                 If you win, the amount will be deducted from your cash balance. Anti-sniping: bids in the last 5 minutes extend the auction.
               </p>

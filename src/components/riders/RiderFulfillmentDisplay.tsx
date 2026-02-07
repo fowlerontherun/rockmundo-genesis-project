@@ -44,7 +44,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 
 const PRIORITY_COLORS: Record<string, string> = {
   essential: 'text-destructive',
-  important: 'text-amber-500',
+  important: 'text-warning',
   nice_to_have: 'text-muted-foreground',
   optional: 'text-muted-foreground/50',
 };
@@ -63,9 +63,9 @@ export function RiderFulfillmentDisplay({
   compact = false,
 }: RiderFulfillmentDisplayProps) {
   const getOverallStatus = () => {
-    if (fulfillmentPercentage >= 90) return { icon: CheckCircle, color: 'text-green-500', label: 'Excellent' };
-    if (fulfillmentPercentage >= 70) return { icon: CheckCircle, color: 'text-green-400', label: 'Good' };
-    if (fulfillmentPercentage >= 50) return { icon: AlertTriangle, color: 'text-amber-500', label: 'Partial' };
+    if (fulfillmentPercentage >= 90) return { icon: CheckCircle, color: 'text-success', label: 'Excellent' };
+    if (fulfillmentPercentage >= 70) return { icon: CheckCircle, color: 'text-success', label: 'Good' };
+    if (fulfillmentPercentage >= 50) return { icon: AlertTriangle, color: 'text-warning', label: 'Partial' };
     return { icon: XCircle, color: 'text-destructive', label: 'Poor' };
   };
 
@@ -79,11 +79,11 @@ export function RiderFulfillmentDisplay({
           <StatusIcon className={cn("h-4 w-4", status.color)} />
           <span className="font-medium">{fulfillmentPercentage}% fulfilled</span>
         </div>
-        <div className="flex items-center gap-1 text-green-600">
+        <div className="flex items-center gap-1 text-success">
           <TrendingUp className="h-3 w-3" />
           <span>+{Math.round((performanceModifier - 1) * 100)}%</span>
         </div>
-        <div className="flex items-center gap-1 text-blue-600">
+        <div className="flex items-center gap-1 text-primary">
           <Users className="h-3 w-3" />
           <span>+{Math.round((moraleModifier - 1) * 100)}%</span>
         </div>
@@ -150,7 +150,7 @@ export function RiderFulfillmentDisplay({
         {/* Impact Modifiers */}
         <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-green-600">
+            <div className="flex items-center justify-center gap-1 text-success">
               <TrendingUp className="h-4 w-4" />
               <span className="text-lg font-bold">+{Math.round((performanceModifier - 1) * 100)}%</span>
             </div>
@@ -158,7 +158,7 @@ export function RiderFulfillmentDisplay({
           </div>
           <Separator orientation="vertical" className="h-10" />
           <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-blue-600">
+            <div className="flex items-center justify-center gap-1 text-primary">
               <Users className="h-4 w-4" />
               <span className="text-lg font-bold">+{Math.round((moraleModifier - 1) * 100)}%</span>
             </div>
@@ -178,7 +178,7 @@ export function RiderFulfillmentDisplay({
         {fulfilled.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-medium text-sm flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4 text-success" />
               Fulfilled ({fulfilled.length})
             </h4>
             <div className="grid gap-1 text-sm">

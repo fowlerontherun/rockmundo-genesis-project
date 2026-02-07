@@ -75,7 +75,7 @@ export const MyAuctionListingsTab = ({ userId }: MyAuctionListingsTabProps) => {
                       {isAuction ? (
                         <span>
                           {hasBids ? (
-                            <>Current bid: <span className="font-semibold text-green-600">${listing.current_bid!.toLocaleString()}</span></>
+                            <>Current bid: <span className="font-semibold text-success">${listing.current_bid!.toLocaleString()}</span></>
                           ) : (
                             <>Starting: ${listing.asking_price.toLocaleString()} (no bids yet)</>
                           )}
@@ -163,7 +163,7 @@ export const MyAuctionListingsTab = ({ userId }: MyAuctionListingsTabProps) => {
                       {listing.listing_status === "sold" ? "Sold" : "Cancelled"}
                     </Badge>
                     {listing.listing_status === "sold" && listing.current_bid && (
-                      <span className="text-sm font-medium text-green-600">${listing.current_bid.toLocaleString()}</span>
+                      <span className="text-sm font-medium text-success">${listing.current_bid.toLocaleString()}</span>
                     )}
                   </div>
                 </CardContent>

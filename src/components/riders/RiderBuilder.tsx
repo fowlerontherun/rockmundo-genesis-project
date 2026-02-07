@@ -256,70 +256,72 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
                     onClick={() => !isLocked && toggleItem(item.id, item)}
                   >
                     <CardContent className="p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <Checkbox 
-                            checked={isSelected} 
-                            disabled={isLocked}
-                            className="mt-1"
-                          />
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{item.name}</span>
-                              {item.is_premium && (
-                                <Star className="h-3 w-3 text-warning" />
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{item.description}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs">
-                                ${item.base_cost}
-                              </Badge>
-                              <Badge variant="secondary" className={cn("text-xs", PRIORITY_CONFIG[item.priority].color)}>
-                                {PRIORITY_CONFIG[item.priority].label}
-                              </Badge>
-                              {item.performance_impact > 0 && (
-                                <Badge variant="outline" className="text-xs text-green-600">
-                                  +{Math.round(item.performance_impact * 100)}% perf
-                                </Badge>
-                              )}
-                              {item.morale_impact > 0 && (
-                                <Badge variant="outline" className="text-xs text-blue-600">
-                                  +{Math.round(item.morale_impact * 100)}% morale
-                                </Badge>
-                              )}
-                              {isLocked && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Requires {item.min_fame_required} fame
-                                </Badge>
-                              )}
-                            </div>
+                      <div className="flex items-start gap-3">
+                        <Checkbox 
+                          checked={isSelected} 
+                          disabled={isLocked}
+                          className="mt-1 shrink-0"
+                          onCheckedChange={() => !isLocked && toggleItem(item.id, item)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{item.name}</span>
+                            {item.is_premium && (
+                              <Star className="h-3 w-3 text-warning" />
+                            )}
                           </div>
-                        </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="outline" className="text-xs">
+                              ${item.base_cost}
+                            </Badge>
+                            <Badge variant="secondary" className={cn("text-xs", PRIORITY_CONFIG[item.priority].color)}>
+                              {PRIORITY_CONFIG[item.priority].label}
+                            </Badge>
+                            {item.performance_impact > 0 && (
+                              <Badge variant="outline" className="text-xs text-success">
+                                +{Math.round(item.performance_impact * 100)}% perf
+                              </Badge>
+                            )}
+                            {item.morale_impact > 0 && (
+                              <Badge variant="outline" className="text-xs text-primary">
+                                +{Math.round(item.morale_impact * 100)}% morale
+                              </Badge>
+                            )}
+                            {isLocked && (
+                              <Badge variant="destructive" className="text-xs">
+                                Requires {item.min_fame_required} fame
+                              </Badge>
+                            )}
+                          </div>
 
-                        {isSelected && selectionData && (
-                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-6 w-6"
-                              onClick={() => updateItemQuantity(item.id, -1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-6 text-center text-sm font-medium">
-                              {selectionData.quantity}
-                            </span>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-6 w-6"
-                              onClick={() => updateItemQuantity(item.id, 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
+                          {/* Quantity controls inline below badges on mobile */}
+                          {isSelected && selectionData && (
+                            <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                              <span className="text-xs text-muted-foreground">Qty:</span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-6 w-6"
+                                onClick={() => updateItemQuantity(item.id, -1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-6 text-center text-sm font-medium">
+                                {selectionData.quantity}
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-6 w-6"
+                                onClick={() => updateItemQuantity(item.id, 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -390,11 +392,11 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
               <p className="text-xs text-muted-foreground">Total Items</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">+{performanceBonus}%</p>
+              <p className="text-2xl font-bold text-success">+{performanceBonus}%</p>
               <p className="text-xs text-muted-foreground">Performance Bonus</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">+{moraleBonus}%</p>
+              <p className="text-2xl font-bold text-primary">+{moraleBonus}%</p>
               <p className="text-xs text-muted-foreground">Morale Bonus</p>
             </div>
           </div>

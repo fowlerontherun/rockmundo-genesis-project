@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.616",
+    date: "2026-02-07",
+    changes: [
+      { type: 'fix', description: "Design System: Replaced all hardcoded colors (green, blue, amber, purple, pink, slate) with semantic tokens (success, warning, primary, accent, destructive) across riders, marketplace, and modeling components" },
+      { type: 'fix', description: "Band Riders: Fixed overlapping quantity buttons on mobile — controls now stack below badges instead of floating right" },
+      { type: 'fix', description: "Band Riders: Fixed checkbox selection not toggling properly — checkbox and card click now both work reliably" },
+      { type: 'fix', description: "Modeling: Jobs no longer complete instantly — players must select a date and time slot for shoots" },
+      { type: 'feature', description: "Modeling: Full booking dialog with calendar date picker, time slot selector, and duration preview" },
+      { type: 'feature', description: "Modeling: Schedule conflict detection — prevents double-booking with other activities" },
+      { type: 'feature', description: "Modeling: Activity locking — only one active modeling contract allowed at a time" },
+      { type: 'improvement', description: "Modeling: Active contracts now display shoot date, time, and duration details" },
+    ],
+  },
+  {
     version: "1.0.615",
     date: "2026-02-06",
     changes: [
