@@ -5388,6 +5388,7 @@ export type Database = {
           fan_gain: number | null
           hype_gained: number | null
           id: string
+          thumbnail_url: string | null
           title: string
           track_id: string | null
           trending_tag: string | null
@@ -5405,6 +5406,7 @@ export type Database = {
           fan_gain?: number | null
           hype_gained?: number | null
           id?: string
+          thumbnail_url?: string | null
           title: string
           track_id?: string | null
           trending_tag?: string | null
@@ -5422,6 +5424,7 @@ export type Database = {
           fan_gain?: number | null
           hype_gained?: number | null
           id?: string
+          thumbnail_url?: string | null
           title?: string
           track_id?: string | null
           trending_tag?: string | null

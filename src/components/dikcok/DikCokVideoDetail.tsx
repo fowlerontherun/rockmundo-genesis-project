@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, TrendingUp, Users, Clock, Music, Flame } from "lucide-react";
+import { Eye, TrendingUp, Users, Clock, Music, Flame, ImageOff } from "lucide-react";
 import { DikCokEngagement } from "./DikCokEngagement";
 import { formatDistanceToNow } from "date-fns";
 
@@ -16,6 +16,7 @@ interface DikCokVideoDetailProps {
     trending_tag?: string;
     engagement_velocity?: string;
     created_at?: string;
+    thumbnail_url?: string;
     band?: {
       name: string;
       genre?: string;
@@ -58,40 +59,56 @@ export const DikCokVideoDetail = ({ video, open, onOpenChange }: DikCokVideoDeta
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Video Preview Placeholder */}
-          <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg relative flex items-center justify-center">
-            <div className="text-8xl opacity-30">▶</div>
+          {/* Video Preview with Thumbnail */}
+          <div className="aspect-video rounded-lg relative overflow-hidden">
+            {video.thumbnail_url ? (
+              <img
+                src={video.thumbnail_url}
+                alt={video.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                <ImageOff className="h-16 w-16 text-muted-foreground/30" />
+              </div>
+            )}
             {video.trending_tag && (
               <Badge className="absolute top-3 left-3 bg-accent">#{video.trending_tag}</Badge>
             )}
+            {/* Play overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-white/80 flex items-center justify-center shadow-lg">
+                <div className="ml-1.5 w-0 h-0 border-l-[20px] border-l-primary border-y-[12px] border-y-transparent" />
+              </div>
+            </div>
           </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-3">
             <Card>
               <CardContent className="p-3 text-center">
-                <Eye className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+                <Eye className="h-5 w-5 mx-auto mb-1 text-primary" />
                 <p className="text-lg font-bold">{video.views.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Views</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 text-center">
-                <Flame className="h-5 w-5 mx-auto mb-1 text-orange-500" />
+                <Flame className="h-5 w-5 mx-auto mb-1 text-destructive" />
                 <p className="text-lg font-bold">{video.hype_gained}</p>
                 <p className="text-xs text-muted-foreground">Hype</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 text-center">
-                <Users className="h-5 w-5 mx-auto mb-1 text-green-500" />
+                <Users className="h-5 w-5 mx-auto mb-1 text-accent-foreground" />
                 <p className="text-lg font-bold">+{video.fan_gain}</p>
                 <p className="text-xs text-muted-foreground">Fans</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 text-center">
-                <TrendingUp className="h-5 w-5 mx-auto mb-1 text-purple-500" />
+                <TrendingUp className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                 <p className="text-lg font-bold">{video.video_type?.difficulty || "Easy"}</p>
                 <p className="text-xs text-muted-foreground">Difficulty</p>
               </CardContent>

@@ -9,17 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Music, Sparkles, Loader2, Clock, Star } from "lucide-react";
+import { Video, Music, Sparkles, Loader2, Clock, Star, Image } from "lucide-react";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
 import { useAuth } from "@/hooks/use-auth-context";
 
 interface DikCokCreateVideoFormProps {
   bandId: string;
+  bandName?: string;
+  bandGenre?: string;
   bandSongs?: { id: string; title: string }[];
   onSuccess?: () => void;
 }
 
-export const DikCokCreateVideoForm = ({ bandId, bandSongs = [], onSuccess }: DikCokCreateVideoFormProps) => {
+export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs = [], onSuccess }: DikCokCreateVideoFormProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -34,6 +36,7 @@ export const DikCokCreateVideoForm = ({ bandId, bandSongs = [], onSuccess }: Dik
   });
 
   const selectedType = videoTypes?.find(t => t.id === formData.videoTypeId);
+  const selectedSong = bandSongs.find(s => s.id === formData.trackId);
 
   const createVideoMutation = useMutation({
     mutationFn: async () => {
@@ -48,7 +51,7 @@ export const DikCokCreateVideoForm = ({ bandId, bandSongs = [], onSuccess }: Dik
       const velocities = ["Niche", "Stable", "Trending", "Exploding"];
       const velocity = velocities[Math.floor(Math.random() * velocities.length)];
 
-      const { error } = await supabase.from("dikcok_videos").insert({
+      const { data: videoData, error } = await supabase.from("dikcok_videos").insert({
         band_id: bandId,
         creator_user_id: user.id,
         video_type_id: formData.videoTypeId,
@@ -60,16 +63,39 @@ export const DikCokCreateVideoForm = ({ bandId, bandSongs = [], onSuccess }: Dik
         hype_gained: hypeGain,
         fan_gain: fanGain,
         engagement_velocity: velocity,
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Trigger AI thumbnail generation in the background (fire-and-forget)
+      const videoId = videoData.id;
+      supabase.functions.invoke("generate-dikcok-thumbnail", {
+        body: {
+          videoId,
+          title: formData.title.trim(),
+          description: formData.description.trim() || undefined,
+          bandName: bandName || undefined,
+          bandGenre: bandGenre || undefined,
+          videoType: selectedType?.name || undefined,
+          songTitle: selectedSong?.title || undefined,
+        },
+      }).then((result) => {
+        if (result.error) {
+          console.warn("Thumbnail generation failed:", result.error);
+        } else {
+          console.log("Thumbnail generated:", result.data);
+          // Refresh the video list to show the new thumbnail
+          queryClient.invalidateQueries({ queryKey: ["dikcok-videos"] });
+        }
+      });
+
       return { views: baseViews, hypeGain, fanGain, velocity };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["dikcok-videos"] });
       toast({
         title: "Video Posted! 🎬",
-        description: `${data.views.toLocaleString()} views, +${data.hypeGain} hype, +${data.fanGain} fans!`,
+        description: `${data.views.toLocaleString()} views, +${data.hypeGain} hype, +${data.fanGain} fans! AI thumbnail generating...`,
       });
       setFormData({ title: "", description: "", videoTypeId: "", trackId: "", trendingTag: "" });
       onSuccess?.();
@@ -88,7 +114,13 @@ export const DikCokCreateVideoForm = ({ bandId, bandSongs = [], onSuccess }: Dik
           <Video className="h-5 w-5" />
           Create New Video
         </CardTitle>
-        <CardDescription>Share your band's content and grow your fanbase</CardDescription>
+        <CardDescription className="flex items-center gap-1">
+          Share your band's content and grow your fanbase
+          <Badge variant="outline" className="ml-2 gap-1 text-xs">
+            <Image className="h-3 w-3" />
+            AI Thumbnail
+          </Badge>
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
