@@ -12762,6 +12762,71 @@ export type Database = {
           },
         ]
       }
+      nightclub_quests: {
+        Row: {
+          chain_id: string | null
+          chain_position: number | null
+          club_id: string
+          cooldown_hours: number | null
+          created_at: string
+          description: string
+          dialogue: Json
+          energy_cost: number
+          id: string
+          is_active: boolean
+          npc_id: string
+          quest_type: string
+          requirements: Json | null
+          rewards: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          chain_id?: string | null
+          chain_position?: number | null
+          club_id: string
+          cooldown_hours?: number | null
+          created_at?: string
+          description: string
+          dialogue?: Json
+          energy_cost?: number
+          id?: string
+          is_active?: boolean
+          npc_id: string
+          quest_type?: string
+          requirements?: Json | null
+          rewards?: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          chain_id?: string | null
+          chain_position?: number | null
+          club_id?: string
+          cooldown_hours?: number | null
+          created_at?: string
+          description?: string
+          dialogue?: Json
+          energy_cost?: number
+          id?: string
+          is_active?: boolean
+          npc_id?: string
+          quest_type?: string
+          requirements?: Json | null
+          rewards?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_quests_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       npc_relationships: {
         Row: {
           affinity_score: number
@@ -15417,6 +15482,64 @@ export type Database = {
             columns: ["gig_id"]
             isOneToOne: false
             referencedRelation: "modeling_gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_nightclub_quest_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          dialogue_state: Json | null
+          id: string
+          profile_id: string
+          quest_id: string
+          rewards_claimed: boolean
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          dialogue_state?: Json | null
+          id?: string
+          profile_id: string
+          quest_id: string
+          rewards_claimed?: boolean
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          dialogue_state?: Json | null
+          id?: string
+          profile_id?: string
+          quest_id?: string
+          rewards_claimed?: boolean
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_nightclub_quest_progress_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_nightclub_quest_progress_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_nightclub_quest_progress_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_quests"
             referencedColumns: ["id"]
           },
         ]
