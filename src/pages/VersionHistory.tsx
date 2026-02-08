@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.639",
+    date: "2026-02-08",
+    changes: [
+      { type: 'feature', description: "AI Music Videos: Videos now play with the full song audio — the generated video clip loops while the song plays for its entire duration" },
+      { type: 'improvement', description: "AI Music Videos: Added 'Full Song' badge and combined mode status indicator showing both video and audio are playing" },
+      { type: 'improvement', description: "AI Music Videos: Equalizer visualizer overlay now appears on video during combined playback" },
+    ],
+  },
+  {
     version: "1.0.638",
     date: "2026-02-08",
     changes: [

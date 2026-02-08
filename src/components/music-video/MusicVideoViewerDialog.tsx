@@ -152,7 +152,15 @@ export function MusicVideoViewerDialog({
   
   const hasRealVideo = !!videoUrl;
   const hasAudio = !!audioUrl;
+  // Combined mode: video loops while song audio plays for full duration
+  const hasCombinedMode = hasRealVideo && hasAudio;
   const hasPlayableContent = hasRealVideo || hasAudio;
+
+  // In combined mode, audio is the primary time source (full song duration).
+  // The video loops silently as the visual backdrop.
+  // If only video (no audio), video plays as-is.
+  // If only audio (no video), audio plays with visualizer.
+  const primaryMediaRef = hasAudio ? audioRef : videoRef;
 
   // Parse description for AI metadata
   const aiMetadata = video?.description ? (() => {
@@ -184,25 +192,40 @@ export function MusicVideoViewerDialog({
   useEffect(() => {
     if (open && hasPlayableContent && isLoaded) {
       const timer = setTimeout(() => {
-        const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
-        if (mediaElement) {
-          mediaElement.play().then(() => {
+        const playAll = async () => {
+          try {
+            if (hasCombinedMode) {
+              // Play both: video loops silently, audio is the song
+              if (videoRef.current) {
+                videoRef.current.muted = true;
+                videoRef.current.loop = true;
+                await videoRef.current.play();
+              }
+              if (audioRef.current) {
+                audioRef.current.volume = volume / 100;
+                await audioRef.current.play();
+              }
+            } else if (hasRealVideo && videoRef.current) {
+              await videoRef.current.play();
+            } else if (hasAudio && audioRef.current) {
+              await audioRef.current.play();
+            }
             setIsPlaying(true);
-            // Log view after 10 seconds
             if (!hasLoggedView) {
               setTimeout(() => {
                 setHasLoggedView(true);
                 onViewLogged?.();
               }, 10000);
             }
-          }).catch(() => {
-            // Autoplay blocked by browser, user will need to click
-          });
-        }
+          } catch {
+            // Autoplay blocked by browser
+          }
+        };
+        playAll();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [open, hasPlayableContent, isLoaded, hasRealVideo]);
+  }, [open, hasPlayableContent, isLoaded, hasCombinedMode, hasRealVideo, hasAudio]);
 
   // Reset on close
   useEffect(() => {
@@ -222,59 +245,115 @@ export function MusicVideoViewerDialog({
     }
   }, [open]);
 
+  // Volume sync
   useEffect(() => {
-    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
-    if (mediaElement) {
-      mediaElement.volume = volume / 100;
+    // In combined mode, only audio has volume (video is muted)
+    if (hasCombinedMode) {
+      if (audioRef.current) audioRef.current.volume = volume / 100;
+    } else {
+      const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+      if (mediaElement) mediaElement.volume = volume / 100;
     }
-  }, [volume, hasRealVideo]);
+  }, [volume, hasCombinedMode, hasRealVideo]);
 
   const togglePlay = useCallback(() => {
-    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
-    if (!mediaElement) return;
-    
-    if (isPlaying) {
-      mediaElement.pause();
-    } else {
-      mediaElement.play();
-      if (!hasLoggedView) {
-        setTimeout(() => {
-          setHasLoggedView(true);
-          onViewLogged?.();
-        }, 10000);
+    const playPause = async () => {
+      if (isPlaying) {
+        // Pause everything
+        audioRef.current?.pause();
+        videoRef.current?.pause();
+        setIsPlaying(false);
+      } else {
+        // Play
+        try {
+          if (hasCombinedMode) {
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.loop = true;
+              await videoRef.current.play();
+            }
+            if (audioRef.current) {
+              await audioRef.current.play();
+            }
+          } else if (hasRealVideo && videoRef.current) {
+            await videoRef.current.play();
+          } else if (hasAudio && audioRef.current) {
+            await audioRef.current.play();
+          }
+          setIsPlaying(true);
+          if (!hasLoggedView) {
+            setTimeout(() => {
+              setHasLoggedView(true);
+              onViewLogged?.();
+            }, 10000);
+          }
+        } catch {
+          // Play failed
+        }
       }
-    }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying, hasRealVideo, hasLoggedView, onViewLogged]);
+    };
+    playPause();
+  }, [isPlaying, hasCombinedMode, hasRealVideo, hasAudio, hasLoggedView, onViewLogged]);
 
   const toggleMute = () => {
-    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
-    if (mediaElement) {
-      mediaElement.muted = !isMuted;
-      setIsMuted(!isMuted);
+    if (hasCombinedMode) {
+      // Only mute/unmute the audio (video is always muted in combined mode)
+      if (audioRef.current) {
+        audioRef.current.muted = !isMuted;
+      }
+    } else {
+      const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+      if (mediaElement) {
+        mediaElement.muted = !isMuted;
+      }
     }
+    setIsMuted(!isMuted);
   };
 
   const handleTimeUpdate = () => {
-    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    // Use the primary time source
+    const mediaElement = primaryMediaRef.current;
     if (mediaElement) {
       setCurrentTime(mediaElement.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
-    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    const mediaElement = primaryMediaRef.current;
     if (mediaElement) {
       setDuration(mediaElement.duration);
       setIsLoaded(true);
     }
   };
 
+  // When audio is also available and video loads first, mark as loaded from audio
+  const handleAudioLoaded = () => {
+    if (hasCombinedMode && audioRef.current) {
+      setDuration(audioRef.current.duration);
+      setIsLoaded(true);
+    }
+  };
+
   const handleSeek = (value: number[]) => {
-    const mediaElement = hasRealVideo ? videoRef.current : audioRef.current;
+    const seekTime = value[0];
+    // Seek the primary time source
+    const mediaElement = primaryMediaRef.current;
     if (mediaElement) {
-      mediaElement.currentTime = value[0];
-      setCurrentTime(value[0]);
+      mediaElement.currentTime = seekTime;
+      setCurrentTime(seekTime);
+    }
+    // In combined mode, also restart video loop from beginning if needed
+    if (hasCombinedMode && videoRef.current) {
+      // Reset the looping video to the start (since it's a short loop)
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  const handleEnded = () => {
+    // Song finished — stop everything
+    setIsPlaying(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
     }
   };
 
@@ -311,6 +390,11 @@ export function MusicVideoViewerDialog({
                 HD Video
               </Badge>
             )}
+            {hasCombinedMode && (
+              <Badge className="bg-purple-600 shrink-0">
+                🎵 Full Song
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -321,14 +405,24 @@ export function MusicVideoViewerDialog({
           onClick={hasPlayableContent ? togglePlay : undefined}
         >
           {hasRealVideo ? (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              className="absolute inset-0 w-full h-full object-contain"
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={() => setIsPlaying(false)}
-            />
+            <>
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                className="absolute inset-0 w-full h-full object-contain"
+                loop={hasCombinedMode}
+                muted={hasCombinedMode}
+                onTimeUpdate={hasCombinedMode ? undefined : handleTimeUpdate}
+                onLoadedMetadata={hasCombinedMode ? undefined : handleLoadedMetadata}
+                onEnded={hasCombinedMode ? undefined : () => setIsPlaying(false)}
+              />
+              {/* In combined mode, show subtle equalizer overlay on the video */}
+              {hasCombinedMode && isPlaying && (
+                <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+                  <AudioVisualizer isPlaying={isPlaying} quality={video.production_quality} />
+                </div>
+              )}
+            </>
           ) : (
             <>
               {/* Floating particles */}
@@ -429,6 +523,16 @@ export function MusicVideoViewerDialog({
             </>
           )}
 
+          {/* Play/pause indicator on hover */}
+          {hasRealVideo && isPlaying && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none opacity-0 hover:opacity-100"
+              transition={{ duration: 0.15 }}
+            >
+              <Pause className="h-16 w-16 text-white/80" />
+            </motion.div>
+          )}
+
           {/* Stats overlay */}
           <div className="absolute top-16 right-4 space-y-2 text-white/80 text-sm z-20">
             <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-sm">
@@ -445,8 +549,8 @@ export function MusicVideoViewerDialog({
             </div>
           </div>
 
-          {/* Tap-to-pause indicator */}
-          {isPlaying && (
+          {/* Tap-to-pause indicator (audio-only mode) */}
+          {!hasRealVideo && isPlaying && (
             <motion.div
               className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none"
               initial={{ opacity: 0 }}
@@ -457,16 +561,18 @@ export function MusicVideoViewerDialog({
             </motion.div>
           )}
 
-          {/* Hidden audio element */}
-          {!hasRealVideo && hasAudio && (
+          {/* Hidden audio element — used in combined mode AND audio-only mode */}
+          {hasAudio && (
             <audio
               ref={audioRef}
               src={audioUrl}
               preload="auto"
               onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={() => setIsPlaying(false)}
-              onCanPlayThrough={() => setIsLoaded(true)}
+              onLoadedMetadata={hasCombinedMode ? handleAudioLoaded : handleLoadedMetadata}
+              onEnded={handleEnded}
+              onCanPlayThrough={() => {
+                if (!hasCombinedMode) setIsLoaded(true);
+              }}
             />
           )}
         </div>
@@ -533,7 +639,9 @@ export function MusicVideoViewerDialog({
             </div>
 
             <div className="text-white/50 text-sm">
-              {hasRealVideo ? (
+              {hasCombinedMode ? (
+                <span className="text-purple-400">🎬 Video + 🎵 Full Song • {video.production_quality}% Quality</span>
+              ) : hasRealVideo ? (
                 <span className="text-green-400">HD Video • {video.production_quality}% Quality</span>
               ) : hasAudio ? (
                 <span>🎵 {video.songs?.title || "Now Playing"}</span>
