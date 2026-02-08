@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.637",
+    date: "2026-02-08",
+    changes: [
+      { type: 'fix', description: "Song Marketplace: Fixed 'operator does not exist: uuid = text' error when placing bids — corrected type casting in place_song_bid RPC" },
+      { type: 'fix', description: "AI Music Videos: Fixed webhook callback not receiving Replicate responses — added verify_jwt=false config so external webhooks can reach the callback endpoint" },
+    ],
+  },
+  {
     version: "1.0.636",
     date: "2026-02-07",
     changes: [
