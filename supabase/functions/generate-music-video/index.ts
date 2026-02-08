@@ -19,6 +19,48 @@ interface VideoGenerationRequest {
   songAudioUrl?: string;
 }
 
+/** Generate a first-frame image using Lovable AI (Gemini image model) */
+async function generateFirstFrame(prompt: string): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+  console.log("[generate-music-video] Generating first frame image...");
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash-image",
+      messages: [
+        {
+          role: "user",
+          content: `Generate a cinematic wide-angle 16:9 still image for a music video. ${prompt}. Ultra high resolution, cinematic lighting, professional cinematography. No text or watermarks.`,
+        },
+      ],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[generate-music-video] Image generation failed:", response.status, errorText);
+    throw new Error(`Image generation failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+  if (!imageUrl) {
+    throw new Error("No image returned from AI gateway");
+  }
+
+  console.log("[generate-music-video] First frame image generated successfully");
+  return imageUrl;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,7 +82,6 @@ serve(async (req) => {
       );
     }
 
-    // Get the user from the JWT
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
       authHeader.replace("Bearer ", "")
     );
@@ -92,10 +133,10 @@ serve(async (req) => {
       );
     }
 
-    // Verify the video exists and get song info
+    // Verify the video exists
     const { data: video, error: videoError } = await supabaseClient
       .from("music_videos")
-      .select("id, song_id, title, status, songs(audio_url)")
+      .select("id, song_id, title, status")
       .eq("id", videoId)
       .single();
 
@@ -106,17 +147,16 @@ serve(async (req) => {
       );
     }
 
-    // Build video generation prompt - focus on continuous, camera-friendly action
+    // Build prompts
     const scenePrompt = sceneDescriptions.slice(0, 3).join(". ");
-    
-    // Video prompt optimized for AI video generation (continuous shots, no editing terms)
     const videoPrompt = `Cinematic music video scene for "${songTitle}"${songGenre ? ` (${songGenre} style)` : ""}. 
 ${visualTheme.replace(/_/g, " ")} visual aesthetic, ${artStyle} style${mood ? `, ${mood} atmosphere` : ""}.
 ${scenePrompt}
 Smooth camera movement, professional lighting, high production value. Single continuous shot with dynamic motion.`;
 
+    const imagePrompt = `${visualTheme.replace(/_/g, " ")} scene for a ${songGenre || "music"} video called "${songTitle}". ${artStyle} style${mood ? `, ${mood} mood` : ""}. ${sceneDescriptions[0] || ""}`;
+
     console.log("[generate-music-video] Starting generation for video:", videoId);
-    console.log("[generate-music-video] Prompt:", videoPrompt.substring(0, 300) + "...");
 
     // Update video status to "generating"
     await supabaseClient
@@ -136,20 +176,37 @@ Smooth camera movement, professional lighting, high production value. Single con
       })
       .eq("id", videoId);
 
-    // Initialize Replicate
+    // Step 1: Generate first frame image using Lovable AI
+    let firstFrameUrl: string;
+    try {
+      firstFrameUrl = await generateFirstFrame(imagePrompt);
+    } catch (imgErr) {
+      console.error("[generate-music-video] First frame generation failed:", imgErr);
+      await supabaseClient
+        .from("music_videos")
+        .update({
+          status: "failed",
+          generation_error: `First frame image generation failed: ${imgErr instanceof Error ? imgErr.message : "Unknown error"}`,
+        })
+        .eq("id", videoId);
+
+      return new Response(
+        JSON.stringify({ error: "Failed to generate first frame image for video" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Step 2: Call Replicate with the first frame image
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-
-    // Build webhook URL for async callback
     const webhookUrl = `${supabaseUrl}/functions/v1/music-video-callback?videoId=${videoId}`;
-    
-    console.log("[generate-music-video] Calling Replicate with webhook:", webhookUrl);
 
-    // Use Replicate's async webhook pattern for video generation
-    // MiniMax video-01-live model for fast video generation
+    console.log("[generate-music-video] Calling Replicate with first frame and webhook:", webhookUrl);
+
     const prediction = await replicate.predictions.create({
       model: "minimax/video-01-live",
       input: {
         prompt: videoPrompt,
+        first_frame_image: firstFrameUrl,
       },
       webhook: webhookUrl,
       webhook_events_filter: ["completed"],
@@ -157,7 +214,7 @@ Smooth camera movement, professional lighting, high production value. Single con
 
     console.log("[generate-music-video] Replicate prediction created:", prediction.id);
 
-    // Store prediction ID for tracking
+    // Store prediction ID
     await supabaseClient
       .from("music_videos")
       .update({
@@ -169,6 +226,7 @@ Smooth camera movement, professional lighting, high production value. Single con
           generation_started_at: new Date().toISOString(),
           generation_prompt: videoPrompt,
           replicate_prediction_id: prediction.id,
+          first_frame_generated: true,
         }),
       })
       .eq("id", videoId);
@@ -178,8 +236,8 @@ Smooth camera movement, professional lighting, high production value. Single con
       user_id: user.id,
       activity_type: "video_generation_started",
       message: `AI video generation started for "${video.title}"`,
-      metadata: { 
-        video_id: videoId, 
+      metadata: {
+        video_id: videoId,
         visual_theme: visualTheme,
         prediction_id: prediction.id,
         estimated_time: "2-5 minutes",
