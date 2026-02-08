@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.638",
+    date: "2026-02-08",
+    changes: [
+      { type: 'fix', description: "AI Music Videos: Fixed 422 error from Replicate — minimax/video-01-live now requires a first_frame_image; added AI-generated first frame using Lovable AI (Gemini) before video generation" },
+    ],
+  },
+  {
     version: "1.0.637",
     date: "2026-02-08",
     changes: [
