@@ -1181,6 +1181,7 @@ const Songwriting = () => {
   const handleConvertProject = async (project: SongwritingProject, catalogStatus: string = 'private', bandId?: string) => {
     try {
       // Calculate final quality using actual player data
+      // Include experience bonus from total songs written and session depth
       const quality = calculateSongQuality({
         genre: project.genres?.[0] || 'Rock',
         skillLevels: skills || {},
@@ -1191,7 +1192,9 @@ const Songwriting = () => {
         },
         sessionHours: (project.total_sessions || 0) * 6,
         coWriters: project.creative_brief?.co_writers?.length || 0,
-        aiLyrics: project.lyrics?.includes('[AI]') || false
+        aiLyrics: project.lyrics?.includes('[AI]') || false,
+        songsWritten: songs.length,
+        sessionsCompleted: project.sessions_completed || 0,
       });
 
       await convertToSong.mutateAsync({

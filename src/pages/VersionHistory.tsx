@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.640",
+    date: "2026-02-09",
+    changes: [
+      { type: 'improvement', description: "Songwriting: Songs now have more variable session counts — breakthrough sessions (skill-based chance) can dramatically speed up progress, while creative blocks slow things down" },
+      { type: 'feature', description: "Songwriting: Experience bonus — the more songs you've written, the higher quality your new songs will be (diminishing returns, up to +50 quality points)" },
+      { type: 'feature', description: "Songwriting: Session depth bonus — songs that take more sessions to complete get a quality bonus (up to +35 points for extra-refined work)" },
+      { type: 'improvement', description: "Songwriting: Higher songwriting skills now increase the chance of breakthrough sessions (15% base → up to 35%), meaning skilled writers finish songs faster" },
+      { type: 'improvement', description: "Recording: Added session luck rolls — 'Magic Takes' (8% chance, up to 2x quality boost) and 'Technical Issues' (8% chance, reduced quality) for more varied recording outcomes" },
+      { type: 'improvement', description: "Gigs: Widened random performance factor from ±5 to ±8, with rare 3% chance of extreme outcomes (disaster or night-of-their-lives)" },
+      { type: 'improvement', description: "Gigs: Fame and fan gains now have ±25% and ±20% random variance respectively, making each gig outcome feel more unique" },
+      { type: 'improvement', description: "Songwriting: Widened quality luck swings — Terrible Days now reduce quality up to 25%, Lightning Strikes boost up to 35%" },
+    ],
+  },
+  {
     version: "1.0.639",
     date: "2026-02-08",
     changes: [

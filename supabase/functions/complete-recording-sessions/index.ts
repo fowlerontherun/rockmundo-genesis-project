@@ -80,14 +80,38 @@ Deno.serve(async (req) => {
           studioQualityBonus = (studioData?.quality_rating || 5) * 2
         }
 
-        // Base improvement scales with duration (2-8 per hour)
-        const baseImprovement = Math.floor(durationHours * (2 + Math.random() * 6))
+        // Recording session luck roll - adds more variance to outcomes
+        const sessionRoll = Math.random()
+        let sessionLuckMultiplier = 1.0
+        let sessionLuckLabel = 'normal'
+        if (sessionRoll < 0.08) {
+          // 8% - Technical issues (bad takes, equipment problems)
+          sessionLuckMultiplier = 0.4 + Math.random() * 0.3 // 0.4-0.7x
+          sessionLuckLabel = 'technical_issues'
+        } else if (sessionRoll < 0.18) {
+          // 10% - Rough session
+          sessionLuckMultiplier = 0.7 + Math.random() * 0.2 // 0.7-0.9x
+          sessionLuckLabel = 'rough_session'
+        } else if (sessionRoll > 0.92) {
+          // 8% - Magic take (everything clicks perfectly)
+          sessionLuckMultiplier = 1.6 + Math.random() * 0.4 // 1.6-2.0x
+          sessionLuckLabel = 'magic_take'
+        } else if (sessionRoll > 0.82) {
+          // 10% - Great flow
+          sessionLuckMultiplier = 1.2 + Math.random() * 0.3 // 1.2-1.5x
+          sessionLuckLabel = 'great_flow'
+        }
+
+        // Base improvement scales with duration (1-12 per hour for wider range)
+        const baseImprovement = Math.floor(durationHours * (1 + Math.random() * 11))
         
-        // Add studio bonus
-        const qualityImprovement = Math.min(30, baseImprovement + studioQualityBonus)
+        // Apply luck multiplier and studio bonus
+        const qualityImprovement = Math.min(40, Math.floor(baseImprovement * sessionLuckMultiplier) + studioQualityBonus)
         
         // Calculate new quality (capped at 100)
         const newQuality = Math.min(100, currentQuality + qualityImprovement)
+        
+        console.log(`Recording luck: ${sessionLuckLabel} (${sessionLuckMultiplier.toFixed(2)}x)`)
 
         // Calculate XP earned
         const baseXpPerHour = 15
