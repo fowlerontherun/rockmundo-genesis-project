@@ -158,10 +158,12 @@ serve(async (req) => {
     const totalRevenue = outcome.ticket_revenue + merchRevenue;
     const netProfit = totalRevenue - totalCosts;
 
-    // Calculate fame gained - balanced formula
+    // Calculate fame gained - balanced formula with variance
     const attendanceMultiplier = 1.0 + Math.log10(Math.max(1, outcome.actual_attendance / 100)) * 0.5;
     const baseFame = (avgRating / 25) * 200;
-    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier));
+    // Add ±25% random variance to fame for more unpredictable outcomes
+    const fameVariance = 0.75 + Math.random() * 0.50; // 0.75 to 1.25
+    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance);
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5);
@@ -193,7 +195,9 @@ serve(async (req) => {
     const gradeMultiplier = GRADE_MULTIPLIERS[performanceGrade] || 1.0;
     const ratingBonus = avgRating / 25; // 0-1 based on rating
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty;
+    // Add ±20% random variance to fan conversion for more unpredictable outcomes
+    const fanVariance = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains

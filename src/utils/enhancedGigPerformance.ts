@@ -283,7 +283,20 @@ export async function calculateEnhancedPerformance(
   const setlistQuality = await calculateSetlistQuality(inputs.setlistId, inputs.venueId);
   const promoterMod = await getPromoterModifier(inputs.promoterId);
   const venueLoyaltyBonus = await getVenueLoyaltyBonus(inputs.bandId, inputs.venueId);
-  const randomFactor = (Math.random() * 10) - 5; // -5 to +5
+  // Wider random factor for more unpredictable gig outcomes (-8 to +8)
+  // With a small chance of extreme swings (once-in-a-lifetime show or disaster)
+  let randomFactor: number;
+  const gigLuckRoll = Math.random();
+  if (gigLuckRoll < 0.03) {
+    // 3% - Disaster (sound issues, band argument, etc.)
+    randomFactor = -(6 + Math.random() * 5); // -6 to -11
+  } else if (gigLuckRoll > 0.97) {
+    // 3% - Night of their lives
+    randomFactor = 6 + Math.random() * 5; // +6 to +11
+  } else {
+    // 94% - Normal variance
+    randomFactor = (Math.random() * 16) - 8; // -8 to +8
+  }
 
   // Apply formula
   const baseScore = (skillPerformance / 100) * bandSynergy * crowdEngagement * (setlistQuality / 100) * 25;
