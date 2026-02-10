@@ -38,10 +38,7 @@ import { format } from "date-fns";
 import type { CityLaws, DrugPolicyStatus } from "@/types/city-governance";
 import { DRUG_POLICY_LABELS, LAW_FIELD_LABELS } from "@/types/city-governance";
 
-const MUSIC_GENRES = [
-  "Rock", "Pop", "Hip-Hop", "Electronic", "Jazz", "Classical", 
-  "Country", "R&B", "Metal", "Indie", "Folk", "Reggae", "Blues"
-];
+import { MUSIC_GENRES } from "@/data/genres";
 
 export default function MayorDashboard() {
   const { cityId } = useParams<{ cityId: string }>();

@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.641",
+    date: "2026-02-10",
+    changes: [
+      { type: 'feature', description: "Added 10 new rap sub-genres: Conscious Rap, Gangsta Rap, Boom Bap, Cloud Rap, Mumble Rap, Grime, Crunk, Phonk, Emo Rap, Jazz Rap" },
+      { type: 'feature', description: "Added 5 new rap-focused skills: Freestyle Rap, Battle Rap, Flow & Cadence, Rap Songwriting, Ad-Libs & Vocal FX — each with 3 tiers" },
+      { type: 'improvement', description: "Country flags now display next to city names on the dashboard location tab" },
+      { type: 'improvement', description: "Radio stations and Mayor Dashboard now use the centralized genre list from the skill hierarchy" },
+      { type: 'feature', description: "Seeded new university courses, books, and YouTube videos for rap-related skills" },
+    ],
+  },
+  {
     version: "1.0.640",
     date: "2026-02-09",
     changes: [

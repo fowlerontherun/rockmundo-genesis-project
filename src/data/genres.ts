@@ -32,7 +32,17 @@ export const MUSIC_GENRES = [
   "Indie/Bedroom Pop",
   "Hyperpop",
   "Metalcore/Djent",
-  "Alt R&B/Neo-Soul"
+  "Alt R&B/Neo-Soul",
+  "Conscious Rap",
+  "Gangsta Rap",
+  "Boom Bap",
+  "Cloud Rap",
+  "Mumble Rap",
+  "Grime",
+  "Crunk",
+  "Phonk",
+  "Emo Rap",
+  "Jazz Rap",
 ] as const;
 
 export type MusicGenre = typeof MUSIC_GENRES[number];

@@ -24,6 +24,7 @@ import {
   Trophy,
   Clock
 } from "lucide-react";
+import { CountryFlag } from "@/components/location/CountryFlag";
 
 interface OverviewTabsProps {
   profile: any;
@@ -353,8 +354,13 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
                   <MapPin className="h-4 w-4 text-primary" />
                   <span className="text-xs text-muted-foreground font-medium">Current Location</span>
                 </div>
-                <p className="text-xl font-bold text-foreground">{currentCity.name}</p>
-                <p className="text-sm text-muted-foreground">{currentCity.country}</p>
+                <div className="flex items-center gap-2">
+                  <CountryFlag country={currentCity.country} size="md" showTooltip={false} />
+                  <div>
+                    <p className="text-xl font-bold text-foreground">{currentCity.name}</p>
+                    <p className="text-sm text-muted-foreground">{currentCity.country}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

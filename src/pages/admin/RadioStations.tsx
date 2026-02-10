@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Radio, Trash2, Plus, Edit2, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
-import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+
 
 type StationFormState = {
   name: string;
@@ -70,9 +70,8 @@ const formatStationForPersistence = (station: StationFormState): StationFormStat
       : null,
 });
 
-const GENRES = SKILL_TREE_DEFINITIONS
-  .filter((skill: any) => skill.metadata?.category === 'genre')
-  .map((skill: any) => skill.slug);
+import { MUSIC_GENRES } from "@/data/genres";
+const GENRES = [...MUSIC_GENRES];
 
 const TIME_SLOTS = [
   { value: 'morning_drive', label: 'Morning Drive (6-10 AM)' },

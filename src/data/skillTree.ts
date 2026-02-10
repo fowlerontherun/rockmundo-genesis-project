@@ -377,7 +377,9 @@ export const GENRE_LIST = [
   "K-Pop/J-Pop", "Afrobeats/Amapiano", "Synthwave", "Indie/Bedroom Pop", "Hyperpop",
   "Metalcore/Djent", "Alt R&B/Neo-Soul", "Funk", "Soul", "Gospel", "Folk",
   "Bluegrass", "Celtic", "Ska", "Grunge", "Progressive Rock", "Ambient",
-  "Industrial", "Dubstep", "House", "Techno", "Trance", "Drum and Bass"
+  "Industrial", "Dubstep", "House", "Techno", "Trance", "Drum and Bass",
+  "Conscious Rap", "Gangsta Rap", "Boom Bap", "Cloud Rap", "Mumble Rap",
+  "Grime", "Crunk", "Phonk", "Emo Rap", "Jazz Rap"
 ] as const;
 
 const genreTracks = [...GENRE_LIST];
@@ -2569,6 +2571,121 @@ const legacyInstrumentsConfigs: TieredSkillConfig[] = [
         name: "Rapping Mastery",
         description: "Deliver legendary freestyle performances with innovative cadences and wordplay.",
         slug: createSlug("instruments", "Mastery", "Rapping")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Freestyle Rap",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Basic Freestyle",
+        description: "Improvise simple bars over beats with basic rhyme schemes.",
+        slug: createSlug("instruments", "Basic", "Freestyle Rap")
+      },
+      Professional: {
+        name: "Professional Freestyle",
+        description: "Deliver multi-syllable rhymes and audience call-and-response off the dome.",
+        slug: createSlug("instruments", "Professional", "Freestyle Rap")
+      },
+      Mastery: {
+        name: "Freestyle Mastery",
+        description: "Command any cypher or battle with razor-sharp wit and flawless improvisation.",
+        slug: createSlug("instruments", "Mastery", "Freestyle Rap")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Battle Rap",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Basic Battle Rap",
+        description: "Learn punchlines, rebuttals, and competitive rap fundamentals.",
+        slug: createSlug("instruments", "Basic", "Battle Rap")
+      },
+      Professional: {
+        name: "Professional Battle Rap",
+        description: "Craft devastating angles, flip opponents' bars, and control crowd reactions.",
+        slug: createSlug("instruments", "Professional", "Battle Rap")
+      },
+      Mastery: {
+        name: "Battle Rap Mastery",
+        description: "Dominate any rap battle with legendary punchlines and performance presence.",
+        slug: createSlug("instruments", "Mastery", "Battle Rap")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Flow & Cadence",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Basic Flow & Cadence",
+        description: "Develop rhythmic awareness, pocket riding, and basic flow patterns.",
+        slug: createSlug("instruments", "Basic", "Flow & Cadence")
+      },
+      Professional: {
+        name: "Professional Flow & Cadence",
+        description: "Switch between triplet flows, syncopation, and complex rhythmic patterns.",
+        slug: createSlug("instruments", "Professional", "Flow & Cadence")
+      },
+      Mastery: {
+        name: "Flow & Cadence Mastery",
+        description: "Innovate entirely new flow styles that influence the next generation of rappers.",
+        slug: createSlug("instruments", "Mastery", "Flow & Cadence")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Rap Songwriting",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Basic Rap Songwriting",
+        description: "Structure verses, hooks, and bridges for complete rap songs.",
+        slug: createSlug("instruments", "Basic", "Rap Songwriting")
+      },
+      Professional: {
+        name: "Professional Rap Songwriting",
+        description: "Craft concept tracks, storytelling narratives, and radio-ready rap songs.",
+        slug: createSlug("instruments", "Professional", "Rap Songwriting")
+      },
+      Mastery: {
+        name: "Rap Songwriting Mastery",
+        description: "Write genre-defining rap albums with cohesive themes and cultural impact.",
+        slug: createSlug("instruments", "Mastery", "Rap Songwriting")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Ad-Libs & Vocal FX",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Basic Ad-Libs & Vocal FX",
+        description: "Add energy with ad-libs, vocal stacks, and signature catchphrases.",
+        slug: createSlug("instruments", "Basic", "Ad-Libs & Vocal FX")
+      },
+      Professional: {
+        name: "Professional Ad-Libs & Vocal FX",
+        description: "Layer ad-libs with precision, use vocal effects creatively, and build signature sounds.",
+        slug: createSlug("instruments", "Professional", "Ad-Libs & Vocal FX")
+      },
+      Mastery: {
+        name: "Ad-Libs & Vocal FX Mastery",
+        description: "Create iconic vocal signatures that become part of hip hop culture.",
+        slug: createSlug("instruments", "Mastery", "Ad-Libs & Vocal FX")
       }
     }
   },
