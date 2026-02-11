@@ -18,7 +18,6 @@ function generateContractTerms(
 ) {
   const { fame, total_fans, release_count } = metrics;
 
-  // Determine band tier
   let tier: "small" | "medium" | "large" | "major";
   if (total_fans >= 50000 || fame >= 80) {
     tier = "major";
@@ -34,44 +33,24 @@ function generateContractTerms(
 
   const tierConfig = {
     small: {
-      advanceBase: 1000,
-      advanceMax: 10000,
-      artistRoyaltyBase: 12,
-      artistRoyaltyMax: 20,
-      singleQuota: 4,
-      albumQuota: 1,
-      termMonths: 36,
-      terminationFeePct: 60,
+      advanceBase: 1000, advanceMax: 10000,
+      artistRoyaltyBase: 12, artistRoyaltyMax: 20,
+      singleQuota: 4, albumQuota: 1, termMonths: 36, terminationFeePct: 60,
     },
     medium: {
-      advanceBase: 5000,
-      advanceMax: 30000,
-      artistRoyaltyBase: 18,
-      artistRoyaltyMax: 30,
-      singleQuota: 3,
-      albumQuota: 1,
-      termMonths: 30,
-      terminationFeePct: 50,
+      advanceBase: 5000, advanceMax: 30000,
+      artistRoyaltyBase: 18, artistRoyaltyMax: 30,
+      singleQuota: 3, albumQuota: 1, termMonths: 30, terminationFeePct: 50,
     },
     large: {
-      advanceBase: 20000,
-      advanceMax: 100000,
-      artistRoyaltyBase: 25,
-      artistRoyaltyMax: 40,
-      singleQuota: 2,
-      albumQuota: 2,
-      termMonths: 24,
-      terminationFeePct: 40,
+      advanceBase: 20000, advanceMax: 100000,
+      artistRoyaltyBase: 25, artistRoyaltyMax: 40,
+      singleQuota: 2, albumQuota: 2, termMonths: 24, terminationFeePct: 40,
     },
     major: {
-      advanceBase: 50000,
-      advanceMax: 500000,
-      artistRoyaltyBase: 35,
-      artistRoyaltyMax: 50,
-      singleQuota: 2,
-      albumQuota: 1,
-      termMonths: 18,
-      terminationFeePct: 25,
+      advanceBase: 50000, advanceMax: 500000,
+      artistRoyaltyBase: 35, artistRoyaltyMax: 50,
+      singleQuota: 2, albumQuota: 1, termMonths: 18, terminationFeePct: 25,
     },
   };
 
@@ -82,22 +61,18 @@ function generateContractTerms(
   const experienceMultiplier = 1 + Math.min(release_count * 0.05, 0.25);
   const labelFactor = 1 - labelReputation / 400;
 
-  const advance = Math.round(
+  const rawAdvance = Math.round(
     config.advanceBase +
       (config.advanceMax - config.advanceBase) *
-        fameMultiplier *
-        fanMultiplier *
-        (1 + qualityBonus) *
-        randomFactor *
-        labelFactor
+        fameMultiplier * fanMultiplier * (1 + qualityBonus) * randomFactor * labelFactor
   );
+  // Cap advance to max for the tier to prevent integer overflow
+  const advance = Math.min(rawAdvance, config.advanceMax * 2);
 
   const artistRoyalty = Math.round(
     config.artistRoyaltyBase +
       (config.artistRoyaltyMax - config.artistRoyaltyBase) *
-        (fameMultiplier - 1) *
-        experienceMultiplier *
-        (1 + qualityBonus)
+        (fameMultiplier - 1) * experienceMultiplier * (1 + qualityBonus)
   );
 
   const clampedArtistRoyalty = Math.min(
@@ -138,14 +113,16 @@ function shouldAcceptDemo(
   labelReputation: number,
   genreMatch: boolean
 ): { accepted: boolean; reason?: string } {
-  const baseThreshold = 30 + labelReputation * 0.3;
+  // Lower base threshold so more demos get accepted
+  const baseThreshold = 20 + labelReputation * 0.2;
 
   let score = songQuality;
   score += bandMetrics.fame * 0.5;
   score += Math.log10(Math.max(bandMetrics.total_fans, 1)) * 10;
   score += bandMetrics.release_count * 5;
-  if (genreMatch) score += 15;
-  score += (Math.random() - 0.5) * 20;
+  if (genreMatch) score += 20;
+  // Add randomness that skews positive
+  score += (Math.random() * 30) - 10;
 
   if (score >= baseThreshold) {
     return { accepted: true };
@@ -177,21 +154,32 @@ Deno.serve(async (req) => {
 
     console.log("Processing pending demo submissions...");
 
-    // Fetch pending demos that haven't been reviewed
+    // Fetch a global deal type (they are not label-specific)
+    const { data: globalDealType } = await supabase
+      .from("label_deal_types")
+      .select("id")
+      .limit(1)
+      .single();
+
+    if (!globalDealType) {
+      console.error("No deal types found in system");
+      return new Response(
+        JSON.stringify({ error: "No deal types configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch pending demos - process after 2 hours (not 24h, so players see results sooner)
     const { data: pendingDemos, error: demosError } = await supabase
       .from("demo_submissions")
       .select(`
-        id,
-        song_id,
-        label_id,
-        band_id,
-        artist_profile_id,
-        submitted_at,
+        id, song_id, label_id, band_id, artist_profile_id, submitted_at,
         songs(title, genre, quality_score),
-        labels(id, name, genre_focus, reputation_score)
+        labels(id, name, genre_focus, reputation_score, owner_id, is_bankrupt)
       `)
       .eq("status", "pending")
-      .lt("submitted_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // At least 1 day old
+      .lt("submitted_at", new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+      .limit(50);
 
     if (demosError) {
       console.error("Error fetching demos:", demosError);
@@ -211,6 +199,18 @@ Deno.serve(async (req) => {
 
         if (!song || !label) {
           console.log(`Skipping demo ${demo.id} - missing song or label`);
+          continue;
+        }
+
+        // Skip player-owned labels (they review manually)
+        if (label.owner_id) {
+          console.log(`Skipping demo ${demo.id} - player-owned label`);
+          continue;
+        }
+
+        // Skip bankrupt labels
+        if (label.is_bankrupt) {
+          console.log(`Skipping demo ${demo.id} - bankrupt label`);
           continue;
         }
 
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
             total_fans: band?.total_fans ?? 0,
             release_count: releaseCount ?? 0,
           };
-        } else {
+        } else if (demo.artist_profile_id) {
           const { data: profile } = await supabase
             .from("profiles")
             .select("fame, fans")
@@ -252,12 +252,16 @@ Deno.serve(async (req) => {
             total_fans: profile?.fans ?? 0,
             release_count: releaseCount ?? 0,
           };
+        } else {
+          console.log(`Skipping demo ${demo.id} - no band_id or artist_profile_id`);
+          continue;
         }
 
         // Check genre match
         const labelGenres = label.genre_focus ?? [];
+        const songGenre = song.genre?.toLowerCase() ?? "";
         const genreMatch = labelGenres.some((g: string) =>
-          g.toLowerCase().includes(song.genre?.toLowerCase() ?? "")
+          g.toLowerCase().includes(songGenre) || songGenre.includes(g.toLowerCase())
         );
 
         // Decide if accepted
@@ -276,27 +280,18 @@ Deno.serve(async (req) => {
             song.quality_score ?? 0
           );
 
-          // Get a deal type for the contract
-          const { data: dealType } = await supabase
-            .from("label_deal_types")
-            .select("id")
-            .eq("label_id", label.id)
-            .limit(1)
-            .single();
-
-          if (!dealType) {
-            console.log(`No deal type found for label ${label.id}, skipping`);
-            continue;
-          }
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + terms.term_months);
 
           // Create contract offer
           const { data: contract, error: contractError } = await supabase
             .from("artist_label_contracts")
             .insert({
               label_id: label.id,
-              deal_type_id: dealType.id,
-              band_id: demo.band_id,
-              artist_profile_id: demo.artist_profile_id,
+              deal_type_id: globalDealType.id,
+              band_id: demo.band_id || null,
+              artist_profile_id: demo.artist_profile_id || null,
               status: "offered",
               advance_amount: terms.advance_amount,
               royalty_artist_pct: terms.royalty_artist_pct,
@@ -309,6 +304,8 @@ Deno.serve(async (req) => {
               contract_value: terms.contract_value,
               demo_submission_id: demo.id,
               release_quota: terms.single_quota + terms.album_quota,
+              start_date: startDate.toISOString(),
+              end_date: endDate.toISOString(),
             })
             .select()
             .single();
@@ -329,7 +326,7 @@ Deno.serve(async (req) => {
             .eq("id", demo.id);
 
           accepted++;
-          console.log(`Demo ${demo.id} accepted, contract ${contract.id} created`);
+          console.log(`Demo ${demo.id} accepted, contract ${contract.id} created for ${song.title}`);
         } else {
           // Reject demo
           await supabase
@@ -354,24 +351,14 @@ Deno.serve(async (req) => {
     console.log(`Processed ${processed} demos: ${accepted} accepted, ${rejected} rejected`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        processed,
-        accepted,
-        rejected,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: true, processed, accepted, rejected }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error in process-demo-review:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

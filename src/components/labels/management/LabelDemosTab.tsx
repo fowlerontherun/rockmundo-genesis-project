@@ -59,13 +59,17 @@ export function LabelDemosTab({ labelId, labelReputation, genreFocus, isPlayerOw
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + terms.term_months);
 
+      // Get a global deal type (they are not label-specific)
+      const { data: dealType } = await supabase.from("label_deal_types").select("id").limit(1).single();
+      if (!dealType) throw new Error("No deal types configured in system");
+
       const { data: contract, error: contractError } = await supabase
         .from("artist_label_contracts")
         .insert({
           label_id: labelId,
           band_id: bandId || null,
           artist_profile_id: demo.artist_profile_id || null,
-          deal_type_id: (await supabase.from("label_deal_types").select("id").limit(1).single()).data?.id,
+          deal_type_id: dealType.id,
           status: "offered",
           advance_amount: terms.advance_amount,
           royalty_artist_pct: terms.royalty_artist_pct,
