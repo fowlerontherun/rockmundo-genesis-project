@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.642",
+    date: "2026-02-11",
+    changes: [
+      { type: 'fix', description: "Fixed NPC labels never reviewing demo submissions — demos are now auto-processed every 4 hours with acceptance based on song quality, fame, fans, and genre match" },
+      { type: 'fix', description: "Fixed contract creation failing due to missing start/end dates and incorrect deal type lookup" },
+      { type: 'feature', description: "Label owners can now scout bands and offer record deals directly from the Roster tab without waiting for demo submissions" },
+      { type: 'improvement', description: "Lowered NPC label acceptance threshold so more demos get accepted, especially for newer artists" },
+      { type: 'improvement', description: "Demo review wait time reduced from 24 hours to 2 hours for faster feedback" },
+    ],
+  },
+  {
     version: "1.0.641",
     date: "2026-02-10",
     changes: [

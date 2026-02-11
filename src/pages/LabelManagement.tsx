@@ -147,7 +147,7 @@ export default function LabelManagement() {
           </TabsList>
           
           <TabsContent value="roster">
-            <LabelRosterTab labelId={label.id} rosterCapacity={label.roster_slot_capacity || 5} />
+            <LabelRosterTab labelId={label.id} rosterCapacity={label.roster_slot_capacity || 5} labelReputation={label.reputation_score || 0} />
           </TabsContent>
           
           <TabsContent value="demos">

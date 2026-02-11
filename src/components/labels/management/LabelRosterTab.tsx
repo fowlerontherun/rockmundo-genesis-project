@@ -1,18 +1,22 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, UserMinus, Music, Disc3, Album, DollarSign } from "lucide-react";
+import { Users, UserMinus, Music, Disc3, Album, DollarSign, Search } from "lucide-react";
 import { toast } from "sonner";
+import { ScoutOfferDialog } from "./ScoutOfferDialog";
 
 interface LabelRosterTabProps {
   labelId: string;
   rosterCapacity: number;
+  labelReputation?: number;
 }
 
-export function LabelRosterTab({ labelId, rosterCapacity }: LabelRosterTabProps) {
+export function LabelRosterTab({ labelId, rosterCapacity, labelReputation = 0 }: LabelRosterTabProps) {
+  const [showScoutDialog, setShowScoutDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: contracts = [], isLoading } = useQuery({
@@ -66,7 +70,13 @@ export function LabelRosterTab({ labelId, rosterCapacity }: LabelRosterTabProps)
             {activeContracts.length} / {rosterCapacity} roster slots filled
           </p>
         </div>
-        <Progress value={(activeContracts.length / rosterCapacity) * 100} className="w-32" />
+        <div className="flex items-center gap-3">
+          <Button size="sm" onClick={() => setShowScoutDialog(true)}>
+            <Search className="h-4 w-4 mr-1" />
+            Scout & Offer Deal
+          </Button>
+          <Progress value={(activeContracts.length / rosterCapacity) * 100} className="w-32" />
+        </div>
       </div>
 
       {activeContracts.length === 0 ? (
@@ -164,6 +174,13 @@ export function LabelRosterTab({ labelId, rosterCapacity }: LabelRosterTabProps)
           })}
         </div>
       )}
+
+      <ScoutOfferDialog
+        open={showScoutDialog}
+        onOpenChange={setShowScoutDialog}
+        labelId={labelId}
+        labelReputation={labelReputation}
+      />
     </div>
   );
 }
