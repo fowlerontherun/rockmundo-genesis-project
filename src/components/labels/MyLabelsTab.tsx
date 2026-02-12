@@ -194,7 +194,7 @@ export function MyLabelsTab() {
             <CardFooter>
               <Button 
                 className="w-full" 
-                onClick={() => navigate(`/label-management/${label.id}`)}
+                onClick={() => navigate(`/labels/${label.id}/manage`)}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Manage Label
