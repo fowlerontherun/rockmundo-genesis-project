@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.644",
+    date: "2026-02-12",
+    changes: [
+      { type: 'fix', description: "Fixed 404 error when clicking 'Manage Label' — navigation path corrected from /label-management/:id to /labels/:id/manage" },
+    ],
+  },
+  {
     version: "1.0.643",
     date: "2026-02-12",
     changes: [
