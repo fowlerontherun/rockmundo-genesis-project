@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.643",
+    date: "2026-02-12",
+    changes: [
+      { type: 'fix', description: "Fixed 404 errors when navigating to record labels from company dashboard — subsidiary labels now have correct ownership data" },
+      { type: 'fix', description: "Fixed artists unable to accept or reject contract offers — added RLS policy allowing artists to update their own contracts" },
+      { type: 'fix', description: "Fixed label owners unable to see demo submissions — added RLS policy for label owners to view and manage demos" },
+      { type: 'fix', description: "Fixed record label management page not loading for subsidiary labels — backfilled missing created_by field" },
+      { type: 'improvement', description: "Contract offers from player-owned labels can now be properly reviewed, accepted, or rejected by artists" },
+    ],
+  },
+  {
     version: "1.0.642",
     date: "2026-02-11",
     changes: [
