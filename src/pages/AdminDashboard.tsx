@@ -3,10 +3,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AdminRoute } from "@/components/AdminRoute";
-import { AlertTriangle, CheckCircle2, Database, Settings2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard } from "lucide-react";
 import SkillDefinitionsManager from "@/components/admin/SkillDefinitionsManager";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useNavStyle } from "@/hooks/useNavStyle";
 
 const AdminDashboard = () => {
+  const { navStyle, setNavStyle, isLoading: navLoading } = useNavStyle();
+
   return (
     <AdminRoute>
       <div className="container mx-auto p-6 space-y-8">
@@ -73,6 +78,28 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" />
+              Navigation Style
+            </CardTitle>
+            <CardDescription>Switch between sidebar and horizontal top navigation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Label htmlFor="nav-style" className="text-sm">Sidebar</Label>
+              <Switch
+                id="nav-style"
+                checked={navStyle === "horizontal"}
+                disabled={navLoading}
+                onCheckedChange={(checked) => setNavStyle(checked ? "horizontal" : "sidebar")}
+              />
+              <Label htmlFor="nav-style" className="text-sm">Horizontal</Label>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-4 md:grid-cols-4">
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/production-notes'}>
