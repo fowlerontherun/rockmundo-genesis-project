@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Navigation from "@/components/ui/navigation";
+import HorizontalNavigation from "@/components/ui/HorizontalNavigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useNavStyle } from "@/hooks/useNavStyle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
@@ -20,6 +22,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
+  const { navStyle } = useNavStyle();
+  const isHorizontal = navStyle === "horizontal";
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
@@ -65,8 +69,8 @@ const Layout = () => {
 
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden">
-      <Navigation />
-      <main className="flex-1 pt-12 pb-20 lg:pt-16 lg:pb-20 overflow-x-hidden max-w-full">
+      {isHorizontal ? <HorizontalNavigation /> : <Navigation />}
+      <main className={`flex-1 ${isHorizontal ? 'pt-24 lg:pt-24' : 'pt-12 lg:pt-16'} pb-20 overflow-x-hidden max-w-full`}>
         <div className="p-3 md:p-4 max-w-full overflow-x-hidden">
           {profileError && (
             <Alert variant="destructive" className="mb-4 max-w-2xl">

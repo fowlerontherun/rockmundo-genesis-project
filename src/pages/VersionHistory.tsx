@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.645",
+    date: "2026-02-13",
+    changes: [
+      { type: 'feature', description: "Added alternative horizontal top navigation with hover dropdowns — can be toggled on/off from Admin Dashboard" },
+      { type: 'feature', description: "Added Navigation Style toggle switch in Admin Dashboard to switch between sidebar and horizontal nav globally" },
+    ],
+  },
+  {
     version: "1.0.644",
     date: "2026-02-12",
     changes: [
