@@ -8,10 +8,13 @@ import {
   Users, Music, Mic2, BarChart3, DollarSign, Activity, 
   AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
   Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
-  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag
+  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useNavStyle } from "@/hooks/useNavStyle";
 
 interface GameStats {
   total_players: number;
@@ -27,6 +30,7 @@ interface GameStats {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { navStyle, setNavStyle, isLoading: navLoading } = useNavStyle();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-game-stats"],
@@ -131,6 +135,29 @@ const AdminDashboard = () => {
             {stats?.activities_today || 0} activities today
           </Badge>
         </div>
+
+        {/* Navigation Style Toggle */}
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" />
+              Navigation Style
+            </CardTitle>
+            <CardDescription>Switch between sidebar and horizontal top navigation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Label htmlFor="nav-style-toggle" className="text-sm">Sidebar</Label>
+              <Switch
+                id="nav-style-toggle"
+                checked={navStyle === "horizontal"}
+                disabled={navLoading}
+                onCheckedChange={(checked) => setNavStyle(checked ? "horizontal" : "sidebar")}
+              />
+              <Label htmlFor="nav-style-toggle" className="text-sm">Horizontal</Label>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>
