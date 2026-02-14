@@ -260,7 +260,7 @@ export default function AISongGeneration() {
               AI Song Generation
             </h1>
             <p className="text-muted-foreground">
-              Test and manage AI-generated audio for songs using Replicate MusicGen
+              Test and manage AI-generated audio for songs using YuE model on Replicate
             </p>
           </div>
           <Button onClick={() => refetch()} variant="outline">
@@ -487,7 +487,7 @@ export default function AISongGeneration() {
             <DialogHeader>
               <DialogTitle>Generate AI Audio</DialogTitle>
               <DialogDescription>
-                Generate audio for "{selectedSong?.title}" using Replicate MusicGen
+                Generate audio for "{selectedSong?.title}" using YuE model on Replicate
               </DialogDescription>
             </DialogHeader>
             
