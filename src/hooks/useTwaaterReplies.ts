@@ -13,7 +13,7 @@ export const useTwaaterReplies = (twaatId: string) => {
         .from("twaat_replies")
         .select(`
           *,
-          account:twaater_accounts(id, handle, display_name, verified)
+          account:twaater_accounts!twaat_replies_account_id_fkey(id, handle, display_name, verified)
         `)
         .eq("parent_twaat_id", twaatId)
         .order("created_at", { ascending: true });

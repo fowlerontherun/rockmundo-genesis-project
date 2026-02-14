@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     // Fetch recent twaats from followed accounts and popular accounts
     // Added visibility filter for public posts only
-    const { data: twaats } = await supabase
+    const { data: twaats, error: twaatsError } = await supabase
       .from('twaats')
       .select(`
         id,
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         created_at,
         linked_type,
         linked_id,
-        account:twaater_accounts(id, handle, display_name, verified, fame_score, owner_type),
+        account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, fame_score, owner_type),
         metrics:twaat_metrics(likes, replies, retwaats, impressions)
       `)
       .eq('visibility', 'public')
@@ -61,7 +61,10 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(200)
 
+    console.log(`Fetched ${twaats?.length || 0} twaats, error: ${twaatsError?.message || 'none'}`)
+
     if (!twaats || twaats.length === 0) {
+      console.log('No twaats found, returning empty feed')
       return new Response(
         JSON.stringify({ ranked_feed: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -21,7 +21,7 @@ export default function TwaaterHashtagView() {
         .from("twaats")
         .select(`
           *,
-          account:twaater_accounts(id, handle, display_name, verified, owner_type, fame_score),
+          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
           metrics:twaat_metrics(*)
         `)
         .ilike("body", `%#${hashtag}%`)
