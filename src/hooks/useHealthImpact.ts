@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getHealthStatus } from "@/utils/healthSystem";
+import { autoHospitalize } from "@/hooks/useHospitalization";
 
 /**
  * Check if user has enough health/energy for an activity
@@ -98,14 +99,9 @@ export async function applyHealthDrain(
     })
     .eq("user_id", userId);
 
-  // Check if user collapsed
+  // Check if user collapsed - auto-hospitalize
   if (newHealth === 0) {
-    const restUntil = new Date();
-    restUntil.setHours(restUntil.getHours() + 24);
-    await supabase
-      .from("profiles")
-      .update({ rest_required_until: restUntil.toISOString() })
-      .eq("user_id", userId);
+    await autoHospitalize(userId);
   }
 }
 
