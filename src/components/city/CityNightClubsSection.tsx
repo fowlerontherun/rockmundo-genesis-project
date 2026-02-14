@@ -1,11 +1,12 @@
 
 import { useEffect, useState } from "react";
-import { Disc3, GlassWater, ListMusic, Mic2, Sparkles, Users } from "lucide-react";
+import { Disc3, GlassWater, ListMusic, Mic2, Sparkles, Users, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CityNightClub } from "@/utils/worldEnvironment";
+import { useNightlifeEvents } from "@/hooks/useNightlifeEvents";
 
 interface CityNightClubsSectionProps {
   nightClubs: CityNightClub[];
@@ -55,6 +56,7 @@ const formatSetLength = (value: number | null | undefined): string | null => {
 const getQualityLabel = (qualityLevel: number) => QUALITY_LABELS[qualityLevel] ?? `Tier ${qualityLevel}`;
 
 export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps) => {
+  const { triggerNightlifeEvent, isProcessing } = useNightlifeEvents();
 
   if (!nightClubs.length) {
     return (
@@ -134,11 +136,23 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                   )}
                 </div>
                 <div className="flex flex-col gap-2 md:items-end">
-                  <Button size="sm" className="w-full md:w-auto" variant="default">
-                    <Mic2 className="mr-2 h-4 w-4" /> Queue for DJ Slot
+                  <Button
+                    size="sm"
+                    className="w-full md:w-auto"
+                    variant="default"
+                    disabled={isProcessing}
+                    onClick={() => triggerNightlifeEvent({ activityType: "dj_slot", clubName: club.name })}
+                  >
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic2 className="mr-2 h-4 w-4" />} Queue for DJ Slot
                   </Button>
-                  <Button size="sm" variant="outline" className="w-full md:w-auto">
-                    <Sparkles className="mr-2 h-4 w-4" /> Visit as Guest
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full md:w-auto"
+                    disabled={isProcessing}
+                    onClick={() => triggerNightlifeEvent({ activityType: "guest_visit", clubName: club.name })}
+                  >
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Visit as Guest
                   </Button>
                 </div>
               </div>

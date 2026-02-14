@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.690",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Nightlife event triggers — visiting clubs or queuing for DJ slots now rolls for addiction based on partying_intensity and afterparty_attendance behavior settings" },
+      { type: 'feature', description: "New useNightlifeEvents hook with energy cost, cash cost, fame gain, and addiction roll per nightclub activity" },
+      { type: 'improvement', description: "Visit as Guest and Queue for DJ Slot buttons are now functional with loading states and outcome toasts" },
+    ],
+  },
+  {
     version: "1.0.689",
     date: "2026-02-14",
     changes: [
