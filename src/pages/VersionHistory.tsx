@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.682",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Retroactively estimated historical sales based on days since release — unit counts and revenue display updated without adding money to player accounts" },
+    ],
+  },
+  {
     version: "1.0.681",
     date: "2026-02-14",
     changes: [
