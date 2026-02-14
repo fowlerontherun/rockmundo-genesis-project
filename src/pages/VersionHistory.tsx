@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.689",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Underworld products can now be tagged with an Addiction Type (alcohol, substances, gambling, partying) from admin" },
+      { type: 'feature', description: "Using items with addiction_type triggers addiction risk — 30% chance of new addiction, or increases existing severity" },
+      { type: 'improvement', description: "Inventory items are consumed (single-use) and removed after use via is_used flag" },
+    ],
+  },
+  {
     version: "1.0.688",
     date: "2026-02-14",
     changes: [

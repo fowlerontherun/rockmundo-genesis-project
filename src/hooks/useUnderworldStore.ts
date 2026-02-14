@@ -19,6 +19,7 @@ export interface UnderworldProduct {
   stock_limit: number | null;
   current_stock: number | null;
   icon_name: string | null;
+  addiction_type: string | null;
   created_at: string;
 }
 
