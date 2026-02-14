@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.680",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed uuid/text type mismatch in complete_song_sale RPC for buyer_user_id and bidder_user_id columns" },
+    ],
+  },
+  {
     version: "1.0.679",
     date: "2026-02-14",
     changes: [
