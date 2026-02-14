@@ -1,93 +1,101 @@
 
-# Underworld Crypto Market Overhaul -- v1.0.686
 
-## Summary
-Transform the crypto market from a static display into a volatile, player-influenced economy with 100 seeded tokens, live price fluctuations, rug-pull mechanics, and trading that's deliberately hard to profit from.
+# Fix Modeling + Offers Dashboard -- v1.0.687
+
+## Problems Identified
+
+### 1. Modeling: Wrong Pattern
+Currently, modeling works like a job catalog -- you browse available gigs and book them yourself. The user wants it to work like **media offers**: offers arrive based on your stats, you accept/decline them, similar to how PR media offers come in for bands.
+
+### 2. Offers Dashboard: Entirely Placeholder
+The Offers Dashboard page (`/offers`) contains **100% hardcoded fake data** -- 10 static contract records with made-up brands (Starlite Audio, Pulse Cola, etc.). It has no database connection whatsoever. It needs to be rebuilt to pull real data from the player's actual offers across all systems (modeling, media, gigs, sponsorships).
 
 ---
 
-## What Changes
+## Changes
 
-### 1. Seed 100 Crypto Tokens
-- Database migration to insert 100 unique tokens with varied names, symbols, and starting prices (ranging from $0.001 to $5,000)
-- Tokens span tiers: ~50 micro-caps (cheap/volatile), ~30 mid-caps, ~15 large-caps, ~5 blue-chips
-- Each gets randomized initial `price_history` entries so charts aren't empty
-- Remove the 3 hardcoded placeholder tokens from the frontend
+### Part A: Modeling Offer System Overhaul
 
-### 2. New Edge Function: `simulate-crypto-market`
-Runs on a cron (every 5-10 minutes) to create live volatility:
+**New approach**: Instead of browsing a catalog, modeling offers are **generated and sent to the player** based on their looks/fame, similar to how `pr_media_offers` work.
 
-- **Base volatility**: Each tick, every token's price shifts by a random percentage. Micro-caps swing +/-15%, mid-caps +/-8%, large-caps +/-4%
-- **Downward bias**: Prices trend slightly downward on average (-0.5% drift per tick) making it hard to profit long-term
-- **Momentum**: Tracks short-term trend direction so prices don't just randomly walk -- they can run up or crash in streaks
-- **Player impact**: Large buy orders push price up slightly, large sell orders push price down. This is calculated from recent `token_transactions` since last tick
-- **Volume simulation**: Randomize `volume_24h` each tick based on price movement
-- **Price history**: Append the new price to `price_history` JSONB array (capped at ~100 entries)
+1. **Database migration**:
+   - Add `modeling_offers` table (or reuse `player_modeling_contracts` with a new `offered` status flow):
+     - `id`, `user_id`, `gig_id`, `status` (pending/accepted/declined/expired), `compensation` (pre-calculated), `fame_boost`, `expires_at`, `offer_reason` (text explaining why), `created_at`
+   - Add `expires_at` column to `player_modeling_contracts` if not present
 
-### 3. Rug-Pull Mechanic
-Built into the edge function:
+2. **Offer generation logic** (new utility `src/utils/modelingOfferGenerator.ts`):
+   - Function `generateModelingOffersForUser(userId, looks, fame)` that:
+     - Queries eligible `modeling_gigs` matching player's looks/fame
+     - Randomly picks 1-3 gigs the player qualifies for
+     - Generates a compensation amount within the gig's min/max range
+     - Creates offers with 3-7 day expiry
+     - Adds a thematic reason ("Your look caught the eye of [agency]", "Brand X wants you for their spring campaign")
+   - Can be called from an edge function on a cron, or triggered on page visit
 
-- Each tick, every micro/mid-cap token has a small chance (~0.5-2%) of "rugging"
-- When rugged: price drops to $0.00, volume goes to 0, token is flagged as `is_rugged = true`
-- Players holding the token lose their investment (holdings become worthless)
-- A notification/toast event is logged so players see "TOKEN X has been rugged!"
-- After rugging, the token is soft-deleted (hidden from market) and a brand-new replacement token is generated with fresh randomized data to maintain 100 active tokens
+3. **Rewrite `ModelingOffersPanel`**:
+   - Replace the current "browse and book" catalog with an **incoming offers list** (like MediaOffersTable)
+   - Each offer shows: gig title, agency/brand, compensation (fixed, not a range), fame boost, expiry countdown
+   - Accept/Decline buttons on pending offers
+   - Accepting still opens the date/time scheduling dialog (keep existing booking logic)
+   - Declining marks offer as declined
+   - Expired offers auto-hide
+   - Keep the career progress component at the top
+   - Keep the "one active contract" rule
 
-### 4. Database Schema Updates
-Add columns to `crypto_tokens`:
-- `is_rugged` (boolean, default false) -- marks dead tokens
-- `volatility_tier` (text: 'micro', 'mid', 'large', 'blue_chip') -- controls swing range
-- `trend_direction` (numeric, default 0) -- momentum tracker (-1 to 1)
-- `is_active` (boolean, default true) -- hide rugged tokens from listings
+4. **Auto-generate on page visit**: If user has 0 pending offers, trigger generation of 1-3 new offers (with a cooldown so it doesn't spam)
 
-### 5. Frontend: Live Trading UI
-Upgrade the existing market section in `UnderworldNew.tsx`:
+### Part B: Offers Dashboard -- Wire to Real Data
 
-- **Auto-refresh**: Poll token prices every 30 seconds using React Query `refetchInterval`
-- **Price flash**: Green/red flash animation when price changes between polls
-- **Working Buy/Sell**: Wire the existing buy/sell form inputs to the `useCryptoTokens` hook's `buyToken`/`sellToken` mutations (currently just placeholder buttons)
-- **Portfolio panel**: Show player's holdings, current P&L, average buy price
-- **Rug alert banner**: When a held token rugs, show a dramatic red alert
-- **Token count badge**: Show "X/100 Active Tokens" in the market header
-- **Rugged tokens graveyard**: Small collapsible section showing recently rugged tokens
+Replace all hardcoded data with a unified view pulling from real database tables:
 
-### 6. Player Impact on Price
-In `useCryptoTokens.ts` buy/sell mutations, after recording the transaction:
-- The edge function picks up recent transactions and factors them into the next price tick
-- Large buys (>1% of market cap) cause a temporary price bump
-- Large sells cause a temporary dip
-- This creates a feedback loop where buying pushes price up, encouraging others, then it crashes
+1. **Data sources to aggregate**:
+   - `player_modeling_contracts` -- modeling offers/contracts
+   - `pr_media_offers` -- PR media offers
+   - `media_offers` -- legacy media offers
+   - `gig_offers` -- band gig booking offers
+   - `sponsorship_offers` -- sponsorship deals
+
+2. **Rewrite `OffersDashboard.tsx`**:
+   - Fetch real data from all offer tables for the current user/band
+   - Normalize into a common `ContractRecord` shape for display
+   - Keep the existing chart/filter UI structure but wire it to real data
+   - KPI cards (Offers Sent/Accepted/Rate/Payout) compute from real records
+   - Charts show real trends
+   - Table links to actual records
+
+### Part C: Version Update
+- Bump to v1.0.687
+- Changelog entry describing both fixes
 
 ---
 
 ## Technical Details
 
-### Migration SQL
-- Add new columns to `crypto_tokens`
-- Seed 100 tokens with INSERT statements using generate_series and randomized data
-- Ensure existing 5 tokens are kept and assigned volatility tiers
-
-### Edge Function: `simulate-crypto-market`
-```text
-For each active token:
-  1. Get recent transactions since last update
-  2. Calculate player pressure (net buy/sell volume)
-  3. Apply base volatility (random within tier range)
-  4. Apply downward drift (-0.5%)
-  5. Apply player pressure modifier
-  6. Apply momentum (trend_direction)
-  7. Roll for rug-pull (micro/mid only)
-  8. If rugged: set price=0, is_rugged=true, spawn replacement
-  9. Update price_history, volume_24h, updated_at
-```
-
 ### Files to Create
-- `supabase/functions/simulate-crypto-market/index.ts`
+- `src/utils/modelingOfferGenerator.ts` -- offer generation logic (mirrors `gigOfferGenerator.ts` pattern)
 
 ### Files to Modify
-- `src/pages/UnderworldNew.tsx` -- wire trading, add portfolio, rug alerts, auto-refresh
-- `src/hooks/useCryptoTokens.ts` -- add refetchInterval, portfolio value calculation
-- `src/hooks/useUnderworld.ts` -- add refetchInterval
-- `src/components/VersionHeader.tsx` -- bump to 1.0.686
-- `src/pages/VersionHistory.tsx` -- changelog entry
-- Database migration for schema + seed data
+- `src/components/modeling/ModelingOffersPanel.tsx` -- rewrite to incoming-offers pattern with accept/decline
+- `src/pages/OffersDashboard.tsx` -- replace hardcoded data with real Supabase queries
+- `src/pages/Modeling.tsx` -- pass band data if needed, trigger offer generation
+- `src/components/VersionHeader.tsx` -- bump to 1.0.687
+- `src/pages/VersionHistory.tsx` -- changelog
+
+### Database Migration
+- Add `expires_at` and `offer_reason` columns to `player_modeling_contracts` (if reusing that table for the offer flow)
+- Or create a dedicated `modeling_offers` table
+
+### Modeling Offers Flow
+
+```text
+Player visits /modeling
+  -> Check pending offers count
+  -> If 0 pending and cooldown expired:
+      -> generateModelingOffersForUser()
+      -> Creates 1-3 offers based on looks/fame
+  -> Display pending offers as cards with Accept/Decline
+  -> Accept -> opens date/time picker -> creates scheduled activity
+  -> Decline -> marks as declined
+  -> Expired offers hidden automatically
+```
+
