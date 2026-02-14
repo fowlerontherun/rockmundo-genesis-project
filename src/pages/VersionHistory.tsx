@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.672",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Release creation now shows per-format cost breakdown and per-song manufacturing cost estimate" },
+      { type: 'feature', description: "Release cards now display full financial breakdown: manufacturing cost, gross revenue, tax paid, distribution fees, and profit/loss" },
+      { type: 'feature', description: "Release analytics dialog now has a Financials tab with a full P&L statement and per-song revenue/cost breakdown" },
+      { type: 'feature', description: "Stats overview now shows Total Tax Paid and Net Profit across all releases" },
+    ],
+  },
+  {
     version: "1.0.671",
     date: "2026-02-14",
     changes: [
