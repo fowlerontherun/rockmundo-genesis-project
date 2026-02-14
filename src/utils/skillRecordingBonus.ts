@@ -4,6 +4,7 @@
  */
 
 import type { SkillProgressEntry } from "./skillGearPerformance";
+import { getTieredBonusScaled } from "./tieredSkillBonus";
 
 /** Skill slugs relevant to recording quality */
 const RECORDING_SKILL_SLUGS = {
@@ -86,8 +87,8 @@ export function calculateRecordingSkillBonus(
 
   const calc = (slugs: readonly string[], maxBonus: number): number => {
     const level = getMaxLevel(progress, slugs);
-    // Skill level is 0-20 (MAX_SKILL_LEVEL), map to 0-maxBonus%
-    return Math.min(maxBonus, (level / 20) * maxBonus);
+    // Tiered bonus: higher levels give progressively more, mastery gets flat bonus
+    return getTieredBonusScaled(level, maxBonus);
   };
 
   const mixing = calc(RECORDING_SKILL_SLUGS.mixing, MAX_BONUSES.mixing);

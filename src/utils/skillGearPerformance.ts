@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getTieredBonusPercent } from "./tieredSkillBonus";
 
 export interface SkillProgressEntry {
   skill_slug: string;
@@ -169,7 +170,13 @@ function getSkillLevelFromProgress(
   // Weight towards max level but consider average
   if (count === 0) return 0;
   const avgLevel = totalLevel / count;
-  return Math.round(maxLevel * 0.6 + avgLevel * 0.4);
+  const blendedLevel = Math.round(maxLevel * 0.6 + avgLevel * 0.4);
+
+  // Apply tiered scaling: raw level → tiered bonus percentage → scale to 0-100
+  // At level 20 (mastered), tiered bonus is ~28%, which maps to score 100
+  const tieredPercent = getTieredBonusPercent(blendedLevel);
+  // Scale: 28% tiered → 100 score (full mastery)
+  return Math.min(100, Math.round((tieredPercent / 28) * 100));
 }
 
 /**
@@ -466,7 +473,9 @@ export function calculateSkillModifier(skillProgress: SkillProgressEntry[] | nul
 
   const avgLevel = totalLevel / count;
   
-  // Scale: 0 skill = 0.8x, 50 skill = 1.0x, 100 skill = 1.3x
-  const modifier = 0.8 + (avgLevel / 100) * 0.5;
+  // Apply tiered scaling: avgLevel → tiered bonus → modifier
+  // Levels 0-20, tiered curve gives 0-28%, map to 0.8-1.3
+  const tieredPercent = getTieredBonusPercent(Math.min(20, avgLevel));
+  const modifier = 0.8 + (tieredPercent / 28) * 0.5;
   return Number(Math.min(1.3, Math.max(0.8, modifier)).toFixed(2));
 }
