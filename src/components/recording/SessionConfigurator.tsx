@@ -166,9 +166,10 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
   // Apply type multiplier and demo cap
   const finalQuality = Math.min(Math.round(rawQuality * typeMultiplier), isDemo ? demoCap : rawQuality * 10);
 
-  // Cost: professional = 2.5x studio rate
+  // Cost: professional = 2.5x studio rate, label-owned = free
+  const isLabelOwnedStudio = !!(studio as any)?.isLabelOwned;
   const costMultiplier = isDemo ? 1 : 2.5;
-  const studioCost = studioHourlyRate * durationHours * costMultiplier;
+  const studioCost = isLabelOwnedStudio ? 0 : studioHourlyRate * durationHours * costMultiplier;
   const producerCost = producerCostPerHour * durationHours;
   const orchestraCost = orchestraOption?.cost || 0;
   const totalCost = studioCost + producerCost + orchestraCost;
@@ -343,7 +344,14 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
             <span className="text-muted-foreground">
               Studio ({durationHours} hrs × ${studioHourlyRate.toLocaleString()}{!isDemo ? ' × 2.5' : ''})
             </span>
-            <span className="font-semibold">${studioCost.toLocaleString()}</span>
+            {isLabelOwnedStudio ? (
+              <div className="flex items-center gap-2">
+                <span className="line-through text-muted-foreground text-xs">${(studioHourlyRate * durationHours * costMultiplier).toLocaleString()}</span>
+                <span className="font-semibold text-green-600">FREE (Label Studio)</span>
+              </div>
+            ) : (
+              <span className="font-semibold">${studioCost.toLocaleString()}</span>
+            )}
           </div>
           {!isDemo && (
             <div className="text-xs text-muted-foreground">Professional rate: 2.5× standard</div>

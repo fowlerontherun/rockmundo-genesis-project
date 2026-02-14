@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.656",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Contract Offers Hub: Pending offers now have an 'ACTION REQUIRED' banner with expiry countdown, plain-English obligations summary, and confirmation dialogs for accept/reject" },
+      { type: 'feature', description: "Active Contract Obligations: Each active contract now shows a 'Your Obligations' dashboard with time remaining, singles/albums progress with behind/overdue warnings, and recoupment status in plain English" },
+      { type: 'feature', description: "Label-Owned Studio: Signed artists recording at studios owned by their label's parent company now get FREE recording — studio shows 'FREE — Label Studio' badge and $0 cost" },
+      { type: 'feature', description: "Interactive Label Directory: Label cards now expand to show current roster, recent releases, genre match indicator, and typical deal types" },
+      { type: 'improvement', description: "Contract offers now expire after 7 game days with visual urgency (pulsing border when < 2 days left)" },
+      { type: 'improvement', description: "Accept/reject contract buttons now require confirmation via dialog to prevent accidental clicks" },
+    ],
+  },
+  {
     version: "1.0.655",
     date: "2026-02-14",
     changes: [

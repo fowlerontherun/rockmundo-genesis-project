@@ -16,9 +16,10 @@ interface RecordingWizardProps {
   userId: string;
   currentCityId: string;
   bandId?: string | null;
+  labelCompanyId?: string | null;
 }
 
-export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, bandId }: RecordingWizardProps) => {
+export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, bandId, labelCompanyId }: RecordingWizardProps) => {
   const [activeTab, setActiveTab] = useState("studio");
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [recordingType, setRecordingType] = useState<'demo' | 'professional' | null>(null);
@@ -125,6 +126,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
                 cityId={currentCityId}
                 selectedStudio={selectedStudio}
                 onSelect={handleStudioSelect}
+                labelCompanyId={labelCompanyId}
               />
             </TabsContent>
 
