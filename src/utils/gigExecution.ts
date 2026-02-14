@@ -27,6 +27,7 @@ import {
 } from "./bandChemistryEffects";
 import { checkVenueGigDiscovery, type MentorDiscoveryResult } from "./mentorDiscovery";
 import { calculateBandSkillAverage } from "./skillGearPerformance";
+import { calculateBandGenreBonus } from "./genreSkillBonus";
 
 interface GigExecutionData {
   gigId: string;
@@ -56,7 +57,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     supabase.from('band_stage_equipment').select('*').eq('band_id', bandId),
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
-    supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance').eq('id', bandId).single(),
+    supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance, primary_genre').eq('id', bandId).single(),
     supabase.from('band_members').select('user_id, skill_contribution, instrument_role').eq('band_id', bandId).eq('is_touring_member', false),
     supabase.from('player_merchandise').select('*').eq('band_id', bandId).gt('stock_quantity', 0)
   ]);
@@ -151,6 +152,16 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error fetching skill tree data for gig, using fallback:', skillError);
   }
 
+  // Calculate genre skill bonus for the band's primary genre
+  const bandGenre = (band as any).primary_genre || null;
+  let bandGenreBonusResult = { multiplier: 1.0, bonusPercent: 0, genre: '', genreSkillLevel: 0 };
+  try {
+    bandGenreBonusResult = await calculateBandGenreBonus(bandId, bandGenre);
+    console.log(`[GigExecution] Band genre bonus for "${bandGenre}": ${bandGenreBonusResult.bonusPercent}%`);
+  } catch (genreError) {
+    console.error('Error calculating band genre bonus:', genreError);
+  }
+
   // Calculate chemistry effects for this performance
   const chemistryEffects = calculateChemistryEffects(bandChemistry);
 
@@ -167,10 +178,31 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
-  // Calculate performance for each song
+  // Pre-calculate genre bonuses for all unique song genres
+  const uniqueGenres = new Set<string>();
+  for (const song of setlistSongs) {
+    const g = song.songs?.genre || bandGenre;
+    if (g) uniqueGenres.add(g);
+  }
+  const genreBonusCache: Record<string, number> = {};
+  if (bandGenre) genreBonusCache[bandGenre] = bandGenreBonusResult.multiplier;
+  for (const genre of uniqueGenres) {
+    if (!genreBonusCache[genre]) {
+      try {
+        const bonus = await calculateBandGenreBonus(bandId, genre);
+        genreBonusCache[genre] = bonus.multiplier;
+      } catch {
+        genreBonusCache[genre] = 1.0;
+      }
+    }
+  }
+
   const songPerformances = setlistSongs.map((song, index) => {
     const rehearsal = rehearsals.find(r => r.song_id === song.song_id);
     const rehearsalLevel = rehearsal?.rehearsal_level || 0;
+
+    const songGenre = song.songs?.genre || bandGenre;
+    const songGenreMultiplier = songGenre ? (genreBonusCache[songGenre] ?? 1.0) : 1.0;
 
     const factors: PerformanceFactors = {
       songQuality: song.songs?.quality_score || 50,
@@ -183,6 +215,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
       gearReliabilityBonus: gearEffects.reliabilityStability,
       stageSkillAverage,
       improvisationLevel: 0,
+      genreSkillMultiplier: songGenreMultiplier,
     };
 
     const result = calculateSongPerformance(factors);

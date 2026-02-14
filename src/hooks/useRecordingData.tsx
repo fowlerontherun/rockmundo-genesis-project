@@ -144,7 +144,8 @@ export const calculateRecordingQuality = (
   durationHours: number,
   orchestraBonus?: number,
   rehearsalBonus?: number,
-  skillBonusPercent?: number
+  skillBonusPercent?: number,
+  genreBonusPercent?: number
 ): { finalQuality: number; breakdown: any } => {
   // Studio multiplier (quality_rating 0-100 gives 1.0-1.2x)
   const studioMultiplier = 1 + (studioQuality / 100) * 0.2;
@@ -163,9 +164,12 @@ export const calculateRecordingQuality = (
 
   // Player skill multiplier (0-30% bonus from mixing, DAW, production, theory skills)
   const skillMultiplier = skillBonusPercent ? 1 + (skillBonusPercent / 100) : 1;
+
+  // Genre skill multiplier (0-20% bonus from training in this song's genre)
+  const genreMultiplier = genreBonusPercent ? 1 + (genreBonusPercent / 100) : 1;
   
   const finalQuality = Math.round(
-    baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier
+    baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier * genreMultiplier
   );
 
   const breakdown = {
@@ -176,7 +180,8 @@ export const calculateRecordingQuality = (
     orchestraBonus: orchestraBonus || 0,
     rehearsalBonus: rehearsalBonus || 0,
     skillBonus: Math.round((skillMultiplier - 1) * 100),
-    totalMultiplier: studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier,
+    genreBonus: Math.round((genreMultiplier - 1) * 100),
+    totalMultiplier: studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier * genreMultiplier,
   };
 
   return { finalQuality, breakdown };
