@@ -9,7 +9,7 @@ export type GigRow = Pick<
 >;
 export type VenueRow = Pick<Tables<"venues">, "id" | "name" | "reputation">;
 export type PromoterRow = Pick<Tables<"promoters">, "id" | "name" | "reputation">;
-export type PlayerSkillsRow = Tables<"player_skills">;
+export type PlayerSkillsRow = Tables<"skill_progress">;
 export type BandRow = Pick<
   Tables<"bands">,
   "id" | "name" | "fame" | "popularity" | "weekly_fans"
@@ -82,7 +82,7 @@ export interface CareerOverview {
   };
 }
 
-const SKILL_COLUMNS: Array<keyof PlayerSkillsRow> = [
+const SKILL_SLUGS = [
   "bass",
   "composition",
   "creativity",
@@ -170,14 +170,24 @@ export const fetchCareerOverview = async (userId: string): Promise<CareerOvervie
     gigRows = (gigsData as GigOutcomeWithDetails[]) ?? [];
   }
 
-  const { data: skillRow, error: skillsError } = await supabase
-    .from("player_skills")
-    .select("*")
+  // Fetch skills from skill_progress via profile
+  const { data: playerProfile } = await supabase
+    .from("profiles")
+    .select("id")
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (skillsError) {
-    throw skillsError;
+  let skillRows: { skill_slug: string; current_level: number }[] = [];
+  if (playerProfile?.id) {
+    const { data: progressData, error: skillsError } = await supabase
+      .from("skill_progress")
+      .select("skill_slug, current_level")
+      .eq("profile_id", playerProfile.id);
+
+    if (skillsError) {
+      throw skillsError;
+    }
+    skillRows = (progressData ?? []) as { skill_slug: string; current_level: number }[];
   }
 
   const totalGigs = gigRows.length;
@@ -314,11 +324,10 @@ export const fetchCareerOverview = async (userId: string): Promise<CareerOvervie
 
   const skillTotals: Record<string, number> = {};
   let totalSkillPoints = 0;
-  if (skillRow) {
-    for (const key of SKILL_COLUMNS) {
-      const value = skillRow[key] ?? 0;
-      skillTotals[key as string] = value;
-      totalSkillPoints += value;
+  for (const row of skillRows) {
+    if (SKILL_SLUGS.includes(row.skill_slug)) {
+      skillTotals[row.skill_slug] = row.current_level || 0;
+      totalSkillPoints += row.current_level || 0;
     }
   }
 

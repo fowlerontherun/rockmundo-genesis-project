@@ -64,22 +64,19 @@ export async function processRetirement(
       return { success: false, error: "Failed to fetch profile" };
     }
 
-    // 2. Fetch player skills (flat structure with skill columns)
-    const { data: playerSkillsData } = await supabase
-      .from("player_skills")
-      .select("vocals, guitar, bass, drums, songwriting, performance, creativity, technical, composition")
-      .eq("user_id", userId)
-      .single();
+    // 2. Fetch player skills from skill_progress
+    const { data: skillProgressData } = await supabase
+      .from("skill_progress")
+      .select("skill_slug, current_level")
+      .eq("profile_id", profileId);
 
     const skillsMap: Record<string, number> = {};
-    if (playerSkillsData) {
-      const skillKeys = ['vocals', 'guitar', 'bass', 'drums', 'songwriting', 'performance', 'creativity', 'technical', 'composition'];
-      skillKeys.forEach(key => {
-        const value = playerSkillsData[key as keyof typeof playerSkillsData];
-        if (typeof value === 'number') {
-          skillsMap[key] = value;
+    if (skillProgressData) {
+      for (const row of skillProgressData) {
+        if (typeof row.current_level === 'number') {
+          skillsMap[row.skill_slug] = row.current_level;
         }
-      });
+      }
     }
 
     // 3. Fetch player attributes (flat structure with attribute columns)
@@ -184,22 +181,28 @@ export async function processRetirement(
       })
       .eq("id", profileId);
 
-    // 11. Reset or apply inherited skills
+    // 11. Reset or apply inherited skills via skill_progress
     if (Object.keys(inheritance.skills).length > 0) {
+      // Delete existing skill_progress entries
       await supabase
-        .from("player_skills")
-        .update({
-          vocals: inheritance.skills.vocals || 0,
-          guitar: inheritance.skills.guitar || 0,
-          bass: inheritance.skills.bass || 0,
-          drums: inheritance.skills.drums || 0,
-          songwriting: inheritance.skills.songwriting || 0,
-          performance: inheritance.skills.performance || 0,
-          creativity: inheritance.skills.creativity || 0,
-          technical: inheritance.skills.technical || 0,
-          composition: inheritance.skills.composition || 0,
-        })
-        .eq("user_id", userId);
+        .from("skill_progress")
+        .delete()
+        .eq("profile_id", profileId);
+
+      // Insert inherited skills
+      const skillInserts = Object.entries(inheritance.skills)
+        .filter(([, level]) => level > 0)
+        .map(([slug, level]) => ({
+          profile_id: profileId,
+          skill_slug: slug,
+          current_level: level,
+          current_xp: 0,
+          required_xp: 100,
+        }));
+
+      if (skillInserts.length > 0) {
+        await supabase.from("skill_progress").insert(skillInserts);
+      }
     }
 
     return {

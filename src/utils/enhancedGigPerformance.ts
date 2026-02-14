@@ -52,21 +52,28 @@ async function calculateSkillPerformance(bandId: string): Promise<number> {
   let count = 0;
 
   for (const member of members) {
-    const { data: skills } = await supabase
-      .from('player_skills')
-      .select('*')
+    if (!member.user_id) continue;
+    // Look up profile_id for skill_progress
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
       .eq('user_id', member.user_id)
-      .single();
+      .maybeSingle();
 
-    if (skills) {
-      const roleSkills = [
-        skills.guitar || 1,
-        skills.bass || 1,
-        skills.drums || 1,
-        skills.vocals || 1,
-        skills.performance || 1,
-      ];
-      totalSkill += roleSkills.reduce((a, b) => a + b, 0) / roleSkills.length;
+    if (!profile?.id) continue;
+
+    const { data: skillRows } = await supabase
+      .from('skill_progress')
+      .select('skill_slug, current_level')
+      .eq('profile_id', profile.id);
+
+    if (skillRows && skillRows.length > 0) {
+      const relevantSlugs = ['guitar', 'bass', 'drums', 'vocals', 'performance'];
+      const levels = relevantSlugs.map(slug => {
+        const match = skillRows.find((s: any) => s.skill_slug === slug);
+        return match?.current_level || 1;
+      });
+      totalSkill += levels.reduce((a: number, b: number) => a + b, 0) / levels.length;
       count++;
     }
   }

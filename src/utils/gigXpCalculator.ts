@@ -246,22 +246,41 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
       }
     }
 
-    // Update player skills if earned improvement
+    // Update skill progress if earned improvement
     if (skillImprovementAmount > 0 && member.user_id && skillTypeImproved) {
-      const { data: skills } = await supabase
-        .from('player_skills')
-        .select('*')
+      // Look up profile_id for skill_progress
+      const { data: memberProfile } = await supabase
+        .from('profiles')
+        .select('id')
         .eq('user_id', member.user_id)
-        .single();
+        .maybeSingle();
 
-      if (skills) {
-        const skillKey = skillTypeImproved as keyof typeof skills;
-        if (skillKey in skills && typeof skills[skillKey] === 'number') {
-          const currentSkill = skills[skillKey] as number;
+      if (memberProfile?.id) {
+        const { data: existingSkill } = await supabase
+          .from('skill_progress')
+          .select('id, current_level, current_xp, required_xp')
+          .eq('profile_id', memberProfile.id)
+          .eq('skill_slug', skillTypeImproved)
+          .maybeSingle();
+
+        if (existingSkill) {
+          // Add XP to existing skill progress
+          const xpGain = skillImprovementAmount * 10; // Convert to XP
           await supabase
-            .from('player_skills')
-            .update({ [skillTypeImproved]: Math.min(100, currentSkill + skillImprovementAmount) })
-            .eq('user_id', member.user_id);
+            .from('skill_progress')
+            .update({ current_xp: (existingSkill.current_xp || 0) + xpGain })
+            .eq('id', existingSkill.id);
+        } else {
+          // Create new skill progress entry
+          await supabase
+            .from('skill_progress')
+            .insert({
+              profile_id: memberProfile.id,
+              skill_slug: skillTypeImproved,
+              current_level: 0,
+              current_xp: skillImprovementAmount * 10,
+              required_xp: 100,
+            });
         }
       }
     }
