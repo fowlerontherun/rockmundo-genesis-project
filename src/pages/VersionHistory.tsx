@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.678",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed 'operator does not exist: uuid = text' error when accepting song marketplace bids — current_bidder_user_id column changed from text to uuid" },
+      { type: 'fix', description: "Removed unsafe text casts in complete_song_sale and place_song_bid RPC functions" },
+    ],
+  },
+  {
     version: "1.0.677",
     date: "2026-02-14",
     changes: [
