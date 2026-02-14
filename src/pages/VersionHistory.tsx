@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.649",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed admin regeneration overwriting user-written lyrics with AI-generated ones — now preserves original songwriting lyrics and never overwrites songwriting_projects" },
+    ],
+  },
+  {
     version: "1.0.648",
     date: "2026-02-14",
     changes: [
