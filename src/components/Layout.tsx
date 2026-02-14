@@ -18,6 +18,7 @@ import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
+import { InterviewModal } from "@/components/pr/InterviewModal";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -88,6 +89,7 @@ const Layout = () => {
       </main>
       <FloatingAvatarWidget />
       <EventNotificationModal />
+      <InterviewModal />
       {pendingReport && (
         <RehearsalCompletionReport
           open={!!pendingReport}

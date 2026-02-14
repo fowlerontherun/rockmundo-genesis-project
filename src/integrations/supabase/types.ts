@@ -8578,6 +8578,95 @@ export type Database = {
           },
         ]
       }
+      interview_questions: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          media_types: string[]
+          option_a_effects: Json
+          option_a_text: string
+          option_b_effects: Json
+          option_b_text: string
+          option_c_effects: Json
+          option_c_text: string
+          option_d_effects: Json
+          option_d_text: string
+          question_text: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          media_types?: string[]
+          option_a_effects?: Json
+          option_a_text: string
+          option_b_effects?: Json
+          option_b_text: string
+          option_c_effects?: Json
+          option_c_text: string
+          option_d_effects?: Json
+          option_d_text: string
+          question_text: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          media_types?: string[]
+          option_a_effects?: Json
+          option_a_text?: string
+          option_b_effects?: Json
+          option_b_text?: string
+          option_c_effects?: Json
+          option_c_text?: string
+          option_d_effects?: Json
+          option_d_text?: string
+          question_text?: string
+        }
+        Relationships: []
+      }
+      interview_results: {
+        Row: {
+          band_id: string
+          created_at: string
+          id: string
+          media_type: string
+          offer_id: string
+          questions: Json
+          total_effects: Json
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          id?: string
+          media_type: string
+          offer_id: string
+          questions?: Json
+          total_effects?: Json
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          id?: string
+          media_type?: string
+          offer_id?: string
+          questions?: Json
+          total_effects?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_results_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_gifted_song_log: {
         Row: {
           created_at: string
@@ -16948,6 +17037,7 @@ export type Database = {
           fame_boost: number | null
           fan_boost: number | null
           id: string
+          interview_completed: boolean | null
           linked_release_id: string | null
           linked_tour_id: string | null
           media_outlet_id: string | null
@@ -16975,6 +17065,7 @@ export type Database = {
           fame_boost?: number | null
           fan_boost?: number | null
           id?: string
+          interview_completed?: boolean | null
           linked_release_id?: string | null
           linked_tour_id?: string | null
           media_outlet_id?: string | null
@@ -17002,6 +17093,7 @@ export type Database = {
           fame_boost?: number | null
           fan_boost?: number | null
           id?: string
+          interview_completed?: boolean | null
           linked_release_id?: string | null
           linked_tour_id?: string | null
           media_outlet_id?: string | null
