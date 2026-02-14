@@ -161,6 +161,7 @@ export const tr: TranslationKeys = {
     offers: "Teklifler",
     songManager: "Şarkı Yöneticisi",
     songMarket: "Şarkı Pazarı",
+    songRankings: "Şarkı Sıralaması",
     bandBrowser: "Grup Tarayıcı",
     bandVehicles: "Grup Araçları",
     bandRiders: "Grup Rider'ları",

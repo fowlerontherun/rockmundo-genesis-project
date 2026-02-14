@@ -24,7 +24,7 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
       // Fetch songs with band info
       let query = supabase
         .from("songs")
-        .select("id, title, genre, quality_score, streams, band_id, user_id, audio_url, bands(name), profiles:user_id(stage_name)")
+        .select("id, title, genre, quality_score, streams, band_id, user_id, audio_url, bands(name)")
         .in("status", ["released", "recorded"])
         .not("quality_score", "is", null);
 
@@ -64,7 +64,7 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
         band_id: s.band_id,
         user_id: s.user_id,
         band_name: s.bands?.name || null,
-        artist_name: s.profiles?.stage_name || null,
+        artist_name: null,
         total_sales: salesMap[s.id] || 0,
         audio_url: s.audio_url || null,
       }));

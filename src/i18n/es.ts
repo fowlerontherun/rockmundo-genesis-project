@@ -159,6 +159,7 @@ export const es: TranslationKeys = {
     offers: "Ofertas",
     songManager: "Gestor de Canciones",
     songMarket: "Mercado de Canciones",
+    songRankings: "Rankings de Canciones",
     bandBrowser: "Explorar Bandas",
     bandVehicles: "Vehículos de Banda",
     bandRiders: "Riders de Banda",
