@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.696",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed label staff hiring/firing failing silently — RLS policies were comparing profile IDs (owner_id) against auth user IDs (auth.uid())" },
+      { type: 'fix', description: "Fixed record label contract offers for bands not working — INSERT policy only checked created_by which is NULL for transferred labels" },
+      { type: 'fix', description: "Fixed label financial transactions and distribution deals being blocked by the same owner_id vs auth.uid() mismatch" },
+      { type: 'improvement', description: "All label-related RLS policies now resolve ownership through both created_by and profile-based owner_id lookup" },
+    ],
+  },
+  {
     version: "1.0.695",
     date: "2026-02-14",
     changes: [
