@@ -35,21 +35,77 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
       const { data: songs, error } = await query.limit(100);
       if (error) throw error;
 
-      let salesMap: Record<string, number> = {};
+      const songIds = (songs || []).map(s => s.id);
 
-      if (rankingType === "sales") {
-        // Fetch sales data via release_songs -> releases
+      // Fetch actual streams from song_releases (the real source of streaming data)
+      let streamsMap: Record<string, number> = {};
+      if (songIds.length > 0) {
+        const { data: songReleases } = await supabase
+          .from("song_releases")
+          .select("song_id, total_streams")
+          .in("song_id", songIds);
+
+        if (songReleases) {
+          for (const sr of songReleases) {
+            streamsMap[sr.song_id] = (streamsMap[sr.song_id] || 0) + (sr.total_streams || 0);
+          }
+        }
+      }
+
+      // Fetch actual sales from release_sales via release_formats -> releases -> release_songs
+      let salesMap: Record<string, number> = {};
+      if (rankingType === "sales" && songIds.length > 0) {
         const { data: releaseSongs } = await supabase
           .from("release_songs")
-          .select("song_id, releases(digital_sales, cd_sales, vinyl_sales, cassette_sales)")
-          .in("song_id", (songs || []).map(s => s.id));
+          .select("song_id, release_id")
+          .in("song_id", songIds);
 
-        if (releaseSongs) {
-          for (const rs of releaseSongs) {
-            const r = rs.releases as any;
-            if (r) {
-              const total = (r.digital_sales || 0) + (r.cd_sales || 0) + (r.vinyl_sales || 0) + (r.cassette_sales || 0);
-              salesMap[rs.song_id] = (salesMap[rs.song_id] || 0) + total;
+        if (releaseSongs && releaseSongs.length > 0) {
+          const releaseIds = [...new Set(releaseSongs.map(rs => rs.release_id))];
+          
+          const { data: releaseFormats } = await supabase
+            .from("release_formats")
+            .select("id, release_id")
+            .in("release_id", releaseIds);
+
+          if (releaseFormats && releaseFormats.length > 0) {
+            const formatIds = releaseFormats.map(rf => rf.id);
+            const releaseToFormats = new Map<string, string[]>();
+            for (const rf of releaseFormats) {
+              const arr = releaseToFormats.get(rf.release_id) || [];
+              arr.push(rf.id);
+              releaseToFormats.set(rf.release_id, arr);
+            }
+
+            const { data: sales } = await supabase
+              .from("release_sales")
+              .select("release_format_id, total_amount")
+              .in("release_format_id", formatIds);
+
+            if (sales) {
+              // Map format_id -> release_id
+              const formatToRelease = new Map<string, string>();
+              for (const rf of releaseFormats) {
+                formatToRelease.set(rf.id, rf.release_id);
+              }
+              // Map release_id -> song_ids
+              const releaseToSongs = new Map<string, string[]>();
+              for (const rs of releaseSongs) {
+                const arr = releaseToSongs.get(rs.release_id) || [];
+                arr.push(rs.song_id);
+                releaseToSongs.set(rs.release_id, arr);
+              }
+
+              for (const sale of sales) {
+                const releaseId = formatToRelease.get(sale.release_format_id);
+                if (releaseId) {
+                  const songIdsForRelease = releaseToSongs.get(releaseId) || [];
+                  const perSongAmount = (sale.total_amount || 0) / Math.max(songIdsForRelease.length, 1);
+                  for (const sid of songIdsForRelease) {
+                    salesMap[sid] = (salesMap[sid] || 0) + perSongAmount;
+                  }
+                }
+              }
             }
           }
         }
@@ -60,12 +116,12 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
         title: s.title,
         genre: s.genre,
         quality_score: s.quality_score || 0,
-        streams: s.streams || 0,
+        streams: streamsMap[s.id] || s.streams || 0,
         band_id: s.band_id,
         user_id: s.user_id,
         band_name: s.bands?.name || null,
         artist_name: null,
-        total_sales: salesMap[s.id] || 0,
+        total_sales: Math.round(salesMap[s.id] || 0),
         audio_url: s.audio_url || null,
       }));
 

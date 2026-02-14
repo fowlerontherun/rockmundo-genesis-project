@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.675",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Song rankings now pull streams from song_releases and sales from release_sales — no longer blank" },
+      { type: 'fix', description: "Sales rankings now correctly aggregate per-song revenue across all release formats" },
+    ],
+  },
+  {
     version: "1.0.674",
     date: "2026-02-14",
     changes: [
