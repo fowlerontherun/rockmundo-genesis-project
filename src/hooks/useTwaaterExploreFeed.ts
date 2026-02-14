@@ -44,8 +44,8 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
           linked_id,
           parent_twaat_id,
           quoted_twaat_id,
-          account:twaater_accounts(id, handle, display_name, verified, owner_type, fame_score),
-          metrics:twaat_metrics(likes, replies, retwaats, views)
+          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
+          metrics:twaat_metrics(likes, replies, retwaats, impressions)
         `)
         .eq("visibility", "public")
         .is("deleted_at", null)

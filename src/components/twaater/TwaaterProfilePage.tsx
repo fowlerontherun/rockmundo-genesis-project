@@ -45,7 +45,7 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
         .from("twaats")
         .select(`
           *,
-          account:twaater_accounts(id, handle, display_name, verified, owner_type),
+          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type),
           metrics:twaat_metrics(*)
         `)
         .eq("account_id", profile?.id)

@@ -17,7 +17,7 @@ export const useTwaaterBookmarks = (accountId?: string) => {
           *,
           twaat:twaats(
             *,
-            account:twaater_accounts(id, handle, display_name, verified),
+            account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified),
             metrics:twaat_metrics(*)
           )
         `)

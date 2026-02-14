@@ -25,7 +25,7 @@ export default function TwaaterTwaatView() {
         .from("twaats")
         .select(`
           *,
-          account:twaater_accounts(id, handle, display_name, verified, owner_type, fame_score),
+          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
           metrics:twaat_metrics(*)
         `)
         .eq("id", twaatId)
@@ -46,7 +46,7 @@ export default function TwaaterTwaatView() {
 
       const { data, error } = await (supabase
         .from("twaats") as any)
-        .select("*, account:twaater_accounts(id, handle, display_name, verified, owner_type, fame_score), metrics:twaat_metrics(*)")
+        .select("*, account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score), metrics:twaat_metrics(*)")
         .eq("reply_to_id", twaatId)
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
