@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Guitar, Mic, Piano, Drum, Music } from "lucide-react";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
+import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { useMemo } from "react";
 
 // Instrument definitions from skill tree - basic tier slugs
@@ -66,7 +67,15 @@ interface SongwritingInstrumentSelectorProps {
   disabled?: boolean;
 }
 
-export const SongwritingInstrumentSelector = ({
+export const SongwritingInstrumentSelector = (props: SongwritingInstrumentSelectorProps) => {
+  return (
+    <SkillSystemProvider>
+      <SongwritingInstrumentSelectorInner {...props} />
+    </SkillSystemProvider>
+  );
+};
+
+const SongwritingInstrumentSelectorInner = ({
   selected,
   onChange,
   disabled,
