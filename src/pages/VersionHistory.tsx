@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.651",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "Reverted AI music generation from YuE back to MiniMax Music-1.5 model for better quality vocal songs (up to 4 mins)" },
+      { type: 'fix', description: "Fixed missing styleParts declaration in generate-song-audio edge function" },
+    ],
+  },
+  {
     version: "1.0.650",
     date: "2026-02-14",
     changes: [

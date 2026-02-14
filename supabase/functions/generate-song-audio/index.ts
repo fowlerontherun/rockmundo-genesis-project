@@ -31,7 +31,7 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[generate-song-audio] Starting generation for song ${songId}, user ${userId}`)
+    console.log(`[generate-song-audio] Starting MiniMax Music generation for song ${songId}, user ${userId}`)
 
     // Check if song already has completed audio or is currently generating
     const { data: existingSong, error: existingSongError } = await supabase
@@ -251,7 +251,7 @@ serve(async (req) => {
     // Clean profanity from song title before using in prompt
     const cleanedSongTitle = cleanProfanity(songTitle)
     
-    console.log(`[generate-song-audio] Building MiniMax prompt for "${cleanedSongTitle}"`)
+    console.log(`[generate-song-audio] Building MiniMax Music prompt for "${cleanedSongTitle}"`)
     console.log(`[generate-song-audio] Genre: ${primaryGenre}`)
     console.log(`[generate-song-audio] Initial Lyrics Check: ${rawLyrics ? rawLyrics.length + ' chars' : 'NONE'}`)
 
@@ -315,8 +315,11 @@ serve(async (req) => {
     
     console.log(`[generate-song-audio] Final Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'using placeholder'}`)
 
-    // Primary genre and style (space-separated for YuE genre tags)
-    styleParts.push(`${primaryGenre}`)
+    // Build style prompt for MiniMax Music-1.5
+    let styleParts: string[] = []
+
+    // Primary genre
+    styleParts.push(primaryGenre)
 
     // Add gender-based vocal style
     const genderVocalStyle = getGenderVocalStyle(creatorGender)
@@ -337,7 +340,7 @@ serve(async (req) => {
 
     // Add theme and mood
     if (themeName) {
-      styleParts.push(`${themeName}`)
+      styleParts.push(themeName)
     }
     if (themeMood) {
       styleParts.push(`${themeMood} mood`)
@@ -369,15 +372,15 @@ serve(async (req) => {
       styleParts.push('mellow')
     }
 
-    // YuE uses space-separated genre tags (not comma-separated)
-    let stylePrompt = styleParts.join(' ')
+    // MiniMax uses comma-separated style description
+    let stylePrompt = styleParts.join(', ')
     if (stylePrompt.length < 10) {
       stylePrompt = `${primaryGenre} vocal song`
     }
-    console.log(`[generate-song-audio] Genre description: "${stylePrompt}"`)
+    console.log(`[generate-song-audio] Style prompt: "${stylePrompt}"`)
 
-    // Format lyrics for YuE - uses lowercase [verse], [chorus] tags, no character limit
-    const formattedLyrics = formatLyricsForYuE(rawLyrics, cleanedSongTitle, primaryGenre)
+    // Format lyrics for MiniMax Music - standard section markers work fine
+    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
     console.log(`[generate-song-audio] Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
@@ -397,14 +400,12 @@ serve(async (req) => {
         .eq('id', attempt.id)
     }
 
-    // Calculate number of segments (~30s each) based on desired duration
-    const numSegments = Math.min(10, Math.max(2, Math.round(durationSeconds / 30)))
-    console.log(`[generate-song-audio] Creating async Replicate prediction (${numSegments} segments for ~${numSegments * 30}s)...`)
+    console.log(`[generate-song-audio] Creating async MiniMax Music prediction...`)
 
-    // Build webhook URL with songId (supabaseUrl already defined above)
+    // Build webhook URL with songId
     const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${songId}`
 
-    // Create async prediction with webhook (returns immediately, no timeout)
+    // Create async prediction with webhook using MiniMax Music-1.5
     const predictionResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -412,12 +413,12 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        version: 'f45da0cfbe372eb9116e87a1e3519aceb008fd03b0d771d21fb8627bee2b4117',
+        model: 'minimax/music-1.5',
         input: {
+          prompt: stylePrompt,
           lyrics: formattedLyrics,
-          genre_description: stylePrompt,
-          num_segments: numSegments,
-          max_new_tokens: 3000,
+          song_type: 'vocal',
+          bitrate: 256,
         },
         webhook: webhookUrl,
         webhook_events_filter: ['completed', 'output'],
@@ -483,7 +484,7 @@ serve(async (req) => {
   }
 })
 
-// Get vocal style based on player gender (space-separated tags for YuE)
+// Get vocal style based on player gender
 function getGenderVocalStyle(gender: string | null): string {
   if (!gender) return 'vocal'
   
@@ -597,9 +598,8 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   return cleaned || null
 }
 
-// Format lyrics for YuE model - uses lowercase [verse], [chorus] tags
-// YuE has NO character limit and faithfully sings provided lyrics
-function formatLyricsForYuE(rawLyrics: string | null, songTitle: string, genre: string): string {
+// Format lyrics for MiniMax Music-1.5 - standard section markers
+function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
   if (!rawLyrics || rawLyrics.trim().length === 0) {
     console.log('[generate-song-audio] No lyrics provided, using placeholder')
     return generateVariedPlaceholderLyrics(songTitle, genre)
@@ -608,7 +608,7 @@ function formatLyricsForYuE(rawLyrics: string | null, songTitle: string, genre: 
   // Safety check for prompt contamination
   let processedLyrics = rawLyrics.trim()
   if (processedLyrics.toLowerCase().includes('style:') || processedLyrics.toLowerCase().startsWith('lyrics:')) {
-    console.warn('[formatLyricsForYuE] Detected corrupted lyrics input, sanitizing...')
+    console.warn('[formatLyricsForMiniMax] Detected corrupted lyrics input, sanitizing...')
     const sectionMatch = processedLyrics.match(/\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)[\s\S]*/i)
     if (sectionMatch) {
       processedLyrics = sectionMatch[0]
@@ -622,22 +622,22 @@ function formatLyricsForYuE(rawLyrics: string | null, songTitle: string, genre: 
   
   console.log(`[generate-song-audio] Using actual lyrics: ${cleanedLyrics.length} chars`)
 
-  // Normalize section markers to lowercase for YuE (it expects [verse], [chorus] etc.)
+  // Normalize section markers for MiniMax (standard [Verse], [Chorus] format)
   let normalized = cleanedLyrics
-    .replace(/\[Verse\s*(\d*)\]/gi, (_, num) => `[verse]`)
-    .replace(/\[Chorus\s*(\d*)\]/gi, (_, num) => `[chorus]`)
-    .replace(/\[Bridge\s*(\d*)\]/gi, (_, num) => `[bridge]`)
-    .replace(/\[Pre-?Chorus\s*(\d*)\]/gi, (_, num) => `[verse]`)  // YuE doesn't support pre-chorus, map to verse
-    .replace(/\[Outro\s*\d*\]/gi, '[outro]')
-    .replace(/\[Intro\s*\d*\]/gi, '[verse]')  // YuE recommends starting with [verse], not [intro]
-    .replace(/\[Hook\s*\d*\]/gi, '[chorus]')
-    .replace(/\[Post-?Chorus\s*\d*\]/gi, '[chorus]')
+    .replace(/\[Verse\s*(\d*)\]/gi, (_, num) => `[Verse${num ? ' ' + num : ''}]`)
+    .replace(/\[Chorus\s*(\d*)\]/gi, (_, num) => `[Chorus${num ? ' ' + num : ''}]`)
+    .replace(/\[Bridge\s*(\d*)\]/gi, (_, num) => `[Bridge${num ? ' ' + num : ''}]`)
+    .replace(/\[Pre-?Chorus\s*(\d*)\]/gi, (_, num) => `[Pre-Chorus${num ? ' ' + num : ''}]`)
+    .replace(/\[Outro\s*\d*\]/gi, '[Outro]')
+    .replace(/\[Intro\s*\d*\]/gi, '[Intro]')
+    .replace(/\[Hook\s*\d*\]/gi, '[Hook]')
+    .replace(/\[Post-?Chorus\s*\d*\]/gi, '[Post-Chorus]')
     // Remove chord annotations and singer markers that waste space
     .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
     .replace(/\((She|He|Both|You|Me)\)\s*/gi, '')
 
   // Check if there are section markers
-  const hasMarkers = /\[(verse|chorus|bridge|outro)\]/i.test(normalized)
+  const hasMarkers = /\[(Verse|Chorus|Bridge|Outro|Intro|Hook|Pre-Chorus|Post-Chorus)\]/i.test(normalized)
 
   if (!hasMarkers) {
     // No markers - add basic structure
@@ -647,19 +647,14 @@ function formatLyricsForYuE(rawLyrics: string | null, songTitle: string, genre: 
     const midpoint = Math.ceil(lines.length / 2)
     const verse = lines.slice(0, midpoint).join('\n')
     const chorus = lines.slice(midpoint).join('\n') || lines.slice(0, Math.min(4, lines.length)).join('\n')
-    return `[verse]\n${verse}\n\n[chorus]\n${chorus}`
+    return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
   }
 
-  // Ensure sections are separated by double newlines (YuE requirement)
-  normalized = normalized.replace(/\n?\[(verse|chorus|bridge|outro)\]/gi, (match) => `\n\n${match.trim()}`)
-  
   // Clean up extra whitespace
   normalized = normalized.replace(/\n{3,}/g, '\n\n').trim()
-
-  // Remove leading newlines before first section
   normalized = normalized.replace(/^\n+/, '')
 
-  console.log(`[generate-song-audio] Formatted lyrics for YuE: ${normalized.length} chars`)
+  console.log(`[generate-song-audio] Formatted lyrics for MiniMax: ${normalized.length} chars`)
   return normalized
 }
 
@@ -669,61 +664,61 @@ function generateVariedPlaceholderLyrics(songTitle: string, genre: string): stri
   
   // Genre-specific placeholder templates
   const templates: Record<string, string> = {
-    rock: `[verse]
+    rock: `[Verse]
 Standing on the edge of tomorrow
 Chasing dreams through the night
 ${title} running through my veins
 Nothing's gonna stop us now
 
-[chorus]
+[Chorus]
 We're alive, we're on fire
 ${title} takes us higher
 Breaking free from all the chains
 Nothing's ever gonna be the same`,
 
-    pop: `[verse]
+    pop: `[Verse]
 Lights are flashing all around
 Dancing to the rhythm of the sound
 ${title} playing on repeat
 Got me moving to the beat
 
-[chorus]
+[Chorus]
 Oh we're shining bright tonight
 ${title} feels so right
 Every moment crystallized
 Living for the spotlight`,
 
-    electronic: `[verse]
+    electronic: `[Verse]
 Synthesizers in the dark
 Digital dreams leave their mark
 ${title} pulses through the air
 Electric vibes everywhere
 
-[chorus]
+[Chorus]
 Drop the bass and let it flow
 ${title} stealing the show
 Frequencies align tonight
 Dancing in the neon light`,
 
-    country: `[verse]
+    country: `[Verse]
 Down that old dusty road
 ${title} where the river flows
 Sunset painting the sky
 Memories of days gone by
 
-[chorus]
+[Chorus]
 This is where I belong
 ${title} is my song
 Simple life and starlit nights
 Everything feels just right`,
 
-    hiphop: `[verse]
+    hiphop: `[Verse]
 Coming up from the bottom now
 ${title} showing them how
 Every word I speak is true
 Built this dream from nothing new
 
-[chorus]
+[Chorus]
 Yeah we made it to the top
 ${title} we don't stop
 Started from the ground floor
@@ -739,13 +734,13 @@ Now we're reaching for more`,
   }
   
   // Default varied placeholder
-  return `[verse]
+  return `[Verse]
 Walking through the moments of my life
 ${title} guiding me through the night
 Every step I take leads me here
 Finding strength and losing fear
 
-[chorus]
+[Chorus]
 This is ${title}
 This is where we shine
 Breaking through the darkness
