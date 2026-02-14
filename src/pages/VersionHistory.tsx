@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.646",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "Switched AI music generation from MiniMax Music-1.5 to YuE model — songs now faithfully sing your actual written lyrics instead of paraphrasing them" },
+      { type: 'improvement', description: "Removed 600-character lyrics limit — full song lyrics are now sent to the AI model for complete faithful reproduction" },
+    ],
+  },
+  {
     version: "1.0.645",
     date: "2026-02-13",
     changes: [
