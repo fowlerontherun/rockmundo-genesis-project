@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.669",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Daily attribute points now scale with progression — new players receive 10 AP, decaying to a minimum of 3 AP as lifetime Skill XP grows (1,000–10,000 SXP range)" },
+      { type: 'improvement', description: "Stipend card now shows your current scaled AP amount based on career progression" },
+    ],
+  },
+  {
     version: "1.0.668",
     date: "2026-02-14",
     changes: [

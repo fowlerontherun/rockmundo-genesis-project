@@ -16,7 +16,19 @@ const STREAK_MILESTONES = [
 
 // Base stipend amounts
 const BASE_STIPEND_SXP = 100;
-const BASE_STIPEND_AP = 10;
+const MAX_STIPEND_AP = 10;
+const MIN_STIPEND_AP = 3;
+// AP decays from MAX to MIN as lifetime SXP grows.
+// Full AP until 1000 lifetime SXP, then linear decay to MIN at 10000+ SXP.
+const AP_DECAY_START = 1000;
+const AP_DECAY_END = 10000;
+
+function getScaledBaseAp(lifetimeSxp: number): number {
+  if (lifetimeSxp <= AP_DECAY_START) return MAX_STIPEND_AP;
+  if (lifetimeSxp >= AP_DECAY_END) return MIN_STIPEND_AP;
+  const progress = (lifetimeSxp - AP_DECAY_START) / (AP_DECAY_END - AP_DECAY_START);
+  return Math.round(MAX_STIPEND_AP - progress * (MAX_STIPEND_AP - MIN_STIPEND_AP));
+}
 
 type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
 
@@ -92,8 +104,10 @@ export async function handleClaimDailyXp(
 
   // Calculate bonuses based on new streak
   const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
+  const lifetimeSxp = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
+  const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
   const totalSxp = BASE_STIPEND_SXP + bonusSxp;
-  const totalAp = BASE_STIPEND_AP + bonusAp;
+  const totalAp = scaledBaseAp + bonusAp;
 
   // Get current balances (use new dual currency columns)
   const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
@@ -105,7 +119,7 @@ export async function handleClaimDailyXp(
   const grantMetadata = {
     ...metadata,
     base_sxp: BASE_STIPEND_SXP,
-    base_ap: BASE_STIPEND_AP,
+    base_ap: scaledBaseAp,
     bonus_sxp: bonusSxp,
     bonus_ap: bonusAp,
     total_sxp: totalSxp,

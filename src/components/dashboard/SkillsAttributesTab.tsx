@@ -106,6 +106,7 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
       <DailyStipendCard 
         lastClaimDate={lastClaimDate} 
         streak={streak}
+        lifetimeSxp={skillXpLifetime}
         onClaimed={handleRefresh} 
       />
 
