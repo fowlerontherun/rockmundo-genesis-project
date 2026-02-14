@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.694",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed country flags not showing for cities with abbreviated country names (USA, UAE) by adding alias resolution" },
+    ],
+  },
+  {
     version: "1.0.693",
     date: "2026-02-14",
     changes: [
