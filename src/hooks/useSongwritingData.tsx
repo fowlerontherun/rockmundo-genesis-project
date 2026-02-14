@@ -75,6 +75,7 @@ type CreateProjectInput = {
   genres?: string[];
   purpose?: string;
   mode?: string;
+  instruments?: string[];
 };
 
 type UpdateProjectInput = {
@@ -221,6 +222,7 @@ export const useSongwritingData = (userId?: string | null) => {
           genres: projectData.genres || [],
           purpose: projectData.purpose || null,
           mode: projectData.mode || null,
+          instruments: projectData.instruments || [],
           quality_score: 0,
           song_rating: null,
           status: 'draft',

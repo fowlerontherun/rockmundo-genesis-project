@@ -215,7 +215,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
                               {song.genre}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              Quality: {song.quality_score}/100
+                              Quality: {song.quality_score}/1000
                             </span>
                           </div>
                         </div>

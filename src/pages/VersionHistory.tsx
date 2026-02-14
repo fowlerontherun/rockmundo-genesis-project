@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.660",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Song quality scale unified to 0-1000 — database function and all UI displays now use the full 1000-point scale instead of capping at 100" },
+      { type: 'feature', description: "Instrument selection in songwriting — players now pick featured instruments when creating a project, with skill levels directly affecting song quality" },
+      { type: 'feature', description: "Instrument skill bonus: each selected instrument contributes up to 30 quality points based on player skill level (diminishing returns after 4 instruments)" },
+      { type: 'improvement', description: "DB auto-complete function now calculates quality on 0-1000 scale with instrument skill bonuses factored in" },
+      { type: 'fix', description: "Fixed gig performance, radio submit, and jam session dialogs displaying quality out of 100 instead of 1000" },
+      { type: 'improvement', description: "Song Quality Breakdown now shows 'Instrumentation' category when instruments are selected" },
+    ],
+  },
+  {
     version: "1.0.659",
     date: "2026-02-14",
     changes: [

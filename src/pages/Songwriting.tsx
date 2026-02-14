@@ -32,6 +32,7 @@ import { LyricsEditor, parseLyricsToSections, sectionsToLyrics, type LyricsSecti
 import { SongNotesDisplay, generateSongNotesForAI } from "@/components/songwriting/SongNotesDisplay";
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
 import { AddToRepertoireDialog } from "@/components/band/AddToRepertoireDialog";
+import { SongwritingInstrumentSelector } from "@/components/songwriting/SongwritingInstrumentSelector";
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
 import { SongwritingScheduleDialog } from "@/components/songwriting/SongwritingScheduleDialog";
 import {
@@ -110,6 +111,7 @@ interface ProjectFormState {
   sessionMusicians: string[];
   inspirationModifiers: string[];
   moodModifiers: string[];
+  instruments: string[];
 }
 
 type SessionEffortOption = {
@@ -151,6 +153,7 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   sessionMusicians: [],
   inspirationModifiers: [],
   moodModifiers: [],
+  instruments: [],
 };
 
 // Simplified song select - only use existing columns
@@ -937,6 +940,7 @@ const Songwriting = () => {
       sessionMusicians: creativeBrief?.session_musicians ?? [],
       inspirationModifiers: creativeBrief?.inspiration_modifiers ?? [],
       moodModifiers: creativeBrief?.mood_modifiers ?? [],
+      instruments: (project as any).instruments ?? [],
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -1036,6 +1040,7 @@ const Songwriting = () => {
           chord_progression_id: payload.chord_progression_id || null,
           initial_lyrics: payload.initial_lyrics ?? undefined,
           creative_brief: payload.creative_brief,
+          instruments: formState.instruments,
         });
       }
 
@@ -1454,6 +1459,14 @@ const Songwriting = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Instrument Selector */}
+                    <SongwritingInstrumentSelector
+                      selected={formState.instruments}
+                      onChange={(instruments) =>
+                        setFormState((previous) => ({ ...previous, instruments }))
+                      }
+                    />
                   </TabsContent>
 
                   {/* Tab 2: Creative Brief */}
