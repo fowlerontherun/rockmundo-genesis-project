@@ -72,6 +72,8 @@ export default function RecordingStudio() {
         return <Clock className="h-4 w-4 text-blue-500 animate-pulse" />;
       case 'cancelled':
         return <X className="h-4 w-4 text-red-500" />;
+      case 'failed':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
         return <Clock className="h-4 w-4 text-yellow-500" />;
     }
@@ -85,6 +87,8 @@ export default function RecordingStudio() {
         return <Badge variant="secondary">{t('gigs.inProgress')}</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">{t('gigs.cancelled')}</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
       default:
         return <Badge variant="outline">{t('gigs.scheduled')}</Badge>;
     }
@@ -190,6 +194,13 @@ export default function RecordingStudio() {
                                 <span className="font-semibold text-green-600">
                                   +{session.quality_improvement}
                                 </span>
+                              </div>
+                            )}
+
+                            {session.status === 'failed' && (
+                              <div className="mt-2 text-sm text-red-500">
+                                <AlertCircle className="h-3 w-3 inline mr-1" />
+                                {(session as any).session_data?.failure_reason || 'Band members were not in the studio city'}
                               </div>
                             )}
                           </div>

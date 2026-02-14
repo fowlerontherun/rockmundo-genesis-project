@@ -62,6 +62,68 @@ Deno.serve(async (req) => {
       try {
         console.log(`Processing recording session ${session.id}`)
 
+        // === Location validation ===
+        const studioCityId = (session as any).city_id || null
+        let locationCityId = studioCityId
+
+        // If no city_id on session, look it up from the studio
+        if (!locationCityId && session.studio_id) {
+          const { data: studioCity } = await supabase
+            .from('city_studios')
+            .select('city_id')
+            .eq('id', session.studio_id)
+            .single()
+          locationCityId = studioCity?.city_id || null
+        }
+
+        if (locationCityId) {
+          let missingMembers: string[] = []
+
+          if (session.band_id) {
+            // Band session: check all active members
+            const { data: members } = await supabase
+              .from('band_members')
+              .select('user_id, current_city_id')
+              .eq('band_id', session.band_id)
+              .in('member_status', ['active'])
+              .eq('is_touring_member', false)
+
+            missingMembers = (members || [])
+              .filter(m => m.current_city_id !== locationCityId)
+              .map(m => m.user_id)
+              .filter(Boolean) as string[]
+          } else if (session.user_id) {
+            // Solo session: check the user's current city
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('current_city_id')
+              .eq('user_id', session.user_id)
+              .single()
+
+            if (profile && profile.current_city_id !== locationCityId) {
+              missingMembers = [session.user_id]
+            }
+          }
+
+          if (missingMembers.length > 0) {
+            console.log(`Session ${session.id} FAILED: ${missingMembers.length} member(s) not in studio city`)
+            
+            const { error: failError } = await supabase
+              .from('recording_sessions')
+              .update({
+                status: 'failed',
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                session_data: { failure_reason: 'Band members were not in the studio city', missing_members: missingMembers },
+              })
+              .eq('id', session.id)
+
+            if (failError) console.error(`Failed to mark session ${session.id} as failed:`, failError)
+            errorCount++
+            continue
+          }
+        }
+
         const startTime = new Date(session.scheduled_start)
         const endTime = new Date(session.scheduled_end)
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)

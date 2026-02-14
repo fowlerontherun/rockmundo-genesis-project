@@ -1,0 +1,1 @@
+ALTER TABLE recording_sessions ADD COLUMN city_id uuid REFERENCES cities(id);

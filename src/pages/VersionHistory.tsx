@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.676",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Country & city filter on recording studios — browse and book studios worldwide, defaults to your current location" },
+      { type: 'feature', description: "Location validation: recording sessions now fail if band members are not in the studio's city when the session completes" },
+      { type: 'improvement', description: "Failed recording sessions display reason (e.g. 'Band members were not in the studio city') with red badge" },
+    ],
+  },
+  {
     version: "1.0.675",
     date: "2026-02-14",
     changes: [
