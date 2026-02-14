@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.679",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Song Rankings sales tab now shows actual units sold (quantity_sold) instead of revenue amounts in cents" },
+    ],
+  },
+  {
     version: "1.0.678",
     date: "2026-02-14",
     changes: [

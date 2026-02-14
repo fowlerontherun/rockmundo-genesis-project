@@ -79,7 +79,7 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
 
             const { data: sales } = await supabase
               .from("release_sales")
-              .select("release_format_id, total_amount")
+              .select("release_format_id, total_amount, quantity_sold")
               .in("release_format_id", formatIds);
 
             if (sales) {
@@ -100,9 +100,9 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
                 const releaseId = formatToRelease.get(sale.release_format_id);
                 if (releaseId) {
                   const songIdsForRelease = releaseToSongs.get(releaseId) || [];
-                  const perSongAmount = (sale.total_amount || 0) / Math.max(songIdsForRelease.length, 1);
+                  const perSongUnits = (sale.quantity_sold || 0) / Math.max(songIdsForRelease.length, 1);
                   for (const sid of songIdsForRelease) {
-                    salesMap[sid] = (salesMap[sid] || 0) + perSongAmount;
+                    salesMap[sid] = (salesMap[sid] || 0) + perSongUnits;
                   }
                 }
               }
