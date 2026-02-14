@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.681",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Normalized all release format retail prices to standard defaults (Digital $9.99, CD $14.99, Vinyl $29.99, Cassette $12.99)" },
+      { type: 'fix', description: "Recalculated all sales revenue based on corrected pricing" },
+    ],
+  },
+  {
     version: "1.0.680",
     date: "2026-02-14",
     changes: [
