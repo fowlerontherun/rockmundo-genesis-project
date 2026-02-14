@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.668",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "All game systems now use the Skill Tree (skill_progress) instead of the legacy player_skills table — gig performance, XP gains, career stats, and retirement inheritance all read from the modern skill system" },
+      { type: 'improvement', description: "Gig skill improvements now award XP to skill_progress entries instead of updating flat player_skills columns" },
+      { type: 'improvement', description: "Retirement inheritance now preserves and restores skills via skill_progress rows, supporting the full skill tree" },
+      { type: 'fix', description: "Career overview skill summary now reflects actual trained skill tree levels instead of potentially stale legacy values" },
+    ],
+  },
+  {
     version: "1.0.667",
     date: "2026-02-14",
     changes: [

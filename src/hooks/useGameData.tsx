@@ -69,6 +69,7 @@ type ActivityInsertPayload = {
 };
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
+// PlayerSkillsRow type kept for backward compat but no longer queried directly
 type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
 type RawAttributes = PlayerAttributesRow | null;
 type PlayerAttributesInsert = Database["public"]["Tables"]["player_attributes"]["Insert"];
@@ -705,62 +706,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         }
       }
 
-      const fetchPlayerSkillsForProfile = async () => {
-        const result = await supabase
-          .from("player_skills")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!result.error) {
-          return result;
-        }
-
-        if (isRelationNotFoundError(result.error) || isSchemaCacheMissingColumnError(result.error) || isSchemaCacheMissingTableError(result.error)) {
-          console.info(
-            "Falling back to legacy player_skills scope due to schema mismatch",
-            result.error,
-          );
-
-          const legacyResult = await supabase
-            .from("player_skills")
-            .select("*")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          if (legacyResult.error) {
-            if (isRelationNotFoundError(legacyResult.error) || isSchemaCacheMissingTableError(legacyResult.error)) {
-              console.warn("Player skills table is unavailable; continuing with default skill state", legacyResult.error);
-              return {
-                data: null,
-                error: null,
-                count: null,
-                status: 200,
-                statusText: "OK",
-              } as PostgrestSingleResponse<PlayerSkillsRow>;
-            }
-
-            return legacyResult;
-          }
-
-          const dataWithProfile = legacyResult.data
-            ? ({
-                ...(legacyResult.data as any),
-                profile_id:
-                  (legacyResult.data as any).profile_id ?? effectiveProfile.id,
-              } as any)
-            : legacyResult.data;
-
-          return {
-            ...legacyResult,
-            data: dataWithProfile,
-          };
-        }
-
-        return result;
-      };
+      // Legacy player_skills fetch removed — all skills now come from skill_progress
 
       const fetchActivitiesWithFallback = async () => {
         if (!activityFeedSupportsProfileId) {
@@ -871,39 +817,17 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const skillProgressResult = await skillProgressPromise;
 
-      let legacySkillsFallback: PlayerSkills | null = null;
       let skillProgressErrorToLog: unknown = null;
 
       const resolvedSkillProgress = (skillProgressResult.data ?? []) as SkillProgressRow[];
 
-      let shouldFetchLegacySkills = false;
       if (skillProgressResult.error) {
         if (
-          isRelationNotFoundError(skillProgressResult.error) ||
-          isSchemaCacheMissingColumnError(skillProgressResult.error) ||
-          isSchemaCacheMissingTableError(skillProgressResult.error, "skill_progress")
+          !isRelationNotFoundError(skillProgressResult.error) &&
+          !isSchemaCacheMissingColumnError(skillProgressResult.error) &&
+          !isSchemaCacheMissingTableError(skillProgressResult.error, "skill_progress")
         ) {
-          shouldFetchLegacySkills = true;
-        } else {
           skillProgressErrorToLog = skillProgressResult.error;
-        }
-      } else if (resolvedSkillProgress.length === 0) {
-        shouldFetchLegacySkills = true;
-      }
-
-      if (shouldFetchLegacySkills) {
-        const legacyResult = await fetchPlayerSkillsForProfile();
-        if (legacyResult.error) {
-          if (
-            !isRelationNotFoundError(legacyResult.error) &&
-            !isSchemaCacheMissingTableError(legacyResult.error)
-          ) {
-            skillProgressErrorToLog = legacyResult.error;
-          }
-        } else {
-          legacySkillsFallback = deriveSkillsFromLegacyRow(
-            (legacyResult.data ?? null) as PlayerSkillsRow | null,
-          );
         }
       }
 
@@ -1048,9 +972,8 @@ const useProvideGameData = (): UseGameDataReturn => {
       }
 
       setSkillProgress(resolvedSkillProgress);
-      const fallbackSkills = legacySkillsFallback;
       setSkills((previous) =>
-        deriveSkillsFromProgress(resolvedSkillProgress, fallbackSkills ?? previous),
+        deriveSkillsFromProgress(resolvedSkillProgress, previous),
       );
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
