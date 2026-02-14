@@ -215,3 +215,6 @@ verify_jwt = false
 
 [functions.replicate-webhook]
 verify_jwt = false
+
+[functions.simulate-crypto-market]
+verify_jwt = false

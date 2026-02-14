@@ -14,6 +14,10 @@ export interface CryptoToken {
   description?: string;
   created_at: string;
   updated_at: string;
+  is_rugged: boolean;
+  volatility_tier: string;
+  trend_direction: number;
+  is_active: boolean;
 }
 
 export const useUnderworld = () => {
@@ -27,11 +31,17 @@ export const useUnderworld = () => {
       const { data, error } = await supabase
         .from("crypto_tokens")
         .select("*")
+        .eq("is_active", true)
+        .eq("is_rugged", false)
         .order("market_cap", { ascending: false });
       
       if (error) throw error;
-      return (data || []) as CryptoToken[];
+      return (data || []).map((t: any) => ({
+        ...t,
+        price_history: (t.price_history || []) as { timestamp: string; price: number }[],
+      })) as CryptoToken[];
     },
+    refetchInterval: 30000,
   });
 
   return {

@@ -29,11 +29,14 @@ export const useCryptoTokens = (userId?: string) => {
       const { data, error } = await supabase
         .from("crypto_tokens")
         .select("*")
+        .eq("is_active", true)
+        .eq("is_rugged", false)
         .order("market_cap", { ascending: false, nullsFirst: false });
 
       if (error) throw error;
       return data as any as CryptoToken[];
     },
+    refetchInterval: 30000,
   });
 
   // Fetch user holdings
