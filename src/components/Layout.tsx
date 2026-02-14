@@ -17,6 +17,7 @@ import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
+import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -85,6 +86,7 @@ const Layout = () => {
           <TutorialTooltip />
         </div>
       </main>
+      <FloatingAvatarWidget />
       <EventNotificationModal />
       {pendingReport && (
         <RehearsalCompletionReport

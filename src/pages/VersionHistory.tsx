@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.654",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Added floating avatar widget — player avatar is now always visible in the bottom-right corner with level badge, expandable info panel showing name/level/fame, and quick link to character page" },
+    ],
+  },
+  {
     version: "1.0.653",
     date: "2026-02-14",
     changes: [
