@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.659",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed Song Rankings page failing to load due to broken foreign key join on profiles table" },
+      { type: 'fix', description: "Fixed Song Rankings showing 'nav.songRankings' instead of 'Song Rankings' in navigation — added missing translation key" },
+    ],
+  },
+  {
     version: "1.0.658",
     date: "2026-02-14",
     changes: [

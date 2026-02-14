@@ -163,6 +163,7 @@ export const en = {
     offers: "Offers",
     songManager: "Song Manager",
     songMarket: "Song Market",
+    songRankings: "Song Rankings",
     bandBrowser: "Band Browser",
     bandVehicles: "Band Vehicles",
     bandRiders: "Band Riders",
