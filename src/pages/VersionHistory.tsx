@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.664",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Deflated all existing song quality scores — songs were inflated from the 10x scale migration; scores now capped at 500 (avg ~310) to reflect early-game skill levels" },
+      { type: 'improvement', description: "New songs written with trained skills will naturally score higher than legacy songs, creating a real sense of progression" },
+    ],
+  },
+  {
     version: "1.0.663",
     date: "2026-02-14",
     changes: [
