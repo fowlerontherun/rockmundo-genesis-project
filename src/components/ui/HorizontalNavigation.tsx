@@ -86,6 +86,7 @@ const HorizontalNavigation = () => {
         { icon: Video, labelKey: "nav.musicVideos", path: "/music-videos" },
         { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
         { icon: Store, labelKey: "nav.songMarket", path: "/song-market" },
+        { icon: Trophy, labelKey: "nav.songRankings", path: "/song-rankings" },
       ],
     },
     {

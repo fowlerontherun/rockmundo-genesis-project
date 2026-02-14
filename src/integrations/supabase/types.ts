@@ -20359,6 +20359,94 @@ export type Database = {
         }
         Relationships: []
       }
+      song_covers: {
+        Row: {
+          cover_quality: number | null
+          covering_band_id: string
+          created_at: string | null
+          flat_fee_amount: number | null
+          id: string
+          licensed_at: string | null
+          original_band_id: string | null
+          original_song_id: string
+          original_user_id: string | null
+          payment_type: string
+          royalty_percentage: number | null
+          skill_multiplier: number | null
+        }
+        Insert: {
+          cover_quality?: number | null
+          covering_band_id: string
+          created_at?: string | null
+          flat_fee_amount?: number | null
+          id?: string
+          licensed_at?: string | null
+          original_band_id?: string | null
+          original_song_id: string
+          original_user_id?: string | null
+          payment_type: string
+          royalty_percentage?: number | null
+          skill_multiplier?: number | null
+        }
+        Update: {
+          cover_quality?: number | null
+          covering_band_id?: string
+          created_at?: string | null
+          flat_fee_amount?: number | null
+          id?: string
+          licensed_at?: string | null
+          original_band_id?: string | null
+          original_song_id?: string
+          original_user_id?: string | null
+          payment_type?: string
+          royalty_percentage?: number | null
+          skill_multiplier?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_covers_covering_band_id_fkey"
+            columns: ["covering_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_covers_original_band_id_fkey"
+            columns: ["original_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_covers_original_song_id_fkey"
+            columns: ["original_song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_covers_original_song_id_fkey"
+            columns: ["original_song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_covers_original_song_id_fkey"
+            columns: ["original_song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_covers_original_song_id_fkey"
+            columns: ["original_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       song_generation_attempts: {
         Row: {
           completed_at: string | null
