@@ -384,12 +384,23 @@ export const getCountryData = (country: string): CountryData | null => {
   return countryData[country] || null;
 };
 
+// Alias map for country abbreviations used in the database
+const countryAliases: Record<string, string> = {
+  "USA": "United States",
+  "UAE": "United Arab Emirates",
+  "UK": "United Kingdom",
+};
+
+const resolveCountry = (country: string): string => {
+  return countryAliases[country] || country;
+};
+
 export const getCountryFlag = (country: string): string => {
-  return countryData[country]?.flag || "🏳️";
+  return countryData[resolveCountry(country)]?.flag || "🏳️";
 };
 
 export const getCountryColors = (country: string): { primary: string; secondary: string } => {
-  const data = countryData[country];
+  const data = countryData[resolveCountry(country)];
   return {
     primary: data?.primaryColor || "220 80% 45%",
     secondary: data?.secondaryColor || "0 80% 50%"
