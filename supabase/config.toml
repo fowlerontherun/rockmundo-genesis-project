@@ -212,3 +212,6 @@ verify_jwt = false
 
 [functions.generate-dikcok-thumbnail]
 verify_jwt = false
+
+[functions.replicate-webhook]
+verify_jwt = false

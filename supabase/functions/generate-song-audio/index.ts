@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import Replicate from "https://esm.sh/replicate@0.25.2"
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -380,122 +380,48 @@ serve(async (req) => {
         .eq('id', attempt.id)
     }
 
-    // Initialize Replicate
-    const replicate = new Replicate({ auth: REPLICATE_API_KEY })
-
     // Calculate number of segments (~30s each) based on desired duration
     const numSegments = Math.min(10, Math.max(2, Math.round(durationSeconds / 30)))
-    console.log(`[generate-song-audio] Calling Replicate YuE API (${numSegments} segments for ~${numSegments * 30}s)...`)
+    console.log(`[generate-song-audio] Creating async Replicate prediction (${numSegments} segments for ~${numSegments * 30}s)...`)
 
-    // Generate audio using YuE for faithful lyrics reproduction
-    const output = await replicate.run(
-      "fofr/yue:f45da0cfbe372eb9116e87a1e3519aceb008fd03b0d771d21fb8627bee2b4117",
-      {
+    // Build webhook URL with songId (supabaseUrl already defined above)
+    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${songId}`
+
+    // Create async prediction with webhook (returns immediately, no timeout)
+    const predictionResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${REPLICATE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        version: 'f45da0cfbe372eb9116e87a1e3519aceb008fd03b0d771d21fb8627bee2b4117',
         input: {
           lyrics: formattedLyrics,
           genre_description: stylePrompt,
           num_segments: numSegments,
           max_new_tokens: 3000,
-        }
-      }
-    )
-
-    console.log(`[generate-song-audio] Replicate output received`)
-
-    if (!output) {
-      throw new Error('No audio generated')
-    }
-
-    // YuE returns an array of file objects — first element is the full audio
-    const outputArray = output as any[]
-    const replicateAudioUrl = outputArray?.[0]?.url?.() || (typeof outputArray?.[0] === 'string' ? outputArray[0] : null)
-
-    if (!replicateAudioUrl) {
-      console.error('[generate-song-audio] Unexpected output format:', JSON.stringify(output))
-      throw new Error('No audio URL in response')
-    }
-
-    console.log(`[generate-song-audio] Replicate URL: ${replicateAudioUrl}`)
-
-    // Download audio from Replicate and upload to Supabase Storage
-    console.log(`[generate-song-audio] Downloading audio from Replicate...`)
-    const audioResponse = await fetch(replicateAudioUrl)
-    
-    if (!audioResponse.ok) {
-      throw new Error(`Failed to download audio: ${audioResponse.status}`)
-    }
-    
-    const audioBlob = await audioResponse.blob()
-    const audioBuffer = await audioBlob.arrayBuffer()
-    const audioBytes = new Uint8Array(audioBuffer)
-    
-    console.log(`[generate-song-audio] Audio downloaded: ${audioBytes.length} bytes`)
-    
-    // Generate unique filename
-    const timestamp = Date.now()
-    const sanitizedTitle = (song.title || 'song').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
-    const filename = `${songId}/${sanitizedTitle}_${timestamp}.mp3`
-    
-    console.log(`[generate-song-audio] Uploading to Supabase Storage: music/${filename}`)
-    
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase
-      .storage
-      .from('music')
-      .upload(filename, audioBytes, {
-        contentType: 'audio/mpeg',
-        upsert: true
+        },
+        webhook: webhookUrl,
+        webhook_events_filter: ['completed', 'output'],
       })
-    
-    if (uploadError) {
-      console.error('[generate-song-audio] Storage upload error:', uploadError)
-      throw new Error(`Failed to upload to storage: ${uploadError.message}`)
-    }
-    
-    console.log(`[generate-song-audio] Upload successful:`, uploadData)
-    
-    // Get public URL
-    const { data: publicUrlData } = supabase
-      .storage
-      .from('music')
-      .getPublicUrl(filename)
-    
-    const audioUrl = publicUrlData.publicUrl
-    console.log(`[generate-song-audio] Public URL: ${audioUrl}`)
+    })
 
-    // Update song with Supabase storage URL
-    const { error: updateError } = await supabase
-      .from('songs')
-      .update({
-        audio_url: audioUrl,
-        audio_generation_status: 'completed',
-        audio_generated_at: new Date().toISOString()
-      })
-      .eq('id', songId)
+    const prediction = await predictionResponse.json()
 
-    if (updateError) {
-      console.error('[generate-song-audio] Update error:', updateError)
-      throw new Error('Failed to save audio URL')
+    if (!predictionResponse.ok) {
+      console.error(`[generate-song-audio] Replicate API error:`, prediction)
+      throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
     }
 
-    // Update attempt record
-    if (attempt?.id) {
-      await supabase
-        .from('song_generation_attempts')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', attempt.id)
-    }
-
-    console.log(`[generate-song-audio] Successfully generated audio with vocals for song ${songId}`)
+    console.log(`[generate-song-audio] Async prediction created: ${prediction.id} for song ${songId}`)
+    console.log(`[generate-song-audio] Prediction web URL: ${prediction.urls?.web}`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        audioUrl,
-        message: `Audio with vocals generated for "${songTitle}"`
+        predictionId: prediction.id,
+        message: `Audio generation started for "${songTitle}". It will be ready in 2-5 minutes.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
