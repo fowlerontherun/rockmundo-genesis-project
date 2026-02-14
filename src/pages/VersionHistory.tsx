@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.684",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Covering a song now creates a copy in your band's repertoire — available for rehearsal and recording with cover quality scaling" },
+    ],
+  },
+  {
     version: "1.0.683",
     date: "2026-02-14",
     changes: [
