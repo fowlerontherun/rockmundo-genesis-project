@@ -1,116 +1,117 @@
 
-
-# Song Quality Scale Fix, Instrument Integration, and Skill Impact Overhaul (v1.0.660)
+# Improved Gig Outcome Insights and Equipment Warnings (v1.0.661)
 
 ## Overview
 
-Three core changes to make skills meaningfully impact song quality across songwriting, recording, and gigs:
-
-1. **Fix quality scale**: The database function caps quality at 100 while the frontend system uses a 0-1000 scale. All quality scores will be unified to 0-1000.
-2. **Instrument selection in songwriting**: Players pick which instruments are featured in a song project. The skill levels of those instruments directly affect the song quality calculation.
-3. **Skill-driven quality everywhere**: Every skill level increase should visibly improve songwriting output, recording quality, and gig performance.
+Add detailed performance insight cards to the gig outcome report that explain **what boosted and what hurt** the score, plus a pre-gig warning system that alerts players when band members are assigned instrument roles but don't have matching gear equipped.
 
 ---
 
-## 1. Fix Quality Scale (0-100 to 0-1000)
+## 1. Performance Insights Card (Post-Gig)
 
-### The Problem
-The database function `auto_complete_songwriting_sessions()` calculates quality on a 0-100 scale (line 137: `GREATEST(20, LEAST(100, v_quality_score))`), but the frontend `songQuality.ts` and `songRatings.ts` both use a 0-1000 scale. This mismatch means all auto-completed songs show quality around 100 or below, while the rating system expects values up to 1000.
+A new component `PerformanceInsightsCard` displayed in `GigOutcomeReport.tsx` that analyzes the gig execution data and generates human-readable insight lines.
 
-Several UI components also display `/100` instead of `/1000`.
+### Insight Categories
 
-### Changes
+**Skill-based insights** (per band member):
+- Low skill warning: "Alex played Lead Guitar with only Level 12 guitar skill -- this dragged down performance"
+- Average skill note: "Jordan had moderate Drums skill (Level 45) -- room to improve"
+- High skill praise: "Sam's vocal mastery (Level 88) elevated the entire set"
 
-**Database migration** -- Update `auto_complete_songwriting_sessions()`:
-- Scale the quality calculation to produce 0-1000 values instead of 0-100
-- Replace `GREATEST(20, LEAST(100, ...))` with `GREATEST(50, LEAST(1000, ...))`
-- Multiply skill and attribute contributions by ~10x to fill the 1000-point range
-- Factor in the instruments used on the project (stored in new `instruments` column)
+**Gear-based insights** (per band member):
+- Gear boost: "Alex has a Rare electric guitar equipped, boosting Lead Guitar performance by +18%"
+- Missing gear warning: "Jordan is assigned Drums but has no drum kit equipped -- no gear bonus applied"
+- Gear mismatch: "Sam has a keyboard equipped but plays Vocals -- gear bonus doesn't apply"
 
-**Fix UI displays** showing `/100`:
-- `src/components/radio/SubmitSongDialog.tsx` -- change `/100` to `/1000`
-- `src/components/jam-sessions/JamOutcomeReportDialog.tsx` -- change `/100` to `/1000`
-- Any other places displaying quality out of 100
+**Other factor insights** (from existing breakdown data):
+- Low rehearsal: "3 of 6 songs were under-rehearsed, costing you up to 20% on those tracks"
+- Chemistry impact: "Band chemistry at 82% gave a +10% synergy boost"
+- Crew contribution: "Your 3-person crew averaged skill level 65, providing solid support"
+- Equipment quality: "Stage equipment quality was 78/100"
 
-**CompleteSongDialog.tsx** -- When converting a project to a song, use the frontend `calculateSongQuality()` function (which already produces 0-1000) instead of just passing through the DB-calculated score. This ensures the detailed breakdown (melody, lyrics, rhythm, arrangement, production) drives the final quality.
+### Data Flow
+
+During gig execution (`gigExecution.ts`), the code already fetches band members but doesn't include `instrument_role`. The change will:
+
+1. Update the `band_members` query in `gigExecution.ts` to also select `instrument_role`
+2. For each member, call `calculatePerformanceModifiers()` from `skillGearPerformance.ts` to get their skill level, gear multiplier, and effective level
+3. Store these per-member breakdowns in the gig outcome's existing `breakdown_data` JSON field as a new `member_insights` array
+4. The `PerformanceInsightsCard` component reads this data and renders categorized insight lines with icons
+
+### Insight Generation Logic
+
+```text
+For each band member:
+  1. Get their instrument_role (e.g., "Lead Guitar")
+  2. Look up their skill level for that role via ROLE_SKILL_MAP
+  3. Check equipped gear via doesCategoryMatchRole()
+  4. Generate insight based on thresholds:
+     - skill < 25: "danger" (red) -- severely hurting performance
+     - skill 25-50: "warning" (yellow) -- below average
+     - skill 50-75: "neutral" (gray) -- decent
+     - skill 75+: "boost" (green) -- actively helping
+  5. Check gear match:
+     - Has matching gear: "boost" with rarity bonus noted
+     - No matching gear: "warning" -- missing out on bonuses
+     - Wrong category gear: "info" -- gear doesn't help this role
+```
 
 ---
 
-## 2. Instrument Selection in Songwriting Projects
+## 2. Pre-Gig Equipment Warning
+
+Add an "Instrument Gear Check" section to the existing `GigPreparationChecklist.tsx` component.
 
 ### How It Works
-When creating or editing a songwriting project, players will select which instruments are featured in the song (e.g., Electric Guitar, Bass Guitar, Drums, Vocals, Piano). These instruments come from the existing skill tree instrument categories.
 
-The selected instruments affect quality in two ways:
-- **Instrument skill bonus**: The player's skill level in each selected instrument contributes to the song's arrangement and production scores
-- **Instrument count bonus**: More instruments = richer arrangement potential (diminishing returns)
+Before a gig, the checklist already shows rehearsal status, equipment, crew, and chemistry. The new section will:
 
-### Changes
+1. Fetch band members with their `instrument_role`
+2. Fetch each member's equipped gear from `player_equipment` joined with `equipment_items`
+3. Use `doesCategoryMatchRole()` from `skillGearPerformance.ts` to check if any equipped item matches their role
+4. Display warnings for mismatches:
+   - "Jordan (Drums) has no drum equipment equipped -- performance will suffer!"
+   - "Alex (Lead Guitar) has matching gear: Fender Stratocaster (Rare) -- +18% bonus"
 
-**Database migration** -- Add `instruments` column to `songwriting_projects`:
-- Type: `text[]` (array of instrument skill slugs)
-- Nullable, defaults to empty array
+### UI
 
-**New component**: `InstrumentSelector.tsx`
-- Multi-select component listing all instruments from the skill tree (filtered to the `Instruments & Performance` category)
-- Shows the player's current skill level next to each instrument
-- Displays a preview of how each instrument's skill level will affect quality
-- Used in the songwriting project creation/edit flow
-
-**Update songwriting project creation** to include instrument selection
-
-**Update `songQuality.ts`**:
-- Add new input field: `instrumentSkills: { slug: string; level: number }[]`
-- New sub-calculation: `calculateInstrumentBonus()` that sums skill contributions from selected instruments
-- Instrument bonus feeds into arrangement strength and adds a new "Instrumentation" quality area
-- Each instrument contributes up to ~30 points based on skill level, with diminishing returns after 4-5 instruments
+A list of band members with their role, showing a green check if they have matching gear or a red warning if they don't. This adds to the existing readiness score calculation.
 
 ---
 
-## 3. Skill Impact on Recording and Gigs
+## Technical Changes
 
-### Recording Quality
-The existing `skillGearPerformance.ts` already maps band roles to instrument skills and calculates modifiers. This utility will be integrated more directly into recording quality:
+### New File
+- `src/components/gig/PerformanceInsightsCard.tsx` -- Component that renders categorized boost/penalty insight lines with color-coded icons
 
-- When recording, the instruments selected during songwriting determine which band member skills are checked
-- Higher instrument skills = higher recording quality multiplier (already partially implemented via `calculateSkillModifier`)
-- The recording quality calculation will incorporate the song's instrument list to match against band member skills
+### Modified Files
+- `src/utils/gigExecution.ts` -- Update band_members query to include `instrument_role`; after calculating performance, run per-member skill+gear analysis and store `member_insights` array in `breakdown_data`
+- `src/components/gig/GigOutcomeReport.tsx` -- Import and render `PerformanceInsightsCard` using `breakdown_data.member_insights`
+- `src/components/gig/GigPreparationChecklist.tsx` -- Add new prop for band members with roles; add "Instrument Gear Check" section showing per-member equipment match status
+- `src/utils/skillGearPerformance.ts` -- Export `doesCategoryMatchRole` (currently not exported) so it can be reused
+- `src/components/VersionHeader.tsx` -- Bump to v1.0.661
+- `src/pages/VersionHistory.tsx` -- Add changelog entry
 
-### Gig Performance
-The existing `LiveGigPerformance.tsx` uses `quality_score / 100` for base scoring. This will be updated to:
-- Use `quality_score / 1000` to match the new scale
-- Continue using `skillGearPerformance.ts` for live performance modifiers
+### Data Structure for `member_insights`
 
-### Continuous Improvement Loop
-Every skill level increase already improves the values returned by:
-- `songQuality.ts` (composing, lyrics, beatmaking, mixing, DAW, etc.)
-- `skillGearPerformance.ts` (instrument skills for gigs/recording)
-- `auto_complete_songwriting_sessions()` (DB-side quality calc)
+Stored in `breakdown_data.member_insights` on gig_outcomes:
 
-By adding instrument skills to the songwriting quality formula, players will see tangible improvement from training any relevant skill.
+```text
+[
+  {
+    memberId: "uuid",
+    displayName: "Alex",
+    role: "Lead Guitar",
+    skillLevel: 35,
+    gearMultiplier: 1.18,
+    effectiveLevel: 41,
+    hasMatchingGear: true,
+    gearName: "Fender Stratocaster",
+    gearRarity: "rare",
+    insightType: "warning",  // danger | warning | neutral | boost
+    message: "Played Lead Guitar with below-average guitar skill (Level 35)"
+  }
+]
+```
 
----
-
-## Technical Changes Summary
-
-### Database Migration
-1. Add `instruments text[]` column to `songwriting_projects`
-2. Rewrite `auto_complete_songwriting_sessions()` to use 0-1000 scale and factor in project instruments
-
-### Files to Create
-- `src/components/songwriting/InstrumentSelector.tsx` -- multi-select instrument picker with skill levels
-
-### Files to Modify
-- `src/utils/songQuality.ts` -- add instrument bonus calculation, new `instrumentSkills` input
-- `src/components/songwriting/SongQualityBreakdown.tsx` -- add "Instrumentation" area to breakdown display
-- `src/components/songwriting/CompleteSongDialog.tsx` -- use `calculateSongQuality()` for proper 0-1000 scoring
-- `src/components/radio/SubmitSongDialog.tsx` -- fix `/100` to `/1000`
-- `src/components/jam-sessions/JamOutcomeReportDialog.tsx` -- fix `/100` to `/1000`
-- `src/components/gig/LiveGigPerformance.tsx` -- fix `quality_score / 100` to `/ 1000`
-- `src/components/VersionHeader.tsx` -- bump to v1.0.660
-- `src/pages/VersionHistory.tsx` -- add changelog entry
-- Songwriting project creation/edit forms -- integrate InstrumentSelector
-
-### Instrument List (from skill tree)
-The selector will pull all instruments from the `Instruments & Performance` category in the skill tree, including: Acoustic Guitar, Classical Guitar, Electric Guitar, Bass Guitar, Upright Bass, Violin, Viola, Cello, Banjo, Mandolin, Ukulele, Harp, 12-String Guitar, Pedal Steel, Lap Steel, Dobro, Classical Piano, Jazz Piano, Hammond Organ, Pipe Organ, Rhodes, Rock Drums, Jazz Drums, and many more (60+ instruments total).
-
+No database migration needed -- `breakdown_data` is already a JSONB column.
