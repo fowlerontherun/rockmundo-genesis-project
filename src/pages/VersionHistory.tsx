@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.673",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Removed duplicate cities (Atlanta, Detroit, Nashville) — education mentor references reassigned to canonical city entries" },
+      { type: 'improvement', description: "Added unique constraint on cities (name + country) to prevent future duplicates" },
+    ],
+  },
+  {
     version: "1.0.672",
     date: "2026-02-14",
     changes: [
