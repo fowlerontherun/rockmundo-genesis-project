@@ -209,9 +209,10 @@ serve(async (req) => {
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
-        const fameMultiplier = 1 + artistFame / fameDivisor;
-        const popularityMultiplier = 1 + artistPopularity / fameDivisor;
-        const qualityMultiplier = avgQuality / 50;
+        // Logarithmic fame scaling: fame 100→1.5x, 1K→2x, 10K→3x, 100K→3.5x, 1M→4x, 5M→4.3x
+        const fameMultiplier = 1 + Math.log10(Math.max(artistFame, 1)) * 0.5;
+        const popularityMultiplier = 1 + Math.log10(Math.max(artistPopularity, 1)) * 0.3;
+        const qualityMultiplier = 0.5 + (avgQuality / 100) * 1.0; // 0.5x at 0 quality, 1.5x at 100
 
         for (const format of release.release_formats || []) {
           // Skip formats with no retail price set
@@ -250,8 +251,9 @@ serve(async (req) => {
           const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
 
           if (actualSales > 0) {
-            // Calculate gross revenue
-            const grossRevenue = actualSales * retailPrice;
+            // retail_price is stored in CENTS — convert to dollars for revenue calc
+            const retailPriceDollars = retailPrice / 100;
+            const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
             
             // Calculate tax and distribution deductions
             const distributionRate = getDistributionRate(format.format_type);
@@ -259,8 +261,8 @@ serve(async (req) => {
             const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
             const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
             
-            // Round to integers for DB columns (unit_price and total_amount are integers in cents)
-            const unitPriceCents = Math.round(retailPrice * 100);
+            // Store in cents in release_sales
+            const unitPriceCents = retailPrice; // already in cents
             const totalAmountCents = Math.round(grossRevenue * 100);
             const salesTaxCents = Math.round(salesTaxAmount * 100);
             const distributionFeeCents = Math.round(distributionFee * 100);
@@ -290,11 +292,34 @@ serve(async (req) => {
                 .eq("id", format.id);
             }
 
-            // Update release revenue with GROSS (for display purposes)
+            // Update release revenue with GROSS (in dollars for display)
             await supabaseClient.rpc("increment_release_revenue", {
               release_id: release.id,
               amount: grossRevenue,
             });
+
+            // Update per-format and total unit counters on release
+            const formatColumn = format.format_type === "digital" ? "digital_sales" 
+              : format.format_type === "cd" ? "cd_sales"
+              : format.format_type === "vinyl" ? "vinyl_sales"
+              : format.format_type === "cassette" ? "cassette_sales"
+              : null;
+            
+            if (formatColumn) {
+              const updateObj: Record<string, any> = {};
+              // Fetch current values to increment
+              const { data: currentRelease } = await supabaseClient
+                .from("releases")
+                .select(`total_units_sold, ${formatColumn}`)
+                .eq("id", release.id)
+                .single();
+              
+              if (currentRelease) {
+                updateObj.total_units_sold = (currentRelease.total_units_sold || 0) + actualSales;
+                updateObj[formatColumn] = (currentRelease[formatColumn] || 0) + actualSales;
+                await supabaseClient.from("releases").update(updateObj).eq("id", release.id);
+              }
+            }
 
             // Credit NET revenue to band (after tax + distribution)
             if (release.band_id) {

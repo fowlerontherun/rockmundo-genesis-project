@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.677",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Record sales rebalanced: logarithmic fame scaling replaces linear (fame 1M now gives ~4x instead of 100x+)" },
+      { type: 'fix', description: "Fixed retail price unit mismatch — prices now consistently stored in cents and correctly converted for revenue calculations" },
+      { type: 'fix', description: "Release unit counters (digital_sales, cd_sales, vinyl_sales, cassette_sales, total_units_sold) now properly increment with each daily sale" },
+      { type: 'fix', description: "Reset all inflated release revenue and sales data to zero — sales will rebuild naturally from corrected calculations" },
+      { type: 'fix', description: "Removed inflated band_earnings from release_sales source" },
+    ],
+  },
+  {
     version: "1.0.676",
     date: "2026-02-14",
     changes: [
