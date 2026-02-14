@@ -60,6 +60,40 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     }
   };
 
+  const handleAdminRegenerate = async () => {
+    if (!user?.id || !limits?.is_admin) return;
+    setRetrying(true);
+    try {
+      // Reset status to allow regeneration
+      await supabase
+        .from('songs')
+        .update({ audio_generation_status: 'failed', audio_url: null })
+        .eq('id', songId);
+
+      const { data, error } = await supabase.functions.invoke('generate-song-audio', {
+        body: { songId, userId: user.id }
+      });
+
+      if (error) {
+        console.error('Admin regenerate error:', error);
+        toast.error("Failed to regenerate");
+      } else if (data?.success) {
+        toast.success("Regeneration started!", {
+          description: "Song is being regenerated with the new YuE model."
+        });
+        queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
+        queryClient.invalidateQueries({ queryKey: ["song-generation-limits"] });
+      } else if (data?.error) {
+        toast.error(data.error, { description: data.details });
+      }
+    } catch (err) {
+      console.error('Admin regenerate failed:', err);
+      toast.error("Failed to regenerate");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleRetry = async () => {
     if (!user?.id || !canRegenerate) return;
 
@@ -111,7 +145,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
 
   if (!status) return null;
 
-  // Already completed with audio - show success, no regeneration allowed
+  // Already completed with audio - show success, admin can regenerate
   if (isCompleted && hasAudio) {
     return (
       <Alert className="bg-primary/10 border-primary/30">
@@ -120,9 +154,25 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
           <span className="text-primary font-medium">
             ✨ AI audio generated successfully!
           </span>
-          <span className="text-xs text-muted-foreground">
-            Regeneration not available
-          </span>
+          {limits?.is_admin ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleAdminRegenerate}
+              disabled={retrying}
+            >
+              {retrying ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-1" />
+              )}
+              Regenerate (Admin)
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              Regeneration not available
+            </span>
+          )}
         </AlertDescription>
       </Alert>
     );

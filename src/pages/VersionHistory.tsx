@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.647",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Added admin 'Regenerate' button on completed songs — admins can now re-trigger AI audio generation to test new models on existing songs" },
+    ],
+  },
+  {
     version: "1.0.646",
     date: "2026-02-14",
     changes: [
