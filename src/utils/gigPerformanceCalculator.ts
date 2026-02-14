@@ -12,6 +12,7 @@ export interface PerformanceFactors {
   songPosition?: number;      // Position in setlist (1-indexed)
   stageSkillAverage?: number; // 0-100 from showmanship, crowd, tech skills
   improvisationLevel?: number; // 0-20 from improv skill level
+  genreSkillMultiplier?: number; // 1.0-1.20 bonus from genre skill tree training
 }
 
 export interface SongPerformanceResult {
@@ -112,9 +113,12 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
   // Apply production notes bonus
   const productionMultiplier = 1 + (factors.productionNotesBonus || 0);
   
+  // Apply genre skill bonus (players trained in this genre perform better)
+  const genreMultiplier = factors.genreSkillMultiplier ?? 1.0;
+  
   // Convert to 25-star scale with all multipliers
   const qualityDifficulty = 0.75 + (normalizedSongQuality / 100) * 0.25;
-  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier * qualityDifficulty * momentumMultiplier * positionMultiplier * eventMultiplier;
+  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier * qualityDifficulty * momentumMultiplier * positionMultiplier * eventMultiplier * genreMultiplier;
   const clampedScore = Math.max(0, Math.min(25, finalScore));
   
   // Determine crowd response based on score

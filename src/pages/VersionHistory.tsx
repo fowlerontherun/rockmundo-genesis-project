@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.662",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Genre skill tree now affects gig performance — bands trained in a song's genre get up to 20% performance boost per song" },
+      { type: 'feature', description: "Genre skill tree now affects recording quality — up to 20% bonus when recording songs matching your trained genre" },
+      { type: 'improvement', description: "Per-song genre matching: each song in a setlist checks the band's skill in that song's specific genre, not just the band's primary genre" },
+    ],
+  },
+  {
     version: "1.0.661",
     date: "2026-02-14",
     changes: [
