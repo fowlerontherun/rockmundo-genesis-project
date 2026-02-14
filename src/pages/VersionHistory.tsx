@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.653",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed 'Edit & Regenerate' — admin-edited lyrics now passed directly to generation, bypassing priority logic that was ignoring edits and using AI/project lyrics instead" },
+    ],
+  },
+  {
     version: "1.0.652",
     date: "2026-02-14",
     changes: [

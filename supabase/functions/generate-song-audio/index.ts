@@ -22,7 +22,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { songId, userId } = await req.json()
+    const { songId, userId, overrideLyrics } = await req.json()
 
     if (!songId || !userId) {
       return new Response(
@@ -225,9 +225,14 @@ serve(async (req) => {
     const songLyricsAreAI = originalSongLyrics?.trim()?.startsWith('[AI Generated]') || originalSongLyrics?.trim()?.includes('[AI Generated]')
     const projectLyricsAreAI = originalProjectLyrics?.trim()?.startsWith('[AI Generated]') || originalProjectLyrics?.trim()?.includes('[AI Generated]')
     
-    // Priority: non-AI project lyrics > non-AI song lyrics > AI song lyrics > AI project lyrics > null
+    // If admin provided override lyrics, use those directly (highest priority)
     let rawLyrics: string | null = null
-    if (originalProjectLyrics?.trim() && !projectLyricsAreAI) {
+    if (overrideLyrics !== undefined && overrideLyrics !== null) {
+      rawLyrics = overrideLyrics.trim() || null
+      console.log(`[generate-song-audio] Using admin override lyrics (${rawLyrics?.length || 0} chars)`)
+    }
+    // Otherwise: non-AI project lyrics > non-AI song lyrics > AI song lyrics > AI project lyrics > null
+    else if (originalProjectLyrics?.trim() && !projectLyricsAreAI) {
       rawLyrics = sanitizeLyrics(originalProjectLyrics)
       console.log('[generate-song-audio] Using non-AI project lyrics (preferred source)')
     } else if (originalSongLyrics?.trim() && !songLyricsAreAI) {
