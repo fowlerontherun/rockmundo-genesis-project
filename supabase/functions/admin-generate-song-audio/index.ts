@@ -169,7 +169,7 @@ serve(async (req) => {
     // Extract creative brief from project
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
     
-    // Build comprehensive prompt for MiniMax Music-1.5
+    // Build comprehensive prompt for YuE
     const rawSongTitle = project?.title || song.title || 'Untitled'
     const cleanedSongTitle = cleanProfanity(rawSongTitle)
     const primaryGenre = song.genre || project?.genres?.[0] || 'pop'
@@ -261,7 +261,7 @@ serve(async (req) => {
     
     addLog(`Final Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'using placeholder (fallback)'}`)
 
-    // Build the style prompt for MiniMax
+    // Build the genre description for YuE (space-separated tags)
     let styleParts: string[] = []
 
     // Use custom prompt if provided, otherwise build from metadata
@@ -281,7 +281,7 @@ serve(async (req) => {
 
       // Add chord progression context
       if (chordProgression) {
-        styleParts.push(`${chordName || chordProgression} progression`)
+        styleParts.push(`${chordName || chordProgression}`)
       }
 
       // Add theme and mood
@@ -325,21 +325,17 @@ serve(async (req) => {
       }
     }
 
-    // MiniMax requires prompt between 10-300 characters
-    let stylePrompt = styleParts.join(', ')
-    if (stylePrompt.length > 300) {
-      stylePrompt = stylePrompt.substring(0, 297) + '...'
-      addLog(`Style prompt truncated to 300 chars (was ${styleParts.join(', ').length})`)
-    } else if (stylePrompt.length < 10) {
-      stylePrompt = `${primaryGenre} song with vocals`
-      addLog(`Style prompt expanded to minimum 10 chars`)
+    // YuE uses space-separated genre tags
+    let stylePrompt = styleParts.join(' ')
+    if (stylePrompt.length < 10) {
+      stylePrompt = `${primaryGenre} vocal song`
     }
-    addLog(`Style prompt (${stylePrompt.length} chars): "${stylePrompt}"`)
+    addLog(`Genre description (${stylePrompt.length} chars): "${stylePrompt}"`)
 
-    // Format lyrics with section markers for MiniMax - preserve full structure
-    addLog('Formatting lyrics for MiniMax Music-1.5 (full structure)...')
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
-    addLog(`Formatted lyrics (${formattedLyrics.length} chars, preserving all sections)`)
+    // Format lyrics for YuE - uses lowercase [verse], [chorus] tags, no character limit
+    addLog('Formatting lyrics for YuE (full lyrics, faithful reproduction)...')
+    const formattedLyrics = formatLyricsForYuE(rawLyrics, cleanedSongTitle, primaryGenre)
+    addLog(`Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
     const fullPrompt = `Style: ${stylePrompt}\n\nLyrics:\n${formattedLyrics}`
@@ -355,23 +351,22 @@ serve(async (req) => {
     addLog('Initializing Replicate API client...')
     const replicate = new Replicate({ auth: REPLICATE_API_KEY })
 
-    // Calculate song duration (1-4 minutes for MiniMax)
-    const songDuration = Math.min(240, Math.max(60, durationSeconds))
-    addLog(`Song duration: ${durationSeconds}s, using ${songDuration}s for MiniMax`)
+    // Calculate number of segments (~30s each) based on desired duration
+    const numSegments = Math.min(10, Math.max(2, Math.round(durationSeconds / 30)))
+    addLog(`Song duration: ${durationSeconds}s, using ${numSegments} segments for YuE`)
 
-    // Generate audio using MiniMax Music-1.5 with vocals
-    addLog('Calling Replicate MiniMax Music-1.5 API (this may take 60-180 seconds)...')
+    // Generate audio using YuE for faithful lyrics reproduction
+    addLog(`Calling Replicate YuE API (${numSegments} segments, this may take 60-300 seconds)...`)
     const startTime = Date.now()
     
     const output = await replicate.run(
-      "minimax/music-1.5",
+      "fofr/yue:f45da0cfbe372eb9116e87a1e3519aceb008fd03b0d771d21fb8627bee2b4117",
       {
         input: {
           lyrics: formattedLyrics,
-          prompt: stylePrompt,
-          song_duration: songDuration,
-          bitrate: 128000,
-          sample_rate: 44100
+          genre_description: stylePrompt,
+          num_segments: numSegments,
+          max_new_tokens: 3000,
         }
       }
     )
@@ -386,7 +381,9 @@ serve(async (req) => {
       throw new Error('No audio generated')
     }
 
-    const replicateAudioUrl = typeof output === 'string' ? output : (output as any)?.audio || (output as any)?.[0]
+    // YuE returns an array of file objects — first element is the full audio
+    const outputArray = output as any[]
+    const replicateAudioUrl = outputArray?.[0]?.url?.() || (typeof outputArray?.[0] === 'string' ? outputArray[0] : null)
 
     if (!replicateAudioUrl) {
       addLog('ERROR: No audio URL found in Replicate response')
@@ -503,21 +500,21 @@ serve(async (req) => {
   }
 })
 
-// Get vocal style based on player gender
+// Get vocal style based on player gender (space-separated tags for YuE)
 function getGenderVocalStyle(gender: string | null): string {
-  if (!gender) return 'clear vocals'
+  if (!gender) return 'vocal'
   
   const genderLower = gender.toLowerCase()
   
   if (genderLower === 'male') {
-    return 'male vocals, male singer'
+    return 'male vocal'
   } else if (genderLower === 'female') {
-    return 'female vocals, female singer'
+    return 'female vocal'
   } else if (genderLower === 'non-binary' || genderLower === 'other' || genderLower === 'prefer not to say') {
-    return 'gender-neutral vocals'
+    return 'vocal'
   }
   
-  return 'clear vocals'
+  return 'vocal'
 }
 
 // Swear words to filter out before sending to AI (will be replaced with clean alternatives)
@@ -617,161 +614,76 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   return cleaned || null
 }
 
-// Format lyrics with section markers for MiniMax Music-1.5
-// ONLY includes essential sections: Intro (if exists), first Verse, Chorus, Bridge
-function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
-  // If no lyrics, generate placeholder structure
+// Format lyrics for YuE model - uses lowercase [verse], [chorus] tags
+// YuE has NO character limit and faithfully sings provided lyrics
+function formatLyricsForYuE(rawLyrics: string | null, songTitle: string, genre: string): string {
   if (!rawLyrics || rawLyrics.trim().length === 0) {
+    console.log('[admin-generate-song-audio] No lyrics provided, using placeholder')
     return generatePlaceholderLyrics(songTitle, genre)
   }
 
-  // Safety check: if lyrics somehow still contain prompt markers, extract just the content
+  // Safety check for prompt contamination
   let processedLyrics = rawLyrics.trim()
   if (processedLyrics.toLowerCase().includes('style:') || processedLyrics.toLowerCase().startsWith('lyrics:')) {
-    console.warn('[formatLyricsForMiniMax] Detected corrupted lyrics input, sanitizing...')
+    console.warn('[formatLyricsForYuE] Detected corrupted lyrics input, sanitizing...')
     const sectionMatch = processedLyrics.match(/\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)[\s\S]*/i)
     if (sectionMatch) {
       processedLyrics = sectionMatch[0]
     } else {
-      // Can't extract, use placeholder
       return generatePlaceholderLyrics(songTitle, genre)
     }
   }
 
-  // Clean profanity first before any processing
+  // Clean profanity
   const cleanedLyrics = cleanProfanity(processedLyrics)
-
-  // Format full lyrics preserving song structure
-  return formatFullLyrics(cleanedLyrics, songTitle, genre)
-}
-
-// Format full lyrics preserving song structure
-// MiniMax Music-1.5 REQUIRES lyrics between 10-600 characters
-function formatFullLyrics(lyrics: string, songTitle: string, genre: string): string {
-  // MiniMax HARD LIMIT: 10-600 characters for lyrics
-  const MAX_CHARS = 580 // Leave buffer for section markers
   
-  // Normalize section markers to consistent format
-  let normalizedLyrics = lyrics
-    .replace(/\[verse\s*(\d*)\]/gi, (_, num) => `[Verse${num ? ' ' + num : ''}]`)
-    .replace(/\[chorus\s*(\d*)\]/gi, (_, num) => `[Chorus${num ? ' ' + num : ''}]`)
-    .replace(/\[bridge\s*(\d*)\]/gi, (_, num) => `[Bridge${num ? ' ' + num : ''}]`)
-    .replace(/\[pre-?chorus\s*(\d*)\]/gi, (_, num) => `[Pre-Chorus${num ? ' ' + num : ''}]`)
-    .replace(/\[outro\s*\d*\]/gi, '[Outro]')
-    .replace(/\[intro\s*\d*\]/gi, '[Intro]')
-    .replace(/\[hook\s*\d*\]/gi, '[Hook]')
-    .replace(/\[post-?chorus\s*\d*\]/gi, '[Post-Chorus]')
-    // Remove chord annotations like (Am-F-C-G) or (She) (He) - these waste character space
+  console.log(`[admin-generate-song-audio] Using actual lyrics: ${cleanedLyrics.length} chars`)
+
+  // Normalize section markers to lowercase for YuE
+  let normalized = cleanedLyrics
+    .replace(/\[Verse\s*(\d*)\]/gi, (_, num) => `[verse]`)
+    .replace(/\[Chorus\s*(\d*)\]/gi, (_, num) => `[chorus]`)
+    .replace(/\[Bridge\s*(\d*)\]/gi, (_, num) => `[bridge]`)
+    .replace(/\[Pre-?Chorus\s*(\d*)\]/gi, (_, num) => `[verse]`)
+    .replace(/\[Outro\s*\d*\]/gi, '[outro]')
+    .replace(/\[Intro\s*\d*\]/gi, '[verse]')
+    .replace(/\[Hook\s*\d*\]/gi, '[chorus]')
+    .replace(/\[Post-?Chorus\s*\d*\]/gi, '[chorus]')
     .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
-    .replace(/\((She|He|Both)\)\s*/gi, '')
+    .replace(/\((She|He|Both|You|Me)\)\s*/gi, '')
 
-  const hasMarkers = /\[(Verse|Chorus|Bridge|Intro|Hook|Pre-Chorus|Outro)\]/i.test(normalizedLyrics)
-  
+  const hasMarkers = /\[(verse|chorus|bridge|outro)\]/i.test(normalized)
+
   if (!hasMarkers) {
-    // No markers - create minimal structure that fits in 600 chars
-    const lines = lyrics.split('\n').filter(l => l.trim() && !l.match(/^\([^)]+\)$/))
+    const lines = normalized.split('\n').filter(l => l.trim())
     if (lines.length === 0) return generatePlaceholderLyrics(songTitle, genre)
     
-    // Take just first 4 lines for verse, 2 for chorus
-    const verse = lines.slice(0, Math.min(4, lines.length)).join('\n')
-    const chorusStart = Math.min(4, lines.length)
-    const chorus = lines.slice(chorusStart, chorusStart + 2).join('\n') || lines.slice(0, 2).join('\n')
-    const result = `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
-    
-    if (result.length <= MAX_CHARS) return result
-    return result.substring(0, MAX_CHARS)
+    const midpoint = Math.ceil(lines.length / 2)
+    const verse = lines.slice(0, midpoint).join('\n')
+    const chorus = lines.slice(midpoint).join('\n') || lines.slice(0, Math.min(4, lines.length)).join('\n')
+    return `[verse]\n${verse}\n\n[chorus]\n${chorus}`
   }
 
-  // Extract all sections maintaining order
-  const sections: { type: string; content: string }[] = []
-  const sectionRegex = /\[(Intro|Verse\s*\d*|Chorus\s*\d*|Bridge\s*\d*|Pre-Chorus\s*\d*|Post-Chorus|Hook|Outro)\]([\s\S]*?)(?=\[|$)/gi
-  let match
+  // Ensure sections are separated by double newlines (YuE requirement)
+  normalized = normalized.replace(/\n?\[(verse|chorus|bridge|outro)\]/gi, (match) => `\n\n${match.trim()}`)
+  normalized = normalized.replace(/\n{3,}/g, '\n\n').trim()
+  normalized = normalized.replace(/^\n+/, '')
 
-  while ((match = sectionRegex.exec(normalizedLyrics)) !== null) {
-    const type = match[1].trim()
-    // Clean content: remove chord annotations and extra whitespace
-    let content = match[2].trim()
-      .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
-      .replace(/\((She|He|Both)\)\s*/gi, '')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .join('\n')
-    if (content) {
-      sections.push({ type, content })
-    }
-  }
-
-  if (sections.length === 0) {
-    return generatePlaceholderLyrics(songTitle, genre)
-  }
-
-  // Priority: First Verse + First Chorus (essential), then maybe Bridge
-  // Build output with strict character limit
-  let totalChars = 0
-  const result: string[] = []
-  
-  // Get first verse
-  const firstVerse = sections.find(s => s.type.toLowerCase().includes('verse'))
-  // Get first chorus
-  const firstChorus = sections.find(s => s.type.toLowerCase().includes('chorus'))
-  
-  if (firstVerse) {
-    const verseLines = firstVerse.content.split('\n').slice(0, 4) // Max 4 lines per section
-    const sectionText = `[Verse]\n${verseLines.join('\n')}`
-    if (totalChars + sectionText.length <= MAX_CHARS) {
-      result.push(sectionText)
-      totalChars += sectionText.length + 2
-    }
-  }
-  
-  if (firstChorus) {
-    const chorusLines = firstChorus.content.split('\n').slice(0, 4) // Max 4 lines
-    const sectionText = `[Chorus]\n${chorusLines.join('\n')}`
-    if (totalChars + sectionText.length <= MAX_CHARS) {
-      result.push(sectionText)
-      totalChars += sectionText.length + 2
-    }
-  }
-  
-  // Add bridge if we have room
-  const bridge = sections.find(s => s.type.toLowerCase().includes('bridge'))
-  if (bridge && totalChars + 100 < MAX_CHARS) {
-    const bridgeLines = bridge.content.split('\n').slice(0, 2) // Max 2 lines for bridge
-    const sectionText = `[Bridge]\n${bridgeLines.join('\n')}`
-    if (totalChars + sectionText.length <= MAX_CHARS) {
-      result.push(sectionText)
-    }
-  }
-
-  if (result.length === 0) {
-    return generatePlaceholderLyrics(songTitle, genre)
-  }
-
-  const output = result.join('\n\n')
-  console.log(`[admin-generate-song-audio] Formatted lyrics: ${output.length} chars (limit: ${MAX_CHARS})`)
-  
-  // Final safety check
-  if (output.length > 600) {
-    console.warn(`[admin-generate-song-audio] Lyrics still too long (${output.length}), truncating...`)
-    return output.substring(0, 595)
-  }
-  
-  return output
+  console.log(`[admin-generate-song-audio] Formatted lyrics for YuE: ${normalized.length} chars`)
+  return normalized
 }
 
 // Generate placeholder lyrics when none exist
 function generatePlaceholderLyrics(songTitle: string, genre: string): string {
-  // Use full title, not truncated
   const title = songTitle || 'This song'
   
-  return `[Verse]
+  return `[verse]
 ${title}
 Feel the rhythm tonight
 ${title}
 Everything feels right
 
-[Chorus]
+[chorus]
 ${title}
 ${title}`
 }
