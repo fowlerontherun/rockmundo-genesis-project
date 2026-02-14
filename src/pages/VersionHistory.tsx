@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.685",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed cover songs failing to save to repertoire due to database constraint — added 'cover' as valid song version and restored missing 'Blue (Cover)'" },
+    ],
+  },
+  {
     version: "1.0.684",
     date: "2026-02-14",
     changes: [
