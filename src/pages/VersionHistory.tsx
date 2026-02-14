@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.674",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Interview modal no longer triggers back-to-back — 10-minute cooldown between prompts" },
+      { type: 'improvement', description: "Added Skip Interview button so players can dismiss without completing" },
+      { type: 'fix', description: "Old pending interviews (7+ days) are auto-completed to clear backlog" },
+    ],
+  },
+  {
     version: "1.0.673",
     date: "2026-02-14",
     changes: [

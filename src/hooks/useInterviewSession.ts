@@ -21,6 +21,10 @@ interface InterviewEffects {
   reputation: Record<string, number>;
 }
 
+// Session-level cooldown key
+const INTERVIEW_COOLDOWN_KEY = "interview_last_shown";
+const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes between interview prompts
+
 export const useInterviewSession = () => {
   const { user } = useAuth();
   const { data: primaryBandRecord } = usePrimaryBand();
@@ -38,18 +42,38 @@ export const useInterviewSession = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const checkedRef = useRef(false);
 
-  // Check for pending interviews
+  // Check for pending interviews with cooldown
   useEffect(() => {
     if (!user?.id || !bandId || checkedRef.current) return;
 
     const check = async () => {
       checkedRef.current = true;
+
+      // Check session cooldown — don't bombard player with interviews
+      const lastShown = sessionStorage.getItem(INTERVIEW_COOLDOWN_KEY);
+      if (lastShown && Date.now() - parseInt(lastShown, 10) < COOLDOWN_MS) {
+        console.log("[Interview] Cooldown active, skipping check");
+        return;
+      }
+
+      // First, auto-complete any interviews older than 7 days to clear backlog
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      await (supabase as any)
+        .from("pr_media_offers")
+        .update({ interview_completed: true })
+        .eq("band_id", bandId)
+        .eq("status", "completed")
+        .eq("interview_completed", false)
+        .lt("created_at", sevenDaysAgo);
+
+      // Now fetch only the most recent pending interview
       const { data } = await supabase
         .from("pr_media_offers")
         .select("id, media_type, outlet_name, show_name, fame_boost, fan_boost, compensation")
         .eq("band_id", bandId)
         .eq("status", "completed")
         .eq("interview_completed", false)
+        .order("created_at", { ascending: false })
         .limit(1);
 
       if (data && data.length > 0) {
@@ -63,6 +87,8 @@ export const useInterviewSession = () => {
           fanBoost: offer.fan_boost || 0,
           compensation: offer.compensation || 0,
         });
+        // Record that we showed an interview
+        sessionStorage.setItem(INTERVIEW_COOLDOWN_KEY, Date.now().toString());
       }
     };
     check();
@@ -219,6 +245,21 @@ export const useInterviewSession = () => {
     setLoading(false);
   }, [pending, totalEffects, user?.id, bandId, answers]);
 
+  // Skip/dismiss: mark as completed without applying effects
+  const skipInterview = useCallback(async () => {
+    if (!pending) return;
+    setLoading(true);
+
+    await supabase
+      .from("pr_media_offers")
+      .update({ interview_completed: true } as any)
+      .eq("id", pending.offerId);
+
+    setPending(null);
+    setPhase("intro");
+    setLoading(false);
+  }, [pending]);
+
   const dismiss = useCallback(() => {
     setPending(null);
     setPhase("intro");
@@ -237,6 +278,7 @@ export const useInterviewSession = () => {
     startInterview,
     handleAnswer,
     finishInterview,
+    skipInterview,
     dismiss,
   };
 };
