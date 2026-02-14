@@ -25185,8 +25185,8 @@ export type Database = {
       auto_complete_songwriting_sessions: {
         Args: never
         Returns: {
-          completed_sessions: number
-          converted_projects: number
+          completed: number
+          converted: number
         }[]
       }
       auto_complete_travel: { Args: never; Returns: undefined }

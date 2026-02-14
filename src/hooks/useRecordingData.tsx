@@ -168,9 +168,18 @@ export const calculateRecordingQuality = (
   // Genre skill multiplier (0-20% bonus from training in this song's genre)
   const genreMultiplier = genreBonusPercent ? 1 + (genreBonusPercent / 100) : 1;
   
-  const finalQuality = Math.round(
-    baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier * genreMultiplier
-  );
+  const rawQuality = baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier * genreMultiplier;
+  
+  // Soft cap: diminishing returns above 600
+  // Below 600: linear. Above 600: hyperbolic curve makes 1000 nearly impossible.
+  // raw 700 → ~650, raw 800 → ~700, raw 1000 → ~775
+  let finalQuality: number;
+  if (rawQuality <= 600) {
+    finalQuality = Math.round(rawQuality);
+  } else {
+    finalQuality = Math.round(600 + ((rawQuality - 600) * 400) / (rawQuality - 600 + 400));
+  }
+  finalQuality = Math.max(0, Math.min(1000, finalQuality));
 
   const breakdown = {
     base: baseSongQuality,

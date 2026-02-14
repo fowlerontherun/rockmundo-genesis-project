@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.665",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "Song quality now has a soft cap — diminishing returns above 500 (songwriting) and 600 (recording) make reaching 1000 virtually impossible; maxed players average ~550 with exceptional luck reaching ~750" },
+      { type: 'improvement', description: "Reduced skill/attribute/instrument/experience contribution scaling in songwriting formula to better reflect early-game progression" },
+      { type: 'improvement', description: "Recording quality also applies a soft cap curve — stacking all bonuses no longer trivially pushes songs to max quality" },
+    ],
+  },
+  {
     version: "1.0.664",
     date: "2026-02-14",
     changes: [
