@@ -1,66 +1,84 @@
 
 
-## Release Manager Financial Breakdown Enhancements (v1.0.672)
+## Country & City Filter for Recording Studios + Location Validation (v1.0.676)
 
 ### Overview
-Add detailed financial breakdowns throughout the Release Manager showing manufacturing costs in dollars, per-song cost allocation, tax paid, distribution fees, and profit/loss calculations.
+Two changes: (1) Add country and city dropdown filters to the Studio selection step in the recording wizard, defaulting to the player's current city but allowing browsing studios worldwide. (2) When the recording session completes, check that all band members (or the solo player) are in the correct city -- if not, the session fails.
 
 ### Changes
 
-#### 1. FormatSelectionStep.tsx -- Show Manufacturing Costs in Dollars During Creation
-Currently costs display as `${(cost / 100).toFixed(2)}` (converting from cents). This is already showing dollars. We will enhance this step to also show:
-- A per-song manufacturing cost estimate (total cost / number of songs, passed as a new prop)
-- A cost summary card at the bottom with line-item breakdown per format
+#### 1. StudioSelector.tsx -- Add Country & City Filter Dropdowns
+- Add two new Select dropdowns at the top: **Country** and **City**
+- Fetch all countries from `cities` table (distinct country values)
+- When a country is selected, fetch cities in that country from `cities` table
+- Default country and city to the player's current city (derive country from `cities` table join)
+- The studio query switches from `cityId` prop to the selected city's ID
+- Show a warning banner if the selected city differs from the player's current city: "You are not in this city. All band members must travel here before the session starts or the recording will fail."
+- Props change: receive `currentCityId` and use it for defaults, but allow override
 
-**Changes:**
-- Add `songCount` prop to `FormatSelectionStep`
-- In the total cost summary card, add a breakdown showing each selected format's cost as a line item
-- Show per-song cost: "Cost per track: $X.XX" below the total
+#### 2. RecordingWizard.tsx -- Pass current city info
+- Pass `currentCityId` to StudioSelector (already done)
+- Store the selected studio's `city_id` so it can be passed to SessionConfigurator
 
-#### 2. CreateReleaseDialog.tsx -- Pass Song Count to Format Step
-- Pass `songCount={selectedSongs.length}` to the `FormatSelectionStep` component
+#### 3. SessionConfigurator.tsx -- Store studio city on the session
+- When creating the recording session, include the studio's `city_id` in the metadata so the completion function can check location
 
-#### 3. ReleaseCard in MyReleasesTab.tsx -- Add Financial Breakdown Section
-Replace the current simple "Production Cost" and "Revenue" boxes with a detailed financial breakdown section on each release card:
-- **Manufacturing Cost**: Total production cost (already exists)
-- **Gross Revenue**: Total revenue from sales
-- **Tax Paid**: Sum of `sales_tax_amount` from `release_sales`
-- **Distribution Fees**: Sum of `distribution_fee` from `release_sales`
-- **Net Profit/Loss**: Revenue minus costs minus tax minus distribution
+#### 4. recording_sessions table -- Add city_id column (migration)
+- Add a nullable `city_id` column (uuid, references cities) to `recording_sessions` so the edge function knows which city the session is booked in
 
-This requires fetching `release_sales` aggregated data. We will add a query for sales financial summary per release.
+#### 5. useRecordingData.tsx -- Save city_id when creating session
+- Include `city_id` from the selected studio when inserting the recording session row
 
-#### 4. ReleaseAnalyticsDialog.tsx -- Add Financial Tab
-Add a new "Financials" tab to the analytics dialog with a full P&L breakdown:
-- Manufacturing cost (from `releases.total_cost`)
-- Gross revenue (streaming + physical/digital)
-- Sales tax paid (aggregated from `release_sales.sales_tax_amount`)
-- Distribution fees (aggregated from `release_sales.distribution_fee`)
-- Net revenue (aggregated from `release_sales.net_revenue`)
-- Profit = Net revenue - manufacturing cost
-- Per-song breakdown showing which songs generated what revenue
+#### 6. complete-recording-sessions edge function -- Add location check
+- Before completing a session, look up the studio's city_id (from the new column or from city_studios)
+- For band sessions: fetch all band members' `current_city_id` from profiles and check they match the studio city
+- For solo sessions: check the user's `current_city_id`
+- If any member is not in the correct city:
+  - Set session status to `'failed'` instead of `'completed'`
+  - Do NOT update song quality or award XP
+  - Log which members were missing
+  - No refund (cost was already paid at booking time)
 
-#### 5. MyReleasesTab.tsx -- Enhance Stats Overview
-Add two new stat cards to the top overview:
-- **Total Tax Paid**: Aggregated across all releases
-- **Total Profit**: Revenue minus costs minus tax minus distribution fees
+#### 7. RecordingStudio.tsx -- Show failed sessions
+- Add a `'failed'` status handler to `getStatusIcon` and `getStatusBadge` (red X with "Failed" badge)
+- Display a reason message for failed sessions (e.g., "Band members were not in the studio city")
+
+#### 8. Version bump
+- VersionHeader.tsx: bump to 1.0.676
+- VersionHistory.tsx: add changelog entry
 
 ### Technical Details
 
-**Data sources:**
-- `releases.total_cost` -- manufacturing cost (stored in cents)
-- `release_sales.sales_tax_amount` -- per-sale tax (in cents)
-- `release_sales.distribution_fee` -- per-sale distribution fee (in cents)
-- `release_sales.net_revenue` -- per-sale net revenue after deductions (in cents)
-- `release_sales.total_amount` -- gross sale amount (in cents)
+**New migration:**
+```sql
+ALTER TABLE recording_sessions ADD COLUMN city_id uuid REFERENCES cities(id);
+```
 
-Note: Current sample data shows zeros for tax/distribution/net_revenue, meaning the `generate-daily-sales` edge function may not be populating these yet. The UI will display them regardless so they show correctly once data flows in.
+**StudioSelector filter flow:**
+1. Query `SELECT DISTINCT country FROM cities ORDER BY country` for country dropdown
+2. On country change, query `SELECT id, name FROM cities WHERE country = $1 ORDER BY name` for city dropdown
+3. On city change, query existing `city_studios` with the new city_id
+4. Default: look up player's current city country from `cities` table using `currentCityId`
+
+**Location check in edge function (pseudo):**
+```
+const studioCityId = session.city_id || studioData.city_id
+if (session.band_id) {
+  const members = await getActiveBandMembers(session.band_id)
+  const missingMembers = members.filter(m => m.current_city_id !== studioCityId)
+  if (missingMembers.length > 0) -> FAIL session
+} else {
+  const profile = await getProfile(session.user_id)
+  if (profile.current_city_id !== studioCityId) -> FAIL session
+}
+```
 
 **Files to modify:**
-1. `src/components/releases/FormatSelectionStep.tsx` -- Add songCount prop, per-song cost display, format line-item breakdown
-2. `src/components/releases/CreateReleaseDialog.tsx` -- Pass songCount prop
-3. `src/components/releases/MyReleasesTab.tsx` -- Fetch release_sales financial data, add breakdown to ReleaseCard, enhance stats overview
-4. `src/components/releases/ReleaseAnalyticsDialog.tsx` -- Add Financials tab with full P&L
-5. `src/components/VersionHeader.tsx` -- Bump to 1.0.672
-6. `src/pages/VersionHistory.tsx` -- Add changelog entry
-
+1. `src/components/recording/StudioSelector.tsx` -- country/city filter dropdowns
+2. `src/components/recording/RecordingWizard.tsx` -- minor prop adjustments
+3. `src/hooks/useRecordingData.tsx` -- pass city_id in session insert
+4. `supabase/migrations/` -- add city_id column to recording_sessions
+5. `supabase/functions/complete-recording-sessions/index.ts` -- location validation
+6. `src/pages/RecordingStudio.tsx` -- handle failed status display
+7. `src/components/VersionHeader.tsx` -- bump to 1.0.676
+8. `src/pages/VersionHistory.tsx` -- changelog entry
