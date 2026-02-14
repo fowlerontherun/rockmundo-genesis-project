@@ -330,6 +330,13 @@ export const useCreateRecordingSession = () => {
       }
 
       // Create recording session - use null for self-produce since producer_id is a uuid column
+      // Get studio's city_id for location validation
+      const { data: studioInfo } = await supabase
+        .from('city_studios')
+        .select('city_id')
+        .eq('id', input.studio_id)
+        .single();
+
       const { data: session, error: sessionError } = await supabase
         .from('recording_sessions')
         .insert({
@@ -345,7 +352,8 @@ export const useCreateRecordingSession = () => {
           quality_improvement: finalQuality - song.quality_score,
           status: 'in_progress',
           scheduled_end: scheduledEnd.toISOString(),
-        })
+          city_id: studioInfo?.city_id || null,
+        } as any)
         .select()
         .single() as any;
 

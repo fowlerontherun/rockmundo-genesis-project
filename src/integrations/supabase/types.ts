@@ -18216,6 +18216,7 @@ export type Database = {
       recording_sessions: {
         Row: {
           band_id: string | null
+          city_id: string | null
           completed_at: string | null
           created_at: string | null
           duration_hours: number
@@ -18235,6 +18236,7 @@ export type Database = {
         }
         Insert: {
           band_id?: string | null
+          city_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           duration_hours?: number
@@ -18254,6 +18256,7 @@ export type Database = {
         }
         Update: {
           band_id?: string | null
+          city_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           duration_hours?: number
@@ -18277,6 +18280,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
           {
