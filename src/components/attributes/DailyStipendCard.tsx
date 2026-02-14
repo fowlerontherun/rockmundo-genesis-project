@@ -12,10 +12,11 @@ import { Badge } from "@/components/ui/badge";
 interface DailyStipendCardProps {
   lastClaimDate?: string | null;
   streak?: number;
+  lifetimeSxp?: number;
   onClaimed?: () => void;
 }
 
-export const DailyStipendCard = ({ lastClaimDate, streak = 0, onClaimed }: DailyStipendCardProps) => {
+export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, onClaimed }: DailyStipendCardProps) => {
   const queryClient = useQueryClient();
   
   // Check if user has claimed today by comparing dates (not timestamps)
@@ -43,7 +44,8 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, onClaimed }: Daily
   // Calculate what they'll get (use current streak + 1 if they claim today)
   const effectiveStreak = hasClaimedToday ? streak : streak + 1;
   const { baseSxp, baseAp, bonusSxp, bonusAp, totalSxp, totalAp } = calculateTotalStipend(
-    hasClaimedToday ? streak : effectiveStreak
+    hasClaimedToday ? streak : effectiveStreak,
+    lifetimeSxp
   );
 
   const emoji = getStreakEmoji(streak);

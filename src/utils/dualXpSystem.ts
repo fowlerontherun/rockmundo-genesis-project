@@ -33,7 +33,7 @@ export interface StreakMilestone {
 // Default configuration values
 export const DEFAULT_DUAL_XP_CONFIG: DualXpConfig = {
   daily_stipend_sxp: 100,
-  daily_stipend_ap: 10,
+  daily_stipend_ap: 10, // Max AP — actual base is scaled by lifetime SXP
   daily_activity_xp_cap: 250,
   streak_7_bonus_sxp: 50,
   streak_7_bonus_ap: 10,
@@ -159,21 +159,41 @@ export const getNextMilestone = (streak: number): { days: number; label: string;
 };
 
 /**
- * Calculate total stipend reward including streak bonuses
+ * AP decay constants — AP decays from MAX to MIN as lifetime SXP grows
+ */
+const MAX_STIPEND_AP = 10;
+const MIN_STIPEND_AP = 3;
+const AP_DECAY_START = 1000;
+const AP_DECAY_END = 10000;
+
+/**
+ * Get scaled base AP based on lifetime skill XP
+ */
+export const getScaledBaseAp = (lifetimeSxp: number): number => {
+  if (lifetimeSxp <= AP_DECAY_START) return MAX_STIPEND_AP;
+  if (lifetimeSxp >= AP_DECAY_END) return MIN_STIPEND_AP;
+  const progress = (lifetimeSxp - AP_DECAY_START) / (AP_DECAY_END - AP_DECAY_START);
+  return Math.round(MAX_STIPEND_AP - progress * (MAX_STIPEND_AP - MIN_STIPEND_AP));
+};
+
+/**
+ * Calculate total stipend reward including streak bonuses and AP scaling
  */
 export const calculateTotalStipend = (
   streak: number,
+  lifetimeSxp: number = 0,
   config: DualXpConfig = DEFAULT_DUAL_XP_CONFIG
 ): { baseSxp: number; baseAp: number; bonusSxp: number; bonusAp: number; totalSxp: number; totalAp: number } => {
   const { sxp: bonusSxp, ap: bonusAp } = calculateStreakBonus(streak, config);
+  const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
   
   return {
     baseSxp: config.daily_stipend_sxp,
-    baseAp: config.daily_stipend_ap,
+    baseAp: scaledBaseAp,
     bonusSxp,
     bonusAp,
     totalSxp: config.daily_stipend_sxp + bonusSxp,
-    totalAp: config.daily_stipend_ap + bonusAp,
+    totalAp: scaledBaseAp + bonusAp,
   };
 };
 
