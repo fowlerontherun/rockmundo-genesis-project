@@ -17,6 +17,9 @@ export const SongQualityBreakdown = ({ quality }: SongQualityBreakdownProps) => 
     { name: "Rhythm", value: quality.rhythmStrength, max: 220 },
     { name: "Arrangement", value: quality.arrangementStrength, max: 250 },
     { name: "Production", value: quality.productionPotential, max: 280 },
+    ...(quality.instrumentationBonus > 0
+      ? [{ name: "Instrumentation", value: quality.instrumentationBonus, max: 200 }]
+      : []),
   ];
 
   // Format luck multiplier as percentage change

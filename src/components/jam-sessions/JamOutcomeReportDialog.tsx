@@ -163,7 +163,7 @@ export const JamOutcomeReportDialog = ({
                           <p className="text-lg font-bold">{giftedSong.title}</p>
                           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                             <Badge variant="secondary">{giftedSong.genre}</Badge>
-                            <span>Quality: {giftedSong.quality_score}/100</span>
+                            <span>Quality: {giftedSong.quality_score}/1000</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
                             Awarded to {getProfileDisplay(songRecipient.participant_id).name}

@@ -21341,6 +21341,7 @@ export type Database = {
           genres: string[] | null
           id: string
           initial_lyrics: string | null
+          instruments: string[] | null
           is_locked: boolean | null
           locked_until: string | null
           lyrics: string | null
@@ -21367,6 +21368,7 @@ export type Database = {
           genres?: string[] | null
           id?: string
           initial_lyrics?: string | null
+          instruments?: string[] | null
           is_locked?: boolean | null
           locked_until?: string | null
           lyrics?: string | null
@@ -21393,6 +21395,7 @@ export type Database = {
           genres?: string[] | null
           id?: string
           initial_lyrics?: string | null
+          instruments?: string[] | null
           is_locked?: boolean | null
           locked_until?: string | null
           lyrics?: string | null

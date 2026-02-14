@@ -15,6 +15,8 @@ export interface SongQualityInputs {
   songsWritten?: number;
   /** Number of sessions spent on this specific project */
   sessionsCompleted?: number;
+  /** Instrument skill slugs selected for this song with their levels */
+  instrumentSkills?: { slug: string; level: number }[];
 }
 
 export interface SongQualityResult {
@@ -24,6 +26,7 @@ export interface SongQualityResult {
   rhythmStrength: number;
   arrangementStrength: number;
   productionPotential: number;
+  instrumentationBonus: number;
   genreMultiplier: number;
   skillCeiling: number;
   sessionLuckLabel: string;
@@ -228,6 +231,26 @@ function calculateSessionDepthBonus(sessionsCompleted: number): number {
   return Math.min(35, (sessionsCompleted - 3) * 8);
 }
 
+/**
+ * Calculate instrumentation bonus from selected instruments and their skill levels.
+ * Each instrument contributes up to 30 points (first 4), then 15 points (diminishing returns).
+ * Range: 0-200 quality points.
+ */
+function calculateInstrumentBonus(instrumentSkills?: { slug: string; level: number }[]): number {
+  if (!instrumentSkills || instrumentSkills.length === 0) return 0;
+  
+  let bonus = 0;
+  instrumentSkills.forEach((inst, index) => {
+    if (index < 4) {
+      bonus += Math.min(30, inst.level * 1.5);
+    } else {
+      bonus += Math.min(15, inst.level * 0.75);
+    }
+  });
+  
+  return Math.min(200, Math.round(bonus));
+}
+
 // Main quality calculation function
 export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResult {
   // Get session-wide luck factor (affects final score)
@@ -257,6 +280,9 @@ export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResu
     inputs.attributes.technical_mastery
   ));
   
+  // Calculate instrumentation bonus from selected instruments
+  const instrumentationBonus = calculateInstrumentBonus(inputs.instrumentSkills);
+  
   // Calculate genre familiarity multiplier (1.0 to 1.5x)
   const genreSkillSlug = getGenreSkillSlug(inputs.genre, 'basic');
   const genreFamiliarity = genreSkillSlug ? (inputs.skillLevels[genreSkillSlug] || 0) : 0;
@@ -271,6 +297,7 @@ export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResu
   // Sum all areas + bonuses
   const rawTotal = melodyStrength + lyricsStrength + rhythmStrength + 
                    arrangementStrength + productionPotential +
+                   instrumentationBonus +
                    experienceBonus + sessionDepthBonus;
   
   // Apply genre multiplier
@@ -290,6 +317,7 @@ export function calculateSongQuality(inputs: SongQualityInputs): SongQualityResu
     rhythmStrength,
     arrangementStrength,
     productionPotential,
+    instrumentationBonus,
     genreMultiplier,
     skillCeiling,
     sessionLuckLabel: `${sessionLuck.emoji} ${sessionLuck.label}`,

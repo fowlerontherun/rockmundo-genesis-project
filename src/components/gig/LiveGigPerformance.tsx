@@ -35,7 +35,7 @@ export const LiveGigPerformance = ({ songs, onComplete, onCancel }: LiveGigPerfo
     // Simulate performance (2 seconds per song for demo)
     setTimeout(() => {
       // Calculate performance score with variance
-      const baseScore = currentSong.quality_score / 100 * 20; // Max 20 points from quality
+      const baseScore = currentSong.quality_score / 1000 * 20; // Max 20 points from quality
       const variance = Math.random() * 5 - 2.5; // -2.5 to +2.5 variance
       const score = Math.max(0, Math.min(25, baseScore + variance));
 
@@ -126,7 +126,7 @@ export const LiveGigPerformance = ({ songs, onComplete, onCancel }: LiveGigPerfo
                   <Star
                     key={i}
                     className={`h-4 w-4 ${
-                      i < Math.floor(currentSong.quality_score / 20)
+                      i < Math.floor(currentSong.quality_score / 200)
                         ? 'fill-yellow-500 text-yellow-500'
                         : 'text-muted'
                     }`}
