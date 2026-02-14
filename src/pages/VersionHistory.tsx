@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.655",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Recording Tiers: New 'Demo' vs 'Professional' recording type selector in the recording wizard" },
+      { type: 'feature', description: "Demo recordings: Standard cost, 4-hour sessions, quality capped at 60% of studio rating with 0.7x multiplier — great for early-career testing" },
+      { type: 'feature', description: "Professional recordings: 2.5x studio rate, 8-hour sessions, full quality potential with no cap" },
+      { type: 'feature', description: "Label bonus: +15% quality boost when recording professionally while signed to a label" },
+      { type: 'feature', description: "Independent penalty: -15% quality penalty for professional recordings without a label, reduced by fame (every 100k) and level (every 10), fully removed at 500k fame or level 50" },
+    ],
+  },
+  {
     version: "1.0.654",
     date: "2026-02-14",
     changes: [

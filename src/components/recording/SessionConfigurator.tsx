@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Clock, DollarSign, TrendingUp, Music2, Users, Wallet, AlertCircle, CalendarIcon, Sparkles } from "lucide-react";
 import { useCreateRecordingSession, calculateRecordingQuality, ORCHESTRA_OPTIONS, type RecordingProducer } from "@/hooks/useRecordingData";
+import { calculateIndependentPenalty } from "./RecordingTypeSelector";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,11 +29,12 @@ interface SessionConfiguratorProps {
   studio: any;
   song: any;
   producer: RecordingProducer;
+  recordingType: 'demo' | 'professional';
   recordingVersion?: 'standard' | 'remix' | 'acoustic';
   onComplete: () => void;
 }
 
-export const SessionConfigurator = ({ userId, bandId, studio, song, producer, recordingVersion, onComplete }: SessionConfiguratorProps) => {
+export const SessionConfigurator = ({ userId, bandId, studio, song, producer, recordingType, recordingVersion, onComplete }: SessionConfiguratorProps) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlotId, setSelectedSlotId] = useState<string>('');
   const [orchestraSize, setOrchestraSize] = useState<'chamber' | 'small' | 'full' | null>(null);
@@ -50,6 +52,9 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     totalBonusPercent: 0,
     breakdown: { mixing: 0, daw: 0, production: 0, vocalProduction: 0, theory: 0 },
   });
+  const [isLabelSigned, setIsLabelSigned] = useState(false);
+  const [playerFame, setPlayerFame] = useState(0);
+  const [playerLevel, setPlayerLevel] = useState(1);
   const createSession = useCreateRecordingSession();
 
   // Fetch slot availability
@@ -60,10 +65,10 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     true
   );
 
-  // Fixed duration for slot-based booking
-  const durationHours = 4;
+  // Duration depends on recording type
+  const durationHours = recordingType === 'demo' ? 4 : 8;
 
-  // Fetch band balance, personal cash, and rehearsal data
+  // Fetch band balance, personal cash, label status, and rehearsal data
   useEffect(() => {
     const fetchData = async () => {
       if (bandId) {
@@ -91,15 +96,28 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
         } else {
           setRehearsalData({ minutes: 0, stage: 'unrehearsed', penalty: -20 });
         }
+
+        // Check label contract
+        const { data: contract } = await supabase
+          .from('artist_label_contracts')
+          .select('id')
+          .eq('band_id', bandId)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle();
+        
+        setIsLabelSigned(!!contract);
       }
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('cash, id')
+        .select('cash, id, fame, level')
         .eq('user_id', userId)
         .single();
       
       setPersonalCash(profile?.cash || 0);
+      setPlayerFame(profile?.fame || 0);
+      setPlayerLevel(profile?.level || 1);
 
       // Fetch player skill progress for recording bonus
       if (profile?.id) {
@@ -126,8 +144,16 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
   const producerCostPerHour = Number((producer as any)?.cost_per_hour ?? 0);
   
   const rehearsalBonus = bandId && rehearsalData ? rehearsalData.penalty : 0;
+
+  // Recording type multipliers
+  const isDemo = recordingType === 'demo';
+  const demoQualityMultiplier = isDemo ? 0.7 : 1.0;
+  const demoCap = isDemo ? Math.round(studioQualityRating * 0.6) : Infinity;
+  const independentPenalty = (!isDemo && !isLabelSigned) ? calculateIndependentPenalty(playerFame, playerLevel) : 0;
+  const labelBonus = (!isDemo && isLabelSigned) ? 15 : 0;
+  const typeMultiplier = demoQualityMultiplier * (1 - independentPenalty / 100) * (1 + labelBonus / 100);
   
-  const { finalQuality, breakdown } = calculateRecordingQuality(
+  const { finalQuality: rawQuality, breakdown } = calculateRecordingQuality(
     songQualityScore,
     studioQualityRating,
     producerQualityBonus,
@@ -137,7 +163,12 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     skillBonus.totalBonusPercent
   );
 
-  const studioCost = studioHourlyRate * durationHours;
+  // Apply type multiplier and demo cap
+  const finalQuality = Math.min(Math.round(rawQuality * typeMultiplier), isDemo ? demoCap : rawQuality * 10);
+
+  // Cost: professional = 2.5x studio rate
+  const costMultiplier = isDemo ? 1 : 2.5;
+  const studioCost = studioHourlyRate * durationHours * costMultiplier;
   const producerCost = producerCostPerHour * durationHours;
   const orchestraCost = orchestraOption?.cost || 0;
   const totalCost = studioCost + producerCost + orchestraCost;
@@ -175,6 +206,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
       duration_hours: durationHours,
       orchestra_size: orchestraSize || undefined,
       recording_version: recordingVersion,
+      recording_type: recordingType,
       rehearsal_bonus: rehearsalBonus,
       scheduled_start: start.toISOString(),
       scheduled_end: end.toISOString(),
@@ -225,7 +257,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
-            Time Slot (4 hours)
+            Time Slot ({durationHours} hours)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -308,9 +340,14 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Studio ({durationHours} hrs × ${studioHourlyRate.toLocaleString()})</span>
+            <span className="text-muted-foreground">
+              Studio ({durationHours} hrs × ${studioHourlyRate.toLocaleString()}{!isDemo ? ' × 2.5' : ''})
+            </span>
             <span className="font-semibold">${studioCost.toLocaleString()}</span>
           </div>
+          {!isDemo && (
+            <div className="text-xs text-muted-foreground">Professional rate: 2.5× standard</div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Producer ({durationHours} hrs × ${producerCostPerHour.toLocaleString()})</span>
             <span className="font-semibold">${producerCost.toLocaleString()}</span>
@@ -376,6 +413,39 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
               <Badge variant="default">+{qualityImprovement} ({qualityImprovementPercent}%)</Badge>
             </div>
             <Progress value={Math.min(100, qualityImprovementPercent)} className="h-2" />
+          </div>
+          {/* Type-specific modifiers */}
+          <div className="space-y-1 border-t pt-3">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Recording Type</span>
+              <Badge variant={isDemo ? 'secondary' : 'default'} className="text-xs">
+                {isDemo ? 'Demo' : 'Professional'}
+              </Badge>
+            </div>
+            {isDemo && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Demo quality cap</span>
+                <span className="text-orange-500 font-medium">Max {demoCap}</span>
+              </div>
+            )}
+            {isDemo && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Demo multiplier</span>
+                <span className="text-orange-500 font-medium">0.7×</span>
+              </div>
+            )}
+            {!isDemo && isLabelSigned && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Label bonus</span>
+                <span className="text-green-600 font-medium">+15%</span>
+              </div>
+            )}
+            {!isDemo && !isLabelSigned && independentPenalty > 0 && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Independent penalty</span>
+                <span className="text-orange-500 font-medium">-{independentPenalty}%</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
