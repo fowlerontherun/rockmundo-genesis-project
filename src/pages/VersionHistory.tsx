@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.693",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Added searchable all-cities list with country flags to the dashboard Location tab, grouped by country with links to each city page" },
+    ],
+  },
+  {
     version: "1.0.692",
     date: "2026-02-14",
     changes: [
