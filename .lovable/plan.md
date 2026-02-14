@@ -1,82 +1,145 @@
 
 
-# Fix Gig Performance: Use Skill Tree + Migrate Song Quality (v1.0.661)
+# Interactive Media Interviews Feature (v1.0.667)
 
-## The Problem
+## Overview
 
-Your gigs are stuck at C/B grades because of three compounding issues:
+When a player accepts a PR media offer (podcast, TV, radio, newspaper, internet/website, or magazine), they will play through an interactive interview mini-game before rewards are applied. The interview consists of **3 randomly selected questions** from a pool of **100 seeded questions**. Each question has **4 response options** with different effects on fame, fans, cash, and reputation axes. A **10-second countdown timer** forces quick decisions -- if time runs out, the worst option is auto-selected.
 
-1. **Band skill calculator reads from the wrong table** -- `bandSkillCalculator.ts` pulls from `player_skills` (legacy table where your levels are 1) instead of `skill_progress` (the skill tree where you've actually been training). This means your `skill_contribution` on band members is nearly zero.
+## How It Works
 
-2. **All existing songs are scored 0-100 instead of 0-1000** -- Songs written before v1.0.660 have quality scores like 80, 100 etc. The gig formula divides by 1000, so a song scored 100 only contributes 10% of its potential. Song quality is weighted at 25% of the performance score.
+1. Player accepts a PR media offer (existing flow, unchanged)
+2. When the scheduled activity completes, instead of silently applying rewards, an **Interview Modal** appears
+3. The modal shows the media type context (e.g., "Live on BBC Radio 1") and presents questions one at a time
+4. Each question has 4 clickable response cards showing their potential effects
+5. A 10-second progress bar counts down per question -- if it expires, option D (the worst one) is auto-selected
+6. After all 3 questions, a results summary shows what happened and the combined effects are applied
+7. Effects modify: fame, fans, cash, and the 4 reputation axes (authenticity, attitude, reliability, creativity)
 
-3. **Player attributes (stage presence, charisma, etc.) are ignored** -- You've nearly maxed these but they don't factor into gig calculations at all.
+## Question Design
 
----
+Questions are categorized by media type so podcast questions feel different from TV questions. Each of the 100 questions has:
+- A question text and media type tag (some are universal, some type-specific)
+- 4 response options ranging from great to terrible
+- Each response has effect multipliers on the base offer rewards plus direct reputation shifts
 
-## What Will Change
+Example:
+> **"Your latest single has divided critics. How do you respond?"**
+> - A) "Art should provoke. I'm proud of it." (+fame, +authenticity)
+> - B) "We appreciate all feedback and keep growing." (+fans, +reliability)
+> - C) "The critics don't understand our vision." (-fans, +attitude toward diva)
+> - D) *silence / no answer* (-fame, -reliability)
 
-### 1. Rewrite `bandSkillCalculator.ts` to use `skill_progress`
+## Technical Plan
 
-Replace the legacy `player_skills` table lookup with `skill_progress` (the skill tree). Use `ROLE_SKILL_MAP` from `skillGearPerformance.ts` to find the right skills for each band member's instrument role.
+### 1. New Database Table: `interview_questions`
 
-- For player members: query `skill_progress` by profile_id, find best matching skill for their `instrument_role`
-- For touring members: keep the existing tier-based random skill system
-- Role mismatch detection stays but uses skill tree data
-- Update `skill_contribution` on `band_members` with the new values
+Stores the 100 seeded questions with their 4 options and effects.
 
-### 2. Migrate existing song quality scores to 0-1000 scale
+```text
+interview_questions
+  id              uuid PK
+  question_text   text
+  media_types     text[]          -- which media types this applies to (or 'all')
+  category        text            -- theme: career, controversy, personal, music, industry
+  option_a_text   text
+  option_a_effects jsonb          -- { fame_mult: 1.2, fan_mult: 1.0, cash_mult: 1.0, reputation: { authenticity: 5 } }
+  option_b_text   text
+  option_b_effects jsonb
+  option_c_text   text
+  option_c_effects jsonb
+  option_d_text   text            -- the "bad" default timeout option
+  option_d_effects jsonb
+  created_at      timestamptz
+```
 
-A one-time database migration that scales all existing songs:
-- `quality_score = quality_score * 10` for all songs where `quality_score <= 100`
-- This brings old songs in line with the new 1000-point scale
+### 2. New Database Table: `interview_results`
 
-### 3. Add player attributes to gig performance
+Records each interview session for history tracking.
 
-Update `gigExecution.ts` to fetch player attributes (`stage_presence`, `charisma`, `energy`, `resilience`) from `profiles` and factor them into the performance calculation:
+```text
+interview_results
+  id              uuid PK
+  user_id         uuid FK
+  band_id         uuid FK
+  offer_id        uuid FK (pr_media_offers)
+  media_type      text
+  questions       jsonb           -- array of { question_id, chosen_option, timed_out }
+  total_effects   jsonb           -- aggregated effects applied
+  created_at      timestamptz
+```
 
-- **Stage presence** feeds into `stageSkillAverage` (currently hardcoded to 50)
-- **Charisma** adds a crowd engagement bonus
-- These are averaged across band members and applied as modifiers
+### 3. Migration: Seed 100 Questions
 
-### 4. Connect `gigExecution.ts` to `skillGearPerformance.ts`
+A SQL migration seeds 100 interview questions across 6 categories:
+- **Career** (20): about goals, achievements, future plans
+- **Controversy** (15): handling criticism, scandals, rivalries
+- **Personal** (15): lifestyle, influences, backstory
+- **Music** (20): creative process, songs, genre, collaborations
+- **Industry** (15): labels, streaming, touring, business
+- **Fan engagement** (15): relationship with fans, social media, live shows
 
-Replace the current approach where `memberSkillAverage` comes from the static `skill_contribution` column. Instead, call `calculateBandSkillAverage()` from `skillGearPerformance.ts` during gig execution to get live skill+gear data.
+Each question has 4 options with escalating risk/reward. Option A and B are generally positive but differ in reputation axis impact. Option C is risky/edgy. Option D is always the worst (timeout default).
 
-This means:
-- `memberSkillAverage` reflects actual skill tree progress
-- `stageSkillAverage` gets real data instead of defaulting to 50
-- Gear bonuses are already calculated by this utility
+### 4. New Component: `InterviewModal.tsx`
 
----
+A full-screen dialog that:
+- Shows media outlet name, type icon, and interview context
+- Displays questions sequentially (1 of 3, 2 of 3, 3 of 3)
+- Renders 4 response cards with effect badges (reusing the existing EffectDisplay pattern from EventNotificationModal)
+- Animated 10-second progress bar per question using framer-motion
+- Auto-selects option D on timeout with a "Time's up!" flash
+- After question 3, shows a results summary card with all effects
+- "Done" button applies effects and closes
 
-## Technical Details
+### 5. New Hook: `useInterviewSession.ts`
 
-### Files to Modify
+Manages the interview state machine:
+- Fetches 3 random questions matching the media type from Supabase
+- Tracks current question index, selected answers, timer state
+- Calculates combined effects (multipliers applied to base offer rewards)
+- Submits results to `interview_results` table
+- Applies reputation changes via the existing `updateReputation` API from `src/lib/api/roleplaying.ts`
+- Applies fame/fan/cash boosts by updating band stats
 
-**`src/utils/bandSkillCalculator.ts`**
-- Replace `player_skills` query with `skill_progress` query
-- Use `ROLE_SKILL_MAP` from `skillGearPerformance.ts` for role-to-skill mapping
-- Look up profile_id from user_id before querying skill_progress
+### 6. Integration with Existing PR Flow
 
-**`src/utils/gigExecution.ts`**
-- Import and call `calculateBandSkillAverage()` instead of reading `skill_contribution` from `band_members`
-- Fetch player attributes from `profiles` for all band members
-- Calculate `stageSkillAverage` from stage_presence + relevant performance skills
-- Pass real skill data to `PerformanceFactors` instead of defaults
+Modify `process-pr-activity` edge function's `complete` action:
+- Instead of directly applying rewards, set the offer status to `interview_pending`
+- The frontend detects offers in `interview_pending` status and opens the InterviewModal
+- After the interview, the frontend calls a new mutation that applies the modified rewards
 
-**Database migration**
-- `UPDATE songs SET quality_score = quality_score * 10 WHERE quality_score IS NOT NULL AND quality_score <= 100;`
+Alternatively (simpler approach): Keep the existing completion flow but add a **new hook** that checks for recently completed offers that haven't had interviews yet. When one is found, the modal opens. This avoids modifying the edge function.
 
-**`src/components/VersionHeader.tsx`** -- Bump to v1.0.661
+The chosen approach: Add an `interview_completed` boolean column to `pr_media_offers`. When an offer completes, if `interview_completed` is false, the InterviewModal appears. After the interview, it marks the flag true and applies bonus/penalty modifiers to the already-applied base rewards.
 
-**`src/pages/VersionHistory.tsx`** -- Add changelog entry
+### 7. Files to Create
 
-### Impact on Grades
+| File | Purpose |
+|------|---------|
+| `src/components/pr/InterviewModal.tsx` | The interview UI with timer, questions, results |
+| `src/hooks/useInterviewSession.ts` | State management, question fetching, result submission |
+| `src/data/interviewQuestions.ts` | TypeScript types for interview data |
+| `supabase/migrations/xxx_interview_system.sql` | Tables + seed 100 questions |
 
-With these fixes, the performance formula inputs change dramatically:
-- `songQuality`: 100 becomes 1000 (25% weight -- from ~10% effective to ~100%)
-- `memberSkillAverage`: 1 becomes your actual skill tree level (10% weight)
-- `stageSkillAverage`: 50 default becomes real attribute data (10% weight)
-- Combined effect: scores should jump from C/B range into A/S territory for well-prepared gigs with trained skills
+### 8. Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/components/Layout.tsx` | Add InterviewModal to global layout (like EventNotificationModal) |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.667 |
+| `src/pages/VersionHistory.tsx` | Add changelog entry |
+
+### 9. Effect Multiplier System
+
+Interview responses modify the base offer rewards with multipliers:
+
+| Response Quality | Fame Mult | Fan Mult | Cash Mult | Reputation |
+|-----------------|-----------|----------|-----------|------------|
+| Great (A)       | 1.3x      | 1.2x    | 1.1x     | +3 to +8 on relevant axis |
+| Good (B)        | 1.1x      | 1.1x    | 1.0x     | +1 to +5 on relevant axis |
+| Risky (C)       | 0.8-1.4x  | 0.7-1.3x| 1.0x     | -5 to +10 (high variance) |
+| Bad/Timeout (D) | 0.5x      | 0.6x    | 0.8x     | -3 to -8 on relevant axis |
+
+The 3 question results are averaged to produce a final interview performance multiplier applied to the offer's base fame_boost, fan_boost, and compensation.
 
