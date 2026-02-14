@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.670",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "All song quality scores re-valued with ±30% variance per song — no more identical round numbers" },
+      { type: 'improvement', description: "Song quality now scales with band songwriting skill: higher-skilled bands (e.g. Big Fowler avg ~351, Barbarela avg ~319) produce noticeably better songs than lower-skilled bands (avg ~150)" },
+    ],
+  },
+  {
     version: "1.0.669",
     date: "2026-02-14",
     changes: [
