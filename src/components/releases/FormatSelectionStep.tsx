@@ -21,6 +21,7 @@ interface FormatSelectionStepProps {
   onRevenueShareChange?: (enabled: boolean) => void;
   scheduledReleaseDate?: Date | null;
   bandId?: string;
+  songCount?: number;
 }
 
 // Manufacturing days by format type - digital/streaming are instant
@@ -62,6 +63,7 @@ export function FormatSelectionStep({
   onRevenueShareChange,
   scheduledReleaseDate,
   bandId,
+  songCount = 1,
 }: FormatSelectionStepProps) {
   const [formatConfigs, setFormatConfigs] = useState<Record<string, any>>({
     digital: { release_date: "", quantity: 0, retail_price: DEFAULT_RETAIL_PRICES.digital, distribution_fee_percentage: 30 },
@@ -435,7 +437,7 @@ export function FormatSelectionStep({
         })}
       </div>
 
-      <Card className="p-4 bg-primary/5">
+      <Card className="p-4 bg-primary/5 space-y-3">
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total Manufacturing Cost:</span>
           <div className="text-right">
@@ -450,6 +452,25 @@ export function FormatSelectionStep({
             )}
           </div>
         </div>
+
+        {/* Per-format cost breakdown */}
+        {selectedFormats.length > 0 && (
+          <div className="border-t border-border pt-3 space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cost Breakdown</p>
+            {selectedFormats.map((f) => (
+              <div key={f.format_type} className="flex justify-between text-sm">
+                <span className="capitalize text-muted-foreground">{f.format_type}{f.quantity ? ` (×${f.quantity})` : ''}</span>
+                <span>${(f.manufacturing_cost / 100).toFixed(2)}</span>
+              </div>
+            ))}
+            {songCount > 0 && totalCost > 0 && (
+              <div className="flex justify-between text-sm border-t border-border/50 pt-1.5 mt-1.5">
+                <span className="text-muted-foreground">Cost per track ({songCount} song{songCount !== 1 ? 's' : ''})</span>
+                <span className="font-medium">${(totalCost / 100 / songCount).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       <div className="flex gap-2">

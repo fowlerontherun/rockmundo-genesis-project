@@ -136,6 +136,34 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
+  // Fetch financial summary from release_sales
+  const { data: financialData, isLoading: loadingFinancials } = useQuery({
+    queryKey: ["release-financials", release?.id],
+    queryFn: async () => {
+      if (!release?.id) return null;
+      const formatIds = release.release_formats?.map((f: any) => f.id) || [];
+      if (formatIds.length === 0) return null;
+
+      const { data, error } = await supabase
+        .from("release_sales")
+        .select("total_amount, sales_tax_amount, distribution_fee, net_revenue, release_format_id, release_formats!inner(format_type)")
+        .in("release_format_id", formatIds);
+
+      if (error) return null;
+
+      let grossRevenue = 0, taxPaid = 0, distributionFees = 0, netRevenue = 0;
+      data?.forEach((s: any) => {
+        grossRevenue += s.total_amount || 0;
+        taxPaid += s.sales_tax_amount || 0;
+        distributionFees += s.distribution_fee || 0;
+        netRevenue += s.net_revenue || 0;
+      });
+
+      return { grossRevenue, taxPaid, distributionFees, netRevenue };
+    },
+    enabled: open && !!release?.id,
+  });
+
   // Fetch chart positions
   const { data: chartData, isLoading: loadingCharts } = useQuery({
     queryKey: ["release-chart-analytics", release?.id],
@@ -185,7 +213,7 @@ export function ReleaseAnalyticsDialog({
   const salesRevenue = salesData?.totalRevenue || 0;
   const totalRevenue = release.total_revenue || (streamingRevenue + salesRevenue);
 
-  const isLoading = loadingStreaming || loadingSales || loadingCharts;
+  const isLoading = loadingStreaming || loadingSales || loadingCharts || loadingFinancials;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,8 +226,9 @@ export function ReleaseAnalyticsDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="financials">Financials</TabsTrigger>
             <TabsTrigger value="streaming">Streaming</TabsTrigger>
             <TabsTrigger value="sales">Sales</TabsTrigger>
             <TabsTrigger value="charts">Charts</TabsTrigger>
@@ -287,6 +316,83 @@ export function ReleaseAnalyticsDialog({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="financials" className="space-y-4">
+            {(() => {
+              const mfgCost = release.total_cost || 0;
+              const gross = financialData?.grossRevenue || 0;
+              const tax = financialData?.taxPaid || 0;
+              const dist = financialData?.distributionFees || 0;
+              const net = financialData?.netRevenue || 0;
+              const profit = net - mfgCost;
+              const totalTracks = release.release_songs?.length || 1;
+
+              return (
+                <>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Profit & Loss Statement</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Gross Revenue</span>
+                        <span className="font-medium text-green-600">${gross.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Sales Tax Paid</span>
+                        <span className="font-medium text-orange-500">-${tax.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Distribution Fees</span>
+                        <span className="font-medium text-orange-500">-${dist.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border-t border-border pt-2">
+                        <span className="text-muted-foreground">Net Revenue</span>
+                        <span className="font-medium">${net.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Manufacturing Cost</span>
+                        <span className="font-medium text-orange-500">-${mfgCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border-t border-border pt-2 font-bold">
+                        <span>{profit >= 0 ? 'Profit' : 'Loss'}</span>
+                        <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>
+                          ${profit.toLocaleString()}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Per-Song Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {release.release_songs?.map((rs: any, idx: number) => {
+                          const songRevShare = totalTracks > 0 ? net / totalTracks : 0;
+                          const songCostShare = totalTracks > 0 ? mfgCost / totalTracks : 0;
+                          const songProfit = songRevShare - songCostShare;
+                          return (
+                            <div key={idx} className="flex justify-between items-center text-sm p-2 bg-muted/30 rounded">
+                              <span className="truncate flex-1">{rs.song?.title || `Track ${rs.track_number}`}</span>
+                              <div className="flex gap-4 text-xs">
+                                <span className="text-muted-foreground">Rev: ${songRevShare.toFixed(0)}</span>
+                                <span className="text-muted-foreground">Cost: ${songCostShare.toFixed(0)}</span>
+                                <span className={songProfit >= 0 ? 'text-green-600' : 'text-destructive'}>
+                                  {songProfit >= 0 ? '+' : ''}${songProfit.toFixed(0)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="streaming" className="space-y-4">

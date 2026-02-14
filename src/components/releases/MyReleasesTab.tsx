@@ -120,6 +120,51 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
     }
   });
 
+  // Fetch aggregated financial data from release_sales
+  const releaseIds = releases?.map(r => r.id) || [];
+  const formatIds = releases?.flatMap(r => r.release_formats?.map((f: any) => f.id) || []) || [];
+
+  const { data: salesFinancials } = useQuery({
+    queryKey: ["release-sales-financials", releaseIds.join(",")],
+    queryFn: async () => {
+      if (formatIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from("release_sales")
+        .select("release_format_id, total_amount, sales_tax_amount, distribution_fee, net_revenue")
+        .in("release_format_id", formatIds);
+      
+      if (error) {
+        console.error("[MyReleasesTab] Sales financials error:", error);
+        return {};
+      }
+
+      // Build a map: releaseId -> { grossRevenue, taxPaid, distributionFees, netRevenue }
+      const formatToRelease: Record<string, string> = {};
+      releases?.forEach(r => {
+        r.release_formats?.forEach((f: any) => {
+          formatToRelease[f.id] = r.id;
+        });
+      });
+
+      const result: Record<string, { grossRevenue: number; taxPaid: number; distributionFees: number; netRevenue: number }> = {};
+      data?.forEach((sale: any) => {
+        const releaseId = formatToRelease[sale.release_format_id];
+        if (!releaseId) return;
+        if (!result[releaseId]) {
+          result[releaseId] = { grossRevenue: 0, taxPaid: 0, distributionFees: 0, netRevenue: 0 };
+        }
+        result[releaseId].grossRevenue += sale.total_amount || 0;
+        result[releaseId].taxPaid += sale.sales_tax_amount || 0;
+        result[releaseId].distributionFees += sale.distribution_fee || 0;
+        result[releaseId].netRevenue += sale.net_revenue || 0;
+      });
+
+      return result;
+    },
+    enabled: formatIds.length > 0,
+  });
+
   const filteredReleases = releases?.filter(r => {
     // Status filter
     if (statusFilter === "all" && r.release_status === "cancelled") return false;
@@ -147,18 +192,24 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
     return true;
   }) || [];
 
+  const totalTaxPaid = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.taxPaid || 0), 0);
+  const totalDistFees = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.distributionFees || 0), 0);
+  const totalMfgCost = releases?.reduce((sum, r) => sum + (r.total_cost || 0), 0) || 0;
+  const totalGrossRevenue = releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0;
+  const totalProfit = totalGrossRevenue - totalMfgCost - totalTaxPaid - totalDistFees;
+
   const stats = {
     total: releases?.filter(r => r.release_status !== "cancelled").length || 0,
     released: releases?.filter(r => r.release_status === "released").length || 0,
     upcoming: releases?.filter(r => ["manufacturing", "planned", "draft"].includes(r.release_status)).length || 0,
     cancelled: releases?.filter(r => r.release_status === "cancelled").length || 0,
-    totalRevenue: releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
+    totalRevenue: totalGrossRevenue,
   };
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[1,2,3,4].map(i => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-4">
@@ -246,6 +297,26 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <DollarSign className="h-4 w-4" />
+              <span>Tax Paid</span>
+            </div>
+            <p className="text-2xl font-bold text-orange-500">${totalTaxPaid.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <TrendingUp className="h-4 w-4" />
+              <span>Net Profit</span>
+            </div>
+            <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+              ${totalProfit.toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Search and Filters */}
@@ -305,6 +376,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
           <ReleaseCard 
             key={release.id} 
             release={release} 
+            financials={salesFinancials?.[release.id]}
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
@@ -361,6 +433,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 
 interface ReleaseCardProps {
   release: any;
+  financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; netRevenue: number };
   onEdit: () => void;
   onCancel: () => void;
   onViewDetails: () => void;
@@ -369,7 +442,7 @@ interface ReleaseCardProps {
   onReorder?: (format: any) => void;
 }
 
-function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onAddPhysical, onAnalytics, onReorder }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onAddPhysical, onAnalytics, onReorder }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -442,22 +515,50 @@ function ReleaseCard({ release, onEdit, onCancel, onViewDetails, onAddPhysical, 
           />
         )}
 
-        {/* Key Metrics Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Financial Breakdown */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="bg-muted/30 rounded-lg p-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
               <DollarSign className="h-3.5 w-3.5" />
-              <span>Production Cost</span>
+              <span>Mfg Cost</span>
             </div>
             <p className="font-semibold">${(release.total_cost || 0).toLocaleString()}</p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span>Revenue</span>
+              <span>Gross Revenue</span>
             </div>
             <p className="font-semibold text-green-600">${(release.total_revenue || 0).toLocaleString()}</p>
           </div>
+          <div className="bg-muted/30 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Tax Paid</span>
+            </div>
+            <p className="font-semibold text-orange-500">${(financials?.taxPaid || 0).toLocaleString()}</p>
+          </div>
+          <div className="bg-muted/30 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Dist. Fees</span>
+            </div>
+            <p className="font-semibold text-orange-500">${(financials?.distributionFees || 0).toLocaleString()}</p>
+          </div>
+          {(() => {
+            const profit = (release.total_revenue || 0) - (release.total_cost || 0) - (financials?.taxPaid || 0) - (financials?.distributionFees || 0);
+            return (
+              <div className="bg-muted/30 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span>Profit/Loss</span>
+                </div>
+                <p className={`font-semibold ${profit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                  ${profit.toLocaleString()}
+                </p>
+              </div>
+            );
+          })()}
           {totalUnitsOrdered > 0 && (
             <div className="bg-muted/30 rounded-lg p-3">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
