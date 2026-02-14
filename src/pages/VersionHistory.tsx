@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.671",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed crash on songwriting page — SongwritingInstrumentSelector now wraps itself in SkillSystemProvider" },
+    ],
+  },
+  {
     version: "1.0.670",
     date: "2026-02-14",
     changes: [
