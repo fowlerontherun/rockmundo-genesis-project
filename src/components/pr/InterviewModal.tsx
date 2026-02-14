@@ -71,6 +71,7 @@ export const InterviewModal = () => {
     startInterview,
     handleAnswer,
     finishInterview,
+    skipInterview,
     answers,
     questions,
   } = useInterviewSession();
@@ -116,9 +117,14 @@ export const InterviewModal = () => {
                 </div>
               </CardContent>
             </Card>
-            <Button onClick={startInterview} disabled={loading} className="w-full font-oswald">
-              {loading ? "Preparing..." : "Start Interview"}
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={skipInterview} disabled={loading} variant="outline" className="flex-1 font-oswald">
+                Skip Interview
+              </Button>
+              <Button onClick={startInterview} disabled={loading} className="flex-1 font-oswald">
+                {loading ? "Preparing..." : "Start Interview"}
+              </Button>
+            </div>
           </div>
         )}
 
