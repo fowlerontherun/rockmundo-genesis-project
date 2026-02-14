@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.657",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Song Rankings: New page at /song-rankings ranking all released/recorded songs by Quality, Sales (digital + CD + vinyl + cassette), and Streams" },
+      { type: 'feature', description: "Cover Songs: Bands can license songs from the rankings to add to their repertoire — choose between a flat fee or 50% royalty split" },
+      { type: 'feature', description: "Cover Quality Scaling: Cover quality = original quality × band skill multiplier (20%-100%), preventing low-skill bands from exploiting top songs" },
+      { type: 'feature', description: "Cover song flat fees are calculated as quality × $10 and paid to the original band. Royalty splits pay 50% of all cover revenue to the original artist" },
+      { type: 'improvement', description: "Song rankings include inline audio player, genre filters, and search — cover button only appears for songs not owned by your band" },
+    ],
+  },
+  {
     version: "1.0.656",
     date: "2026-02-14",
     changes: [

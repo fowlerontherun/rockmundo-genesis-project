@@ -53,6 +53,7 @@ const Gettit = lazyWithRetry(() => import("./pages/Gettit"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
+const SongRankings = lazyWithRetry(() => import("./pages/SongRankings"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
@@ -359,6 +360,7 @@ function App() {
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="song-market" element={<SongMarket />} />
+                    <Route path="song-rankings" element={<SongRankings />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
                     <Route path="music-hub" element={<MusicHub />} />
