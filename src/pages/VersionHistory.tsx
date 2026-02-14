@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.687",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Modeling now uses an incoming-offers system — offers arrive based on your looks/fame, accept or decline like media offers" },
+      { type: 'feature', description: "Auto-generates 1-3 modeling offers on page visit with cooldown to prevent spam" },
+      { type: 'fix', description: "Offers Dashboard now pulls real data from modeling, media, gig, and sponsorship tables instead of hardcoded placeholders" },
+      { type: 'improvement', description: "Unified KPI cards, trend charts, and filterable table across all offer sources" },
+    ],
+  },
+  {
     version: "1.0.686",
     date: "2026-02-14",
     changes: [
