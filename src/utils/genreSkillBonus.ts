@@ -7,6 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getAllGenreSkillSlugs } from "@/data/genres";
 import type { SkillProgressEntry } from "./skillGearPerformance";
+import { getTieredBonusPercent } from "./tieredSkillBonus";
 
 export interface GenreSkillBonus {
   /** Multiplier to apply (1.0 = no bonus, up to ~1.20 = 20% bonus) */
@@ -52,9 +53,9 @@ export function calculateGenreSkillBonus(
 
   if (maxLevel === 0) return NO_BONUS;
 
-  // Max bonus is 20% at skill level 20
-  // Scale: level 1 = 1%, level 5 = 5%, level 10 = 10%, level 20 = 20%
-  const bonusPercent = Math.min(20, maxLevel);
+  // Tiered bonus: higher levels give progressively more, mastery (20) gets a flat bonus
+  // Raw curve goes 0-28%, we use it directly for genre (up to 28% at mastery)
+  const bonusPercent = getTieredBonusPercent(maxLevel);
   const multiplier = 1 + bonusPercent / 100;
 
   return {

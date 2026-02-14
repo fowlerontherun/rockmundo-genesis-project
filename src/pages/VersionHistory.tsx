@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.663",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "Tiered skill bonuses: genre, instrument, and recording skills now scale non-linearly — early levels give small bonuses, higher levels give progressively more, and mastered skills (level 20) receive a flat +5% mastery bonus on top" },
+      { type: 'improvement', description: "Genre skill bonus increased from max 20% to max 28% at mastery, with accelerating returns at higher tiers" },
+      { type: 'improvement', description: "Recording skill bonuses (mixing, DAW, production, vocal, theory) now use tiered scaling — mastered categories provide significantly more bonus than mid-level ones" },
+      { type: 'improvement', description: "Instrument performance skills use tiered curve — mastered instruments contribute disproportionately more to gig performance scores" },
+    ],
+  },
+  {
     version: "1.0.662",
     date: "2026-02-14",
     changes: [
