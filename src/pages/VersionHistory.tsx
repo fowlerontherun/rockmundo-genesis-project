@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.683",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed 'Unknown Artist' on Song Rankings — now shows band artist_name with band name fallback" },
+    ],
+  },
+  {
     version: "1.0.682",
     date: "2026-02-14",
     changes: [
