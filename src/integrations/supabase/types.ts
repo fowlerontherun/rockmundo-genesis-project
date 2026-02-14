@@ -15533,11 +15533,13 @@ export type Database = {
           compensation: number | null
           completed_at: string | null
           created_at: string | null
+          expires_at: string | null
           fame_boost: number | null
           gig_id: string
           gig_type: string | null
           id: string
           looks_boost: number | null
+          offer_reason: string | null
           scheduled_end: string | null
           scheduled_start: string | null
           shoot_date: string | null
@@ -15549,11 +15551,13 @@ export type Database = {
           compensation?: number | null
           completed_at?: string | null
           created_at?: string | null
+          expires_at?: string | null
           fame_boost?: number | null
           gig_id: string
           gig_type?: string | null
           id?: string
           looks_boost?: number | null
+          offer_reason?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           shoot_date?: string | null
@@ -15565,11 +15569,13 @@ export type Database = {
           compensation?: number | null
           completed_at?: string | null
           created_at?: string | null
+          expires_at?: string | null
           fame_boost?: number | null
           gig_id?: string
           gig_type?: string | null
           id?: string
           looks_boost?: number | null
+          offer_reason?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           shoot_date?: string | null
