@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.658",
+    date: "2026-02-14",
+    changes: [
+      { type: 'improvement', description: "Floating avatar widget now shows unread inbox count badge instead of level number — only appears when there are unread messages" },
+      { type: 'improvement', description: "Clicking the floating avatar now navigates directly to the Inbox page instead of toggling an info panel" },
+      { type: 'improvement', description: "Removed expanded info panel from avatar widget for a cleaner, more purposeful interaction" },
+    ],
+  },
+  {
     version: "1.0.657",
     date: "2026-02-14",
     changes: [
