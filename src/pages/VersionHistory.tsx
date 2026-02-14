@@ -14,10 +14,11 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.649",
+    version: "1.0.650",
     date: "2026-02-14",
     changes: [
-      { type: 'fix', description: "Fixed admin regeneration overwriting user-written lyrics with AI-generated ones — now preserves original songwriting lyrics and never overwrites songwriting_projects" },
+      { type: 'fix', description: "Restored recoverable lyrics from songwriting projects back to songs table" },
+      { type: 'fix', description: "Fixed regeneration to prefer non-AI project lyrics over AI-tagged song lyrics — strips [AI Generated] prefix and prioritizes original user work" },
     ],
   },
   {

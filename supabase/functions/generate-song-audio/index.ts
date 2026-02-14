@@ -222,7 +222,24 @@ serve(async (req) => {
     // Track if song originally had lyrics to avoid overwriting user content
     const originalSongLyrics = song.lyrics
     const originalProjectLyrics = project?.lyrics
-    let rawLyrics = sanitizeLyrics(song.lyrics) || sanitizeLyrics(project?.lyrics) || null
+    const songLyricsAreAI = originalSongLyrics?.trim()?.startsWith('[AI Generated]') || originalSongLyrics?.trim()?.includes('[AI Generated]')
+    const projectLyricsAreAI = originalProjectLyrics?.trim()?.startsWith('[AI Generated]') || originalProjectLyrics?.trim()?.includes('[AI Generated]')
+    
+    // Priority: non-AI project lyrics > non-AI song lyrics > AI song lyrics > AI project lyrics > null
+    let rawLyrics: string | null = null
+    if (originalProjectLyrics?.trim() && !projectLyricsAreAI) {
+      rawLyrics = sanitizeLyrics(originalProjectLyrics)
+      console.log('[generate-song-audio] Using non-AI project lyrics (preferred source)')
+    } else if (originalSongLyrics?.trim() && !songLyricsAreAI) {
+      rawLyrics = sanitizeLyrics(originalSongLyrics)
+      console.log('[generate-song-audio] Using non-AI song lyrics')
+    } else if (originalSongLyrics?.trim()) {
+      rawLyrics = sanitizeLyrics(originalSongLyrics.replace(/\[AI Generated\]\s*/g, '').trim())
+      console.log('[generate-song-audio] Using AI-tagged song lyrics (stripped prefix)')
+    } else if (originalProjectLyrics?.trim()) {
+      rawLyrics = sanitizeLyrics(originalProjectLyrics.replace(/\[AI Generated\]\s*/g, '').trim())
+      console.log('[generate-song-audio] Using AI-tagged project lyrics (stripped prefix)')
+    }
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
