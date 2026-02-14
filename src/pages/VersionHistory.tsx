@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.661",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Gig performance now uses Skill Tree (skill_progress) instead of legacy player_skills table — trained skills finally affect gig outcomes" },
+      { type: 'fix', description: "Migrated all existing song quality scores from 0-100 to 0-1000 scale so older songs no longer drag down gig ratings" },
+      { type: 'feature', description: "Player attributes (stage_presence, charisma) now factor into gig performance — stage skill average uses 60% stage presence + 40% charisma" },
+      { type: 'improvement', description: "Band skill calculator now calls calculatePerformanceModifiers() which includes gear bonuses — equipped instruments directly boost gig scores" },
+      { type: 'improvement', description: "Gig execution uses calculateBandSkillAverage() for live skill+gear data instead of static skill_contribution column" },
+    ],
+  },
+  {
     version: "1.0.660",
     date: "2026-02-14",
     changes: [

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { ROLE_SKILL_MAP, calculatePerformanceModifiers } from "./skillGearPerformance";
 
 export interface BandMember {
   id: string;
@@ -36,31 +37,10 @@ function getRandomSkillForTier(tier: number): number {
   return Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
 }
 
-function getRelevantSkillLevel(skills: PlayerSkills, instrumentRole: string): number {
-  const role = instrumentRole.toLowerCase();
-  
-  if (role.includes('guitar') && !role.includes('bass')) return skills.guitar || 1;
-  if (role.includes('bass')) return skills.bass || 1;
-  if (role.includes('drum')) return skills.drums || 1;
-  if (role.includes('vocal') || role.includes('sing')) return skills.vocals || 1;
-  if (role.includes('keyboard') || role.includes('piano')) return skills.technical || 1;
-  
-  return skills.performance || 1;
-}
-
-function detectRoleMismatch(skills: PlayerSkills, instrumentRole: string): boolean {
-  const roleSkill = getRelevantSkillLevel(skills, instrumentRole);
-  const maxSkill = Math.max(
-    skills.guitar,
-    skills.bass,
-    skills.drums,
-    skills.vocals,
-    skills.technical
-  );
-  
-  return roleSkill < maxSkill * 0.7;
-}
-
+/**
+ * Calculate band skill rating using the skill_progress table (skill tree)
+ * instead of the legacy player_skills table.
+ */
 export async function calculateBandSkillRating(
   bandId: string,
   chemistryLevel: number = 0
@@ -81,29 +61,33 @@ export async function calculateBandSkillRating(
 
     for (const member of members) {
       let relevantSkillLevel = 0;
-      let mismatchPenalty = 1.0;
 
       if (member.is_touring_member && member.touring_member_tier) {
+        // Touring members use tier-based random skill
         relevantSkillLevel = getRandomSkillForTier(member.touring_member_tier);
       } else if (member.user_id) {
-        const { data: skills } = await supabase
-          .from('player_skills')
-          .select('*')
+        // Player members: look up profile_id then use skill_progress via calculatePerformanceModifiers
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
           .eq('user_id', member.user_id)
           .single();
 
-        if (skills) {
-          relevantSkillLevel = getRelevantSkillLevel(skills as PlayerSkills, member.instrument_role);
-          if (detectRoleMismatch(skills as PlayerSkills, member.instrument_role)) {
-            mismatchPenalty = 0.4;
-          }
+        if (profile) {
+          const modifiers = await calculatePerformanceModifiers(
+            profile.id,
+            member.instrument_role || 'Vocals'
+          );
+          // effectiveLevel already includes gear bonus
+          relevantSkillLevel = modifiers.effectiveLevel;
         }
       }
 
-      const memberScore = relevantSkillLevel * mismatchPenalty;
+      const memberScore = relevantSkillLevel;
       totalScore += memberScore;
       memberCount++;
 
+      // Update skill_contribution on band_members with the new value
       await supabase
         .from('band_members')
         .update({ skill_contribution: Math.round(memberScore) })

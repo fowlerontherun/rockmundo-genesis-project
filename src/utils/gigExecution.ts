@@ -26,6 +26,7 @@ import {
   type ChemistryEffects 
 } from "./bandChemistryEffects";
 import { checkVenueGigDiscovery, type MentorDiscoveryResult } from "./mentorDiscovery";
+import { calculateBandSkillAverage } from "./skillGearPerformance";
 
 interface GigExecutionData {
   gigId: string;
@@ -56,7 +57,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
     supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance').eq('id', bandId).single(),
-    supabase.from('band_members').select('user_id, skill_contribution').eq('band_id', bandId).eq('is_touring_member', false),
+    supabase.from('band_members').select('user_id, skill_contribution, instrument_role').eq('band_id', bandId).eq('is_touring_member', false),
     supabase.from('player_merchandise').select('*').eq('band_id', bandId).gt('stock_quantity', 0)
   ]);
 
@@ -124,9 +125,31 @@ export async function executeGigPerformance(data: GigExecutionData) {
 
   const bandChemistry = band.chemistry_level || 0;
 
-  const memberSkillAverage = members.length > 0
-    ? members.reduce((sum, m) => sum + (m.skill_contribution || 50), 0) / members.length
-    : 50;
+  // Use skill tree + gear data for member skill average instead of legacy skill_contribution
+  let memberSkillAverage = 50;
+  let stageSkillAverage = 50;
+  try {
+    const bandSkillData = await calculateBandSkillAverage(bandId);
+    memberSkillAverage = bandSkillData.avgSkill;
+
+    // Fetch player attributes (stage_presence, charisma) for band members
+    const memberUserIds = members.map(m => m.user_id).filter((id): id is string => !!id);
+    if (memberUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('stage_presence, charisma, energy, resilience')
+        .in('user_id', memberUserIds);
+      
+      if (profiles && profiles.length > 0) {
+        const avgStagePresence = profiles.reduce((sum, p) => sum + ((p as any).stage_presence || 50), 0) / profiles.length;
+        const avgCharisma = profiles.reduce((sum, p) => sum + ((p as any).charisma || 50), 0) / profiles.length;
+        // Stage skill = blend of stage_presence attribute + skill tree performance level
+        stageSkillAverage = Math.round(avgStagePresence * 0.6 + avgCharisma * 0.4);
+      }
+    }
+  } catch (skillError) {
+    console.error('Error fetching skill tree data for gig, using fallback:', skillError);
+  }
 
   // Calculate chemistry effects for this performance
   const chemistryEffects = calculateChemistryEffects(bandChemistry);
@@ -158,7 +181,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
       memberSkillAverage,
       venueCapacityUsed,
       gearReliabilityBonus: gearEffects.reliabilityStability,
-      stageSkillAverage: 50, // Default baseline; full skill fetch would add latency
+      stageSkillAverage,
       improvisationLevel: 0,
     };
 
