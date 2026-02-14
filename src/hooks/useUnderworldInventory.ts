@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
 import type { UnderworldProduct } from "@/hooks/useUnderworldStore";
 import type { Json } from "@/integrations/supabase/types";
+import type { AddictionType } from "@/utils/addictionSystem";
 
 export interface InventoryItem {
   id: string;
@@ -147,6 +148,42 @@ export const useUnderworldInventory = () => {
 
       if (markUsedError) throw markUsedError;
 
+      // Check addiction trigger if product has addiction_type
+      if (product?.addiction_type) {
+        const addictionType = product.addiction_type as AddictionType;
+        // Check if player already has this addiction
+        const { data: existingAddiction } = await supabase
+          .from("player_addictions")
+          .select("id, severity")
+          .eq("user_id", user.id)
+          .eq("addiction_type", addictionType)
+          .in("status", ["active", "recovering", "relapsed"])
+          .maybeSingle();
+
+        if (existingAddiction) {
+          // Increase severity by 5-10
+          const severityIncrease = 5 + Math.floor(Math.random() * 6);
+          await supabase
+            .from("player_addictions")
+            .update({ 
+              severity: Math.min(100, existingAddiction.severity + severityIncrease),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingAddiction.id);
+        } else {
+          // Roll for new addiction (30% chance from direct substance use)
+          if (Math.random() < 0.30) {
+            await supabase.from("player_addictions").insert({
+              user_id: user.id,
+              addiction_type: addictionType,
+              severity: 20,
+              status: "active",
+              triggered_at: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
       return { success: true, product };
     },
     onSuccess: (data) => {
@@ -155,6 +192,7 @@ export const useUnderworldInventory = () => {
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-history", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["active-boosts", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["addictions", user?.id] });
 
       toast({
         title: "Item Used",

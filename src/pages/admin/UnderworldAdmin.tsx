@@ -37,6 +37,7 @@ interface UnderworldProduct {
   duration_hours: number | null;
   is_available: boolean;
   is_legal: boolean;
+  addiction_type: string | null;
   icon_name: string | null;
 }
 
@@ -89,6 +90,7 @@ const UnderworldAdmin = () => {
     duration_hours: null as number | null,
     is_available: true,
     is_legal: false,
+    addiction_type: null as string | null,
     icon_name: "Package",
     effects: { ...DEFAULT_EFFECTS },
   });
@@ -287,6 +289,7 @@ const UnderworldAdmin = () => {
         duration_hours: productData.duration_hours,
         is_available: productData.is_available,
         is_legal: productData.is_legal,
+        addiction_type: productData.addiction_type,
         icon_name: productData.icon_name,
         effects,
       };
@@ -354,6 +357,7 @@ const UnderworldAdmin = () => {
       duration_hours: null,
       is_available: true,
       is_legal: false,
+      addiction_type: null,
       icon_name: "Package",
       effects: { ...DEFAULT_EFFECTS },
     });
@@ -371,6 +375,7 @@ const UnderworldAdmin = () => {
       duration_hours: product.duration_hours,
       is_available: product.is_available,
       is_legal: product.is_legal ?? false,
+      addiction_type: product.addiction_type ?? null,
       icon_name: product.icon_name || "Package",
       effects: parseEffects(product.effects),
     });
@@ -570,6 +575,27 @@ const UnderworldAdmin = () => {
                     <span className="text-xs text-muted-foreground ml-auto">
                       {newProduct.is_legal ? "Visible in legal stores" : "Underworld only"}
                     </span>
+                  </div>
+
+                  {/* Addiction Type */}
+                  <div className="rounded-md border border-border p-3 space-y-2">
+                    <Label>Addiction Type (triggers addiction risk on use)</Label>
+                    <Select
+                      value={newProduct.addiction_type || "none"}
+                      onValueChange={(v) => setNewProduct({ ...newProduct, addiction_type: v === "none" ? null : v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="alcohol">🍺 Alcohol</SelectItem>
+                        <SelectItem value="substances">💊 Substances</SelectItem>
+                        <SelectItem value="gambling">🎰 Gambling</SelectItem>
+                        <SelectItem value="partying">🎉 Partying</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {newProduct.addiction_type && (
+                      <p className="text-xs text-orange-400">⚠️ Using this item will increase addiction risk for {newProduct.addiction_type}</p>
+                    )}
                   </div>
 
                   {/* Effects Editor */}

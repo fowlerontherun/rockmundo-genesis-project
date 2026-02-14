@@ -24057,6 +24057,7 @@ export type Database = {
       }
       underworld_products: {
         Row: {
+          addiction_type: string | null
           category: string
           created_at: string | null
           current_stock: number | null
@@ -24078,6 +24079,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          addiction_type?: string | null
           category: string
           created_at?: string | null
           current_stock?: number | null
@@ -24099,6 +24101,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          addiction_type?: string | null
           category?: string
           created_at?: string | null
           current_stock?: number | null
