@@ -1,6 +1,8 @@
-import { AlertCircle, CheckCircle2, Loader2, Music, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Music, RefreshCw, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useSongGenerationStatus } from "@/hooks/useSongGenerationStatus";
 import { useSongGenerationLimits } from "@/hooks/useSongGenerationLimits";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +21,9 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [retrying, setRetrying] = useState(false);
+  const [showLyricsDialog, setShowLyricsDialog] = useState(false);
+  const [editLyrics, setEditLyrics] = useState("");
+  const [loadingLyrics, setLoadingLyrics] = useState(false);
   
   const { 
     data: status,
@@ -60,14 +65,36 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     }
   };
 
-  const handleAdminRegenerate = async () => {
+  const handleOpenLyricsDialog = async () => {
+    setLoadingLyrics(true);
+    setShowLyricsDialog(true);
+    try {
+      const { data } = await supabase
+        .from('songs')
+        .select('lyrics')
+        .eq('id', songId)
+        .single();
+      setEditLyrics(data?.lyrics || "");
+    } catch {
+      setEditLyrics("");
+    } finally {
+      setLoadingLyrics(false);
+    }
+  };
+
+  const handleAdminRegenerate = async (updatedLyrics?: string) => {
     if (!user?.id || !limits?.is_admin) return;
     setRetrying(true);
+    setShowLyricsDialog(false);
     try {
-      // Reset status to allow regeneration
+      // Save updated lyrics if provided
+      const updatePayload: Record<string, any> = { audio_generation_status: 'failed', audio_url: null };
+      if (updatedLyrics !== undefined) {
+        updatePayload.lyrics = updatedLyrics;
+      }
       await supabase
         .from('songs')
-        .update({ audio_generation_status: 'failed', audio_url: null })
+        .update(updatePayload)
         .eq('id', songId);
 
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
@@ -79,7 +106,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         toast.error("Failed to regenerate");
       } else if (data?.success) {
         toast.success("Regeneration started!", {
-          description: "Song is being regenerated with the new YuE model."
+          description: "Song is being regenerated with MiniMax Music."
         });
         queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
         queryClient.invalidateQueries({ queryKey: ["song-generation-limits"] });
@@ -143,38 +170,83 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     }
   };
 
-  if (!status) return null;
+  const lyricsDialog = (
+    <Dialog open={showLyricsDialog} onOpenChange={setShowLyricsDialog}>
+      <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Edit Lyrics Before Regenerating</DialogTitle>
+        </DialogHeader>
+        {loadingLyrics ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <Textarea
+            value={editLyrics}
+            onChange={(e) => setEditLyrics(e.target.value)}
+            className="min-h-[300px] font-mono text-sm"
+            placeholder="Enter lyrics with [Verse], [Chorus], etc."
+          />
+        )}
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setShowLyricsDialog(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => handleAdminRegenerate(editLyrics)} disabled={loadingLyrics}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Save & Regenerate
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (!status) return <>{lyricsDialog}</>;
 
   // Already completed with audio - show success, admin can regenerate
   if (isCompleted && hasAudio) {
     return (
-      <Alert className="bg-primary/10 border-primary/30">
-        <CheckCircle2 className="h-4 w-4 text-primary" />
-        <AlertDescription className="flex items-center justify-between">
-          <span className="text-primary font-medium">
-            ✨ AI audio generated successfully!
-          </span>
-          {limits?.is_admin ? (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAdminRegenerate}
-              disabled={retrying}
-            >
-              {retrying ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-1" />
-              )}
-              Regenerate (Admin)
-            </Button>
-          ) : (
-            <span className="text-xs text-muted-foreground">
-              Regeneration not available
+      <>
+        {lyricsDialog}
+        <Alert className="bg-primary/10 border-primary/30">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-primary font-medium">
+              ✨ AI audio generated successfully!
             </span>
-          )}
-        </AlertDescription>
-      </Alert>
+            {limits?.is_admin ? (
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleOpenLyricsDialog}
+                  disabled={retrying}
+                >
+                  <Edit3 className="h-4 w-4 mr-1" />
+                  Edit & Regenerate
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleAdminRegenerate()}
+                  disabled={retrying}
+                >
+                  {retrying ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                  )}
+                  Regenerate
+                </Button>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Regeneration not available
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      </>
     );
   }
 
@@ -188,67 +260,73 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     const seconds = elapsed % 60;
 
     return (
-      <Alert className="bg-muted/50 border-muted">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <AlertDescription className="flex items-center justify-between">
-          <span>
-            Generating AI audio for "{songTitle}"...
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
+      <>
+        {lyricsDialog}
+        <Alert className="bg-muted/50 border-muted">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              Generating AI audio for "{songTitle}"...
             </span>
-            {minutes >= 5 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleReset}
-                disabled={retrying}
-              >
-                {retrying ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                )}
-                Reset
-              </Button>
-            )}
-          </div>
-        </AlertDescription>
-      </Alert>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
+              </span>
+              {minutes >= 5 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleReset}
+                  disabled={retrying}
+                >
+                  {retrying ? (
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                  )}
+                  Reset
+                </Button>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      </>
     );
   }
 
   // Failed or timed out - show retry option
   if (isFailed || isTimedOut) {
     return (
-      <Alert variant="destructive" className="bg-destructive/10">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription className="flex items-center justify-between">
-          <span>
-            {isTimedOut 
-              ? "Generation timed out after 10 minutes" 
-              : "Audio generation failed"}
-          </span>
-          {showRetry && canRegenerate && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRetry}
-              disabled={retrying || (limits && !limits.can_generate && !limits.is_admin)}
-            >
-              {retrying ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-1" />
-              )}
-              Retry
-            </Button>
-          )}
-        </AlertDescription>
-      </Alert>
+      <>
+        {lyricsDialog}
+        <Alert variant="destructive" className="bg-destructive/10">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              {isTimedOut 
+                ? "Generation timed out after 10 minutes" 
+                : "Audio generation failed"}
+            </span>
+            {showRetry && canRegenerate && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRetry}
+                disabled={retrying || (limits && !limits.can_generate && !limits.is_admin)}
+              >
+                {retrying ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                )}
+                Retry
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      </>
     );
   }
 
-  return null;
+  return <>{lyricsDialog}</>;
 }

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.652",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Admin: Added 'Edit & Regenerate' button — opens lyrics editor dialog to review/replace lyrics before regenerating AI audio" },
+    ],
+  },
+  {
     version: "1.0.651",
     date: "2026-02-14",
     changes: [
