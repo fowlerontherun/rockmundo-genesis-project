@@ -1,117 +1,82 @@
 
-# Improved Gig Outcome Insights and Equipment Warnings (v1.0.661)
 
-## Overview
+# Fix Gig Performance: Use Skill Tree + Migrate Song Quality (v1.0.661)
 
-Add detailed performance insight cards to the gig outcome report that explain **what boosted and what hurt** the score, plus a pre-gig warning system that alerts players when band members are assigned instrument roles but don't have matching gear equipped.
+## The Problem
 
----
+Your gigs are stuck at C/B grades because of three compounding issues:
 
-## 1. Performance Insights Card (Post-Gig)
+1. **Band skill calculator reads from the wrong table** -- `bandSkillCalculator.ts` pulls from `player_skills` (legacy table where your levels are 1) instead of `skill_progress` (the skill tree where you've actually been training). This means your `skill_contribution` on band members is nearly zero.
 
-A new component `PerformanceInsightsCard` displayed in `GigOutcomeReport.tsx` that analyzes the gig execution data and generates human-readable insight lines.
+2. **All existing songs are scored 0-100 instead of 0-1000** -- Songs written before v1.0.660 have quality scores like 80, 100 etc. The gig formula divides by 1000, so a song scored 100 only contributes 10% of its potential. Song quality is weighted at 25% of the performance score.
 
-### Insight Categories
-
-**Skill-based insights** (per band member):
-- Low skill warning: "Alex played Lead Guitar with only Level 12 guitar skill -- this dragged down performance"
-- Average skill note: "Jordan had moderate Drums skill (Level 45) -- room to improve"
-- High skill praise: "Sam's vocal mastery (Level 88) elevated the entire set"
-
-**Gear-based insights** (per band member):
-- Gear boost: "Alex has a Rare electric guitar equipped, boosting Lead Guitar performance by +18%"
-- Missing gear warning: "Jordan is assigned Drums but has no drum kit equipped -- no gear bonus applied"
-- Gear mismatch: "Sam has a keyboard equipped but plays Vocals -- gear bonus doesn't apply"
-
-**Other factor insights** (from existing breakdown data):
-- Low rehearsal: "3 of 6 songs were under-rehearsed, costing you up to 20% on those tracks"
-- Chemistry impact: "Band chemistry at 82% gave a +10% synergy boost"
-- Crew contribution: "Your 3-person crew averaged skill level 65, providing solid support"
-- Equipment quality: "Stage equipment quality was 78/100"
-
-### Data Flow
-
-During gig execution (`gigExecution.ts`), the code already fetches band members but doesn't include `instrument_role`. The change will:
-
-1. Update the `band_members` query in `gigExecution.ts` to also select `instrument_role`
-2. For each member, call `calculatePerformanceModifiers()` from `skillGearPerformance.ts` to get their skill level, gear multiplier, and effective level
-3. Store these per-member breakdowns in the gig outcome's existing `breakdown_data` JSON field as a new `member_insights` array
-4. The `PerformanceInsightsCard` component reads this data and renders categorized insight lines with icons
-
-### Insight Generation Logic
-
-```text
-For each band member:
-  1. Get their instrument_role (e.g., "Lead Guitar")
-  2. Look up their skill level for that role via ROLE_SKILL_MAP
-  3. Check equipped gear via doesCategoryMatchRole()
-  4. Generate insight based on thresholds:
-     - skill < 25: "danger" (red) -- severely hurting performance
-     - skill 25-50: "warning" (yellow) -- below average
-     - skill 50-75: "neutral" (gray) -- decent
-     - skill 75+: "boost" (green) -- actively helping
-  5. Check gear match:
-     - Has matching gear: "boost" with rarity bonus noted
-     - No matching gear: "warning" -- missing out on bonuses
-     - Wrong category gear: "info" -- gear doesn't help this role
-```
+3. **Player attributes (stage presence, charisma, etc.) are ignored** -- You've nearly maxed these but they don't factor into gig calculations at all.
 
 ---
 
-## 2. Pre-Gig Equipment Warning
+## What Will Change
 
-Add an "Instrument Gear Check" section to the existing `GigPreparationChecklist.tsx` component.
+### 1. Rewrite `bandSkillCalculator.ts` to use `skill_progress`
 
-### How It Works
+Replace the legacy `player_skills` table lookup with `skill_progress` (the skill tree). Use `ROLE_SKILL_MAP` from `skillGearPerformance.ts` to find the right skills for each band member's instrument role.
 
-Before a gig, the checklist already shows rehearsal status, equipment, crew, and chemistry. The new section will:
+- For player members: query `skill_progress` by profile_id, find best matching skill for their `instrument_role`
+- For touring members: keep the existing tier-based random skill system
+- Role mismatch detection stays but uses skill tree data
+- Update `skill_contribution` on `band_members` with the new values
 
-1. Fetch band members with their `instrument_role`
-2. Fetch each member's equipped gear from `player_equipment` joined with `equipment_items`
-3. Use `doesCategoryMatchRole()` from `skillGearPerformance.ts` to check if any equipped item matches their role
-4. Display warnings for mismatches:
-   - "Jordan (Drums) has no drum equipment equipped -- performance will suffer!"
-   - "Alex (Lead Guitar) has matching gear: Fender Stratocaster (Rare) -- +18% bonus"
+### 2. Migrate existing song quality scores to 0-1000 scale
 
-### UI
+A one-time database migration that scales all existing songs:
+- `quality_score = quality_score * 10` for all songs where `quality_score <= 100`
+- This brings old songs in line with the new 1000-point scale
 
-A list of band members with their role, showing a green check if they have matching gear or a red warning if they don't. This adds to the existing readiness score calculation.
+### 3. Add player attributes to gig performance
+
+Update `gigExecution.ts` to fetch player attributes (`stage_presence`, `charisma`, `energy`, `resilience`) from `profiles` and factor them into the performance calculation:
+
+- **Stage presence** feeds into `stageSkillAverage` (currently hardcoded to 50)
+- **Charisma** adds a crowd engagement bonus
+- These are averaged across band members and applied as modifiers
+
+### 4. Connect `gigExecution.ts` to `skillGearPerformance.ts`
+
+Replace the current approach where `memberSkillAverage` comes from the static `skill_contribution` column. Instead, call `calculateBandSkillAverage()` from `skillGearPerformance.ts` during gig execution to get live skill+gear data.
+
+This means:
+- `memberSkillAverage` reflects actual skill tree progress
+- `stageSkillAverage` gets real data instead of defaulting to 50
+- Gear bonuses are already calculated by this utility
 
 ---
 
-## Technical Changes
+## Technical Details
 
-### New File
-- `src/components/gig/PerformanceInsightsCard.tsx` -- Component that renders categorized boost/penalty insight lines with color-coded icons
+### Files to Modify
 
-### Modified Files
-- `src/utils/gigExecution.ts` -- Update band_members query to include `instrument_role`; after calculating performance, run per-member skill+gear analysis and store `member_insights` array in `breakdown_data`
-- `src/components/gig/GigOutcomeReport.tsx` -- Import and render `PerformanceInsightsCard` using `breakdown_data.member_insights`
-- `src/components/gig/GigPreparationChecklist.tsx` -- Add new prop for band members with roles; add "Instrument Gear Check" section showing per-member equipment match status
-- `src/utils/skillGearPerformance.ts` -- Export `doesCategoryMatchRole` (currently not exported) so it can be reused
-- `src/components/VersionHeader.tsx` -- Bump to v1.0.661
-- `src/pages/VersionHistory.tsx` -- Add changelog entry
+**`src/utils/bandSkillCalculator.ts`**
+- Replace `player_skills` query with `skill_progress` query
+- Use `ROLE_SKILL_MAP` from `skillGearPerformance.ts` for role-to-skill mapping
+- Look up profile_id from user_id before querying skill_progress
 
-### Data Structure for `member_insights`
+**`src/utils/gigExecution.ts`**
+- Import and call `calculateBandSkillAverage()` instead of reading `skill_contribution` from `band_members`
+- Fetch player attributes from `profiles` for all band members
+- Calculate `stageSkillAverage` from stage_presence + relevant performance skills
+- Pass real skill data to `PerformanceFactors` instead of defaults
 
-Stored in `breakdown_data.member_insights` on gig_outcomes:
+**Database migration**
+- `UPDATE songs SET quality_score = quality_score * 10 WHERE quality_score IS NOT NULL AND quality_score <= 100;`
 
-```text
-[
-  {
-    memberId: "uuid",
-    displayName: "Alex",
-    role: "Lead Guitar",
-    skillLevel: 35,
-    gearMultiplier: 1.18,
-    effectiveLevel: 41,
-    hasMatchingGear: true,
-    gearName: "Fender Stratocaster",
-    gearRarity: "rare",
-    insightType: "warning",  // danger | warning | neutral | boost
-    message: "Played Lead Guitar with below-average guitar skill (Level 35)"
-  }
-]
-```
+**`src/components/VersionHeader.tsx`** -- Bump to v1.0.661
 
-No database migration needed -- `breakdown_data` is already a JSONB column.
+**`src/pages/VersionHistory.tsx`** -- Add changelog entry
+
+### Impact on Grades
+
+With these fixes, the performance formula inputs change dramatically:
+- `songQuality`: 100 becomes 1000 (25% weight -- from ~10% effective to ~100%)
+- `memberSkillAverage`: 1 becomes your actual skill tree level (10% weight)
+- `stageSkillAverage`: 50 default becomes real attribute data (10% weight)
+- Combined effect: scores should jump from C/B range into A/S territory for well-prepared gigs with trained skills
+
