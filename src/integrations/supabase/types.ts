@@ -230,6 +230,7 @@ export type Database = {
           deal_type_id: string
           demo_submission_id: string | null
           end_date: string
+          expires_at: string | null
           id: string
           label_id: string
           manufacturing_covered: boolean | null
@@ -262,6 +263,7 @@ export type Database = {
           deal_type_id: string
           demo_submission_id?: string | null
           end_date: string
+          expires_at?: string | null
           id?: string
           label_id: string
           manufacturing_covered?: boolean | null
@@ -294,6 +296,7 @@ export type Database = {
           deal_type_id?: string
           demo_submission_id?: string | null
           end_date?: string
+          expires_at?: string | null
           id?: string
           label_id?: string
           manufacturing_covered?: boolean | null

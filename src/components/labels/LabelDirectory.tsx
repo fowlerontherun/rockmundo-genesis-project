@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Globe2, MapPin, Rocket, Send, Star, Settings, Crown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Building2, Globe2, MapPin, Rocket, Send, Star, Settings, Crown, ChevronDown, Users, Disc3, Music } from "lucide-react";
 import { SubmitDemoDialog } from "./SubmitDemoDialog";
 import { LabelFinanceDialog } from "./LabelFinanceDialog";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,105 @@ interface LabelDirectoryProps {
   artistEntities: ArtistEntity[];
   dealTypes: DealTypeRow[];
   territories: TerritoryRow[];
+}
+
+function LabelExpandedDetails({ labelId, bandGenre }: { labelId: string; bandGenre?: string }) {
+  const { data: roster } = useQuery({
+    queryKey: ['label-roster-preview', labelId],
+    queryFn: async () => {
+      const { data } = await (supabase
+        .from('artist_label_contracts')
+        .select('id, bands(name), status')
+        .eq('label_id', labelId)
+        .eq('status', 'active')
+        .limit(5) as any);
+      return (data ?? []) as any[];
+    },
+  });
+
+  const { data: releases } = useQuery({
+    queryKey: ['label-releases-preview', labelId],
+    queryFn: async () => {
+      const q = supabase
+        .from('label_releases' as any)
+        .select('id, title, release_type, created_at')
+        .eq('label_id', labelId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      const { data } = await q;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const { data: labelDealTypes } = useQuery({
+    queryKey: ['label-deal-types-preview', labelId],
+    queryFn: async () => {
+      const { data } = await (supabase
+        .from('label_deal_types')
+        .select('name, advance_min, advance_max, royalty_artist_pct')
+        .limit(5) as any);
+      return (data ?? []) as any[];
+    },
+  });
+
+  return (
+    <div className="px-6 pb-4 space-y-3">
+      <Separator />
+      
+      {/* Roster */}
+      <div>
+        <h4 className="text-sm font-semibold flex items-center gap-1 mb-1">
+          <Users className="h-3 w-3" /> Current Roster
+        </h4>
+        {roster && roster.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {roster.map((r: any) => (
+              <Badge key={r.id} variant="outline" className="text-xs">
+                {r.bands?.name ?? 'Solo Artist'}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No artists signed yet</p>
+        )}
+      </div>
+
+      {/* Recent Releases */}
+      <div>
+        <h4 className="text-sm font-semibold flex items-center gap-1 mb-1">
+          <Disc3 className="h-3 w-3" /> Recent Releases
+        </h4>
+        {releases && releases.length > 0 ? (
+          <div className="space-y-1">
+            {releases.map((r: any) => (
+              <div key={r.id} className="flex items-center justify-between text-xs">
+                <span>{r.title}</span>
+                <Badge variant="secondary" className="text-[10px]">{r.release_type}</Badge>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No releases yet</p>
+        )}
+      </div>
+
+      {/* Deal Types */}
+      {labelDealTypes && labelDealTypes.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold flex items-center gap-1 mb-1">
+            <Music className="h-3 w-3" /> Typical Deals
+          </h4>
+          <div className="space-y-1">
+            {labelDealTypes.map((d: any, i: number) => (
+              <div key={i} className="text-xs text-muted-foreground">
+                {d.name}: ${d.advance_min?.toLocaleString()}–${d.advance_max?.toLocaleString()} advance, {d.royalty_artist_pct}% artist royalty
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function LabelDirectory({ artistEntities, dealTypes, territories }: LabelDirectoryProps) {
@@ -300,6 +400,19 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                         </div>
                       ) : null}
                     </CardContent>
+
+                    {/* Expandable Details */}
+                    <Collapsible>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                          <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                          View Details
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <LabelExpandedDetails labelId={label.id} bandGenre={primaryBand?.genre} />
+                      </CollapsibleContent>
+                    </Collapsible>
 
                     <CardFooter className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

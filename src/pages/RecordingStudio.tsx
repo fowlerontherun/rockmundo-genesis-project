@@ -23,6 +23,7 @@ export default function RecordingStudio() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [userBandId, setUserBandId] = useState<string | null>(null);
+  const [labelCompanyId, setLabelCompanyId] = useState<string | null>(null);
   
   const currentCityId = currentCity?.id || "";
   
@@ -43,8 +44,20 @@ export default function RecordingStudio() {
 
       if (bandMemberships?.band_id) {
         setUserBandId(bandMemberships.band_id);
+        
+        // Check for active label contract to get label's company_id
+        const { data: contract } = await supabase
+          .from('artist_label_contracts')
+          .select('labels(company_id)')
+          .eq('band_id', bandMemberships.band_id)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle();
+        
+        setLabelCompanyId((contract as any)?.labels?.company_id ?? null);
       } else {
         setUserBandId(null);
+        setLabelCompanyId(null);
       }
     };
 
@@ -235,6 +248,7 @@ export default function RecordingStudio() {
         userId={session?.user?.id || ""}
         currentCityId={currentCityId}
         bandId={userBandId}
+        labelCompanyId={labelCompanyId}
       />
 
       {selectedSession && (

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Globe2, Layers, ShieldCheck, Disc3, Album, DollarSign, XCircle, Send } from "lucide-react";
+import { Globe2, Layers, ShieldCheck, Disc3, Album, DollarSign, XCircle, Send, AlertTriangle, Clock, Calendar } from "lucide-react";
 import type { ArtistEntity, ContractWithRelations } from "./types";
 import { ContractNotificationsPanel } from "./ContractNotificationsPanel";
 import { buildContractNotifications } from "./contractNotifications";
@@ -14,6 +14,7 @@ import { SubmitDemoDialog } from "./SubmitDemoDialog";
 import { DemoSubmissionsPanel } from "./DemoSubmissionsPanel";
 import { ContractOfferCard } from "./ContractOfferCard";
 import { TerminateContractDialog } from "./TerminateContractDialog";
+import { differenceInMonths, differenceInDays, format } from "date-fns";
 
 interface MyContractsTabProps {
   artistEntities: ArtistEntity[];
@@ -28,6 +29,28 @@ const STATUS_VARIANTS: Record<string, "secondary" | "default" | "outline" | "des
   terminated: "destructive",
 };
 
+function getObligationStatus(completed: number, quota: number, monthsLeft: number, totalMonths: number) {
+  if (quota === 0) return 'on-track';
+  const progress = completed / quota;
+  const timeProgress = 1 - (monthsLeft / totalMonths);
+  if (progress >= 1) return 'on-track';
+  if (progress >= timeProgress - 0.1) return 'on-track';
+  if (progress >= timeProgress - 0.3) return 'behind';
+  return 'overdue';
+}
+
+const statusColors = {
+  'on-track': 'text-green-600',
+  'behind': 'text-amber-500',
+  'overdue': 'text-destructive',
+};
+
+const statusBadge = {
+  'on-track': { variant: 'outline' as const, className: 'bg-green-500/10 text-green-700 border-green-500/30' },
+  'behind': { variant: 'outline' as const, className: 'bg-amber-500/10 text-amber-700 border-amber-500/30' },
+  'overdue': { variant: 'destructive' as const, className: '' },
+};
+
 export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) {
   const [showDemoDialog, setShowDemoDialog] = useState(false);
   const [terminateContract, setTerminateContract] = useState<any>(null);
@@ -36,7 +59,6 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
   const bandEntities = artistEntities.filter((entity) => entity.type === "band");
   const primaryBandId = bandEntities[0]?.id ?? null;
 
-  // Fetch user/band balance for termination
   const { data: balances } = useQuery({
     queryKey: ["balances-for-termination", userId, primaryBandId],
     queryFn: async () => {
@@ -127,6 +149,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
           manufacturing_covered,
           territories,
           created_at,
+          expires_at,
           demo_submission_id,
           labels(name, reputation_score),
           demo_submissions(songs(title, quality_score))
@@ -154,6 +177,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         demo_song_title: offer.demo_submissions?.songs?.title ?? "Demo",
         demo_song_quality: offer.demo_submissions?.songs?.quality_score ?? 0,
         created_at: offer.created_at,
+        expires_at: offer.expires_at,
       }));
     },
   });
@@ -202,10 +226,15 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
       {/* Demo Submissions Panel */}
       <DemoSubmissionsPanel userId={userId} bandId={primaryBandId} />
 
-      {/* Contract Offers */}
+      {/* Contract Offers - Prominent Section */}
       {contractOffers.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Contract Offers</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Contract Offers</h2>
+            <Badge variant="destructive" className="animate-pulse">
+              {contractOffers.length} pending
+            </Badge>
+          </div>
           {contractOffers.map((offer) => (
             <ContractOfferCard
               key={offer.id}
@@ -227,7 +256,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         </Card>
       )}
 
-      {/* Active Contracts */}
+      {/* Active Contracts with Obligations Dashboard */}
       {activeContracts.map((contract) => {
         const entity = contract.band_id
           ? entityLookup.get(contract.band_id)
@@ -237,12 +266,22 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         const recouped = contract.recouped_amount ?? 0;
         const recoupProgress = advanceAmount > 0 ? Math.min((recouped / advanceAmount) * 100, 100) : 100;
         
-        // New quota tracking
         const singleQuota = (contract as any).single_quota ?? contract.release_quota ?? 0;
         const albumQuota = (contract as any).album_quota ?? 0;
         const singlesCompleted = (contract as any).singles_completed ?? 0;
         const albumsCompleted = (contract as any).albums_completed ?? 0;
         const territoryList = contract.territories ?? [];
+
+        // Calculate time remaining
+        const now = new Date();
+        const endDate = contract.end_date ? new Date(contract.end_date) : null;
+        const startDate = contract.start_date ? new Date(contract.start_date) : null;
+        const monthsLeft = endDate ? Math.max(0, differenceInMonths(endDate, now)) : 0;
+        const daysLeft = endDate ? Math.max(0, differenceInDays(endDate, now)) : 0;
+        const totalMonths = startDate && endDate ? Math.max(1, differenceInMonths(endDate, startDate)) : 24;
+
+        const singleStatus = getObligationStatus(singlesCompleted, singleQuota, monthsLeft, totalMonths);
+        const albumStatus = getObligationStatus(albumsCompleted, albumQuota, monthsLeft, totalMonths);
 
         return (
           <Card key={contract.id}>
@@ -267,6 +306,74 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
             </CardHeader>
 
             <CardContent className="space-y-4">
+              {/* Obligations Summary - Plain English */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Your Obligations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      <strong>{monthsLeft > 0 ? `${monthsLeft} month${monthsLeft !== 1 ? 's' : ''}` : `${daysLeft} days`}</strong> remaining
+                      {endDate && <span className="text-muted-foreground"> (ends {format(endDate, 'MMM d, yyyy')})</span>}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Disc3 className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      <strong>{singlesCompleted}</strong> of <strong>{singleQuota}</strong> singles delivered
+                      {singleQuota - singlesCompleted > 0 && (
+                        <span className={statusColors[singleStatus]}> — {singleQuota - singlesCompleted} remaining</span>
+                      )}
+                    </span>
+                    {singleStatus !== 'on-track' && (
+                      <Badge {...statusBadge[singleStatus]} className={statusBadge[singleStatus].className + ' text-xs'}>
+                        {singleStatus === 'behind' ? 'Behind' : 'Overdue'}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {albumQuota > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Album className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        <strong>{albumsCompleted}</strong> of <strong>{albumQuota}</strong> albums delivered
+                        {albumQuota - albumsCompleted > 0 && (
+                          <span className={statusColors[albumStatus]}> — {albumQuota - albumsCompleted} remaining</span>
+                        )}
+                      </span>
+                      {albumStatus !== 'on-track' && (
+                        <Badge {...statusBadge[albumStatus]} className={statusBadge[albumStatus].className + ' text-xs'}>
+                          {albumStatus === 'behind' ? 'Behind' : 'Overdue'}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {advanceAmount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        {recoupProgress >= 100 ? (
+                          <span className="text-green-600 font-medium">Advance fully recouped! You now earn your full royalty split.</span>
+                        ) : (
+                          <>
+                            Recouped ${recouped.toLocaleString()} of ${advanceAmount.toLocaleString()} advance.
+                            <span className="text-muted-foreground"> Royalties go to the label until recouped.</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Progress Bars */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {/* Recoupment */}
                 <div className="space-y-2">
