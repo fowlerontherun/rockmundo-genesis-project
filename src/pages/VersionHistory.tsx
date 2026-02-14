@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.667",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Interactive media interviews: when a PR media offer completes, players now play through a 3-question interview mini-game with 4 response options each" },
+      { type: 'feature', description: "10-second countdown timer per question — if time runs out, the worst response is auto-selected" },
+      { type: 'feature', description: "Interview responses modify fame, fans, cash multipliers and reputation axes (authenticity, attitude, reliability, creativity)" },
+      { type: 'feature', description: "100 seeded interview questions across 6 categories: Career, Controversy, Personal, Music, Industry, and Fan Engagement" },
+      { type: 'improvement', description: "Questions are filtered by media type (podcast, TV, radio, newspaper, internet, magazine) for contextual interviews" },
+    ],
+  },
+  {
     version: "1.0.666",
     date: "2026-02-14",
     changes: [
