@@ -1,127 +1,78 @@
 
 
-# Clubs & DJing System + DJ Skill Tree Expansion -- v1.0.691
+# Company System Bug Fixes & Expansion -- v1.0.696
 
-## What's Being Built
+## Root Cause Analysis
 
-Currently, "Queue for DJ Slot" is a single button click that gives a flat +8 fame and costs 25 energy -- no skill checks, no scheduling, no performance outcome, no payouts from the club data. This update turns DJing into a full gameplay loop and adds a dedicated DJ/Club Performance skill category to the skill tree.
+### Bug 1: Label Staff Hiring / Firing Fails (RLS Mismatch)
+The `label_staff`, `label_financial_transactions`, and `label_distribution_deals` tables all have RLS policies that check `labels.owner_id = auth.uid()`. However, `labels.owner_id` stores **profile IDs** (not auth user IDs). Since `auth.uid()` returns the auth user ID, this comparison never matches, silently blocking all INSERT/UPDATE/DELETE operations on these tables.
 
----
+### Bug 2: Contract Offers for Bands Fail (RLS Mismatch)
+The `artist_label_contracts` INSERT policy checks `labels.created_by = auth.uid()`. This works when `created_by` is set, but for labels created via company transfer or where `created_by` was never populated, it is NULL -- blocking contract creation entirely.
 
-## Part A: DJ Skill Tree (New Category)
+### Bug 3: Venue/Studio Upgrades & Staff (Likely Working)
+Venue and recording studio RLS chains through `companies.owner_id = auth.uid()`, and `companies.owner_id` correctly stores auth user IDs. If users report issues here, it may be a UI-side problem rather than RLS. However, the `FOR ALL` + `FOR SELECT` policy duplication is redundant and could cause confusion -- these will be cleaned up.
 
-Add a new **"DJ & Club Performance"** skill category with 7 tracks, each with Basic/Professional/Mastery tiers (21 new skills total):
+## Fix Strategy
 
-| Track | Description |
-|---|---|
-| Beatmatching | Manual beat alignment, tempo reading, phrase matching |
-| DJ Mixing | Transitions, EQing, harmonic mixing, creative blends |
-| Crowd Reading | Gauging energy, track selection instinct, floor management |
-| Set Building | Opening, peaking, cool-down arcs, dynamic set construction |
-| DJ Scratching | Scratch techniques layered into DJ sets (cross-prereq with Turntablism) |
-| Live Remixing | On-the-fly mashups, loop layering, effects chains during live sets |
-| Club Promotion | Self-promotion, flyer culture, building a DJ brand and following |
+All fixes are RLS policy corrections in a single migration. The policies need to resolve `auth.uid()` through the `profiles` table to match `labels.owner_id` (which stores profile IDs), OR alternatively match on `labels.created_by` (which stores auth user IDs).
 
-The DJ Scratching track will have a cross-prerequisite on the existing `instruments_basic_turntablism` skill, connecting the two trees. This new category joins the existing `electronicConfigs` section of `skillTree.ts`.
+The safest approach: update all label-related policies to check **both** `owner_id` via profile lookup AND `created_by` directly, using an OR condition.
 
 ---
 
-## Part B: DJ Performance System
+## Changes
 
-Replace the flat "Queue for DJ Slot" button with a proper performance flow:
+### Database Migration (single file)
 
-### Flow
-1. **Queue for DJ Slot** -- checks fame requirement from the club's `dj_slot_config.fameRequirement`, checks energy, checks for scheduling conflicts
-2. **Performance Calculation** -- runs a DJ performance score based on:
-   - DJ skill levels (Beatmatching, Mixing, Crowd Reading, Set Building average)
-   - Player attributes (Charisma 40%, Stage Presence 60%)
-   - Club quality level (higher quality = harder crowd to impress)
-   - Variance roll (+/-8, like gigs)
-   - Gear bonuses (if applicable)
-3. **Outcome** -- generates a DJ performance report:
-   - Performance rating (0-100)
-   - Cash payout (from `dj_slot_config.payout`, scaled by performance)
-   - Fame gain (scaled by club quality and performance)
-   - Fan gain (small, local)
-   - XP gain for DJ skills (based on set length)
-   - Addiction roll (already wired via `useNightlifeEvents`)
-   - Possible outcomes: "Crowd went wild", "Solid set", "Rough night", "Cleared the floor"
-4. **Cooldown** -- cannot DJ at the same club for 24 hours (in-game time)
+1. **Fix `label_staff` RLS**: Drop and recreate the `FOR ALL` policy to check either `l.owner_id = (SELECT id FROM profiles WHERE user_id = auth.uid())` OR `l.created_by = auth.uid()`.
 
-### Database
-- **New table: `player_dj_performances`** -- tracks DJ set history
-  - `id`, `user_id`, `profile_id`, `club_id`, `performance_score`, `cash_earned`, `fame_gained`, `fans_gained`, `xp_gained`, `outcome_text`, `set_length_minutes`, `created_at`
+2. **Fix `label_financial_transactions` RLS**: Same pattern as above.
 
-### Key Integration Points
-- Fame requirement check reads from the club's `dj_slot_config.fameRequirement`
-- Payout reads from `dj_slot_config.payout`
-- Set length from `dj_slot_config.setLengthMinutes`
-- Scheduling uses `player_scheduled_activities` + `check_scheduling_conflict`
-- XP gains feed into `skill_progress` for DJ skills
-- Addiction roll remains wired through `useNightlifeEvents`
+3. **Fix `label_distribution_deals` RLS**: Same pattern as above.
 
----
+4. **Fix `artist_label_contracts` INSERT policy**: Update `WITH CHECK` to also match `labels.owner_id` via profile lookup, not just `labels.created_by`.
 
-## Part C: Enhanced Club UI
+5. **Fix `artist_label_contracts` SELECT policy**: Add the profile-based ownership check as an additional OR condition so label owners who only have `owner_id` set can still see contracts.
 
-Update `CityNightClubsSection.tsx` to support the new DJ flow:
+6. **Fix `artist_label_contracts` UPDATE policy** ("Label owners can update"): Same profile lookup fix.
 
-1. **Pre-DJ Check** -- "Queue for DJ Slot" now shows:
-   - Fame requirement vs player's fame (red/green indicator)
-   - Energy requirement
-   - Expected payout range
-   - "You need X more fame" message if under requirement
-2. **DJ Performance Dialog** -- after clicking queue, a dialog shows:
-   - Set building progress (simulated)
-   - Performance outcome with score, earnings, and flavor text
-   - XP gains breakdown
-   - "Play Again" cooldown indicator
-3. **DJ History** -- small section showing recent DJ performances at this club
+### Version Update
 
----
-
-## Part D: DJ Performance Utility
-
-New utility file `src/utils/djPerformance.ts`:
-- `calculateDjPerformanceScore(skills, attributes, clubQuality)` -- mirrors gig performance logic
-- `generateDjOutcome(score, clubData)` -- produces fame/cash/fan/xp results
-- `getDjSkillAverage(skillProgress)` -- averages relevant DJ skills
-
----
-
-## Part E: Version Update
-- Bump to v1.0.691
-- Changelog entry for DJ skills and club performance system
+- `src/components/VersionHeader.tsx` -- bump to 1.0.696
+- `src/pages/VersionHistory.tsx` -- add changelog entry
 
 ---
 
 ## Technical Details
 
-### Files to Create
-- `src/utils/djPerformance.ts` -- DJ performance calculation and outcome generation
-- `src/hooks/useDjPerformance.ts` -- hook wrapping the DJ flow (queue, perform, record)
+### Policy Fix Pattern
 
-### Files to Modify
-- `src/data/skillTree.ts` -- add `djClubConfigs` array (7 tracks x 3 tiers = 21 skills), add to build export
-- `src/hooks/useNightlifeEvents.ts` -- update `dj_slot` handling to use the new performance system instead of flat outcomes
-- `src/components/city/CityNightClubsSection.tsx` -- add fame check, DJ performance dialog, and outcome display
-- `src/components/VersionHeader.tsx` -- bump to 1.0.691
-- `src/pages/VersionHistory.tsx` -- changelog
-
-### Database Migration
-- Create `player_dj_performances` table with RLS (user can only read/write own records)
-
-### DJ Performance Formula
-
+All label-related RLS policies currently do:
 ```text
-baseScore = (beatmatchingLevel + mixingLevel + crowdReadingLevel + setBuildingLevel) / 4
-attributeBonus = (stagePresence * 0.6 + charisma * 0.4) / 100 * 15
-difficultyPenalty = clubQualityLevel * 3
-varianceRoll = random(-8, +8)
-finalScore = clamp(baseScore + attributeBonus - difficultyPenalty + varianceRoll, 0, 100)
-
-cashEarned = clubPayout * (finalScore / 70)  // 70 = "expected" score
-fameGain = clubQuality * 2 * (finalScore / 50)
-xpGain = setLengthMinutes * 0.5
+EXISTS (SELECT 1 FROM labels l WHERE l.id = table.label_id AND l.owner_id = auth.uid())
 ```
+
+They need to become:
+```text
+EXISTS (
+  SELECT 1 FROM labels l
+  WHERE l.id = table.label_id
+  AND (
+    l.created_by = auth.uid()
+    OR l.owner_id IN (SELECT p.id FROM profiles p WHERE p.user_id = auth.uid())
+  )
+)
+```
+
+### Tables Affected
+- `label_staff` (SELECT + ALL policies)
+- `label_financial_transactions` (SELECT + ALL policies)
+- `label_distribution_deals` (SELECT + ALL policies)
+- `artist_label_contracts` (INSERT with_check, SELECT qual, UPDATE qual for label-owner policies)
+
+### Files Modified
+- New migration SQL file (RLS policy fixes)
+- `src/components/VersionHeader.tsx`
+- `src/pages/VersionHistory.tsx`
 
