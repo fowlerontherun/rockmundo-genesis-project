@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.695",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Reseeded all university courses for every skill tree skill — 23,000+ courses across all universities" },
+      { type: 'improvement', description: "Major music cities (London, Nashville, Chicago, Atlanta, etc.) now offer courses for ALL skills; smaller cities offer ~40% of skills" },
+      { type: 'improvement', description: "Increased XP rewards across all tiers: Basic 15-46, Professional 25-68, Mastery 40-95 per day" },
+      { type: 'improvement', description: "Standardized all course durations to 14-28 days" },
+    ],
+  },
+  {
     version: "1.0.694",
     date: "2026-02-14",
     changes: [
