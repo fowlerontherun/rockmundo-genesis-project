@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.666",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Masterpiece roll: players with near-maxed songwriting + vocal skills (combined 30+) have a rare ~2% chance to write a legendary song (quality 800-950) that bypasses the soft cap" },
+      { type: 'improvement', description: "Recording soft cap relaxed for high-quality songs — a masterpiece song (800-950) with perfect recording conditions can now reach 900-1000 quality" },
+      { type: 'improvement', description: "Reaching 1000 is still extraordinarily rare: requires both a masterpiece roll AND a flawless recording with top studio, producer, skills, and genre match" },
+    ],
+  },
+  {
     version: "1.0.665",
     date: "2026-02-14",
     changes: [

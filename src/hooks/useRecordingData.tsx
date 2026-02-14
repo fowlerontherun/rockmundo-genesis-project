@@ -171,13 +171,15 @@ export const calculateRecordingQuality = (
   const rawQuality = baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier * skillMultiplier * genreMultiplier;
   
   // Soft cap: diminishing returns above 600
-  // Below 600: linear. Above 600: hyperbolic curve makes 1000 nearly impossible.
-  // raw 700 → ~650, raw 800 → ~700, raw 1000 → ~775
+  // Below 600: linear. Above 600: gentler curve that allows masterpiece songs 
+  // (800-950 base) to reach 900-1000 with perfect recording conditions.
+  // raw 700 → ~680, raw 800 → ~750, raw 900 → ~830, raw 1000 → ~900, raw 1150 → ~1000
   let finalQuality: number;
   if (rawQuality <= 600) {
     finalQuality = Math.round(rawQuality);
   } else {
-    finalQuality = Math.round(600 + ((rawQuality - 600) * 400) / (rawQuality - 600 + 400));
+    // Gentler curve: k=600 instead of 400, allowing masterpieces to shine through
+    finalQuality = Math.round(600 + ((rawQuality - 600) * 600) / (rawQuality - 600 + 600));
   }
   finalQuality = Math.max(0, Math.min(1000, finalQuality));
 
