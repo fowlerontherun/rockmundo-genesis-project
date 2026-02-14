@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.648",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed AI song generation timeout — switched to async webhook-based Replicate API calls so long YuE model generations no longer hit the 150s edge function limit" },
+      { type: 'feature', description: "Added replicate-webhook edge function to handle async audio generation completion, download, and storage" },
+    ],
+  },
+  {
     version: "1.0.647",
     date: "2026-02-14",
     changes: [
