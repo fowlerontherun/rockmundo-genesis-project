@@ -13551,6 +13551,54 @@ export type Database = {
           },
         ]
       }
+      player_addictions: {
+        Row: {
+          addiction_type: string
+          created_at: string
+          days_clean: number
+          id: string
+          recovered_at: string | null
+          recovery_program: string | null
+          recovery_started_at: string | null
+          relapse_count: number
+          severity: number
+          status: string
+          triggered_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          addiction_type: string
+          created_at?: string
+          days_clean?: number
+          id?: string
+          recovered_at?: string | null
+          recovery_program?: string | null
+          recovery_started_at?: string | null
+          relapse_count?: number
+          severity?: number
+          status?: string
+          triggered_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          addiction_type?: string
+          created_at?: string
+          days_clean?: number
+          id?: string
+          recovered_at?: string | null
+          recovery_program?: string | null
+          recovery_started_at?: string | null
+          relapse_count?: number
+          severity?: number
+          status?: string
+          triggered_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_attributes: {
         Row: {
           attribute_points: number | null
@@ -14909,6 +14957,45 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           target_per_week?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      player_holidays: {
+        Row: {
+          cost: number
+          created_at: string
+          destination: string
+          duration_days: number
+          ends_at: string
+          health_boost_per_day: number
+          id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number
+          created_at?: string
+          destination: string
+          duration_days: number
+          ends_at: string
+          health_boost_per_day?: number
+          id?: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          destination?: string
+          duration_days?: number
+          ends_at?: string
+          health_boost_per_day?: number
+          id?: string
+          started_at?: string
+          status?: string
           user_id?: string
         }
         Relationships: []

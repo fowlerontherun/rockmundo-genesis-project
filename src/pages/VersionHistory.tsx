@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.688",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Hospital system — check in when health is critical, auto-hospitalization on collapse, recovery based on hospital effectiveness" },
+      { type: 'feature', description: "Addiction & recovery system — alcohol, substances, gambling, partying addictions triggered by nightlife behavior" },
+      { type: 'feature', description: "Three recovery paths: Therapy ($100/session), Rehab (full blocking program), Cold Turkey (free but risky)" },
+      { type: 'feature', description: "Holiday system — 6 destinations with health boosts, blocks all activities except songwriting" },
+      { type: 'improvement', description: "Wellness page restructured into 5 tabs: Overview, Activities, Hospital, Addictions, Holidays" },
+      { type: 'fix', description: "Auto-hospitalization replaces basic rest_required_until mechanic when health hits 0" },
+    ],
+  },
+  {
     version: "1.0.687",
     date: "2026-02-14",
     changes: [
