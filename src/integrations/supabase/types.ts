@@ -4964,11 +4964,15 @@ export type Database = {
           current_price: number
           description: string | null
           id: string
+          is_active: boolean
+          is_rugged: boolean
           market_cap: number | null
           name: string
           price_history: Json | null
           symbol: string
+          trend_direction: number
           updated_at: string | null
+          volatility_tier: string
           volume_24h: number | null
         }
         Insert: {
@@ -4976,11 +4980,15 @@ export type Database = {
           current_price?: number
           description?: string | null
           id?: string
+          is_active?: boolean
+          is_rugged?: boolean
           market_cap?: number | null
           name: string
           price_history?: Json | null
           symbol: string
+          trend_direction?: number
           updated_at?: string | null
+          volatility_tier?: string
           volume_24h?: number | null
         }
         Update: {
@@ -4988,11 +4996,15 @@ export type Database = {
           current_price?: number
           description?: string | null
           id?: string
+          is_active?: boolean
+          is_rugged?: boolean
           market_cap?: number | null
           name?: string
           price_history?: Json | null
           symbol?: string
+          trend_direction?: number
           updated_at?: string | null
+          volatility_tier?: string
           volume_24h?: number | null
         }
         Relationships: []

@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.686",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "Overhauled Underworld crypto market — 100 seeded tokens across 4 volatility tiers with live price simulation" },
+      { type: 'feature', description: "Added simulate-crypto-market edge function with volatility, momentum, downward drift, and player impact on prices" },
+      { type: 'feature', description: "Rug-pull mechanic — micro/mid-cap tokens can randomly drop to $0 and get replaced with fresh tokens" },
+      { type: 'feature', description: "Live trading UI — working buy/sell orders, portfolio panel with P&L tracking, price flash animations" },
+      { type: 'feature', description: "Auto-refresh prices every 30 seconds, rug alert banners for held tokens that get rugged" },
+    ],
+  },
+  {
     version: "1.0.685",
     date: "2026-02-14",
     changes: [
