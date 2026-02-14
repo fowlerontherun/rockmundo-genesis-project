@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -22,7 +24,9 @@ import {
   Mic,
   Calendar,
   Trophy,
-  Clock
+  Clock,
+  Globe,
+  Search
 } from "lucide-react";
 import { CountryFlag } from "@/components/location/CountryFlag";
 
@@ -35,6 +39,22 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: primaryBand } = usePrimaryBand();
+  const [citySearch, setCitySearch] = useState("");
+
+  // Fetch all cities
+  const { data: allCities } = useQuery({
+    queryKey: ["dashboard-all-cities"],
+    queryFn: async () => {
+      const client: any = supabase;
+      const { data } = await client
+        .from("cities")
+        .select("id, name, country, music_scene")
+        .order("country", { ascending: true })
+        .order("name", { ascending: true });
+      return data || [];
+    },
+    staleTime: 300000
+  });
 
   // Fetch career stats
   const { data: careerStats } = useQuery({
@@ -396,6 +416,72 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
                 </div>
               </CardContent>
             </Card>
+
+            {/* All Cities with Country Flags */}
+            {allCities && allCities.length > 0 && (() => {
+              const filtered = citySearch
+                ? allCities.filter((c: any) =>
+                    c.name.toLowerCase().includes(citySearch.toLowerCase()) ||
+                    c.country.toLowerCase().includes(citySearch.toLowerCase())
+                  )
+                : allCities;
+              const grouped = filtered.reduce((acc: Record<string, any[]>, city: any) => {
+                const country = city.country || "Unknown";
+                if (!acc[country]) acc[country] = [];
+                acc[country].push(city);
+                return acc;
+              }, {} as Record<string, any[]>);
+              const sortedCountries = Object.keys(grouped).sort();
+
+              return (
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      All Cities ({allCities.length})
+                    </CardTitle>
+                    <div className="relative mt-2">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search cities or countries..."
+                        value={citySearch}
+                        onChange={(e) => setCitySearch(e.target.value)}
+                        className="pl-8 h-8 text-xs"
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-4">
+                        {sortedCountries.map((country) => (
+                          <div key={country}>
+                            <div className="flex items-center gap-2 mb-1.5 sticky top-0 bg-card py-1 z-10">
+                              <CountryFlag country={country} size="sm" showTooltip={false} />
+                              <span className="text-xs font-semibold text-foreground">{country}</span>
+                              <span className="text-[10px] text-muted-foreground">({grouped[country].length})</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1 ml-6">
+                              {grouped[country].map((city: any) => (
+                                <Link
+                                  key={city.id}
+                                  to={`/cities/${city.id}`}
+                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors truncate py-0.5"
+                                >
+                                  {city.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {sortedCountries.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-4">No cities found</p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </>
         ) : (
           <Card>
