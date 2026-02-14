@@ -97,8 +97,12 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         .update(updatePayload)
         .eq('id', songId);
 
+      const body: Record<string, any> = { songId, userId: user.id };
+      if (updatedLyrics !== undefined) {
+        body.overrideLyrics = updatedLyrics;
+      }
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body: { songId, userId: user.id }
+        body
       });
 
       if (error) {
