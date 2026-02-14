@@ -14440,6 +14440,59 @@ export type Database = {
           },
         ]
       }
+      player_dj_performances: {
+        Row: {
+          cash_earned: number
+          club_id: string | null
+          created_at: string
+          fame_gained: number
+          fans_gained: number
+          id: string
+          outcome_text: string | null
+          performance_score: number
+          profile_id: string | null
+          set_length_minutes: number
+          user_id: string
+          xp_gained: number
+        }
+        Insert: {
+          cash_earned?: number
+          club_id?: string | null
+          created_at?: string
+          fame_gained?: number
+          fans_gained?: number
+          id?: string
+          outcome_text?: string | null
+          performance_score?: number
+          profile_id?: string | null
+          set_length_minutes?: number
+          user_id: string
+          xp_gained?: number
+        }
+        Update: {
+          cash_earned?: number
+          club_id?: string | null
+          created_at?: string
+          fame_gained?: number
+          fans_gained?: number
+          id?: string
+          outcome_text?: string | null
+          performance_score?: number
+          profile_id?: string | null
+          set_length_minutes?: number
+          user_id?: string
+          xp_gained?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_dj_performances_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_employment: {
         Row: {
           auto_clock_in: boolean | null

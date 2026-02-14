@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.691",
+    date: "2026-02-14",
+    changes: [
+      { type: 'feature', description: "DJ & Club Performance skill tree — 21 new skills across 7 tracks: Beatmatching, Mixing, Crowd Reading, Set Building, Scratching, Live Remixing, and Club Promotion" },
+      { type: 'feature', description: "DJ performance system — Queue for DJ Slot now runs skill-based performance scoring with cash payouts, fame gains, fan gains, and XP awards" },
+      { type: 'feature', description: "DJ performance dialog — shows score (0-100), outcome label, rewards grid, and addiction warnings after each set" },
+      { type: 'feature', description: "DJ Scratching cross-prerequisite — requires Basic Turntablism skill from the Instruments tree" },
+      { type: 'feature', description: "player_dj_performances table tracks full DJ set history per club" },
+      { type: 'improvement', description: "DJ payouts scale with performance score — exceeding expectations earns more than base payout" },
+    ],
+  },
+  {
     version: "1.0.690",
     date: "2026-02-14",
     changes: [

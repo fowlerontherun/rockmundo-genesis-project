@@ -3311,6 +3311,174 @@ const musicHealthConfigs: TieredSkillConfig[] = [
 ];
 
 // ============================================================================
+// DJ & CLUB PERFORMANCE SKILLS
+// ============================================================================
+const djClubConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Beatmatching",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic Beatmatching",
+        description: "Learn manual beat alignment, tempo reading, and phrase counting.",
+        slug: "dj_basic_beatmatching"
+      },
+      Professional: {
+        name: "Professional Beatmatching",
+        description: "Nail beatmatching on vinyl, handle tempo shifts, and sync without visual aids.",
+        slug: "dj_professional_beatmatching"
+      },
+      Mastery: {
+        name: "Beatmatching Mastery",
+        description: "Flawless beat alignment at any tempo — your transitions are invisible.",
+        slug: "dj_mastery_beatmatching"
+      }
+    }
+  },
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Mixing",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic DJ Mixing",
+        description: "Learn EQing, crossfader technique, and basic transitions.",
+        slug: "dj_basic_mixing"
+      },
+      Professional: {
+        name: "Professional DJ Mixing",
+        description: "Execute harmonic mixing, creative blends, and multi-deck layering.",
+        slug: "dj_professional_mixing"
+      },
+      Mastery: {
+        name: "DJ Mixing Mastery",
+        description: "Your mixes are seamless art — genre-bending transitions that keep the floor locked in.",
+        slug: "dj_mastery_mixing"
+      }
+    }
+  },
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Crowd Reading",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic Crowd Reading",
+        description: "Gauge floor energy and pick tracks that match the room vibe.",
+        slug: "dj_basic_crowd_reading"
+      },
+      Professional: {
+        name: "Professional Crowd Reading",
+        description: "Read micro-shifts in energy, manage peaks and valleys, and adapt on the fly.",
+        slug: "dj_professional_crowd_reading"
+      },
+      Mastery: {
+        name: "Crowd Reading Mastery",
+        description: "You command any room — manipulate crowd energy like a conductor.",
+        slug: "dj_mastery_crowd_reading"
+      }
+    }
+  },
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Set Building",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic Set Building",
+        description: "Structure opening, peak, and cool-down segments in a DJ set.",
+        slug: "dj_basic_set_building"
+      },
+      Professional: {
+        name: "Professional Set Building",
+        description: "Craft dynamic multi-hour sets with tension arcs and surprise moments.",
+        slug: "dj_professional_set_building"
+      },
+      Mastery: {
+        name: "Set Building Mastery",
+        description: "Design legendary sets that take crowds on an unforgettable journey.",
+        slug: "dj_mastery_set_building"
+      }
+    }
+  },
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Scratching",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic DJ Scratching",
+        description: "Learn baby scratches, transforms, and basic scratch patterns.",
+        slug: "dj_basic_scratching",
+        prerequisites: [{ slug: "instruments_basic_turntablism", requiredValue: 100 }]
+      },
+      Professional: {
+        name: "Professional DJ Scratching",
+        description: "Execute flares, crabs, and complex scratch combos live in your sets.",
+        slug: "dj_professional_scratching"
+      },
+      Mastery: {
+        name: "DJ Scratching Mastery",
+        description: "Your scratching is musical art — full turntablist performances woven into club sets.",
+        slug: "dj_mastery_scratching"
+      }
+    }
+  },
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Live Remixing",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic Live Remixing",
+        description: "Loop sections, layer acapellas, and create basic mashups on the fly.",
+        slug: "dj_basic_live_remixing"
+      },
+      Professional: {
+        name: "Professional Live Remixing",
+        description: "Build intricate live edits with effects chains, stems, and real-time arrangement.",
+        slug: "dj_professional_live_remixing"
+      },
+      Mastery: {
+        name: "Live Remixing Mastery",
+        description: "Every set is unique — you reconstruct tracks live with studio-quality creativity.",
+        slug: "dj_mastery_live_remixing"
+      }
+    }
+  },
+  {
+    prefix: "dj",
+    category: "DJ & Club Performance",
+    track: "Club Promotion",
+    icon: "turntable",
+    tiers: {
+      Basic: {
+        name: "Basic Club Promotion",
+        description: "Create flyers, post on socials, and build a local DJ following.",
+        slug: "dj_basic_club_promotion"
+      },
+      Professional: {
+        name: "Professional Club Promotion",
+        description: "Run event series, manage guest lists, and build a brand around your DJ persona.",
+        slug: "dj_professional_club_promotion"
+      },
+      Mastery: {
+        name: "Club Promotion Mastery",
+        description: "You ARE the event — your name alone sells out venues worldwide.",
+        slug: "dj_mastery_club_promotion"
+      }
+    }
+  }
+];
+
+// ============================================================================
 // BUILD AND EXPORT
 // ============================================================================
 const { definitions, relationships } = buildSkillTree([
@@ -3330,7 +3498,8 @@ const { definitions, relationships } = buildSkillTree([
   ...musicBusinessConfigs,
   ...improvisationConfigs,
   ...audiencePsychologyConfigs,
-  ...musicHealthConfigs
+  ...musicHealthConfigs,
+  ...djClubConfigs
 ]);
 
 export const SKILL_TREE_DEFINITIONS: SkillDefinitionRecord[] = definitions;
