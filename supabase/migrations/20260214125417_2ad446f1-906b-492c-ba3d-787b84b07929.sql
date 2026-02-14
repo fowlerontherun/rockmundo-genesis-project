@@ -1,0 +1,1 @@
+ALTER TABLE public.recording_sessions ADD COLUMN recording_type text NOT NULL DEFAULT 'professional';

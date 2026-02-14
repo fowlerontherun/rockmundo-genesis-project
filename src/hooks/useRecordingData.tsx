@@ -129,11 +129,12 @@ interface CreateRecordingSessionInput {
   duration_hours: number;
   orchestra_size?: 'chamber' | 'small' | 'full';
   recording_version?: 'standard' | 'remix' | 'acoustic';
+  recording_type?: 'demo' | 'professional';
   rehearsal_bonus?: number;
   session_type?: string;
   parent_recording_id?: string;
-  scheduled_start?: string;  // ISO date for scheduled sessions
-  scheduled_end?: string;    // ISO date for scheduled sessions
+  scheduled_start?: string;
+  scheduled_end?: string;
 }
 
 export const calculateRecordingQuality = (
@@ -322,6 +323,7 @@ export const useCreateRecordingSession = () => {
           producer_id: input.producer_id === 'self-produce' ? null : input.producer_id,
           song_id: input.song_id,
           recording_version: input.recording_version || null,
+          recording_type: input.recording_type || 'professional',
           duration_hours: input.duration_hours,
           total_cost: totalCost,
           quality_improvement: finalQuality - song.quality_score,

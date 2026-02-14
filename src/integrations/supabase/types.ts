@@ -18127,6 +18127,7 @@ export type Database = {
           id: string
           producer_id: string | null
           quality_improvement: number | null
+          recording_type: string
           recording_version: string | null
           scheduled_end: string
           scheduled_start: string
@@ -18145,6 +18146,7 @@ export type Database = {
           id?: string
           producer_id?: string | null
           quality_improvement?: number | null
+          recording_type?: string
           recording_version?: string | null
           scheduled_end: string
           scheduled_start?: string
@@ -18163,6 +18165,7 @@ export type Database = {
           id?: string
           producer_id?: string | null
           quality_improvement?: number | null
+          recording_type?: string
           recording_version?: string | null
           scheduled_end?: string
           scheduled_start?: string
