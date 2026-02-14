@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.692",
+    date: "2026-02-14",
+    changes: [
+      { type: 'fix', description: "Fixed inventory items not disappearing after use — missing RLS UPDATE policy on underworld_purchases was silently blocking the is_used flag update" },
+    ],
+  },
+  {
     version: "1.0.691",
     date: "2026-02-14",
     changes: [
