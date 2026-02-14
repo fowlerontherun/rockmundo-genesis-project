@@ -178,11 +178,29 @@ serve(async (req) => {
     const themeName = project?.song_themes?.name || null
     const themeMood = project?.song_themes?.mood || null
     const themeDescription = project?.song_themes?.description || null
-    // Prefer song lyrics, fallback to project lyrics - sanitize to remove any prompt contamination
+    // Smart lyrics selection: prefer non-AI lyrics, check project first if song has AI-generated ones
     // Track originals to avoid overwriting user-written lyrics
     const originalSongLyrics = song.lyrics
     const originalProjectLyrics = project?.lyrics
-    let rawLyrics = sanitizeLyrics(song.lyrics) || sanitizeLyrics(project?.lyrics) || null
+    const songLyricsAreAI = originalSongLyrics?.trim()?.startsWith('[AI Generated]') || originalSongLyrics?.trim()?.includes('[AI Generated]')
+    const projectLyricsAreAI = originalProjectLyrics?.trim()?.startsWith('[AI Generated]') || originalProjectLyrics?.trim()?.includes('[AI Generated]')
+    
+    // Priority: non-AI project lyrics > non-AI song lyrics > AI song lyrics > AI project lyrics > null
+    let rawLyrics: string | null = null
+    if (originalProjectLyrics?.trim() && !projectLyricsAreAI) {
+      rawLyrics = sanitizeLyrics(originalProjectLyrics)
+      addLog('Using non-AI project lyrics (preferred source)')
+    } else if (originalSongLyrics?.trim() && !songLyricsAreAI) {
+      rawLyrics = sanitizeLyrics(originalSongLyrics)
+      addLog('Using non-AI song lyrics')
+    } else if (originalSongLyrics?.trim()) {
+      // Strip [AI Generated] prefix and use the actual lyrics content
+      rawLyrics = sanitizeLyrics(originalSongLyrics.replace(/\[AI Generated\]\s*/g, '').trim()) 
+      addLog('Using AI-tagged song lyrics (stripped [AI Generated] prefix)')
+    } else if (originalProjectLyrics?.trim()) {
+      rawLyrics = sanitizeLyrics(originalProjectLyrics.replace(/\[AI Generated\]\s*/g, '').trim())
+      addLog('Using AI-tagged project lyrics (stripped [AI Generated] prefix)')
+    }
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
