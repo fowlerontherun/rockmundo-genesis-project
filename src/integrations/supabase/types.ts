@@ -11026,6 +11026,109 @@ export type Database = {
           },
         ]
       }
+      lottery_draws: {
+        Row: {
+          bonus_number: number | null
+          created_at: string
+          draw_date: string | null
+          id: string
+          jackpot_amount: number
+          status: string
+          week_start: string
+          winning_numbers: number[] | null
+        }
+        Insert: {
+          bonus_number?: number | null
+          created_at?: string
+          draw_date?: string | null
+          id?: string
+          jackpot_amount?: number
+          status?: string
+          week_start: string
+          winning_numbers?: number[] | null
+        }
+        Update: {
+          bonus_number?: number | null
+          created_at?: string
+          draw_date?: string | null
+          id?: string
+          jackpot_amount?: number
+          status?: string
+          week_start?: string
+          winning_numbers?: number[] | null
+        }
+        Relationships: []
+      }
+      lottery_tickets: {
+        Row: {
+          bonus_matched: boolean
+          bonus_number: number
+          claimed: boolean
+          created_at: string
+          draw_id: string
+          id: string
+          matches: number | null
+          prize_cash: number
+          prize_fame: number
+          prize_xp: number
+          profile_id: string
+          selected_numbers: number[]
+          user_id: string
+        }
+        Insert: {
+          bonus_matched?: boolean
+          bonus_number: number
+          claimed?: boolean
+          created_at?: string
+          draw_id: string
+          id?: string
+          matches?: number | null
+          prize_cash?: number
+          prize_fame?: number
+          prize_xp?: number
+          profile_id: string
+          selected_numbers: number[]
+          user_id: string
+        }
+        Update: {
+          bonus_matched?: boolean
+          bonus_number?: number
+          claimed?: boolean
+          created_at?: string
+          draw_id?: string
+          id?: string
+          matches?: number | null
+          prize_cash?: number
+          prize_fame?: number
+          prize_xp?: number
+          profile_id?: string
+          selected_numbers?: number[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lottery_tickets_draw_id_fkey"
+            columns: ["draw_id"]
+            isOneToOne: false
+            referencedRelation: "lottery_draws"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lottery_tickets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lottery_tickets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       magazine_submissions: {
         Row: {
           band_id: string

@@ -218,3 +218,6 @@ verify_jwt = false
 
 [functions.simulate-crypto-market]
 verify_jwt = false
+
+[functions.lottery-draw]
+verify_jwt = false

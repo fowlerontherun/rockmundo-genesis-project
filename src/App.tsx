@@ -242,6 +242,7 @@ const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
+const Lottery = lazyWithRetry(() => import("./pages/Lottery"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -396,6 +397,7 @@ function App() {
                     <Route path="rehearsal-studio-business/:studioId" element={<RehearsalStudioBusinessManagement />} />
                     <Route path="recording-studio-business/:studioId" element={<RecordingStudioBusinessManagement />} />
                     
+                    <Route path="lottery" element={<Lottery />} />
                     <Route path="modeling" element={<Modeling />} />
                     
                     {/* Redirects */}

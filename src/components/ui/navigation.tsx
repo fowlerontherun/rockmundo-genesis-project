@@ -69,6 +69,7 @@ import {
   Tv,
   Film,
   Inbox,
+  Ticket,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -214,6 +215,7 @@ const Navigation = () => {
         { icon: HandHeart, labelKey: "nav.gettit", path: "/gettit" },
         { icon: UserPlus, labelKey: "nav.playerSearch", path: "/players/search" },
         { icon: Sparkles, labelKey: "nav.underworld", path: "/underworld" },
+        { icon: Ticket, labelKey: "Lottery", path: "/lottery" },
       ],
     },
     {
