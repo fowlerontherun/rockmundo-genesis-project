@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.703",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed rehearsal studio upgrades — used SECURITY DEFINER function to prevent RLS recursion when checking room ownership" },
+    ],
+  },
+  {
     version: "1.0.702",
     date: "2026-02-15",
     changes: [
