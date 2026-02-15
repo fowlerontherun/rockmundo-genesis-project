@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.705",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed lottery — number picker now resets after buying a ticket so you can immediately buy another" },
+      { type: 'feature', description: "Added 'Previous Tickets' section on the Play tab showing past draw tickets with matched numbers highlighted" },
+    ],
+  },
+  {
     version: "1.0.704",
     date: "2026-02-15",
     changes: [

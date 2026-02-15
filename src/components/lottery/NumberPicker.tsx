@@ -36,6 +36,9 @@ export const NumberPicker = ({ onSubmit, disabled, isLoading }: NumberPickerProp
   const handleSubmit = () => {
     if (selectedNumbers.length === 7 && selectedBonus !== null) {
       onSubmit([...selectedNumbers].sort((a, b) => a - b), selectedBonus);
+      // Reset for next ticket
+      setSelectedNumbers([]);
+      setSelectedBonus(null);
     }
   };
 
