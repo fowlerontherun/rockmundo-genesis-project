@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.697",
+    date: "2026-02-15",
+    changes: [
+      { type: 'feature', description: "Weekly in-game lottery — pick 7 numbers (1-49) and 1 bonus number (1-10) for a chance to win up to $1,000,000 + XP + Fame" },
+      { type: 'feature', description: "Number picker grid with Quick Pick random selection, $500 ticket cost, 1 ticket per player per week" },
+      { type: 'feature', description: "8 prize tiers from 3 matches (free ticket refund) up to 7+Bonus (jackpot)" },
+      { type: 'feature', description: "Live countdown to next Monday draw, Results tab with match highlighting, History tab with past draws" },
+      { type: 'feature', description: "lottery-draw edge function generates winning numbers and auto-awards prizes weekly" },
+    ],
+  },
+  {
     version: "1.0.696",
     date: "2026-02-14",
     changes: [
