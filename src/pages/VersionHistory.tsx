@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.704",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed horizontal navigation — desktop dropdowns no longer clipped by overflow, click-to-toggle added, and mobile sheet menu now works properly" },
+    ],
+  },
+  {
     version: "1.0.703",
     date: "2026-02-15",
     changes: [
