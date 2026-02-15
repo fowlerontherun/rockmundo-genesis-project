@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.700",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed 'Manage Factory' button on merch company doing nothing — removed no-op button from the management page where it was redundant" },
+    ],
+  },
+  {
     version: "1.0.699",
     date: "2026-02-15",
     changes: [

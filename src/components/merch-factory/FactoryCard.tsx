@@ -8,7 +8,7 @@ import { FACTORY_TYPES } from "@/types/merch-factory";
 
 interface FactoryCardProps {
   factory: MerchFactory;
-  onManage: () => void;
+  onManage?: () => void;
 }
 
 export function FactoryCard({ factory, onManage }: FactoryCardProps) {
@@ -75,10 +75,12 @@ export function FactoryCard({ factory, onManage }: FactoryCardProps) {
           </div>
         </div>
         
-        <Button onClick={onManage} className="w-full">
-          <Settings className="h-4 w-4 mr-2" />
-          Manage Factory
-        </Button>
+        {onManage && (
+          <Button onClick={onManage} className="w-full">
+            <Settings className="h-4 w-4 mr-2" />
+            Manage Factory
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
