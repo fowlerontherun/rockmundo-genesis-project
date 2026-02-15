@@ -1,78 +1,148 @@
 
 
-# Company System Bug Fixes & Expansion -- v1.0.696
+# Weekly In-Game Lottery -- v1.0.697
 
-## Root Cause Analysis
+## Overview
 
-### Bug 1: Label Staff Hiring / Firing Fails (RLS Mismatch)
-The `label_staff`, `label_financial_transactions`, and `label_distribution_deals` tables all have RLS policies that check `labels.owner_id = auth.uid()`. However, `labels.owner_id` stores **profile IDs** (not auth user IDs). Since `auth.uid()` returns the auth user ID, this comparison never matches, silently blocking all INSERT/UPDATE/DELETE operations on these tables.
+A weekly lottery where players pick **7 main numbers** (from 1-49) and **1 bonus number** (from 1-10). A draw happens once per week (Monday 00:00 UTC, matching the existing week anchor system). Players can check results, see past draws, and claim winnings.
 
-### Bug 2: Contract Offers for Bands Fail (RLS Mismatch)
-The `artist_label_contracts` INSERT policy checks `labels.created_by = auth.uid()`. This works when `created_by` is set, but for labels created via company transfer or where `created_by` was never populated, it is NULL -- blocking contract creation entirely.
+## Game Design
 
-### Bug 3: Venue/Studio Upgrades & Staff (Likely Working)
-Venue and recording studio RLS chains through `companies.owner_id = auth.uid()`, and `companies.owner_id` correctly stores auth user IDs. If users report issues here, it may be a UI-side problem rather than RLS. However, the `FOR ALL` + `FOR SELECT` policy duplication is redundant and could cause confusion -- these will be cleaned up.
+### How It Works
 
-## Fix Strategy
+- **Number Selection**: Players pick 7 numbers from 1-49 and 1 bonus number from 1-10
+- **Ticket Cost**: $500 in-game cash per ticket (1 ticket per player per week)
+- **Weekly Draw**: Every Monday at 00:00 UTC, 7 winning numbers + 1 bonus number are drawn
+- **Draw Mechanism**: An edge function runs on a cron schedule to generate winning numbers and calculate payouts
 
-All fixes are RLS policy corrections in a single migration. The policies need to resolve `auth.uid()` through the `profiles` table to match `labels.owner_id` (which stores profile IDs), OR alternatively match on `labels.created_by` (which stores auth user IDs).
+### Prize Tiers
 
-The safest approach: update all label-related policies to check **both** `owner_id` via profile lookup AND `created_by` directly, using an OR condition.
+| Match | Prize |
+|-------|-------|
+| 7 + Bonus | Jackpot: $1,000,000 + 10,000 XP + 5,000 Fame |
+| 7 | $250,000 + 5,000 XP |
+| 6 + Bonus | $50,000 + 2,000 XP |
+| 6 | $10,000 + 1,000 XP |
+| 5 + Bonus | $5,000 + 500 XP |
+| 5 | $1,000 + 200 XP |
+| 4 | $500 + 100 XP |
+| 3 | Free ticket next week (refund $500) |
 
 ---
 
 ## Changes
 
-### Database Migration (single file)
+### 1. Database -- New Tables (Migration)
 
-1. **Fix `label_staff` RLS**: Drop and recreate the `FOR ALL` policy to check either `l.owner_id = (SELECT id FROM profiles WHERE user_id = auth.uid())` OR `l.created_by = auth.uid()`.
+**`lottery_draws`** -- stores each weekly draw result
+- `id` (uuid PK)
+- `week_start` (date, unique) -- Monday anchor date
+- `draw_date` (timestamptz) -- when the draw was executed
+- `winning_numbers` (int[]) -- 7 winning numbers
+- `bonus_number` (int) -- the bonus number
+- `jackpot_amount` (int, default 1000000)
+- `status` (text: 'pending' | 'drawn' | 'paid_out')
+- `created_at` (timestamptz)
 
-2. **Fix `label_financial_transactions` RLS**: Same pattern as above.
+**`lottery_tickets`** -- stores player entries
+- `id` (uuid PK)
+- `user_id` (uuid, FK to auth.users)
+- `profile_id` (uuid, FK to profiles)
+- `draw_id` (uuid, FK to lottery_draws)
+- `selected_numbers` (int[]) -- 7 chosen numbers
+- `bonus_number` (int) -- chosen bonus number
+- `matches` (int, nullable) -- filled after draw
+- `bonus_matched` (boolean, default false)
+- `prize_cash` (int, default 0)
+- `prize_xp` (int, default 0)
+- `prize_fame` (int, default 0)
+- `claimed` (boolean, default false)
+- `created_at` (timestamptz)
 
-3. **Fix `label_distribution_deals` RLS**: Same pattern as above.
+**RLS Policies**:
+- Players can SELECT their own tickets
+- Players can INSERT tickets (with profile ownership check)
+- Lottery draws are SELECT-able by all authenticated users
+- No direct UPDATE/DELETE by players on draws
 
-4. **Fix `artist_label_contracts` INSERT policy**: Update `WITH CHECK` to also match `labels.owner_id` via profile lookup, not just `labels.created_by`.
+### 2. Edge Function -- `lottery-draw`
 
-5. **Fix `artist_label_contracts` SELECT policy**: Add the profile-based ownership check as an additional OR condition so label owners who only have `owner_id` set can still see contracts.
+- Triggered weekly via pg_cron (or manually by admin)
+- Generates 7 unique random numbers (1-49) and 1 bonus number (1-10)
+- Calculates matches for all tickets in that draw
+- Updates ticket records with match count, bonus match, and prize amounts
+- Awards prizes (cash, XP, fame) to winning profiles
 
-6. **Fix `artist_label_contracts` UPDATE policy** ("Label owners can update"): Same profile lookup fix.
+### 3. New Page -- `src/pages/Lottery.tsx`
 
-### Version Update
+Main lottery page with tabs:
 
-- `src/components/VersionHeader.tsx` -- bump to 1.0.696
-- `src/pages/VersionHistory.tsx` -- add changelog entry
+- **Play Tab**: Number picker grid (1-49) for main numbers, separate picker (1-10) for bonus. Shows current ticket cost ($500), player's cash balance, and submit button. Displays countdown to next draw.
+- **Results Tab**: Latest draw results with winning numbers displayed as colored balls. List of player's past tickets with match highlights.
+- **History Tab**: Past draw results table showing dates, winning numbers, and jackpot amounts.
+
+### 4. Hook -- `src/hooks/useLottery.ts`
+
+- `useCurrentDraw()` -- fetches or creates the current week's draw record
+- `useMyTickets()` -- fetches player's tickets for current/past draws  
+- `useBuyTicket()` -- mutation to purchase a ticket (deducts cash, inserts ticket)
+- `useDrawResults()` -- fetches past draw results
+- `useClaimPrize()` -- mutation to claim unclaimed winnings
+
+### 5. Navigation & Routing
+
+- Add route `/lottery` in `App.tsx`
+- Add nav item under the Social or Career section in `navigation.tsx` with a Ticket/Dice icon
+- Link label: "Lottery"
+
+### 6. Version Update
+
+- Bump to `v1.0.697` in `VersionHeader.tsx`
+- Add changelog entry in `VersionHistory.tsx`
 
 ---
 
 ## Technical Details
 
-### Policy Fix Pattern
+### Number Picker Component
 
-All label-related RLS policies currently do:
+A grid of clickable number buttons (1-49). Selected numbers are highlighted. Max 7 selections enforced. Separate row for bonus number (1-10). Quick Pick button for random selection.
+
+### Draw Timing
+
+Uses the existing `getUtcWeekStart()` utility from `src/utils/week.ts` to determine the current draw week. Each draw is keyed by its Monday `week_start` date, ensuring one draw per week.
+
+### Edge Function Logic
+
 ```text
-EXISTS (SELECT 1 FROM labels l WHERE l.id = table.label_id AND l.owner_id = auth.uid())
+1. Find the current week's draw record (status = 'pending')
+2. Generate 7 unique random ints in [1, 49]
+3. Generate 1 random int in [1, 10]
+4. Update draw with winning numbers, set status = 'drawn'
+5. For each ticket in this draw:
+   a. Count matching numbers
+   b. Check bonus match
+   c. Calculate prize tier
+   d. Update ticket with results
+   e. Credit profile with cash/xp/fame
+6. Set draw status = 'paid_out'
 ```
 
-They need to become:
-```text
-EXISTS (
-  SELECT 1 FROM labels l
-  WHERE l.id = table.label_id
-  AND (
-    l.created_by = auth.uid()
-    OR l.owner_id IN (SELECT p.id FROM profiles p WHERE p.user_id = auth.uid())
-  )
-)
-```
+### Cron Setup
 
-### Tables Affected
-- `label_staff` (SELECT + ALL policies)
-- `label_financial_transactions` (SELECT + ALL policies)
-- `label_distribution_deals` (SELECT + ALL policies)
-- `artist_label_contracts` (INSERT with_check, SELECT qual, UPDATE qual for label-owner policies)
+A pg_cron job calls the `lottery-draw` edge function every Monday at 00:05 UTC.
 
-### Files Modified
-- New migration SQL file (RLS policy fixes)
-- `src/components/VersionHeader.tsx`
-- `src/pages/VersionHistory.tsx`
+### Files Created/Modified
+
+- **New**: `supabase/migrations/[timestamp]_lottery_tables.sql`
+- **New**: `supabase/functions/lottery-draw/index.ts`
+- **New**: `src/pages/Lottery.tsx`
+- **New**: `src/hooks/useLottery.ts`
+- **New**: `src/components/lottery/NumberPicker.tsx`
+- **New**: `src/components/lottery/DrawResults.tsx`
+- **New**: `src/components/lottery/TicketHistory.tsx`
+- **Modified**: `src/App.tsx` (add route)
+- **Modified**: `src/components/ui/navigation.tsx` (add nav link)
+- **Modified**: `src/components/VersionHeader.tsx` (bump version)
+- **Modified**: `src/pages/VersionHistory.tsx` (add changelog)
 
