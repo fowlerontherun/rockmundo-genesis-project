@@ -25741,6 +25741,7 @@ export type Database = {
       }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      owns_rehearsal_room: { Args: { _room_id: string }; Returns: boolean }
       place_song_bid: {
         Args: {
           p_bid_amount: number
