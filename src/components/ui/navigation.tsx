@@ -456,7 +456,7 @@ const Navigation = () => {
                     onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                   >
                     <History className="h-4 w-4 mr-1" />
- v1.0.701
+ v1.0.702
                   </Button>
                   <HowToPlayDialog />
                 </div>
@@ -516,7 +516,7 @@ const Navigation = () => {
                       onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                     >
                       <History className="h-4 w-4 mr-1" />
-                      v1.0.701
+                      v1.0.702
                     </Button>
                     <HowToPlayDialog />
                   </div>
