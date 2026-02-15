@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.702",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed rehearsal studio upgrades — resolved RLS policy blocking owners from installing upgrades" },
+    ],
+  },
+  {
     version: "1.0.701",
     date: "2026-02-15",
     changes: [
