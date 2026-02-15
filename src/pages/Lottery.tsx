@@ -7,12 +7,13 @@ import { DrawResults } from "@/components/lottery/DrawResults";
 import { TicketHistory } from "@/components/lottery/TicketHistory";
 import {
   useCurrentDraw,
-  useMyTicket,
+  useMyTicketsForDraw,
   useMyTickets,
   useBuyTicket,
   useDrawHistory,
   useClaimPrize,
   TICKET_COST,
+  MAX_TICKETS_PER_DRAW,
 } from "@/hooks/useLottery";
 import { useGameData } from "@/hooks/useGameData";
 import { getUtcWeekStart } from "@/utils/week";
@@ -67,14 +68,16 @@ const PRIZE_TABLE = [
 const Lottery = () => {
   const { profile } = useGameData();
   const { data: currentDraw, isLoading: drawLoading } = useCurrentDraw();
-  const { data: myTicket } = useMyTicket(currentDraw?.id);
+  const { data: myDrawTickets } = useMyTicketsForDraw(currentDraw?.id);
   const { data: myTickets } = useMyTickets();
   const { data: drawHistory } = useDrawHistory();
   const buyTicket = useBuyTicket();
   const claimPrize = useClaimPrize();
 
   const cash = (profile as any)?.cash || 0;
-  const hasTicket = !!myTicket;
+  const ticketCount = myDrawTickets?.length || 0;
+  const maxReached = ticketCount >= MAX_TICKETS_PER_DRAW;
+  const jackpotAmount = currentDraw?.jackpot_amount || 1000000;
 
   const handleBuyTicket = (numbers: number[], bonus: number) => {
     if (!currentDraw?.id) return;
@@ -107,9 +110,14 @@ const Lottery = () => {
             Pick 7 numbers + 1 bonus for a chance to win big!
           </p>
         </div>
-        <Badge variant="outline" className="text-xs">
-          Balance: ${cash.toLocaleString()}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge className="bg-primary/10 text-primary text-sm font-bold">
+            🏆 Jackpot: ${jackpotAmount.toLocaleString()}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            Balance: ${cash.toLocaleString()}
+          </Badge>
+        </div>
       </div>
 
       <Countdown />
@@ -132,38 +140,65 @@ const Lottery = () => {
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">Loading...</CardContent>
             </Card>
-          ) : hasTicket ? (
-            <Card>
-              <CardContent className="py-8 text-center space-y-3">
-                <p className="text-lg font-semibold">You already have a ticket for this week!</p>
-                <div className="flex flex-wrap gap-1.5 justify-center">
-                  {(myTicket.selected_numbers || []).sort((a: number, b: number) => a - b).map((n: number, i: number) => (
-                    <span key={i} className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground font-bold">
-                      {n}
-                    </span>
-                  ))}
-                  <span className="flex items-center text-muted-foreground mx-1">+</span>
-                  <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-warning text-warning-foreground font-bold">
-                    {myTicket.bonus_number}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">Good luck! Results will be available after the draw.</p>
-              </CardContent>
-            </Card>
           ) : (
             <>
-              {cash < TICKET_COST && (
+              {/* Show existing tickets */}
+              {ticketCount > 0 && (
                 <Card>
-                  <CardContent className="py-4 text-center text-destructive text-sm">
-                    You need at least ${TICKET_COST} to buy a ticket. Current balance: ${cash.toLocaleString()}
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      Your Tickets ({ticketCount}/{MAX_TICKETS_PER_DRAW})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {(myDrawTickets || []).map((ticket: any, idx: number) => (
+                      <div key={ticket.id} className="flex flex-wrap gap-1.5 items-center border rounded-lg p-2">
+                        <span className="text-xs text-muted-foreground mr-1">#{idx + 1}</span>
+                        {(ticket.selected_numbers || []).sort((a: number, b: number) => a - b).map((n: number, i: number) => (
+                          <span key={i} className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                            {n}
+                          </span>
+                        ))}
+                        <span className="text-muted-foreground mx-1">+</span>
+                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-warning text-warning-foreground text-xs font-bold">
+                          {ticket.bonus_number}
+                        </span>
+                      </div>
+                    ))}
+                    {!maxReached && (
+                      <p className="text-xs text-muted-foreground text-center pt-1">
+                        You can buy {MAX_TICKETS_PER_DRAW - ticketCount} more ticket{MAX_TICKETS_PER_DRAW - ticketCount !== 1 ? "s" : ""} this week
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
-              <NumberPicker
-                onSubmit={handleBuyTicket}
-                disabled={cash < TICKET_COST || buyTicket.isPending}
-                isLoading={buyTicket.isPending}
-              />
+
+              {/* Number picker if not maxed out */}
+              {!maxReached && (
+                <>
+                  {cash < TICKET_COST && (
+                    <Card>
+                      <CardContent className="py-4 text-center text-destructive text-sm">
+                        You need at least ${TICKET_COST} to buy a ticket. Current balance: ${cash.toLocaleString()}
+                      </CardContent>
+                    </Card>
+                  )}
+                  <NumberPicker
+                    onSubmit={handleBuyTicket}
+                    disabled={cash < TICKET_COST || buyTicket.isPending}
+                    isLoading={buyTicket.isPending}
+                  />
+                </>
+              )}
+
+              {maxReached && (
+                <Card>
+                  <CardContent className="py-4 text-center text-sm text-muted-foreground">
+                    You've bought the maximum {MAX_TICKETS_PER_DRAW} tickets for this draw. Good luck! 🍀
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
 

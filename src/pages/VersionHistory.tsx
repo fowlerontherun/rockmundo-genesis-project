@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.699",
+    date: "2026-02-15",
+    changes: [
+      { type: 'feature', description: "Players can now buy up to 10 lottery tickets per weekly draw instead of 1" },
+      { type: 'feature', description: "Current jackpot amount is now displayed prominently on the lottery page" },
+    ],
+  },
+  {
     version: "1.0.698",
     date: "2026-02-15",
     changes: [
