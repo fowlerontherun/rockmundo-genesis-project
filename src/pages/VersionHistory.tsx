@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.706",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Removed unique constraint on lottery tickets allowing players to buy up to 10 tickets per draw as intended" },
+    ],
+  },
+  {
     version: "1.0.705",
     date: "2026-02-15",
     changes: [
