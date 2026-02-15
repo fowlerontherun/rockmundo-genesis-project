@@ -211,12 +211,22 @@ const HorizontalNavigation = () => {
   };
 
   const handleMouseLeave = () => {
-    dropdownTimeout.current = setTimeout(() => setOpenDropdown(null), 200);
+    dropdownTimeout.current = setTimeout(() => setOpenDropdown(null), 250);
+  };
+
+  const handleToggle = (key: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenDropdown((prev) => (prev === key ? null : key));
   };
 
   // Close dropdown on outside click
   useEffect(() => {
-    const handler = () => setOpenDropdown(null);
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-nav-dropdown]')) {
+        setOpenDropdown(null);
+      }
+    };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
@@ -246,7 +256,7 @@ const HorizontalNavigation = () => {
         </div>
 
         {/* Horizontal nav sections */}
-        <div className="flex items-center px-2 h-10 overflow-x-auto scrollbar-none">
+        <div className="flex items-center px-2 h-10">
           {navSections.map((section) => {
             const sectionKey = section.titleKey;
             const isOpen = openDropdown === sectionKey;
@@ -256,9 +266,9 @@ const HorizontalNavigation = () => {
               <div
                 key={sectionKey}
                 className="relative"
+                data-nav-dropdown
                 onMouseEnter={() => handleMouseEnter(sectionKey)}
                 onMouseLeave={handleMouseLeave}
-                onClick={(e) => e.stopPropagation()}
               >
                 <button
                   className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
@@ -266,6 +276,7 @@ const HorizontalNavigation = () => {
                       ? "text-primary bg-primary/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
+                  onClick={(e) => handleToggle(sectionKey, e)}
                 >
                   {t(section.titleKey)}
                 </button>
@@ -274,6 +285,7 @@ const HorizontalNavigation = () => {
                 {isOpen && (
                   <div
                     className="absolute top-full left-0 mt-0.5 min-w-[200px] bg-popover border border-border rounded-md shadow-lg py-1 z-[60]"
+                    data-nav-dropdown
                     onMouseEnter={() => handleMouseEnter(sectionKey)}
                     onMouseLeave={handleMouseLeave}
                   >
