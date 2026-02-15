@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, Trophy, History, Timer } from "lucide-react";
+import { Ticket, Trophy, History, Timer, TicketCheck } from "lucide-react";
 import { NumberPicker } from "@/components/lottery/NumberPicker";
 import { DrawResults } from "@/components/lottery/DrawResults";
 import { TicketHistory } from "@/components/lottery/TicketHistory";
@@ -218,6 +218,55 @@ const Lottery = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Previous tickets from past draws */}
+          {drawnTickets.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TicketCheck className="h-4 w-4" />
+                  Previous Tickets
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {drawnTickets.slice(0, 20).map((ticket: any) => {
+                  const draw = ticket.lottery_draws;
+                  const drawDate = draw?.draw_date ? new Date(draw.draw_date).toLocaleDateString() : "Unknown";
+                  const hasWon = ticket.prize_amount > 0;
+                  return (
+                    <div key={ticket.id} className={`border rounded-lg p-3 ${hasWon ? 'border-primary/50 bg-primary/5' : ''}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground">Draw: {drawDate}</span>
+                        {hasWon ? (
+                          <Badge className="bg-primary/10 text-primary text-xs">Won ${ticket.prize_amount?.toLocaleString()}</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">No win</Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {(ticket.selected_numbers || []).sort((a: number, b: number) => a - b).map((n: number, i: number) => {
+                          const isMatch = draw?.winning_numbers?.includes(n);
+                          return (
+                            <span key={i} className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold ${
+                              isMatch ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {n}
+                            </span>
+                          );
+                        })}
+                        <span className="text-muted-foreground mx-0.5">+</span>
+                        <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold ${
+                          ticket.bonus_number === draw?.bonus_number ? 'bg-warning text-warning-foreground' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {ticket.bonus_number}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="results">
