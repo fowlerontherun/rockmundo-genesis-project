@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.698",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed lottery ticket purchase — added missing INSERT RLS policy for lottery_draws table" },
+    ],
+  },
+  {
     version: "1.0.697",
     date: "2026-02-15",
     changes: [
