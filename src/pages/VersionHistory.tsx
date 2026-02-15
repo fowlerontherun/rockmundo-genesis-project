@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.701",
+    date: "2026-02-15",
+    changes: [
+      { type: 'fix', description: "Fixed label contract offers failing with 'integer out of range' — advance amounts could overflow when bands had high fame/fans" },
+      { type: 'fix', description: "Clamped contract advance calculations to 3x tier maximum to prevent numeric overflow errors" },
+    ],
+  },
+  {
     version: "1.0.700",
     date: "2026-02-15",
     changes: [
