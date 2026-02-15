@@ -103,14 +103,17 @@ export function generateContractTerms(
   // Higher label reputation = slightly worse terms for artist (they're pickier)
   const labelFactor = 1 - (labelReputation / 400);
 
-  const advance = Math.round(
-    config.advanceBase +
-    (config.advanceMax - config.advanceBase) *
-    fameMultiplier *
-    fanMultiplier *
-    (1 + qualityBonus) *
-    randomFactor *
-    labelFactor
+  const advance = Math.min(
+    Math.round(
+      config.advanceBase +
+      (config.advanceMax - config.advanceBase) *
+      fameMultiplier *
+      fanMultiplier *
+      (1 + qualityBonus) *
+      randomFactor *
+      labelFactor
+    ),
+    config.advanceMax * 3 // Hard cap at 3x tier max to prevent integer overflow
   );
 
   const artistRoyalty = Math.round(
