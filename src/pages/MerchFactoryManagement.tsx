@@ -59,7 +59,7 @@ export default function MerchFactoryManagement() {
         
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-1">
-            <FactoryCard factory={factory} onManage={() => {}} />
+            <FactoryCard factory={factory} />
           </div>
           
           <div className="md:col-span-2">
