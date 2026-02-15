@@ -44,11 +44,13 @@ export function useCurrentDraw() {
   });
 }
 
-export function useMyTicket(drawId: string | undefined) {
+const MAX_TICKETS_PER_DRAW = 10;
+
+export function useMyTicketsForDraw(drawId: string | undefined) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["lottery-ticket", drawId, user?.id],
+    queryKey: ["lottery-tickets-draw", drawId, user?.id],
     enabled: !!drawId && !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -56,10 +58,10 @@ export function useMyTicket(drawId: string | undefined) {
         .select("*")
         .eq("draw_id", drawId!)
         .eq("user_id", user!.id)
-        .maybeSingle();
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 }
@@ -104,6 +106,15 @@ export function useBuyTicket() {
       if (selectedNumbers.length !== 7) throw new Error("Select 7 numbers");
       if (bonusNumber < 1 || bonusNumber > 10) throw new Error("Invalid bonus number");
 
+      // Check ticket count for this draw
+      const { count } = await supabase
+        .from("lottery_tickets")
+        .select("*", { count: "exact", head: true })
+        .eq("draw_id", drawId)
+        .eq("user_id", user.id);
+
+      if ((count || 0) >= MAX_TICKETS_PER_DRAW) throw new Error("Maximum 10 tickets per draw");
+
       // Deduct cash
       const { error: cashError } = await supabase
         .from("profiles")
@@ -129,7 +140,7 @@ export function useBuyTicket() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lottery-ticket"] });
+      queryClient.invalidateQueries({ queryKey: ["lottery-tickets-draw"] });
       queryClient.invalidateQueries({ queryKey: ["lottery-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       toast({ title: "Ticket purchased!", description: `$${TICKET_COST} deducted from your cash.` });
@@ -210,7 +221,7 @@ export function useClaimPrize() {
     },
     onSuccess: (ticket) => {
       queryClient.invalidateQueries({ queryKey: ["lottery-tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["lottery-ticket"] });
+      queryClient.invalidateQueries({ queryKey: ["lottery-tickets-draw"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       const parts: string[] = [];
       if (ticket.prize_cash > 0) parts.push(`$${ticket.prize_cash.toLocaleString()}`);
@@ -224,4 +235,4 @@ export function useClaimPrize() {
   });
 }
 
-export { TICKET_COST };
+export { TICKET_COST, MAX_TICKETS_PER_DRAW };
