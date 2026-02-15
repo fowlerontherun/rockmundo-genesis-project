@@ -1,0 +1,1 @@
+ALTER TABLE public.lottery_tickets DROP CONSTRAINT IF EXISTS lottery_tickets_user_id_draw_id_key;
