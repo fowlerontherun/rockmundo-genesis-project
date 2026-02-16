@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.746",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed duplicate UK/United Kingdom entries in TV networks — normalized all to 'United Kingdom'" },
+    ],
+  },
+  {
     version: "1.0.745",
     date: "2026-02-16",
     changes: [
