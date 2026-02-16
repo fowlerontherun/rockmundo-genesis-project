@@ -14,7 +14,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
-import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
+// Radio button moved to Dashboard
 import { VersionHeader } from "@/components/VersionHeader";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -258,7 +258,6 @@ const HorizontalNavigation = () => {
             <VersionHeader />
           </div>
           <div className="flex items-center gap-1">
-            <RMRadioButton />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
@@ -405,7 +404,6 @@ const HorizontalNavigation = () => {
           <img src={logo} alt="RockMundo" className="h-7 w-auto object-contain" />
           
           <div className="flex items-center gap-0.5">
-            <RMRadioButton />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
