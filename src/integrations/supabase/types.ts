@@ -11270,6 +11270,317 @@ export type Database = {
         }
         Relationships: []
       }
+      major_event_instances: {
+        Row: {
+          created_at: string
+          event_date: string | null
+          event_id: string
+          id: string
+          invited_band_ids: string[] | null
+          status: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          event_date?: string | null
+          event_id: string
+          id?: string
+          invited_band_ids?: string[] | null
+          status?: string
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          event_date?: string | null
+          event_id?: string
+          id?: string
+          invited_band_ids?: string[] | null
+          status?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "major_event_instances_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "major_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      major_event_performances: {
+        Row: {
+          band_id: string | null
+          cash_earned: number | null
+          completed_at: string | null
+          created_at: string
+          current_song_position: number
+          fame_gained: number | null
+          fans_gained: number | null
+          id: string
+          instance_id: string
+          overall_rating: number | null
+          song_1_id: string | null
+          song_2_id: string | null
+          song_3_id: string | null
+          started_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          cash_earned?: number | null
+          completed_at?: string | null
+          created_at?: string
+          current_song_position?: number
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          instance_id: string
+          overall_rating?: number | null
+          song_1_id?: string | null
+          song_2_id?: string | null
+          song_3_id?: string | null
+          started_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          band_id?: string | null
+          cash_earned?: number | null
+          completed_at?: string | null
+          created_at?: string
+          current_song_position?: number
+          fame_gained?: number | null
+          fans_gained?: number | null
+          id?: string
+          instance_id?: string
+          overall_rating?: number | null
+          song_1_id?: string | null
+          song_2_id?: string | null
+          song_3_id?: string | null
+          started_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "major_event_performances_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "major_event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_3_id_fkey"
+            columns: ["song_3_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_3_id_fkey"
+            columns: ["song_3_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_3_id_fkey"
+            columns: ["song_3_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_performances_song_3_id_fkey"
+            columns: ["song_3_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      major_event_song_performances: {
+        Row: {
+          commentary: Json | null
+          crowd_response: string | null
+          id: string
+          performance_id: string
+          performance_score: number | null
+          position: number
+          song_id: string
+        }
+        Insert: {
+          commentary?: Json | null
+          crowd_response?: string | null
+          id?: string
+          performance_id: string
+          performance_score?: number | null
+          position: number
+          song_id: string
+        }
+        Update: {
+          commentary?: Json | null
+          crowd_response?: string | null
+          id?: string
+          performance_id?: string
+          performance_score?: number | null
+          position?: number
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "major_event_song_performances_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "major_event_performances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "major_event_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "major_event_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      major_events: {
+        Row: {
+          audience_size: number
+          base_cash_reward: number
+          category: string
+          created_at: string
+          description: string | null
+          fame_multiplier: number
+          fan_multiplier: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          max_cash_reward: number
+          min_fame_required: number
+          month: number
+          name: string
+        }
+        Insert: {
+          audience_size?: number
+          base_cash_reward?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          fame_multiplier?: number
+          fan_multiplier?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          max_cash_reward?: number
+          min_fame_required?: number
+          month: number
+          name: string
+        }
+        Update: {
+          audience_size?: number
+          base_cash_reward?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          fame_multiplier?: number
+          fan_multiplier?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          max_cash_reward?: number
+          min_fame_required?: number
+          month?: number
+          name?: string
+        }
+        Relationships: []
+      }
       manufacturing_costs: {
         Row: {
           cost_per_unit: number
