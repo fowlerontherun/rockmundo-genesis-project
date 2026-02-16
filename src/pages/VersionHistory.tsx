@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.735",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Inventory: Book Library now shows books from actual reading sessions instead of empty legacy table" },
+      { type: 'feature', description: "Inventory: Added House Keys tab showing all owned properties with details" },
+    ],
+  },
+  {
     version: "1.0.734",
     date: "2026-02-16",
     changes: [
