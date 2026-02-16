@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.744",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Song Fame system — cumulative fame score based on streams, sales, radio plays, hype, global reach, and gig plays" },
+      { type: 'feature', description: "Song Popularity — dynamic hotness meter (0-1000) that grows with gig plays and hype, decays with overplay, and recovers when rested" },
+      { type: 'feature', description: "Fan Favourite system — songs can randomly become fan favourites after gigs (3% base chance, boosted by crowd response and encore placement)" },
+      { type: 'feature', description: "Encore fame bonus — playing a famous song (fame ≥300) as encore gives 1.15x performance multiplier; fan favourites get 1.25x" },
+      { type: 'feature', description: "Fame-aware gig commentary — new commentary lines for famous songs, fan favourites, and legendary encores" },
+      { type: 'improvement', description: "Repertoire cards now display fame (flame icon), popularity (trend arrow), and fan favourite (gold star) badges" },
+      { type: 'feature', description: "Song Rankings now include 'Fame' as a ranking type" },
+    ],
+  },
+  {
     version: "1.0.743",
     date: "2026-02-16",
     changes: [

@@ -15,6 +15,8 @@ export interface SongContext {
   isEncore?: boolean;
   performanceScore: number;
   crowdResponse: string;
+  fame?: number;
+  isFanFavourite?: boolean;
 }
 
 export interface BandContext {
@@ -226,6 +228,27 @@ export const WEATHER_EFFECTS: Record<string, string[]> = {
   ],
 };
 
+// Fame & Fan Favourite commentary
+export const FAME_COMMENTARY: string[] = [
+  "The crowd goes WILD — they know every word to '{song}'!",
+  "'{song}' is a CERTIFIED HIT! The audience sings along from start to finish!",
+  "This is the one they've been waiting for — '{song}' brings the house DOWN!",
+  "The entire venue erupts as the opening notes of '{song}' ring out!",
+];
+
+export const FAN_FAVOURITE_COMMENTARY: string[] = [
+  "🌟 FAN FAVOURITE! The crowd SCREAMS as '{song}' starts — this is THEIR song!",
+  "🌟 '{song}' — the fans' absolute FAVOURITE! The energy is UNREAL!",
+  "🌟 The chant starts before the first note: '{song}! {song}!' The fans have spoken!",
+  "🌟 Pure LOVE from the crowd for '{song}' — you can feel the connection!",
+];
+
+export const ENCORE_FAME_COMMENTARY: string[] = [
+  "The PERFECT encore choice — '{song}' with fame {fame}! The crowd EXPLODES!",
+  "A legendary encore! '{song}' proves why it's one of their biggest hits!",
+  "'{song}' as the encore — MASTERFUL! This is what legends are made of!",
+];
+
 // Special milestone moments
 export const MILESTONE_MOMENTS: Record<string, string[]> = {
   first_song: [
@@ -277,6 +300,25 @@ export function generateArrivalCommentary(venue: VenueContext, band: BandContext
 }
 
 export function generateSongCommentary(song: SongContext, band: BandContext): string {
+  // Fan favourite commentary (high priority)
+  if (song.isFanFavourite && Math.random() < 0.7) {
+    return getRandomItem(FAN_FAVOURITE_COMMENTARY)
+      .replace(/{song}/g, song.title);
+  }
+
+  // Famous encore commentary
+  if (song.isEncore && (song.fame || 0) >= 300 && Math.random() < 0.6) {
+    return getRandomItem(ENCORE_FAME_COMMENTARY)
+      .replace(/{song}/g, song.title)
+      .replace(/{fame}/g, String(song.fame || 0));
+  }
+
+  // High fame commentary
+  if ((song.fame || 0) >= 500 && Math.random() < 0.4) {
+    return getRandomItem(FAME_COMMENTARY)
+      .replace(/{song}/g, song.title);
+  }
+
   const energyLevel = song.performanceScore >= 20 ? 'high' : song.performanceScore >= 14 ? 'medium' : 'low';
   const genre = (song.genre || band.genre || 'default').toLowerCase();
   

@@ -21971,11 +21971,15 @@ export type Database = {
           extended_audio_generated_at: string | null
           extended_audio_url: string | null
           fame: number | null
+          fan_favourite_at: string | null
           genre: string
+          gig_play_count: number | null
           hype: number | null
           id: string
           is_extended_featured: boolean | null
+          is_fan_favourite: boolean | null
           is_purchased: boolean
+          last_gigged_at: string | null
           last_radio_play: string | null
           lyrics: string | null
           lyrics_progress: number | null
@@ -21986,6 +21990,7 @@ export type Database = {
           original_writer_id: string | null
           ownership_type: string | null
           parent_song_id: string | null
+          popularity: number | null
           production_potential: number | null
           profile_id: string | null
           purchased_at: string | null
@@ -22029,11 +22034,15 @@ export type Database = {
           extended_audio_generated_at?: string | null
           extended_audio_url?: string | null
           fame?: number | null
+          fan_favourite_at?: string | null
           genre: string
+          gig_play_count?: number | null
           hype?: number | null
           id?: string
           is_extended_featured?: boolean | null
+          is_fan_favourite?: boolean | null
           is_purchased?: boolean
+          last_gigged_at?: string | null
           last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
@@ -22044,6 +22053,7 @@ export type Database = {
           original_writer_id?: string | null
           ownership_type?: string | null
           parent_song_id?: string | null
+          popularity?: number | null
           production_potential?: number | null
           profile_id?: string | null
           purchased_at?: string | null
@@ -22087,11 +22097,15 @@ export type Database = {
           extended_audio_generated_at?: string | null
           extended_audio_url?: string | null
           fame?: number | null
+          fan_favourite_at?: string | null
           genre?: string
+          gig_play_count?: number | null
           hype?: number | null
           id?: string
           is_extended_featured?: boolean | null
+          is_fan_favourite?: boolean | null
           is_purchased?: boolean
+          last_gigged_at?: string | null
           last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
@@ -22102,6 +22116,7 @@ export type Database = {
           original_writer_id?: string | null
           ownership_type?: string | null
           parent_song_id?: string | null
+          popularity?: number | null
           production_potential?: number | null
           profile_id?: string | null
           purchased_at?: string | null
