@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.806",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Recommended pricing system — each merch item now shows a recommended sale price based on cost and quality tier" },
+      { type: 'feature', description: "Pricing impact indicators: Bargain/Underpriced/Fair/Overpriced/Rip-off with sales velocity multiplier, fame and fan effects" },
+      { type: 'improvement', description: "Pricing assessment shown in catalog product config, inventory table, and manage inventory price field" },
+    ],
+  },
+  {
     version: "1.0.805",
     date: "2026-02-16",
     changes: [

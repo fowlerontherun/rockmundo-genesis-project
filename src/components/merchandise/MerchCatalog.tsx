@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Package, Loader2 } from "lucide-react";
 import { MerchItemCard } from "./MerchItemCard";
-import { useMerchRequirements, MerchItemRequirement, QUALITY_TIERS, checkMerchUnlocked, calculateMerchQuality } from "@/hooks/useMerchRequirements";
+import { useMerchRequirements, MerchItemRequirement, QUALITY_TIERS, checkMerchUnlocked, calculateMerchQuality, getRecommendedPrice, getPricingImpact } from "@/hooks/useMerchRequirements";
 import { cn } from "@/lib/utils";
 
 interface MerchCatalogProps {
@@ -60,10 +60,17 @@ export const MerchCatalog = ({
     setDesignName("");
     // Calculate suggested price based on quality and cost
     const quality = calculateMerchQuality(item.base_quality_tier, bandFame, false);
-    const qualityMultiplier = QUALITY_TIERS[quality].priceMultiplier;
-    const suggestedPrice = Math.round(item.base_cost * 2.5 * qualityMultiplier);
+    const suggestedPrice = getRecommendedPrice(item.base_cost, quality);
     setPrice(suggestedPrice.toString());
   };
+
+  // Compute pricing impact for the current selection
+  const currentPricingImpact = useMemo(() => {
+    if (!selectedItem || !price) return null;
+    const quality = calculateMerchQuality(selectedItem.base_quality_tier, bandFame, false);
+    const recommended = getRecommendedPrice(selectedItem.base_cost, quality);
+    return { impact: getPricingImpact(parseInt(price) || 0, recommended), recommended };
+  }, [selectedItem, price, bandFame]);
 
   const handleAddProduct = () => {
     if (!selectedItem || !designName.trim()) return;
@@ -211,9 +218,11 @@ export const MerchCatalog = ({
                         value={price}
                         onChange={(e) => setPrice(e.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Min: ${selectedItem.base_cost}
-                      </p>
+                      {currentPricingImpact && (
+                        <p className="text-xs text-muted-foreground">
+                          Recommended: <span className="font-medium text-foreground">${currentPricingImpact.recommended}</span>
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="initial-stock">Initial Stock</Label>
@@ -262,6 +271,46 @@ export const MerchCatalog = ({
                             </span>
                           </div>
                         </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Pricing Impact Indicator */}
+                  {currentPricingImpact && (
+                    <div className={cn(
+                      "p-3 rounded-lg border text-xs space-y-1.5",
+                      currentPricingImpact.impact.label === "Rip-off" ? "bg-destructive/10 border-destructive/30" :
+                      currentPricingImpact.impact.label === "Overpriced" ? "bg-amber-500/10 border-amber-500/30" :
+                      currentPricingImpact.impact.label === "Fair Price" ? "bg-green-500/10 border-green-500/30" :
+                      "bg-blue-500/10 border-blue-500/30"
+                    )}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">Pricing Assessment</span>
+                        <Badge variant="outline" className={cn("text-xs", currentPricingImpact.impact.color)}>
+                          {currentPricingImpact.impact.label}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Sales velocity:</span>
+                        <span className={cn("font-medium", currentPricingImpact.impact.salesMultiplier >= 1 ? "text-green-600" : "text-destructive")}>
+                          {currentPricingImpact.impact.salesMultiplier}x
+                        </span>
+                      </div>
+                      {currentPricingImpact.impact.fameEffect !== 0 && (
+                        <div className="flex justify-between">
+                          <span>Fame effect:</span>
+                          <span className={cn("font-medium", currentPricingImpact.impact.fameEffect > 0 ? "text-green-600" : "text-destructive")}>
+                            {currentPricingImpact.impact.fameEffect > 0 ? "+" : ""}{currentPricingImpact.impact.fameEffect}/day
+                          </span>
+                        </div>
+                      )}
+                      {currentPricingImpact.impact.fanEffect !== 0 && (
+                        <div className="flex justify-between">
+                          <span>Fan effect:</span>
+                          <span className={cn("font-medium", currentPricingImpact.impact.fanEffect > 0 ? "text-green-600" : "text-destructive")}>
+                            {currentPricingImpact.impact.fanEffect > 0 ? "+" : ""}{currentPricingImpact.impact.fanEffect}/day
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}

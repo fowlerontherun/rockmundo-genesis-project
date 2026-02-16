@@ -21,7 +21,7 @@ import { MerchManagerCard } from "@/components/merchandise/MerchManagerCard";
 import { OperatingCostsCard } from "@/components/merchandise/OperatingCostsCard";
 import { useMerchManager } from "@/hooks/useMerchManager";
 import { useMerchImageGenerator } from "@/hooks/useMerchImageGenerator";
-import { useMerchRequirements, QUALITY_TIERS, MerchItemRequirement, calculateMerchQuality } from "@/hooks/useMerchRequirements";
+import { useMerchRequirements, QUALITY_TIERS, MerchItemRequirement, calculateMerchQuality, getRecommendedPrice, getPricingImpact } from "@/hooks/useMerchRequirements";
 import {
   Loader2,
   PackagePlus,
@@ -861,12 +861,13 @@ const Merchandise = () => {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                       <TableRow>
                         <TableHead>Product</TableHead>
                         <TableHead className="hidden xl:table-cell">Category</TableHead>
                         <TableHead>Quality</TableHead>
                         <TableHead>Cost</TableHead>
                         <TableHead>Sale</TableHead>
+                        <TableHead className="hidden md:table-cell">Pricing</TableHead>
                         <TableHead>Stock</TableHead>
                         <TableHead className="hidden lg:table-cell">Potential</TableHead>
                         <TableHead>Status</TableHead>
@@ -880,6 +881,8 @@ const Merchandise = () => {
                         const status = getStatus(product.stock_quantity);
                         const qualityTier = (product as any).quality_tier || 'basic';
                         const qualityInfo = QUALITY_TIERS[qualityTier as keyof typeof QUALITY_TIERS] || QUALITY_TIERS.basic;
+                        const recommendedPrice = getRecommendedPrice(safeNumber(product.cost_to_produce), qualityTier as any);
+                        const pricingImpact = getPricingImpact(safeNumber(product.selling_price), recommendedPrice);
 
                         return (
                           <TableRow key={product.id}>
@@ -938,6 +941,16 @@ const Merchandise = () => {
                             </TableCell>
                             <TableCell>{currencyFormatter.format(safeNumber(product.cost_to_produce))}</TableCell>
                             <TableCell>{currencyFormatter.format(safeNumber(product.selling_price))}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex flex-col gap-0.5">
+                                <Badge variant="outline" className={`text-xs ${pricingImpact.color}`}>
+                                  {pricingImpact.label}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground">
+                                  Rec: ${recommendedPrice} · {pricingImpact.salesMultiplier}x sales
+                                </span>
+                              </div>
+                            </TableCell>
                             <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
                             <TableCell className="hidden lg:table-cell">{currencyFormatter.format(potential)}</TableCell>
                             <TableCell>
@@ -948,7 +961,7 @@ const Merchandise = () => {
                       })}
                       {(!merchandise || !Array.isArray(merchandise) || merchandise.length === 0) && (
                         <TableRow>
-                          <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                          <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
                             No merchandise found yet. Add your first product to start tracking performance.
                           </TableCell>
                         </TableRow>
@@ -1200,6 +1213,24 @@ const Merchandise = () => {
                       onChange={(event) => setEditForm((prev) => ({ ...prev, price: event.target.value }))}
                       required
                     />
+                    {(() => {
+                      const cost = parseInt(editForm.cost) || 0;
+                      const qualityTier = ((selectedProduct as any)?.quality_tier || 'basic') as any;
+                      const rec = getRecommendedPrice(cost, qualityTier);
+                      const impact = getPricingImpact(parseInt(editForm.price) || 0, rec);
+                      return (
+                        <div className="text-xs space-y-1">
+                          <p className="text-muted-foreground">
+                            Recommended: <span className="font-medium text-foreground">${rec}</span>
+                          </p>
+                          <Badge variant="outline" className={`text-xs ${impact.color}`}>
+                            {impact.label} — {impact.salesMultiplier}x sales
+                            {impact.fameEffect !== 0 && ` · ${impact.fameEffect > 0 ? "+" : ""}${impact.fameEffect} fame/day`}
+                            {impact.fanEffect !== 0 && ` · ${impact.fanEffect > 0 ? "+" : ""}${impact.fanEffect} fans/day`}
+                          </Badge>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <label className="text-sm font-medium" htmlFor="edit-stock">
