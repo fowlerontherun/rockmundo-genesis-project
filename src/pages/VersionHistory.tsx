@@ -14,10 +14,10 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.818",
+    version: "1.0.819",
     date: "2026-02-16",
     changes: [
-      { type: 'fix', description: "Added unique constraint on pov_clip_templates (instrument_track, variant) to fix ON CONFLICT seed error" },
+      { type: 'fix', description: "Added missing instrument_role field to POV clip seed templates to fix not-null constraint violation" },
     ],
   },
   {
