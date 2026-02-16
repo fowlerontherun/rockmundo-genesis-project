@@ -7,7 +7,7 @@ export type ActivityType =
   | 'songwriting' | 'gig' | 'rehearsal' | 'busking' | 'recording' 
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
   | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
-  | 'pr_appearance' | 'film_production' | 'other';
+  | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 

@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.765",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Festival System Expansion Phase 1: Added festival_stages, festival_stage_slots, festival_tickets, festival_attendance, festival_watch_rewards, festival_finances, and festival_quality_ratings database tables" },
+      { type: 'feature', description: "Festivals now support 2-4 day durations (Thu-Sun or Sat-Sun) with up to 5 stages and 6 slots per stage per day" },
+      { type: 'feature', description: "Players can purchase day or weekend festival tickets — schedule is blocked for the festival duration" },
+      { type: 'feature', description: "Festival attendance tracking with stage-switching — move between stages freely" },
+      { type: 'feature', description: "Watch rewards system: earn XP, gifted songs (5% chance), or attribute points (3% chance) from watching performances" },
+      { type: 'feature', description: "Festival finances system with ticket revenue, sponsorship, security costs, band payouts, and 15% festival tax" },
+      { type: 'feature', description: "Festival quality ratings (comfort, food, safety, lineup) affecting attendee satisfaction" },
+      { type: 'feature', description: "NPC DJ sessions fill empty festival slots with genre-matched, average-quality performances" },
+      { type: 'feature', description: "Security firm integration for festivals via security_contracts" },
+      { type: 'feature', description: "Added festival_attendance and festival_performance activity types to the scheduling system" },
+    ],
+  },
+  {
     version: "1.0.764",
     date: "2026-02-16",
     changes: [

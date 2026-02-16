@@ -30,6 +30,8 @@ const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: st
   open_mic: { path: '/open-mic', icon: Mic, label: 'Open Mic Night', description: 'Perform at open mic venues' },
   pr_appearance: { path: '/pr', icon: Star, label: 'PR Appearance', description: 'Media and PR appearances (booked via offers)' },
   film_production: { path: '/pr', icon: Clapperboard, label: 'Film Production', description: 'Film and movie appearances (booked via offers)' },
+  festival_attendance: { path: '/festivals', icon: Music, label: 'Festival Attendance', description: 'Attend a music festival as a spectator' },
+  festival_performance: { path: '/festivals', icon: Guitar, label: 'Festival Performance', description: 'Perform at a music festival' },
   other: { path: '/schedule', icon: Calendar, label: 'Other Activity', description: 'Schedule a custom activity' },
 };
 
