@@ -18517,7 +18517,7 @@ export type Database = {
           avatar_generation_count: number | null
           avatar_url: string | null
           bio: string | null
-          cash: number | null
+          cash: number
           character_birth_date: string | null
           created_at: string | null
           current_activity: string | null
@@ -18527,7 +18527,7 @@ export type Database = {
           energy: number
           experience: number | null
           experience_at_last_weekly_bonus: number | null
-          fame: number | null
+          fame: number
           fans: number | null
           gender: string | null
           has_active_lawyer: boolean | null
@@ -18542,7 +18542,7 @@ export type Database = {
           last_weekly_bonus_at: string | null
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
-          level: number | null
+          level: number
           rest_required_until: string | null
           rpm_avatar_url: string | null
           terms_accepted_at: string | null
@@ -18563,7 +18563,7 @@ export type Database = {
           avatar_generation_count?: number | null
           avatar_url?: string | null
           bio?: string | null
-          cash?: number | null
+          cash?: number
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -18573,7 +18573,7 @@ export type Database = {
           energy?: number
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
-          fame?: number | null
+          fame?: number
           fans?: number | null
           gender?: string | null
           has_active_lawyer?: boolean | null
@@ -18588,7 +18588,7 @@ export type Database = {
           last_weekly_bonus_at?: string | null
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
-          level?: number | null
+          level?: number
           rest_required_until?: string | null
           rpm_avatar_url?: string | null
           terms_accepted_at?: string | null
@@ -18609,7 +18609,7 @@ export type Database = {
           avatar_generation_count?: number | null
           avatar_url?: string | null
           bio?: string | null
-          cash?: number | null
+          cash?: number
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -18619,7 +18619,7 @@ export type Database = {
           energy?: number
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
-          fame?: number | null
+          fame?: number
           fans?: number | null
           gender?: string | null
           has_active_lawyer?: boolean | null
@@ -18634,7 +18634,7 @@ export type Database = {
           last_weekly_bonus_at?: string | null
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
-          level?: number | null
+          level?: number
           rest_required_until?: string | null
           rpm_avatar_url?: string | null
           terms_accepted_at?: string | null

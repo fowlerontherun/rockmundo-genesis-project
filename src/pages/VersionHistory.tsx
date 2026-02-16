@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.812",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed null cash/fame/level on profiles by restoring data and adding NOT NULL constraints with defaults to prevent future nulls" },
+    ],
+  },
+  {
     version: "1.0.811",
     date: "2026-02-16",
     changes: [
