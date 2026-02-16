@@ -80,6 +80,30 @@ serve(async (req) => {
     console.log(`Distribution rates: digital=${digitalDistributionRate*100}%, cd=${cdDistributionRate*100}%, vinyl=${vinylDistributionRate*100}%`);
     console.log(`Default tax rate: ${defaultSalesTaxRate*100}%`);
 
+    // ── Christmas Sales Boost (fixed epoch: Jan 1, 2026) ──
+    const GAME_EPOCH = new Date("2026-01-01T00:00:00Z");
+    const msFromEpoch = Date.now() - GAME_EPOCH.getTime();
+    const realDaysFromEpoch = Math.max(0, Math.floor(msFromEpoch / (1000 * 60 * 60 * 24)));
+    const daysPerGameMonth = 10;
+    const gameDaysElapsed = Math.floor((realDaysFromEpoch / daysPerGameMonth) * 30);
+    const remainingGameDays = gameDaysElapsed % 360;
+    const currentGameMonth = Math.floor(remainingGameDays / 30) + 1;
+    const currentGameDay = (remainingGameDays % 30) + 1;
+    const currentGameYear = Math.floor(gameDaysElapsed / 360) + 1;
+
+    let christmasMultiplier = 1.0;
+    const christmasBoostBase = salesConfig.christmas_sales_boost ?? 1.5;
+    if (currentGameMonth === 12) {
+      if (currentGameDay === 25) {
+        christmasMultiplier = christmasBoostBase + 1.0; // 2.5x default
+      } else if (currentGameDay >= 20) {
+        christmasMultiplier = christmasBoostBase + 0.5; // 2.0x default
+      } else {
+        christmasMultiplier = christmasBoostBase; // 1.5x default
+      }
+    }
+    console.log(`Game date: Month ${currentGameMonth}, Day ${currentGameDay}, Year ${currentGameYear} | Christmas multiplier: ${christmasMultiplier}x`);
+
     const { data: releases, error: releasesError } = await supabaseClient
       .from("releases")
       .select(`
@@ -253,7 +277,7 @@ serve(async (req) => {
           const firstWeekBoost = daysSinceRelease <= 7 ? 1.5 : 1.0;
 
           const calculatedSales = Math.floor(
-            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier * hypeMultiplier * firstWeekBoost
+            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier * hypeMultiplier * firstWeekBoost * christmasMultiplier
           );
 
           // For digital, no stock limit. For physical, cap at available stock

@@ -7,8 +7,6 @@ interface SeasonalBackgroundProps {
 }
 
 export function SeasonalBackground({ season, enabled = true }: SeasonalBackgroundProps) {
-  if (!enabled) return null;
-
   const particles = useMemo(() => {
     const count = season === "winter" ? 50 : season === "autumn" ? 30 : 20;
     return Array.from({ length: count }, (_, i) => ({
@@ -20,6 +18,8 @@ export function SeasonalBackground({ season, enabled = true }: SeasonalBackgroun
       rotation: Math.random() * 360,
     }));
   }, [season]);
+
+  if (!enabled) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -56,7 +56,9 @@ export function SeasonalBackground({ season, enabled = true }: SeasonalBackgroun
       ))}
 
       {/* Season-specific decorations */}
+      {season === "spring" && <SpringDecorations />}
       {season === "summer" && <SummerDecorations />}
+      {season === "autumn" && <AutumnDecorations />}
       {season === "winter" && <WinterDecorations />}
     </div>
   );
@@ -88,6 +90,18 @@ function getParticleContent(season: Season): React.ReactNode {
   }
 }
 
+function SpringDecorations() {
+  return (
+    <>
+      <div className="absolute bottom-0 left-8 text-5xl opacity-10">🌷</div>
+      <div className="absolute bottom-0 right-12 text-4xl opacity-10">🦋</div>
+      <div className="absolute top-20 right-4 w-64 h-64 opacity-10">
+        <div className="absolute inset-0 bg-gradient-radial from-pink-300 to-transparent animate-pulse-slow" />
+      </div>
+    </>
+  );
+}
+
 function SummerDecorations() {
   return (
     <>
@@ -98,6 +112,16 @@ function SummerDecorations() {
       {/* Palm tree silhouettes */}
       <div className="absolute bottom-0 left-4 text-6xl opacity-10">🌴</div>
       <div className="absolute bottom-0 right-8 text-5xl opacity-10">🌴</div>
+    </>
+  );
+}
+
+function AutumnDecorations() {
+  return (
+    <>
+      <div className="absolute bottom-0 left-6 text-5xl opacity-10">🍁</div>
+      <div className="absolute bottom-0 right-10 text-4xl opacity-10">🎃</div>
+      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-orange-900/10 to-transparent" />
     </>
   );
 }
