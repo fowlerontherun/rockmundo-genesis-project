@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.716",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed Replicate API error 'version is required / model not allowed' — switched to model-based predictions endpoint for AI song generation" },
+    ],
+  },
+  {
     version: "1.0.715",
     date: "2026-02-16",
     changes: [
