@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.751",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Housing: country and city filter dropdowns to browse properties in any country" },
+      { type: 'improvement', description: "Housing: city selector adjusts rental pricing based on local cost of living" },
+      { type: 'improvement', description: "Housing: 'My Location' button to quickly reset filters to current city" },
+    ],
+  },
+  {
     version: "1.0.750",
     date: "2026-02-16",
     changes: [
