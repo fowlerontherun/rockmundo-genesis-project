@@ -96,6 +96,7 @@ const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagemen
 const BandRepertoire = lazyWithRetry(() => import("./pages/BandRepertoire"));
 const BandManagementPage = lazyWithRetry(() => import("./pages/bands/[bandId]/management"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
+const ChristmasCharts = lazyWithRetry(() => import("./pages/ChristmasCharts"));
 const CountryCharts = lazyWithRetry(() => import("./pages/CountryCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
@@ -284,6 +285,7 @@ function App() {
                     <Route path="tour-manager" element={<TourManager />} />
                     <Route path="streaming" element={<Navigate to="/streaming-platforms" replace />} />
                     <Route path="music/charts" element={<ChartsPage />} />
+                    <Route path="christmas-charts" element={<ChristmasCharts />} />
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="offers-dashboard" element={<OffersDashboard />} />

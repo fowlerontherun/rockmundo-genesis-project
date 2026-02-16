@@ -4,7 +4,7 @@ import { VipBadge } from "@/components/VipBadge";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
-export const version = "1.0.754";
+export const version = "1.0.755";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();

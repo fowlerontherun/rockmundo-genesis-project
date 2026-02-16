@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.755",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Christmas Charts Race page — live leaderboard of December sales competing for Christmas Number One" },
+      { type: 'feature', description: "Christmas Charts countdown banner, progress bar, and animated sales bars for top releases" },
+      { type: 'feature', description: "Christmas Number One History section showing past winners" },
+    ],
+  },
+  {
     version: "1.0.754",
     date: "2026-02-16",
     changes: [
