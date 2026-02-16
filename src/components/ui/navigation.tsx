@@ -456,7 +456,7 @@ const Navigation = () => {
                     onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                   >
                     <History className="h-4 w-4 mr-1" />
- v1.0.707
+ v1.0.708
                   </Button>
                   <HowToPlayDialog />
                 </div>
@@ -464,7 +464,7 @@ const Navigation = () => {
             </SheetContent>
           </Sheet>
 
-          <img 
+          <img
             src={logo} 
             alt="RockMundo" 
             className="h-7 w-auto object-contain"
@@ -516,7 +516,7 @@ const Navigation = () => {
                       onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                     >
                       <History className="h-4 w-4 mr-1" />
-                      v1.0.707
+                      v1.0.708
                     </Button>
                     <HowToPlayDialog />
                   </div>

@@ -120,7 +120,7 @@ export function ReleaseAnalyticsDialog({
           formatStats[format] = { format, units: 0, revenue: 0 };
         }
         formatStats[format].units += sale.quantity_sold || 0;
-        formatStats[format].revenue += sale.total_amount || 0;
+        formatStats[format].revenue += (sale.total_amount || 0) / 100;
       });
 
       const totalUnits = Object.values(formatStats).reduce((sum, f) => sum + f.units, 0);
@@ -153,10 +153,10 @@ export function ReleaseAnalyticsDialog({
 
       let grossRevenue = 0, taxPaid = 0, distributionFees = 0, netRevenue = 0;
       data?.forEach((s: any) => {
-        grossRevenue += s.total_amount || 0;
-        taxPaid += s.sales_tax_amount || 0;
-        distributionFees += s.distribution_fee || 0;
-        netRevenue += s.net_revenue || 0;
+        grossRevenue += (s.total_amount || 0) / 100;
+        taxPaid += (s.sales_tax_amount || 0) / 100;
+        distributionFees += (s.distribution_fee || 0) / 100;
+        netRevenue += (s.net_revenue || 0) / 100;
       });
 
       return { grossRevenue, taxPaid, distributionFees, netRevenue };
@@ -495,7 +495,7 @@ export function ReleaseAnalyticsDialog({
                             </span>
                             <span className="capitalize">{sale.release_formats?.format_type || sale.platform}</span>
                             <span>{sale.quantity_sold} units</span>
-                            <span className="text-green-600">${sale.total_amount?.toLocaleString()}</span>
+                            <span className="text-green-600">${((sale.total_amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
                         ))}
                       </div>
