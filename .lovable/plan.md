@@ -1,76 +1,77 @@
 
-
-# v1.0.739 -- Global City Expansion and Small Venue Seeding
+# v1.0.740 -- Expand Travel Connectivity and Reduce All Travel Times by 10%
 
 ## Overview
 
-Currently there are **134 cities** and **408 venues** across 64 countries. Many regions are underrepresented (most countries have only 1 city), and 55 existing cities have **zero venues**. This update will:
+Travel options are calculated dynamically in `src/utils/dynamicTravel.ts` using Haversine distance. Two issues limit connectivity:
 
-1. **Add ~80 new cities** to fill gaps in Africa, Asia, South America, the Middle East, Eastern Europe, and underrepresented Western nations
-2. **Seed 2-3 small music venues** for every city that currently has zero venues (55 existing + ~80 new = ~135 cities needing venues)
-3. Total: roughly **300-400 new small venues** across all new and venue-less cities
-
----
-
-## New Cities by Region (~80 total)
-
-### Africa (currently 4 cities: Accra, Addis Ababa, Lagos, Nairobi, Cape Town, Johannesburg)
-- **New:** Dakar (Senegal), Dar es Salaam (Tanzania), Kinshasa (DR Congo), Luanda (Angola), Maputo (Mozambique), Tunis (Tunisia), Algiers (Algeria), Kampala (Uganda)
-
-### Asia & Middle East (currently ~15 cities)
-- **New:** Hanoi (Vietnam), Bangkok suburbs Chiang Mai (Thailand), Osaka (Japan), Pune/Chennai (India), Karachi/Lahore (Pakistan), Dhaka (Bangladesh), Colombo (Sri Lanka), Beirut (Lebanon), Amman (Jordan), Doha (Qatar), Riyadh (Saudi Arabia), Almaty (Kazakhstan)
-
-### South America (currently 5 cities)
-- **New:** Bogota already exists; add Quito (Ecuador), La Paz (Bolivia), Asuncion (Paraguay), Caracas (Venezuela), Panama City (Panama), San Jose (Costa Rica), Tegucigalpa (Honduras), Santo Domingo (Dominican Republic), Port-au-Prince (Haiti), San Juan (Puerto Rico), Guatemala City (Guatemala)
-
-### Eastern Europe (currently ~12 cities)
-- **New:** Minsk (Belarus), Kyiv (Ukraine), Skopje (North Macedonia), Tirana (Albania), Sarajevo (Bosnia), Tbilisi (Georgia), Yerevan (Armenia), Chisinau (Moldova)
-
-### Western Europe gaps
-- **New:** Luxembourg City (Luxembourg), Edinburgh (UK), Cork (Ireland), Malaga (Spain), Lyon (France), Stuttgart (Germany), Zurich (Switzerland)
-
-### Oceania
-- **New:** Auckland (New Zealand), Gold Coast (Australia), Wellington (New Zealand)
-
-Each city will include: name, country, latitude, longitude, population, region, timezone, music_scene rating, dominant_genre, cost_of_living, is_coastal, has_train_network
+1. **Missing country connections**: The `CONNECTED_COUNTRIES` map only has ~30 countries. The 50+ newly added countries (e.g., Ukraine, Georgia, Lebanon, Ecuador) have no train connectivity entries, meaning train travel between neighbors is unavailable.
+2. **Inconsistent region values**: New cities were seeded with lowercase regions (`africa`, `asia`, `europe`) while the ship route validation checks capitalized values (`Africa`, `Asia`, `Europe`). This breaks ship travel for ~40 cities.
+3. **Travel times**: All transport durations can be reduced by 10% by increasing effective speeds.
 
 ---
 
-## Small Venue Seeding
+## Changes
 
-For every city without venues (existing 55 + new ~80), seed **2-3 small venues** with:
-- **Types:** cafe, indie_venue, club (small music-focused)
-- **Capacity:** 50-250 (small/intimate)
-- **Prestige level:** 1 (starter venues)
-- **Base payment:** 0-300
-- **Realistic names** reflecting local culture (e.g., "The Vinyl Den" not "City Cafe")
-- **Requirements:** minimal (min_fame: 0, min_fans: 0) so new players can perform
-- Standard slot_config with 4 slots per day
+### 1. Expand `CONNECTED_COUNTRIES` map (in `dynamicTravel.ts`)
+
+Add train connections for all new countries with realistic neighbor links:
+
+- **Eastern Europe**: Ukraine (Poland, Romania, Hungary, Moldova, Belarus), Belarus (Poland, Lithuania, Latvia, Russia), Georgia (Turkey, Armenia), Armenia (Georgia, Turkey), Moldova (Ukraine, Romania), Bosnia and Herzegovina (Croatia, Serbia), Albania (Greece, North Macedonia), North Macedonia (Serbia, Bulgaria, Greece, Albania)
+- **Middle East**: Lebanon (Turkey, Jordan), Jordan (Saudi Arabia, Lebanon), Saudi Arabia (Jordan, UAE), Qatar (Saudi Arabia), UAE (Saudi Arabia)
+- **Asia**: Pakistan (India, China), Bangladesh (India), Sri Lanka (no land), Kazakhstan (Russia, China)
+- **Africa**: Senegal (no rail network -- skip), Tunisia (Algeria), Algeria (Tunisia, Morocco), Uganda (Kenya, Tanzania), Tanzania (Kenya, Uganda, Mozambique), DR Congo (no rail), Angola (no rail), Mozambique (Tanzania, South Africa)
+- **South/Central America**: Ecuador (Colombia, Peru), Bolivia (Peru, Brazil, Argentina, Paraguay), Paraguay (Brazil, Argentina, Bolivia), Venezuela (Colombia, Brazil), Panama (Costa Rica, Colombia), Costa Rica (Panama), Honduras (Guatemala), Dominican Republic (no rail), Guatemala (Honduras, Mexico), Puerto Rico (no rail), Haiti (no rail)
+- **Western Europe**: Luxembourg (France, Germany, Belgium)
+
+### 2. Fix region inconsistency (SQL migration)
+
+Normalize all lowercase region values to capitalized versions:
+```sql
+UPDATE cities SET region = 'Africa' WHERE region = 'africa';
+UPDATE cities SET region = 'Asia' WHERE region = 'asia';
+UPDATE cities SET region = 'Europe' WHERE region = 'europe';
+UPDATE cities SET region = 'Oceania' WHERE region = 'oceania';
+UPDATE cities SET region = 'South America' WHERE region = 'south_america';
+UPDATE cities SET region = 'Caribbean' WHERE region = 'caribbean';
+UPDATE cities SET region = 'Central America' WHERE region = 'central_america';
+UPDATE cities SET region = 'Middle East' WHERE region = 'middle_east';
+```
+
+Also add ship routes for new region pairs:
+- Caribbean to North America, Caribbean to South America
+- Central America to North America, Central America to South America
+- Middle East to Africa (Red Sea routes)
+
+### 3. Reduce all travel times by 10%
+
+Increase all transport speeds by ~11% (which produces a 10% time reduction):
+- Bus: 50 -> 56 km/h
+- Train: 180 -> 200 km/h
+- Plane: 850 -> 944 km/h
+- Ship: 35 -> 39 km/h
+- Private Jet: fixed 3h -> 2.7h (rounded to 2.7)
+
+Also reduce buffer times by 10%:
+- Plane: 3h -> 2.7h
+- Train: 0.5h -> 0.45h
+- Ship: 1h -> 0.9h
+- Bus: 0.25h -> 0.22h
+
+### 4. Version bump
+
+Update to v1.0.740 in `VersionHeader.tsx`, `navigation.tsx`, and `VersionHistory.tsx`.
 
 ---
 
 ## Technical Details
 
-### Database changes
-One SQL migration containing:
-1. INSERT ~80 new rows into `cities` (with ON CONFLICT (name, country) DO NOTHING to avoid duplicates)
-2. INSERT ~350 new rows into `venues` using subqueries to look up `city_id` by name/country
+### Files to modify:
+1. **`src/utils/dynamicTravel.ts`** -- Add ~40 new country entries to `CONNECTED_COUNTRIES`, increase transport speeds by ~11%, reduce buffer times by 10%, add new valid ship routes for Caribbean/Central America/Middle East, round private jet duration to 2.7h
+2. **New SQL migration** -- Normalize region values to capitalized format for consistency
+3. **`src/components/VersionHeader.tsx`** -- Version bump to 1.0.740
+4. **`src/components/ui/navigation.tsx`** -- Version bump
+5. **`src/pages/VersionHistory.tsx`** -- Add changelog entry
 
-### Files to modify
-1. **New SQL migration** -- Seed cities and small venues
-2. **`src/components/VersionHeader.tsx`** -- Version bump to 1.0.739
-3. **`src/components/ui/navigation.tsx`** -- Version bump
-4. **`src/pages/VersionHistory.tsx`** -- Add changelog entry
-
-### Venue template per city (example)
-```text
-INSERT INTO venues (name, city_id, capacity, venue_type, prestige_level, base_payment, ...)
-VALUES (
-  'The Vinyl Den',
-  (SELECT id FROM cities WHERE name = 'Dakar' AND country = 'Senegal'),
-  80, 'indie_venue', 1, 150, ...
-);
-```
-
-Each venue gets: slot_config (4 slots), requirements (empty/zero), venue_cut 0.20, band_revenue_share 0.50, equipment_quality 2-3, sound_system_rating 2-3, no security required, alcohol_license true/false varying.
-
+### No database route tables needed
+The travel system is entirely dynamic (Haversine distance + mode rules). The only DB fix is normalizing region strings so ship route validation works for all cities.
