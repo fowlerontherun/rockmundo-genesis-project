@@ -1,94 +1,46 @@
 
+# Fix Cluttered Charts on Mobile (v1.0.784)
 
-# Festival Page Enhancement Plan (v1.0.783)
+## Problem
+On mobile, the chart table uses a fixed 12-column grid. When columns like Genre, Trend, and Weeks are hidden (`hidden sm:block`), their grid space becomes empty gaps rather than being redistributed. This causes the "This Week" and "Total Sales" number columns to appear jammed together, creating a "387.6K387.6K" effect with no visual separation.
 
-## Summary
-Overhaul the festival browse/detail page to show richer festival information, remove the "Perform Now" button (performances should work like gigs -- scheduled, not instant), add festival-specific merch creation for bands, and add a festival-exclusive items shop for attendees.
+## Solution
+Restructure the chart table layout to be mobile-responsive by:
 
----
-
-## Changes Overview
-
-### 1. Remove "Perform Now" Button from FestivalCard
-- In `FestivalCard.tsx`, remove the "Perform Now" button block (lines 163-173) that allows instant performance
-- Replace with a status indicator showing the scheduled performance time (if the player's band has a confirmed slot)
-- Performances should happen automatically based on slot scheduling, matching how gigs work
-
-### 2. Enrich the Festival Detail Panel (FestivalBrowser.tsx)
-Expand the `FestivalDetailPanel` to display more comprehensive information:
-
-- **Description section** -- show the festival description text
-- **Festival stats** -- duration, total stages, genre focus, capacity, ticket sales count
-- **Security info** -- show assigned security firm if available
-- **Financial summary** -- ticket price breakdown (day vs weekend), savings percentage on weekend passes
-- **Schedule grid** -- reorganize lineup by day with time slots visible, not just a flat list
-- **Attendance counter** -- show how many people have bought tickets or are attending
-
-### 3. Improve Ticket Purchase Section
-- Make the ticket buying UI more prominent with clearer pricing cards
-- Show remaining capacity / sold-out indicators
-- Add a confirmation dialog before purchase (since it deducts cash)
-- Display the player's current cash balance next to the buy buttons so they know if they can afford it
-
-### 4. Festival Merch Creation (for Bands)
-Add a new tab/section in the festival detail panel for bands that are performing:
-
-- **New component**: `FestivalMerchCreator.tsx` in `src/components/festivals/merch/`
-- Allows the performing band to create festival-specific merchandise (t-shirts, posters, commemorative items) tied to that festival
-- Uses the existing `player_merchandise` table with metadata indicating it's festival-specific (`metadata: { festival_id }`)
-- Festival merch gets a sales boost from festival attendance
-- Reuses patterns from the existing `MerchCatalog` and `ReleaseDesignDialog` components
-
-### 5. Festival-Exclusive Attendee Shop
-Add a marketplace for attendees to buy unique festival items:
-
-- **New component**: `FestivalExclusiveShop.tsx` in `src/components/festivals/merch/`
-- Available only to players who have a ticket for the festival
-- Shows festival-branded items (festival t-shirts, wristbands, commemorative posters, limited collectibles)
-- Items are generated based on the festival data (title, genre, location)
-- Purchases deduct from player cash and add items to their inventory
-- Some items could be "limited edition" with stock counts
-- Integrates into the `FestivalDetailPanel` as a new section or tab
-
-### 6. Update Festival Page Tabs
-In `Festivals.tsx`, add a third tab for "My Festival Merch" or integrate the shop into the detail panel:
-
-- The detail panel will gain two new collapsible sections:
-  - "Festival Shop" (for attendees to buy exclusive items)
-  - "Sell Your Merch" (for performing bands to set up their festival merch stand)
-
-### 7. Version Update
-- Bump version to `1.0.783` in `VersionHeader.tsx`
-- Add changelog entry in `VersionHistory.tsx`
-
----
+1. **Switching to a responsive grid** -- Use fewer columns on mobile (e.g., `grid-cols-8 sm:grid-cols-12`) so visible columns fill the available space properly
+2. **Expand song column on mobile** -- Give the song/artist name more room on small screens to avoid heavy truncation
+3. **Stack metric values on mobile** -- Show "This Week" and "Total" values stacked vertically in a single column on mobile instead of side-by-side, eliminating the cramped overlap
+4. **Compact audio player** -- Ensure the inline `TrackableSongPlayer` doesn't bloat card height on mobile
+5. **Smaller text on mobile** -- Reduce font sizes for numbers and labels on small screens
 
 ## Technical Details
 
-### Files to Modify
+### File: `src/pages/CountryCharts.tsx`
+
+**Header row (line 110):**
+- Change from `grid-cols-12` to `grid-cols-8 sm:grid-cols-12`
+- Rank: `col-span-1`
+- Song: `col-span-4 sm:col-span-3` (keeps more room on mobile)
+- Genre: stays `hidden sm:block col-span-2`
+- Weekly value: `col-span-1 sm:col-span-2` on mobile, or stack both values
+- Total value: `col-span-2 sm:col-span-2`
+- Trend/Weeks: stay hidden on mobile
+
+**Data rows (lines 138-231):**
+- Match the same responsive column structure
+- On mobile, combine weekly + total into a single stacked cell showing both values with small labels
+- Reduce number font size on mobile (`text-xs sm:text-sm`)
+
+**Filter bar (lines 291-390):**
+- Narrow the Select trigger widths on mobile (e.g., `w-[110px] sm:w-[150px]`)
+- Ensure filters wrap neatly on small screens
+
+**Tabs (line 402):**
+- Already handles mobile with shortened labels -- no change needed
+
+### Files Modified
 | File | Change |
 |------|--------|
-| `src/components/festivals/FestivalCard.tsx` | Remove "Perform Now" button, add scheduled slot info |
-| `src/components/festivals/FestivalBrowser.tsx` | Expand detail panel with description, stats, festival shop, merch stand sections |
-| `src/components/VersionHeader.tsx` | Bump to v1.0.783 |
+| `src/pages/CountryCharts.tsx` | Responsive grid layout, stacked values on mobile, smaller touch targets |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.784 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
-
-### New Files
-| File | Purpose |
-|------|---------|
-| `src/components/festivals/merch/FestivalExclusiveShop.tsx` | Attendee shop for festival-exclusive items |
-| `src/components/festivals/merch/FestivalMerchStand.tsx` | Band merch stand setup for performing bands |
-
-### Data Approach
-- Festival-exclusive items will be defined as a static catalog generated from festival properties (no new DB tables needed)
-- Purchases will use the existing `player_merchandise` / profile cash deduction pattern
-- Band festival merch uses the existing `player_merchandise` table with `festival_id` in metadata
-- The `festival_merch_sales` table already exists and can track sales
-
-### Key Patterns Followed
-- Uses existing `useFestivalTickets` hook for ticket state
-- Uses existing `useFestivalStages` / `useFestivalStageSlots` for lineup data
-- Uses existing `useFestivalQuality` for ratings
-- Follows the same cash deduction pattern from `useFestivalTickets`
-- Reuses `Card`, `Badge`, `Button`, `Separator` UI components consistently
-
