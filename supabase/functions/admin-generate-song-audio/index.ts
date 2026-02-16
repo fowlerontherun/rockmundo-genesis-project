@@ -251,7 +251,7 @@ serve(async (req) => {
             
             // Only save generated lyrics if song didn't have original user lyrics
             // NEVER overwrite user-entered lyrics from songwriting projects
-            if (!hadOriginalLyrics) {
+            if (!hadOriginalLyrics && !song.audio_url) {
               const { error: lyricsUpdateError } = await supabase
                 .from('songs')
                 .update({ lyrics: rawLyrics })
@@ -528,8 +528,8 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   if (cleaned.toLowerCase().includes('style:')) {
     console.log('[sanitizeLyrics] Detected Style: in lyrics, extracting actual lyrics')
     
-    // Find the FIRST Lyrics: section and extract from there
-    const lyricsMatch = cleaned.match(/Lyrics:\s*([\s\S]*?)(?=\n\nLyrics:|\n\nStyle:|$)/i)
+    // Find the FIRST Lyrics: section and extract from there (flexible whitespace)
+    const lyricsMatch = cleaned.match(/Lyrics:\s*([\s\S]*?)(?=\n\s*Lyrics:|\n\s*Style:|$)/i)
     if (lyricsMatch && lyricsMatch[1]) {
       cleaned = lyricsMatch[1].trim()
     } else {
@@ -544,25 +544,38 @@ function sanitizeLyrics(lyrics: string | null): string | null {
     }
   }
   
-  // Strip "Lyrics:" header if present
-  cleaned = cleaned.replace(/^lyrics:\s*/i, '').trim()
+  // Strip "Lyrics:" header if present (flexible whitespace)
+  cleaned = cleaned.replace(/^\s*lyrics:\s*/i, '').trim()
   
   // Remove any duplicate Lyrics: sections — keep only the FIRST set of lyrics
-  const lyricsSections = cleaned.split(/\n\s*Lyrics:\s*\n/i)
+  const lyricsSections = cleaned.split(/\n\s*Lyrics:\s*\n?/i)
   if (lyricsSections.length > 1) {
     console.log(`[sanitizeLyrics] Detected ${lyricsSections.length} Lyrics: sections, keeping first only`)
     cleaned = lyricsSections[0].trim()
   }
   
-  // Also detect duplicate song structures (two [Verse 1] markers = concatenated songs)
-  const verse1Count = (cleaned.match(/\[verse\s*1?\]/gi) || []).length
-  if (verse1Count > 1) {
-    console.log(`[sanitizeLyrics] Detected ${verse1Count} Verse 1 markers - truncating to first song`)
-    const firstVerseEnd = cleaned.search(/\[verse\s*1?\]/i)
-    const afterFirst = cleaned.substring(firstVerseEnd + 1)
-    const secondVersePos = afterFirst.search(/\[verse\s*1?\]/i)
-    if (secondVersePos > 0) {
-      cleaned = cleaned.substring(0, firstVerseEnd + 1 + secondVersePos).trim()
+  // Detect (You) / (Me) singer markers as AI contamination signal
+  if (/\((You|Me)\)/i.test(cleaned)) {
+    console.log('[sanitizeLyrics] Detected (You)/(Me) singer markers - stripping them')
+    cleaned = cleaned.replace(/\((You|Me)\)\s*/gi, '')
+  }
+  
+  // Also detect duplicate song structures (two [Verse 1] or [Verse] markers = concatenated songs)
+  const verseMatches = [...cleaned.matchAll(/\[(verse\s*\d*)\]/gi)]
+  if (verseMatches.length > 1) {
+    const verseLabels = verseMatches.map(m => m[1].toLowerCase().replace(/\s+/g, ''))
+    const seen = new Set<string>()
+    let duplicateIndex = -1
+    for (let i = 0; i < verseLabels.length; i++) {
+      if (seen.has(verseLabels[i])) {
+        duplicateIndex = verseMatches[i].index!
+        break
+      }
+      seen.add(verseLabels[i])
+    }
+    if (duplicateIndex > 0) {
+      console.log(`[sanitizeLyrics] Detected duplicate verse marker at pos ${duplicateIndex} - truncating to first song`)
+      cleaned = cleaned.substring(0, duplicateIndex).trim()
     }
   }
   

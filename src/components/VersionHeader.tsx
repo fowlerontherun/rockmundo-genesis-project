@@ -3,7 +3,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { VipBadge } from "@/components/VipBadge";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 
-export const version = "1.0.719";
+export const version = "1.0.720";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
