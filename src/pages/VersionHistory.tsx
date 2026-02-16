@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.734",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Gear: Added 28 Harley Benton items — electric guitars (13), acoustics (4), basses (4), amps (2), effects (4), keyboard (1)" },
+      { type: 'feature', description: "Gear: Added 31 items from Squier, Jackson, Cort, Chapman, Sterling, Charvel, Reverend, Gretsch, Danelectro, Kramer, Sire, and more" },
+      { type: 'improvement', description: "Gear catalog expanded from 506 to 565 items across all categories" },
+    ],
+  },
+  {
     version: "1.0.733",
     date: "2026-02-16",
     changes: [
