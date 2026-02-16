@@ -227,21 +227,42 @@ export const MerchCatalog = ({
                     </div>
                   </div>
 
-                  {/* Profit Preview */}
-                  {price && parseInt(price) > selectedItem.base_cost && (
-                    <div className="p-2 bg-primary/5 rounded text-xs">
-                      <div className="flex justify-between">
-                        <span>Profit per item:</span>
-                        <span className="font-medium text-green-600">
-                          ${parseInt(price) - selectedItem.base_cost}
+                  {/* Cost & Profit Preview */}
+                  {stock && parseInt(stock) > 0 && (
+                    <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-1.5 border border-border">
+                      <div className="flex justify-between font-medium">
+                        <span>Production Cost:</span>
+                        <span className="text-destructive">
+                          -${selectedItem.base_cost * (parseInt(stock) || 0)}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Total potential profit:</span>
-                        <span className="font-medium text-green-600">
-                          ${(parseInt(price) - selectedItem.base_cost) * (parseInt(stock) || 0)}
-                        </span>
-                      </div>
+                      <p className="text-muted-foreground">
+                        {parseInt(stock)} units × ${selectedItem.base_cost}/unit
+                      </p>
+                      {price && parseInt(price) > selectedItem.base_cost && (
+                        <>
+                          <div className="border-t border-border pt-1.5 flex justify-between">
+                            <span>Gross profit/unit:</span>
+                            <span className="font-medium text-green-600">
+                              ${parseInt(price) - selectedItem.base_cost}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>- Logistics (5%):</span>
+                            <span>-${(parseInt(price) * 0.05).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>- Tax (8%):</span>
+                            <span>-${(parseInt(price) * 0.08).toFixed(2)}</span>
+                          </div>
+                          <div className="border-t border-border pt-1.5 flex justify-between font-medium">
+                            <span>Net profit/unit:</span>
+                            <span className="text-green-600">
+                              ${(parseInt(price) - selectedItem.base_cost - parseInt(price) * 0.05 - parseInt(price) * 0.08).toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
