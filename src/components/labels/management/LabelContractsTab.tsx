@@ -20,6 +20,7 @@ const STATUS_COLORS: Record<string, string> = {
   active: "bg-emerald-500/20 text-emerald-500",
   offered: "bg-amber-500/20 text-amber-500",
   accepted_by_artist: "bg-blue-500/20 text-blue-500",
+  negotiating: "bg-purple-500/20 text-purple-500",
   completed: "bg-blue-500/20 text-blue-500",
   terminated: "bg-destructive/20 text-destructive",
   rejected: "bg-muted text-muted-foreground",
