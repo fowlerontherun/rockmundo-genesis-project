@@ -16,7 +16,7 @@ const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; des
   { value: "combined", label: "Top 50", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales", hasAlbumData: true },
   { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" />, description: "Ranked by weekly streams", hasAlbumData: true },
   { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" />, description: "Digital download sales", hasAlbumData: true },
-  { value: "physical_sales", label: "Physical", icon: <Disc className="h-4 w-4" />, description: "CD, Vinyl & Cassette sales combined", hasAlbumData: false },
+  { value: "physical_sales", label: "Physical", icon: <Disc className="h-4 w-4" />, description: "CD, Vinyl & Cassette sales combined", hasAlbumData: true },
   { value: "radio_airplay", label: "Radio", icon: <Radio className="h-4 w-4" />, description: "Radio airplay chart", hasAlbumData: false },
 ];
 

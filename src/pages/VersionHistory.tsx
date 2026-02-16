@@ -14,14 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.823",
+    version: "1.0.824",
     date: "2026-02-16",
     changes: [
-      { type: 'fix', description: "Album charts now only show album entries (release title, record sales, total streams) instead of leaking individual singles from album-scoped chart types" },
+      { type: 'fix', description: "Physical chart now supports album view; album charts resolve artist name from release band when song band is missing; fixes 'Unknown Artist' on album chart entries" },
     ],
   },
   {
-    version: "1.0.822",
+    version: "1.0.823",
     date: "2026-02-16",
     changes: [
       { type: 'feature', description: "Massively expanded How to Play guide: 8 tabs (Overview, Music, Perform, Skills, Career, Social, World, Lifestyle) covering all game systems including touring, PR, merch, equipment, housing, health/energy, minigames, achievements, and more" },
