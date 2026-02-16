@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.718",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed Replicate bitrate error — changed from 256 to 128000 (valid API value)" },
+    ],
+  },
+  {
     version: "1.0.717",
     date: "2026-02-16",
     changes: [
