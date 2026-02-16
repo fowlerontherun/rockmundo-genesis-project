@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { usePlayerLevel } from "@/hooks/usePlayerLevel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -40,6 +41,54 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
   const { user } = useAuth();
   const { data: primaryBand } = usePrimaryBand();
   const [citySearch, setCitySearch] = useState("");
+
+  // Fetch XP wallet for computed level
+  const { data: xpWallet } = useQuery({
+    queryKey: ["dashboard-xp-wallet", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      const client: any = supabase;
+      const { data } = await client
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!profile?.id,
+    staleTime: 60000,
+  });
+
+  // Fetch skill progress for computed level
+  const { data: skillProgress } = useQuery({
+    queryKey: ["dashboard-skill-progress", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      const client: any = supabase;
+      const { data } = await client
+        .from("player_skill_progress")
+        .select("skill_slug, current_level")
+        .eq("profile_id", profile.id);
+      if (!data) return null;
+      const skills: Record<string, number> = {};
+      for (const row of data as any[]) {
+        if (row.skill_slug && typeof row.current_level === "number") {
+          skills[row.skill_slug] = row.current_level;
+        }
+      }
+      return skills;
+    },
+    enabled: !!profile?.id,
+    staleTime: 60000,
+  });
+
+  // Compute real player level from combined progress
+  const playerLevelData = usePlayerLevel({
+    xpWallet: xpWallet ?? null,
+    skills: skillProgress ?? null,
+    fame: profile?.fame ?? 0,
+    attributeStars: null,
+  });
 
   // Fetch all cities
   const { data: allCities } = useQuery({
@@ -192,7 +241,8 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground font-medium">Level</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{profile?.level || 1}</p>
+              <p className="text-2xl font-bold text-foreground">{playerLevelData.level}</p>
+              <Progress value={playerLevelData.levelProgress} className="h-1.5 mt-1" />
             </CardContent>
           </Card>
 
