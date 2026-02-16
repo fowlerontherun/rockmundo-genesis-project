@@ -29,6 +29,7 @@ export function GameDateWidget({ profileCreatedAt }: GameDateWidgetProps) {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="text-3xl">{calendar.seasonEmoji}</div>
+                <span className="text-xs font-medium capitalize text-muted-foreground">{calendar.season}</span>
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />

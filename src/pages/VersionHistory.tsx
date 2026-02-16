@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.758",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Season name now displayed alongside season emoji in location header and game date widget" },
+      { type: 'feature', description: "Today's News header now shows current in-game season, day, and year" },
+      { type: 'improvement', description: "Confirmed gig outcome reports are viewable for all bands from Today's News" },
+    ],
+  },
+  {
     version: "1.0.757",
     date: "2026-02-16",
     changes: [
