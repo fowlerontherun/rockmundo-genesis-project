@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.733",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Seeded 1,155 new jobs across 55 previously empty cities — all 134 cities now have 21 jobs each covering all categories" },
+    ],
+  },
+  {
     version: "1.0.732",
     date: "2026-02-16",
     changes: [
