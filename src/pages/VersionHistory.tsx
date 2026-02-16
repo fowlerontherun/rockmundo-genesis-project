@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.779",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Contract notification CTAs (e.g. 'Open contract to review', 'Approve or counter') are now clickable buttons that scroll to and highlight the relevant contract or offer card" },
+    ],
+  },
+  {
     version: "1.0.778",
     date: "2026-02-16",
     changes: [

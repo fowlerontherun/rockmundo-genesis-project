@@ -1,12 +1,14 @@
 import { Bell, ShieldAlert, Timer, Trophy, XOctagon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { ContractNotification } from "./contractNotifications";
 
 interface ContractNotificationsPanelProps {
   playerMessages: ContractNotification[];
   adminAlerts: ContractNotification[];
+  onNotificationAction?: (notification: ContractNotification) => void;
 }
 
 const categoryCopy: Record<ContractNotification["category"], { label: string; icon: JSX.Element }> = {
@@ -29,9 +31,10 @@ interface NotificationListProps {
   description: string;
   emptyLabel: string;
   notifications: ContractNotification[];
+  onAction?: (notification: ContractNotification) => void;
 }
 
-const NotificationList = ({ title, description, notifications, emptyLabel }: NotificationListProps) => {
+const NotificationList = ({ title, description, notifications, emptyLabel, onAction }: NotificationListProps) => {
   return (
     <Card className="h-full">
       <CardHeader>
@@ -56,7 +59,17 @@ const NotificationList = ({ title, description, notifications, emptyLabel }: Not
                     </Badge>
                     <span>{notification.title}</span>
                   </div>
-                  {notification.cta && (
+                  {notification.cta && onAction && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs font-medium text-primary hover:text-primary/80"
+                      onClick={() => onAction(notification)}
+                    >
+                      {notification.cta}
+                    </Button>
+                  )}
+                  {notification.cta && !onAction && (
                     <Badge variant="outline" className="text-xs font-medium">
                       {notification.cta}
                     </Badge>
@@ -87,7 +100,7 @@ const NotificationList = ({ title, description, notifications, emptyLabel }: Not
   );
 };
 
-export const ContractNotificationsPanel = ({ playerMessages, adminAlerts }: ContractNotificationsPanelProps) => {
+export const ContractNotificationsPanel = ({ playerMessages, adminAlerts, onNotificationAction }: ContractNotificationsPanelProps) => {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <NotificationList
@@ -95,12 +108,14 @@ export const ContractNotificationsPanel = ({ playerMessages, adminAlerts }: Cont
         description="Player-facing updates for offers, expirations, and performance events."
         notifications={playerMessages}
         emptyLabel="No player messages right now."
+        onAction={onNotificationAction}
       />
       <NotificationList
         title="Admin approvals"
         description="Internal follow-ups that need a producer or label admin to approve."
         notifications={adminAlerts}
         emptyLabel="No admin approvals required."
+        onAction={onNotificationAction}
       />
     </div>
   );
