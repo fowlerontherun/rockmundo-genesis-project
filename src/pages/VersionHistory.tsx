@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.797",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Repertoire song cards redesigned for mobile — stats (fame, popularity, quality, status) now wrap below the title instead of overflowing off-screen" },
+    ],
+  },
+  {
     version: "1.0.796",
     date: "2026-02-16",
     changes: [
