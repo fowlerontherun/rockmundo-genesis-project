@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.809",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Removed seasonal background particle effects (falling flowers/snow/leaves)" },
+    ],
+  },
+  {
     version: "1.0.808",
     date: "2026-02-16",
     changes: [

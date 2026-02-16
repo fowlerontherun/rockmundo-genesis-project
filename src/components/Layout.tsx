@@ -20,7 +20,7 @@ import { EventNotificationModal } from "@/components/events/EventNotificationMod
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
 import { InterviewModal } from "@/components/pr/InterviewModal";
-import { SeasonalBackground } from "@/components/calendar/SeasonalBackground";
+
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 const Layout = () => {
@@ -96,7 +96,7 @@ const Layout = () => {
           <TutorialTooltip />
         </div>
       </main>
-      {calendar && <SeasonalBackground season={calendar.season} />}
+      
       <FloatingAvatarWidget />
       <EventNotificationModal />
       <InterviewModal />
