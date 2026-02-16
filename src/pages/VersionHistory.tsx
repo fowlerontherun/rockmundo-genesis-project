@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.729",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Song Marketplace: New 'Top Sales' tab showing top 100 completed sales ranked by price with gold/silver/bronze highlights" },
+    ],
+  },
+  {
     version: "1.0.728",
     date: "2026-02-16",
     changes: [
