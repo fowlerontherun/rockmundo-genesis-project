@@ -515,20 +515,20 @@ const Dashboard = () => {
                     </div>}
                   
                   {messages.map(message => <div key={message.id} className={cn("flex w-full", message.role === "user" ? "justify-end" : "justify-start")}>
-                      <div className={cn("max-w-xl rounded-2xl border px-4 py-3", message.role === "advisor" ? "border-primary/20 bg-background" : "border-primary bg-primary text-primary-foreground")}>
+                      <div className={cn("max-w-full sm:max-w-xl rounded-2xl border px-4 py-3 overflow-hidden", message.role === "advisor" ? "border-primary/20 bg-background" : "border-primary bg-primary text-primary-foreground")}>
                         <div className="flex items-center gap-2 text-sm font-medium">
                           {message.role === "advisor" ? <>
                               <Bot className="h-4 w-4" />
                               <span>{t('nav.advisor')}</span>
                             </> : <span>{t('dashboard.you', 'You')}</span>}
                         </div>
-                        <p className="mt-2 text-sm leading-relaxed">{message.content}</p>
+                        <p className="mt-2 text-sm leading-relaxed break-words">{message.content}</p>
                         
                         {message.suggestions && message.suggestions.length > 0 && <div className="mt-4 space-y-2">
                             {message.suggestions.map(suggestion => <div key={suggestion.id} className="rounded-lg border bg-muted/20 p-3">
                                 <h3 className="text-sm font-semibold">{suggestion.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{suggestion.message}</p>
-                                {suggestion.actions.length > 0 && <div className="mt-2 flex gap-2">
+                                {suggestion.actions.length > 0 && <div className="mt-2 flex flex-wrap gap-2">
                                     {suggestion.actions.map(action => <Button key={action.href} variant="outline" size="sm" asChild>
                                         <Link to={action.href}>{action.label}</Link>
                                       </Button>)}

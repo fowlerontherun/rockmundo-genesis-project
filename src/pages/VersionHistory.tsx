@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.725",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Advisor text no longer overflows on mobile — messages and action buttons now wrap properly" },
+    ],
+  },
+  {
     version: "1.0.724",
     date: "2026-02-16",
     changes: [
