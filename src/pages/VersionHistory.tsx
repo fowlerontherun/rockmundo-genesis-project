@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.801",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed merch sales simulation — integer type mismatch (22P02) was preventing all daily sales from being recorded since Jan 26" },
+      { type: 'fix', description: "Rounded total_price and unit_price to integers before inserting into merch_orders table" },
+      { type: 'fix', description: "Rounded band_earnings.amount to integer for merchandise revenue credits" },
+    ],
+  },
+  {
     version: "1.0.800",
     date: "2026-02-16",
     changes: [

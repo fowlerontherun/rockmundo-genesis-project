@@ -176,17 +176,18 @@ Deno.serve(async (req) => {
         const unitPrice = selectedMerch.selling_price || 20;
         const subtotal = unitPrice * quantity;
 
-        // Calculate taxes
+        // Calculate taxes (keep as decimals for numeric columns)
         const salesTax = Math.round(subtotal * selectedCountry.salesTaxRate * 100) / 100;
         const vat = Math.round(subtotal * selectedCountry.vatRate * 100) / 100;
-        const totalPrice = Math.round((subtotal + salesTax + vat) * 100) / 100;
-        const netRevenue = subtotal; // Band receives pre-tax amount
+        // total_price and unit_price are INTEGER columns - must be whole numbers
+        const totalPrice = Math.round(subtotal + salesTax + vat);
+        const netRevenue = subtotal; // Band receives pre-tax amount (integer since unitPrice is integer)
 
         ordersToInsert.push({
           band_id: band.id,
           merchandise_id: selectedMerch.id,
           quantity,
-          unit_price: unitPrice,
+          unit_price: Math.round(unitPrice),
           total_price: totalPrice,
           sales_tax: salesTax,
           vat: vat,
@@ -248,7 +249,7 @@ Deno.serve(async (req) => {
         
         await supabase.from("band_earnings").insert({
           band_id: band.id,
-          amount: bandNetRevenue,
+          amount: Math.round(bandNetRevenue),
           source: "merchandise",
           description: `Daily merch sales: ${ordersToInsert.length} orders ($${bandTotalTaxes.toFixed(2)} in taxes collected)`,
           metadata: {
