@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.817",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Added RLS policies for pov_clip_templates: admin INSERT, UPDATE, DELETE permissions to fix seed clips error" },
+    ],
+  },
+  {
     version: "1.0.816",
     date: "2026-02-16",
     changes: [
