@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useUserRole } from "@/hooks/useUserRole";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
@@ -48,6 +49,7 @@ const HorizontalNavigation = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { data: unreadInboxCount } = useUnreadInboxCount();
+  const { isAdmin } = useUserRole();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const dropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -271,7 +273,7 @@ const HorizontalNavigation = () => {
 
         {/* Horizontal nav sections */}
         <div className="flex items-center px-2 h-10 relative z-[9999]">
-          {navSections.map((section) => {
+          {navSections.filter(s => s.titleKey !== 'nav.admin' || isAdmin()).map((section) => {
             const sectionKey = section.titleKey;
             const isOpen = openDropdown === sectionKey;
             const hasActive = sectionHasActive(section);
@@ -358,7 +360,7 @@ const HorizontalNavigation = () => {
                 </div>
               </div>
               <nav className="p-3 space-y-1">
-                {navSections.map((section) => (
+                {navSections.filter(s => s.titleKey !== 'nav.admin' || isAdmin()).map((section) => (
                   <div key={section.titleKey} className="mb-3">
                     <h3
                       className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider px-3 py-1 cursor-pointer hover:text-primary transition-colors"

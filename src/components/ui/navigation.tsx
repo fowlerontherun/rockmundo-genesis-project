@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useUserRole } from "@/hooks/useUserRole";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
@@ -95,6 +96,7 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { isAdmin } = useUserRole();
   const { data: unreadInboxCount } = useUnreadInboxCount();
   
   // Desktop sidebar collapsed state with localStorage persistence
@@ -351,7 +353,7 @@ const Navigation = () => {
 
       {/* Navigation */}
       <nav className={`flex-1 ${collapsed ? 'p-2' : 'p-4'} space-y-2 overflow-y-auto`}>
-        {navSections.map((section) => {
+        {navSections.filter(s => s.titleKey !== 'nav.admin' || isAdmin()).map((section) => {
           const sectionKey = getSectionKey(section.titleKey);
           return (
             <Collapsible

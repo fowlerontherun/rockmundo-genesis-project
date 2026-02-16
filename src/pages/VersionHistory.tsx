@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.769",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Admin nav section is now hidden from non-admin users in both sidebar and horizontal navigation" },
+      { type: 'feature', description: "Admin User Role Management page — view all users, search by username, and change roles (admin/moderator/user)" },
+      { type: 'feature', description: "User Roles tile added to Admin Dashboard for quick access" },
+    ],
+  },
+  {
     version: "1.0.768",
     date: "2026-02-16",
     changes: [
