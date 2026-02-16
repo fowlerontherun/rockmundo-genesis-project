@@ -68,10 +68,10 @@ export default function TodaysNewsPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-oswald">{t('todaysNews.title')}</h1>
-        <p className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+        <h1 className="text-2xl sm:text-3xl font-oswald">{t('todaysNews.title')}</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
       </div>
 
       {/* Random Events - urgent attention */}
@@ -81,7 +81,7 @@ export default function TodaysNewsPage() {
       <PersonalUpdates />
 
       {/* Player XP, Skills, and Earnings */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <PlayerGainsNews />
         <BandGainsNews />
         <EarningsNews />
@@ -102,7 +102,7 @@ export default function TodaysNewsPage() {
       {/* Band Invitations */}
       <BandInvitations />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <TrendingHashtags />
         <ChartMoversSection />
         <MilestoneNews />
