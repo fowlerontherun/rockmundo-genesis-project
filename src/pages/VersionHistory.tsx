@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.742",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Added category filter chips to university course browser — filter by Instruments, Vocals, Genres, Production, Performance, Composition, and Technology" },
+      { type: 'improvement', description: "Improved course search to match against formatted skill names, university names, and cities — multi-word queries now work correctly" },
+      { type: 'feature', description: "Active filter badges with one-click removal and 'Clear all' button for easy filter management" },
+      { type: 'improvement', description: "Course cards now show duration and required skill level badges for better at-a-glance comparison" },
+      { type: 'improvement', description: "Skill slugs now display as readable labels (e.g., 'basic_keyboard' → 'Keyboard')" },
+    ],
+  },
+  {
     version: "1.0.741",
     date: "2026-02-16",
     changes: [
