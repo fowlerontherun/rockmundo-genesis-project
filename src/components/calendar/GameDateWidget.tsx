@@ -33,7 +33,7 @@ export function GameDateWidget({ profileCreatedAt }: GameDateWidgetProps) {
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">
-                      {calendar.monthName} {calendar.gameDay}, Year {calendar.gameYear}
+                      Day {calendar.gameDay}, Year {calendar.gameYear}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground capitalize">

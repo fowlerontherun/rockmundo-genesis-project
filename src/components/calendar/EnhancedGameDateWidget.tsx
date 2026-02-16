@@ -102,7 +102,7 @@ export function EnhancedGameDateWidget({
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-lg font-bold">
-                  {calendar.monthName} {calendar.gameDay}
+                  Day {calendar.gameDay}
                 </span>
               </div>
               <div className="text-2xl font-bold text-primary">Year {calendar.gameYear}</div>
