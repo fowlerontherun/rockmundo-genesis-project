@@ -1,98 +1,74 @@
 
-## v1.0.707 — Addiction Balance, Craving Events, Holiday Prices, and Debt Relief
+## v1.0.708 — Fix Record Sales Revenue Display and Band Debt Relief
 
-### 1. Reduce Addiction Trigger Chances
-**File:** `src/utils/addictionSystem.ts`
+### Problem Summary
 
-Lower `TRIGGER_CHANCES` by ~40-50%:
-- legendary: 0.08 -> 0.05
-- heavy: 0.04 -> 0.025
-- moderate: 0.01 -> 0.006
-- light: 0.002 -> 0.001
-- abstinent: stays 0
+**1. Revenue figures are displayed 100x too high (cents shown as dollars)**
+All `release_sales` financial columns (`total_amount`, `net_revenue`, `sales_tax_amount`, `distribution_fee`) are stored in **cents** in the database. However, the UI displays these raw cent values as if they were dollars. For example, a $8,041.95 gross revenue shows as "$804,195".
 
-Reduce afterparty multipliers from 2x/1.3x to 1.6x/1.2x.
+This affects:
+- **ReleaseSalesTab.tsx**: Total revenue and per-sale amounts displayed in cents
+- **ReleaseAnalyticsDialog.tsx**: Revenue breakdown, P&L statement, and per-song financials all in cents
+- The `release.total_revenue` field (stored in dollars by `increment_release_revenue`) is mixed with `release_sales.total_amount` (stored in cents), creating inconsistency
 
----
-
-### 2. Seed 100 Addiction Craving Events
-**Database migration** -- insert 100 new rows into `random_events` with `category = 'addiction_craving'`, `is_common = true`, `is_active = true`.
-
-Split across 4 addiction types:
-
-- **Alcohol (~30):** "I could really use a drink", "A cold beer would take the edge off", "The bar is calling my name", etc.
-- **Substances (~25):** "I need a hit", "Just one more time won't hurt", "I know a guy who can sort me out", etc.
-- **Gambling (~25):** "I should stick a bet on", "The casino is calling", "I feel lucky today", "One spin won't hurt", etc.
-- **Partying (~20):** "There's a party I can't miss", "One more night out won't hurt", "I should go out tonight", etc.
-
-Each event has two choices:
-- **Option A (Give in):** Short-term boost (energy/morale +10-15) but costs cash ($20-100) and increases addiction severity (+5-15)
-- **Option B (Resist):** Health +5, XP +10-20, no negative effects
-
-The effects JSON will include an `addiction_type` field so the trigger function can match events to the player's specific addiction.
+**2. Bands are deep in debt**
+- "Big Fowler and the Growlers": **-$39.9M** (caused by $41M in leader withdrawals)
+- "Mr. Blue": **-$915K**
+- "Jophiel": **-$59K**
 
 ---
 
-### 3. Update Random Event Trigger Function
-**File:** `supabase/functions/trigger-random-events/index.ts`
+### Fix 1: Convert cents to dollars in all display components
 
-Add logic: when processing a player, check if they have an active addiction (query `player_addictions` for `status = 'active'`). If so, give a bonus roll (1 in 5 chance) to trigger a craving event matching their addiction type, filtered from events with `category = 'addiction_craving'`.
+**File: `src/components/releases/ReleaseSalesTab.tsx`**
+- Line 57: Divide `totalRevenue` by 100 when summing `sale.total_amount`
+- Line 237: Divide `sale.total_amount` by 100 for individual sale display
 
----
+**File: `src/components/releases/ReleaseAnalyticsDialog.tsx`**
+- Lines 117-127 (sales aggregation): Divide `total_amount` by 100
+- Lines 154-160 (financial summary): Divide all cent fields (`total_amount`, `sales_tax_amount`, `distribution_fee`, `net_revenue`) by 100
+- All corresponding display lines in the Financials tab
 
-### 4. Increase Holiday Prices
-**File:** `src/hooks/useHolidays.ts`
+### Fix 2: Reset band balances to zero for bands in debt
 
-Updated pricing:
-- Local Staycation: $20 -> $50/day
-- Beach Resort: $80 -> $200/day
-- Mountain Cabin: $50 -> $120/day
-- Tropical Island: $150 -> $400/day
-- Countryside Retreat: $40 -> $100/day
-- Spa Resort: $120 -> $300/day
-
----
-
-### 5. Debt Relief for Struggling Players
-**Database migration** -- a one-time UPDATE to help players currently in severe debt:
-
-After checking the database, **no players are currently in negative cash**. The lowest balance is $500. So no debt relief migration is needed right now. However, as a preventive measure, the migration will include a safety-net statement:
-
+**Database migration:**
 ```sql
--- Clear debt flags and give a small cash boost to any player below $0
-UPDATE profiles
-SET cash = GREATEST(cash, 500),
-    debt_started_at = NULL
-WHERE cash < 0;
-
--- Release anyone imprisoned purely for debt
-UPDATE profiles
-SET is_imprisoned = false
-WHERE is_imprisoned = true AND cash >= 0;
+UPDATE bands 
+SET band_balance = 0 
+WHERE band_balance < 0;
 ```
 
-This ensures if any players fall into debt before the migration runs, they get a fresh start.
+This resets the 3 affected bands to a clean slate.
+
+### Fix 3: Version bump
+
+- Update version to **v1.0.708** in `navigation.tsx`
+- Add changelog entry in `VersionHistory.tsx`
 
 ---
 
-### 6. Version Bump
-**Files:** `src/components/ui/navigation.tsx`, `src/pages/VersionHistory.tsx`
+### Technical Details
 
-Update to v1.0.707 with changelog:
-- Reduced addiction trigger chances by ~40%
-- Added 100 craving events for addicted players
-- Increased holiday destination prices
-- Applied debt relief for struggling players
+The root cause of the display bug is a unit mismatch. The `generate-daily-sales` edge function correctly stores values in cents:
+```
+unit_price: 999         (cents, = $9.99)
+total_amount: 804195    (cents, = $8,041.95)
+net_revenue: 562936     (cents, = $5,629.36)
+```
 
----
+But the UI reads these values directly without dividing by 100:
+```typescript
+// BUG: total_amount is in cents, displayed as dollars
+const totalRevenue = sales?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+// Shows "$804,195" instead of "$8,041.95"
+```
 
-### Technical Summary of Changes
+### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/utils/addictionSystem.ts` | Lower trigger chances and afterparty multipliers |
-| `src/hooks/useHolidays.ts` | Increase all `costPerDay` values |
-| `supabase/functions/trigger-random-events/index.ts` | Add addiction-targeted craving event logic |
-| New SQL migration | Seed 100 craving events + debt relief UPDATE |
-| `src/components/ui/navigation.tsx` | Version bump to v1.0.707 |
+| `src/components/releases/ReleaseSalesTab.tsx` | Divide cent values by 100 for display |
+| `src/components/releases/ReleaseAnalyticsDialog.tsx` | Divide all cent-based financial fields by 100 |
+| New SQL migration | Reset negative band balances to 0 |
+| `src/components/ui/navigation.tsx` | Version bump to v1.0.708 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
