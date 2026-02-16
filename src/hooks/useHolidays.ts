@@ -13,12 +13,12 @@ export interface HolidayDestination {
 }
 
 export const HOLIDAY_DESTINATIONS: HolidayDestination[] = [
-  { name: "Local Staycation", durations: [3, 5], costPerDay: 20, healthPerDay: 15, description: "Rest at home", emoji: "🏠" },
-  { name: "Beach Resort", durations: [5, 7], costPerDay: 80, healthPerDay: 20, description: "Sun and relaxation", emoji: "🏖️" },
-  { name: "Mountain Cabin", durations: [3, 7], costPerDay: 50, healthPerDay: 18, description: "Fresh air and peace", emoji: "🏔️" },
-  { name: "Tropical Island", durations: [7, 14], costPerDay: 150, healthPerDay: 25, description: "Ultimate getaway", emoji: "🌴" },
-  { name: "Countryside Retreat", durations: [3, 5], costPerDay: 40, healthPerDay: 17, description: "Quiet countryside", emoji: "🌻" },
-  { name: "Spa Resort", durations: [5, 7], costPerDay: 120, healthPerDay: 22, description: "Luxury pampering", emoji: "🧖" },
+  { name: "Local Staycation", durations: [3, 5], costPerDay: 50, healthPerDay: 15, description: "Rest at home", emoji: "🏠" },
+  { name: "Beach Resort", durations: [5, 7], costPerDay: 200, healthPerDay: 20, description: "Sun and relaxation", emoji: "🏖️" },
+  { name: "Mountain Cabin", durations: [3, 7], costPerDay: 120, healthPerDay: 18, description: "Fresh air and peace", emoji: "🏔️" },
+  { name: "Tropical Island", durations: [7, 14], costPerDay: 400, healthPerDay: 25, description: "Ultimate getaway", emoji: "🌴" },
+  { name: "Countryside Retreat", durations: [3, 5], costPerDay: 100, healthPerDay: 17, description: "Quiet countryside", emoji: "🌻" },
+  { name: "Spa Resort", durations: [5, 7], costPerDay: 300, healthPerDay: 22, description: "Luxury pampering", emoji: "🧖" },
 ];
 
 export interface PlayerHoliday {
