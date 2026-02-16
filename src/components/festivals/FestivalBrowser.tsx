@@ -6,12 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, MapPin, Music, Ticket, Users, Star, ChevronRight, Clock } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar, MapPin, Music, Ticket, Users, Star, ChevronRight, ChevronDown, Clock, ShoppingBag, ShoppingCart, Image } from "lucide-react";
 import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useFestivalStages, useFestivalStageSlots } from "@/hooks/useFestivalStages";
 import { useFestivalQuality } from "@/hooks/useFestivalFinances";
 import { useAuth } from "@/hooks/use-auth-context";
 import { format } from "date-fns";
+import { FestivalMerchStand } from "./merch/FestivalMerchStand";
+import { FestivalExclusiveShop } from "./merch/FestivalExclusiveShop";
 
 interface Festival {
   id: string;
@@ -24,6 +27,8 @@ interface Festival {
   ticket_price: number | null;
   max_stages: number | null;
   status: string;
+  poster_url?: string | null;
+  security_firm_id?: string | null;
 }
 
 export const FestivalBrowser = ({ onSelectLive }: { onSelectLive: (id: string) => void }) => {
@@ -145,6 +150,11 @@ const FestivalCard = ({
                   <Ticket className="h-3 w-3 mr-1" /> £{festival.ticket_price}
                 </Badge>
               )}
+              {festival.poster_url && (
+                <Badge variant="outline" className="text-xs">
+                  <Image className="h-3 w-3 mr-1" /> Poster
+                </Badge>
+              )}
             </div>
           </div>
           {isActive && (
@@ -164,6 +174,8 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
   const { data: slots = [] } = useFestivalStageSlots(festivalId);
   const { tickets, hasTicket, hasWeekendPass, purchaseTicket } = useFestivalTickets(festivalId);
   const { data: quality } = useFestivalQuality(festivalId);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [merchOpen, setMerchOpen] = useState(false);
 
   const { data: festival } = useQuery<Festival | null>({
     queryKey: ["festival-detail", festivalId],
@@ -178,15 +190,70 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
     },
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile-cash-festival", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.from("profiles").select("cash").eq("user_id", user.id).single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check if user has a performing band at this festival
+  const { data: userBandSlot } = useQuery({
+    queryKey: ["user-band-slot", festivalId, user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data: members } = await supabase.from("band_members").select("band_id").eq("user_id", user.id);
+      if (!members?.length) return null;
+      const bandIds = members.map(m => m.band_id);
+      const matchingSlot = slots.find((s: any) => s.band_id && bandIds.includes(s.band_id));
+      return matchingSlot ? { bandId: matchingSlot.band_id } : null;
+    },
+    enabled: !!user?.id && slots.length > 0,
+  });
+
+  // Ticket count
+  const { data: ticketCount } = useQuery({
+    queryKey: ["festival-ticket-count", festivalId],
+    queryFn: async () => {
+      const { count } = await (supabase as any)
+        .from("festival_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("festival_id", festivalId);
+      return count || 0;
+    },
+  });
+
+  // Security firm name
+  const { data: securityFirm } = useQuery({
+    queryKey: ["festival-security-firm", festival?.security_firm_id],
+    queryFn: async () => {
+      if (!festival?.security_firm_id) return null;
+      const { data } = await (supabase as any)
+        .from("security_firms")
+        .select("name")
+        .eq("id", festival.security_firm_id)
+        .single();
+      return data;
+    },
+    enabled: !!festival?.security_firm_id,
+  });
+
   if (!festival) return null;
 
   const isActive = festival.status === "in_progress" || festival.status === "active";
   const durationDays = festival.duration_days || 2;
   const ticketPrice = festival.ticket_price || 50;
   const weekendPrice = ticketPrice * durationDays * 0.8;
+  const cash = profile?.cash ?? 0;
 
   const handlePurchase = (type: "day" | "weekend", dayNumber?: number) => {
     const price = type === "weekend" ? weekendPrice : ticketPrice;
+    if (cash < price) {
+      return;
+    }
     purchaseTicket.mutate({
       festivalId,
       ticketType: type,
@@ -198,9 +265,22 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
     });
   };
 
+  // Group lineup by day
+  const dayGroups: Record<number, typeof slots> = {};
+  slots.forEach((s: any) => {
+    if (!dayGroups[s.day_number]) dayGroups[s.day_number] = [];
+    dayGroups[s.day_number].push(s);
+  });
+
   return (
     <Card>
       <CardHeader>
+        {/* Poster display */}
+        {festival.poster_url && (
+          <div className="mb-4 rounded-lg overflow-hidden border">
+            <img src={festival.poster_url} alt={`${festival.title} poster`} className="w-full object-cover max-h-64" />
+          </div>
+        )}
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-xl">{festival.title}</CardTitle>
@@ -217,6 +297,27 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        {/* Description */}
+        {festival.description && (
+          <p className="text-sm text-muted-foreground">{festival.description}</p>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-2 text-center text-sm">
+          <div className="p-2 rounded bg-muted/50">
+            <p className="text-xs text-muted-foreground">Stages</p>
+            <p className="font-bold">{stages.length || festival.max_stages || "—"}</p>
+          </div>
+          <div className="p-2 rounded bg-muted/50">
+            <p className="text-xs text-muted-foreground">Attendees</p>
+            <p className="font-bold">{ticketCount ?? 0}</p>
+          </div>
+          <div className="p-2 rounded bg-muted/50">
+            <p className="text-xs text-muted-foreground">Security</p>
+            <p className="font-bold text-xs">{securityFirm?.name || "None"}</p>
+          </div>
+        </div>
+
         {/* Quality ratings */}
         {quality && (
           <div className="grid grid-cols-5 gap-2 text-center">
@@ -248,6 +349,7 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
         <div className="space-y-3">
           <h4 className="font-semibold flex items-center gap-2">
             <Ticket className="h-4 w-4" /> Tickets
+            <Badge variant="outline" className="ml-auto text-xs">Cash: ${cash.toLocaleString()}</Badge>
           </h4>
           {hasTicket ? (
             <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
@@ -263,10 +365,10 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
                   <Button
                     size="sm"
                     className="w-full"
-                    disabled={purchaseTicket.isPending}
+                    disabled={purchaseTicket.isPending || cash < weekendPrice}
                     onClick={() => handlePurchase("weekend")}
                   >
-                    Buy Pass
+                    {cash < weekendPrice ? "Can't afford" : "Buy Pass"}
                   </Button>
                 </CardContent>
               </Card>
@@ -279,10 +381,10 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
                       size="sm"
                       variant="outline"
                       className="w-full"
-                      disabled={purchaseTicket.isPending}
+                      disabled={purchaseTicket.isPending || cash < ticketPrice}
                       onClick={() => handlePurchase("day", i + 1)}
                     >
-                      Buy
+                      {cash < ticketPrice ? "Can't afford" : "Buy"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -293,7 +395,7 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
 
         <Separator />
 
-        {/* Lineup by stage */}
+        {/* Lineup by day */}
         <div className="space-y-3">
           <h4 className="font-semibold flex items-center gap-2">
             <Users className="h-4 w-4" /> Lineup
@@ -302,40 +404,79 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
             <p className="text-sm text-muted-foreground">Lineup not yet announced</p>
           ) : (
             <div className="space-y-4">
-              {stages.map((stage) => {
-                const stageSlots = slots.filter((s) => s.stage_id === stage.id);
-                return (
-                  <div key={stage.id} className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{stage.stage_name}</Badge>
-                      {stage.genre_focus && (
-                        <span className="text-xs text-muted-foreground">{stage.genre_focus}</span>
-                      )}
-                    </div>
-                    <div className="grid gap-1 pl-4">
-                      {stageSlots.map((slot) => (
-                        <div key={slot.id} className="flex items-center gap-2 text-sm">
-                          <Badge
-                            variant={slot.slot_type === "headliner" ? "default" : "secondary"}
-                            className="text-xs capitalize w-20 justify-center"
-                          >
-                            {slot.slot_type === "dj_session" ? "DJ" : slot.slot_type}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">Day {slot.day_number}</span>
-                          <span className="font-medium">
-                            {slot.is_npc_dj
-                              ? slot.npc_dj_name || "NPC DJ"
-                              : slot.band?.name || "TBA"}
-                          </span>
+              {Object.entries(dayGroups).sort(([a], [b]) => Number(a) - Number(b)).map(([day, daySlots]) => (
+                <div key={day} className="space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground">Day {day}</p>
+                  {stages.map((stage) => {
+                    const stageSlots = daySlots.filter((s: any) => s.stage_id === stage.id);
+                    if (stageSlots.length === 0) return null;
+                    return (
+                      <div key={stage.id} className="pl-2 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{stage.stage_name}</Badge>
+                          {stage.genre_focus && (
+                            <span className="text-xs text-muted-foreground">{stage.genre_focus}</span>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+                        <div className="grid gap-1 pl-3">
+                          {stageSlots.map((slot: any) => (
+                            <div key={slot.id} className="flex items-center gap-2 text-sm">
+                              <Badge
+                                variant={slot.slot_type === "headliner" ? "default" : "secondary"}
+                                className="text-xs capitalize w-20 justify-center"
+                              >
+                                {slot.slot_type === "dj_session" ? "DJ" : slot.slot_type}
+                              </Badge>
+                              <span className="font-medium">
+                                {slot.is_npc_dj
+                                  ? slot.npc_dj_name || "NPC DJ"
+                                  : slot.band?.name || "TBA"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </div>
+
+        {/* Festival Shop - for ticket holders */}
+        {hasTicket && (
+          <>
+            <Separator />
+            <Collapsible open={shopOpen} onOpenChange={setShopOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left font-semibold text-sm py-1">
+                <ShoppingCart className="h-4 w-4" />
+                Festival Shop
+                <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${shopOpen ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <FestivalExclusiveShop festivalId={festivalId} festivalTitle={festival.title} location={festival.location} />
+              </CollapsibleContent>
+            </Collapsible>
+          </>
+        )}
+
+        {/* Sell Your Merch - for performing bands */}
+        {userBandSlot && (
+          <>
+            <Separator />
+            <Collapsible open={merchOpen} onOpenChange={setMerchOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left font-semibold text-sm py-1">
+                <ShoppingBag className="h-4 w-4" />
+                Sell Your Merch
+                <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${merchOpen ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <FestivalMerchStand festivalId={festivalId} festivalTitle={festival.title} bandId={userBandSlot.bandId} />
+              </CollapsibleContent>
+            </Collapsible>
+          </>
+        )}
       </CardContent>
     </Card>
   );

@@ -7387,6 +7387,7 @@ export type Database = {
           is_active: boolean | null
           max_participants: number | null
           max_stages: number | null
+          poster_url: string | null
           requirements: Json | null
           rewards: Json | null
           security_firm_id: string | null
@@ -7414,6 +7415,7 @@ export type Database = {
           is_active?: boolean | null
           max_participants?: number | null
           max_stages?: number | null
+          poster_url?: string | null
           requirements?: Json | null
           rewards?: Json | null
           security_firm_id?: string | null
@@ -7441,6 +7443,7 @@ export type Database = {
           is_active?: boolean | null
           max_participants?: number | null
           max_stages?: number | null
+          poster_url?: string | null
           requirements?: Json | null
           rewards?: Json | null
           security_firm_id?: string | null
