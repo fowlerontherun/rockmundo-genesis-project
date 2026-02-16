@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.818",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Added unique constraint on pov_clip_templates (instrument_track, variant) to fix ON CONFLICT seed error" },
+    ],
+  },
+  {
     version: "1.0.817",
     date: "2026-02-16",
     changes: [
