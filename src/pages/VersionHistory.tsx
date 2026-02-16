@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.782",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed security contract creation failing with check constraint violation - changed contract_type from 'festival' to 'event'" },
+    ],
+  },
+  {
     version: "1.0.781",
     date: "2026-02-16",
     changes: [
