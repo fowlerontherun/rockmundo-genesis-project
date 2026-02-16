@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.813",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Restored all player cash to $1,000,000 and set fame to 80% of their band's fame to compensate for data reset caused by v1.0.812 migration" },
+    ],
+  },
+  {
     version: "1.0.812",
     date: "2026-02-16",
     changes: [
