@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.776",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Radio Player nav item now launches the player dialog directly instead of navigating to a separate page" },
+    ],
+  },
+  {
     version: "1.0.775",
     date: "2026-02-16",
     changes: [

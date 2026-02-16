@@ -32,7 +32,7 @@ const Index = lazyWithRetry(() => import("./pages/Index"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
-const RadioPlayerPage = lazyWithRetry(() => import("./pages/RadioPlayerPage"));
+
 const OffersDashboard = lazyWithRetry(() => import("./pages/OffersDashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 
@@ -302,7 +302,7 @@ function App() {
                     <Route path="seasonal-events" element={<SeasonalEventsCalendar />} />
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
                     <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="radio-player" element={<RadioPlayerPage />} />
+                    
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
