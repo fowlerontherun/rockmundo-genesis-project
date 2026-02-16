@@ -29,10 +29,14 @@ interface Song {
 }
 
 interface PlaylistItem {
-  type: 'song' | 'content';
+  type: 'song' | 'content' | 'host-segment' | 'chart-number-one';
   song?: Song;
   content?: RadioContent;
 }
+
+// The radio host clip that plays every 30 minutes
+const RADIO_HOST_CLIP_URL = "/audio/radio-host-blondie.mp3";
+const HOST_SEGMENT_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 // Shuffle array using Fisher-Yates algorithm
 function shuffleArray<T>(array: T[]): T[] {
@@ -102,6 +106,12 @@ function getAudioUrl(item: PlaylistItem): string | null {
   if (item.type === 'content' && item.content) {
     return item.content.audio_url;
   }
+  if (item.type === 'host-segment') {
+    return RADIO_HOST_CLIP_URL;
+  }
+  if (item.type === 'chart-number-one' && item.song) {
+    return item.song.audio_url;
+  }
   return null;
 }
 
@@ -116,6 +126,9 @@ let globalState: RadioState = {
   isMuted: false,
 };
 let stateListeners: Set<() => void> = new Set();
+let lastHostSegmentTime: number = Date.now(); // Track when last host segment played
+let chartNumberOneSong: Song | null = null; // Cached #1 chart song
+let pendingHostSegment: boolean = false; // Flag: next track should be host segment
 
 const notifyListeners = () => {
   stateListeners.forEach(l => l());
@@ -200,7 +213,55 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
 
   const playNext = useCallback(() => {
     if (globalState.playlist.length === 0) return;
-    
+
+    const now = Date.now();
+    const timeSinceLastHost = now - lastHostSegmentTime;
+
+    // Check if it's time for a host segment (every 30 minutes)
+    if (timeSinceLastHost >= HOST_SEGMENT_INTERVAL_MS && !pendingHostSegment && globalState.currentItem?.type !== 'host-segment') {
+      // Play host segment clip
+      pendingHostSegment = true;
+      lastHostSegmentTime = now;
+      
+      const hostItem: PlaylistItem = { type: 'host-segment' };
+      globalState = {
+        ...globalState,
+        currentItem: hostItem,
+      };
+
+      if (globalAudio) {
+        globalAudio.src = RADIO_HOST_CLIP_URL;
+        if (globalState.isPlaying) {
+          globalAudio.play().catch(console.error);
+        }
+      }
+      notifyListeners();
+      return;
+    }
+
+    // After host segment, play the #1 chart song
+    if (pendingHostSegment && globalState.currentItem?.type === 'host-segment') {
+      pendingHostSegment = false;
+      
+      if (chartNumberOneSong) {
+        const chartItem: PlaylistItem = { type: 'chart-number-one', song: chartNumberOneSong };
+        globalState = {
+          ...globalState,
+          currentItem: chartItem,
+        };
+
+        if (globalAudio) {
+          globalAudio.src = chartNumberOneSong.audio_url;
+          if (globalState.isPlaying) {
+            globalAudio.play().catch(console.error);
+          }
+        }
+        notifyListeners();
+        return;
+      }
+    }
+
+    // Normal playlist progression
     const nextIndex = (globalState.currentIndex + 1) % globalState.playlist.length;
     const nextItem = globalState.playlist[nextIndex];
     
@@ -324,6 +385,43 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch the #1 chart song for the host segment
+  useQuery({
+    queryKey: ["rm-radio-chart-number-one"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chart_singles")
+        .select("song_id, title, band_name, total_streams")
+        .order("total_streams", { ascending: false })
+        .limit(1);
+
+      if (error || !data || data.length === 0) {
+        console.error("[RMRadio] Error fetching #1 chart song:", error);
+        return null;
+      }
+
+      const chartSong = data[0];
+      // Get the audio_url from songs table
+      const { data: songData } = await supabase
+        .from("songs")
+        .select("audio_url")
+        .eq("id", chartSong.song_id)
+        .single();
+
+      if (songData?.audio_url) {
+        chartNumberOneSong = {
+          id: chartSong.song_id,
+          title: chartSong.title || "Unknown",
+          audio_url: songData.audio_url,
+          band_name: chartSong.band_name || "Unknown Artist",
+          genre: null,
+        };
+      }
+      return chartNumberOneSong;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Initialize playlist when songs and content load
   useEffect(() => {
     if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
@@ -400,7 +498,30 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
           ) : (
             <>
               {/* Now Playing */}
-              {state.currentItem?.type === 'content' ? (
+              {state.currentItem?.type === 'host-segment' ? (
+                <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
+                  <div className="text-xs text-primary uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Radio className="h-3 w-3 animate-pulse" />
+                    Live Host Segment
+                  </div>
+                  <div className="text-lg font-semibold truncate">
+                    Blondie - Radio Host
+                  </div>
+                  <div className="text-sm text-muted-foreground">RM Radio Presenter</div>
+                </div>
+              ) : state.currentItem?.type === 'chart-number-one' ? (
+                <div className="bg-chart-1/10 rounded-lg p-4 border border-chart-1/30">
+                  <div className="text-xs text-chart-1 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    🏆 #1 Chart Hit
+                  </div>
+                  <div className="text-lg font-semibold truncate">
+                    {state.currentItem?.song?.title || "---"}
+                  </div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    {state.currentItem?.song?.band_name || "---"}
+                  </div>
+                </div>
+              ) : state.currentItem?.type === 'content' ? (
                 <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/30">
                   <div className="text-xs text-amber-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Megaphone className="h-3 w-3" />
