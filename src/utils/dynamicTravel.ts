@@ -27,7 +27,7 @@ export interface TravelOption {
 // Realistic transport mode configurations with region/country constraints
 export const TRANSPORT_MODES = {
   bus: { 
-    speedKmh: 50,           // Realistic bus speed
+    speedKmh: 56,           // ~10% faster (was 50)
     costPerKm: 0.05,        // Cheap option
     comfort: 25, 
     minDistance: 0, 
@@ -38,7 +38,7 @@ export const TRANSPORT_MODES = {
     requiresSameCountry: true,
   },
   train: { 
-    speedKmh: 180,          // High-speed rail average
+    speedKmh: 200,          // ~10% faster (was 180)
     costPerKm: 0.12, 
     comfort: 75, 
     minDistance: 30, 
@@ -49,7 +49,7 @@ export const TRANSPORT_MODES = {
     trainNetworkRegions: ['Europe', 'Asia'],
   },
   plane: { 
-    speedKmh: 850, 
+    speedKmh: 944,          // ~10% faster (was 850)
     costPerKm: 0.12,
     comfort: 55, 
     minDistance: 200,       // Planes for longer distances
@@ -59,7 +59,7 @@ export const TRANSPORT_MODES = {
     // Available everywhere
   },
   ship: { 
-    speedKmh: 35, 
+    speedKmh: 39,           // ~10% faster (was 35)
     costPerKm: 0.06, 
     comfort: 85,            // Leisurely travel
     minDistance: 50, 
@@ -76,6 +76,17 @@ export const TRANSPORT_MODES = {
       ['Asia', 'Oceania'],        // Asia to Australia
       ['North America', 'North America'], // Coastal US
       ['Oceania', 'Oceania'],     // Australia/NZ
+      ['Caribbean', 'North America'],    // Caribbean ferries
+      ['Caribbean', 'South America'],    // Caribbean to SA
+      ['Caribbean', 'Caribbean'],        // Inter-island
+      ['Central America', 'North America'], // Central America coast
+      ['Central America', 'South America'], // Pacific/Atlantic
+      ['Central America', 'Central America'],
+      ['Middle East', 'Africa'],         // Red Sea routes
+      ['Middle East', 'Asia'],           // Persian Gulf
+      ['Middle East', 'Middle East'],    // Gulf states
+      ['South America', 'South America'], // SA coastline
+      ['Africa', 'Africa'],             // African coast
     ],
   },
   private_jet: {
@@ -87,68 +98,115 @@ export const TRANSPORT_MODES = {
     icon: 'private_jet',
     baseCost: 75000,        // Fixed $75,000 cost
     // No restrictions - available everywhere
-    fixedDuration: 3,       // Always 3 hours (direct flight, no waiting)
+    fixedDuration: 2.7,     // 10% faster (was 3 hours)
     isImmediate: true,      // No departure schedules - leaves immediately
   },
 } as const;
 
 // Countries that share land borders/rail connections (for train routes)
 const CONNECTED_COUNTRIES: Record<string, string[]> = {
-  // Europe
-  'United Kingdom': ['France', 'Belgium', 'Netherlands', 'Ireland'], // Eurostar + ferries
-  'France': ['United Kingdom', 'Belgium', 'Germany', 'Spain', 'Italy', 'Switzerland', 'Netherlands'],
-  'Germany': ['France', 'Netherlands', 'Belgium', 'Austria', 'Switzerland', 'Poland', 'Czech Republic', 'Denmark'],
+  // Western Europe
+  'United Kingdom': ['France', 'Belgium', 'Netherlands', 'Ireland'],
+  'France': ['United Kingdom', 'Belgium', 'Germany', 'Spain', 'Italy', 'Switzerland', 'Netherlands', 'Luxembourg'],
+  'Germany': ['France', 'Netherlands', 'Belgium', 'Austria', 'Switzerland', 'Poland', 'Czech Republic', 'Denmark', 'Luxembourg'],
   'Spain': ['France', 'Portugal'],
   'Italy': ['France', 'Switzerland', 'Austria', 'Germany', 'Slovenia'],
   'Netherlands': ['Germany', 'Belgium', 'France', 'United Kingdom'],
-  'Belgium': ['France', 'Netherlands', 'Germany', 'United Kingdom'],
+  'Belgium': ['France', 'Netherlands', 'Germany', 'United Kingdom', 'Luxembourg'],
   'Austria': ['Germany', 'Italy', 'Switzerland', 'Czech Republic', 'Hungary', 'Slovakia', 'Slovenia'],
   'Switzerland': ['France', 'Germany', 'Italy', 'Austria'],
-  'Poland': ['Germany', 'Czech Republic', 'Slovakia', 'Lithuania'],
-  'Czech Republic': ['Germany', 'Austria', 'Poland', 'Slovakia'],
+  'Portugal': ['Spain'],
+  'Ireland': ['United Kingdom'],
+  'Luxembourg': ['France', 'Germany', 'Belgium'],
+  // Scandinavia & Baltics
   'Sweden': ['Norway', 'Denmark', 'Finland'],
   'Norway': ['Sweden'],
   'Denmark': ['Germany', 'Sweden'],
-  'Portugal': ['Spain'],
-  'Hungary': ['Austria', 'Slovakia', 'Romania', 'Serbia', 'Croatia', 'Slovenia'],
-  'Greece': ['Bulgaria', 'Turkey'],
-  'Ireland': ['United Kingdom'],
+  'Finland': ['Sweden', 'Estonia', 'Russia'],
   'Estonia': ['Latvia', 'Finland'],
-  'Latvia': ['Estonia', 'Lithuania'],
-  'Lithuania': ['Latvia', 'Poland'],
-  'Romania': ['Hungary', 'Bulgaria', 'Serbia'],
-  'Bulgaria': ['Romania', 'Serbia', 'Greece'],
-  'Serbia': ['Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Bosnia and Herzegovina'],
+  'Latvia': ['Estonia', 'Lithuania', 'Belarus'],
+  'Lithuania': ['Latvia', 'Poland', 'Belarus'],
+  // Central & Eastern Europe
+  'Poland': ['Germany', 'Czech Republic', 'Slovakia', 'Lithuania', 'Ukraine', 'Belarus'],
+  'Czech Republic': ['Germany', 'Austria', 'Poland', 'Slovakia'],
+  'Slovakia': ['Czech Republic', 'Poland', 'Austria', 'Hungary'],
+  'Hungary': ['Austria', 'Slovakia', 'Romania', 'Serbia', 'Croatia', 'Slovenia', 'Ukraine'],
+  'Romania': ['Hungary', 'Bulgaria', 'Serbia', 'Moldova', 'Ukraine'],
+  'Bulgaria': ['Romania', 'Serbia', 'Greece', 'North Macedonia'],
+  'Serbia': ['Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Bosnia and Herzegovina', 'North Macedonia'],
   'Croatia': ['Slovenia', 'Hungary', 'Serbia', 'Bosnia and Herzegovina'],
   'Slovenia': ['Italy', 'Austria', 'Hungary', 'Croatia'],
-  'Slovakia': ['Czech Republic', 'Poland', 'Austria', 'Hungary'],
-  'Finland': ['Sweden', 'Estonia', 'Russia'],
+  'Greece': ['Bulgaria', 'Turkey', 'Albania', 'North Macedonia'],
+  'Ukraine': ['Poland', 'Romania', 'Hungary', 'Moldova', 'Belarus'],
+  'Belarus': ['Poland', 'Lithuania', 'Latvia', 'Russia', 'Ukraine'],
+  'Moldova': ['Ukraine', 'Romania'],
+  'Bosnia and Herzegovina': ['Croatia', 'Serbia'],
+  'Albania': ['Greece', 'North Macedonia'],
+  'North Macedonia': ['Serbia', 'Bulgaria', 'Greece', 'Albania'],
+  // Caucasus
+  'Georgia': ['Turkey', 'Armenia'],
+  'Armenia': ['Georgia', 'Turkey'],
+  // Russia & Central Asia
+  'Russia': ['China', 'Finland', 'Belarus', 'Kazakhstan'],
+  'Kazakhstan': ['Russia', 'China'],
+  // Middle East
+  'Turkey': ['Greece', 'Georgia', 'Armenia', 'Lebanon'],
+  'Lebanon': ['Turkey', 'Jordan'],
+  'Jordan': ['Saudi Arabia', 'Lebanon'],
+  'Saudi Arabia': ['Jordan', 'United Arab Emirates'],
+  'Qatar': ['Saudi Arabia'],
+  'United Arab Emirates': ['Saudi Arabia'],
   // Asia
-  'Japan': [], // Island nation - no train connections outside
-  'South Korea': [], // DMZ blocks North Korea
-  'China': ['Russia', 'Mongolia', 'Vietnam'],
+  'China': ['Russia', 'Mongolia', 'Vietnam', 'Pakistan', 'Kazakhstan'],
   'India': ['Pakistan', 'Bangladesh', 'Nepal'],
+  'Pakistan': ['India', 'China'],
+  'Bangladesh': ['India'],
+  'Japan': [],
+  'South Korea': [],
   'Thailand': ['Malaysia', 'Cambodia', 'Vietnam', 'Myanmar'],
   'Malaysia': ['Thailand', 'Singapore'],
   'Singapore': ['Malaysia'],
   'Vietnam': ['China', 'Cambodia', 'Thailand'],
-  'Indonesia': [], // Islands
-  'Philippines': [], // Islands
-  // Others
-  'United States': ['Canada', 'Mexico'],
-  'Canada': ['United States'],
-  'Mexico': ['United States'],
-  'Australia': [], // Island continent
-  'New Zealand': [], // Island nation
-  'Brazil': ['Argentina', 'Paraguay', 'Uruguay'],
-  'Argentina': ['Brazil', 'Chile', 'Uruguay', 'Paraguay'],
-  'Russia': ['China', 'Finland'],
-  'Turkey': [],
-  'United Arab Emirates': [],
-  'South Africa': [],
+  'Indonesia': [],
+  'Philippines': [],
+  'Sri Lanka': [],
+  // Africa
+  'Morocco': ['Spain', 'Algeria'],
+  'Algeria': ['Tunisia', 'Morocco'],
+  'Tunisia': ['Algeria'],
   'Egypt': [],
   'Nigeria': [],
-  'Morocco': ['Spain'], // Ferry connection
+  'South Africa': ['Mozambique'],
+  'Kenya': ['Uganda', 'Tanzania'],
+  'Uganda': ['Kenya', 'Tanzania'],
+  'Tanzania': ['Kenya', 'Uganda', 'Mozambique'],
+  'Mozambique': ['Tanzania', 'South Africa'],
+  // Americas
+  'United States': ['Canada', 'Mexico'],
+  'Canada': ['United States'],
+  'Mexico': ['United States', 'Guatemala'],
+  'Guatemala': ['Honduras', 'Mexico'],
+  'Honduras': ['Guatemala'],
+  'Costa Rica': ['Panama'],
+  'Panama': ['Costa Rica', 'Colombia'],
+  'Colombia': ['Panama', 'Venezuela', 'Ecuador'],
+  'Venezuela': ['Colombia', 'Brazil'],
+  'Ecuador': ['Colombia', 'Peru'],
+  'Peru': ['Ecuador', 'Bolivia'],
+  'Brazil': ['Argentina', 'Paraguay', 'Uruguay', 'Venezuela', 'Bolivia'],
+  'Argentina': ['Brazil', 'Chile', 'Uruguay', 'Paraguay', 'Bolivia'],
+  'Bolivia': ['Peru', 'Brazil', 'Argentina', 'Paraguay'],
+  'Paraguay': ['Brazil', 'Argentina', 'Bolivia'],
+  // Oceania
+  'Australia': [],
+  'New Zealand': [],
+  // Islands (no rail)
+  'Dominican Republic': [],
+  'Puerto Rico': [],
+  'Haiti': [],
+  'Senegal': [],
+  'DR Congo': [],
+  'Angola': [],
 };
 
 // Haversine formula to calculate distance between two coordinates
@@ -269,21 +327,23 @@ function isDefaultCoastal(cityName: string): boolean {
   const coastalCities = [
     'London', 'Liverpool', 'Bristol', 'Glasgow', 'Edinburgh', 'Brighton',
     'Cardiff', 'Belfast', 'Newcastle', 'Portsmouth',
-    'Sydney', 'Melbourne', 'Brisbane', 'Perth',
+    'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Gold Coast', 'Auckland', 'Wellington',
     'Tokyo', 'Osaka', 'Yokohama', 'Fukuoka', 'Nagoya',
     'Miami', 'San Francisco', 'Seattle', 'Los Angeles', 'San Diego', 'Boston', 'New York',
     'Houston', 'Honolulu',
     'Vancouver', 'Toronto',
-    'Hong Kong', 'Singapore', 'Mumbai', 'Chennai', 'Kolkata',
-    'Rio de Janeiro', 'São Paulo', 'Buenos Aires', 'Lima', 'Montevideo',
-    'Barcelona', 'Marseille', 'Naples', 'Venice', 'Lisbon', 'Porto',
+    'Hong Kong', 'Singapore', 'Mumbai', 'Chennai', 'Kolkata', 'Colombo', 'Karachi',
+    'Rio de Janeiro', 'São Paulo', 'Buenos Aires', 'Lima', 'Montevideo', 'Caracas',
+    'Barcelona', 'Marseille', 'Naples', 'Venice', 'Lisbon', 'Porto', 'Malaga',
     'Nice', 'Bordeaux', 'Seville',
-    'Athens', 'Istanbul', 'Dubai', 'Tel Aviv',
-    'Cape Town', 'Lagos', 'Cairo', 'Casablanca', 'Accra',
+    'Athens', 'Istanbul', 'Dubai', 'Tel Aviv', 'Beirut', 'Doha',
+    'Cape Town', 'Lagos', 'Cairo', 'Casablanca', 'Accra', 'Dakar', 'Dar es Salaam',
+    'Luanda', 'Maputo', 'Tunis', 'Algiers',
     'Copenhagen', 'Stockholm', 'Oslo', 'Helsinki', 'Amsterdam', 'Rotterdam',
     'Hamburg', 'Gdansk', 'Gothenburg', 'Antwerp', 'Tallinn', 'Riga',
     'Shanghai', 'Shenzhen', 'Guangzhou', 'Busan', 'Taipei',
-    'Bangkok', 'Ho Chi Minh City', 'Jakarta', 'Manila', 'Kuala Lumpur',
+    'Bangkok', 'Ho Chi Minh City', 'Jakarta', 'Manila', 'Kuala Lumpur', 'Hanoi',
+    'Panama City', 'San Juan', 'Santo Domingo', 'Port-au-Prince', 'Tirana',
   ];
   return coastalCities.includes(cityName);
 }
@@ -329,16 +389,16 @@ export function calculateDuration(distanceKm: number, mode: keyof typeof TRANSPO
   let bufferHours = 0;
   switch (mode) {
     case 'plane':
-      bufferHours = 3; // Check-in, security, boarding, deplaning
+      bufferHours = 2.7; // 10% reduced (was 3)
       break;
     case 'train':
-      bufferHours = 0.5;
+      bufferHours = 0.45; // 10% reduced (was 0.5)
       break;
     case 'ship':
-      bufferHours = 1; // Boarding procedures
+      bufferHours = 0.9; // 10% reduced (was 1)
       break;
     case 'bus':
-      bufferHours = 0.25;
+      bufferHours = 0.22; // 10% reduced (was 0.25)
       break;
   }
   
