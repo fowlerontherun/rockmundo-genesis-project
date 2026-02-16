@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.710",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed band debt — bands were going negative due to unchecked leader withdrawals, not record sales tax" },
+      { type: 'fix', description: "Added offsetting earnings records to properly zero out 3 bands in debt (up to -$39.9M)" },
+      { type: 'improvement', description: "Added database constraint preventing band_balance from ever going negative" },
+      { type: 'fix', description: "Leader withdrawals now enforced at DB level — overdrafts are impossible" },
+    ],
+  },
+  {
     version: "1.0.709",
     date: "2026-02-16",
     changes: [
