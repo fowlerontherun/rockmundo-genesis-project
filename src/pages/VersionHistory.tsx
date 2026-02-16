@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.800",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "AI merch image generation wired into UI — generate per product or batch 'Generate All Missing Images' from overview" },
+      { type: 'feature', description: "Product table now shows AI-generated image thumbnails with inline generate button for missing images" },
+      { type: 'feature', description: "Sales analytics profit breakdown: Gross Revenue − Logistics (5%) − Tax (8%) = Net Revenue" },
+      { type: 'feature', description: "Catalog order form shows full cost breakdown: production cost, logistics, tax, and net profit per unit" },
+      { type: 'improvement', description: "Merch Manager logistics discount now wired into Operating Costs card (3% with manager vs 5% without)" },
+      { type: 'improvement', description: "Sales overview 4th stat card changed from Avg Order to Net Revenue for clearer P&L visibility" },
+    ],
+  },
+  {
     version: "1.0.799",
     date: "2026-02-16",
     changes: [

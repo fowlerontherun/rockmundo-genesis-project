@@ -20,6 +20,7 @@ import { MerchCatalog } from "@/components/merchandise/MerchCatalog";
 import { MerchManagerCard } from "@/components/merchandise/MerchManagerCard";
 import { OperatingCostsCard } from "@/components/merchandise/OperatingCostsCard";
 import { useMerchManager } from "@/hooks/useMerchManager";
+import { useMerchImageGenerator } from "@/hooks/useMerchImageGenerator";
 import { useMerchRequirements, QUALITY_TIERS, MerchItemRequirement, calculateMerchQuality } from "@/hooks/useMerchRequirements";
 import {
   Loader2,
@@ -33,6 +34,7 @@ import {
   Shirt,
   TrendingUp,
   ImageIcon,
+  Wand2,
 } from "lucide-react";
 import { SalesAnalyticsTab } from "@/components/merchandise/SalesAnalyticsTab";
 import { CollaborationOffersCard } from "@/components/merchandise/CollaborationOffersCard";
@@ -251,6 +253,9 @@ const Merchandise = () => {
   const bandFame = primaryBand?.bands?.fame ?? 0;
   const bandFans = primaryBand?.bands?.weekly_fans ?? 0;
   const playerLevel = 10; // TODO: Get from profile
+
+  const { manager, logisticsRate } = useMerchManager(bandId);
+  const { generateImage, isGenerating, generatingId, generateAllMissing, isGeneratingAll } = useMerchImageGenerator(bandId);
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabConfig["value"]>("overview");
@@ -737,9 +742,35 @@ const Merchandise = () => {
             <CardHeader>
               <CardTitle className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <span>Inventory Performance Snapshot</span>
-                <span className="text-sm text-muted-foreground">
-                  Real-time totals pulled from your Supabase merchandise table.
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isGeneratingAll || !merchandise?.length}
+                    onClick={() => {
+                      const missing = (merchandise || []).filter((p: any) => !p.design_preview_url);
+                      if (missing.length === 0) {
+                        toast({ title: "All images generated", description: "Every product already has an image." });
+                        return;
+                      }
+                      generateAllMissing(
+                        missing.map((p: any) => ({
+                          merchId: p.id,
+                          itemType: p.item_type ?? "merchandise",
+                          designName: p.design_name ?? "Product",
+                          bandName,
+                          qualityTier: p.quality_tier || "basic",
+                        }))
+                      );
+                    }}
+                  >
+                    {isGeneratingAll ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+                    Generate All Images
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Real-time totals pulled from your Supabase merchandise table.
+                  </span>
+                </div>
               </CardTitle>
               <CardDescription>
                 Track on-hand value, average margin, and low stock alerts for the entire catalogue.
@@ -834,11 +865,42 @@ const Merchandise = () => {
                         return (
                           <TableRow key={product.id}>
                             <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-semibold">{product.design_name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {percentFormatter.format(margin)} margin · {currencyFormatter.format(unitProfit)} / unit
-                                </span>
+                              <div className="flex items-center gap-3">
+                                {(product as any).design_preview_url ? (
+                                  <img
+                                    src={(product as any).design_preview_url}
+                                    alt={product.design_name ?? ""}
+                                    className="h-10 w-10 rounded object-cover border border-border"
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      generateImage({
+                                        merchId: product.id,
+                                        itemType: product.item_type ?? "merchandise",
+                                        designName: product.design_name ?? "Product",
+                                        bandName,
+                                        qualityTier: (product as any).quality_tier || "basic",
+                                      });
+                                    }}
+                                    disabled={isGenerating && generatingId === product.id}
+                                    className="h-10 w-10 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
+                                    title="Generate AI image"
+                                  >
+                                    {isGenerating && generatingId === product.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                    ) : (
+                                      <Wand2 className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                  </button>
+                                )}
+                                <div className="flex flex-col">
+                                  <span className="font-semibold">{product.design_name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {percentFormatter.format(margin)} margin · {currencyFormatter.format(unitProfit)} / unit
+                                  </span>
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell className="hidden xl:table-cell">{formatProductType(product.item_type)}</TableCell>
@@ -957,7 +1019,7 @@ const Merchandise = () => {
               <OperatingCostsCard
                 totalStock={summary.totalUnits}
                 storageCostDaily={0.10}
-                logisticsRate={0.05}
+                logisticsRate={logisticsRate}
                 taxRate={0.08}
                 totalRevenue={summary.potentialRevenue}
               />

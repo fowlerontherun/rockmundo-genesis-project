@@ -65,6 +65,11 @@ export const SalesAnalyticsTab = ({ bandId }: SalesAnalyticsTabProps) => {
 
   if (!analytics) return null;
 
+  // Calculate profit breakdown
+  const logisticsTotal = analytics.totalRevenue * 0.05;
+  const taxTotal = analytics.totalRevenue * 0.08;
+  const netRevenue = analytics.totalRevenue - logisticsTotal - taxTotal;
+
   return (
     <div className="space-y-6">
       {/* Time Range Selector */}
@@ -90,7 +95,7 @@ export const SalesAnalyticsTab = ({ bandId }: SalesAnalyticsTabProps) => {
             </div>
             <div>
               <p className="text-2xl font-bold">{formatCurrency(analytics.totalRevenue)}</p>
-              <p className="text-sm text-muted-foreground">Total Revenue</p>
+              <p className="text-sm text-muted-foreground">Gross Revenue</p>
             </div>
           </CardContent>
         </Card>
@@ -122,12 +127,47 @@ export const SalesAnalyticsTab = ({ bandId }: SalesAnalyticsTabProps) => {
               <TrendingUp className="h-6 w-6 text-orange-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(analytics.avgOrderValue)}</p>
-              <p className="text-sm text-muted-foreground">Avg Order</p>
+              <p className="text-2xl font-bold">{formatCurrency(netRevenue)}</p>
+              <p className="text-sm text-muted-foreground">Net Revenue</p>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Profit Breakdown */}
+      {analytics.totalRevenue > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Profit Breakdown
+            </CardTitle>
+            <CardDescription>Revenue after operating costs</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Gross Revenue</span>
+                <span className="font-medium">{formatCurrency(analytics.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>− Logistics (5%)</span>
+                <span>-{formatCurrency(logisticsTotal)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>− Tax (8%)</span>
+                <span>-{formatCurrency(taxTotal)}</span>
+              </div>
+              <div className="border-t border-border pt-2 flex justify-between font-semibold">
+                <span>Net Revenue</span>
+                <span className={netRevenue >= 0 ? "text-green-600" : "text-destructive"}>
+                  {formatCurrency(netRevenue)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Revenue Trend Chart */}
       {analytics.revenueByDay.length > 0 && (
