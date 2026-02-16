@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.728",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Wellness page recovery program text no longer gets cut off on mobile — buttons now wrap text properly" },
+    ],
+  },
+  {
     version: "1.0.727",
     date: "2026-02-16",
     changes: [
