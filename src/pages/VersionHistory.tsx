@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.799",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "AI-generated merchandise images — each product gets a unique AI photo based on item type, band name, and quality tier" },
+      { type: 'feature', description: "Realistic business costs: storage fees ($0.10/unit/day), logistics (5% of sales), and tax (8% of revenue)" },
+      { type: 'feature', description: "VIP Merchandise Manager — hire an NPC who auto-restocks, reduces logistics to 3%, for $2,000/month" },
+      { type: 'feature', description: "Operating costs dashboard showing estimated monthly storage, logistics, and tax expenses" },
+      { type: 'feature', description: "Profit breakdown in catalog: order cost, per-unit profit after logistics and tax" },
+      { type: 'feature', description: "8 new merch-themed random events: Bootleg Alert, Viral Merch Moment, Factory Delay, Fan Design Contest, Warehouse Fire, Celebrity Spotted, Tax Audit, Manager Scandal" },
+      { type: 'improvement', description: "Product cards show AI-generated thumbnails with regenerate option" },
+      { type: 'improvement', description: "Catalog order form now shows total upfront production cost before confirming" },
+    ],
+  },
+  {
     version: "1.0.798",
     date: "2026-02-16",
     changes: [

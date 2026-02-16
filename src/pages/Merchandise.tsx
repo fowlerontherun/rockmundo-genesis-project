@@ -17,6 +17,9 @@ import { TShirtDesignerNew } from "@/components/merchandise/TShirtDesignerNew";
 import { SavedDesigns } from "@/components/merchandise/SavedDesigns";
 import { MerchItemCard } from "@/components/merchandise/MerchItemCard";
 import { MerchCatalog } from "@/components/merchandise/MerchCatalog";
+import { MerchManagerCard } from "@/components/merchandise/MerchManagerCard";
+import { OperatingCostsCard } from "@/components/merchandise/OperatingCostsCard";
+import { useMerchManager } from "@/hooks/useMerchManager";
 import { useMerchRequirements, QUALITY_TIERS, MerchItemRequirement, calculateMerchQuality } from "@/hooks/useMerchRequirements";
 import {
   Loader2,
@@ -29,6 +32,7 @@ import {
   Sparkles,
   Shirt,
   TrendingUp,
+  ImageIcon,
 } from "lucide-react";
 import { SalesAnalyticsTab } from "@/components/merchandise/SalesAnalyticsTab";
 import { CollaborationOffersCard } from "@/components/merchandise/CollaborationOffersCard";
@@ -948,6 +952,18 @@ const Merchandise = () => {
               {/* Brand Collaborations */}
               <CollaborationOffersCard bandId={bandId} />
               <ActiveCollaborationsCard bandId={bandId} />
+
+              {/* Operating Costs */}
+              <OperatingCostsCard
+                totalStock={summary.totalUnits}
+                storageCostDaily={0.10}
+                logisticsRate={0.05}
+                taxRate={0.08}
+                totalRevenue={summary.potentialRevenue}
+              />
+
+              {/* VIP Merch Manager */}
+              <MerchManagerCard bandId={bandId} />
             </div>
           </div>
         </TabsContent>
