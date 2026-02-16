@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, Plus, AlertTriangle } from "lucide-react";
+import { TrendingUp, Plus, AlertTriangle, ArrowDownToLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
   const [selectedOption, setSelectedOption] = useState<InvestmentOption | null>(null);
   const [investAmount, setInvestAmount] = useState("");
   const [isInvesting, setIsInvesting] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState<string | null>(null);
 
   const totalInvested = investments.reduce((sum, i) => sum + i.invested_amount, 0);
   const totalValue = investments.reduce((sum, i) => sum + i.current_value, 0);
@@ -92,6 +93,48 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
     }
   };
 
+  const handleWithdraw = async (investment: PlayerInvestment) => {
+    if (!user?.id) return;
+    setIsWithdrawing(investment.id);
+    try {
+      // Get current cash
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("cash")
+        .eq("user_id", user.id)
+        .single();
+
+      // Add current value back to cash
+      const { error: cashError } = await supabase
+        .from("profiles")
+        .update({ cash: (profile?.cash || 0) + investment.current_value })
+        .eq("user_id", user.id);
+
+      if (cashError) throw cashError;
+
+      // Delete the investment
+      const { error: deleteError } = await supabase
+        .from("player_investments")
+        .delete()
+        .eq("id", investment.id);
+
+      if (deleteError) throw deleteError;
+
+      const gain = investment.current_value - investment.invested_amount;
+      toast.success(
+        `Withdrew ${currencyFormatter.format(investment.current_value)} from ${investment.investment_name}` +
+        (gain > 0 ? ` (${currencyFormatter.format(gain)} profit!)` : "")
+      );
+      queryClient.invalidateQueries({ queryKey: ["player-investments"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
+    } catch (error) {
+      toast.error("Failed to withdraw investment");
+      console.error(error);
+    } finally {
+      setIsWithdrawing(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Portfolio Summary */}
@@ -136,6 +179,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
                     <TableHead className="text-right">Invested</TableHead>
                     <TableHead className="text-right">Value</TableHead>
                     <TableHead className="text-right">Return</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -154,6 +198,17 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
                         <TableCell className="text-right">{currencyFormatter.format(inv.current_value)}</TableCell>
                         <TableCell className={`text-right ${gain >= 0 ? "text-emerald-500" : "text-destructive"}`}>
                           {gain >= 0 ? "+" : ""}{percentFormatter.format(roi)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleWithdraw(inv)}
+                            disabled={isWithdrawing === inv.id}
+                          >
+                            <ArrowDownToLine className="h-3 w-3 mr-1" />
+                            {isWithdrawing === inv.id ? "..." : "Withdraw"}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.714",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Investments now grow daily — growth_rate is applied to current_value each day via process-daily-updates" },
+      { type: 'feature', description: "Withdraw button on investments — sell any position and return its current value to your cash balance" },
+      { type: 'improvement', description: "Investment returns now visible as positions appreciate over time" },
+    ],
+  },
+  {
     version: "1.0.713",
     date: "2026-02-16",
     changes: [
