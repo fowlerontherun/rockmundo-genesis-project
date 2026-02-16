@@ -120,6 +120,12 @@ const AdminDashboard = () => {
               <CardDescription>Debug & manage video generation</CardDescription>
             </CardHeader>
           </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/release-pump'}>
+            <CardHeader>
+              <CardTitle>Release Pump</CardTitle>
+              <CardDescription>Boost digital sales for releases</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
 
         <Card className="border-primary/20">
