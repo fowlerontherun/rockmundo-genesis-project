@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.823",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Album charts now only show album entries (release title, record sales, total streams) instead of leaking individual singles from album-scoped chart types" },
+    ],
+  },
+  {
     version: "1.0.822",
     date: "2026-02-16",
     changes: [

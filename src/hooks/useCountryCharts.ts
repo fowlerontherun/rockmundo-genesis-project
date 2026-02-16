@@ -351,12 +351,12 @@ export const useCountryCharts = (
       // Filter entries based on release category to ensure proper data
       const filteredData = (data || []).filter(entry => {
         if (releaseCategory === "album") {
-          // For album view, only include entries with entry_type='album' or from _album chart types
-          return entry.entry_type === "album" || entry.chart_type?.endsWith("_album");
+          // For album view, only include actual album entries (not individual songs on album charts)
+          return entry.entry_type === "album";
         }
         if (releaseCategory === "ep") {
-          // For EP view, only include entries with entry_type='album' (EPs use album type) or from _ep chart types
-          return entry.entry_type === "album" || entry.chart_type?.endsWith("_ep");
+          // For EP view, only include actual album/EP entries
+          return entry.entry_type === "album";
         }
         // For singles and all, include everything (singles are the default)
         return true;
