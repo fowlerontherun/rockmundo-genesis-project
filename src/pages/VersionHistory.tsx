@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.821",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Songwriting instrument selector now matches legacy skill slugs (guitar, bass, drums, vocals, etc.) so skill levels display correctly alongside the newer instruments_basic_* slugs" },
+    ],
+  },
+  {
     version: "1.0.820",
     date: "2026-02-16",
     changes: [

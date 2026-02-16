@@ -7,40 +7,41 @@ import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { useMemo } from "react";
 
 // Instrument definitions from skill tree - basic tier slugs
+// alsoMatch contains legacy/alternate slugs that should also count for this instrument's level
 const SONGWRITING_INSTRUMENTS = [
   // Strings
-  { slug: "instruments_basic_acoustic_guitar", label: "Acoustic Guitar", icon: "guitar" },
-  { slug: "instruments_basic_electric_guitar", label: "Electric Guitar", icon: "guitar" },
-  { slug: "instruments_basic_classical_guitar", label: "Classical Guitar", icon: "guitar" },
-  { slug: "instruments_basic_bass_guitar", label: "Bass Guitar", icon: "guitar" },
-  { slug: "instruments_basic_violin", label: "Violin", icon: "strings" },
-  { slug: "instruments_basic_cello", label: "Cello", icon: "strings" },
-  { slug: "instruments_basic_ukulele", label: "Ukulele", icon: "strings" },
-  { slug: "instruments_basic_banjo", label: "Banjo", icon: "strings" },
-  { slug: "instruments_basic_mandolin", label: "Mandolin", icon: "strings" },
-  { slug: "instruments_basic_upright_bass", label: "Upright Bass", icon: "guitar" },
+  { slug: "instruments_basic_acoustic_guitar", label: "Acoustic Guitar", icon: "guitar", alsoMatch: ["guitar"] },
+  { slug: "instruments_basic_electric_guitar", label: "Electric Guitar", icon: "guitar", alsoMatch: ["guitar"] },
+  { slug: "instruments_basic_classical_guitar", label: "Classical Guitar", icon: "guitar", alsoMatch: ["guitar"] },
+  { slug: "instruments_basic_bass_guitar", label: "Bass Guitar", icon: "guitar", alsoMatch: ["bass"] },
+  { slug: "instruments_basic_violin", label: "Violin", icon: "strings", alsoMatch: [] },
+  { slug: "instruments_basic_cello", label: "Cello", icon: "strings", alsoMatch: [] },
+  { slug: "instruments_basic_ukulele", label: "Ukulele", icon: "strings", alsoMatch: [] },
+  { slug: "instruments_basic_banjo", label: "Banjo", icon: "strings", alsoMatch: [] },
+  { slug: "instruments_basic_mandolin", label: "Mandolin", icon: "strings", alsoMatch: [] },
+  { slug: "instruments_basic_upright_bass", label: "Upright Bass", icon: "guitar", alsoMatch: ["bass"] },
   // Keys
-  { slug: "instruments_basic_classical_piano", label: "Piano", icon: "keys" },
-  { slug: "instruments_basic_jazz_piano", label: "Jazz Piano", icon: "keys" },
-  { slug: "instruments_basic_hammond_organ", label: "Hammond Organ", icon: "keys" },
-  { slug: "instruments_basic_rhodes", label: "Rhodes", icon: "keys" },
-  { slug: "instruments_basic_synthesizer", label: "Synthesizer", icon: "keys" },
+  { slug: "instruments_basic_classical_piano", label: "Piano", icon: "keys", alsoMatch: ["piano", "basic_keyboard"] },
+  { slug: "instruments_basic_jazz_piano", label: "Jazz Piano", icon: "keys", alsoMatch: ["piano", "basic_keyboard"] },
+  { slug: "instruments_basic_hammond_organ", label: "Hammond Organ", icon: "keys", alsoMatch: ["basic_keyboard"] },
+  { slug: "instruments_basic_rhodes", label: "Rhodes", icon: "keys", alsoMatch: ["basic_keyboard"] },
+  { slug: "instruments_basic_synthesizer", label: "Synthesizer", icon: "keys", alsoMatch: ["basic_electronic_instruments"] },
   // Drums & Percussion
-  { slug: "instruments_basic_rock_drums", label: "Rock Drums", icon: "drums" },
-  { slug: "instruments_basic_jazz_drums", label: "Jazz Drums", icon: "drums" },
-  { slug: "instruments_basic_percussion", label: "Percussion", icon: "drums" },
-  { slug: "instruments_basic_cajon", label: "Cajon", icon: "drums" },
+  { slug: "instruments_basic_rock_drums", label: "Rock Drums", icon: "drums", alsoMatch: ["drums", "instruments_basic_drum_kit"] },
+  { slug: "instruments_basic_jazz_drums", label: "Jazz Drums", icon: "drums", alsoMatch: ["drums", "instruments_basic_drum_kit"] },
+  { slug: "instruments_basic_percussion", label: "Percussion", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
+  { slug: "instruments_basic_cajon", label: "Cajon", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
   // Vocals
-  { slug: "instruments_basic_lead_vocals", label: "Lead Vocals", icon: "vocals" },
-  { slug: "instruments_basic_backup_vocals", label: "Backup Vocals", icon: "vocals" },
-  { slug: "instruments_basic_rap_vocals", label: "Rap Vocals", icon: "vocals" },
+  { slug: "instruments_basic_lead_vocals", label: "Lead Vocals", icon: "vocals", alsoMatch: ["vocals", "basic_singing", "lead_vocals_mastery"] },
+  { slug: "instruments_basic_backup_vocals", label: "Backup Vocals", icon: "vocals", alsoMatch: ["vocals", "basic_singing"] },
+  { slug: "instruments_basic_rap_vocals", label: "Rap Vocals", icon: "vocals", alsoMatch: ["vocals", "rapping"] },
   // Winds & Brass
-  { slug: "instruments_basic_saxophone", label: "Saxophone", icon: "winds" },
-  { slug: "instruments_basic_trumpet", label: "Trumpet", icon: "winds" },
-  { slug: "instruments_basic_trombone", label: "Trombone", icon: "winds" },
-  { slug: "instruments_basic_flute", label: "Flute", icon: "winds" },
-  { slug: "instruments_basic_clarinet", label: "Clarinet", icon: "winds" },
-  { slug: "instruments_basic_harmonica", label: "Harmonica", icon: "winds" },
+  { slug: "instruments_basic_saxophone", label: "Saxophone", icon: "winds", alsoMatch: ["basic_woodwinds"] },
+  { slug: "instruments_basic_trumpet", label: "Trumpet", icon: "winds", alsoMatch: ["basic_brass"] },
+  { slug: "instruments_basic_trombone", label: "Trombone", icon: "winds", alsoMatch: ["basic_brass"] },
+  { slug: "instruments_basic_flute", label: "Flute", icon: "winds", alsoMatch: ["basic_woodwinds"] },
+  { slug: "instruments_basic_clarinet", label: "Clarinet", icon: "winds", alsoMatch: ["basic_woodwinds"] },
+  { slug: "instruments_basic_harmonica", label: "Harmonica", icon: "winds", alsoMatch: [] },
 ];
 
 export { SONGWRITING_INSTRUMENTS };
@@ -83,8 +84,16 @@ const SongwritingInstrumentSelectorInner = ({
   const { progress } = useSkillSystem();
 
   const getSkillLevel = (slug: string): number => {
-    const skill = progress?.find((s) => s.skill_slug === slug);
-    return skill?.current_level ?? 0;
+    const instrument = SONGWRITING_INSTRUMENTS.find((i) => i.slug === slug);
+    const slugsToCheck = [slug, ...(instrument?.alsoMatch ?? [])];
+    let maxLevel = 0;
+    for (const s of slugsToCheck) {
+      const skill = progress?.find((p) => p.skill_slug === s);
+      if (skill && (skill.current_level ?? 0) > maxLevel) {
+        maxLevel = skill.current_level ?? 0;
+      }
+    }
+    return maxLevel;
   };
 
   const toggleInstrument = (slug: string) => {
