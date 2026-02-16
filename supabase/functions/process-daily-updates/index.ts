@@ -422,8 +422,40 @@ Deno.serve(async (req) => {
       console.error('Error in rent collection:', rentError)
     }
 
+    // === DAILY INVESTMENT GROWTH ===
+    console.log('=== Processing Investment Growth ===')
+    let investmentsGrown = 0
+    try {
+      const { data: activeInvestments } = await supabase
+        .from('player_investments')
+        .select('id, current_value, growth_rate')
+
+      if (activeInvestments && activeInvestments.length > 0) {
+        for (const inv of activeInvestments) {
+          try {
+            const dailyRate = (inv.growth_rate || 0)
+            if (dailyRate <= 0) continue
+            const newValue = Math.round(inv.current_value * (1 + dailyRate))
+            if (newValue !== inv.current_value) {
+              await supabase
+                .from('player_investments')
+                .update({ current_value: newValue })
+                .eq('id', inv.id)
+              investmentsGrown++
+            }
+          } catch (invError) {
+            console.error(`Error growing investment ${inv.id}:`, invError)
+            errorCount++
+          }
+        }
+        console.log(`Investments grown: ${investmentsGrown}`)
+      }
+    } catch (invError) {
+      console.error('Error in investment growth:', invError)
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
