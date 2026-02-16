@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.761",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Dashboard Profile tab now shows character avatar picture, name, age, and gender at the top" },
+    ],
+  },
+  {
     version: "1.0.760",
     date: "2026-02-16",
     changes: [

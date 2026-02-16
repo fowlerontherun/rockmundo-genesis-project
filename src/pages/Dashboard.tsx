@@ -303,6 +303,33 @@ const Dashboard = () => {
 
         {/* Profile Tab - Now with sub-tabs */}
         <TabsContent value="profile" className="space-y-4">
+          {/* Character Avatar & Info */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20 border-2 border-primary/30">
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
+                  <AvatarFallback className="text-2xl">
+                    <User className="h-10 w-10" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold text-foreground truncate">
+                    {profile?.display_name || profile?.username || "Unknown"}
+                  </h2>
+                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                    {profile?.age && (
+                      <span>Age {profile.age}</span>
+                    )}
+                    {profile?.gender && (
+                      <span className="capitalize">{profile.gender}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Location Header - Shows country flag, city name, and local flavor */}
           {currentCity && (
             <LocationHeader 
