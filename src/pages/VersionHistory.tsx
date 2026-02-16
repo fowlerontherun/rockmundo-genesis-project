@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.789",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Releases now appear on the schedule — manufacturing completion dates shown as scheduled activities" },
+      { type: 'feature', description: "Festival detail page now has a ticket purchase section with day/weekend ticket options" },
+    ],
+  },
+  {
     version: "1.0.788",
     date: "2026-02-16",
     changes: [

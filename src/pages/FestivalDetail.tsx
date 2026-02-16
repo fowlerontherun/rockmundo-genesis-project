@@ -10,18 +10,28 @@
  import { Progress } from "@/components/ui/progress";
  import { 
    ArrowLeft, Calendar, MapPin, Users, Music, Star, 
-   DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain
+   DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2
  } from "lucide-react";
  import { format, formatDistanceToNow, isFuture } from "date-fns";
  import { usePrimaryBand } from "@/hooks/usePrimaryBand";
  import { useFestivalHistory, useFestivalSponsorships, useFestivalRivalries } from "@/hooks/useFestivalHistory";
  import { FestivalRivalryCard } from "@/components/festivals/rivalry/FestivalRivalryCard";
+ import { useFestivalTickets } from "@/hooks/useFestivalTickets";
+ import { useFestivalStages } from "@/hooks/useFestivalStages";
+ import { useFestivalQuality } from "@/hooks/useFestivalFinances";
+ import { useAuth } from "@/hooks/use-auth-context";
  
  export default function FestivalDetail() {
    const { festivalId } = useParams();
    const navigate = useNavigate();
+   const { user } = useAuth();
    const { data: primaryBandRecord } = usePrimaryBand();
    const band = primaryBandRecord?.bands;
+   const { tickets, hasTicket, hasWeekendPass, purchaseTicket } = useFestivalTickets(festivalId);
+   const { data: stages = [] } = useFestivalStages(festivalId);
+   const { data: quality } = useFestivalQuality(festivalId);
+   const [selectedTicketType, setSelectedTicketType] = useState<"day" | "weekend">("weekend");
+   const [selectedDay, setSelectedDay] = useState(1);
  
    // Fetch festival details
    const { data: festival, isLoading } = useQuery({
@@ -311,6 +321,85 @@
            )}
          </TabsContent>
        </Tabs>
+ 
+       {/* Ticket Purchase */}
+       {isUpcoming && (
+         <Card className="border-primary/30">
+           <CardHeader>
+             <CardTitle className="flex items-center gap-2">
+               <Ticket className="h-5 w-5 text-primary" />
+               Buy Tickets
+             </CardTitle>
+             <CardDescription>
+               {hasTicket 
+                 ? hasWeekendPass 
+                   ? "You have a weekend pass for this festival!" 
+                   : "You have a day ticket. Upgrade to a weekend pass?"
+                 : "Purchase tickets to attend this festival"}
+             </CardDescription>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             {hasWeekendPass ? (
+               <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                 ✓ Weekend Pass Holder
+               </Badge>
+             ) : (
+               <div className="grid gap-3 sm:grid-cols-2">
+                 {/* Day Ticket */}
+                 <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'day' ? 'border-primary' : 'hover:border-primary/40'}`}
+                   onClick={() => setSelectedTicketType('day')}>
+                   <CardContent className="p-4 text-center">
+                     <p className="font-bold text-lg">Day Ticket</p>
+                     <p className="text-2xl font-bold text-primary mt-1">
+                       ${(festival.metadata?.day_ticket_price || 500).toLocaleString()}
+                     </p>
+                     <p className="text-xs text-muted-foreground mt-1">Access for one day</p>
+                   </CardContent>
+                 </Card>
+                 {/* Weekend Pass */}
+                 <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'weekend' ? 'border-primary' : 'hover:border-primary/40'}`}
+                   onClick={() => setSelectedTicketType('weekend')}>
+                   <CardContent className="p-4 text-center">
+                     <p className="font-bold text-lg">Weekend Pass</p>
+                     <p className="text-2xl font-bold text-primary mt-1">
+                       ${(festival.metadata?.weekend_ticket_price || 1200).toLocaleString()}
+                     </p>
+                     <p className="text-xs text-muted-foreground mt-1">Full festival access</p>
+                   </CardContent>
+                 </Card>
+               </div>
+             )}
+             {!hasWeekendPass && (
+               <Button 
+                 className="w-full" 
+                 size="lg"
+                 disabled={purchaseTicket.isPending}
+                 onClick={() => {
+                   if (!festivalId) return;
+                   purchaseTicket.mutate({
+                     festivalId,
+                     ticketType: selectedTicketType,
+                     price: selectedTicketType === 'weekend' 
+                       ? (festival.metadata?.weekend_ticket_price || 1200)
+                       : (festival.metadata?.day_ticket_price || 500),
+                     dayNumber: selectedTicketType === 'day' ? selectedDay : undefined,
+                     festivalTitle: festival.title,
+                     festivalStart: festival.start_date,
+                     festivalEnd: festival.end_date,
+                   });
+                 }}
+               >
+                 {purchaseTicket.isPending ? (
+                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                 ) : (
+                   <Ticket className="h-4 w-4 mr-2" />
+                 )}
+                 Buy {selectedTicketType === 'weekend' ? 'Weekend Pass' : 'Day Ticket'}
+               </Button>
+             )}
+           </CardContent>
+         </Card>
+       )}
  
        {/* Description */}
        {festival.description && (
