@@ -444,7 +444,7 @@ function SecurityManager({ festivalId, festival }: { festivalId: string; festiva
         .from("security_contracts")
         .insert({
           security_firm_id: firmId,
-          contract_type: "festival",
+          contract_type: "event",
           festival_id: festivalId,
           guards_required: guardsRequired,
           fee_per_event: guardsRequired * 200,
