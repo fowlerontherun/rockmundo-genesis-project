@@ -213,7 +213,7 @@ serve(async (req) => {
     
     // Build comprehensive prompt for MiniMax Music-1.5
     const songTitle = project?.title || song.title || 'Untitled'
-    const primaryGenre = song.genre || project?.genres?.[0] || 'pop'
+    const primaryGenre = (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
     const chordProgression = project?.chord_progressions?.progression || null
     const chordName = project?.chord_progressions?.name || null
     const themeName = project?.song_themes?.name || null
@@ -378,7 +378,7 @@ serve(async (req) => {
     }
 
     // MiniMax uses comma-separated style description
-    let stylePrompt = styleParts.join(', ')
+    let stylePrompt = styleParts.join(', ').replace(/^Style:\s*/i, '').trim()
     if (stylePrompt.length < 10) {
       stylePrompt = `${primaryGenre} vocal song`
     }
@@ -568,12 +568,12 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   
   let cleaned = lyrics.trim()
   
-  // If lyrics start with "Style:" they contain the full prompt - extract just the lyrics part
-  if (cleaned.toLowerCase().startsWith('style:')) {
-    console.log('[sanitizeLyrics] Detected Style: prefix in lyrics, extracting actual lyrics')
+  // If lyrics contain "Style:" anywhere, they likely contain the full prompt - extract just lyrics
+  if (cleaned.toLowerCase().includes('style:')) {
+    console.log('[sanitizeLyrics] Detected Style: in lyrics, extracting actual lyrics')
     
-    // Find the Lyrics: section and extract from there
-    const lyricsMatch = cleaned.match(/Lyrics:\s*([\s\S]*?)(?=\n\nLyrics:|$)/i)
+    // Find the FIRST Lyrics: section and extract from there
+    const lyricsMatch = cleaned.match(/Lyrics:\s*([\s\S]*?)(?=\n\nLyrics:|\n\nStyle:|$)/i)
     if (lyricsMatch && lyricsMatch[1]) {
       cleaned = lyricsMatch[1].trim()
     } else {
@@ -582,22 +582,34 @@ function sanitizeLyrics(lyrics: string | null): string | null {
       if (sectionMatch) {
         cleaned = sectionMatch[1].trim()
       } else {
-        // Can't extract, return null to trigger regeneration
         console.warn('[sanitizeLyrics] Could not extract lyrics from corrupted prompt')
         return null
       }
     }
   }
   
-  // Also check if lyrics start with "Lyrics:" header
-  if (cleaned.toLowerCase().startsWith('lyrics:')) {
-    cleaned = cleaned.replace(/^lyrics:\s*/i, '').trim()
+  // Strip "Lyrics:" header if present
+  cleaned = cleaned.replace(/^lyrics:\s*/i, '').trim()
+  
+  // Remove any duplicate Lyrics: sections — keep only the FIRST set of lyrics
+  // Split on "Lyrics:" boundaries and keep the first chunk
+  const lyricsSections = cleaned.split(/\n\s*Lyrics:\s*\n/i)
+  if (lyricsSections.length > 1) {
+    console.log(`[sanitizeLyrics] Detected ${lyricsSections.length} Lyrics: sections, keeping first only`)
+    cleaned = lyricsSections[0].trim()
   }
   
-  // Remove any duplicate Lyrics: sections (take first one only)
-  if (cleaned.split(/\n\nLyrics:/i).length > 1) {
-    console.log('[sanitizeLyrics] Detected duplicate Lyrics: sections, keeping first')
-    cleaned = cleaned.split(/\n\nLyrics:/i)[0].trim()
+  // Also detect duplicate song structures (two [Verse 1] markers = concatenated songs)
+  const verse1Count = (cleaned.match(/\[verse\s*1?\]/gi) || []).length
+  if (verse1Count > 1) {
+    console.log(`[sanitizeLyrics] Detected ${verse1Count} Verse 1 markers - truncating to first song`)
+    // Find the second [Verse 1] or [Verse] and cut there
+    const firstVerseEnd = cleaned.search(/\[verse\s*1?\]/i)
+    const afterFirst = cleaned.substring(firstVerseEnd + 1)
+    const secondVersePos = afterFirst.search(/\[verse\s*1?\]/i)
+    if (secondVersePos > 0) {
+      cleaned = cleaned.substring(0, firstVerseEnd + 1 + secondVersePos).trim()
+    }
   }
   
   return cleaned || null

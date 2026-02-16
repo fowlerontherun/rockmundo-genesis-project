@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.719",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed duplicate 'Style: Style:' prefix in AI audio generation prompts" },
+      { type: 'fix', description: "Fixed AI-generated lyrics being appended to existing user lyrics — now only the first/original lyrics are used" },
+    ],
+  },
+  {
     version: "1.0.718",
     date: "2026-02-16",
     changes: [
