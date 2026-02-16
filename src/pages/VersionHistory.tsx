@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.788",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Festivals page redesigned — compact stats row, richer browse cards with poster images, click-to-detail navigation, countdown badges, cleaner mobile layout" },
+      { type: 'improvement', description: "My Festivals tab redesigned with icon-prefixed rows, clickable cards linking to festival detail, and cleaner status badges" },
+    ],
+  },
+  {
     version: "1.0.787",
     date: "2026-02-16",
     changes: [
