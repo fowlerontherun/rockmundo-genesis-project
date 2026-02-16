@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.798",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Housing price market — per-country price multipliers fluctuate gently (±1-5%) every few hours via cron" },
+      { type: 'feature', description: "Buy prices now reflect current market conditions with trend indicators (📈📉)" },
+      { type: 'feature', description: "Sell prices follow market value — if the market rises, your property sells for more (70% of market value)" },
+      { type: 'improvement', description: "Property cards show base vs market price and percentage change" },
+      { type: 'improvement', description: "Owned properties display current market value and market-adjusted sell price" },
+    ],
+  },
+  {
     version: "1.0.797",
     date: "2026-02-16",
     changes: [
