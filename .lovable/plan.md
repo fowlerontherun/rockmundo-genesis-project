@@ -1,62 +1,94 @@
 
-# Hide Admin Nav for Non-Admins + Admin User Management (v1.0.769)
 
-## What Changes
+# Festival Page Enhancement Plan (v1.0.783)
 
-1. **Hide the Admin navigation section** from both the sidebar and horizontal nav for users who are not admins. Currently every user can see the "Admin" heading and link.
+## Summary
+Overhaul the festival browse/detail page to show richer festival information, remove the "Perform Now" button (performances should work like gigs -- scheduled, not instant), add festival-specific merch creation for bands, and add a festival-exclusive items shop for attendees.
 
-2. **New Admin User Management page** (`/admin/user-roles`) accessible from the Admin Dashboard, allowing admins to:
-   - View all users and their current roles (admin/moderator/user)
-   - Promote users to admin or moderator
-   - Demote admins/moderators back to user
-   - Search users by username or email
+---
+
+## Changes Overview
+
+### 1. Remove "Perform Now" Button from FestivalCard
+- In `FestivalCard.tsx`, remove the "Perform Now" button block (lines 163-173) that allows instant performance
+- Replace with a status indicator showing the scheduled performance time (if the player's band has a confirmed slot)
+- Performances should happen automatically based on slot scheduling, matching how gigs work
+
+### 2. Enrich the Festival Detail Panel (FestivalBrowser.tsx)
+Expand the `FestivalDetailPanel` to display more comprehensive information:
+
+- **Description section** -- show the festival description text
+- **Festival stats** -- duration, total stages, genre focus, capacity, ticket sales count
+- **Security info** -- show assigned security firm if available
+- **Financial summary** -- ticket price breakdown (day vs weekend), savings percentage on weekend passes
+- **Schedule grid** -- reorganize lineup by day with time slots visible, not just a flat list
+- **Attendance counter** -- show how many people have bought tickets or are attending
+
+### 3. Improve Ticket Purchase Section
+- Make the ticket buying UI more prominent with clearer pricing cards
+- Show remaining capacity / sold-out indicators
+- Add a confirmation dialog before purchase (since it deducts cash)
+- Display the player's current cash balance next to the buy buttons so they know if they can afford it
+
+### 4. Festival Merch Creation (for Bands)
+Add a new tab/section in the festival detail panel for bands that are performing:
+
+- **New component**: `FestivalMerchCreator.tsx` in `src/components/festivals/merch/`
+- Allows the performing band to create festival-specific merchandise (t-shirts, posters, commemorative items) tied to that festival
+- Uses the existing `player_merchandise` table with metadata indicating it's festival-specific (`metadata: { festival_id }`)
+- Festival merch gets a sales boost from festival attendance
+- Reuses patterns from the existing `MerchCatalog` and `ReleaseDesignDialog` components
+
+### 5. Festival-Exclusive Attendee Shop
+Add a marketplace for attendees to buy unique festival items:
+
+- **New component**: `FestivalExclusiveShop.tsx` in `src/components/festivals/merch/`
+- Available only to players who have a ticket for the festival
+- Shows festival-branded items (festival t-shirts, wristbands, commemorative posters, limited collectibles)
+- Items are generated based on the festival data (title, genre, location)
+- Purchases deduct from player cash and add items to their inventory
+- Some items could be "limited edition" with stock counts
+- Integrates into the `FestivalDetailPanel` as a new section or tab
+
+### 6. Update Festival Page Tabs
+In `Festivals.tsx`, add a third tab for "My Festival Merch" or integrate the shop into the detail panel:
+
+- The detail panel will gain two new collapsible sections:
+  - "Festival Shop" (for attendees to buy exclusive items)
+  - "Sell Your Merch" (for performing bands to set up their festival merch stand)
+
+### 7. Version Update
+- Bump version to `1.0.783` in `VersionHeader.tsx`
+- Add changelog entry in `VersionHistory.tsx`
 
 ---
 
 ## Technical Details
 
-### 1. Conditionally hide Admin nav section
-
-**Files:** `src/components/ui/navigation.tsx`, `src/components/ui/HorizontalNavigation.tsx`
-
-- Import `useUserRole` hook in both navigation components
-- Filter the `navSections` array to exclude the section with `titleKey: "nav.admin"` when `isAdmin()` returns false
-- The `useUserRole` hook already exists and provides `isAdmin()` -- no new DB queries needed
-
-### 2. New Admin User Management component
-
-**New file:** `src/components/admin/AdminUserRoles.tsx`
-
-- Fetches all rows from `user_roles` joined with `profiles` (for username/avatar)
-- Displays a table of users with their current role
-- Admin can change a user's role via a dropdown (admin/moderator/user)
-- Updates the `user_roles` table on change
-- Search/filter by username
-- Protected by `AdminRoute` wrapper
-
-### 3. New page + route
-
-**New file:** `src/pages/admin/AdminUserRoles.tsx` -- thin wrapper around the component
-
-**Modified file:** `src/App.tsx` -- add route `admin/user-roles`
-
-### 4. Add tile to Admin Dashboard
-
-**Modified file:** `src/pages/AdminDashboard.tsx` -- add a "User Roles" card tile in the admin grid linking to `/admin/user-roles`
-
-### 5. Version bump
-
-- `VersionHeader.tsx`: bump to `1.0.769`
-- `VersionHistory.tsx`: add changelog entry
-
-### Files changed (summary)
+### Files to Modify
 | File | Change |
 |------|--------|
-| `src/components/ui/navigation.tsx` | Import `useUserRole`, filter out admin section for non-admins |
-| `src/components/ui/HorizontalNavigation.tsx` | Same filter logic |
-| `src/components/admin/AdminUserRoles.tsx` | **New** -- user role management UI |
-| `src/pages/admin/AdminUserRoles.tsx` | **New** -- page wrapper |
-| `src/App.tsx` | Add lazy import + route for `admin/user-roles` |
-| `src/pages/AdminDashboard.tsx` | Add "User Roles" tile card |
-| `src/components/VersionHeader.tsx` | Version bump |
-| `src/pages/VersionHistory.tsx` | Changelog entry |
+| `src/components/festivals/FestivalCard.tsx` | Remove "Perform Now" button, add scheduled slot info |
+| `src/components/festivals/FestivalBrowser.tsx` | Expand detail panel with description, stats, festival shop, merch stand sections |
+| `src/components/VersionHeader.tsx` | Bump to v1.0.783 |
+| `src/pages/VersionHistory.tsx` | Add changelog entry |
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/components/festivals/merch/FestivalExclusiveShop.tsx` | Attendee shop for festival-exclusive items |
+| `src/components/festivals/merch/FestivalMerchStand.tsx` | Band merch stand setup for performing bands |
+
+### Data Approach
+- Festival-exclusive items will be defined as a static catalog generated from festival properties (no new DB tables needed)
+- Purchases will use the existing `player_merchandise` / profile cash deduction pattern
+- Band festival merch uses the existing `player_merchandise` table with `festival_id` in metadata
+- The `festival_merch_sales` table already exists and can track sales
+
+### Key Patterns Followed
+- Uses existing `useFestivalTickets` hook for ticket state
+- Uses existing `useFestivalStages` / `useFestivalStageSlots` for lineup data
+- Uses existing `useFestivalQuality` for ratings
+- Follows the same cash deduction pattern from `useFestivalTickets`
+- Reuses `Card`, `Badge`, `Button`, `Separator` UI components consistently
+
