@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.773",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Band popularity and cohesion score now calculated daily — were stuck at 0 because process-daily-updates never updated them" },
+      { type: 'feature', description: "Days together tracked from band creation date; cohesion factors in chemistry, time, and performance count" },
+      { type: 'feature', description: "Popularity calculated from fame tier, fan engagement, and recent gig activity (0-1000 scale)" },
+    ],
+  },
+  {
     version: "1.0.772",
     date: "2026-02-16",
     changes: [

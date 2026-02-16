@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     // Process bands - award daily fame and fans with configurable rates
     const { data: bands, error: bandsError } = await supabase
       .from('bands')
-      .select('id, fame, weekly_fans, total_fans')
+      .select('id, fame, weekly_fans, total_fans, popularity, cohesion_score, days_together, chemistry_level, performance_count, created_at, status')
 
     if (bandsError) throw bandsError
 
@@ -143,12 +143,33 @@ Deno.serve(async (req) => {
         const totalFameGain = passiveFameGain + activityFameBonus
         const totalFansGain = passiveFansGain + activityFansBonus + fameBasedFansBonus
 
+        // Calculate days_together from band creation date
+        const bandCreated = new Date(band.created_at)
+        const newDaysTogether = Math.max(0, Math.floor((Date.now() - bandCreated.getTime()) / (1000 * 60 * 60 * 24)))
+
+        // Calculate cohesion_score based on chemistry, days together, and performance count
+        // Cohesion grows with time and activity, scaled 0-100
+        const timeComponent = Math.min(40, newDaysTogether * 0.5) // up to 40 from time (80 days)
+        const chemistryComponent = ((band.chemistry_level || 0) / 100) * 30 // up to 30 from chemistry
+        const performanceComponent = Math.min(30, (band.performance_count || 0) * 1.5) // up to 30 from gigs
+        const newCohesionScore = Math.min(100, Math.round(timeComponent + chemistryComponent + performanceComponent))
+
+        // Calculate popularity based on fame, fans, and recent activity
+        // Popularity = weighted blend of fame tier + fan engagement + activity recency
+        const fameTier = Math.floor(Math.log10(Math.max(band.fame || 1, 1)) * 100) // ~0-600
+        const fanEngagement = Math.min(200, Math.floor(((band.total_fans || 0) / 1000) * 10)) // up to 200
+        const activityBoost = gigsCount * 50 // recent gigs boost
+        const newPopularity = Math.min(1000, fameTier + fanEngagement + activityBoost)
+
         await supabase
           .from('bands')
           .update({
             fame: (band.fame || 0) + totalFameGain,
             weekly_fans: (band.weekly_fans || 0) + totalFansGain,
-            total_fans: (band.total_fans || 0) + totalFansGain
+            total_fans: (band.total_fans || 0) + totalFansGain,
+            days_together: newDaysTogether,
+            cohesion_score: newCohesionScore,
+            popularity: newPopularity,
           })
           .eq('id', band.id)
 
