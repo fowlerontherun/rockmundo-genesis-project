@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.713",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Admin Fame & Fans Gifting tool now supports adding money to band balances" },
+      { type: 'improvement', description: "Band balance column shown in admin gifting table for quick reference" },
+      { type: 'improvement', description: "Money grants logged as band_earnings for full audit trail" },
+    ],
+  },
+  {
     version: "1.0.712",
     date: "2026-02-16",
     changes: [
