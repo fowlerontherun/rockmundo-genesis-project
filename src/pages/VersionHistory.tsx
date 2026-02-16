@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.720",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Songs with existing audio no longer get stuck in 'failed' status — auto-recovery sets them back to 'completed'" },
+      { type: 'fix', description: "AI-generated lyrics can no longer overwrite user-written lyrics when a song already has audio" },
+      { type: 'improvement', description: "Improved lyrics sanitizer — catches duplicate Lyrics: headers, (You)/(Me) markers, and duplicate verse blocks more reliably" },
+      { type: 'fix', description: "Blocked regeneration attempts on songs that already have a valid audio URL" },
+    ],
+  },
+  {
     version: "1.0.719",
     date: "2026-02-16",
     changes: [
