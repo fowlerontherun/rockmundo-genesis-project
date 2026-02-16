@@ -158,6 +158,7 @@ export const tr: TranslationKeys = {
     selfPr: "Kendi Tanıtımın",
     websites: "Web Siteleri",
     journal: "Günlük",
+    radioPlayer: "Radyo",
     offers: "Teklifler",
     songManager: "Şarkı Yöneticisi",
     songMarket: "Şarkı Pazarı",

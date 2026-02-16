@@ -27,7 +27,7 @@ import { VipStatusCard } from "@/components/VipStatusCard";
 import { BehaviorSettingsTab } from "@/components/dashboard/BehaviorSettingsTab";
 import { CharacterIdentityCard } from "@/components/character";
 import { ReputationCard } from "@/components/reputation";
-import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
+
 
 // Advisor imports
 import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
@@ -363,18 +363,6 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Radio Player Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-primary" />
-                Radio Player
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RMRadioButton className="w-full justify-center h-10 text-sm" />
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Fame & Fans Tab */}

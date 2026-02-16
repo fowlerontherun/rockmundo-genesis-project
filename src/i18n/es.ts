@@ -156,6 +156,7 @@ export const es: TranslationKeys = {
     selfPr: "Auto-Promoción",
     websites: "Sitios Web",
     journal: "Diario",
+    radioPlayer: "Radio",
     offers: "Ofertas",
     songManager: "Gestor de Canciones",
     songMarket: "Mercado de Canciones",
