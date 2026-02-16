@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.820",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed university course browser returning only ~1000 results — implemented paginated fetching to load all 23,000+ courses across all cities" },
+    ],
+  },
+  {
     version: "1.0.819",
     date: "2026-02-16",
     changes: [

@@ -167,40 +167,73 @@ export const UniversityTab = () => {
   const { data: courses, isLoading: coursesLoading } = useQuery({
     queryKey: ["all_courses_with_unis"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("university_courses")
-        .select(`
-          id,
-          name,
-          skill_slug,
-          base_price,
-          base_duration_days,
-          required_skill_level,
-          university_id,
-          universities (
+      const batchSize = 1000;
+      const allCourses: CourseWithUniversity[] = [];
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("university_courses")
+          .select(`
             id,
             name,
-            city,
-            prestige
-          )
-        `)
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data as CourseWithUniversity[];
+            skill_slug,
+            base_price,
+            base_duration_days,
+            required_skill_level,
+            university_id,
+            universities (
+              id,
+              name,
+              city,
+              prestige
+            )
+          `)
+          .eq("is_active", true)
+          .order("name")
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allCourses.push(...(data as CourseWithUniversity[]));
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allCourses;
     },
   });
 
   const { data: courseCounts } = useQuery({
     queryKey: ["university_course_counts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("university_courses")
-        .select("university_id")
-        .eq("is_active", true);
-      if (error) throw error;
+      const batchSize = 1000;
+      const allRows: { university_id: string }[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-      const counts = data.reduce((acc, course) => {
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("university_courses")
+          .select("university_id")
+          .eq("is_active", true)
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allRows.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const counts = allRows.reduce((acc, course) => {
         acc[course.university_id] = (acc[course.university_id] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
