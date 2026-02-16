@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.726",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Reduced global text size slightly across all pages (14px mobile, 15px tablet, 16px desktop) for better content density" },
+      { type: 'fix', description: "Today's News page spacing tightened so more content fits on mobile screens" },
+    ],
+  },
+  {
     version: "1.0.725",
     date: "2026-02-16",
     changes: [
