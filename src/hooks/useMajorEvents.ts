@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { createScheduledActivity } from "@/hooks/useActivityBooking";
 
 export interface MajorEvent {
   id: string;
@@ -18,6 +19,9 @@ export interface MajorEvent {
   frequency_years: number;
   image_url: string | null;
   is_active: boolean;
+  genre: string | null;
+  duration_hours: number;
+  cooldown_years: number;
 }
 
 export interface MajorEventInstance {
@@ -25,6 +29,8 @@ export interface MajorEventInstance {
   event_id: string;
   year: number;
   event_date: string | null;
+  event_start: string | null;
+  event_end: string | null;
   status: string;
   invited_band_ids: string[];
   event?: MajorEvent;
@@ -167,6 +173,69 @@ export function useMajorEventSongPerformances(performanceId: string | null) {
   });
 }
 
+/**
+ * Check if band is on cooldown for a specific event (performed in last 3 game years)
+ */
+export function useBandEventCooldowns(bandId?: string) {
+  return useQuery({
+    queryKey: ['band-event-cooldowns', bandId],
+    queryFn: async () => {
+      if (!bandId) return {};
+      
+      // Get all completed performances for this band
+      const { data, error } = await (supabase as any)
+        .from('major_event_performances')
+        .select('instance_id, instance:major_event_instances(event_id, year)')
+        .eq('band_id', bandId)
+        .eq('status', 'completed');
+      
+      if (error) throw error;
+      
+      // Build a map of event_id -> last year performed
+      const cooldowns: Record<string, number> = {};
+      for (const perf of (data || [])) {
+        const eventId = perf.instance?.event_id;
+        const year = perf.instance?.year;
+        if (eventId && year) {
+          cooldowns[eventId] = Math.max(cooldowns[eventId] || 0, year);
+        }
+      }
+      return cooldowns;
+    },
+    enabled: !!bandId,
+  });
+}
+
+/**
+ * Count how many events the band has accepted/completed in a given year
+ */
+export function useBandYearEventCount(bandId?: string) {
+  return useQuery({
+    queryKey: ['band-year-event-count', bandId],
+    queryFn: async () => {
+      if (!bandId) return {};
+      
+      const { data, error } = await (supabase as any)
+        .from('major_event_performances')
+        .select('instance_id, instance:major_event_instances(year)')
+        .eq('band_id', bandId)
+        .in('status', ['accepted', 'in_progress', 'completed']);
+      
+      if (error) throw error;
+      
+      const counts: Record<number, number> = {};
+      for (const perf of (data || [])) {
+        const year = perf.instance?.year;
+        if (year) {
+          counts[year] = (counts[year] || 0) + 1;
+        }
+      }
+      return counts;
+    },
+    enabled: !!bandId,
+  });
+}
+
 export function useAcceptMajorEvent() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -179,14 +248,32 @@ export function useAcceptMajorEvent() {
       song1Id,
       song2Id,
       song3Id,
+      eventStart,
+      eventEnd,
+      eventName,
     }: {
       instanceId: string;
       bandId: string;
       song1Id: string;
       song2Id: string;
       song3Id: string;
+      eventStart: string;
+      eventEnd: string;
+      eventName: string;
     }) => {
       if (!user) throw new Error('Must be logged in');
+
+      // Create scheduled activity to block the time slot
+      await createScheduledActivity({
+        userId: user.id,
+        bandId,
+        activityType: 'major_event' as any,
+        scheduledStart: new Date(eventStart),
+        scheduledEnd: new Date(eventEnd),
+        title: `🏟️ ${eventName}`,
+        description: `Performing at ${eventName}`,
+        metadata: { major_event_instance_id: instanceId },
+      });
 
       const { data, error } = await (supabase as any)
         .from('major_event_performances')
@@ -208,9 +295,11 @@ export function useAcceptMajorEvent() {
     onSuccess: () => {
       toast({
         title: "Invitation Accepted!",
-        description: "You've accepted the major event invitation. Get ready to perform!",
+        description: "You've accepted the major event invitation. It's been added to your schedule!",
       });
       queryClient.invalidateQueries({ queryKey: ['major-event-performances'] });
+      queryClient.invalidateQueries({ queryKey: ['band-year-event-count'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
     },
     onError: (error: Error) => {
       toast({

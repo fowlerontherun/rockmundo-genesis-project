@@ -2,7 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import { useMajorEvents, useMajorEventPerformances, useMajorEventHistory, useAcceptMajorEvent } from "@/hooks/useMajorEvents";
+import { 
+  useMajorEvents, useMajorEventPerformances, useMajorEventHistory, 
+  useAcceptMajorEvent, useBandEventCooldowns, useBandYearEventCount 
+} from "@/hooks/useMajorEvents";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { MajorEventSongSelector } from "@/components/major-events/MajorEventSongSelector";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,10 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getMonthName } from "@/utils/gameCalendar";
 import { 
   Trophy, Users, Star, DollarSign, TrendingUp, Loader2, Play,
-  CheckCircle, Lock, Sparkles, Music, History, Calendar, Clock, Repeat
+  CheckCircle, Lock, Sparkles, Music, History, Calendar, Clock, Repeat,
+  Ban, Guitar
 } from "lucide-react";
 
 const categoryIcons: Record<string, string> = {
@@ -30,6 +35,9 @@ const categoryColors: Record<string, string> = {
   holiday: 'bg-red-500/10 text-red-500 border-red-500/30',
 };
 
+const MAX_EVENTS_PER_YEAR = 2;
+const COOLDOWN_YEARS = 3;
+
 export default function MajorEvents() {
   const { user } = useAuth();
   const { data: primaryBand } = usePrimaryBand();
@@ -40,14 +48,23 @@ export default function MajorEvents() {
   const { data: historyInstances = [], isLoading: loadingHistory } = useMajorEventHistory();
   const { data: calendar } = useGameCalendar();
   const acceptEvent = useAcceptMajorEvent();
+  const { data: cooldowns = {} } = useBandEventCooldowns(activeBand?.id);
+  const { data: yearCounts = {} } = useBandYearEventCount(activeBand?.id);
 
   const [selectedInstance, setSelectedInstance] = useState<string | null>(null);
+  const [selectedEventStart, setSelectedEventStart] = useState<string>('');
+  const [selectedEventEnd, setSelectedEventEnd] = useState<string>('');
+  const [selectedEventName, setSelectedEventName] = useState<string>('');
   const [songSelectorOpen, setSongSelectorOpen] = useState(false);
 
   const bandFame = activeBand?.fame || 0;
+  const bandGenre = activeBand?.genre || null;
 
-  const handleAcceptInvitation = (instanceId: string) => {
+  const handleAcceptInvitation = (instanceId: string, eventStart: string, eventEnd: string, eventName: string) => {
     setSelectedInstance(instanceId);
+    setSelectedEventStart(eventStart);
+    setSelectedEventEnd(eventEnd);
+    setSelectedEventName(eventName);
     setSongSelectorOpen(true);
   };
 
@@ -59,6 +76,9 @@ export default function MajorEvents() {
       song1Id,
       song2Id,
       song3Id,
+      eventStart: selectedEventStart,
+      eventEnd: selectedEventEnd,
+      eventName: selectedEventName,
     });
   };
 
@@ -66,9 +86,36 @@ export default function MajorEvents() {
     return performances.find(p => p.instance_id === instanceId);
   };
 
+  /**
+   * Check if band can accept this event
+   */
+  const getBlockReason = (instance: typeof events[0]): string | null => {
+    const event = instance.event;
+    if (!event || !activeBand) return null;
+
+    // Genre check: if event has a genre, band must match
+    if (event.genre && bandGenre && event.genre !== bandGenre) {
+      return `Genre mismatch — this event is for ${event.genre} bands`;
+    }
+
+    // 2 events per year cap
+    const yearCount = yearCounts[instance.year] || 0;
+    if (yearCount >= MAX_EVENTS_PER_YEAR) {
+      return `Your band already has ${MAX_EVENTS_PER_YEAR} events in Year ${instance.year}`;
+    }
+
+    // 3-year cooldown
+    const lastPerformed = cooldowns[event.id];
+    if (lastPerformed && (instance.year - lastPerformed) < COOLDOWN_YEARS) {
+      const canAgainYear = lastPerformed + COOLDOWN_YEARS;
+      return `Cooldown — can perform at this event again in Year ${canAgainYear}`;
+    }
+
+    return null;
+  };
+
   const completedPerformances = performances.filter(p => p.status === 'completed');
 
-  // Group upcoming events by game year
   const eventsByYear = events.reduce((acc, instance) => {
     const yr = instance.year;
     if (!acc[yr]) acc[yr] = [];
@@ -98,7 +145,6 @@ export default function MajorEvents() {
         </p>
       </div>
 
-      {/* Current game date context */}
       {calendar && (
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="py-3">
@@ -127,21 +173,17 @@ export default function MajorEvents() {
       {activeBand && (
         <Card className="bg-muted/30">
           <CardContent className="py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-3">
                 <Star className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm">Your Band Fame: <strong>{bandFame.toLocaleString()}</strong></span>
+                <span className="text-sm">
+                  <strong>{activeBand.name}</strong> · Fame: <strong>{bandFame.toLocaleString()}</strong>
+                  {bandGenre && <> · Genre: <strong>{bandGenre}</strong></>}
+                </span>
               </div>
-              <div className="flex gap-2">
-                <Badge variant="outline" className={bandFame >= 5000 ? 'border-yellow-500 text-yellow-500' : 'opacity-50'}>
-                  Tier 1 (5000+)
-                </Badge>
-                <Badge variant="outline" className={bandFame >= 2000 ? 'border-blue-500 text-blue-500' : 'opacity-50'}>
-                  Tier 2 (2000+)
-                </Badge>
-                <Badge variant="outline" className={bandFame >= 800 ? 'border-green-500 text-green-500' : 'opacity-50'}>
-                  Tier 3 (800+)
-                </Badge>
+              <div className="flex gap-2 text-xs">
+                <Badge variant="outline">Max {MAX_EVENTS_PER_YEAR} events/year</Badge>
+                <Badge variant="outline">{COOLDOWN_YEARS}yr cooldown after performing</Badge>
               </div>
             </div>
           </CardContent>
@@ -161,7 +203,6 @@ export default function MajorEvents() {
           </TabsTrigger>
         </TabsList>
 
-        {/* UPCOMING EVENTS */}
         <TabsContent value="upcoming" className="space-y-6">
           {events.length === 0 ? (
             <Card>
@@ -178,6 +219,11 @@ export default function MajorEvents() {
                   {calendar && yr === calendar.gameYear && (
                     <Badge variant="default" className="text-xs">Current Year</Badge>
                   )}
+                  {activeBand && (yearCounts[yr] || 0) > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {yearCounts[yr]}/{MAX_EVENTS_PER_YEAR} slots used
+                    </Badge>
+                  )}
                 </div>
                 {eventsByYear[yr]
                   .sort((a, b) => (a.event?.month || 0) - (b.event?.month || 0))
@@ -190,9 +236,10 @@ export default function MajorEvents() {
                     const catColor = categoryColors[event.category] || categoryColors.sports;
                     const isCurrentYear = calendar && yr === calendar.gameYear;
                     const isPastInCurrentYear = isCurrentYear && event.month < (calendar?.gameMonth || 0);
+                    const blockReason = getBlockReason(instance);
 
                     return (
-                      <Card key={instance.id} className={`transition-all ${!qualified ? 'opacity-60' : ''} ${isPastInCurrentYear ? 'opacity-50' : ''}`}>
+                      <Card key={instance.id} className={`transition-all ${(!qualified || blockReason) ? 'opacity-60' : ''} ${isPastInCurrentYear ? 'opacity-50' : ''}`}>
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-3">
@@ -208,9 +255,21 @@ export default function MajorEvents() {
                                 <Badge variant="outline" className={catColor}>
                                   {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
                                 </Badge>
+                                {(event as any).genre && (
+                                  <Badge variant="outline" className="gap-1 bg-accent/30">
+                                    <Guitar className="h-3 w-3" />
+                                    {(event as any).genre}
+                                  </Badge>
+                                )}
+                                {!(event as any).genre && (
+                                  <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                    <Guitar className="h-3 w-3" />
+                                    Any Genre
+                                  </Badge>
+                                )}
                                 <Badge variant="outline" className="gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {getMonthName(event.month)}, Year {yr}
+                                  {getMonthName(event.month)}, Year {yr} · {(event as any).duration_hours || 3}h
                                 </Badge>
                                 <Badge variant="outline" className="gap-1">
                                   <Repeat className="h-3 w-3" />
@@ -218,7 +277,7 @@ export default function MajorEvents() {
                                 </Badge>
                                 <Badge variant="outline" className="gap-1">
                                   <Users className="h-3 w-3" />
-                                  {event.audience_size.toLocaleString()} audience
+                                  {event.audience_size.toLocaleString()}
                                 </Badge>
                                 <Badge variant="outline" className="gap-1">
                                   <DollarSign className="h-3 w-3" />
@@ -235,7 +294,7 @@ export default function MajorEvents() {
                               </div>
                             </div>
 
-                            <div className="flex flex-col items-end gap-2">
+                            <div className="flex flex-col items-end gap-2 shrink-0">
                               {existingPerformance ? (
                                 existingPerformance.status === 'completed' ? (
                                   <Badge className="bg-green-500">
@@ -250,9 +309,27 @@ export default function MajorEvents() {
                                     {existingPerformance.status === 'in_progress' ? 'Watch Live' : 'Perform Now'}
                                   </Button>
                                 )
+                              ) : blockReason ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Badge variant="secondary" className="gap-1">
+                                        <Ban className="h-3 w-3" /> Blocked
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[250px]">
+                                      <p>{blockReason}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               ) : qualified ? (
                                 <Button
-                                  onClick={() => handleAcceptInvitation(instance.id)}
+                                  onClick={() => handleAcceptInvitation(
+                                    instance.id,
+                                    instance.event_start || instance.event_date || '',
+                                    instance.event_end || instance.event_date || '',
+                                    event.name,
+                                  )}
                                   disabled={!activeBand || acceptEvent.isPending}
                                   className="gap-2"
                                 >
@@ -279,7 +356,6 @@ export default function MajorEvents() {
           )}
         </TabsContent>
 
-        {/* MY PERFORMANCES */}
         <TabsContent value="my-performances" className="space-y-4">
           {completedPerformances.length === 0 ? (
             <Card>
@@ -319,7 +395,6 @@ export default function MajorEvents() {
           )}
         </TabsContent>
 
-        {/* EVENT HISTORY */}
         <TabsContent value="history" className="space-y-4">
           {loadingHistory ? (
             <div className="flex justify-center py-8">
@@ -383,14 +458,12 @@ export default function MajorEvents() {
         </TabsContent>
       </Tabs>
 
-      {activeBand && (
-        <MajorEventSongSelector
-          open={songSelectorOpen}
-          onOpenChange={setSongSelectorOpen}
-          bandId={activeBand.id}
-          onConfirm={handleSongConfirm}
-        />
-      )}
+      <MajorEventSongSelector
+        open={songSelectorOpen}
+        onOpenChange={setSongSelectorOpen}
+        onConfirm={handleSongConfirm}
+        bandId={activeBand?.id}
+      />
     </div>
   );
 }

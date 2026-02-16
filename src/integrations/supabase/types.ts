@@ -11316,7 +11316,9 @@ export type Database = {
         Row: {
           created_at: string
           event_date: string | null
+          event_end: string | null
           event_id: string
+          event_start: string | null
           id: string
           invited_band_ids: string[] | null
           status: string
@@ -11325,7 +11327,9 @@ export type Database = {
         Insert: {
           created_at?: string
           event_date?: string | null
+          event_end?: string | null
           event_id: string
+          event_start?: string | null
           id?: string
           invited_band_ids?: string[] | null
           status?: string
@@ -11334,7 +11338,9 @@ export type Database = {
         Update: {
           created_at?: string
           event_date?: string | null
+          event_end?: string | null
           event_id?: string
+          event_start?: string | null
           id?: string
           invited_band_ids?: string[] | null
           status?: string
@@ -11577,11 +11583,14 @@ export type Database = {
           audience_size: number
           base_cash_reward: number
           category: string
+          cooldown_years: number | null
           created_at: string
           description: string | null
+          duration_hours: number | null
           fame_multiplier: number
           fan_multiplier: number
           frequency_years: number
+          genre: string | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -11595,11 +11604,14 @@ export type Database = {
           audience_size?: number
           base_cash_reward?: number
           category?: string
+          cooldown_years?: number | null
           created_at?: string
           description?: string | null
+          duration_hours?: number | null
           fame_multiplier?: number
           fan_multiplier?: number
           frequency_years?: number
+          genre?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -11613,11 +11625,14 @@ export type Database = {
           audience_size?: number
           base_cash_reward?: number
           category?: string
+          cooldown_years?: number | null
           created_at?: string
           description?: string | null
+          duration_hours?: number | null
           fame_multiplier?: number
           fan_multiplier?: number
           frequency_years?: number
+          genre?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
