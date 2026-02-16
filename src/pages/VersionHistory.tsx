@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.737",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Seeded 90+ TV shows across all countries — Australia, Brazil, Canada, France, Germany, Ireland, Italy, Japan, Netherlands, Norway, South Korea, Spain, Sweden, and global streaming platforms" },
+      { type: 'feature', description: "Every TV network now has shows including realistic hosts, time slots, and viewer reach values" },
+      { type: 'feature', description: "Added shows for UK networks without content (ITV4, Film4, Drama, Channel 5) and extra US shows (Austin City Limits, The Masked Singer)" },
+    ],
+  },
+  {
     version: "1.0.735",
     date: "2026-02-16",
     changes: [
