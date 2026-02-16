@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.826",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Radio stations now visible again — backfilled has_performed flag for all bands with completed gigs, and gig completion now correctly marks the country as performed for future radio access" },
+    ],
+  },
+  {
     version: "1.0.825",
     date: "2026-02-16",
     changes: [

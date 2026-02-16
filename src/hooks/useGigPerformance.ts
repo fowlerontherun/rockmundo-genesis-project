@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateSongPerformance, calculateMerchSales, type PerformanceFactors } from "@/utils/gigPerformanceCalculator";
+import { markCountryAsPerformed } from "@/utils/regionalFame";
 
 export interface GigPerformanceData {
   gigId: string;
@@ -284,6 +285,18 @@ export const useCompleteGigPerformance = () => {
         .from('gigs')
         .update({ status: 'completed' })
         .eq('id', gigId);
+
+      // Mark the country as performed for radio access
+      const { data: gigVenue } = await supabase
+        .from('gigs')
+        .select('venues!inner(city_id, cities!inner(country))')
+        .eq('id', gigId)
+        .maybeSingle();
+      
+      const gigCountry = (gigVenue as any)?.venues?.cities?.country;
+      if (gigCountry) {
+        await markCountryAsPerformed(bandId, gigCountry);
+      }
 
       // Update band stats and balance
       if (band) {
