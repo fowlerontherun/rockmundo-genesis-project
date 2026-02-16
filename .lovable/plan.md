@@ -1,54 +1,76 @@
 
-# v1.0.737 -- Seed TV Shows for All Countries
+
+# v1.0.739 -- Global City Expansion and Small Venue Seeding
 
 ## Overview
 
-Currently there are 77 TV networks across 15+ countries but only 36 TV shows, almost all in the UK (25) and US (10), plus 1 in Japan. Countries like Australia, Brazil, Canada, France, Germany, Ireland, Italy, Netherlands, Norway, South Korea, Spain, and Sweden have networks but zero shows. Global streaming networks also have no shows.
+Currently there are **134 cities** and **408 venues** across 64 countries. Many regions are underrepresented (most countries have only 1 city), and 55 existing cities have **zero venues**. This update will:
 
-This update will seed 150+ TV shows across all existing networks so every country has a full lineup.
+1. **Add ~80 new cities** to fill gaps in Africa, Asia, South America, the Middle East, Eastern Europe, and underrepresented Western nations
+2. **Seed 2-3 small music venues** for every city that currently has zero venues (55 existing + ~80 new = ~135 cities needing venues)
+3. Total: roughly **300-400 new small venues** across all new and venue-less cities
 
 ---
 
-## What Gets Added
+## New Cities by Region (~80 total)
 
-Shows will be seeded for every network that currently has zero shows, using realistic show names and hosts appropriate to each country:
+### Africa (currently 4 cities: Accra, Addis Ababa, Lagos, Nairobi, Cape Town, Johannesburg)
+- **New:** Dakar (Senegal), Dar es Salaam (Tanzania), Kinshasa (DR Congo), Luanda (Angola), Maputo (Mozambique), Tunis (Tunisia), Algiers (Algeria), Kampala (Uganda)
 
-- **Australia** (4 networks): Morning shows, talk shows, music specials (e.g., "Sunrise" on Channel 7, "Rage" on ABC Australia)
-- **Brazil** (2 networks): Variety and talk shows (e.g., "Fantástico" on TV Globo, "Programa do Ratinho" on SBT)
-- **Canada** (2 networks): Morning shows, talk shows (e.g., "The Social" on CTV, "Q with Tom Power" on CBC)
-- **France** (5 networks): Talk shows, entertainment (e.g., "Quotidien" on Canal+, "Taratata" on France 2)
-- **Germany** (5 networks): Entertainment, talk shows (e.g., "Wetten, dass..?" on ZDF, "TV total" on ProSieben)
-- **Ireland** (1 network): Talk show, entertainment (e.g., "The Late Late Show" on RTE)
-- **Italy** (4 networks): Entertainment, variety (e.g., "Che Tempo Che Fa" on Rai Uno, "Amici" on Canale 5)
-- **Japan** (2 more networks): Music shows (e.g., "Kohaku Uta Gassen" on NHK, "Hey! Hey! Hey!" on Fuji TV)
-- **Netherlands** (1 network): Talk show, entertainment
-- **Norway** (1 network): Talk show, entertainment
-- **South Korea** (2 networks): Music shows, entertainment (e.g., "Music Bank" on KBS, "Show! Music Core" on MBC)
-- **Spain** (4 networks): Entertainment, talk shows (e.g., "El Hormiguero" on Antena 3, "La Resistencia" on TVE)
-- **Sweden** (2 networks): Talk shows, music specials
-- **Global streaming** (5 networks): Music specials, entertainment (e.g., "Tiny Desk Concert" on Netflix UK)
-- **Additional UK networks** with zero shows (e.g., ITV4, More4, Film4, Drama, etc.)
+### Asia & Middle East (currently ~15 cities)
+- **New:** Hanoi (Vietnam), Bangkok suburbs Chiang Mai (Thailand), Osaka (Japan), Pune/Chennai (India), Karachi/Lahore (Pakistan), Dhaka (Bangladesh), Colombo (Sri Lanka), Beirut (Lebanon), Amman (Jordan), Doha (Qatar), Riyadh (Saudi Arabia), Almaty (Kazakhstan)
 
-Each show includes: show_name, show_type, host_name, time_slot, viewer_reach, fame/fan/compensation boosts, min_fame_required, description, and days_of_week.
+### South America (currently 5 cities)
+- **New:** Bogota already exists; add Quito (Ecuador), La Paz (Bolivia), Asuncion (Paraguay), Caracas (Venezuela), Panama City (Panama), San Jose (Costa Rica), Tegucigalpa (Honduras), Santo Domingo (Dominican Republic), Port-au-Prince (Haiti), San Juan (Puerto Rico), Guatemala City (Guatemala)
+
+### Eastern Europe (currently ~12 cities)
+- **New:** Minsk (Belarus), Kyiv (Ukraine), Skopje (North Macedonia), Tirana (Albania), Sarajevo (Bosnia), Tbilisi (Georgia), Yerevan (Armenia), Chisinau (Moldova)
+
+### Western Europe gaps
+- **New:** Luxembourg City (Luxembourg), Edinburgh (UK), Cork (Ireland), Malaga (Spain), Lyon (France), Stuttgart (Germany), Zurich (Switzerland)
+
+### Oceania
+- **New:** Auckland (New Zealand), Gold Coast (Australia), Wellington (New Zealand)
+
+Each city will include: name, country, latitude, longitude, population, region, timezone, music_scene rating, dominant_genre, cost_of_living, is_coastal, has_train_network
+
+---
+
+## Small Venue Seeding
+
+For every city without venues (existing 55 + new ~80), seed **2-3 small venues** with:
+- **Types:** cafe, indie_venue, club (small music-focused)
+- **Capacity:** 50-250 (small/intimate)
+- **Prestige level:** 1 (starter venues)
+- **Base payment:** 0-300
+- **Realistic names** reflecting local culture (e.g., "The Vinyl Den" not "City Cafe")
+- **Requirements:** minimal (min_fame: 0, min_fans: 0) so new players can perform
+- Standard slot_config with 4 slots per day
 
 ---
 
 ## Technical Details
 
-### Valid constraints:
-- `show_type`: talk_show, morning_show, late_night, music_special, variety, news, entertainment
-- `time_slot`: morning, afternoon, prime_time, late_night
+### Database changes
+One SQL migration containing:
+1. INSERT ~80 new rows into `cities` (with ON CONFLICT (name, country) DO NOTHING to avoid duplicates)
+2. INSERT ~350 new rows into `venues` using subqueries to look up `city_id` by name/country
 
-### Database changes:
-- Single INSERT migration joining against existing `tv_networks` by ID
-- ~150 new TV show rows across all networks
-- Version bump to v1.0.737 in `VersionHeader.tsx`, `navigation.tsx`, and `VersionHistory.tsx`
-
-### Files to modify:
-1. **New SQL migration** -- Seed TV shows for all countries
-2. **`src/components/VersionHeader.tsx`** -- Version bump
+### Files to modify
+1. **New SQL migration** -- Seed cities and small venues
+2. **`src/components/VersionHeader.tsx`** -- Version bump to 1.0.739
 3. **`src/components/ui/navigation.tsx`** -- Version bump
 4. **`src/pages/VersionHistory.tsx`** -- Add changelog entry
 
-### Note on duplicate networks:
-Some countries have duplicate network entries (e.g., two "France 2", two "ProSieben", two "NHK"). Shows will be assigned to one of each to avoid duplicates.
+### Venue template per city (example)
+```text
+INSERT INTO venues (name, city_id, capacity, venue_type, prestige_level, base_payment, ...)
+VALUES (
+  'The Vinyl Den',
+  (SELECT id FROM cities WHERE name = 'Dakar' AND country = 'Senegal'),
+  80, 'indie_venue', 1, 150, ...
+);
+```
+
+Each venue gets: slot_config (4 slots), requirements (empty/zero), venue_cut 0.20, band_revenue_share 0.50, equipment_quality 2-3, sound_system_rating 2-3, no security required, alcohol_license true/false varying.
+
