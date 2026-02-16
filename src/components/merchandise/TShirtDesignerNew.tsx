@@ -408,8 +408,8 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                 {/* T-Shirt Shape */}
                 <path
                   d={activeView === "front" 
-                    ? "M75 30 L45 50 L20 90 L50 100 L60 70 L60 350 L240 350 L240 70 L250 100 L280 90 L255 50 L225 30 L190 30 C185 50 165 65 150 65 C135 65 115 50 110 30 Z"
-                    : "M75 30 L45 50 L20 90 L50 100 L60 70 L60 350 L240 350 L240 70 L250 100 L280 90 L255 50 L225 30 L190 30 C185 40 165 50 150 50 C135 50 115 40 110 30 Z"
+                    ? "M110 40 L95 38 L75 35 L40 55 L10 110 L15 115 L55 100 L65 85 L70 120 L70 350 L75 355 L225 355 L230 350 L230 120 L235 85 L245 100 L285 115 L290 110 L260 55 L225 35 L205 38 L190 40 C185 55 170 68 150 68 C130 68 115 55 110 40 Z"
+                    : "M110 40 L95 38 L75 35 L40 55 L10 110 L15 115 L55 100 L65 85 L70 120 L70 350 L75 355 L225 355 L230 350 L230 120 L235 85 L245 100 L285 115 L290 110 L260 55 L225 35 L205 38 L190 40 C185 48 170 55 150 55 C130 55 115 48 110 40 Z"
                   }
                   fill={tshirtColor}
                   stroke="hsl(var(--border))"
@@ -418,7 +418,7 @@ export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDe
                 {/* Collar */}
                 {activeView === "front" && (
                   <path
-                    d="M110 30 C115 50 135 65 150 65 C165 65 185 50 190 30"
+                    d="M110 40 C115 55 130 68 150 68 C170 68 185 55 190 40"
                     fill="none"
                     stroke="hsl(var(--border))"
                     strokeWidth="1.5"

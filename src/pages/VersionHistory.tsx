@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.802",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Improved T-Shirt Designer SVG shape — sleeves now extend properly with natural curves instead of stubby angular arms" },
+    ],
+  },
+  {
     version: "1.0.801",
     date: "2026-02-16",
     changes: [
