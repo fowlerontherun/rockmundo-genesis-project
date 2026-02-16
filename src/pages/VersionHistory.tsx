@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.748",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Batch housing image generator — generates all 1,260 missing property images automatically via AI" },
+      { type: 'feature', description: "New 'Generate All Missing Images' button on Housing page with live progress tracking" },
+    ],
+  },
+  {
     version: "1.0.747",
     date: "2026-02-16",
     changes: [
