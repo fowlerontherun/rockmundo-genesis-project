@@ -1,0 +1,1 @@
+UPDATE bands SET band_balance = 0 WHERE band_balance < 0;

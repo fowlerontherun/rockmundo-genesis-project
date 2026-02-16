@@ -54,7 +54,7 @@ export function ReleaseSalesTab({ userId }: ReleaseSalesTabProps) {
         )
         .order("sale_date", { ascending: false });
 
-      const totalRevenue = sales?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+      const totalRevenue = sales?.reduce((sum, sale) => sum + (sale.total_amount || 0) / 100, 0) || 0;
       const totalUnits = sales?.reduce((sum, sale) => sum + sale.quantity_sold, 0) || 0;
 
       return { sales: sales || [], totalRevenue, totalUnits };
@@ -234,7 +234,7 @@ export function ReleaseSalesTab({ userId }: ReleaseSalesTabProps) {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">${sale.total_amount}</div>
+                        <div className="font-semibold">${((sale.total_amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <div className="text-sm text-muted-foreground">{sale.quantity_sold} units</div>
                       </div>
                     </div>

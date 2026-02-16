@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.708",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed record sales revenue display — cent values were shown as dollars (100x too high)" },
+      { type: 'fix', description: "All financial fields (gross revenue, tax, distribution fees, net revenue) now correctly converted from cents to dollars" },
+      { type: 'fix', description: "Reset 3 bands with negative balances (up to -$39.9M) back to $0" },
+    ],
+  },
+  {
     version: "1.0.707",
     date: "2026-02-16",
     changes: [
