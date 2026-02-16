@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.803",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Merged simulate-ticket-sales into process-daily-updates, freeing an edge function slot" },
+      { type: 'feature', description: "Deployed generate-merch-image edge function — AI merch image generation now operational" },
+    ],
+  },
+  {
     version: "1.0.802",
     date: "2026-02-16",
     changes: [
