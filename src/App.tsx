@@ -132,6 +132,7 @@ const CompanyAdmin = lazyWithRetry(() => import("./pages/admin/CompanyAdmin"));
 const SecurityFirmsAdmin = lazyWithRetry(() => import("./pages/admin/SecurityFirmsAdmin"));
 const MerchFactoriesAdmin = lazyWithRetry(() => import("./pages/admin/MerchFactoriesAdmin"));
 const LogisticsCompaniesAdmin = lazyWithRetry(() => import("./pages/admin/LogisticsCompaniesAdmin"));
+const AdminReleasePump = lazyWithRetry(() => import("./pages/admin/ReleasePump"));
 
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
@@ -442,6 +443,7 @@ function App() {
                     {/* <Route path="admin/3d-gig-viewer" element={<Admin3DGigViewer />} /> */}
                     <Route path="admin/gear-items" element={<GearItemsAdmin />} />
                     <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
+                    <Route path="admin/release-pump" element={<AdminReleasePump />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />

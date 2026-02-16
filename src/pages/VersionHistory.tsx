@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.750",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Admin: Release Pump — boost any release's digital sales with configurable amounts (1-100K)" },
+      { type: 'feature', description: "Admin: Release Pump processes sales through standard tax & distribution pipeline, crediting band finances correctly" },
+      { type: 'improvement', description: "Verified record sales correctly credit net revenue (after tax + distribution) to band_earnings and band_balance" },
+    ],
+  },
+  {
     version: "1.0.749",
     date: "2026-02-16",
     changes: [
