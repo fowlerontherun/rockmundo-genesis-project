@@ -27,12 +27,29 @@ function useCountriesWithHousing() {
   return useQuery({
     queryKey: ["housing-countries"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("housing_types")
-        .select("country")
-        .eq("is_active", true);
-      if (error) throw error;
-      const unique = [...new Set((data ?? []).map(d => d.country))].sort();
+      // Paginate to avoid the 1000-row Supabase limit (1280+ housing types)
+      const allCountries: string[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("housing_types")
+          .select("country")
+          .eq("is_active", true)
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          data.forEach(d => { if (d.country) allCountries.push(d.country); });
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const unique = [...new Set(allCountries)].sort();
       return unique as string[];
     },
   });

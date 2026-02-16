@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.793",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Housing country list now paginates past the 1000-row Supabase limit — all countries (including UK, USA, etc.) now appear" },
+      { type: 'fix', description: "Housing types query paginated to ensure all property images are fetched correctly" },
+    ],
+  },
+  {
     version: "1.0.792",
     date: "2026-02-16",
     changes: [
