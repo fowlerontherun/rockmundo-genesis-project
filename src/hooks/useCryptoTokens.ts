@@ -127,9 +127,16 @@ export const useCryptoTokens = (userId?: string) => {
 
       if (txError) throw txError;
 
-      // Update or create holding
-      const existing = holdings.find((h) => h.token_id === tokenId);
-      
+      // Fetch fresh holding from DB to avoid stale closure
+      const { data: existingHoldings } = await supabase
+        .from("player_token_holdings")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("token_id", tokenId)
+        .limit(1);
+
+      const existing = existingHoldings?.[0];
+
       if (existing) {
         const newQuantity = existing.quantity + quantity;
         const newAvgPrice = 
@@ -180,7 +187,15 @@ export const useCryptoTokens = (userId?: string) => {
     }) => {
       if (!userId) throw new Error("User not authenticated");
 
-      const holding = holdings.find((h) => h.token_id === tokenId);
+      // Fetch fresh holding from DB to avoid stale closure
+      const { data: freshHoldings } = await supabase
+        .from("player_token_holdings")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("token_id", tokenId)
+        .limit(1);
+
+      const holding = freshHoldings?.[0];
       if (!holding || holding.quantity < quantity) {
         throw new Error("Insufficient token balance");
       }

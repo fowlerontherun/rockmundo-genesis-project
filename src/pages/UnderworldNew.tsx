@@ -240,6 +240,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
   const [sellQuantity, setSellQuantity] = useState("");
   const [ruggedGraveyardOpen, setRuggedGraveyardOpen] = useState(false);
   const previousPricesRef = useRef<Record<string, number>>({});
+  const tradePanelRef = useRef<HTMLDivElement>(null);
 
   // Track previous prices for flash animations
   const previousPrices = previousPricesRef.current;
@@ -511,7 +512,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
                               {token.volatility_tier?.replace("_", " ")}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button size="sm" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); setSelectedToken(token.symbol); }}>
+                              <Button size="sm" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); setSelectedToken(token.symbol); setTimeout(() => tradePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}>
                                 Trade
                               </Button>
                             </TableCell>
@@ -525,7 +526,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
 
               {/* Selected token detail + trading */}
               {!tokensLoading && selectedTokenData && (
-                <div className="space-y-4 pt-4 border-t border-border">
+                <div ref={tradePanelRef} className="space-y-4 pt-4 border-t border-border">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-semibold">{selectedTokenData.name} ({selectedTokenData.symbol})</h3>
