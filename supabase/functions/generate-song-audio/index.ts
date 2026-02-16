@@ -423,7 +423,7 @@ serve(async (req) => {
           prompt: stylePrompt,
           lyrics: formattedLyrics,
           song_type: 'vocal',
-          bitrate: 256,
+          bitrate: 128000,
         },
         webhook: webhookUrl,
         webhook_events_filter: ['completed', 'output'],
