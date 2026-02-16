@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/components/ui/use-toast";
 
+export interface MarketPrice {
+  country: string;
+  price_multiplier: number;
+  trend: 'rising' | 'falling' | 'stable';
+  trend_strength: number;
+  last_updated_at: string;
+}
+
 export interface HousingType {
   id: string;
   country: string;
@@ -130,8 +138,10 @@ export function useBuyProperty() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ housingType, country }: { housingType: HousingType; country: string }) => {
+    mutationFn: async ({ housingType, country, marketMultiplier = 1 }: { housingType: HousingType; country: string; marketMultiplier?: number }) => {
       if (!user) throw new Error("Not authenticated");
+
+      const marketPrice = getMarketPrice(housingType.base_price, marketMultiplier);
 
       // Get player cash
       const { data: profile, error: profileError } = await supabase
@@ -140,26 +150,26 @@ export function useBuyProperty() {
         .eq("user_id", user.id)
         .single();
       if (profileError) throw profileError;
-      if ((profile.cash || 0) < housingType.base_price) {
+      if ((profile.cash || 0) < marketPrice) {
         throw new Error("Not enough cash to buy this property");
       }
 
       // Deduct cash
       const { error: cashError } = await supabase
         .from("profiles")
-        .update({ cash: (profile.cash || 0) - housingType.base_price })
+        .update({ cash: (profile.cash || 0) - marketPrice })
         .eq("user_id", user.id);
       if (cashError) throw cashError;
 
-      // Create property record with upkeep
-      const dailyUpkeep = Math.round(housingType.base_price * 0.001);
+      // Create property record with upkeep based on market price
+      const dailyUpkeep = Math.round(marketPrice * 0.001);
       const { error: insertError } = await supabase
         .from("player_properties")
         .insert({
           user_id: user.id,
           housing_type_id: housingType.id,
           country,
-          purchase_price: housingType.base_price,
+          purchase_price: marketPrice,
           daily_upkeep: dailyUpkeep,
         });
       if (insertError) throw insertError;
@@ -272,8 +282,34 @@ export function calculateDailyUpkeep(basePrice: number): number {
   return Math.round(basePrice * 0.001);
 }
 
-export function calculateSellPrice(purchasePrice: number): number {
-  return Math.round(purchasePrice * 0.7);
+export function calculateSellPrice(purchasePrice: number, marketMultiplier: number = 1): number {
+  // Sell at 70% of current market value (purchase_price * market multiplier * 0.7)
+  return Math.round(purchasePrice * marketMultiplier * 0.7);
+}
+
+export function getMarketPrice(basePrice: number, multiplier: number): number {
+  return Math.round(basePrice * multiplier);
+}
+
+export function useMarketPrices() {
+  return useQuery({
+    queryKey: ["housing-market-prices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("housing_market_prices")
+        .select("*")
+        .order("country");
+      if (error) throw error;
+      return (data ?? []) as MarketPrice[];
+    },
+    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
+  });
+}
+
+export function useMarketPriceForCountry(country: string | null) {
+  const { data: allPrices } = useMarketPrices();
+  if (!country || !allPrices) return null;
+  return allPrices.find(p => p.country === country) ?? null;
 }
 
 export function calculateRentalIncome(purchasePrice: number): number {
@@ -286,9 +322,9 @@ export function useSellProperty() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (property: PlayerProperty) => {
+    mutationFn: async ({ property, marketMultiplier = 1 }: { property: PlayerProperty; marketMultiplier?: number }) => {
       if (!user) throw new Error("Not authenticated");
-      const sellPrice = calculateSellPrice(property.purchase_price);
+      const sellPrice = calculateSellPrice(property.purchase_price, marketMultiplier);
 
       // Credit cash back
       const { data: profile, error: profileError } = await supabase

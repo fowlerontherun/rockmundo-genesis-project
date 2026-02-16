@@ -18,12 +18,15 @@ import {
   useSellProperty,
   useToggleRentOut,
   usePlayerCash,
+  useMarketPrices,
+  useMarketPriceForCountry,
   calculateWeeklyRent,
   calculateSellPrice,
   calculateRentalIncome,
   calculateDailyUpkeep,
+  getMarketPrice,
 } from "@/hooks/useHousing";
-import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe, TrendingDown, TrendingUp, Banknote } from "lucide-react";
+import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -110,7 +113,8 @@ const Housing = () => {
   const sellProperty = useSellProperty();
   const toggleRentOut = useToggleRentOut();
   const { data: playerCash = 0 } = usePlayerCash();
-
+  const marketPrice = useMarketPriceForCountry(activeCountry);
+  const { data: allMarketPrices = [] } = useMarketPrices();
   const [generatingImage, setGeneratingImage] = useState<string | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ processed: number; remaining: number } | null>(null);
@@ -285,11 +289,28 @@ const Housing = () => {
 
         {/* BUY TAB */}
         <TabsContent value="buy" className="space-y-4">
-          {/* Cash balance */}
-          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-            <Banknote className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Your Cash:</span>
-            <span className="text-sm font-bold text-primary">{formatPrice(playerCash)}</span>
+          {/* Cash balance & Market indicator */}
+          <div className="flex flex-wrap gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Banknote className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Your Cash:</span>
+              <span className="text-sm font-bold text-primary">{formatPrice(playerCash)}</span>
+            </div>
+            {marketPrice && (
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Market:</span>
+                <span className={`text-sm font-bold ${
+                  marketPrice.trend === 'rising' ? 'text-green-500' : 
+                  marketPrice.trend === 'falling' ? 'text-destructive' : 
+                  'text-muted-foreground'
+                }`}>
+                  {marketPrice.trend === 'rising' ? '📈' : marketPrice.trend === 'falling' ? '📉' : '➡️'}
+                  {' '}{(Number(marketPrice.price_multiplier) * 100 - 100).toFixed(1)}%
+                  {' '}({marketPrice.trend})
+                </span>
+              </div>
+            )}
           </div>
 
           {!activeCountry ? (
@@ -300,7 +321,10 @@ const Housing = () => {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {housingTypes?.map((ht) => {
                 const owned = ownedIds.has(ht.id);
-                const canAfford = playerCash >= ht.base_price;
+                const mult = marketPrice ? Number(marketPrice.price_multiplier) : 1;
+                const currentPrice = getMarketPrice(ht.base_price, mult);
+                const canAfford = playerCash >= currentPrice;
+                const priceChange = mult !== 1 ? ((mult - 1) * 100) : 0;
                 return (
                   <Card key={ht.id} className={owned ? "border-primary/50 bg-primary/5" : ""}>
                     <CardHeader className="pb-2">
@@ -332,11 +356,23 @@ const Housing = () => {
                         </div>
                       )}
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-lg font-bold text-primary">{formatPrice(ht.base_price)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-primary">{formatPrice(currentPrice)}</span>
+                          {priceChange !== 0 && (
+                            <span className={`text-xs font-medium ${priceChange > 0 ? 'text-green-500' : 'text-destructive'}`}>
+                              {priceChange > 0 ? '▲' : '▼'}{Math.abs(priceChange).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">{activeCountry}</span>
                       </div>
+                      {mult !== 1 && (
+                        <p className="text-xs text-muted-foreground">
+                          Base: {formatPrice(ht.base_price)}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Daily upkeep: {formatPrice(calculateDailyUpkeep(ht.base_price))}
+                        Daily upkeep: {formatPrice(calculateDailyUpkeep(currentPrice))}
                       </p>
                     </CardContent>
                     <CardFooter>
@@ -346,11 +382,11 @@ const Housing = () => {
                         <Button
                           className="w-full"
                           size="sm"
-                          onClick={() => buyProperty.mutate({ housingType: ht, country: activeCountry! })}
+                          onClick={() => buyProperty.mutate({ housingType: ht, country: activeCountry!, marketMultiplier: mult })}
                           disabled={buyProperty.isPending || !canAfford}
                         >
                           {buyProperty.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <DollarSign className="h-4 w-4 mr-1" />}
-                          {canAfford ? "Buy Property" : "Can't Afford"}
+                          {canAfford ? `Buy ${formatPrice(currentPrice)}` : "Can't Afford"}
                         </Button>
                       )}
                     </CardFooter>
@@ -476,9 +512,12 @@ const Housing = () => {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {playerProperties.map((pp) => {
+                  const countryMarket = allMarketPrices.find(m => m.country === pp.country);
+                  const mult = countryMarket ? Number(countryMarket.price_multiplier) : 1;
                   const upkeep = pp.daily_upkeep || calculateDailyUpkeep(pp.purchase_price);
                   const rentalIncome = pp.is_rented_out ? (pp.rental_income_daily || calculateRentalIncome(pp.purchase_price)) : 0;
-                  const sellPrice = calculateSellPrice(pp.purchase_price);
+                  const sellPrice = calculateSellPrice(pp.purchase_price, mult);
+                  const marketValue = getMarketPrice(pp.housing_types?.base_price ?? pp.purchase_price, mult);
                   const netDaily = rentalIncome - upkeep;
 
                   return (
@@ -494,6 +533,11 @@ const Housing = () => {
                         <CardTitle className="text-base">{pp.housing_types?.name ?? "Property"}</CardTitle>
                         <CardDescription className="text-xs">
                           Purchased for {formatPrice(pp.purchase_price)}
+                          {mult !== 1 && (
+                            <span className={`ml-2 ${mult > 1 ? 'text-green-500' : 'text-destructive'}`}>
+                              Market value: {formatPrice(marketValue)} ({mult > 1 ? '▲' : '▼'}{((mult - 1) * 100).toFixed(1)}%)
+                            </span>
+                          )}
                         </CardDescription>
                       </CardHeader>
                       {pp.housing_types?.image_url && (
@@ -533,7 +577,7 @@ const Housing = () => {
                           variant="destructive"
                           size="sm"
                           className="flex-1"
-                          onClick={() => sellProperty.mutate(pp)}
+                          onClick={() => sellProperty.mutate({ property: pp, marketMultiplier: mult })}
                           disabled={sellProperty.isPending}
                         >
                           Sell {formatPrice(sellPrice)}

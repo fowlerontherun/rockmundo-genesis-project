@@ -8976,6 +8976,36 @@ export type Database = {
           },
         ]
       }
+      housing_market_prices: {
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          last_updated_at: string
+          price_multiplier: number
+          trend: string
+          trend_strength: number
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          id?: string
+          last_updated_at?: string
+          price_multiplier?: number
+          trend?: string
+          trend_strength?: number
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          last_updated_at?: string
+          price_multiplier?: number
+          trend?: string
+          trend_strength?: number
+        }
+        Relationships: []
+      }
       housing_types: {
         Row: {
           base_price: number
