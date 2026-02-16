@@ -352,7 +352,6 @@ Deno.serve(async (req) => {
     console.log('=== Generating PR offers ===')
     let prOffersGenerated = 0
     try {
-      // Call the generate-pr-offers function
       const { data, error } = await supabase.functions.invoke('generate-pr-offers', {
         body: { triggeredBy: 'daily-updates' }
       })
@@ -367,15 +366,71 @@ Deno.serve(async (req) => {
       console.error('Error calling generate-pr-offers:', prError)
     }
 
+    // === DAILY RENT COLLECTION ===
+    console.log('=== Processing Daily Rent ===')
+    let rentalsCharged = 0
+    let rentalsDefaulted = 0
+    try {
+      const { data: activeRentals, error: rentalsError } = await supabase
+        .from('player_rentals')
+        .select('id, user_id, weekly_cost')
+        .eq('status', 'active')
+
+      if (rentalsError) {
+        console.error('Error fetching active rentals:', rentalsError)
+      } else if (activeRentals && activeRentals.length > 0) {
+        for (const rental of activeRentals) {
+          try {
+            const dailyCharge = Math.round(rental.weekly_cost / 7)
+            
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, cash')
+              .eq('user_id', rental.user_id)
+              .single()
+
+            if (!profile) continue
+
+            if ((profile.cash || 0) < dailyCharge) {
+              // Default the rental
+              await supabase
+                .from('player_rentals')
+                .update({ status: 'defaulted', ended_at: new Date().toISOString() })
+                .eq('id', rental.id)
+              rentalsDefaulted++
+              console.log(`Rental ${rental.id} defaulted - player cannot afford rent`)
+            } else {
+              await supabase
+                .from('profiles')
+                .update({ cash: (profile.cash || 0) - dailyCharge })
+                .eq('id', profile.id)
+
+              await supabase
+                .from('player_rentals')
+                .update({ last_charged_at: new Date().toISOString() })
+                .eq('id', rental.id)
+              rentalsCharged++
+            }
+          } catch (rentalError) {
+            console.error(`Error processing rental ${rental.id}:`, rentalError)
+            errorCount++
+          }
+        }
+        console.log(`Rent collected: ${rentalsCharged} charged, ${rentalsDefaulted} defaulted`)
+      }
+    } catch (rentError) {
+      console.error('Error in rent collection:', rentError)
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs,
+      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs + rentalsCharged,
       errorCount,
       resultSummary: {
         profiles_processed: processedProfiles,
@@ -384,6 +439,8 @@ Deno.serve(async (req) => {
         ticket_sales_updated: ticketSalesUpdated,
         hype_decayed: hypeDecayCount,
         pr_offers_generated: prOffersGenerated,
+        rentals_charged: rentalsCharged,
+        rentals_defaulted: rentalsDefaulted,
       },
     })
 

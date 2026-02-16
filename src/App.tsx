@@ -245,6 +245,7 @@ const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const Lottery = lazyWithRetry(() => import("./pages/Lottery"));
+const Housing = lazyWithRetry(() => import("./pages/Housing"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -402,6 +403,7 @@ function App() {
                     <Route path="recording-studio-business/:studioId" element={<RecordingStudioBusinessManagement />} />
                     
                     <Route path="lottery" element={<Lottery />} />
+                    <Route path="housing" element={<Housing />} />
                     <Route path="modeling" element={<Modeling />} />
                     
                     {/* Redirects */}

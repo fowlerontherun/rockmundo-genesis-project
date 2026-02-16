@@ -205,6 +205,7 @@ const Navigation = () => {
         { icon: Bus, labelKey: "nav.tours", path: "/tour-manager" },
         { icon: Building2, labelKey: "nav.currentCity", path: cityOverviewPath },
         { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse" },
+        { icon: Home, labelKey: "Housing", path: "/housing" },
       ],
     },
     {
@@ -457,7 +458,7 @@ const Navigation = () => {
                     onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                   >
                     <History className="h-4 w-4 mr-1" />
- v1.0.710
+                     v1.0.711
                   </Button>
                   <HowToPlayDialog />
                 </div>
