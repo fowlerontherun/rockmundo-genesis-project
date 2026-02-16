@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
 import { GigReviewViewer } from "@/components/gig/GigReviewViewer";
-import { ParallaxGigViewer } from "@/components/gig-viewer/ParallaxGigViewer";
+import { VideoGigViewer } from "@/components/gig-viewer/VideoGigViewer";
 import { GigViewerModeSelector } from "@/components/gig/GigViewerModeSelector";
 import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
@@ -394,7 +394,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         
         {/* 3D Stage Viewer */}
         {show3DViewer && reviewGigId && (
-          <ParallaxGigViewer
+          <VideoGigViewer
             gigId={reviewGigId}
             onClose={() => {
               setShow3DViewer(false);
