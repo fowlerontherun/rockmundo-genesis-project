@@ -1,172 +1,169 @@
 
 
-# Merchandise System Overhaul (v1.0.799)
+# Replace 3D Gig Viewers with AI-Generated POV Video Clips
 
 ## Overview
-A major expansion of the merchandise system adding AI-generated product images, realistic business costs (ordering, storage, logistics, taxes), a VIP-only Merchandise Manager hire, and new merch-themed random events that tie into the narrative system.
 
----
+Remove the existing parallax/3D gig viewer and POV overlay system, and replace it with a video-based gig viewer that plays pre-generated AI video clips from the perspective of each musician on stage. Clips are generated using the Replicate API (already configured) and stored in Supabase Storage, then played back during gigs with dynamic cutting between camera angles.
 
-## Part 1: AI-Generated Merchandise Images
+## What Gets Removed
 
-### What it does
-When a player creates a new merch item (e.g. "Summer Tour 2024 Tee"), an AI image is generated showing that product with the band's aesthetic. Images appear on product cards, in the catalog, and on the overview table.
+- `ParallaxGigViewer` (the 2D parallax stage with avatar images)
+- `POVGigViewer` (the overlay-based POV system)
+- All POV scene components (`GuitaristPOV`, `DrummerPOV`, `VocalistPOV`, `BassistPOV`, `KeyboardistPOV`, `CrowdPOV`)
+- `StageLightsOverlay`, `InstrumentSkinOverlay`
+- `POVPostProcessing`, `POVOverlays`, `CameraShake`
+- `SimpleStageBackground`, `StageSpotlights`, `InstrumentSilhouettes`
+- `CharacterAvatarImage`, `InstrumentOverlay`
+- All `procedural-equipment/` components
+- `Stage3DEquipment`
+- Related hooks: `usePOVClipCycler`, `usePOVClipGenerator`
 
-### Implementation
-- **New edge function**: `generate-merch-image` -- follows the same pattern as `generate-housing-image` and `generate-dikcok-thumbnail`
-- Uses `google/gemini-2.5-flash-image` via the Lovable AI gateway
-- Prompt incorporates: item type (tee, hoodie, poster, vinyl, etc.), design name, band name, quality tier
-- Generated image uploaded to Supabase Storage bucket `merch-images`
-- URL saved to the existing `design_preview_url` column on `player_merchandise`
-- **Batch generation**: "Generate All Missing Images" button on the overview tab
-- **Single generation**: Auto-triggered when adding a new product, or manual "Generate Image" button on each product card
+## Clip Categories and Counts
 
-### UI changes
-- Product cards in overview table and catalog show the AI image thumbnail
-- MerchItemCard gets a small image preview area
-- "Regenerate Image" button on Manage Inventory tab (costs $100 in-game cash)
+Based on the full skill tree, clips are needed for these instrument families, plus universal clips:
 
----
+### Instrument POV Clips (~120 clips)
 
-## Part 2: Realistic Business Costs
+Each instrument gets 2-3 clip variants (looking down at instrument, looking at crowd, close-up hands):
 
-### New cost categories added to merchandise management
+| Family | Instruments | Clips Each | Total |
+|--------|------------|------------|-------|
+| Guitar family | Electric, Acoustic, Classical, 12-String, Pedal Steel, Lap Steel, Dobro, Bass, Upright Bass | 3 | ~27 |
+| Keys family | Piano, Organ, Rhodes, Wurlitzer, Accordion, Harpsichord, Clavinet, Mellotron, Celesta | 2 | ~18 |
+| Drums/Percussion | Rock Kit, Jazz Kit, Latin Perc, African, Tabla, Marimba, Vibes, Timpani, Snare, Steelpan, Taiko, Cajon, more | 3 | ~40 |
+| Wind | Flute, Clarinet, Sax (alto/tenor/soprano/bari), Harmonica, Bagpipes, etc. | 2 | ~24 |
+| Brass | Trumpet, Trombone, French Horn, Tuba, Euphonium, etc. | 2 | ~16 |
+| Electronic | Turntables, Launchpad, Eurorack, Theremin, Keytar, MPC, Synths | 2 | ~14 |
+| World/Folk | Sitar, Oud, Kora, Erhu, Shamisen, Bouzouki, etc. | 2 | ~24 |
+| Vocals/Rap | Vocalist mic, Rapper, Freestyle | 3 | ~9 |
 
-| Cost Type | How it works |
-|-----------|-------------|
-| **Order Cost** | When adding stock, player pays `quantity x cost_to_produce` upfront from band cash |
-| **Storage Fee** | Daily cost of $0.10 per unit in stock (displayed as monthly estimate) |
-| **Logistics Fee** | 5% of sale price applied to each sale (shipping/handling) |
-| **Tax Rate** | 8% tax on revenue (shown separately in analytics) |
+### Universal Stage Clips (~30 clips)
 
-### Database changes
-- Add columns to `player_merchandise`: `storage_cost_daily` (integer, default 10 cents per unit), `logistics_pct` (numeric, default 0.05), `tax_pct` (numeric, default 0.08)
-- Ordering stock now deducts `quantity x cost_to_produce` from band cash (or player cash)
-- Sales analytics updated to show gross revenue, logistics costs, taxes, storage costs, and net profit
+| Type | Description | Count |
+|------|-------------|-------|
+| Crowd (small venue) | POV from stage looking at 50-200 people, hands raised, moshing | 4 |
+| Crowd (medium venue) | 500-2000 people, phone lights, lighters | 4 |
+| Crowd (arena) | 5000+ people, massive production | 4 |
+| Crowd (festival outdoor) | Daylight outdoor festival crowd | 4 |
+| Walking backstage | POV walking through backstage corridors toward stage | 3 |
+| Walking onto stage | POV stepping onto stage, lights hitting, crowd cheering | 3 |
+| Bowing/exit | POV bowing to crowd, waving, walking off | 3 |
+| Between songs | Looking across stage at bandmates, adjusting gear | 3 |
+| Stage lights/atmosphere | Smoke, strobes, overhead rigs (overlay loops) | 2 |
 
-### UI changes
-- **Add Product tab**: Shows total order cost before confirming ("Order 50 units = $350 production cost")
-- **Overview tab**: New "Operating Costs" summary card showing daily storage, estimated monthly logistics, tax liability
-- **Manage Inventory tab**: Restock button shows cost to order more units
-- **Sales tab**: Profit breakdown: Gross Revenue - Production - Logistics - Tax - Storage = Net Profit
+### Total: ~150 unique clips
 
----
+## Architecture
 
-## Part 3: VIP Merchandise Manager
+### Database Changes
 
-### What it does
-VIP players can hire a "Merch Manager" NPC who automates restocking, suggests pricing, and reduces logistics costs.
+1. **Expand `pov_clip_templates` table** -- add columns:
+   - `video_url` (text) -- Supabase Storage URL of the generated clip
+   - `thumbnail_url` (text) -- Still frame for loading
+   - `instrument_family` (text) -- guitar, keys, drums, wind, brass, electronic, world, vocals, universal
+   - `instrument_track` (text) -- matches skill tree track name (e.g. "Electric Guitar")
+   - `variant` (text) -- "hands_down", "crowd_look", "close_up", "entrance", "exit", etc.
+   - `venue_size` (text) -- small, medium, arena, festival, any
+   - `generation_status` (text) -- pending, generating, completed, failed
+   - `generation_prompt` (text) -- the AI prompt used
+   - `generation_error` (text)
 
-### Features
-- **Auto-restock**: When stock drops below a threshold, the manager orders more (up to a configurable limit)
-- **Price optimization**: Suggests optimal prices based on quality tier and band fame
-- **Logistics discount**: Reduces logistics fee from 5% to 3%
-- **Monthly salary**: $2,000/month deducted from band cash
-- **Hire/Fire UI**: Card on the overview tab (VIP-gated) with manager status, salary info, and toggle
+2. **Create Supabase Storage bucket** `pov-clips` for the video files
 
-### Database changes
-- Add columns to `player_merchandise` table or a new `merch_managers` table:
-  - `merch_managers`: `id`, `band_id`, `manager_name` (randomly generated), `monthly_salary` (default 2000), `is_active`, `auto_restock_enabled`, `restock_threshold` (default 10), `restock_quantity` (default 50), `hired_at`, `created_at`
+### Edge Function: `generate-pov-clips`
 
-### UI changes
-- New "Manager" section on the overview tab, wrapped in `VipGate`
-- Shows manager name, monthly cost, auto-restock settings
-- Toggle switches for auto-restock, with configurable threshold and quantity
-- "Fire Manager" button with confirmation dialog
+A batch generation function (admin-only) that:
+1. Reads all instrument tracks from a config
+2. For each, constructs a detailed prompt (MTV2/Kerrang aesthetic, first-person POV, specific instrument, ~5 second loop)
+3. Generates a still image via Gemini (`google/gemini-2.5-flash-image`)
+4. Sends the still to Replicate MiniMax for a short video (~5s)
+5. Uploads the result to `pov-clips` storage bucket
+6. Updates `pov_clip_templates` with the URL and status
 
----
+Generation is batched and rate-limited (e.g., 5 concurrent) to avoid API overload. An admin UI page triggers and monitors progress.
 
-## Part 4: Random Events Integration
+### New Component: `VideoGigViewer`
 
-### New merch-themed random events (added to `random_events` table)
+Replaces `ParallaxGigViewer`. Core behavior:
+- On load, fetches the band's instrument roles
+- Queries `pov_clip_templates` for matching clips (by instrument_track or family)
+- Builds a "cut list" -- a sequence of clips to play:
+  - **Intro**: Backstage walk + onto-stage clip
+  - **Per song**: Cycles through each band member's instrument POV (4-6 seconds each), interspersed with crowd shots
+  - **Between songs**: Crowd reaction clips
+  - **Outro**: Bowing + walk-off clip
+- Plays clips back in a `<video>` element with crossfade transitions (CSS opacity)
+- Syncs with song audio (existing `GigAudioPlayer`)
+- Shows current song info, crowd response, and progress HUD overlay
 
-| Event | Category | Option A | Option B |
-|-------|----------|----------|----------|
-| **Bootleg Alert** | merchandise | Sue the bootlegger (-$500, +fame) | Ignore it (-stock on best seller) |
-| **Viral Merch Moment** | merchandise | Capitalize with flash sale (+sales, -stock) | Play it cool (+fame, smaller boost) |
-| **Factory Delay** | merchandise | Pay rush fee (-$1000, stock arrives) | Wait it out (no stock for 3 days) |
-| **Fan Design Contest** | merchandise | Accept winning design (+unique item, +fans) | Decline (no effect) |
-| **Warehouse Fire** | merchandise | Pay insurance excess (-$2000, partial recovery) | Lose all stock of random item |
-| **Celebrity Spotted in Your Merch** | merchandise | Post about it (+fame, +merch sales) | Stay quiet (+credibility) |
-| **Tax Audit** | financial | Pay accountant (-$800, clean) | Handle yourself (50% chance of fine) |
-| **Merch Manager Scandal** (VIP only) | merchandise | Fire and rehire (-$500) | Cover it up (-fame, keep manager) |
+### Cut Logic
 
-### Implementation
-- Insert these events via migration SQL into `random_events` with `category: 'merchandise'`
-- Effects use existing JSONB `option_a_effects` / `option_b_effects` format (cash, fame, fans, stock changes)
-- These events can trigger naturally through the existing random event system
+```text
+[Backstage Walk] -> [Walk On Stage] -> 
+  Song 1: [Guitarist POV 5s] -> [Crowd 3s] -> [Drummer POV 5s] -> [Vocalist POV 5s] -> [Crowd 3s] ->
+  [Between Songs Clip] ->
+  Song 2: [Bassist POV 5s] -> [Guitarist POV 5s] -> [Crowd 3s] -> [Vocalist POV 5s] -> ...
+  ...
+[Bowing] -> [Walk Off]
+```
 
----
+The cut sequence is randomized per gig but weighted by:
+- Song energy (higher energy = more crowd cuts, faster switching)
+- Crowd response (ecstatic = more crowd shots)
+- Instrument roles present in the band
 
-## Part 5: Expansion Suggestions (Future Roadmap)
+### Admin Page: `/admin/pov-clips`
 
-These are ideas for further depth -- not implemented in this version but designed to slot in later:
+- Shows all clip templates with generation status
+- "Generate All" button to kick off batch generation
+- Individual "Regenerate" per clip
+- Preview player for completed clips
+- Progress bar for batch operations
 
-1. **Limited Edition Drops**: Time-limited merch with countdown timers and scarcity mechanics (columns already exist: `is_limited_edition`, `limited_quantity`, `available_until`)
-2. **Tour-Exclusive Merch**: Items only available during specific tours (column exists: `tour_exclusive_tour_id`)
-3. **Merch Bundles**: Combine items into discounted bundles for higher average order value
-4. **Fan Demand System**: AI-driven demand curves where popularity of item types shifts based on genre trends, season, and band fame
-5. **Merch Collaborations with Other Bands**: Cross-promote with other player bands for shared merch lines (collaboration system already partially built)
-6. **Pop-Up Shop Events**: Temporary merch stands in specific cities during tours with location-based bonuses
-7. **Merch Quality Degradation**: Over time, unsold stock degrades in quality tier, forcing clearance sales
-8. **Counterfeit Market**: Random events where bootleg versions of your merch appear, affecting your sales unless you take legal action
+### Fallback
 
----
+If a specific instrument doesn't have a generated clip yet, fall back to the nearest family match (e.g., "Pedal Steel Guitar" falls back to any guitar POV clip). If no clips exist at all, show a stylized "audio only" mode similar to the music video viewer fallback.
 
 ## Technical Details
 
-### Files to create
-- `supabase/functions/generate-merch-image/index.ts` -- AI image generation edge function
-- `supabase/migrations/xxx_merch_overhaul.sql` -- new columns, merch_managers table, random events insert
+### Files to Create
+- `src/components/gig-viewer/VideoGigViewer.tsx` -- main viewer
+- `src/components/gig-viewer/VideoClipPlayer.tsx` -- handles dual-video crossfade
+- `src/components/gig-viewer/GigCutSequencer.tsx` -- builds cut list from band + clips
+- `src/components/gig-viewer/VideoGigHUD.tsx` -- overlay with song info, progress
+- `src/hooks/useGigClipSequence.ts` -- manages clip cycling and transitions
+- `src/hooks/usePOVClips.ts` -- fetches available clips for a band's instruments
+- `src/data/instrumentClipConfig.ts` -- maps skill tree instruments to clip prompts
+- `supabase/functions/generate-pov-clips/index.ts` -- batch generation
+- `src/pages/admin/POVClipAdmin.tsx` -- admin management page
+- `supabase/migrations/xxx_expand_pov_clips.sql` -- schema changes
 
-### Files to modify
-- `src/pages/Merchandise.tsx` -- add cost displays, manager section, image previews, operating costs card
-- `src/hooks/useMerchSales.ts` -- add logistics/tax/storage cost calculations to analytics
-- `src/components/merchandise/MerchCatalog.tsx` -- show order cost, trigger image generation on add
-- `src/components/merchandise/MerchItemCard.tsx` -- display AI image thumbnail
-- `src/components/merchandise/SalesAnalyticsTab.tsx` -- profit breakdown with new cost categories
-- `src/components/VersionHeader.tsx` -- bump to 1.0.799
-- `src/pages/VersionHistory.tsx` -- changelog entry
+### Files to Delete
+- `src/components/gig-viewer/POVGigViewer.tsx`
+- `src/components/gig-viewer/POVOverlays.tsx`
+- `src/components/gig-viewer/POVPostProcessing.tsx`
+- `src/components/gig-viewer/CameraShake.tsx`
+- `src/components/gig-viewer/SimpleStageBackground.tsx`
+- `src/components/gig-viewer/StageSpotlights.tsx`
+- `src/components/gig-viewer/InstrumentSilhouettes.tsx`
+- `src/components/gig-viewer/InstrumentOverlay.tsx`
+- `src/components/gig-viewer/CharacterAvatarImage.tsx`
+- `src/components/gig-viewer/Stage3DEquipment.tsx`
+- `src/components/gig-viewer/POVClipPreview.tsx`
+- `src/components/gig-viewer/ParallaxGigViewer.tsx`
+- All files in `src/components/gig-viewer/pov-scenes/`
+- All files in `src/components/gig-viewer/procedural-equipment/`
+- `src/hooks/usePOVClipCycler.ts`
+- `src/hooks/usePOVClipGenerator.ts`
 
-### New merch_managers table
-```sql
-CREATE TABLE merch_managers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  band_id uuid REFERENCES bands(id) NOT NULL,
-  manager_name text NOT NULL,
-  monthly_salary integer NOT NULL DEFAULT 2000,
-  is_active boolean NOT NULL DEFAULT true,
-  auto_restock_enabled boolean NOT NULL DEFAULT true,
-  restock_threshold integer NOT NULL DEFAULT 10,
-  restock_quantity integer NOT NULL DEFAULT 50,
-  logistics_discount numeric NOT NULL DEFAULT 0.02,
-  hired_at timestamptz NOT NULL DEFAULT now(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(band_id)
-);
-ALTER TABLE merch_managers ENABLE ROW LEVEL SECURITY;
-```
+### Files to Modify
+- `src/pages/PerformGig.tsx` -- swap `ParallaxGigViewer` for `VideoGigViewer`
+- `src/components/band/GigHistoryTab.tsx` -- same swap
+- `src/components/gig/GigViewerModeSelector.tsx` -- update mode labels
+- `src/components/VersionHeader.tsx` -- bump version
+- `src/pages/VersionHistory.tsx` -- log changes
 
-### Edge function pattern (generate-merch-image)
-```typescript
-// Same pattern as generate-housing-image
-// Prompt: "Generate a product photo of a {item_type} with design '{design_name}' 
-//          for the band '{band_name}'. Style: {quality_tier} quality merchandise.
-//          Clean product photography on white background."
-// Model: google/gemini-2.5-flash-image
-// Upload to: merch-images/{band_id}/{merch_id}.png
-// Save URL to: player_merchandise.design_preview_url
-```
-
-### Cost formulas
-```typescript
-const orderCost = quantity * costToProduce;           // Upfront
-const dailyStorageCost = stockQuantity * 0.10;        // Per day
-const logisticsFee = salePrice * 0.05;                // Per sale
-const taxAmount = salePrice * 0.08;                   // Per sale
-const netProfit = salePrice - costToProduce - logisticsFee - taxAmount;
-
-// With manager discount:
-const logisticsFeeWithManager = salePrice * 0.03;     // 3% instead of 5%
-```
+### Version
+This will be **v1.0.815**.
 
