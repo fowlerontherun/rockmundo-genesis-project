@@ -160,6 +160,7 @@ export const en = {
     selfPr: "Self-PR",
     websites: "Websites",
     journal: "Journal",
+    radioPlayer: "Radio Player",
     offers: "Offers",
     songManager: "Song Manager",
     songMarket: "Song Market",

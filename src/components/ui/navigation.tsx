@@ -141,6 +141,7 @@ const Navigation = () => {
         { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
         { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
         { icon: BookOpen, labelKey: "nav.journal", path: "/journal" },
+        { icon: Radio, labelKey: "nav.radioPlayer", path: "/radio-player" },
       ],
     },
     {
