@@ -98,6 +98,32 @@ export const buildContractNotifications = (
       adminAlerts.push(adminMessage);
     }
 
+    if (contract.status === "accepted_by_artist") {
+      playerMessages.push({
+        id: `${contract.id}-accepted-player`,
+        audience: "player",
+        category: "offer",
+        severity: "default",
+        title: "Contract accepted — awaiting label activation",
+        description: `You accepted the offer from ${labelName}. The label will finalize and pay the advance once they activate.`,
+        entityName,
+        labelName,
+        cta: "View contract",
+      });
+
+      adminAlerts.push({
+        id: `${contract.id}-accepted-admin`,
+        audience: "admin",
+        category: "offer",
+        severity: "warning",
+        title: "Artist accepted — ready to activate",
+        description: `${entityName} accepted the contract offer. Activate to start the term and pay the $${(contract.advance_amount ?? 0).toLocaleString()} advance.`,
+        entityName,
+        labelName,
+        cta: "Activate contract",
+      });
+    }
+
     if (contract.status === "active" && daysToEnd !== null && daysToEnd <= 30) {
       playerMessages.push({
         id: `${contract.id}-expiry-player`,

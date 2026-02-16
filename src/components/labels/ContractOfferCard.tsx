@@ -77,15 +77,12 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      const startDate = new Date();
-      const endDate = addMonths(startDate, offer.term_months);
-
+      // Band accepts → status becomes "accepted_by_artist"
+      // The label must then activate it to make it "active"
       const { error } = await supabase
         .from("artist_label_contracts")
         .update({
-          status: "active",
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
+          status: "accepted_by_artist",
         })
         .eq("id", offer.id);
 
@@ -94,7 +91,7 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
     onSuccess: () => {
       toast({
         title: "Contract accepted!",
-        description: `You've signed with ${offer.label_name}. Time to make some music!`,
+        description: `You've agreed to the terms from ${offer.label_name}. The label will finalize and activate the contract.`,
       });
       queryClient.invalidateQueries({ queryKey: ["contract-offers"] });
       queryClient.invalidateQueries({ queryKey: ["label-contracts"] });
@@ -335,17 +332,17 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
               disabled={acceptMutation.isPending || rejectMutation.isPending || isExpired}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              {acceptMutation.isPending ? "Signing..." : "Accept Contract"}
+              {acceptMutation.isPending ? "Accepting..." : "Accept Terms"}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Sign this contract?</AlertDialogTitle>
+              <AlertDialogTitle>Accept these contract terms?</AlertDialogTitle>
               <AlertDialogDescription>
-                You're about to sign a {offer.term_months}-month deal with {offer.label_name}. 
+                You're agreeing to a {offer.term_months}-month deal with {offer.label_name}. 
                 You'll need to deliver {offer.single_quota} single{offer.single_quota !== 1 ? 's' : ''}
                 {offer.album_quota > 0 ? ` and ${offer.album_quota} album${offer.album_quota !== 1 ? 's' : ''}` : ''}.
-                You'll receive ${offer.advance_amount.toLocaleString()} upfront.
+                The label will finalize and activate the contract, at which point you'll receive your ${offer.advance_amount.toLocaleString()} advance.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
