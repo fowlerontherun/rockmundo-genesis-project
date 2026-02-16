@@ -411,14 +411,14 @@ serve(async (req) => {
     const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${songId}`
 
     // Create async prediction with webhook using MiniMax Music-1.5
-    const predictionResponse = await fetch('https://api.replicate.com/v1/predictions', {
+    // Use the models endpoint so we can pass model name instead of version
+    const predictionResponse = await fetch('https://api.replicate.com/v1/models/minimax/music-1.5/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${REPLICATE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'minimax/music-1.5',
         input: {
           prompt: stylePrompt,
           lyrics: formattedLyrics,
