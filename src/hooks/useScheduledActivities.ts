@@ -7,7 +7,8 @@ export type ActivityType =
   | 'songwriting' | 'gig' | 'rehearsal' | 'busking' | 'recording' 
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
   | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
-  | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' | 'other';
+  | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' 
+  | 'release_manufacturing' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 
@@ -181,6 +182,36 @@ export function useScheduledActivities(date: Date, userId?: string) {
         );
       }
 
+      // Fetch releases in manufacturing status for user's bands
+      let releaseActivities: ScheduledActivity[] = [];
+      if (userBandIds.length > 0) {
+        const { data: manufacturingReleases } = await supabase
+          .from('releases')
+          .select('*, bands(name)')
+          .in('band_id', userBandIds)
+          .eq('release_status', 'manufacturing')
+          .not('manufacturing_complete_at', 'is', null);
+        
+        releaseActivities = (manufacturingReleases || [])
+          .filter((r: any) => {
+            // Show on the day manufacturing completes
+            const completeDate = new Date(r.manufacturing_complete_at).toISOString().split('T')[0];
+            return completeDate === dateString;
+          })
+          .map((r: any) => ({
+            id: `release_${r.id}`,
+            user_id: userId,
+            profile_id: userId,
+            activity_type: 'release_manufacturing' as const,
+            scheduled_start: new Date(new Date(r.manufacturing_complete_at).setHours(12, 0, 0, 0)).toISOString(),
+            scheduled_end: new Date(new Date(r.manufacturing_complete_at).setHours(13, 0, 0, 0)).toISOString(),
+            status: 'scheduled' as const,
+            title: `📀 Release Ready: ${r.title}`,
+            description: `${r.bands?.name} — ${r.release_type}`,
+            metadata: { auto_scheduled: true, release_id: r.id, release_type: r.release_type },
+          }));
+      }
+
       // Convert to unified format
       const activities: ScheduledActivity[] = [
         ...(scheduledData || []),
@@ -216,6 +247,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
           location: t.travel_mode,
           metadata: { tour_travel_leg: true, tour_name: t.tours?.name },
         })),
+        ...releaseActivities,
       ];
       
       // Merge work shifts from profile_activity_statuses (exclude duplicates already in scheduled activities)
