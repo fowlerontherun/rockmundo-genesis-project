@@ -62,20 +62,20 @@ const InventoryManager = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch house keys from lifestyle_property_purchases
+  // Fetch house keys from player_properties
   const { data: properties = [], isLoading: propertiesLoading } = useQuery({
     queryKey: ["inventory-properties", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
       const { data, error } = await supabase
-        .from("lifestyle_property_purchases")
+        .from("player_properties")
         .select(`
           *,
-          lifestyle_properties (name, city, district, property_type, bedrooms, bathrooms, area_sq_ft, description, energy_rating)
+          housing_types (name, country, tier, bedrooms, description, base_price, image_url)
         `)
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("purchased_at", { ascending: false });
 
       if (error) throw error;
       return data ?? [];
@@ -373,11 +373,16 @@ const InventoryManager = () => {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {properties.map((purchase: any) => {
-                    const prop = purchase.lifestyle_properties;
+                    const prop = purchase.housing_types;
                     if (!prop) return null;
 
                     return (
                       <Card key={purchase.id} className="overflow-hidden border-2 border-primary/20">
+                        {prop.image_url && (
+                          <div className="h-32 overflow-hidden">
+                            <img src={prop.image_url} alt={prop.name} className="w-full h-full object-cover" />
+                          </div>
+                        )}
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
@@ -386,12 +391,14 @@ const InventoryManager = () => {
                               </div>
                               <div>
                                 <CardTitle className="text-base">{prop.name}</CardTitle>
-                                <p className="text-xs text-muted-foreground">{prop.city}{prop.district ? ` · ${prop.district}` : ''}</p>
+                                <p className="text-xs text-muted-foreground">{purchase.country}</p>
                               </div>
                             </div>
-                            <Badge variant="outline" className="capitalize text-xs">
-                              {prop.property_type?.replace(/_/g, " ")}
-                            </Badge>
+                            {prop.tier && (
+                              <Badge variant="outline" className="text-xs">
+                                Tier {prop.tier}
+                              </Badge>
+                            )}
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
@@ -406,26 +413,7 @@ const InventoryManager = () => {
                                 <span className="font-medium">{prop.bedrooms}</span>
                               </div>
                             )}
-                            {prop.bathrooms != null && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Bathrooms</span>
-                                <span className="font-medium">{prop.bathrooms}</span>
-                              </div>
-                            )}
-                            {prop.area_sq_ft != null && (
-                              <div className="flex justify-between col-span-2">
-                                <span className="text-muted-foreground">Area</span>
-                                <span className="font-medium">{prop.area_sq_ft.toLocaleString()} sq ft</span>
-                              </div>
-                            )}
                           </div>
-
-                          {prop.energy_rating && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Energy Rating</span>
-                              <Badge variant="secondary">{prop.energy_rating}</Badge>
-                            </div>
-                          )}
 
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Purchase Price</span>
@@ -434,7 +422,7 @@ const InventoryManager = () => {
 
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            <span>Purchased {new Date(purchase.created_at).toLocaleDateString()}</span>
+                            <span>Purchased {new Date(purchase.purchased_at).toLocaleDateString()}</span>
                           </div>
                         </CardContent>
                       </Card>

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.777",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "House Keys in Inventory now correctly reads from player_properties table instead of empty lifestyle_property_purchases table" },
+    ],
+  },
+  {
     version: "1.0.776",
     date: "2026-02-16",
     changes: [
