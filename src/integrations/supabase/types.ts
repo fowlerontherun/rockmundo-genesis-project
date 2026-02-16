@@ -16846,31 +16846,40 @@ export type Database = {
         Row: {
           country: string
           created_at: string
+          daily_upkeep: number
           housing_type_id: string
           id: string
           is_primary: boolean
+          is_rented_out: boolean
           purchase_price: number
           purchased_at: string
+          rental_income_daily: number
           user_id: string
         }
         Insert: {
           country: string
           created_at?: string
+          daily_upkeep?: number
           housing_type_id: string
           id?: string
           is_primary?: boolean
+          is_rented_out?: boolean
           purchase_price: number
           purchased_at?: string
+          rental_income_daily?: number
           user_id: string
         }
         Update: {
           country?: string
           created_at?: string
+          daily_upkeep?: number
           housing_type_id?: string
           id?: string
           is_primary?: boolean
+          is_rented_out?: boolean
           purchase_price?: number
           purchased_at?: string
+          rental_income_daily?: number
           user_id?: string
         }
         Relationships: [

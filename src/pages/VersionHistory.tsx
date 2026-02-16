@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.796",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Sell properties at 70% of purchase price — cash credited back to your balance" },
+      { type: 'feature', description: "Rent out owned properties for daily passive income (~0.5% of property value/day)" },
+      { type: 'feature', description: "Daily upkeep costs displayed on all owned properties (~0.1% of value/day)" },
+      { type: 'improvement', description: "Buy tab now shows your cash balance and disables purchase button when you can't afford a property" },
+      { type: 'improvement', description: "My Properties tab shows net daily cost/profit summary across all properties" },
+    ],
+  },
+  {
     version: "1.0.795",
     date: "2026-02-16",
     changes: [

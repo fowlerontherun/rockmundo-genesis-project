@@ -25,6 +25,9 @@ export interface PlayerProperty {
   purchased_at: string;
   purchase_price: number;
   is_primary: boolean;
+  daily_upkeep: number;
+  is_rented_out: boolean;
+  rental_income_daily: number;
   created_at: string;
   housing_types?: HousingType;
 }
@@ -148,7 +151,8 @@ export function useBuyProperty() {
         .eq("user_id", user.id);
       if (cashError) throw cashError;
 
-      // Create property record
+      // Create property record with upkeep
+      const dailyUpkeep = Math.round(housingType.base_price * 0.001);
       const { error: insertError } = await supabase
         .from("player_properties")
         .insert({
@@ -156,6 +160,7 @@ export function useBuyProperty() {
           housing_type_id: housingType.id,
           country,
           purchase_price: housingType.base_price,
+          daily_upkeep: dailyUpkeep,
         });
       if (insertError) throw insertError;
     },
@@ -260,4 +265,117 @@ export function useEndRental() {
 // Helper to calculate rental cost scaled by country cost_of_living
 export function calculateWeeklyRent(baseWeeklyCost: number, costOfLiving: number): number {
   return Math.round(baseWeeklyCost * (0.4 + (costOfLiving / 100) * 1.2));
+}
+
+// Helper formulas
+export function calculateDailyUpkeep(basePrice: number): number {
+  return Math.round(basePrice * 0.001);
+}
+
+export function calculateSellPrice(purchasePrice: number): number {
+  return Math.round(purchasePrice * 0.7);
+}
+
+export function calculateRentalIncome(purchasePrice: number): number {
+  return Math.round(purchasePrice * 0.005);
+}
+
+export function useSellProperty() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (property: PlayerProperty) => {
+      if (!user) throw new Error("Not authenticated");
+      const sellPrice = calculateSellPrice(property.purchase_price);
+
+      // Credit cash back
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("cash")
+        .eq("user_id", user.id)
+        .single();
+      if (profileError) throw profileError;
+
+      const { error: cashError } = await supabase
+        .from("profiles")
+        .update({ cash: (profile.cash || 0) + sellPrice })
+        .eq("user_id", user.id);
+      if (cashError) throw cashError;
+
+      // Delete property
+      const { error: deleteError } = await supabase
+        .from("player_properties")
+        .delete()
+        .eq("id", property.id)
+        .eq("user_id", user.id);
+      if (deleteError) throw deleteError;
+
+      return sellPrice;
+    },
+    onSuccess: (sellPrice) => {
+      queryClient.invalidateQueries({ queryKey: ["player-properties"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
+      toast({ title: "Property Sold!", description: `You received $${sellPrice.toLocaleString()}.` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Sale Failed", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useToggleRentOut() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (property: PlayerProperty) => {
+      if (!user) throw new Error("Not authenticated");
+      const newRentedOut = !property.is_rented_out;
+      const rentalIncome = newRentedOut ? calculateRentalIncome(property.purchase_price) : 0;
+
+      const { error } = await supabase
+        .from("player_properties")
+        .update({
+          is_rented_out: newRentedOut,
+          rental_income_daily: rentalIncome,
+        })
+        .eq("id", property.id)
+        .eq("user_id", user.id);
+      if (error) throw error;
+
+      return newRentedOut;
+    },
+    onSuccess: (isRentedOut) => {
+      queryClient.invalidateQueries({ queryKey: ["player-properties"] });
+      toast({
+        title: isRentedOut ? "Property Rented Out" : "Rental Stopped",
+        description: isRentedOut ? "You're now earning rental income." : "You stopped renting out this property.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function usePlayerCash() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["player-cash-housing", user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("cash")
+        .eq("user_id", user.id)
+        .single();
+      if (error) throw error;
+      return (data?.cash ?? 0) as number;
+    },
+    enabled: !!user,
+  });
 }
