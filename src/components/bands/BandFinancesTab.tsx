@@ -30,6 +30,15 @@ const sourceLabels: Record<string, string> = {
   merch: "Merchandise",
   streaming: "Streaming revenue",
   release: "Release investment",
+  release_sales: "Record sales",
+  video_revenue: "Video revenue",
+  sponsorship: "Sponsorship deal",
+  pr_appearance: "PR appearance",
+  refund: "Refund",
+  leader_deposit: "Leader deposit",
+  leader_withdrawal: "Leader withdrawal",
+  recording: "Recording session",
+  major_event: "Major event performance",
 };
 
 function getSourceLabel(source: string) {

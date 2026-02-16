@@ -340,8 +340,21 @@ serve(async (req) => {
                   city_id: homeCityId,
                 },
               });
-            }
 
+              // Update band_balance with net revenue
+              const { data: currentBand } = await supabaseClient
+                .from("bands")
+                .select("band_balance")
+                .eq("id", release.band_id)
+                .single();
+
+              if (currentBand) {
+                await supabaseClient
+                  .from("bands")
+                  .update({ band_balance: (currentBand.band_balance || 0) + netRevenue })
+                  .eq("id", release.band_id);
+              }
+            }
             // Update song fame based on sales (1 fame per 5 physical sales, 1 per 10 digital)
             const famePerSale = isDigital ? 0.1 : 0.2;
             for (const rs of release.release_songs || []) {
