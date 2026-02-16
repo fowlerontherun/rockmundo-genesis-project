@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Monitor, FileText } from "lucide-react";
+import { Video, FileText } from "lucide-react";
 
 interface GigViewerModeSelectorProps {
   mode: '3d' | 'text';
@@ -17,8 +17,8 @@ export const GigViewerModeSelector = ({ mode, onModeChange, disabled }: GigViewe
         disabled={disabled}
         className="gap-2"
       >
-        <Monitor className="h-4 w-4" />
-        <span className="hidden sm:inline">Stage View</span>
+        <Video className="h-4 w-4" />
+        <span className="hidden sm:inline">POV Cam</span>
       </Button>
       <Button
         variant={mode === 'text' ? 'default' : 'ghost'}
