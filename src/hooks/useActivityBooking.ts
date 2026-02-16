@@ -82,6 +82,18 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
     userId = user.id;
   }
 
+  // Fetch the profile_id from the profiles table
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const profileId = profileData?.id;
+  if (!profileId) {
+    throw new Error('Player profile not found. Please complete onboarding first.');
+  }
+
   // Check for conflicts
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
     userId,
@@ -99,6 +111,7 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
     .from('player_scheduled_activities')
     .insert({
       user_id: userId,
+      profile_id: profileId,
       activity_type: params.activityType,
       scheduled_start: params.scheduledStart.toISOString(),
       scheduled_end: params.scheduledEnd.toISOString(),
