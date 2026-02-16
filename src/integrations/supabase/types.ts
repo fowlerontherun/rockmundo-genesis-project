@@ -18623,6 +18623,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           listener_base: number
+          logo_url: string | null
           min_fame_required: number | null
           min_fans_required: number | null
           name: string
@@ -18642,6 +18643,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           listener_base?: number
+          logo_url?: string | null
           min_fame_required?: number | null
           min_fans_required?: number | null
           name: string
@@ -18661,6 +18663,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           listener_base?: number
+          logo_url?: string | null
           min_fame_required?: number | null
           min_fans_required?: number | null
           name?: string
