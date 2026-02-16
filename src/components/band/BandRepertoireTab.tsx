@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Music, Radio, Disc, TrendingUp, Search, PlayCircle, Trash2, Archive, ArchiveRestore } from "lucide-react";
+import { Music, Radio, Disc, TrendingUp, Search, PlayCircle, Trash2, Archive, ArchiveRestore, Flame, Star, TrendingDown } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { BandRepertoireHeader } from "@/components/band/BandRepertoireHeader";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
@@ -30,6 +31,9 @@ interface RepertoireSong {
   revenue: number;
   user_id: string;
   archived: boolean | null;
+  fame: number;
+  popularity: number;
+  is_fan_favourite: boolean;
   ownership?: {
     user_id: string;
     ownership_percentage: number;
@@ -75,7 +79,10 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           created_at,
           audio_url,
           user_id,
-          archived
+          archived,
+          fame,
+          popularity,
+          is_fan_favourite
         `)
         .eq("band_id", bandId)
         .order("created_at", { ascending: false });
@@ -109,6 +116,9 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
 
       return (songsData || []).map(song => ({
         ...song,
+        fame: (song as any).fame || 0,
+        popularity: (song as any).popularity || 0,
+        is_fan_favourite: !!(song as any).is_fan_favourite,
         streams: streamsBySong[song.id]?.streams || 0,
         revenue: streamsBySong[song.id]?.revenue || 0,
         ownership: ownershipData?.filter(o => o.song_id === song.id) || []
@@ -412,6 +422,56 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
                       </div>
 
                       <div className="flex items-center gap-3">
+                        {/* Fame */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1">
+                                <Flame className={`h-4 w-4 ${song.fame >= 1000 ? 'text-orange-500' : song.fame >= 500 ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                                <span className="text-xs font-medium">{song.fame}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Song Fame: {song.fame >= 1000 ? 'Hit!' : song.fame >= 500 ? 'Well-known' : 'Growing'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        {/* Popularity */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1">
+                                {song.popularity >= 200 ? (
+                                  <TrendingUp className="h-4 w-4 text-green-500" />
+                                ) : song.popularity > 0 ? (
+                                  <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <TrendingDown className="h-4 w-4 text-muted-foreground/40" />
+                                )}
+                                <span className="text-xs font-medium">{song.popularity}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Popularity: {song.popularity >= 500 ? 'Hot!' : song.popularity >= 200 ? 'Trending' : 'Cool'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        {/* Fan Favourite */}
+                        {song.is_fan_favourite && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>⭐ Fan Favourite!</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+
                         <div className="text-right hidden md:block">
                           <p className="text-sm font-medium">
                             {(song.streams || 0).toLocaleString()} streams

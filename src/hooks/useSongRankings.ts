@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type RankingType = "quality" | "sales" | "streams";
+export type RankingType = "quality" | "sales" | "streams" | "fame";
 
 export interface RankedSong {
   id: string;
@@ -15,6 +15,7 @@ export interface RankedSong {
   artist_name: string | null;
   total_sales: number;
   audio_url: string | null;
+  fame: number;
 }
 
 export const useSongRankings = (rankingType: RankingType, genreFilter?: string) => {
@@ -24,7 +25,7 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
       // Fetch songs with band info
       let query = supabase
         .from("songs")
-        .select("id, title, genre, quality_score, streams, band_id, user_id, audio_url, bands(name, artist_name)")
+        .select("id, title, genre, quality_score, streams, band_id, user_id, audio_url, fame, bands(name, artist_name)")
         .in("status", ["released", "recorded"])
         .not("quality_score", "is", null);
 
@@ -123,6 +124,7 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
         artist_name: s.bands?.name || null,
         total_sales: Math.round(salesMap[s.id] || 0),
         audio_url: s.audio_url || null,
+        fame: (s as any).fame || 0,
       }));
 
       // Sort based on ranking type
@@ -135,6 +137,9 @@ export const useSongRankings = (rankingType: RankingType, genreFilter?: string) 
           break;
         case "streams":
           ranked.sort((a, b) => b.streams - a.streams);
+          break;
+        case "fame":
+          ranked.sort((a, b) => b.fame - a.fame);
           break;
       }
 

@@ -28,6 +28,7 @@ import {
 import { checkVenueGigDiscovery, type MentorDiscoveryResult } from "./mentorDiscovery";
 import { calculateBandSkillAverage } from "./skillGearPerformance";
 import { calculateBandGenreBonus } from "./genreSkillBonus";
+import { getEncoreFameBonus, updateSongsAfterGig } from "./songFamePopularity";
 
 interface GigExecutionData {
   gigId: string;
@@ -43,7 +44,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   // Fetch setlist songs
   const { data: setlistSongs, error: setlistError } = await supabase
     .from('setlist_songs')
-    .select('*, songs!inner(id, title, genre, quality_score)')
+    .select('*, songs!inner(id, title, genre, quality_score, fame, popularity, is_fan_favourite)')
     .eq('setlist_id', setlistId)
     .order('position');
 
@@ -221,7 +222,19 @@ export async function executeGigPerformance(data: GigExecutionData) {
     const result = calculateSongPerformance(factors);
     
     // Apply chemistry bonus to performance score
-    const chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
+    let chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
+
+    // Apply encore fame bonus (last song = encore)
+    const isEncore = index === setlistSongs.length - 1;
+    if (isEncore) {
+      const songFame = song.songs?.fame || 0;
+      const songIsFanFav = !!(song.songs as any)?.is_fan_favourite;
+      const encoreMultiplier = getEncoreFameBonus(songFame, songIsFanFav);
+      if (encoreMultiplier > 1.0) {
+        chemistryBoostedScore = Math.round(chemistryBoostedScore * encoreMultiplier * 100) / 100;
+        console.log(`[GigExecution] Encore fame bonus: ${encoreMultiplier}x for "${song.songs?.title}" (fame: ${songFame}, fanFav: ${songIsFanFav})`);
+      }
+    }
 
     return {
       song_id: song.song_id,
@@ -618,6 +631,22 @@ export async function executeGigPerformance(data: GigExecutionData) {
     }
   } catch (discoveryError) {
     console.error('Error checking mentor discovery:', discoveryError);
+  }
+
+  // Update song fame, popularity, gig counts, and roll for fan favourites
+  try {
+    await updateSongsAfterGig(
+      songPerformances.map(sp => ({
+        song_id: sp.song_id,
+        crowd_response: sp.crowd_response,
+        position: sp.position,
+      })),
+      bandId,
+      setlistSongs.length
+    );
+    console.log(`[GigExecution] Song fame/popularity updated for ${songPerformances.length} songs`);
+  } catch (songFameError) {
+    console.error('Error updating song fame/popularity:', songFameError);
   }
 
   return {
