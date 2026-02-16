@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.792",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Festival tickets moved to dedicated 'Tickets' tab — visible to all players, not just performing bands" },
+    ],
+  },
+  {
     version: "1.0.791",
     date: "2026-02-16",
     changes: [
