@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.766",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Admin Festival Management: Full stage creation wizard with auto-generated slots (6 per stage per day — 1 headliner, 2 support, 3 openers)" },
+      { type: 'feature', description: "Admin can assign bands to festival slots with custom payouts or auto-fill empty slots with NPC DJ sessions" },
+      { type: 'feature', description: "Festival finances dashboard: ticket revenue, sponsorship, security costs, 15% tax, and calculated band budget" },
+      { type: 'feature', description: "Festival quality ratings: comfort, food, safety, lineup sliders (1-5) with overall score calculation" },
+      { type: 'feature', description: "Security firm integration: assign firms to festivals, auto-calculate guard requirements and costs" },
+      { type: 'feature', description: "Festival creation form now includes duration (2-4 days), start day (Thu/Fri/Sat), max stages (1-5), and ticket pricing" },
+    ],
+  },
+  {
     version: "1.0.765",
     date: "2026-02-16",
     changes: [
