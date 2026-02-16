@@ -8,9 +8,14 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export interface Database {
-  public: {
-    Tables: {
+// Helper: adds Relationships: [] to every table that lacks it
+type WithRelationships<T> = {
+  [K in keyof T]: T[K] extends { Row: any; Insert: any; Update: any }
+    ? T[K] & { Relationships: [] }
+    : T[K];
+};
+
+type RawTables = {
       profiles: {
         Row: {
           id: string;
@@ -34,6 +39,7 @@ export interface Database {
           current_city_id?: string | null;
           current_location?: string;
           health?: number;
+          last_health_update?: string | null;
         };
         Insert: {
           id?: string;
@@ -447,6 +453,13 @@ export interface Database {
           skill_points_earned: number;
           attribute_points_earned: number;
           last_recalculated: string;
+          skill_xp_balance: number;
+          skill_xp_lifetime: number;
+          skill_xp_spent: number;
+          attribute_points_balance: number;
+          attribute_points_lifetime: number;
+          stipend_claim_streak: number;
+          last_stipend_claim_date: string | null;
         };
         Insert: {
           profile_id: string;
@@ -456,6 +469,13 @@ export interface Database {
           skill_points_earned?: number;
           attribute_points_earned?: number;
           last_recalculated?: string;
+          skill_xp_balance?: number;
+          skill_xp_lifetime?: number;
+          skill_xp_spent?: number;
+          attribute_points_balance?: number;
+          attribute_points_lifetime?: number;
+          stipend_claim_streak?: number;
+          last_stipend_claim_date?: string | null;
         };
         Update: {
           profile_id?: string;
@@ -465,6 +485,13 @@ export interface Database {
           skill_points_earned?: number;
           attribute_points_earned?: number;
           last_recalculated?: string;
+          skill_xp_balance?: number;
+          skill_xp_lifetime?: number;
+          skill_xp_spent?: number;
+          attribute_points_balance?: number;
+          attribute_points_lifetime?: number;
+          stipend_claim_streak?: number;
+          last_stipend_claim_date?: string | null;
         };
       };
       education_youtube_resources: {
@@ -557,25 +584,63 @@ export interface Database {
           id: string;
           profile_id: string;
           grant_date: string;
-          xp_awarded: number;
+          xp_amount: number;
+          source: string;
+          attribute_points_amount: number | null;
           metadata: Json;
-          claimed_at: string;
+          created_at: string;
         };
         Insert: {
           id?: string;
           profile_id: string;
           grant_date: string;
-          xp_awarded: number;
+          xp_amount: number;
+          source: string;
+          attribute_points_amount?: number | null;
           metadata?: Json;
-          claimed_at?: string;
+          created_at?: string;
         };
         Update: {
           id?: string;
           profile_id?: string;
           grant_date?: string;
-          xp_awarded?: number;
+          xp_amount?: number;
+          source?: string;
+          attribute_points_amount?: number | null;
           metadata?: Json;
-          claimed_at?: string;
+          created_at?: string;
+        };
+      };
+      experience_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          profile_id: string | null;
+          activity_type: string;
+          xp_amount: number;
+          skill_slug: string | null;
+          metadata: Json;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          profile_id?: string | null;
+          activity_type: string;
+          xp_amount: number;
+          skill_slug?: string | null;
+          metadata?: Json;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          profile_id?: string | null;
+          activity_type?: string;
+          xp_amount?: number;
+          skill_slug?: string | null;
+          metadata?: Json;
+          created_at?: string | null;
         };
       };
       skill_definitions: {
@@ -1068,10 +1133,18 @@ export interface Database {
           created_at?: string;
         };
       };
-    };
+};
+
+export interface Database {
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
+  public: {
+    Tables: WithRelationships<RawTables>;
     Views: {
       [key: string]: {
         Row: Record<string, any>;
+        Relationships: [];
       };
     };
     Functions: {

@@ -319,7 +319,7 @@ export async function handleSpendSkillXp(
       current_level: newLevel,
       required_xp: newRequiredXp,
       last_practiced_at: new Date().toISOString(),
-      metadata: metadata || {},
+      metadata: (metadata || {}) as Record<string, string | number | boolean | null>,
     }, { onConflict: "profile_id,skill_slug" });
 
   if (skillError) {

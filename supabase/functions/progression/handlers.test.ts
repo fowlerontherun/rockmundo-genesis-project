@@ -106,7 +106,7 @@ class MockSupabaseClient {
 
         return Promise.resolve({ data: null, error: null });
       },
-      update(values: Record<string, unknown>) {
+      update2(values: Record<string, unknown>) {
         return {
           eq(column: string, value: unknown) {
             const rows = (client.tables[table] ?? []) as Array<Record<string, unknown>>;
@@ -159,6 +159,13 @@ describe("handleSpendSkillXp", () => {
       skill_points_earned: 0,
       attribute_points_earned: 0,
       last_recalculated: "2024-01-01T00:00:00Z",
+      skill_xp_balance: 1000,
+      skill_xp_lifetime: 1000,
+      skill_xp_spent: 0,
+      attribute_points_balance: 0,
+      attribute_points_lifetime: 0,
+      stipend_claim_streak: 0,
+      last_stipend_claim_date: null,
     };
 
     const skillRow: Database["public"]["Tables"]["skill_progress"]["Row"] = {
