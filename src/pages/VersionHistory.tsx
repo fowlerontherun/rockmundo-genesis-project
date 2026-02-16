@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.795",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Housing image generation fixed to use Gemini Flash Image model (dall-e-3 not available on gateway)" },
+    ],
+  },
+  {
     version: "1.0.794",
     date: "2026-02-16",
     changes: [
