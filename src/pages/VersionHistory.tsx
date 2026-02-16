@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.768",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Category Hub pages: clicking a navigation heading now takes you to a tile-based hub page for that section" },
+      { type: 'feature', description: "10 hub pages created: Character, Music, Band, Live, Events, World, Social, Career, Commerce, and Media" },
+      { type: 'improvement', description: "Navigation headings are now clickable links in both desktop horizontal nav and mobile sidebar" },
+    ],
+  },
+  {
     version: "1.0.767",
     date: "2026-02-16",
     changes: [

@@ -36,6 +36,7 @@ type NavItem = {
 
 type NavSection = {
   titleKey: string;
+  hubPath?: string;
   items: NavItem[];
 };
 
@@ -56,6 +57,7 @@ const HorizontalNavigation = () => {
   const navSections: NavSection[] = [
     {
       titleKey: "nav.home",
+      hubPath: "/dashboard",
       items: [
         { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
         { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
@@ -66,6 +68,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.character",
+      hubPath: "/hub/character",
       items: [
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
@@ -77,6 +80,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.music",
+      hubPath: "/hub/music",
       items: [
         { icon: Music, labelKey: "nav.songwriting", path: "/songwriting" },
         { icon: GraduationCap, labelKey: "nav.education", path: "/education" },
@@ -91,6 +95,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.band",
+      hubPath: "/hub/band",
       items: [
         { icon: Users, labelKey: "nav.bandManager", path: "/band" },
         { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry" },
@@ -103,6 +108,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.live",
+      hubPath: "/hub/live",
       items: [
         { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
         { icon: Mic, labelKey: "nav.openMic", path: "/open-mic" },
@@ -115,6 +121,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.events",
+      hubPath: "/hub/events",
       items: [
         { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
         { icon: Award, labelKey: "nav.awards", path: "/awards" },
@@ -124,6 +131,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.world",
+      hubPath: "/hub/world",
       items: [
         { icon: Globe, labelKey: "nav.cities", path: "/cities" },
         { icon: Plane, labelKey: "nav.travel", path: "/travel" },
@@ -135,6 +143,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.social",
+      hubPath: "/hub/social",
       items: [
         { icon: Twitter, labelKey: "nav.twaater", path: "/twaater" },
         { icon: Video, labelKey: "nav.dikcok", path: "/dikcok" },
@@ -146,6 +155,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.career",
+      hubPath: "/hub/career",
       items: [
         { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
         { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
@@ -160,6 +170,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.commerce",
+      hubPath: "/hub/commerce",
       items: [
         { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
         { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
@@ -167,6 +178,7 @@ const HorizontalNavigation = () => {
     },
     {
       titleKey: "nav.media",
+      hubPath: "/hub/media",
       items: [
         { icon: Radio, labelKey: "nav.radio", path: "/media/radio" },
         { icon: Tv, labelKey: "nav.tvShows", path: "/media/tv-shows" },
@@ -278,7 +290,13 @@ const HorizontalNavigation = () => {
                       ? "text-primary bg-primary/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
-                  onClick={(e) => handleToggle(sectionKey, e)}
+                  onClick={(e) => {
+                    if (section.hubPath) {
+                      handleNavigation(section.hubPath);
+                    } else {
+                      handleToggle(sectionKey, e);
+                    }
+                  }}
                 >
                   {t(section.titleKey)}
                 </button>
@@ -342,7 +360,10 @@ const HorizontalNavigation = () => {
               <nav className="p-3 space-y-1">
                 {navSections.map((section) => (
                   <div key={section.titleKey} className="mb-3">
-                    <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider px-3 py-1">
+                    <h3
+                      className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider px-3 py-1 cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => section.hubPath && handleNavigation(section.hubPath)}
+                    >
                       {t(section.titleKey)}
                     </h3>
                     {section.items.map((item) => {

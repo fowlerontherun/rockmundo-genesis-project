@@ -249,6 +249,16 @@ const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const Lottery = lazyWithRetry(() => import("./pages/Lottery"));
 const Housing = lazyWithRetry(() => import("./pages/Housing"));
+const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
+const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
+const BandHub = lazyWithRetry(() => import("./pages/hubs/BandHub"));
+const LiveHub = lazyWithRetry(() => import("./pages/hubs/LiveHub"));
+const EventsHub = lazyWithRetry(() => import("./pages/hubs/EventsHub"));
+const WorldHub = lazyWithRetry(() => import("./pages/hubs/WorldHub"));
+const SocialHub = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
+const CareerHub = lazyWithRetry(() => import("./pages/hubs/CareerHub"));
+const CommerceHub = lazyWithRetry(() => import("./pages/hubs/CommerceHub"));
+const MediaHubPage = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -409,6 +419,18 @@ function App() {
                     
                     <Route path="lottery" element={<Lottery />} />
                     <Route path="housing" element={<Housing />} />
+                    
+                    {/* Category hub pages */}
+                    <Route path="hub/character" element={<CharacterHub />} />
+                    <Route path="hub/music" element={<MusicHubPage />} />
+                    <Route path="hub/band" element={<BandHub />} />
+                    <Route path="hub/live" element={<LiveHub />} />
+                    <Route path="hub/events" element={<EventsHub />} />
+                    <Route path="hub/world" element={<WorldHub />} />
+                    <Route path="hub/social" element={<SocialHub />} />
+                    <Route path="hub/career" element={<CareerHub />} />
+                    <Route path="hub/commerce" element={<CommerceHub />} />
+                    <Route path="hub/media" element={<MediaHubPage />} />
                     <Route path="modeling" element={<Modeling />} />
                     
                     {/* Redirects */}
