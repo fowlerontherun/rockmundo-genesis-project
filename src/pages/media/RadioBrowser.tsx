@@ -50,6 +50,22 @@ const RadioBrowser = () => {
     },
     enabled: !!user?.id,
   });
+
+  // Fetch countries the band has visited (performed in)
+  const { data: visitedCountries = [] } = useQuery({
+    queryKey: ["visited-countries-radio", primaryBand?.id],
+    queryFn: async () => {
+      if (!primaryBand?.id) return [];
+      const { data, error } = await supabase
+        .from("band_country_fans")
+        .select("country")
+        .eq("band_id", primaryBand.id)
+        .eq("has_performed", true);
+      if (error) throw error;
+      return data.map(d => d.country);
+    },
+    enabled: !!primaryBand?.id,
+  });
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,13 +81,15 @@ const RadioBrowser = () => {
     }
   }, [currentCity]);
 
-  // Extract unique values for filters
+  // Extract unique values for filters — only from visited countries
   const filterOptions = useMemo(() => {
     const genres = new Set<string>();
     const countries = new Set<string>();
     const types = new Set<string>();
 
     stations.forEach((station) => {
+      // Only include filter options from visited countries
+      if (visitedCountries.length > 0 && !visitedCountries.includes(station.country)) return;
       if (station.station_type) types.add(station.station_type);
       if (station.country) countries.add(station.country);
       station.accepted_genres?.forEach((g) => genres.add(g));
@@ -82,11 +100,20 @@ const RadioBrowser = () => {
       countries: Array.from(countries).sort(),
       stationTypes: Array.from(types).sort(),
     };
-  }, [stations]);
+  }, [stations, visitedCountries]);
 
-  // Apply filters
+  // Apply filters — only show stations in countries the band has visited
   const filteredStations = useMemo(() => {
     return stations.filter((station) => {
+      // Only show stations in visited countries
+      if (visitedCountries.length > 0 && !visitedCountries.includes(station.country)) {
+        return false;
+      }
+      // If no band or no visited countries data yet, hide all stations
+      if (primaryBand && visitedCountries.length === 0) {
+        return false;
+      }
+
       // Search filter
       if (searchTerm && !station.name.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
@@ -114,7 +141,7 @@ const RadioBrowser = () => {
 
       return true;
     });
-  }, [stations, searchTerm, stationType, genreFilter, countryFilter, localOnly, currentCity]);
+  }, [stations, searchTerm, stationType, genreFilter, countryFilter, localOnly, currentCity, visitedCountries, primaryBand]);
 
   // Calculate airplay stats
   const airplayStats = useMemo(() => {

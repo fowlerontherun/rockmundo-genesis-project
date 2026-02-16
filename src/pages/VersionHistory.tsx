@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.791",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Radio stations now only show countries the band has visited — players must perform in a country before accessing its stations" },
+      { type: 'feature', description: "Batch submit wizard also filtered to visited countries only" },
+      { type: 'feature', description: "Submit dialog blocks submission with clear message for unvisited countries" },
+    ],
+  },
+  {
     version: "1.0.790",
     date: "2026-02-16",
     changes: [
