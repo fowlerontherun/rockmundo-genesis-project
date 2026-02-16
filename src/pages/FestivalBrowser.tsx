@@ -264,13 +264,10 @@ export default function FestivalBrowser() {
                           </Button>
                         )}
                         {participation && (participation.status === "confirmed" || participation.status === "invited") && (
-                          <Button
-                            className="flex-1"
-                            onClick={() => navigate(`/festival-performance/${participation.id}`)}
-                            disabled={isUpcoming}
-                          >
-                            {isUpcoming ? "Waiting..." : "Perform Now"}
-                          </Button>
+                          <Badge className="bg-green-600 text-white px-3 py-1.5 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Scheduled
+                          </Badge>
                         )}
                         {!band && (
                           <Button
@@ -356,12 +353,10 @@ export default function FestivalBrowser() {
                           </Button>
                         )}
                         {(participation.status === "confirmed" || participation.status === "invited") && (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/festival-performance/${participation.id}`)}
-                          >
-                            Perform Now
-                          </Button>
+                          <Badge className="bg-green-600 text-white px-3 py-1.5 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Scheduled
+                          </Badge>
                         )}
                       </div>
                     </div>
