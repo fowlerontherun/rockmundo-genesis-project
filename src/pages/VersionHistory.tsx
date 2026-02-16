@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.711",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Housing & Rentals system — buy country-specific properties (20 tiers per country) or rent apartments (5 tiers)" },
+      { type: 'feature', description: "1,280 unique housing types seeded across 64 countries with prices scaled by cost of living" },
+      { type: 'feature', description: "5 rental options (1 Bed Flat to Villa) with weekly costs adjusted per country economy" },
+      { type: 'feature', description: "AI-generated house images via Lovable AI Gateway, cached in Supabase Storage" },
+      { type: 'feature', description: "Daily rent collection — active rentals auto-deduct from player cash; defaults end the lease" },
+      { type: 'feature', description: "Property gallery showing all owned homes across countries" },
+    ],
+  },
+  {
     version: "1.0.710",
     date: "2026-02-16",
     changes: [

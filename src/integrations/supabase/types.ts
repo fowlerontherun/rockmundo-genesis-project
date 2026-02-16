@@ -8590,6 +8590,48 @@ export type Database = {
           },
         ]
       }
+      housing_types: {
+        Row: {
+          base_price: number
+          bedrooms: number
+          country: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          style_tags: string[] | null
+          tier: number
+        }
+        Insert: {
+          base_price: number
+          bedrooms?: number
+          country: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          style_tags?: string[] | null
+          tier: number
+        }
+        Update: {
+          base_price?: number
+          bedrooms?: number
+          country?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          style_tags?: string[] | null
+          tier?: number
+        }
+        Relationships: []
+      }
       interview_questions: {
         Row: {
           category: string
@@ -16393,6 +16435,94 @@ export type Database = {
           },
         ]
       }
+      player_properties: {
+        Row: {
+          country: string
+          created_at: string
+          housing_type_id: string
+          id: string
+          is_primary: boolean
+          purchase_price: number
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          housing_type_id: string
+          id?: string
+          is_primary?: boolean
+          purchase_price: number
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          housing_type_id?: string
+          id?: string
+          is_primary?: boolean
+          purchase_price?: number
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_properties_housing_type_id_fkey"
+            columns: ["housing_type_id"]
+            isOneToOne: false
+            referencedRelation: "housing_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_rentals: {
+        Row: {
+          country: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          last_charged_at: string
+          rental_type_id: string
+          started_at: string
+          status: string
+          user_id: string
+          weekly_cost: number
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          last_charged_at?: string
+          rental_type_id: string
+          started_at?: string
+          status?: string
+          user_id: string
+          weekly_cost: number
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          last_charged_at?: string
+          rental_type_id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+          weekly_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_rentals_rental_type_id_fkey"
+            columns: ["rental_type_id"]
+            isOneToOne: false
+            referencedRelation: "rental_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_reputation: {
         Row: {
           attitude_score: number
@@ -19771,6 +19901,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rental_types: {
+        Row: {
+          base_weekly_cost: number
+          created_at: string
+          description: string
+          id: string
+          name: string
+          tier: number
+        }
+        Insert: {
+          base_weekly_cost: number
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          tier: number
+        }
+        Update: {
+          base_weekly_cost?: number
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          tier?: number
+        }
+        Relationships: []
       }
       reputation_events: {
         Row: {
