@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.732",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed navigation dropdown menus rendering behind page content by increasing z-index stacking context" },
+    ],
+  },
+  {
     version: "1.0.731",
     date: "2026-02-16",
     changes: [

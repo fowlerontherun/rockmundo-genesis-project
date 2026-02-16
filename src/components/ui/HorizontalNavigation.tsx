@@ -256,7 +256,7 @@ const HorizontalNavigation = () => {
         </div>
 
         {/* Horizontal nav sections */}
-        <div className="flex items-center px-2 h-10">
+        <div className="flex items-center px-2 h-10 relative z-[9999]">
           {navSections.map((section) => {
             const sectionKey = section.titleKey;
             const isOpen = openDropdown === sectionKey;
@@ -284,7 +284,7 @@ const HorizontalNavigation = () => {
                 {/* Dropdown */}
                 {isOpen && (
                   <div
-                    className="absolute top-full left-0 mt-0.5 min-w-[200px] bg-popover border border-border rounded-md shadow-lg py-1 z-[60]"
+                    className="absolute top-full left-0 mt-0.5 min-w-[200px] bg-popover border border-border rounded-md shadow-lg py-1 z-[9999]"
                     data-nav-dropdown
                     onMouseEnter={() => handleMouseEnter(sectionKey)}
                     onMouseLeave={handleMouseLeave}
