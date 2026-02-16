@@ -83,6 +83,7 @@ type NavItem = {
 
 type NavSection = {
   titleKey: string;
+  hubPath?: string;
   items: NavItem[];
 };
 
@@ -131,6 +132,7 @@ const Navigation = () => {
   const navSections: NavSection[] = [
     {
       titleKey: "nav.home",
+      hubPath: "/dashboard",
       items: [
         { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
         { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
@@ -141,6 +143,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.character",
+      hubPath: "/hub/character",
       items: [
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
@@ -152,6 +155,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.music",
+      hubPath: "/hub/music",
       items: [
         { icon: Music, labelKey: "nav.songwriting", path: "/songwriting" },
         { icon: GraduationCap, labelKey: "nav.education", path: "/education" },
@@ -166,6 +170,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.band",
+      hubPath: "/hub/band",
       items: [
         { icon: Users, labelKey: "nav.bandManager", path: "/band" },
         { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry" },
@@ -178,6 +183,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.live",
+      hubPath: "/hub/live",
       items: [
         { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
         { icon: Mic, labelKey: "nav.openMic", path: "/open-mic" },
@@ -190,6 +196,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.events",
+      hubPath: "/hub/events",
       items: [
         { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
         { icon: Award, labelKey: "nav.awards", path: "/awards" },
@@ -199,6 +206,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.world",
+      hubPath: "/hub/world",
       items: [
         { icon: Globe, labelKey: "nav.cities", path: "/cities" },
         { icon: Plane, labelKey: "nav.travel", path: "/travel" },
@@ -210,6 +218,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.social",
+      hubPath: "/hub/social",
       items: [
         { icon: Twitter, labelKey: "nav.twaater", path: "/twaater" },
         { icon: Video, labelKey: "nav.dikcok", path: "/dikcok" },
@@ -222,6 +231,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.career",
+      hubPath: "/hub/career",
       items: [
         { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
         { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
@@ -236,6 +246,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.commerce",
+      hubPath: "/hub/commerce",
       items: [
         { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
         { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
@@ -243,6 +254,7 @@ const Navigation = () => {
     },
     {
       titleKey: "nav.media",
+      hubPath: "/hub/media",
       items: [
         { icon: Radio, labelKey: "nav.radio", path: "/media/radio" },
         { icon: Tv, labelKey: "nav.tvShows", path: "/media/tv-shows" },
@@ -350,7 +362,15 @@ const Navigation = () => {
               {!collapsed && (
                 <CollapsibleTrigger className="w-full group">
                   <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
-                    <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
+                    <h3
+                      className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                      onClick={(e) => {
+                        if (section.hubPath) {
+                          e.stopPropagation();
+                          navigate(section.hubPath);
+                        }
+                      }}
+                    >
                       {t(section.titleKey)}
                     </h3>
                     {openSections[sectionKey] ? (
