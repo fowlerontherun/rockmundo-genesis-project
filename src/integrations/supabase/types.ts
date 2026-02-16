@@ -18054,9 +18054,18 @@ export type Database = {
           description: string | null
           duration_range: number[] | null
           energy_level: string | null
+          generation_error: string | null
+          generation_prompt: string | null
+          generation_status: string | null
           id: string
+          instrument_family: string | null
           instrument_role: string
+          instrument_track: string | null
           overlays: string[] | null
+          thumbnail_url: string | null
+          variant: string | null
+          venue_size: string | null
+          video_url: string | null
         }
         Insert: {
           camera_position?: Json | null
@@ -18065,9 +18074,18 @@ export type Database = {
           description?: string | null
           duration_range?: number[] | null
           energy_level?: string | null
+          generation_error?: string | null
+          generation_prompt?: string | null
+          generation_status?: string | null
           id?: string
+          instrument_family?: string | null
           instrument_role: string
+          instrument_track?: string | null
           overlays?: string[] | null
+          thumbnail_url?: string | null
+          variant?: string | null
+          venue_size?: string | null
+          video_url?: string | null
         }
         Update: {
           camera_position?: Json | null
@@ -18076,9 +18094,18 @@ export type Database = {
           description?: string | null
           duration_range?: number[] | null
           energy_level?: string | null
+          generation_error?: string | null
+          generation_prompt?: string | null
+          generation_status?: string | null
           id?: string
+          instrument_family?: string | null
           instrument_role?: string
+          instrument_track?: string | null
           overlays?: string[] | null
+          thumbnail_url?: string | null
+          variant?: string | null
+          venue_size?: string | null
+          video_url?: string | null
         }
         Relationships: []
       }

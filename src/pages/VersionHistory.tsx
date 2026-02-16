@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.815",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Replaced 3D/Parallax gig viewer with video-based POV concert mode — AI-generated clips from each musician's perspective with crossfade transitions" },
+      { type: 'feature', description: "~150 POV clip templates covering all skill tree instruments (guitar, keys, drums, wind, brass, electronic, world/folk, vocals) plus universal stage clips (crowd, backstage, entrance, exit)" },
+      { type: 'feature', description: "Dynamic cut sequencer: clips cycle between musician POVs and crowd shots, weighted by song energy and crowd mood" },
+      { type: 'feature', description: "Audio-only fallback with animated equalizer when POV clips are still generating" },
+      { type: 'feature', description: "Admin POV Clip Manager page for seeding templates and monitoring generation status" },
+      { type: 'improvement', description: "Removed all old 3D procedural equipment, parallax stage, POV overlay, and camera shake components" },
+    ],
+  },
+  {
     version: "1.0.814",
     date: "2026-02-16",
     changes: [
