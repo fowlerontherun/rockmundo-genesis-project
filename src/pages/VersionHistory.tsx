@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.811",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed type errors in progression edge function by updating database-fallback.ts with missing dual-currency wallet columns (skill_xp_balance, attribute_points_balance, stipend_claim_streak, etc.)" },
+    ],
+  },
+  {
     version: "1.0.810",
     date: "2026-02-16",
     changes: [
