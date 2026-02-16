@@ -145,10 +145,10 @@ serve(async (req) => {
       supabaseClient.from('tv_networks').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
       supabaseClient.from('radio_stations').select('id, name, min_fame_required').eq('is_active', true),
       supabaseClient.from('radio_shows').select('id, station_id, show_name, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, cooldown_days').eq('is_active', true),
-      supabaseClient.from('podcasts').select('id, name, min_fame_required, min_fans_required, cooldown_days').eq('is_active', true),
-      supabaseClient.from('newspapers').select('id, name, min_fame_required, min_fans_required, cooldown_days').eq('is_active', true),
-      supabaseClient.from('magazines').select('id, name, min_fame_required, min_fans_required, cooldown_days').eq('is_active', true),
-      supabaseClient.from('youtube_channels').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
+      supabaseClient.from('podcasts').select('id, podcast_name, min_fame_required, cooldown_days').eq('is_active', true),
+      supabaseClient.from('newspapers').select('id, name, min_fame_required').eq('is_active', true),
+      supabaseClient.from('magazines').select('id, name, min_fame_required, cooldown_days').eq('is_active', true),
+      supabaseClient.from('youtube_channels').select('id, name, min_fame_required').eq('is_active', true),
       supabaseClient.from('websites').select('id, name, website_url, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max').eq('is_active', true),
       supabaseClient.from('film_productions').select('id, title, min_fame_required, compensation, fame_boost, fan_boost, film_type').eq('is_active', true),
     ]);
@@ -277,7 +277,7 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const podcast = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = podcast.id;
-              outletName = podcast.name || podcast.podcast_name || 'Podcast';
+              outletName = podcast.podcast_name || 'Podcast';
               cooldownDays = podcast.cooldown_days || 30;
               
               if (await isOnCooldown(supabaseClient, band.id, 'podcast', mediaOutletId)) {
