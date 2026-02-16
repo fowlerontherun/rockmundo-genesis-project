@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.740",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Expanded train connectivity for 40+ new countries — Ukraine, Georgia, Lebanon, Ecuador, Kazakhstan, and many more now have rail connections to neighbors" },
+      { type: 'improvement', description: "All travel times reduced by 10% — faster bus, train, plane, ship speeds and shorter buffer times" },
+      { type: 'fix', description: "Fixed ship routes broken for ~40 cities due to inconsistent region casing in database" },
+      { type: 'feature', description: "Added ship routes for Caribbean, Central America, and Middle East regions" },
+      { type: 'improvement', description: "Private jet duration reduced from 3h to 2.7h" },
+    ],
+  },
+  {
     version: "1.0.739",
     date: "2026-02-16",
     changes: [
