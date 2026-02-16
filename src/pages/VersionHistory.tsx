@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.810",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Security: Added input validation and length limits to AI lyrics generation edge function to prevent prompt injection and abuse" },
+    ],
+  },
+  {
     version: "1.0.809",
     date: "2026-02-16",
     changes: [
