@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.784",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed cluttered chart layout on mobile — responsive grid (8-col mobile / 12-col desktop), stacked weekly+total values, smaller text, and narrower filter dropdowns" },
+    ],
+  },
+  {
     version: "1.0.782",
     date: "2026-02-16",
     changes: [

@@ -107,11 +107,11 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
     <>
       <div className="space-y-1">
         {/* Header */}
-        <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
+        <div className="grid grid-cols-8 sm:grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
           <div className="col-span-1">#</div>
           <div className="col-span-4 sm:col-span-3">{isAlbumView ? "Album" : "Song"}</div>
           <div className="col-span-2 hidden sm:block">Genre</div>
-          <div className="col-span-2 text-right flex items-center justify-end gap-1">
+          <div className="col-span-3 sm:col-span-2 text-right hidden sm:flex items-center justify-end gap-1">
             {labels.weekly}
             {chartType === "combined" && (
               <TooltipProvider>
@@ -129,7 +129,8 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
               </TooltipProvider>
             )}
           </div>
-          <div className="col-span-2 text-right">{labels.total}</div>
+          <div className="col-span-3 sm:hidden text-right">Sales</div>
+          <div className="col-span-2 text-right hidden sm:block">{labels.total}</div>
           <div className="col-span-1 text-center hidden sm:block">Trend</div>
           <div className="col-span-1 text-right hidden sm:block">Wks</div>
         </div>
@@ -142,7 +143,7 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
             <div
               key={entry.id}
               className={cn(
-                "grid grid-cols-12 gap-2 px-3 py-3 rounded-lg hover:bg-accent/50 transition-colors items-start cursor-pointer",
+                "grid grid-cols-8 sm:grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 rounded-lg hover:bg-accent/50 transition-colors items-start cursor-pointer",
                 entry.rank <= 3 && "bg-accent/30",
                 entry.is_fake && "opacity-70"
               )}
@@ -152,7 +153,7 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
               <div className="col-span-1">
                 <span
                   className={cn(
-                    "font-bold text-lg",
+                    "font-bold text-base sm:text-lg",
                     entry.rank === 1 && "text-yellow-500",
                     entry.rank === 2 && "text-slate-400",
                     entry.rank === 3 && "text-amber-600"
@@ -164,15 +165,15 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
 
               {/* Song/Album & Artist */}
               <div className="col-span-4 sm:col-span-3 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
                       {isAlbumEntry && (
-                        <Album className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <Album className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary shrink-0" />
                       )}
-                      <p className="font-medium truncate text-sm">{entry.title}</p>
+                      <p className="font-medium truncate text-xs sm:text-sm">{entry.title}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{entry.artist}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{entry.artist}</p>
                   </div>
                   {entry.is_fake && (
                     <Badge variant="outline" className="text-[10px] px-1 shrink-0">
@@ -180,14 +181,14 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
                     </Badge>
                   )}
                   {isAlbumEntry && (
-                    <Badge variant="secondary" className="text-[10px] px-1 shrink-0">
+                    <Badge variant="secondary" className="text-[10px] px-1 shrink-0 hidden sm:inline-flex">
                       Album
                     </Badge>
                   )}
                 </div>
                 {/* Audio Player for real songs (only for song entries) */}
                 {!entry.is_fake && entry.audio_url && !isAlbumEntry && (
-                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="mt-1 sm:mt-2" onClick={(e) => e.stopPropagation()}>
                     <TrackableSongPlayer
                       songId={entry.song_id}
                       audioUrl={entry.audio_url}
@@ -208,13 +209,27 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
                 </Badge>
               </div>
 
-              {/* Weekly/Chart Points */}
-              <div className="col-span-2 text-right">
+              {/* Mobile: Stacked weekly + total */}
+              <div className="col-span-3 sm:hidden text-right">
+                <div className="flex flex-col gap-0.5">
+                  <div>
+                    <span className="text-[9px] text-muted-foreground block">{labels.weekly}</span>
+                    <span className="font-mono text-xs">{formatNumber(getWeeklyValue(entry))}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-muted-foreground block">{labels.total}</span>
+                    <span className="font-mono text-xs">{formatNumber(getTotalValue(entry))}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop: Weekly/Chart Points */}
+              <div className="col-span-2 text-right hidden sm:block">
                 <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
               </div>
 
-              {/* Total */}
-              <div className="col-span-2 text-right">
+              {/* Desktop: Total */}
+              <div className="col-span-2 text-right hidden sm:block">
                 <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
               </div>
 
@@ -298,7 +313,7 @@ export default function CountryCharts() {
                 setSelectedYear("current");
               }
             }}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[110px] sm:w-[130px]">
                 <SelectValue placeholder="Time range" />
               </SelectTrigger>
               <SelectContent>
@@ -335,7 +350,7 @@ export default function CountryCharts() {
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[130px] sm:w-[180px]">
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
               <SelectContent>
@@ -351,7 +366,7 @@ export default function CountryCharts() {
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={genre} onValueChange={setGenre}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[110px] sm:w-[150px]">
                 <SelectValue placeholder="Select genre" />
               </SelectTrigger>
               <SelectContent>
@@ -369,7 +384,7 @@ export default function CountryCharts() {
             <div className="flex items-center gap-2">
               <Disc className="h-4 w-4 text-muted-foreground" />
               <Select value={releaseCategory} onValueChange={(v) => setReleaseCategory(v as ReleaseCategory)}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[110px] sm:w-[150px]">
                   <SelectValue placeholder="Release type" />
                 </SelectTrigger>
                 <SelectContent>
