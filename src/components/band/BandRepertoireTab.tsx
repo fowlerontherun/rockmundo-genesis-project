@@ -402,114 +402,88 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
             <div className="grid gap-3">
               {filteredSongs.map((song) => (
                 <Card key={song.id} className="hover:bg-accent/50 transition-colors">
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div 
-                        className="flex items-center gap-4 flex-1 cursor-pointer"
-                        onClick={() => setSelectedSongId(song.id)}
-                      >
-                        <div className="p-2 bg-muted rounded-lg">
-                          <Music className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{song.title}</h3>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {song.genre && <span>{song.genre}</span>}
-                            <span>•</span>
-                            <span>{new Date(song.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
+                  <CardContent className="py-3 px-3 sm:px-4">
+                    {/* Top row: icon + title + actions */}
+                    <div 
+                      className="flex items-start gap-3 cursor-pointer"
+                      onClick={() => setSelectedSongId(song.id)}
+                    >
+                      <div className="p-2 bg-muted rounded-lg shrink-0 mt-0.5">
+                        <Music className="h-4 w-4 text-primary" />
                       </div>
-
-                      <div className="flex items-center gap-3">
-                        {/* Fame */}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1">
-                                <Flame className={`h-4 w-4 ${song.fame >= 1000 ? 'text-orange-500' : song.fame >= 500 ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-                                <span className="text-xs font-medium">{song.fame}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Song Fame: {song.fame >= 1000 ? 'Hit!' : song.fame >= 500 ? 'Well-known' : 'Growing'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        {/* Popularity */}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1">
-                                {song.popularity >= 200 ? (
-                                  <TrendingUp className="h-4 w-4 text-green-500" />
-                                ) : song.popularity > 0 ? (
-                                  <TrendingDown className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <TrendingDown className="h-4 w-4 text-muted-foreground/40" />
-                                )}
-                                <span className="text-xs font-medium">{song.popularity}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Popularity: {song.popularity >= 500 ? 'Hot!' : song.popularity >= 200 ? 'Trending' : 'Cool'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        {/* Fan Favourite */}
-                        {song.is_fan_favourite && (
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-semibold text-sm truncate">{song.title}</h3>
+                          {song.is_fan_favourite && (
+                            <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400 shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                          {song.genre && <span className="truncate max-w-[120px]">{song.genre}</span>}
+                          <span>•</span>
+                          <span className="shrink-0">{new Date(song.created_at).toLocaleDateString()}</span>
+                        </div>
+                        
+                        {/* Stats row — visible on all screens */}
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                                <div className="flex items-center gap-0.5">
+                                  <Flame className={`h-3.5 w-3.5 ${song.fame >= 1000 ? 'text-orange-500' : song.fame >= 500 ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                                  <span className="text-xs font-medium">{song.fame}</span>
+                                </div>
                               </TooltipTrigger>
-                              <TooltipContent>
-                                <p>⭐ Fan Favourite!</p>
-                              </TooltipContent>
+                              <TooltipContent><p>Fame</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        )}
 
-                        <div className="text-right hidden md:block">
-                          <p className="text-sm font-medium">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-0.5">
+                                  {song.popularity >= 200 ? (
+                                    <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                                  ) : (
+                                    <TrendingDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                  )}
+                                  <span className="text-xs font-medium">{song.popularity}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Popularity</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <Badge variant={getStatusVariant(song.status)} className="text-[10px] px-1.5 py-0">{song.status}</Badge>
+
+                          <span className={`text-xs font-bold ${getQualityColor(song.quality_score)}`}>
+                            Q{song.quality_score}
+                          </span>
+
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
                             {(song.streams || 0).toLocaleString()} streams
-                          </p>
-                          <p className="text-sm text-green-600">
-                            ${(song.revenue || 0).toLocaleString()}
-                          </p>
+                          </span>
                         </div>
+                      </div>
 
-                        <Badge variant={getStatusVariant(song.status)}>{song.status}</Badge>
-
-                        <span className={`font-bold ${getQualityColor(song.quality_score)}`}>
-                          {song.quality_score}
-                        </span>
-
+                      {/* Action buttons — compact */}
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
                           title={song.archived ? "Restore to active" : "Archive song"}
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleArchive(song.id, song.title, !!song.archived);
-                          }}
+                          onClick={() => handleToggleArchive(song.id, song.title, !!song.archived)}
                         >
-                          {song.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                          {song.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
                         </Button>
-
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFromRepertoire(song.id, song.title);
-                          }}
+                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRemoveFromRepertoire(song.id, song.title)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
