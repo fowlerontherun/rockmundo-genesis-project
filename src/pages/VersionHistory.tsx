@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.814",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Dashboard level now uses computed Combined Progress level instead of static database column — accurately reflects XP, skills, fame, and attributes" },
+    ],
+  },
+  {
     version: "1.0.813",
     date: "2026-02-16",
     changes: [
