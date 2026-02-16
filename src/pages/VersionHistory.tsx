@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.723",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Release Hype System — hype_score (0-1000) on releases accumulates from campaigns, release parties, and activities" },
+      { type: 'feature', description: "Interactive Release Parties — 5-question timed mini-game (reuses interview architecture) with 100 unique party-themed questions across 5 categories" },
+      { type: 'feature', description: "Hype impacts sales — hypeMultiplier (1x at 0, 3x at 1000) applied to daily sales calculations" },
+      { type: 'feature', description: "Hype impacts streams — streaming revenue now boosted by release hype score" },
+      { type: 'feature', description: "First-week sales boost — 1.5x multiplier for releases within 7 days of launch, stacks with hype" },
+      { type: 'feature', description: "Hype decay — 5% daily reduction after first week keeps hype from lasting forever" },
+      { type: 'feature', description: "Promotional campaigns now actually apply their hypeBoost to release hype_score daily while active" },
+      { type: 'feature', description: "HypeMeter component shows visual hype level (Cold → Warming Up → Building → Hot → VIRAL) on release cards" },
+    ],
+  },
+  {
     version: "1.0.722",
     date: "2026-02-16",
     changes: [

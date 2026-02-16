@@ -17,9 +17,11 @@ import {
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3, XCircle, Plus, Search, Filter
+  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
+import { HypeMeter } from "./HypeMeter";
+import { ReleasePartyModal } from "./ReleasePartyModal";
 import { ManufacturingProgress } from "./ManufacturingProgress";
 import { EditReleaseDialog } from "./EditReleaseDialog";
 import { CancelReleaseDialog } from "./CancelReleaseDialog";
@@ -55,6 +57,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const [addPhysicalRelease, setAddPhysicalRelease] = useState<any>(null);
   const [analyticsRelease, setAnalyticsRelease] = useState<any>(null);
   const [reorderFormat, setReorderFormat] = useState<{ format: any; release: any } | null>(null);
+  const [partyRelease, setPartyRelease] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -385,6 +388,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             onReorder={(format) => {
               setReorderFormat({ format, release });
             }}
+            onParty={() => setPartyRelease(release)}
           />
         ))}
       </div>
@@ -427,6 +431,17 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         format={reorderFormat?.format}
         release={reorderFormat?.release}
       />
+
+      {partyRelease && (
+        <ReleasePartyModal
+          open={!!partyRelease}
+          onOpenChange={(open) => !open && setPartyRelease(null)}
+          releaseId={partyRelease.id}
+          releaseTitle={partyRelease.title}
+          userId={userId}
+          bandId={partyRelease.band_id}
+        />
+      )}
     </div>
   );
 }
@@ -440,9 +455,10 @@ interface ReleaseCardProps {
   onAddPhysical?: () => void;
   onAnalytics?: () => void;
   onReorder?: (format: any) => void;
+  onParty?: () => void;
 }
 
-function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onAddPhysical, onAnalytics, onReorder }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -506,6 +522,11 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onA
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Hype Meter */}
+        {(release.hype_score > 0 || release.release_status === "manufacturing" || release.release_status === "released") && (
+          <HypeMeter hypeScore={release.hype_score || 0} />
+        )}
+
         {/* Manufacturing Progress */}
         {release.release_status === "manufacturing" && (
           <ManufacturingProgress
@@ -709,7 +730,21 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onA
           </Button>
           {release.release_status !== "released" && release.release_status !== "cancelled" && (
             <>
-              <Button 
+          {(release.release_status === "released" || release.release_status === "manufacturing") && (
+            <>
+              {release.release_status === "manufacturing" || !release.release_party_done ? (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={onParty}
+                >
+                  <PartyPopper className="h-4 w-4 mr-1" />
+                  Release Party
+                </Button>
+              ) : null}
+            </>
+          )}
+          <Button 
                 variant="outline" 
                 size="sm"
                 onClick={onEdit}
