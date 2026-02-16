@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.747",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Added Major Events and Housing links to horizontal navigation (were missing)" },
+    ],
+  },
+  {
     version: "1.0.746",
     date: "2026-02-16",
     changes: [
