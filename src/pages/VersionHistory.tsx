@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.752",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Player Search: expanded profile details — fame, level, fans, city, hours played" },
+      { type: 'feature', description: "Player Search: inline Friend Request button with status tracking (Add/Sent/Accept/Friends)" },
+      { type: 'feature', description: "Player Search: inline DM dialog to message any player directly from search results" },
+    ],
+  },
+  {
     version: "1.0.751",
     date: "2026-02-16",
     changes: [
