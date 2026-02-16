@@ -103,7 +103,7 @@ const SeasonalEventsCalendar = () => {
                 <span className="text-2xl">{getSeasonEmoji(currentSeason)}</span>
                 <span className="font-semibold capitalize">{currentSeason}</span>
                 <span className="text-muted-foreground">
-                  — {calendar.monthName}, Year {calendar.gameYear}
+                  — Day {calendar.gameDay}, Year {calendar.gameYear}
                 </span>
               </div>
               <Badge variant="outline">{seasonProgress}% complete</Badge>

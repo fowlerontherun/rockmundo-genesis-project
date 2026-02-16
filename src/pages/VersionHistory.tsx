@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.757",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Simplified in-game date display to show day number instead of month name" },
+    ],
+  },
+  {
     version: "1.0.756",
     date: "2026-02-16",
     changes: [
