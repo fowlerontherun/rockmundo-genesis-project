@@ -194,6 +194,7 @@ const Navigation = () => {
         { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
         { icon: Award, labelKey: "nav.awards", path: "/awards" },
         { icon: Star, labelKey: "nav.eurovision", path: "/events/eurovision" },
+        { icon: Trophy, labelKey: "Major Events", path: "/major-events" },
       ],
     },
     {
@@ -456,7 +457,7 @@ const Navigation = () => {
                     onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                   >
                     <History className="h-4 w-4 mr-1" />
- v1.0.708
+ v1.0.709
                   </Button>
                   <HowToPlayDialog />
                 </div>
@@ -516,7 +517,7 @@ const Navigation = () => {
                       onClick={() => { navigate('/version-history'); setIsOpen(false); }}
                     >
                       <History className="h-4 w-4 mr-1" />
-                      v1.0.708
+                      v1.0.709
                     </Button>
                     <HowToPlayDialog />
                   </div>

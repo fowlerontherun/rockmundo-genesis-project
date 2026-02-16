@@ -209,6 +209,8 @@ const JamSessions = lazyWithRetry(() => import("./components/jam-sessions/JamSes
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
 const OpenMicNights = lazyWithRetry(() => import("./pages/OpenMicNights"));
 const PerformOpenMic = lazyWithRetry(() => import("./pages/PerformOpenMic"));
+const MajorEvents = lazyWithRetry(() => import("./pages/MajorEvents"));
+const PerformMajorEvent = lazyWithRetry(() => import("./pages/PerformMajorEvent"));
 const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
@@ -313,6 +315,8 @@ function App() {
                     <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="open-mic" element={<OpenMicNights />} />
                     <Route path="open-mic/perform/:performanceId" element={<PerformOpenMic />} />
+                    <Route path="major-events" element={<MajorEvents />} />
+                    <Route path="major-events/perform/:performanceId" element={<PerformMajorEvent />} />
                     <Route path="band-riders" element={<BandRiders />} />
                     <Route path="radio" element={<Navigate to="/media/radio" replace />} />
                     <Route path="radio-stations" element={<Navigate to="/media/radio" replace />} />

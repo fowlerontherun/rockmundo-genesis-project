@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.709",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Major Events system — 15 annual global events (Super Bowl, Olympics, World Cup, Grammys, etc.) invite bands to perform" },
+      { type: 'feature', description: "3-song performances with live commentary and crowd reactions at major events" },
+      { type: 'feature', description: "Cash, fame, and fan rewards scale with event prestige and performance quality" },
+      { type: 'feature', description: "Fame-tiered invitations: Tier 1 (5000+), Tier 2 (2000+), Tier 3 (800+ fame)" },
+      { type: 'feature', description: "Full outcome report with performance grade (S/A/B/C/D/F) and song-by-song breakdown" },
+    ],
+  },
+  {
     version: "1.0.708",
     date: "2026-02-16",
     changes: [
