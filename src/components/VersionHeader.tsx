@@ -1,9 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";
 import { VipBadge } from "@/components/VipBadge";
-import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 
-export const version = "1.0.773";
+export const version = "1.0.774";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
@@ -17,7 +16,6 @@ export const VersionHeader = () => {
         v{version}
       </span>
       <VipBadge size="sm" />
-      <RMRadioButton />
     </div>
   );
 };

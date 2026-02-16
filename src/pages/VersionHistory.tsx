@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.774",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Moved Radio Player from header to a dedicated section on the Dashboard home page" },
+    ],
+  },
+  {
     version: "1.0.773",
     date: "2026-02-16",
     changes: [
