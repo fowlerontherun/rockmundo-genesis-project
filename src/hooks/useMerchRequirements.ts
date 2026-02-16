@@ -97,3 +97,66 @@ export const calculateMerchQuality = (
   
   return tiers[tierIndex];
 };
+
+/**
+ * Calculate the recommended sale price for a merch item.
+ * Formula: base_cost × 2.5 × qualityPriceMultiplier
+ */
+export const getRecommendedPrice = (
+  baseCost: number,
+  qualityTier: QualityTier
+): number => {
+  const qualityMultiplier = QUALITY_TIERS[qualityTier].priceMultiplier;
+  return Math.round(baseCost * 2.5 * qualityMultiplier);
+};
+
+export type PricingImpact = {
+  /** Ratio of actual price to recommended (1.0 = exactly recommended) */
+  ratio: number;
+  /** Multiplier applied to sales velocity (0.0 – 1.5) */
+  salesMultiplier: number;
+  /** Daily fame change caused by pricing (-2 to +1) */
+  fameEffect: number;
+  /** Daily fan change caused by pricing (-5 to +2) */
+  fanEffect: number;
+  /** Human-readable label */
+  label: string;
+  /** Semantic color class */
+  color: string;
+};
+
+/**
+ * Determine how a player's chosen price compares to the recommended price
+ * and what impact that has on sales, fame, and fans.
+ *
+ * Pricing bands:
+ *   ≤ 70%  → "Bargain"     : 1.4x sales, +1 fame/day, +2 fans/day  (leaving money on table)
+ *   71-90% → "Underpriced"  : 1.2x sales, +0 fame, +1 fan/day
+ *   91-110%→ "Fair Price"   : 1.0x sales, +0 fame, +0 fans
+ *  111-130%→ "Overpriced"   : 0.6x sales, -1 fame/day, -2 fans/day
+ *   >130%  → "Rip-off"      : 0.25x sales, -2 fame/day, -5 fans/day
+ */
+export const getPricingImpact = (
+  actualPrice: number,
+  recommendedPrice: number
+): PricingImpact => {
+  if (recommendedPrice <= 0) {
+    return { ratio: 1, salesMultiplier: 1, fameEffect: 0, fanEffect: 0, label: "Fair Price", color: "text-green-500" };
+  }
+
+  const ratio = actualPrice / recommendedPrice;
+
+  if (ratio <= 0.7) {
+    return { ratio, salesMultiplier: 1.4, fameEffect: 1, fanEffect: 2, label: "Bargain", color: "text-blue-500" };
+  }
+  if (ratio <= 0.9) {
+    return { ratio, salesMultiplier: 1.2, fameEffect: 0, fanEffect: 1, label: "Underpriced", color: "text-sky-500" };
+  }
+  if (ratio <= 1.1) {
+    return { ratio, salesMultiplier: 1.0, fameEffect: 0, fanEffect: 0, label: "Fair Price", color: "text-green-500" };
+  }
+  if (ratio <= 1.3) {
+    return { ratio, salesMultiplier: 0.6, fameEffect: -1, fanEffect: -2, label: "Overpriced", color: "text-amber-500" };
+  }
+  return { ratio, salesMultiplier: 0.25, fameEffect: -2, fanEffect: -5, label: "Rip-off", color: "text-destructive" };
+};
