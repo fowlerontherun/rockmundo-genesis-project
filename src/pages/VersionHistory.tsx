@@ -14,14 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.740",
+    version: "1.0.741",
     date: "2026-02-16",
     changes: [
-      { type: 'feature', description: "Expanded train connectivity for 40+ new countries — Ukraine, Georgia, Lebanon, Ecuador, Kazakhstan, and many more now have rail connections to neighbors" },
-      { type: 'improvement', description: "All travel times reduced by 10% — faster bus, train, plane, ship speeds and shorter buffer times" },
-      { type: 'fix', description: "Fixed ship routes broken for ~40 cities due to inconsistent region casing in database" },
-      { type: 'feature', description: "Added ship routes for Caribbean, Central America, and Middle East regions" },
-      { type: 'improvement', description: "Private jet duration reduced from 3h to 2.7h" },
+      { type: 'feature', description: "Added 78 new Legendary Masters covering 89 skill categories — mentors now available for all core skills, genres, instruments, production, and performance" },
+      { type: 'feature', description: "New masters span 30+ cities worldwide with unique lore, discovery hints, and day-of-week availability" },
+      { type: 'feature', description: "Added 344 new university courses for instrument skills — guitar, bass, drums, keyboard, singing, strings, brass, woodwinds, percussion, and electronic instruments" },
+      { type: 'improvement', description: "Instrument courses now include specialized topics like Slap Bass, Jazz Drumming, Modular Synthesis, Slide Guitar, and more" },
     ],
   },
   {
