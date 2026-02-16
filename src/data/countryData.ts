@@ -399,6 +399,31 @@ export const getCountryFlag = (country: string): string => {
   return countryData[resolveCountry(country)]?.flag || "🏳️";
 };
 
+// ISO 3166-1 alpha-2 codes for flag-icons CSS library
+const countryIsoCodes: Record<string, string> = {
+  "United Kingdom": "gb", "United States": "us", "Spain": "es", "France": "fr",
+  "Germany": "de", "Japan": "jp", "Brazil": "br", "Australia": "au",
+  "Sweden": "se", "Jamaica": "jm", "South Korea": "kr", "Nigeria": "ng",
+  "Italy": "it", "Canada": "ca", "Mexico": "mx", "Argentina": "ar",
+  "India": "in", "South Africa": "za", "Cuba": "cu", "Ireland": "ie",
+  "Netherlands": "nl", "Belgium": "be", "Austria": "at", "Norway": "no",
+  "Denmark": "dk", "Finland": "fi", "Portugal": "pt", "Colombia": "co",
+  "Chile": "cl", "Peru": "pe", "Thailand": "th", "Indonesia": "id",
+  "Philippines": "ph", "Turkey": "tr", "Israel": "il", "Egypt": "eg",
+  "Morocco": "ma", "Kenya": "ke", "Ghana": "gh", "Ethiopia": "et",
+  "Tanzania": "tz", "Senegal": "sn", "Poland": "pl", "Czech Republic": "cz",
+  "Hungary": "hu", "Greece": "gr", "Switzerland": "ch", "New Zealand": "nz",
+  "China": "cn", "Taiwan": "tw", "Vietnam": "vn", "Malaysia": "my",
+  "Singapore": "sg", "United Arab Emirates": "ae", "Saudi Arabia": "sa",
+  "Russia": "ru", "Ukraine": "ua", "Serbia": "rs", "Croatia": "hr",
+  "Iceland": "is", "Romania": "ro", "Puerto Rico": "pr",
+};
+
+export const getCountryIsoCode = (country: string): string | null => {
+  const resolved = resolveCountry(country);
+  return countryIsoCodes[resolved] || null;
+};
+
 export const getCountryColors = (country: string): { primary: string; secondary: string } => {
   const data = countryData[resolveCountry(country)];
   return {

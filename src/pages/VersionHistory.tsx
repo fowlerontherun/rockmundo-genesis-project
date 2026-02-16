@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.724",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Country flags now use CSS-based SVG flags (flag-icons) instead of emoji — fixes flags not displaying on Windows desktop browsers" },
+    ],
+  },
+  {
     version: "1.0.723",
     date: "2026-02-16",
     changes: [
