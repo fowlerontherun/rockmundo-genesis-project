@@ -457,17 +457,4 @@
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-slow { animation: pulse 4s ease-in-out infinite; }
 
-/* Global text size reduction — slightly smaller across all pages */
-html {
-  font-size: 14px;
-}
-@media (min-width: 768px) {
-  html {
-    font-size: 15px;
-  }
-}
-@media (min-width: 1024px) {
-  html {
-    font-size: 16px;
-  }
-}
+/* Mobile text density — use Tailwind classes, not root font-size changes */
