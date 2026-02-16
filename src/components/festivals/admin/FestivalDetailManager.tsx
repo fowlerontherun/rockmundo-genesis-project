@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Plus, Music, Users, DollarSign, Star, Shield, Trash2, 
-  Headphones, MapPin, Layers 
+  Headphones, MapPin, Layers, ImageIcon, Loader2 
 } from "lucide-react";
 import { useFestivalStages, useFestivalStageSlots, useCreateFestivalStage, useAssignBandToSlot, useFillNpcDjSlot } from "@/hooks/useFestivalStages";
 import { useFestivalFinances, useFestivalQuality, useCreateFestivalFinances, useUpdateFestivalQuality, calculateFestivalBudget } from "@/hooks/useFestivalFinances";
@@ -27,13 +27,40 @@ interface FestivalDetailManagerProps {
 }
 
 export function FestivalDetailManager({ festivalId, festival }: FestivalDetailManagerProps) {
+  const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+  const [posterUrl, setPosterUrl] = useState<string | null>(festival?.poster_url || null);
+  const queryClient = useQueryClient();
+
+  const handleGeneratePoster = async () => {
+    setIsGeneratingPoster(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-festival-poster", {
+        body: { festivalId },
+      });
+      if (error) throw error;
+      if (data?.poster_url) {
+        setPosterUrl(data.poster_url);
+        queryClient.invalidateQueries({ queryKey: ["festival-detail", festivalId] });
+        queryClient.invalidateQueries({ queryKey: ["browse-festivals"] });
+        toast.success("Lineup poster generated!");
+      } else {
+        throw new Error(data?.error || "Failed to generate poster");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Poster generation failed");
+    } finally {
+      setIsGeneratingPoster(false);
+    }
+  };
+
   return (
     <Tabs defaultValue="stages" className="space-y-4">
-      <TabsList className="grid grid-cols-4 w-full">
+      <TabsList className="grid grid-cols-5 w-full">
         <TabsTrigger value="stages"><Layers className="h-4 w-4 mr-1" /> Stages</TabsTrigger>
         <TabsTrigger value="finances"><DollarSign className="h-4 w-4 mr-1" /> Finances</TabsTrigger>
         <TabsTrigger value="quality"><Star className="h-4 w-4 mr-1" /> Quality</TabsTrigger>
         <TabsTrigger value="security"><Shield className="h-4 w-4 mr-1" /> Security</TabsTrigger>
+        <TabsTrigger value="poster"><ImageIcon className="h-4 w-4 mr-1" /> Poster</TabsTrigger>
       </TabsList>
 
       <TabsContent value="stages">
@@ -47,6 +74,38 @@ export function FestivalDetailManager({ festivalId, festival }: FestivalDetailMa
       </TabsContent>
       <TabsContent value="security">
         <SecurityManager festivalId={festivalId} festival={festival} />
+      </TabsContent>
+      <TabsContent value="poster">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" /> Lineup Poster
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {posterUrl && (
+              <div className="rounded-lg overflow-hidden border">
+                <img src={posterUrl} alt="Festival lineup poster" className="w-full object-contain max-h-[500px]" />
+              </div>
+            )}
+            <Button 
+              onClick={handleGeneratePoster} 
+              disabled={isGeneratingPoster}
+              className="w-full"
+            >
+              {isGeneratingPoster ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Poster...</>
+              ) : posterUrl ? (
+                <><ImageIcon className="h-4 w-4 mr-2" /> Regenerate Poster</>
+              ) : (
+                <><ImageIcon className="h-4 w-4 mr-2" /> Generate Lineup Poster</>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              AI generates a poster from the current lineup. Make sure all slots are filled first.
+            </p>
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   );

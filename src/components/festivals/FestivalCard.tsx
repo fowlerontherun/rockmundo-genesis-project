@@ -160,16 +160,11 @@ export function FestivalCard({
             </Button>
           )}
 
-          {(participation?.status === "confirmed" || participation?.status === "pending") && 
-           isOngoing && onPerform && (
-            <Button 
-              className="flex-1"
-              onClick={() => onPerform(participation.id)}
-              disabled={isPerforming}
-            >
-              <Music className="h-4 w-4 mr-2" />
-              {isPerforming ? "Performing..." : "Perform Now"}
-            </Button>
+          {participation?.status === "confirmed" && (
+            <Badge className="bg-green-600 text-white px-3 py-1.5">
+              <Clock className="h-3 w-3 mr-1" />
+              Scheduled
+            </Badge>
           )}
 
           {participation?.status === "performed" && (

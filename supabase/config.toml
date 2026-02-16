@@ -224,3 +224,6 @@ verify_jwt = false
 
 [functions.generate-housing-image]
 verify_jwt = false
+
+[functions.generate-festival-poster]
+verify_jwt = false

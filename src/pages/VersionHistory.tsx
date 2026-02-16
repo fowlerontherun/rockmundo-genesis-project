@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.785",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Festival expansion: enriched detail panel with description, stats, attendance count, security firm, and cash balance display" },
+      { type: 'feature', description: "Festival Exclusive Shop: ticket holders can buy collectible wristbands, posters, t-shirts, and pins" },
+      { type: 'feature', description: "Festival Merch Stand: performing bands can create and sell festival-exclusive merchandise" },
+      { type: 'feature', description: "AI-generated lineup posters: admin can generate festival poster from lineup using AI image generation" },
+      { type: 'feature', description: "Festival poster displayed in player-facing detail panel when available" },
+      { type: 'improvement', description: "Removed instant 'Perform Now' button — replaced with 'Scheduled' badge for confirmed performers" },
+      { type: 'improvement', description: "Festival lineup reorganized by day with clearer stage groupings" },
+    ],
+  },
+  {
     version: "1.0.784",
     date: "2026-02-16",
     changes: [
