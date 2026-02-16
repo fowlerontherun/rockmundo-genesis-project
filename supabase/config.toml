@@ -227,3 +227,6 @@ verify_jwt = false
 
 [functions.generate-festival-poster]
 verify_jwt = false
+
+[functions.generate-merch-image]
+verify_jwt = false

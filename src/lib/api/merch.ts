@@ -110,6 +110,9 @@ const defaultInventoryStub: MerchInventoryItem = {
   tour_exclusive_tour_id: null,
   collaboration_id: null,
   design_preview_url: null,
+  storage_cost_daily: 0.10,
+  logistics_pct: 0.05,
+  tax_pct: 0.08,
 };
 
 const generateOrderId = (bandId: string, index: number) => `${bandId}-${index}`;

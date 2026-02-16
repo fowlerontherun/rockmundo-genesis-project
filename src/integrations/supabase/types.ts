@@ -12962,6 +12962,56 @@ export type Database = {
         }
         Relationships: []
       }
+      merch_managers: {
+        Row: {
+          auto_restock_enabled: boolean
+          band_id: string
+          created_at: string
+          hired_at: string
+          id: string
+          is_active: boolean
+          logistics_discount: number
+          manager_name: string
+          monthly_salary: number
+          restock_quantity: number
+          restock_threshold: number
+        }
+        Insert: {
+          auto_restock_enabled?: boolean
+          band_id: string
+          created_at?: string
+          hired_at?: string
+          id?: string
+          is_active?: boolean
+          logistics_discount?: number
+          manager_name: string
+          monthly_salary?: number
+          restock_quantity?: number
+          restock_threshold?: number
+        }
+        Update: {
+          auto_restock_enabled?: boolean
+          band_id?: string
+          created_at?: string
+          hired_at?: string
+          id?: string
+          is_active?: boolean
+          logistics_discount?: number
+          manager_name?: string
+          monthly_salary?: number
+          restock_quantity?: number
+          restock_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_managers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: true
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merch_orders: {
         Row: {
           band_id: string
@@ -16433,10 +16483,13 @@ export type Database = {
           is_limited_edition: boolean | null
           item_type: string
           limited_quantity: number | null
+          logistics_pct: number
           quality_tier: string | null
           sales_boost_pct: number | null
           selling_price: number
           stock_quantity: number
+          storage_cost_daily: number
+          tax_pct: number
           tour_exclusive_tour_id: string | null
           updated_at: string
         }
@@ -16453,10 +16506,13 @@ export type Database = {
           is_limited_edition?: boolean | null
           item_type: string
           limited_quantity?: number | null
+          logistics_pct?: number
           quality_tier?: string | null
           sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
+          storage_cost_daily?: number
+          tax_pct?: number
           tour_exclusive_tour_id?: string | null
           updated_at?: string
         }
@@ -16473,10 +16529,13 @@ export type Database = {
           is_limited_edition?: boolean | null
           item_type?: string
           limited_quantity?: number | null
+          logistics_pct?: number
           quality_tier?: string | null
           sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
+          storage_cost_daily?: number
+          tax_pct?: number
           tour_exclusive_tour_id?: string | null
           updated_at?: string
         }
