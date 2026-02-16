@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.790",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Festival ticket prices now read from the actual festival ticket_price field instead of hardcoded fallbacks" },
+      { type: 'feature', description: "Festival ticket add-ons: Early Access, VIP Camping, Glamping, and Backstage Pass with dynamic pricing based on festival tier" },
+    ],
+  },
+  {
     version: "1.0.789",
     date: "2026-02-16",
     changes: [

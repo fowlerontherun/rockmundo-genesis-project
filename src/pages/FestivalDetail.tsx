@@ -32,6 +32,7 @@
    const { data: quality } = useFestivalQuality(festivalId);
    const [selectedTicketType, setSelectedTicketType] = useState<"day" | "weekend">("weekend");
    const [selectedDay, setSelectedDay] = useState(1);
+   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
  
    // Fetch festival details
    const { data: festival, isLoading } = useQuery({
@@ -323,83 +324,147 @@
        </Tabs>
  
        {/* Ticket Purchase */}
-       {isUpcoming && (
-         <Card className="border-primary/30">
-           <CardHeader>
-             <CardTitle className="flex items-center gap-2">
-               <Ticket className="h-5 w-5 text-primary" />
-               Buy Tickets
-             </CardTitle>
-             <CardDescription>
-               {hasTicket 
-                 ? hasWeekendPass 
-                   ? "You have a weekend pass for this festival!" 
-                   : "You have a day ticket. Upgrade to a weekend pass?"
-                 : "Purchase tickets to attend this festival"}
-             </CardDescription>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             {hasWeekendPass ? (
-               <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                 ✓ Weekend Pass Holder
-               </Badge>
-             ) : (
-               <div className="grid gap-3 sm:grid-cols-2">
-                 {/* Day Ticket */}
-                 <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'day' ? 'border-primary' : 'hover:border-primary/40'}`}
-                   onClick={() => setSelectedTicketType('day')}>
-                   <CardContent className="p-4 text-center">
-                     <p className="font-bold text-lg">Day Ticket</p>
-                     <p className="text-2xl font-bold text-primary mt-1">
-                       ${(festival.metadata?.day_ticket_price || 500).toLocaleString()}
-                     </p>
-                     <p className="text-xs text-muted-foreground mt-1">Access for one day</p>
-                   </CardContent>
-                 </Card>
-                 {/* Weekend Pass */}
-                 <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'weekend' ? 'border-primary' : 'hover:border-primary/40'}`}
-                   onClick={() => setSelectedTicketType('weekend')}>
-                   <CardContent className="p-4 text-center">
-                     <p className="font-bold text-lg">Weekend Pass</p>
-                     <p className="text-2xl font-bold text-primary mt-1">
-                       ${(festival.metadata?.weekend_ticket_price || 1200).toLocaleString()}
-                     </p>
-                     <p className="text-xs text-muted-foreground mt-1">Full festival access</p>
-                   </CardContent>
-                 </Card>
-               </div>
-             )}
-             {!hasWeekendPass && (
-               <Button 
-                 className="w-full" 
-                 size="lg"
-                 disabled={purchaseTicket.isPending}
-                 onClick={() => {
-                   if (!festivalId) return;
-                   purchaseTicket.mutate({
-                     festivalId,
-                     ticketType: selectedTicketType,
-                     price: selectedTicketType === 'weekend' 
-                       ? (festival.metadata?.weekend_ticket_price || 1200)
-                       : (festival.metadata?.day_ticket_price || 500),
-                     dayNumber: selectedTicketType === 'day' ? selectedDay : undefined,
-                     festivalTitle: festival.title,
-                     festivalStart: festival.start_date,
-                     festivalEnd: festival.end_date,
-                   });
-                 }}
-               >
-                 {purchaseTicket.isPending ? (
-                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                 ) : (
-                   <Ticket className="h-4 w-4 mr-2" />
-                 )}
-                 Buy {selectedTicketType === 'weekend' ? 'Weekend Pass' : 'Day Ticket'}
-               </Button>
-             )}
-           </CardContent>
-         </Card>
-       )}
+       {isUpcoming && (() => {
+         const basePrice = festival.ticket_price || 100;
+         const dayPrice = Math.round(basePrice * 0.45);
+         const weekendPrice = basePrice;
+         
+         const ADD_ONS = [
+           { id: "early_access", label: "Early Access", description: "Enter 2 hours before general admission", price: Math.round(basePrice * 0.15) },
+           { id: "vip_camping", label: "VIP Camping", description: "Premium campsite with showers & charging", price: Math.round(basePrice * 0.4) },
+           { id: "glamping", label: "Glamping", description: "Pre-pitched luxury tent with bedding", price: Math.round(basePrice * 0.7) },
+           { id: "backstage", label: "Backstage Pass", description: "Meet artists backstage between sets", price: Math.round(basePrice * 0.5) },
+         ];
+         
+         const addOnTotal = selectedAddOns.reduce((sum, id) => {
+           const addOn = ADD_ONS.find(a => a.id === id);
+           return sum + (addOn?.price || 0);
+         }, 0);
+         
+         const ticketBase = selectedTicketType === 'weekend' ? weekendPrice : dayPrice;
+         const totalPrice = ticketBase + addOnTotal;
+         
+         return (
+           <Card className="border-primary/30">
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+                 <Ticket className="h-5 w-5 text-primary" />
+                 Buy Tickets
+               </CardTitle>
+               <CardDescription>
+                 {hasTicket 
+                   ? hasWeekendPass 
+                     ? "You have a weekend pass for this festival!" 
+                     : "You have a day ticket. Upgrade to a weekend pass?"
+                   : "Purchase tickets to attend this festival"}
+               </CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-4">
+               {hasWeekendPass ? (
+                 <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                   ✓ Weekend Pass Holder
+                 </Badge>
+               ) : (
+                 <>
+                   <div className="grid gap-3 sm:grid-cols-2">
+                     {/* Day Ticket */}
+                     <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'day' ? 'border-primary ring-1 ring-primary/30' : 'hover:border-primary/40'}`}
+                       onClick={() => setSelectedTicketType('day')}>
+                       <CardContent className="p-4 text-center">
+                         <p className="font-bold text-lg">Day Ticket</p>
+                         <p className="text-2xl font-bold text-primary mt-1">
+                           ${dayPrice.toLocaleString()}
+                         </p>
+                         <p className="text-xs text-muted-foreground mt-1">Access for one day</p>
+                       </CardContent>
+                     </Card>
+                     {/* Weekend Pass */}
+                     <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'weekend' ? 'border-primary ring-1 ring-primary/30' : 'hover:border-primary/40'}`}
+                       onClick={() => setSelectedTicketType('weekend')}>
+                       <CardContent className="p-4 text-center">
+                         <p className="font-bold text-lg">Weekend Pass</p>
+                         <p className="text-2xl font-bold text-primary mt-1">
+                           ${weekendPrice.toLocaleString()}
+                         </p>
+                         <p className="text-xs text-muted-foreground mt-1">Full festival access</p>
+                       </CardContent>
+                     </Card>
+                   </div>
+                   
+                   {/* Add-Ons */}
+                   <Separator />
+                   <div>
+                     <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                       <Zap className="h-4 w-4 text-primary" />
+                       Add-Ons
+                     </h4>
+                     <div className="grid gap-2 sm:grid-cols-2">
+                       {ADD_ONS.map(addOn => {
+                         const isSelected = selectedAddOns.includes(addOn.id);
+                         // Don't allow glamping + vip camping together
+                         const isDisabled = (addOn.id === 'glamping' && selectedAddOns.includes('vip_camping')) ||
+                                           (addOn.id === 'vip_camping' && selectedAddOns.includes('glamping'));
+                         return (
+                           <Card 
+                             key={addOn.id}
+                             className={`cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/40'}`}
+                             onClick={() => {
+                               if (isDisabled) return;
+                               setSelectedAddOns(prev => 
+                                 isSelected ? prev.filter(id => id !== addOn.id) : [...prev, addOn.id]
+                               );
+                             }}
+                           >
+                             <CardContent className="p-3 flex items-start justify-between gap-2">
+                               <div className="min-w-0">
+                                 <p className="font-medium text-sm">{addOn.label}</p>
+                                 <p className="text-xs text-muted-foreground">{addOn.description}</p>
+                               </div>
+                               <span className="text-sm font-bold text-primary shrink-0">+${addOn.price}</span>
+                             </CardContent>
+                           </Card>
+                         );
+                       })}
+                     </div>
+                   </div>
+                   
+                   {/* Total & Buy */}
+                   <Separator />
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="text-sm text-muted-foreground">Total</p>
+                       <p className="text-2xl font-bold">${totalPrice.toLocaleString()}</p>
+                     </div>
+                     <Button 
+                       size="lg"
+                       disabled={purchaseTicket.isPending}
+                       onClick={() => {
+                         if (!festivalId) return;
+                         purchaseTicket.mutate({
+                           festivalId,
+                           ticketType: selectedTicketType,
+                           price: totalPrice,
+                           dayNumber: selectedTicketType === 'day' ? selectedDay : undefined,
+                           festivalTitle: festival.title,
+                           festivalStart: festival.start_date,
+                           festivalEnd: festival.end_date,
+                         });
+                       }}
+                     >
+                       {purchaseTicket.isPending ? (
+                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                       ) : (
+                         <Ticket className="h-4 w-4 mr-2" />
+                       )}
+                       Buy {selectedTicketType === 'weekend' ? 'Weekend Pass' : 'Day Ticket'}
+                     </Button>
+                   </div>
+                 </>
+               )}
+             </CardContent>
+           </Card>
+         );
+       })()}
  
        {/* Description */}
        {festival.description && (
