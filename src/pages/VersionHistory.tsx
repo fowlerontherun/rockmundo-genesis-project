@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.764",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'null profile_id' error when accepting major event invitations — now correctly fetches player profile before creating scheduled activity" },
+    ],
+  },
+  {
     version: "1.0.763",
     date: "2026-02-16",
     changes: [
