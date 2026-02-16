@@ -1,172 +1,167 @@
 
 
-## v1.0.709 — Major Events System
+## v1.0.711 — Housing and Rentals System
 
-Annual global events invite bands to perform for massive cash, fame, and fan rewards. Works like Open Mic but with 3 songs, live commentary, and a full gig outcome report.
-
----
-
-### The Events
-
-Seed ~15 major annual events across categories:
-
-| Event | Category | Month | Audience Size | Cash Reward Range |
-|-------|----------|-------|---------------|-------------------|
-| Super Bowl Halftime Show | Sports | February | 500,000 | $500K-$2M |
-| WrestleMania Opening | Sports | April | 80,000 | $100K-$500K |
-| BBC Variety Show | TV | December | 200,000 | $50K-$200K |
-| Olympics Opening Ceremony | Sports | July | 1,000,000 | $750K-$3M |
-| Olympics Closing Ceremony | Sports | August | 800,000 | $500K-$2M |
-| Men's World Cup Final | Sports | June | 1,500,000 | $1M-$5M |
-| Women's World Cup Final | Sports | July | 600,000 | $400K-$1.5M |
-| Winter Olympics Opening | Sports | February | 500,000 | $500K-$2M |
-| Winter Olympics Closing | Sports | February | 400,000 | $400K-$1.5M |
-| Grammy Awards | Music | January | 300,000 | $200K-$800K |
-| MTV VMAs | Music | August | 250,000 | $150K-$600K |
-| Brit Awards | Music | February | 200,000 | $100K-$500K |
-| New Year's Eve Times Square | Holiday | December | 1,000,000 | $500K-$2M |
-| Coachella Main Stage Headline | Music | April | 100,000 | $300K-$1M |
-| Glastonbury Pyramid Stage Headline | Music | June | 120,000 | $350K-$1.2M |
-
-### How It Works
-
-1. **Invitations**: When a band reaches sufficient fame (varies per event prestige), they receive invitations to upcoming major events. Higher fame = more prestigious invitations.
-2. **Browse & Accept**: Players browse available events on the Major Events page. They can accept invitations and select 3 songs for their performance.
-3. **Perform**: Similar to Open Mic -- live commentary, song-by-song progression with crowd reactions, simulated or audio-based playback.
-4. **Outcome Report**: Shows performance grade (S/A/B/C/D/F), cash earned, fame gained, new fans, and song-by-song breakdown.
-5. **Rewards**: Unlike open mics, major events pay significant cash AND fame AND fans. Reward scales with performance quality and event prestige.
-
-### Minimum Fame Requirements
-
-- Tier 1 (Super Bowl, Olympics, World Cup Final): 5000+ fame
-- Tier 2 (Grammys, VMAs, Brits, NYE): 2000+ fame
-- Tier 3 (WrestleMania, BBC, Coachella, Glastonbury): 800+ fame
+Players can buy country-specific houses or rent standardized apartments. House purchases are one-time costs from the player's cash balance. Rentals are weekly charges deducted automatically.
 
 ---
 
-### Technical Implementation
+### Overview
 
-#### 1. Database Migration
+**Buying (20 house types per country)**
+- Each of the 64 countries gets 20 unique house types with names and prices scaled by that country's cost of living
+- Each house has an AI-generated image stylized to match the country's architecture
+- One-time purchase deducted from `profiles.cash`
+- Players can own multiple houses across countries
+- Houses provide a "home base" in that country
 
-Create 3 new tables:
+**Renting (5 options, same everywhere)**
+- 1 Bed Flat, 2 Bed Flat, Deluxe Studio, Luxury Studio, Villa
+- Base weekly costs: $200, $350, $600, $1,200, $3,000
+- Actual cost scaled by the country's `cost_of_living` index
+- Weekly charge deducted from `profiles.cash` by a daily process (cost / 7 per day)
+- Player can only have one active rental at a time
 
-**`major_events`** -- the event definitions
+---
+
+### Database Tables
+
+**`housing_types`** — 20 house type definitions per country (seeded, ~1,280 rows)
 - `id` UUID PK
-- `name` TEXT (e.g. "Super Bowl Halftime Show")
+- `country` TEXT (matches `cities.country`)
+- `name` TEXT (e.g. "Victorian Terraced House", "Tokyo Apartment")
 - `description` TEXT
-- `category` TEXT (sports/music/tv/holiday)
-- `month` INT (1-12, when it occurs annually)
-- `audience_size` INT
-- `min_fame_required` INT
-- `base_cash_reward` INT (minimum payout in dollars)
-- `max_cash_reward` INT (maximum payout in dollars)
-- `fame_multiplier` NUMERIC (how much fame to award relative to performance)
-- `fan_multiplier` NUMERIC
-- `image_url` TEXT
+- `tier` INT (1-20, cheapest to most expensive)
+- `base_price` INT (purchase price in dollars)
+- `image_url` TEXT (nullable, for AI-generated images)
+- `style_tags` TEXT[] (e.g. ["traditional", "urban"])
+- `bedrooms` INT
 - `is_active` BOOLEAN DEFAULT true
 - `created_at` TIMESTAMPTZ
 
-**`major_event_instances`** -- yearly occurrences
+**`player_properties`** — owned houses
 - `id` UUID PK
-- `event_id` UUID FK -> major_events
-- `year` INT
-- `event_date` TIMESTAMPTZ
-- `status` TEXT ('upcoming', 'invitations_sent', 'performing', 'completed')
-- `invited_band_ids` UUID[] (bands that received invitations)
-- `created_at` TIMESTAMPTZ
-
-**`major_event_performances`** -- player performances
-- `id` UUID PK
-- `instance_id` UUID FK -> major_event_instances
 - `user_id` UUID FK -> auth.users
-- `band_id` UUID FK -> bands
-- `song_1_id` UUID FK -> songs
-- `song_2_id` UUID FK -> songs
-- `song_3_id` UUID FK -> songs
-- `status` TEXT ('accepted', 'in_progress', 'completed', 'declined')
-- `current_song_position` INT DEFAULT 1
-- `overall_rating` NUMERIC
-- `cash_earned` INT
-- `fame_gained` INT
-- `fans_gained` INT
-- `started_at` TIMESTAMPTZ
-- `completed_at` TIMESTAMPTZ
+- `housing_type_id` UUID FK -> housing_types
+- `country` TEXT
+- `purchased_at` TIMESTAMPTZ
+- `purchase_price` INT
+- `is_primary` BOOLEAN DEFAULT false
 - `created_at` TIMESTAMPTZ
 
-**`major_event_song_performances`** -- per-song results
+**`rental_types`** — 5 fixed rental options (seeded)
 - `id` UUID PK
-- `performance_id` UUID FK -> major_event_performances
-- `song_id` UUID FK -> songs
-- `position` INT
-- `performance_score` NUMERIC
-- `crowd_response` TEXT
-- `commentary` JSONB
+- `name` TEXT (e.g. "1 Bed Flat")
+- `description` TEXT
+- `base_weekly_cost` INT
+- `tier` INT (1-5)
+- `created_at` TIMESTAMPTZ
 
-Seed ~15 events into `major_events` and generate current-year instances in `major_event_instances`. Enable RLS with policies for authenticated users.
+**`player_rentals`** — active rentals
+- `id` UUID PK
+- `user_id` UUID FK -> auth.users
+- `rental_type_id` UUID FK -> rental_types
+- `country` TEXT
+- `weekly_cost` INT (actual cost after country scaling)
+- `started_at` TIMESTAMPTZ
+- `ended_at` TIMESTAMPTZ (null if active)
+- `last_charged_at` TIMESTAMPTZ
+- `status` TEXT ('active', 'ended', 'defaulted')
+- `created_at` TIMESTAMPTZ
 
-#### 2. New Hook: `src/hooks/useMajorEvents.ts`
+### Seed Data
 
-Modeled on `useOpenMicNights.ts` but:
-- Queries `major_events` joined with `major_event_instances`
-- Filters by fame requirement (only shows events the band qualifies for)
-- `useAcceptMajorEvent` mutation -- accepts invitation, selects 3 songs, creates scheduled activity
-- `useStartMajorEventPerformance` / song performance queries
-- Song selector allows 3 songs instead of 2
+**20 House Types per Country** — names and prices vary by country and are styled to match local architecture. Examples:
 
-#### 3. New Edge Functions
+| Tier | UK Example | Japan Example | Base Price (UK) |
+|------|-----------|---------------|-----------------|
+| 1 | Bedsit | Tiny Capsule Room | $15,000 |
+| 2 | Studio Flat | 1K Apartment | $30,000 |
+| 3 | Terraced House | Danchi Unit | $60,000 |
+| ... | ... | ... | ... |
+| 18 | Georgian Mansion | Traditional Machiya Estate | $5,000,000 |
+| 19 | Country Manor | Mountain Ryokan Resort | $10,000,000 |
+| 20 | Royal Estate | Private Island Villa | $25,000,000 |
 
-**`process-major-event-song`** -- identical pattern to `process-open-mic-song` but:
-- Higher base scores due to event prestige
-- Uses `audience_size` for scaling crowd response
-- Commentary themed to the specific event type
+Prices are scaled by the country's `cost_of_living` index (0-100). A country with cost_of_living=80 pays ~1.6x base, cost_of_living=30 pays ~0.6x base.
 
-**`complete-major-event`** -- identical pattern to `complete-open-mic` but:
-- Calculates cash reward: `base_cash + (performance_rating / 100) * (max_cash - base_cash)`
-- Fame calculation uses the event's `fame_multiplier` and audience size
-- Fan calculation uses `fan_multiplier` and audience size
-- Updates band cash/fame/fans
-- Credits cash to band balance
+**5 Rental Types** (universal):
 
-#### 4. New Pages
+| Tier | Name | Base Weekly Cost |
+|------|------|-----------------|
+| 1 | 1 Bed Flat | $200 |
+| 2 | 2 Bed Flat | $350 |
+| 3 | Deluxe Studio | $600 |
+| 4 | Luxury Studio | $1,200 |
+| 5 | Villa | $3,000 |
 
-**`src/pages/MajorEvents.tsx`** -- Browse/accept page
-- Lists upcoming major events with prestige badges, audience sizes, reward ranges
-- Shows fame requirement and whether band qualifies
-- "Accept Invitation" opens a 3-song selector dialog
-- Shows accepted/past performances
+Weekly rental cost = `base_weekly_cost * (0.4 + (cost_of_living / 100) * 1.2)` so cheap countries pay ~40-60% of base, expensive ones pay up to 160%.
 
-**`src/pages/PerformMajorEvent.tsx`** -- Live performance page
-- Modeled exactly on `PerformOpenMic.tsx`
-- Shows "Song X of 3" progression
-- Live commentary, progress bars, audio controls
-- Calls `process-major-event-song` for each song
-- Calls `complete-major-event` after song 3
+---
 
-**`src/components/major-events/MajorEventOutcomeReport.tsx`** -- Post-show report
-- Modeled on `OpenMicOutcomeReport.tsx`
-- Shows cash earned (unlike open mic's "no money" notice)
-- Fame gained, fans gained, performance grade
-- Song-by-song breakdown
+### AI Image Generation
 
-**`src/components/major-events/MajorEventSongSelector.tsx`** -- 3-song selector
-- Modeled on `OpenMicSongSelector.tsx` but allows 3 selections
+Each of the 20 house types for each country gets an AI-generated image via a new edge function `generate-housing-image`. This uses the Lovable AI Gateway with the image model to create stylized house images matching the country's architectural style. Images are generated on-demand (first time a player views a house type in that country) and cached in Supabase Storage.
 
-#### 5. Routing and Navigation
+---
 
-**`src/App.tsx`** -- Add routes:
-- `/major-events` -> MajorEvents page
-- `/major-events/perform/:performanceId` -> PerformMajorEvent page
+### Weekly Rent Collection
 
-**`src/components/ui/navigation.tsx`** -- Add to "Events" section:
-- `{ icon: Star, labelKey: "nav.majorEvents", path: "/major-events" }`
+Handled inside `process-daily-updates` (existing edge function). Add a new section:
+1. Query all `player_rentals` with `status = 'active'`
+2. Calculate daily charge = `weekly_cost / 7`
+3. Deduct from `profiles.cash`
+4. If player cannot afford rent, mark rental as `defaulted` and end it
+5. Update `last_charged_at`
 
-#### 6. Version Bump
+---
 
-Update to **v1.0.709** in `navigation.tsx` and `VersionHistory.tsx`:
-- Added Major Events system with 15 annual global events
-- Bands receive invitations based on fame level
-- 3-song performances with live commentary and outcome reports
-- Cash, fame, and fan rewards scale with event prestige and performance quality
+### Frontend
+
+**New Page: `src/pages/Housing.tsx`**
+- Two tabs: "Buy Property" and "Rent"
+- **Buy tab**: Shows 20 house types for the player's current country, with images, prices, and a "Buy" button. Filter by tier/price range. Shows owned properties.
+- **Rent tab**: Shows 5 rental options with weekly costs scaled to current country. "Start Renting" / "End Lease" buttons. Shows current active rental.
+- Property gallery showing owned homes across all countries
+
+**New Hook: `src/hooks/useHousing.ts`**
+- `useHousingTypes(country)` — fetch house types for a country
+- `useRentalTypes()` — fetch the 5 rental options
+- `usePlayerProperties()` — fetch owned properties
+- `usePlayerRental()` — fetch active rental
+- `useBuyProperty()` mutation — purchase a house (deduct cash)
+- `useStartRental()` mutation — start renting (deduct first week)
+- `useEndRental()` mutation — end a rental
+
+**Navigation**: Add "Housing" to the "World" section in navigation
+
+---
+
+### Technical Details
+
+#### Migration SQL
+
+The migration will:
+1. Create `housing_types`, `player_properties`, `rental_types`, `player_rentals` tables
+2. Seed 5 rental types
+3. Seed 20 housing types for all 64 countries (1,280 rows) with country-appropriate names and cost_of_living-scaled prices
+4. Enable RLS with policies for authenticated users (read all housing/rental types, manage own properties/rentals)
+
+#### Edge Function: `generate-housing-image`
+
+- Accepts `housing_type_id` and `country`
+- Generates a stylized image using the Lovable AI Gateway image model (`google/gemini-2.5-flash-image`)
+- Prompt includes country name, architectural style, house tier/description
+- Stores result in Supabase Storage bucket `housing-images`
+- Updates `housing_types.image_url` with the public URL
+- Returns the image URL
+
+#### Rent Collection in `process-daily-updates`
+
+Add ~30 lines after the existing daily processing to:
+- Fetch active rentals joined with profiles
+- Calculate and deduct daily rent (weekly_cost / 7)
+- Default rentals where player cash goes negative
 
 ---
 
@@ -174,15 +169,13 @@ Update to **v1.0.709** in `navigation.tsx` and `VersionHistory.tsx`:
 
 | File | Action |
 |------|--------|
-| New SQL migration | Create 3 tables, seed 15 events, generate instances, RLS policies |
-| `src/hooks/useMajorEvents.ts` | New hook for all major event queries/mutations |
-| `src/pages/MajorEvents.tsx` | New browse/accept page |
-| `src/pages/PerformMajorEvent.tsx` | New live performance page |
-| `src/components/major-events/MajorEventSongSelector.tsx` | New 3-song selector dialog |
-| `src/components/major-events/MajorEventOutcomeReport.tsx` | New outcome report component |
-| `supabase/functions/process-major-event-song/index.ts` | New edge function for song processing |
-| `supabase/functions/complete-major-event/index.ts` | New edge function for completion + rewards |
-| `src/App.tsx` | Add 2 new routes |
-| `src/components/ui/navigation.tsx` | Add nav item + version bump |
+| New SQL migration | Create 4 tables, seed 1,280 house types + 5 rental types, RLS policies |
+| `src/hooks/useHousing.ts` | New hook for all housing queries/mutations |
+| `src/pages/Housing.tsx` | New page with Buy/Rent tabs |
+| `supabase/functions/generate-housing-image/index.ts` | New edge function for AI house images |
+| `supabase/functions/process-daily-updates/index.ts` | Add daily rent deduction section |
+| `src/App.tsx` | Add `/housing` route |
+| `src/components/ui/navigation.tsx` | Add Housing to World section + version bump |
+| `src/components/VersionHeader.tsx` | Version bump to 1.0.711 |
 | `src/pages/VersionHistory.tsx` | Add changelog entry |
 
