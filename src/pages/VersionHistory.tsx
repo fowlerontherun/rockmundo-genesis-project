@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.760",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'View Outcome' button greyed out on Last Night's Gigs — RLS policy now allows all users to view gig outcomes (public performance data)" },
+    ],
+  },
+  {
     version: "1.0.759",
     date: "2026-02-16",
     changes: [
