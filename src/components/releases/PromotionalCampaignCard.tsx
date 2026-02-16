@@ -68,6 +68,16 @@ export const PromotionalCampaignCard = ({ releaseId, releaseTitle, bandBalance }
         effects: campaign.effects,
       });
       if (error) throw error;
+
+      // Apply hype boost to release
+      const hypeBoost = campaign.effects.hypeBoost || 0;
+      if (hypeBoost > 0) {
+        const { data: rel } = await supabase.from("releases").select("hype_score").eq("id", releaseId).single();
+        const currentHype = (rel as any)?.hype_score || 0;
+        const newHype = Math.min(1000, currentHype + hypeBoost);
+        await supabase.from("releases").update({ hype_score: newHype } as any).eq("id", releaseId);
+      }
+
       return campaign;
     },
     onSuccess: (campaign) => {

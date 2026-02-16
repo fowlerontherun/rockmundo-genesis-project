@@ -19617,6 +19617,109 @@ export type Database = {
           },
         ]
       }
+      release_party_questions: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          option_a_effects: Json
+          option_a_text: string
+          option_b_effects: Json
+          option_b_text: string
+          option_c_effects: Json
+          option_c_text: string
+          option_d_effects: Json
+          option_d_text: string
+          party_context: string[] | null
+          question_text: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          option_a_effects?: Json
+          option_a_text: string
+          option_b_effects?: Json
+          option_b_text: string
+          option_c_effects?: Json
+          option_c_text: string
+          option_d_effects?: Json
+          option_d_text: string
+          party_context?: string[] | null
+          question_text: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          option_a_effects?: Json
+          option_a_text?: string
+          option_b_effects?: Json
+          option_b_text?: string
+          option_c_effects?: Json
+          option_c_text?: string
+          option_d_effects?: Json
+          option_d_text?: string
+          party_context?: string[] | null
+          question_text?: string
+        }
+        Relationships: []
+      }
+      release_party_results: {
+        Row: {
+          band_id: string | null
+          created_at: string | null
+          hype_awarded: number | null
+          id: string
+          questions: Json
+          release_id: string
+          total_effects: Json
+          user_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          hype_awarded?: number | null
+          id?: string
+          questions?: Json
+          release_id: string
+          total_effects?: Json
+          user_id: string
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          hype_awarded?: number | null
+          id?: string
+          questions?: Json
+          release_id?: string
+          total_effects?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_party_results_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "release_party_results_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: true
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_party_results_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: true
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       release_sales: {
         Row: {
           city_id: string | null
@@ -19788,6 +19891,7 @@ export type Database = {
           created_at: string
           digital_sales: number | null
           format_type: string | null
+          hype_score: number | null
           id: string
           is_greatest_hits: boolean | null
           label_contract_id: string | null
@@ -19824,6 +19928,7 @@ export type Database = {
           created_at?: string
           digital_sales?: number | null
           format_type?: string | null
+          hype_score?: number | null
           id?: string
           is_greatest_hits?: boolean | null
           label_contract_id?: string | null
@@ -19860,6 +19965,7 @@ export type Database = {
           created_at?: string
           digital_sales?: number | null
           format_type?: string | null
+          hype_score?: number | null
           id?: string
           is_greatest_hits?: boolean | null
           label_contract_id?: string | null

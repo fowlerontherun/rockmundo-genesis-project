@@ -75,10 +75,35 @@ Deno.serve(async (req) => {
     const AGE_GROUPS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
     const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ', 'Middle East', 'Africa', 'South East Asia'];
 
+    // Pre-fetch all release hype scores for streaming releases
+    const songIds = (streamingReleases || []).map(r => r.song_id).filter(Boolean);
+    let releaseHypeMap = new Map<string, number>();
+    if (songIds.length > 0) {
+      const { data: releaseSongData } = await supabase
+        .from("release_songs")
+        .select("song_id, release:releases(id, hype_score, manufacturing_complete_at)")
+        .in("song_id", songIds);
+      
+      if (releaseSongData) {
+        for (const rs of releaseSongData) {
+          const rel = (rs as any).release;
+          if (rel && rel.hype_score) {
+            const existing = releaseHypeMap.get(rs.song_id) || 0;
+            releaseHypeMap.set(rs.song_id, Math.max(existing, rel.hype_score));
+          }
+        }
+      }
+    }
+
     for (const release of streamingReleases || []) {
       try {
         const baseStreams = Math.floor(Math.random() * 4900) + 100;
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier);
+        
+        // Apply hype multiplier from release
+        const songHype = releaseHypeMap.get(release.song_id) || 0;
+        const streamHypeMultiplier = 1 + (songHype / 500);
+        
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier);
         // Use decimal revenue instead of floor to avoid $0 at low stream counts
         const dailyRevenue = Number((dailyStreams * 0.004).toFixed(2));
 

@@ -87,6 +87,8 @@ serve(async (req) => {
         band_id,
         user_id,
         release_type,
+        hype_score,
+        manufacturing_complete_at,
         bands(id, fame, popularity, chemistry_level, home_city_id),
         release_formats(id, format_type, retail_price, quantity),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
@@ -243,8 +245,15 @@ serve(async (req) => {
               break;
           }
 
+          // Hype multiplier: 0 hype = 1.0x, 500 hype = 2.0x, 1000 hype = 3.0x
+          const hypeScore = (release as any).hype_score || 0;
+          const hypeMultiplier = 1 + (hypeScore / 500);
+          const releasedDate = (release as any).manufacturing_complete_at || release.created_at;
+          const daysSinceRelease = releasedDate ? (Date.now() - new Date(releasedDate).getTime()) / (1000 * 60 * 60 * 24) : 999;
+          const firstWeekBoost = daysSinceRelease <= 7 ? 1.5 : 1.0;
+
           const calculatedSales = Math.floor(
-            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier
+            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier * hypeMultiplier * firstWeekBoost
           );
 
           // For digital, no stock limit. For physical, cap at available stock
@@ -373,6 +382,37 @@ serve(async (req) => {
             totalSales += actualSales;
           }
         }
+        // Hype decay: 5% per day after first week
+        const hypeScoreVal = (release as any).hype_score || 0;
+        const releaseDateVal = (release as any).manufacturing_complete_at || release.created_at;
+        const daysSinceVal = releaseDateVal ? (Date.now() - new Date(releaseDateVal).getTime()) / (1000 * 60 * 60 * 24) : 999;
+        if (daysSinceVal > 7 && hypeScoreVal > 0) {
+          const decayedHype = Math.floor(hypeScoreVal * 0.95);
+          await supabaseClient.from("releases")
+            .update({ hype_score: decayedHype } as any)
+            .eq("id", release.id);
+        }
+
+        // Apply active campaign hype boosts
+        const { data: activeCampaigns } = await (supabaseClient.from("promotional_campaigns" as any) as any)
+          .select("effects")
+          .eq("release_id", release.id)
+          .eq("status", "active");
+        
+        if (activeCampaigns && activeCampaigns.length > 0) {
+          let campaignHypeBoost = 0;
+          for (const campaign of activeCampaigns) {
+            campaignHypeBoost += (campaign.effects?.hypeBoost || 0);
+          }
+          if (campaignHypeBoost > 0) {
+            const currentHype = (release as any).hype_score || 0;
+            const newHype = Math.min(1000, currentHype + campaignHypeBoost);
+            await supabaseClient.from("releases")
+              .update({ hype_score: newHype } as any)
+              .eq("id", release.id);
+          }
+        }
+
       } catch (releaseError) {
         errorCount += 1;
         console.error(`Error processing release ${release.id}:`, releaseError);
