@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.707",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Reduced addiction trigger chances by ~40% across all partying intensities" },
+      { type: 'improvement', description: "Lowered afterparty attendance addiction multipliers (2x→1.6x, 1.3x→1.2x)" },
+      { type: 'feature', description: "Added 100 addiction craving events — addicted players now face temptation events matching their addiction type" },
+      { type: 'feature', description: "Craving events offer Give In (short-term boost, severity increase) or Resist (health/XP reward) choices" },
+      { type: 'improvement', description: "Increased all holiday destination prices (e.g. Beach Resort $80→$200/day, Tropical Island $150→$400/day)" },
+      { type: 'fix', description: "Applied debt relief — players in negative cash reset to $500 minimum with debt flags cleared" },
+    ],
+  },
+  {
     version: "1.0.706",
     date: "2026-02-15",
     changes: [

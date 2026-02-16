@@ -13,6 +13,7 @@ const corsHeaders = {
 
 const JOB_NAME = "trigger-random-events";
 const TRIGGER_CHANCE = 15; // 1 in 15 chance (~6.7%)
+const CRAVING_TRIGGER_CHANCE = 5; // 1 in 5 chance (20%) for addicted players
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -46,17 +47,27 @@ Deno.serve(async (req) => {
 
     console.log(`[${JOB_NAME}] Found ${activePlayers?.length || 0} active players`);
 
-    // Get all active events
+    // Get all active events (non-craving)
     const { data: allEvents, error: eventsError } = await supabase
       .from("random_events")
       .select("*")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .or("category.is.null,category.neq.addiction_craving");
 
     if (eventsError) throw eventsError;
 
-    console.log(`[${JOB_NAME}] Found ${allEvents?.length || 0} active events`);
+    // Get all active craving events
+    const { data: cravingEvents, error: cravingError } = await supabase
+      .from("random_events")
+      .select("*")
+      .eq("is_active", true)
+      .eq("category", "addiction_craving");
 
-    if (!allEvents || allEvents.length === 0) {
+    if (cravingError) throw cravingError;
+
+    console.log(`[${JOB_NAME}] Found ${allEvents?.length || 0} active events, ${cravingEvents?.length || 0} craving events`);
+
+    if ((!allEvents || allEvents.length === 0) && (!cravingEvents || cravingEvents.length === 0)) {
       console.log(`[${JOB_NAME}] No events available, skipping`);
       await completeJobRun({
         jobName: JOB_NAME,
@@ -90,7 +101,49 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // 1 in 25 chance
+      // Check if player has an active addiction for craving events
+      const { data: activeAddictions } = await supabase
+        .from("player_addictions")
+        .select("addiction_type")
+        .eq("user_id", player.user_id)
+        .eq("status", "active")
+        .limit(1);
+
+      const hasActiveAddiction = activeAddictions && activeAddictions.length > 0;
+      const addictionType = hasActiveAddiction ? activeAddictions[0].addiction_type : null;
+
+      // Bonus craving roll for addicted players
+      if (hasActiveAddiction && cravingEvents && cravingEvents.length > 0) {
+        const cravingRoll = Math.floor(Math.random() * CRAVING_TRIGGER_CHANCE) + 1;
+        if (cravingRoll === 1) {
+          // Filter craving events matching addiction type
+          const matchingCravings = cravingEvents.filter((e) => {
+            try {
+              const choiceAEffects = typeof e.choice_a_effects === "string" ? JSON.parse(e.choice_a_effects) : e.choice_a_effects;
+              return choiceAEffects?.addiction_type === addictionType;
+            } catch {
+              return false;
+            }
+          });
+
+          const eligibleCravings = matchingCravings.length > 0 ? matchingCravings : cravingEvents;
+          const selectedCraving = eligibleCravings[Math.floor(Math.random() * eligibleCravings.length)];
+
+          const { error: insertError } = await supabase.from("player_events").insert({
+            user_id: player.user_id,
+            event_id: selectedCraving.id,
+            status: "pending_choice",
+          });
+
+          if (!insertError) {
+            eventsTriggered++;
+            console.log(`[${JOB_NAME}] Triggered craving event "${selectedCraving.title}" for addicted player ${player.user_id}`);
+            continue; // Skip normal roll since craving triggered
+          }
+        }
+      }
+
+      // Normal 1 in 15 chance
       const roll = Math.floor(Math.random() * TRIGGER_CHANCE) + 1;
       if (roll !== 1) {
         continue;
@@ -107,7 +160,7 @@ Deno.serve(async (req) => {
       const seenEventIds = new Set(history?.map((h) => h.event_id) || []);
 
       // Filter eligible events
-      const eligibleEvents = allEvents.filter((event) => {
+      const eligibleEvents = (allEvents || []).filter((event) => {
         // Skip non-common events already seen
         if (!event.is_common && seenEventIds.has(event.id)) {
           return false;

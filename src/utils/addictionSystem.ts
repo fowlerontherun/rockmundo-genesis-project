@@ -22,16 +22,16 @@ export interface AddictionRecord {
 
 // Trigger chance per nightlife event based on partying intensity
 const TRIGGER_CHANCES: Record<string, number> = {
-  legendary: 0.08,
-  heavy: 0.04,
-  moderate: 0.01,
-  light: 0.002,
+  legendary: 0.05,
+  heavy: 0.025,
+  moderate: 0.006,
+  light: 0.001,
   abstinent: 0,
 };
 
 export function calculateAddictionTriggerChance(settings: Partial<BehaviorSettings>): number {
   const base = TRIGGER_CHANCES[settings.partying_intensity || "moderate"] || 0.01;
-  const multiplier = settings.afterparty_attendance === "always" ? 2 : settings.afterparty_attendance === "sometimes" ? 1.3 : 1;
+  const multiplier = settings.afterparty_attendance === "always" ? 1.6 : settings.afterparty_attendance === "sometimes" ? 1.2 : 1;
   return base * multiplier;
 }
 
