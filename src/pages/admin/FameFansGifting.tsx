@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { AdminRoute } from "@/components/AdminRoute";
-import { Star, Users, Search, Gift, Music, User } from "lucide-react";
+import { Star, Users, Search, Gift, Music, User, DollarSign } from "lucide-react";
 
 export default function FameFansGifting() {
   const { toast } = useToast();
@@ -31,7 +31,7 @@ export default function FameFansGifting() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bands")
-        .select("id, name, genre, fame, total_fans, casual_fans, dedicated_fans, superfans, status")
+        .select("id, name, genre, fame, total_fans, casual_fans, dedicated_fans, superfans, band_balance, status")
         .order("name");
       if (error) throw error;
       return data;
@@ -53,7 +53,7 @@ export default function FameFansGifting() {
 
   // Grant fame/fans to band
   const grantToBandMutation = useMutation({
-    mutationFn: async ({ bandId, fame, fans, reason }: { bandId: string; fame: number; fans: number; reason: string }) => {
+    mutationFn: async ({ bandId, fame, fans, money, reason }: { bandId: string; fame: number; fans: number; money: number; reason: string }) => {
       const band = bands.find(b => b.id === bandId);
       if (!band) throw new Error("Band not found");
 
@@ -65,6 +65,7 @@ export default function FameFansGifting() {
         updates.dedicated_fans = (band.dedicated_fans || 0) + Math.floor(fans * 0.3);
         updates.superfans = (band.superfans || 0) + Math.floor(fans * 0.1);
       }
+      if (money > 0) updates.band_balance = (band.band_balance || 0) + money;
 
       const { error } = await supabase.from("bands").update(updates).eq("id", bandId);
       if (error) throw error;
@@ -75,13 +76,23 @@ export default function FameFansGifting() {
           band_id: bandId,
           event_type: "admin_grant",
           fame_gained: fame,
-          event_data: { reason, fans_granted: fans },
+          event_data: { reason, fans_granted: fans, money_granted: money },
+        });
+      }
+
+      // Log money gift as band_earnings
+      if (money > 0) {
+        await supabase.from("band_earnings").insert({
+          band_id: bandId,
+          amount: money,
+          source: "leader_deposit",
+          description: `Admin grant: ${reason}`,
         });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-bands-fame"] });
-      toast({ title: "Fame/Fans granted to band successfully" });
+      toast({ title: "Fame/Fans/Money granted to band successfully" });
       setGiftDialogOpen(false);
     },
     onError: (error: any) => {
@@ -126,15 +137,16 @@ export default function FameFansGifting() {
     const formData = new FormData(e.currentTarget);
     const fame = Number(formData.get("fame")) || 0;
     const fans = Number(formData.get("fans")) || 0;
+    const money = Number(formData.get("money")) || 0;
     const reason = formData.get("reason") as string || "Admin grant";
 
-    if (fame === 0 && fans === 0) {
-      toast({ title: "Please enter fame or fans amount", variant: "destructive" });
+    if (fame === 0 && fans === 0 && money === 0) {
+      toast({ title: "Please enter at least one value", variant: "destructive" });
       return;
     }
 
     if (giftType === "band" && selectedBand) {
-      grantToBandMutation.mutate({ bandId: selectedBand.id, fame, fans, reason });
+      grantToBandMutation.mutate({ bandId: selectedBand.id, fame, fans, money, reason });
     } else if (giftType === "player" && selectedPlayer) {
       grantToPlayerMutation.mutate({ userId: selectedPlayer.user_id, fame, fans, reason });
     }
@@ -191,6 +203,7 @@ export default function FameFansGifting() {
                       <TableHead>Band</TableHead>
                       <TableHead>Genre</TableHead>
                       <TableHead>Fame</TableHead>
+                      <TableHead>Balance</TableHead>
                       <TableHead>Total Fans</TableHead>
                       <TableHead>Fan Breakdown</TableHead>
                       <TableHead>Status</TableHead>
@@ -204,6 +217,9 @@ export default function FameFansGifting() {
                         <TableCell>{band.genre || "—"}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{band.fame || 0}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">${(band.band_balance || 0).toLocaleString()}</Badge>
                         </TableCell>
                         <TableCell>{band.total_fans || 0}</TableCell>
                         <TableCell>
@@ -310,15 +326,15 @@ export default function FameFansGifting() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                Gift Fame & Fans to {giftType === "band" ? selectedBand?.name : selectedPlayer?.display_name}
+                Gift to {giftType === "band" ? selectedBand?.name : selectedPlayer?.display_name}
               </DialogTitle>
               <DialogDescription>
-                Enter the amount of fame and/or fans to grant
+                Enter the amount of fame, fans{giftType === "band" ? ", and/or money" : ""} to grant
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleGiftSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className={`grid gap-4 ${giftType === "band" ? "grid-cols-3" : "grid-cols-2"}`}>
                 <div className="space-y-2">
                   <Label htmlFor="fame">Fame</Label>
                   <Input
@@ -341,6 +357,19 @@ export default function FameFansGifting() {
                     defaultValue=""
                   />
                 </div>
+                {giftType === "band" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="money">Money ($)</Label>
+                    <Input
+                      id="money"
+                      name="money"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      defaultValue=""
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
