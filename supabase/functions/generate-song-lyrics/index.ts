@@ -312,14 +312,69 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      title, 
-      theme, 
-      genre, 
-      chordProgression,
-      creativeBrief,
-      existingLyrics 
-    } = await req.json();
+    const body = await req.json();
+    
+    // ============ INPUT VALIDATION ============
+    const title = typeof body.title === 'string' ? body.title.slice(0, 200).trim() : '';
+    const genre = typeof body.genre === 'string' ? body.genre.slice(0, 100).trim() : '';
+    
+    if (!title || !genre) {
+      return new Response(
+        JSON.stringify({ error: 'Title and genre are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize theme
+    let theme = body.theme;
+    if (typeof theme === 'string') {
+      theme = theme.slice(0, 500).trim();
+    } else if (typeof theme === 'object' && theme !== null) {
+      theme = {
+        name: typeof theme.name === 'string' ? theme.name.slice(0, 200).trim() : undefined,
+        mood: typeof theme.mood === 'string' ? theme.mood.slice(0, 100).trim() : undefined,
+        description: typeof theme.description === 'string' ? theme.description.slice(0, 500).trim() : undefined,
+      };
+    } else {
+      theme = null;
+    }
+
+    // Sanitize chord progression
+    let chordProgression = body.chordProgression;
+    if (typeof chordProgression === 'string') {
+      chordProgression = chordProgression.slice(0, 200).trim();
+    } else if (typeof chordProgression === 'object' && chordProgression !== null) {
+      chordProgression = {
+        name: typeof chordProgression.name === 'string' ? chordProgression.name.slice(0, 200).trim() : undefined,
+        progression: typeof chordProgression.progression === 'string' ? chordProgression.progression.slice(0, 200).trim() : undefined,
+      };
+    } else {
+      chordProgression = null;
+    }
+
+    // Sanitize existing lyrics
+    const existingLyrics = typeof body.existingLyrics === 'string' ? body.existingLyrics.slice(0, 5000).trim() : '';
+
+    // Sanitize creative brief
+    let creativeBrief = null;
+    if (typeof body.creativeBrief === 'object' && body.creativeBrief !== null) {
+      const cb = body.creativeBrief;
+      creativeBrief = {
+        inspirationModifiers: Array.isArray(cb.inspirationModifiers) 
+          ? cb.inspirationModifiers.filter((m: unknown) => typeof m === 'string').slice(0, 10).map((m: string) => m.slice(0, 50)) 
+          : [],
+        moodModifiers: Array.isArray(cb.moodModifiers) 
+          ? cb.moodModifiers.filter((m: unknown) => typeof m === 'string').slice(0, 10).map((m: string) => m.slice(0, 50)) 
+          : [],
+        writingMode: typeof cb.writingMode === 'string' ? cb.writingMode.slice(0, 50) : '',
+        coWriters: Array.isArray(cb.coWriters) 
+          ? cb.coWriters.filter((m: unknown) => typeof m === 'string').slice(0, 10).map((m: string) => m.slice(0, 100)) 
+          : [],
+        sessionMusicians: Array.isArray(cb.sessionMusicians)
+          ? cb.sessionMusicians.filter((m: unknown) => typeof m === 'string').slice(0, 10).map((m: string) => m.slice(0, 100))
+          : [],
+      };
+    }
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
