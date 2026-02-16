@@ -17,6 +17,8 @@ import { useGameData, type PlayerAttributes } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Link, useNavigate } from "react-router-dom";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { calculateInGameAge } from "@/utils/gameCalendar";
 
 type AttributeKey = keyof PlayerAttributes;
 
@@ -371,10 +373,13 @@ const MyCharacterEdit = () => {
     );
   }
 
+  const { data: calendarData } = useGameCalendar();
   const displayName = profile?.display_name || profile?.username || "Performer";
   const avatarUrl = (profile as any)?.avatar_url ?? undefined;
   const lifetimeXp = Number((xpWallet as XpWalletRow | null)?.lifetime_xp ?? 0);
   const xpSpent = Number((xpWallet as XpWalletRow | null)?.xp_spent ?? 0);
+  const initialAge = (profile as any)?.age ?? 18;
+  const characterAge = calendarData ? calculateInGameAge(initialAge, calendarData) : initialAge;
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -588,6 +593,7 @@ const MyCharacterEdit = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">{displayName}</h2>
+                  <p className="text-sm text-muted-foreground">Age: {characterAge}</p>
                   <p className="text-sm text-muted-foreground">Lifetime XP: {formatNumber(lifetimeXp)}</p>
                   <p className="text-sm text-muted-foreground">XP spent: {formatNumber(Math.max(0, xpSpent))}</p>
                 </div>

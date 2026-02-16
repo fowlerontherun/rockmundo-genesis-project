@@ -1,12 +1,28 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { Season } from "@/utils/gameCalendar";
 
 interface SeasonalBackgroundProps {
   season: Season;
   enabled?: boolean;
+  durationMs?: number;
 }
 
-export function SeasonalBackground({ season, enabled = true }: SeasonalBackgroundProps) {
+export function SeasonalBackground({ season, enabled = true, durationMs = 10000 }: SeasonalBackgroundProps) {
+  const [visible, setVisible] = useState(true);
+  const [removed, setRemoved] = useState(false);
+
+  // Reset timer when season changes
+  useEffect(() => {
+    setVisible(true);
+    setRemoved(false);
+    const fadeTimer = setTimeout(() => setVisible(false), durationMs);
+    const removeTimer = setTimeout(() => setRemoved(true), durationMs + 2000);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
+  }, [season, durationMs]);
+
   const particles = useMemo(() => {
     const count = season === "winter" ? 50 : season === "autumn" ? 30 : 20;
     return Array.from({ length: count }, (_, i) => ({
@@ -19,10 +35,13 @@ export function SeasonalBackground({ season, enabled = true }: SeasonalBackgroun
     }));
   }, [season]);
 
-  if (!enabled) return null;
+  if (!enabled || removed) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div
+      className="fixed inset-0 pointer-events-none overflow-hidden z-0 transition-opacity duration-2000"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
       {/* Season-specific background gradient */}
       <div
         className={`absolute inset-0 opacity-20 transition-colors duration-1000 ${
@@ -105,11 +124,9 @@ function SpringDecorations() {
 function SummerDecorations() {
   return (
     <>
-      {/* Sun rays effect */}
       <div className="absolute top-0 right-0 w-96 h-96 opacity-10">
         <div className="absolute inset-0 bg-gradient-radial from-yellow-400 to-transparent animate-pulse-slow" />
       </div>
-      {/* Palm tree silhouettes */}
       <div className="absolute bottom-0 left-4 text-6xl opacity-10">🌴</div>
       <div className="absolute bottom-0 right-8 text-5xl opacity-10">🌴</div>
     </>
@@ -129,7 +146,6 @@ function AutumnDecorations() {
 function WinterDecorations() {
   return (
     <>
-      {/* Frost effect on edges */}
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-blue-200/10 to-transparent" />
       <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-blue-200/5 to-transparent" />
       <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-blue-200/5 to-transparent" />

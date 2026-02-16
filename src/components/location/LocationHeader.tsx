@@ -2,8 +2,9 @@ import { CountryFlag } from "./CountryFlag";
 import { getCountryData } from "@/data/countryData";
 import { getCityFlavor } from "@/data/cityFlavor";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Music, Clock } from "lucide-react";
+import { MapPin, Music, Clock, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 interface LocationHeaderProps {
   cityName: string;
@@ -22,6 +23,7 @@ export const LocationHeader = ({
 }: LocationHeaderProps) => {
   const countryData = getCountryData(country);
   const cityFlavorData = getCityFlavor(cityName);
+  const { data: calendar } = useGameCalendar();
   
   // Get current time in city's timezone
   const getLocalTime = () => {
@@ -104,6 +106,13 @@ export const LocationHeader = ({
                 <div className="flex items-center gap-1.5 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span>Local time: <span className="font-medium">{localTime}</span></span>
+                </div>
+              )}
+
+              {calendar && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{calendar.seasonEmoji} {calendar.monthName}, Yr {calendar.gameYear}</span>
                 </div>
               )}
               

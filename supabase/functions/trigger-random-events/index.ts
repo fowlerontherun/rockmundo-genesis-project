@@ -159,10 +159,27 @@ Deno.serve(async (req) => {
 
       const seenEventIds = new Set(history?.map((h) => h.event_id) || []);
 
+      // Compute current game season from epoch for season filtering
+      const GAME_EPOCH_MS = new Date("2026-01-01T00:00:00Z").getTime();
+      const nowMs = Date.now();
+      const realDaysElapsed = Math.max(0, Math.floor((nowMs - GAME_EPOCH_MS) / (1000 * 60 * 60 * 24)));
+      const gameDaysElapsed = Math.floor((realDaysElapsed / 10) * 30);
+      const remainingDays = gameDaysElapsed % (30 * 12);
+      const currentGameMonth = Math.floor(remainingDays / 30) + 1;
+      const currentSeason = currentGameMonth >= 3 && currentGameMonth <= 5 ? "spring"
+        : currentGameMonth >= 6 && currentGameMonth <= 8 ? "summer"
+        : currentGameMonth >= 9 && currentGameMonth <= 11 ? "autumn"
+        : "winter";
+
       // Filter eligible events
       const eligibleEvents = (allEvents || []).filter((event) => {
         // Skip non-common events already seen
         if (!event.is_common && seenEventIds.has(event.id)) {
+          return false;
+        }
+
+        // Season filter: only allow events with no season or matching current season
+        if (event.season && event.season !== currentSeason) {
           return false;
         }
 

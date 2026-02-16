@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.756",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Seasonal Events Calendar page — browse all season-specific events grouped by season with encounter tracking" },
+      { type: 'improvement', description: "Seasonal background effects now fade out after 10 seconds for better performance" },
+      { type: 'improvement', description: "Moved season/year info from header bar into LocationHeader alongside city and local time" },
+      { type: 'feature', description: "Character profile now displays in-game age based on starting age + game years elapsed" },
+    ],
+  },
+  {
     version: "1.0.755",
     date: "2026-02-16",
     changes: [
