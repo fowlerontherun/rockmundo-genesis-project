@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.767",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Festival Browse & Tickets: player-facing festival listing with stage lineup, quality ratings, and day/weekend ticket purchase" },
+      { type: 'feature', description: "Live Festival Experience: enter active festivals, switch between stages, see live commentary and current performers" },
+      { type: 'feature', description: "Festival Stage Commentary: real-time generated commentary for band performances and DJ sets with crowd reactions" },
+      { type: 'feature', description: "Watch Rewards: claim XP, gifted songs, or attribute points while watching festival performances" },
+      { type: 'feature', description: "Festival Voice Chat: stage-scoped voice chat — moving stages auto-switches voice channel" },
+      { type: 'feature', description: "Festival attendance tracking with join/leave and per-stage attendee counts" },
+      { type: 'improvement', description: "Festivals page rebuilt with Browse & Tickets and Live Festival tabs replacing the old simulation sandbox" },
+    ],
+  },
+  {
     version: "1.0.766",
     date: "2026-02-16",
     changes: [
