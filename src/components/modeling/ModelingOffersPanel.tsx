@@ -86,7 +86,8 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: Modelin
         .from("player_modeling_contracts")
         .select("*, gig:modeling_gigs(title, gig_type, duration_hours)")
         .eq("user_id", userId)
-        .in("status", ["accepted", "shooting"]);
+        .in("status", ["accepted", "shooting"])
+        .gte("shoot_date", new Date().toISOString().split("T")[0]);
 
       if (error) throw error;
       return data;

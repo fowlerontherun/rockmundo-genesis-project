@@ -454,8 +454,69 @@ Deno.serve(async (req) => {
       console.error('Error in investment growth:', invError)
     }
 
+    // === MODELING CONTRACT COMPLETION ===
+    console.log('=== Completing past modeling contracts ===')
+    let modelingCompleted = 0
+    try {
+      const { data: pastContracts } = await supabase
+        .from('player_modeling_contracts')
+        .select('id, user_id, band_id, compensation, fame_boost, shoot_date')
+        .eq('status', 'accepted')
+        .lt('shoot_date', today)
+
+      if (pastContracts && pastContracts.length > 0) {
+        for (const contract of pastContracts) {
+          try {
+            // Mark as completed
+            await supabase
+              .from('player_modeling_contracts')
+              .update({ status: 'completed', completed_at: new Date().toISOString() })
+              .eq('id', contract.id)
+
+            // Award compensation to player cash
+            if (contract.user_id && contract.compensation) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, cash, fame')
+                .eq('user_id', contract.user_id)
+                .single()
+
+              if (profile) {
+                await supabase
+                  .from('profiles')
+                  .update({
+                    cash: (profile.cash || 0) + (contract.compensation || 0),
+                    fame: (profile.fame || 0) + (contract.fame_boost || 0),
+                  })
+                  .eq('id', profile.id)
+              }
+            }
+
+            // Log earnings if band exists
+            if (contract.band_id && contract.compensation) {
+              await supabase.from('band_earnings').insert({
+                band_id: contract.band_id,
+                amount: contract.compensation,
+                source: 'modeling',
+                description: `Modeling contract completed`,
+                earned_by_user_id: contract.user_id,
+              })
+            }
+
+            modelingCompleted++
+          } catch (cErr) {
+            console.error(`Error completing modeling contract ${contract.id}:`, cErr)
+            errorCount++
+          }
+        }
+        console.log(`Modeling contracts completed: ${modelingCompleted}`)
+      }
+    } catch (modelErr) {
+      console.error('Error in modeling completion:', modelErr)
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
@@ -473,6 +534,7 @@ Deno.serve(async (req) => {
         pr_offers_generated: prOffersGenerated,
         rentals_charged: rentalsCharged,
         rentals_defaulted: rentalsDefaulted,
+        modeling_completed: modelingCompleted,
       },
     })
 

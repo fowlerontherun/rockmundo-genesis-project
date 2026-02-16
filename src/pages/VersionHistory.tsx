@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.738",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "PR Offers: Fixed podcast/newspaper/magazine queries using wrong column names, preventing offer generation" },
+      { type: 'fix', description: "Modeling: Contracts with past shoot dates no longer block new offers" },
+      { type: 'feature', description: "Modeling: Daily updates now auto-complete past contracts, awarding compensation and fame to players" },
+    ],
+  },
+  {
     version: "1.0.737",
     date: "2026-02-16",
     changes: [
