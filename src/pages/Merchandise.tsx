@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -858,7 +859,7 @@ const Merchandise = () => {
                     <p className="text-2xl font-semibold">{currencyFormatter.format(summary.totalCost)}</p>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <ResponsiveTable>
                   <Table>
                     <TableHeader>
                        <TableRow>
@@ -968,7 +969,7 @@ const Merchandise = () => {
                       )}
                     </TableBody>
                   </Table>
-                </div>
+                </ResponsiveTable>
               </CardContent>
             </Card>
 

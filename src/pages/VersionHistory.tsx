@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.808",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "New ResponsiveTable component ensures tables always fit on mobile with horizontal scroll and compact text sizing" },
+      { type: 'improvement', description: "Applied ResponsiveTable to merchandise overview table" },
+    ],
+  },
+  {
     version: "1.0.807",
     date: "2026-02-16",
     changes: [
