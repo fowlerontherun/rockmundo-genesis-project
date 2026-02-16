@@ -721,17 +721,17 @@ const Merchandise = () => {
         className="space-y-6"
       >
         {/* Mobile Tabs - Scrollable icons */}
-        <TabsList className="flex w-full overflow-x-auto gap-1 rounded-xl bg-muted/40 p-1 md:hidden">
+        <TabsList className="flex w-full overflow-x-auto gap-0.5 rounded-xl bg-muted/40 p-1 md:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm min-w-[52px]"
+                className="flex flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1.5 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm min-w-[42px] shrink-0"
               >
-                <Icon className="h-4 w-4" />
-                <span className="truncate max-w-full text-[10px]">{tab.label.split(' ')[0]}</span>
+                <Icon className="h-3.5 w-3.5" />
+                <span className="text-[9px] leading-tight">{tab.label.split(' ')[0]}</span>
               </TabsTrigger>
             );
           })}

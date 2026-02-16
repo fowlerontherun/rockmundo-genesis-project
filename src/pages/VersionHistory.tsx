@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.807",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Merchandise tabs now fit properly on mobile with smaller icons, tighter spacing, and smooth horizontal scrolling" },
+    ],
+  },
+  {
     version: "1.0.806",
     date: "2026-02-16",
     changes: [
