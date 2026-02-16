@@ -46,6 +46,23 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
     enabled: open,
   });
 
+  // Check if band has visited this station's country
+  const { data: hasVisitedCountry = false } = useQuery({
+    queryKey: ["visited-country-check", bandData?.id, station.country],
+    queryFn: async () => {
+      if (!bandData?.id || !station.country) return false;
+      const { data } = await supabase
+        .from("band_country_fans")
+        .select("id")
+        .eq("band_id", bandData.id)
+        .eq("country", station.country)
+        .eq("has_performed", true)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!bandData?.id && !!station.country && open,
+  });
+
   // Fetch band's fame in the station's country
   const { data: countryFame = 0 } = useQuery({
     queryKey: ["band-country-fame", bandData?.id, station.country],
@@ -172,7 +189,15 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
           </Alert>
         )}
 
-        {!hasEnoughFame && minFameRequired > 0 ? (
+        {!hasVisitedCountry ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="font-medium">Country Not Visited</p>
+            <p className="text-sm mt-2">
+              You must perform in {station.country} before you can submit songs to stations there. Book a gig or tour to unlock radio access.
+            </p>
+          </div>
+        ) : !hasEnoughFame && minFameRequired > 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p className="font-medium">Station Locked</p>
@@ -245,7 +270,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedSongId || isSubmitting || !hasEnoughFame}
+            disabled={!selectedSongId || isSubmitting || !hasEnoughFame || !hasVisitedCountry}
           >
             {isSubmitting ? "Submitting..." : "Submit Song"}
           </Button>

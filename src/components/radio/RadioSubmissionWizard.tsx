@@ -102,18 +102,36 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     enabled: !!bandId,
   });
 
-  // Fetch radio stations
-  const { data: stations = [], isLoading: stationsLoading } = useQuery({
-    queryKey: ["radio-stations-wizard"],
+  // Fetch visited countries
+  const { data: visitedCountries = [] } = useQuery({
+    queryKey: ["visited-countries-wizard", bandId],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from("band_country_fans")
+        .select("country")
+        .eq("band_id", bandId)
+        .eq("has_performed", true);
+      if (error) throw error;
+      return data.map(d => d.country);
+    },
+    enabled: !!bandId,
+  });
+
+  // Fetch radio stations — only from visited countries
+  const { data: stations = [], isLoading: stationsLoading } = useQuery({
+    queryKey: ["radio-stations-wizard", visitedCountries],
+    queryFn: async () => {
+      if (visitedCountries.length === 0) return [];
       const { data, error } = await supabase
         .from("radio_stations")
         .select("*")
         .eq("is_active", true)
+        .in("country", visitedCountries)
         .order("listener_base", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: visitedCountries.length > 0,
   });
 
   // Fetch existing submissions
