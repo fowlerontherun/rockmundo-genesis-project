@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.763",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Major events now have duration and datetime — accepting an event blocks the time slot on your schedule" },
+      { type: 'feature', description: "Events are genre-specific (Rock, Pop, Hip Hop, etc.) — only matching bands can be invited to genre-locked events" },
+      { type: 'feature', description: "Bands limited to max 2 major events per game year — forces strategic choices" },
+      { type: 'feature', description: "3-year cooldown after performing at an event — cannot repeat the same event for 3 game years" },
+      { type: 'improvement', description: "Event cards now show genre badge, duration, and blocked/cooldown status with tooltip reasons" },
+      { type: 'improvement', description: "Band info card shows genre, event cap rules, and cooldown policy" },
+    ],
+  },
+  {
     version: "1.0.762",
     date: "2026-02-16",
     changes: [
