@@ -1,154 +1,83 @@
-# Festival Expansion + AI Lineup Poster (v1.0.785)
+
+
+# Housing System Enhancements (v1.0.796)
 
 ## Overview
+Add property selling, renting out owned properties, daily upkeep costs, and better affordability feedback to the housing system.
 
-This plan covers three major areas:
+## Changes
 
-1. Implementing the previously approved festival enhancement plan (richer details, remove "Perform Now", merch creation, attendee exclusive shop)
-2. Adding AI-generated lineup poster functionality via a new admin button. The poster should use the band logo if they have one and if not just the band name.
-3. Version bump
+### 1. Database Migration
+- Add columns to `player_properties`: `daily_upkeep` (integer, calculated from tier/price), `is_rented_out` (boolean, default false), `rental_income_daily` (integer, default 0), `sold_at` (timestamp, nullable)
+- The `daily_upkeep` will be set on insert based on the property tier (roughly 0.01-0.02% of base price per day)
 
----
+### 2. Sell Property Feature
+- Add a `useSellProperty` mutation in `useHousing.ts`
+- Sells at 70% of the original purchase price (depreciation)
+- Credits cash back to the player's profile
+- Marks property with `sold_at` timestamp (soft delete) or hard deletes the row
+- Add "Sell" button on each owned property card in the "My Properties" tab
 
-## 1. Remove "Perform Now" Button
+### 3. Rent Out Property Feature
+- Add a `useToggleRentOut` mutation in `useHousing.ts`
+- Players can toggle renting out a property they own
+- Rental income is calculated as ~0.5% of purchase price per day
+- Show "Rent Out" / "Stop Renting" toggle button on owned property cards
+- Display daily rental income on the card when rented out
 
-**File: `src/components/festivals/FestivalCard.tsx**`
+### 4. Daily Upkeep Costs
+- Calculate upkeep as a percentage of the property's base price (roughly $base_price * 0.001 per day)
+- Display daily upkeep cost on each owned property card
+- Display total daily upkeep across all properties in the "My Properties" tab header
+- Note: Actual daily deduction would require a scheduled function (out of scope for now), but the cost will be displayed and tracked
 
-- Remove the "Perform Now" button block (lines 163-173) that allows instant performance during ongoing festivals
-- Replace with a "Scheduled" badge showing the player's confirmed slot time if they have one
-- Keep "Apply to Perform" and "Withdraw" buttons as-is (these are for the gig-like workflow)
+### 5. Buy Tab Affordability Check
+- Fetch the player's current cash balance
+- Show player's cash balance at the top of the Buy tab
+- Disable the "Buy" button and show "Can't Afford" when cash is insufficient
+- The mutation already checks server-side, but this adds client-side UX feedback
 
----
+### 6. UI Updates to "My Properties" Tab
+Each property card will show:
+- Property name, country, image (existing)
+- Purchase price (existing)
+- Daily upkeep cost (new)
+- Rental status and daily income if rented out (new)
+- "Sell for $X" button (new)
+- "Rent Out" / "Stop Renting" button (new)
+- Net daily cost/profit summary (new)
 
-## 2. Enrich Festival Detail Panel
-
-**File: `src/components/festivals/FestivalBrowser.tsx**`
-
-- Add festival description display below the title
-- Show festival stats: duration, total stages, genre focus, capacity, ticket count
-- Show security firm name if assigned (join on `security_firm_id`)
-- Improve ticket section with player's current cash balance shown, and a confirmation step
-- Reorganize lineup by day with clearer time groupings
-- Add attendance counter (count of tickets purchased)
-
----
-
-## 3. Festival Merch Creation (for performing bands)
-
-**New file: `src/components/festivals/merch/FestivalMerchStand.tsx**`
-
-- Available to bands with a confirmed slot at the festival
-- Allows creating festival-exclusive merchandise using the existing `player_merchandise` table
-- Items get a `festival_exclusive` flag and reference the festival ID in metadata
-- Uses patterns from existing Merchandise page (design name, item type, pricing)
-- Sales tracked via the existing `festival_merch_sales` table
-
----
-
-## 4. Festival Exclusive Attendee Shop
-
-**New file: `src/components/festivals/merch/FestivalExclusiveShop.tsx**`
-
-- Only visible to players who have purchased a ticket (uses `useFestivalTickets` hook)
-- Shows festival-branded collectible items generated from festival data (title, genre, location):
-  - Festival wristband, commemorative poster, limited edition t-shirt, festival pin
-- Purchasing deducts cash from player profile
-- Items are virtual collectibles (no new DB table needed -- stored as profile inventory or simple client-side confirmation with cash deduction)
-
----
-
-## 5. Integrate Merch Sections into Detail Panel
-
-**File: `src/components/festivals/FestivalBrowser.tsx**`
-
-- Add two new collapsible sections in `FestivalDetailPanel`:
-  - "Festival Shop" -- renders `FestivalExclusiveShop` (for ticket holders)
-  - "Sell Your Merch" -- renders `FestivalMerchStand` (for performing bands)
-
----
-
-## 6. AI-Generated Lineup Poster
-
-### Database Migration
-
-- Add `poster_url` column (TEXT, nullable) to `game_events` table
-
-### New Edge Function: `generate-festival-poster`
-
-- **File: `supabase/functions/generate-festival-poster/index.ts**`
-- Accepts `festivalId` in POST body
-- Fetches festival data + stages + all slots (with band names) from Supabase
-- Constructs a detailed prompt describing the festival lineup poster:
-  - Festival title, dates, location
-  - Each stage with its lineup grouped by day
-  - Headliners featured prominently
-  - Music festival poster aesthetic
-- Calls `ai.gateway.lovable.dev` with `google/gemini-2.5-flash-image` (same pattern as `generate-housing-image`)
-- Uploads result to a Supabase storage bucket (`festival-posters`)
-- Updates `game_events.poster_url` with the public URL
-- Returns the poster URL
-
-### Storage Bucket
-
-- Create `festival-posters` bucket (public) via migration
-
-### Admin UI: "Generate Lineup Poster" Button
-
-**File: `src/components/festivals/admin/FestivalDetailManager.tsx**`
-
-- Add a new tab or a button in the Stages tab header area: "Generate Lineup Poster"
-- When clicked, calls the `generate-festival-poster` edge function
-- Shows loading state while generating
-- On success, displays the poster image in a dialog/card
-- The poster URL is persisted on the festival record
-
-### Player-Facing Poster Display
-
-**File: `src/components/festivals/FestivalBrowser.tsx**`
-
-- If `poster_url` exists on the festival, display it as a prominent image in the detail panel header
-
----
-
-## 7. Version Update
-
-- Bump to `1.0.785` in `VersionHeader.tsx`
+### 7. Version Update
+- Bump version to `1.0.796` in `VersionHeader.tsx`
 - Add changelog entry in `VersionHistory.tsx`
-
----
 
 ## Technical Details
 
-### Files to Create
+### Database SQL
+```sql
+ALTER TABLE player_properties
+  ADD COLUMN daily_upkeep integer NOT NULL DEFAULT 0,
+  ADD COLUMN is_rented_out boolean NOT NULL DEFAULT false,
+  ADD COLUMN rental_income_daily integer NOT NULL DEFAULT 0;
+```
 
+### Sell Price Formula
+```
+sellPrice = Math.round(purchasePrice * 0.7)
+```
 
-| File                                                       | Purpose                              |
-| ---------------------------------------------------------- | ------------------------------------ |
-| `src/components/festivals/merch/FestivalMerchStand.tsx`    | Band merch creation for festivals    |
-| `src/components/festivals/merch/FestivalExclusiveShop.tsx` | Attendee exclusive collectibles shop |
-| `supabase/functions/generate-festival-poster/index.ts`     | AI poster generation edge function   |
+### Daily Upkeep Formula
+```
+dailyUpkeep = Math.round(basePrice * 0.001)  -- ~0.1% of property value per day
+```
 
+### Daily Rental Income Formula
+```
+rentalIncome = Math.round(basePrice * 0.005)  -- ~0.5% of property value per day
+```
 
-### Files to Modify
-
-
-| File                                                       | Change                                               |
-| ---------------------------------------------------------- | ---------------------------------------------------- |
-| `src/components/festivals/FestivalCard.tsx`                | Remove "Perform Now", add scheduled slot badge       |
-| `src/components/festivals/FestivalBrowser.tsx`             | Enrich detail panel, add merch sections, show poster |
-| `src/components/festivals/admin/FestivalDetailManager.tsx` | Add "Generate Poster" button                         |
-| `src/components/VersionHeader.tsx`                         | Bump to v1.0.785                                     |
-| `src/pages/VersionHistory.tsx`                             | Add changelog                                        |
-| `supabase/config.toml`                                     | Add `generate-festival-poster` function config       |
-
-
-### Database Migration
-
-- `ALTER TABLE game_events ADD COLUMN IF NOT EXISTS poster_url TEXT;`
-- Create storage bucket `festival-posters` with public access
-
-### Dependencies
-
-- No new npm packages needed
-- Uses existing `LOVABLE_API_KEY` secret for AI image generation (already configured)
-- Follows established pattern from `generate-housing-image` edge function
+### Files Modified
+- `src/hooks/useHousing.ts` -- add sell, rent-out mutations; update PlayerProperty type; add upkeep calculation helper
+- `src/pages/Housing.tsx` -- update Buy tab with cash display and affordability, update My Properties tab with sell/rent/upkeep UI
+- `src/components/VersionHeader.tsx` -- bump to 1.0.796
+- `src/pages/VersionHistory.tsx` -- add changelog entry
