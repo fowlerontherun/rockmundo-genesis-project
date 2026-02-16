@@ -54,6 +54,22 @@ function useLabelDemoCount(labelId: string | undefined) {
   });
 }
 
+function usePendingContractCount(labelId: string | undefined) {
+  return useQuery({
+    queryKey: ['label-pending-contract-count', labelId],
+    queryFn: async () => {
+      if (!labelId) return 0;
+      const { count } = await supabase
+        .from('artist_label_contracts')
+        .select('*', { count: 'exact', head: true })
+        .eq('label_id', labelId)
+        .eq('status', 'offered');
+      return count || 0;
+    },
+    enabled: !!labelId,
+  });
+}
+
 export default function LabelManagement() {
   const { labelId } = useParams();
   const navigate = useNavigate();
@@ -61,6 +77,7 @@ export default function LabelManagement() {
   
   const { data: label, isLoading } = useLabelByIdOrCompanyId(labelId);
   const { data: pendingDemoCount = 0 } = useLabelDemoCount(label?.id);
+  const { data: pendingContractCount = 0 } = usePendingContractCount(label?.id);
   
   if (isLoading) {
     return (
@@ -131,6 +148,11 @@ export default function LabelManagement() {
             <TabsTrigger value="contracts" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Contracts</span>
+              {pendingContractCount > 0 && (
+                <span className="ml-1 bg-amber-500 text-amber-950 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {pendingContractCount}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="releases" className="flex items-center gap-2">
               <Disc className="h-4 w-4" />

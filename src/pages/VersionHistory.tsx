@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.759",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Contract Designer Dialog — full term editor (advance, royalty split, quotas, territories, termination fee) opens before sending any offer" },
+      { type: 'fix', description: "Scout offers now open the Contract Designer instead of silently auto-generating contracts" },
+      { type: 'fix', description: "Demo acceptance now opens the Contract Designer for term review before sending an offer" },
+      { type: 'feature', description: "Contracts tab now shows action buttons: Withdraw Offer, Activate Contract, and expandable View Details for active contracts" },
+      { type: 'feature', description: "Active contract details show singles/albums progress, recoupment status, termination fee, and contract value" },
+      { type: 'improvement', description: "Contracts tab header shows status summary badges and pending offer count on the tab" },
+    ],
+  },
+  {
     version: "1.0.758",
     date: "2026-02-16",
     changes: [
