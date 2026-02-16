@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Music, Radio, Disc, TrendingUp, Search, PlayCircle, Trash2 } from "lucide-react";
+import { Music, Radio, Disc, TrendingUp, Search, PlayCircle, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BandRepertoireHeader } from "@/components/band/BandRepertoireHeader";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
@@ -29,6 +29,7 @@ interface RepertoireSong {
   streams: number;
   revenue: number;
   user_id: string;
+  archived: boolean | null;
   ownership?: {
     user_id: string;
     ownership_percentage: number;
@@ -44,6 +45,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("songs");
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const [songView, setSongView] = useState<"active" | "archived">("active");
 
   // Backfill ownership records on mount
   useQuery({
@@ -72,7 +74,8 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           status,
           created_at,
           audio_url,
-          user_id
+          user_id,
+          archived
         `)
         .eq("band_id", bandId)
         .order("created_at", { ascending: false });
@@ -248,7 +251,35 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
     }
   };
 
-  const filteredSongs = songs.filter(song =>
+  const handleToggleArchive = async (songId: string, songTitle: string, currentlyArchived: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("songs")
+        .update({ archived: !currentlyArchived })
+        .eq("id", songId);
+      if (error) throw error;
+      toast({
+        title: currentlyArchived ? "Song Restored" : "Song Archived",
+        description: currentlyArchived
+          ? `"${songTitle}" is now active in your repertoire`
+          : `"${songTitle}" has been archived`,
+      });
+      refetchSongs();
+      queryClient.invalidateQueries({ queryKey: ["band-repertoire-songs", bandId] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update song",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const activeSongs = songs.filter(s => !s.archived);
+  const archivedSongs = songs.filter(s => s.archived);
+  const displaySongs = songView === "active" ? activeSongs : archivedSongs;
+
+  const filteredSongs = displaySongs.filter(song =>
     song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (song.genre?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -308,6 +339,28 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
 
         {/* Songs Tab */}
         <TabsContent value="songs" className="space-y-4">
+          {/* Active / Archived toggle */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={songView === "active" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSongView("active")}
+            >
+              <Music className="h-4 w-4 mr-1" />
+              Active
+              <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{activeSongs.length}</Badge>
+            </Button>
+            <Button
+              variant={songView === "archived" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSongView("archived")}
+            >
+              <Archive className="h-4 w-4 mr-1" />
+              Archived
+              <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{archivedSongs.length}</Badge>
+            </Button>
+          </div>
+
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -373,6 +426,19 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
                         <span className={`font-bold ${getQualityColor(song.quality_score)}`}>
                           {song.quality_score}
                         </span>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={song.archived ? "Restore to active" : "Archive song"}
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleArchive(song.id, song.title, !!song.archived);
+                          }}
+                        >
+                          {song.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                        </Button>
 
                         <Button
                           variant="ghost"
