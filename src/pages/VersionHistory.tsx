@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.822",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Massively expanded How to Play guide: 8 tabs (Overview, Music, Perform, Skills, Career, Social, World, Lifestyle) covering all game systems including touring, PR, merch, equipment, housing, health/energy, minigames, achievements, and more" },
+      { type: 'feature', description: "Added 18 new tutorial steps covering education, skill tree, equipment, merch, busking, tours, charts, radio, labels, travel, world map, DikCok, Gettit, PR, employment, schedule, achievements, and underworld" },
+    ],
+  },
+  {
     version: "1.0.821",
     date: "2026-02-16",
     changes: [
