@@ -1,101 +1,54 @@
 
+# v1.0.737 -- Seed TV Shows for All Countries
 
-# v1.0.736 — PR Offers Fix, Modeling Rework, Radio Station Expansion
+## Overview
 
-This plan addresses four major areas: broken PR offer generation, stuck modeling contracts, radio station coverage gaps, and station branding.
+Currently there are 77 TV networks across 15+ countries but only 36 TV shows, almost all in the UK (25) and US (10), plus 1 in Japan. Countries like Australia, Brazil, Canada, France, Germany, Ireland, Italy, Netherlands, Norway, South Korea, Spain, and Sweden have networks but zero shows. Global streaming networks also have no shows.
 
----
-
-## 1. Fix PR Offers for Podcasts, Newspapers, and Magazines
-
-**Root cause:** The `generate-pr-offers` edge function queries columns that don't exist on these tables, causing silent failures:
-- `podcasts` table uses `podcast_name` (not `name`) and has no `min_fans_required`
-- `newspapers` table has no `min_fans_required` or `cooldown_days`
-- `magazines` table has no `min_fans_required`
-
-**Fix:** Update the edge function's SELECT queries to use correct column names and stop selecting non-existent columns:
-- Podcasts: select `podcast_name` instead of `name`, drop `min_fans_required`
-- Newspapers: drop `min_fans_required` and `cooldown_days` from SELECT
-- Magazines: drop `min_fans_required` from SELECT
-- Update the outlet name fallback for podcasts to use `podcast_name`
+This update will seed 150+ TV shows across all existing networks so every country has a full lineup.
 
 ---
 
-## 2. Modeling System Rework
+## What Gets Added
 
-**Problems identified:**
-- 17 accepted contracts are stuck with past shoot dates and no completion logic
-- `hasActiveContract` blocks all new offers indefinitely since nothing ever completes
-- No edge function or process exists to complete modeling contracts and pay out rewards
+Shows will be seeded for every network that currently has zero shows, using realistic show names and hosts appropriate to each country:
 
-**Fixes:**
+- **Australia** (4 networks): Morning shows, talk shows, music specials (e.g., "Sunrise" on Channel 7, "Rage" on ABC Australia)
+- **Brazil** (2 networks): Variety and talk shows (e.g., "Fantástico" on TV Globo, "Programa do Ratinho" on SBT)
+- **Canada** (2 networks): Morning shows, talk shows (e.g., "The Social" on CTV, "Q with Tom Power" on CBC)
+- **France** (5 networks): Talk shows, entertainment (e.g., "Quotidien" on Canal+, "Taratata" on France 2)
+- **Germany** (5 networks): Entertainment, talk shows (e.g., "Wetten, dass..?" on ZDF, "TV total" on ProSieben)
+- **Ireland** (1 network): Talk show, entertainment (e.g., "The Late Late Show" on RTE)
+- **Italy** (4 networks): Entertainment, variety (e.g., "Che Tempo Che Fa" on Rai Uno, "Amici" on Canale 5)
+- **Japan** (2 more networks): Music shows (e.g., "Kohaku Uta Gassen" on NHK, "Hey! Hey! Hey!" on Fuji TV)
+- **Netherlands** (1 network): Talk show, entertainment
+- **Norway** (1 network): Talk show, entertainment
+- **South Korea** (2 networks): Music shows, entertainment (e.g., "Music Bank" on KBS, "Show! Music Core" on MBC)
+- **Spain** (4 networks): Entertainment, talk shows (e.g., "El Hormiguero" on Antena 3, "La Resistencia" on TVE)
+- **Sweden** (2 networks): Talk shows, music specials
+- **Global streaming** (5 networks): Music specials, entertainment (e.g., "Tiny Desk Concert" on Netflix UK)
+- **Additional UK networks** with zero shows (e.g., ITV4, More4, Film4, Drama, etc.)
 
-### a) Add completion logic to `process-daily-updates`
-Add a modeling contract completion step that:
-- Finds all `accepted` contracts where `shoot_date` is in the past
-- Marks them as `completed`, sets `completed_at`
-- Awards the `compensation` to the player's cash balance
-- Awards `fame_boost` to the player's fame
-- Logs a `band_earnings` entry if applicable
-
-### b) Bulk-fix existing stuck contracts
-Run a migration to complete all 17 stuck contracts (shoot_date before today), set `completed_at = now()`, and credit the players.
-
-### c) Improve the one-active-contract rule
-Change the `hasActiveContract` check to only block if there's a contract with a **future** `shoot_date` that hasn't been completed. Past-date accepted contracts shouldn't block.
-
----
-
-## 3. Radio Stations for All Cities
-
-**Current state:** 175 stations across 70 cities, but 64 cities have zero stations.
-
-**Plan:**
-- Seed 2-3 radio stations per missing city (128-192 new stations)
-- Use realistic, unique names instead of "City FM" patterns (e.g., "The Hive 101.5" for Manchester, "Radio Sunshine" for Lisbon)
-- Add a `logo_url` column to `radio_stations` via migration
-- Each station gets varied `station_type`, `quality_level`, `listener_base`, and genre mixes appropriate to the city's music culture
-
-### Rename generic "City FM" stations
-- Update all ~50 stations named "[City] FM" with creative, realistic names (e.g., "Buenos Aires FM" becomes "Radio Tango 98.3", "Cairo FM" becomes "Nile Beats Radio")
-
----
-
-## 4. Radio Station Logos
-
-- Add `logo_url` column to the `radio_stations` table
-- For well-known real stations already in the database (e.g., BBC Radio 1, Capital FM, Jazz FM, Classic FM), set their logo URLs to publicly available logos or placeholder branded images
-- Create an edge function `generate-radio-logos` that uses Lovable AI image generation to create logos for stations without one
-- The function would generate simple, professional radio station logo images and store them in Supabase storage
-- This can be triggered from the admin panel or run as a batch process
+Each show includes: show_name, show_type, host_name, time_slot, viewer_reach, fame/fan/compensation boosts, min_fame_required, description, and days_of_week.
 
 ---
 
 ## Technical Details
 
-### Files to modify:
-1. **`supabase/functions/generate-pr-offers/index.ts`** — Fix podcast/newspaper/magazine column name mismatches
-2. **`supabase/functions/process-daily-updates/index.ts`** — Add modeling contract completion step
-3. **`src/components/modeling/ModelingOffersPanel.tsx`** — Fix `hasActiveContract` to ignore past-date contracts
-4. **New migration** — Add `logo_url` to `radio_stations`, seed stations for 64 missing cities, rename generic stations, bulk-complete stuck modeling contracts
-5. **New edge function: `generate-radio-logos/index.ts`** — AI logo generation for stations
-6. **Version files** — Bump to v1.0.736
+### Valid constraints:
+- `show_type`: talk_show, morning_show, late_night, music_special, variety, news, entertainment
+- `time_slot`: morning, afternoon, prime_time, late_night
 
 ### Database changes:
-```text
-ALTER TABLE radio_stations ADD COLUMN logo_url text;
+- Single INSERT migration joining against existing `tv_networks` by ID
+- ~150 new TV show rows across all networks
+- Version bump to v1.0.737 in `VersionHeader.tsx`, `navigation.tsx`, and `VersionHistory.tsx`
 
--- Bulk-complete stuck modeling contracts
-UPDATE player_modeling_contracts 
-SET status = 'completed', completed_at = now() 
-WHERE status = 'accepted' AND shoot_date < CURRENT_DATE;
+### Files to modify:
+1. **New SQL migration** -- Seed TV shows for all countries
+2. **`src/components/VersionHeader.tsx`** -- Version bump
+3. **`src/components/ui/navigation.tsx`** -- Version bump
+4. **`src/pages/VersionHistory.tsx`** -- Add changelog entry
 
--- Seed ~190 new stations for 64 cities without any
--- Rename ~50 generic "City FM" stations
-```
-
-### Estimated scope:
-- 5-6 files modified/created
-- 1 large SQL migration (station seeding + renames + modeling fix)
-- 1 new edge function for AI logo generation
-
+### Note on duplicate networks:
+Some countries have duplicate network entries (e.g., two "France 2", two "ProSieben", two "NHK"). Shows will be assigned to one of each to avoid duplicates.
