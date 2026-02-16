@@ -257,7 +257,7 @@ const HorizontalNavigation = () => {
         {/* Top bar with logo and utilities */}
         <div className="flex items-center justify-between px-4 h-12 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="RockMundo" className="h-7 w-auto object-contain cursor-pointer" onClick={() => handleNavigation("/dashboard")} />
+            <img src={logo} alt="RockMundo" className="h-10 w-auto object-contain cursor-pointer" onClick={() => handleNavigation("/dashboard")} />
             <VersionHeader />
           </div>
           <div className="flex items-center gap-1">
@@ -275,7 +275,74 @@ const HorizontalNavigation = () => {
 
         {/* Horizontal nav sections */}
         <div className="flex items-center px-2 h-10 relative z-[9999]">
-          {navSections.filter(s => s.titleKey !== 'nav.admin' || isAdmin()).map((section) => {
+          {/* Home stays left */}
+          {navSections.filter(s => s.titleKey === 'nav.home').map((section) => {
+            const sectionKey = section.titleKey;
+            const isOpen = openDropdown === sectionKey;
+            const hasActive = sectionHasActive(section);
+
+            return (
+              <div
+                key={sectionKey}
+                className="relative"
+                data-nav-dropdown
+                onMouseEnter={() => handleMouseEnter(sectionKey)}
+                onMouseLeave={handleMouseLeave}
+              >
+                <button
+                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap text-yellow-400 ${
+                    hasActive ? "bg-primary/10" : "hover:bg-accent"
+                  }`}
+                  onClick={(e) => {
+                    if (section.hubPath) {
+                      handleNavigation(section.hubPath);
+                    } else {
+                      handleToggle(sectionKey, e);
+                    }
+                  }}
+                >
+                  {t(section.titleKey)}
+                </button>
+
+                {isOpen && (
+                  <div
+                    className="absolute top-full left-0 mt-0.5 min-w-[200px] bg-popover border border-border rounded-md shadow-lg py-1 z-[9999]"
+                    data-nav-dropdown
+                    onMouseEnter={() => handleMouseEnter(sectionKey)}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.path);
+                      return (
+                        <button
+                          key={item.path}
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                            active
+                              ? "bg-accent text-accent-foreground"
+                              : "text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                          }`}
+                          onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path)}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span>{t(item.labelKey)}</span>
+                          {item.badge && item.badge > 0 && (
+                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Remaining sections centered */}
+          <div className="flex-1 flex items-center justify-center">
+          {navSections.filter(s => s.titleKey !== 'nav.home' && (s.titleKey !== 'nav.admin' || isAdmin())).map((section) => {
             const sectionKey = section.titleKey;
             const isOpen = openDropdown === sectionKey;
             const hasActive = sectionHasActive(section);
@@ -341,6 +408,7 @@ const HorizontalNavigation = () => {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 

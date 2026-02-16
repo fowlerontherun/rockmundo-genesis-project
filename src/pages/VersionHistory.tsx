@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.778",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Horizontal nav items are now center-aligned except Home which stays left with yellow text" },
+      { type: 'improvement', description: "RockMundo logo made larger in horizontal navigation" },
+    ],
+  },
+  {
     version: "1.0.777",
     date: "2026-02-16",
     changes: [
