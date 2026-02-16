@@ -1,71 +1,90 @@
 
 
-## v1.0.712 — Fix Record Sales Finances
+# v1.0.720 — Fix Song Lyrics Overwrite and Generation Recovery
 
-Three bugs are causing the financial confusion in band manager and release views.
+## Problem Summary
 
----
+Three interrelated issues with AI song generation:
 
-### Bug 1: Tax and Fees Displayed 100x Too High
+1. **User lyrics being overwritten**: The user's original punk lyrics for "Girls don't buy rounds" were replaced by AI-generated lyrics in the database. The current lyrics prioritization logic has gaps that allow this.
 
-**Problem**: In the My Releases tab, tax paid and distribution fees are pulled from `release_sales` (stored in **cents**) but displayed as if they were dollars. Meanwhile, Total Revenue comes from `releases.total_revenue` (stored in **dollars**). This means:
-- A release earning $1,000 gross shows "Tax Paid: $20,000" (actually 20000 cents = $200)
-- Net Profit then goes massively negative because you're subtracting cents from dollars
+2. **Duplicate lyrics in prompt**: The `audio_prompt` shows TWO "Lyrics:" sections concatenated -- the user's originals followed by AI-generated lyrics. The sanitizer isn't fully catching this.
 
-**Fix**: In `MyReleasesTab.tsx` lines 157-160, divide all `release_sales` aggregated values by 100 to convert cents to dollars, matching how `ReleaseAnalyticsDialog.tsx` already does it correctly.
+3. **Song stuck in "failed" status**: The song already has a working `audio_url` from a successful Feb 13 generation, but its status was set to "failed" during a later regen attempt that errored out.
 
-### Bug 2: Daily Sales Never Credit Band Balance
+## Plan
 
-**Problem**: The `generate-daily-sales` edge function inserts a `band_earnings` record with the net revenue, but **never updates `bands.band_balance`**. Every other revenue source (gigs, sponsorships, PR, videos, merch, major events) explicitly updates `band_balance`. Record sales are the only source that skips this step, so bands never receive spendable cash from their sales.
+### 1. Fix the lyrics source in the songs table (Data Fix)
 
-**Fix**: Add a `band_balance` update in `generate-daily-sales` after the `band_earnings` insert, matching the pattern used in `complete-gig`, `simulate-video-views`, etc.
+The song `ed4d2171-e4bf-4aee-9376-bc6420f81dd7` needs its status corrected:
+- It already has a valid `audio_url` -- set `audio_generation_status` back to `completed`
+- The `songs.lyrics` field currently holds AI-generated content; the user's original lyrics exist only in the `audio_prompt` field
 
-### Bug 3: Confusing Display in Band Finances Tab
+We'll run a SQL update to fix this specific song's status. The user's original lyrics will need to be manually restored or the user can re-enter them.
 
-**Problem**: The band finances tab only shows the last 20 transactions with generic labels. When a band has hundreds of small daily sales entries, the "average deposit" and "monthly runway" metrics become misleading.
+### 2. Strengthen lyrics protection in `generate-song-audio`
 
-**Fix**: Add better source labels for `release_sales`, `video_revenue`, and other newer sources to the `sourceLabels` map in `BandFinancesTab.tsx` so entries display clearly.
+**Problem**: The `hadOriginalLyrics` guard (line 294) only prevents saving when the song/project already had lyrics. But it doesn't prevent the AI-generated lyrics from being used as `rawLyrics` if a previous run already overwrote the field.
 
----
+**Fix**:
+- Add a check: if `rawLyrics` was sourced from `song.lyrics` but the song already has a completed `audio_url`, skip AI lyrics generation entirely (the song was already generated once)
+- Strengthen `sanitizeLyrics` to also detect the `(You)` / `(Me)` singer markers in AI-generated lyrics as a contamination signal
+- Never save AI-generated lyrics to `songs.lyrics` if the song already has an `audio_url`
 
-### Technical Changes
+### 3. Improve the `sanitizeLyrics` duplicate detection
 
-#### File: `src/components/releases/MyReleasesTab.tsx`
-- Lines 157-160: Divide `total_amount`, `sales_tax_amount`, `distribution_fee`, and `net_revenue` by 100 when aggregating from `release_sales`
+**Problem**: The function splits on `\n\s*Lyrics:\s*\n` but the concatenation pattern in the stored data may not match this exact whitespace pattern.
 
-#### File: `supabase/functions/generate-daily-sales/index.ts`
-- After the `band_earnings` insert (line 326-343), add a `bands` table update to increment `band_balance` by `netRevenue`, matching the pattern:
+**Fix**:
+- Make the `Lyrics:` split regex more flexible to catch variations
+- Also detect when user lyrics and AI lyrics are concatenated without a `Lyrics:` separator (by checking for dramatically different writing styles via duplicate section markers like two `[Verse 1]` blocks)
+
+### 4. Prevent regeneration when audio already exists
+
+**Problem**: Line 48 only blocks if status is `completed` AND `audio_url` exists. If status got corrupted to `failed` but audio exists, it allows regen.
+
+**Fix**:
+- If a song already has a valid `audio_url`, block regeneration regardless of status (or at least warn), unless explicitly requested by admin override
+- Add a "recovery" path: if status is `failed` but `audio_url` exists, automatically fix the status to `completed` instead of allowing a new generation
+
+### 5. Version bump
+
+Update `VersionHeader.tsx`, `navigation.tsx`, and `VersionHistory.tsx` to v1.0.720.
+
+## Technical Details
+
+### Files to modify:
+- `supabase/functions/generate-song-audio/index.ts` -- lyrics protection, sanitizer improvements, audio_url guard
+- `supabase/functions/admin-generate-song-audio/index.ts` -- same sanitizer improvements
+- `src/components/VersionHeader.tsx` -- version bump
+- `src/components/ui/navigation.tsx` -- version bump
+- `src/pages/VersionHistory.tsx` -- changelog entry
+
+### Key code changes in `generate-song-audio/index.ts`:
+
+1. After checking existing song (around line 48), add recovery logic:
+```typescript
+// Auto-recover: if song has audio_url but status is 'failed', fix it
+if (existingSong?.audio_url && existingSong?.audio_generation_status === 'failed') {
+  await supabase.from('songs')
+    .update({ audio_generation_status: 'completed' })
+    .eq('id', songId);
+  return new Response(
+    JSON.stringify({ 
+      error: "Song already has generated audio. Status has been recovered to completed.",
+      recovered: true 
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+  );
+}
 ```
-const { data: band } = await supabaseClient
-  .from('bands')
-  .select('band_balance')
-  .eq('id', release.band_id)
-  .single();
 
-await supabaseClient
-  .from('bands')
-  .update({ band_balance: (band.band_balance || 0) + netRevenue })
-  .eq('id', release.band_id);
+2. In the lyrics saving section (line 294), add an additional guard:
+```typescript
+if (!hadOriginalLyrics && !existingSong?.audio_url) {
+  // Only save if no original lyrics AND no existing audio
+}
 ```
 
-#### File: `src/components/bands/BandFinancesTab.tsx`
-- Expand `sourceLabels` to include: `release_sales`, `video_revenue`, `sponsorship`, `pr_appearance`, `refund`, `leader_deposit`, `leader_withdrawal`, `recording`, `major_event`
-
-#### File: `src/components/VersionHeader.tsx`
-- Version bump to 1.0.712
-
-#### File: `src/components/ui/navigation.tsx`
-- Version bump to 1.0.712
-
-#### File: `src/pages/VersionHistory.tsx`
-- Add changelog entry for v1.0.712
-
----
-
-### Impact
-
-- Tax/fees will display at correct dollar amounts (100x smaller than currently shown)
-- Profit calculations will be accurate (revenue, tax, and fees all in same unit)
-- Bands will actually receive spendable cash from record sales going forward
-- Transaction history will have clearer labels
+3. Improve `sanitizeLyrics` to handle more edge cases with flexible regex patterns.
 
