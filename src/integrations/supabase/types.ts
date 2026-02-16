@@ -11581,9 +11581,11 @@ export type Database = {
           description: string | null
           fame_multiplier: number
           fan_multiplier: number
+          frequency_years: number
           id: string
           image_url: string | null
           is_active: boolean
+          last_occurrence_year: number | null
           max_cash_reward: number
           min_fame_required: number
           month: number
@@ -11597,9 +11599,11 @@ export type Database = {
           description?: string | null
           fame_multiplier?: number
           fan_multiplier?: number
+          frequency_years?: number
           id?: string
           image_url?: string | null
           is_active?: boolean
+          last_occurrence_year?: number | null
           max_cash_reward?: number
           min_fame_required?: number
           month: number
@@ -11613,9 +11617,11 @@ export type Database = {
           description?: string | null
           fame_multiplier?: number
           fan_multiplier?: number
+          frequency_years?: number
           id?: string
           image_url?: string | null
           is_active?: boolean
+          last_occurrence_year?: number | null
           max_cash_reward?: number
           min_fame_required?: number
           month?: number

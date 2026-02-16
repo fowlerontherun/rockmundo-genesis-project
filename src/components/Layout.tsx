@@ -13,6 +13,7 @@ import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
+import { useAutoMajorEventCompletion } from "@/hooks/useAutoMajorEventCompletion";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
@@ -41,6 +42,9 @@ const Layout = () => {
 
   // Global auto-complete for release manufacturing
   useAutoManufacturingCompletion(user?.id || null);
+
+  // Auto-complete major events when game date passes event date
+  useAutoMajorEventCompletion(user?.id || null);
 
   // Global game event notifications (gig results, offers, completions, etc.)
   useGameEventNotifications();
