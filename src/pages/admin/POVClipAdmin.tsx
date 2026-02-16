@@ -40,6 +40,7 @@ export default function POVClipAdmin() {
           templates.push({
             instrument_family: config.instrumentFamily,
             instrument_track: config.instrumentTrack,
+            instrument_role: config.instrumentFamily,
             variant: variant.variant,
             clip_type: variant.variant,
             description: variant.prompt.substring(0, 200),
@@ -54,6 +55,7 @@ export default function POVClipAdmin() {
         templates.push({
           instrument_family: 'universal',
           instrument_track: config.category,
+          instrument_role: 'universal',
           variant: config.variant,
           clip_type: config.category,
           description: config.prompt.substring(0, 200),
