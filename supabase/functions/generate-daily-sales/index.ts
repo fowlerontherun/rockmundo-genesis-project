@@ -33,6 +33,9 @@ serve(async (req) => {
   let releasesProcessed = 0;
   let errorCount = 0;
 
+  // Accumulate per-band revenue to credit once at the end
+  const bandRevenueAccumulator = new Map<string, { netRevenue: number; grossRevenue: number; units: number; taxRate: number; formats: string[] }>();
+
   try {
     runId = await startJobRun({
       jobName: "generate-daily-sales",
@@ -354,41 +357,17 @@ serve(async (req) => {
               }
             }
 
-            // Credit NET revenue to band (after tax + distribution)
+            // Accumulate NET revenue per band for batch crediting at end
             if (release.band_id) {
-              await supabaseClient.from("band_earnings").insert({
-                band_id: release.band_id,
-                amount: netRevenue,
-                source: "release_sales",
-                description: `Daily sales revenue (after ${Math.round(salesTaxRate * 100)}% tax + ${Math.round(distributionRate * 100)}% distribution)`,
-                metadata: { 
-                  format: format.format_type, 
-                  units: actualSales,
-                  gross_revenue: grossRevenue,
-                  sales_tax: salesTaxAmount,
-                  sales_tax_rate: salesTaxRate * 100,
-                  distribution_fee: distributionFee,
-                  distribution_rate: distributionRate * 100,
-                  net_revenue: netRevenue,
-                  city_id: homeCityId,
-                },
-              });
-
-              // Update band_balance with net revenue
-              const { data: currentBand } = await supabaseClient
-                .from("bands")
-                .select("band_balance")
-                .eq("id", release.band_id)
-                .single();
-
-              if (currentBand) {
-                await supabaseClient
-                  .from("bands")
-                  .update({ band_balance: (currentBand.band_balance || 0) + netRevenue })
-                  .eq("id", release.band_id);
+              const existing = bandRevenueAccumulator.get(release.band_id) || { netRevenue: 0, grossRevenue: 0, units: 0, taxRate: salesTaxRate, formats: [] };
+              existing.netRevenue += netRevenue;
+              existing.grossRevenue += grossRevenue;
+              existing.units += actualSales;
+              if (!existing.formats.includes(format.format_type)) {
+                existing.formats.push(format.format_type);
               }
+              bandRevenueAccumulator.set(release.band_id, existing);
             }
-            // Update song fame based on sales (1 fame per 5 physical sales, 1 per 10 digital)
             const famePerSale = isDigital ? 0.1 : 0.2;
             for (const rs of release.release_songs || []) {
               if (rs.song_id) {
@@ -444,6 +423,71 @@ serve(async (req) => {
     }
 
     console.log(`Generated ${totalSales} total sales across all releases`);
+
+    // ── Batch credit all bands with accumulated revenue ──
+    let bandsCredited = 0;
+    for (const [bandId, revenue] of bandRevenueAccumulator.entries()) {
+      if (revenue.netRevenue <= 0) continue;
+
+      try {
+        // Round to whole number — band_earnings.amount is integer (dollars)
+        const netAmount = Math.round(revenue.netRevenue);
+
+        // Insert aggregated band_earnings entry
+        const { error: earningsError } = await supabaseClient
+          .from("band_earnings")
+          .insert({
+            band_id: bandId,
+            amount: netAmount,
+            source: "release_sales",
+            description: `Daily sales revenue: ${revenue.units} units across ${revenue.formats.join(", ")} (net after tax & distribution)`,
+            metadata: {
+              gross_revenue: Math.round(revenue.grossRevenue * 100) / 100,
+              net_revenue: netAmount,
+              total_units: revenue.units,
+              formats: revenue.formats,
+            },
+          });
+
+        if (earningsError) {
+          console.error(`Failed to insert band_earnings for band ${bandId}:`, earningsError);
+          errorCount++;
+          continue;
+        }
+
+        // Atomically increment band_balance using read-then-write with error checking
+        const { data: currentBand, error: fetchError } = await supabaseClient
+          .from("bands")
+          .select("band_balance")
+          .eq("id", bandId)
+          .single();
+
+        if (fetchError) {
+          console.error(`Failed to fetch band_balance for band ${bandId}:`, fetchError);
+          errorCount++;
+          continue;
+        }
+
+        const newBalance = (currentBand?.band_balance || 0) + netAmount;
+        const { error: updateError } = await supabaseClient
+          .from("bands")
+          .update({ band_balance: newBalance })
+          .eq("id", bandId);
+
+        if (updateError) {
+          console.error(`Failed to update band_balance for band ${bandId}:`, updateError);
+          errorCount++;
+          continue;
+        }
+
+        bandsCredited++;
+        console.log(`Credited band ${bandId}: $${netAmount} (${revenue.units} units)`);
+      } catch (creditError) {
+        console.error(`Error crediting band ${bandId}:`, creditError);
+        errorCount++;
+      }
+    }
+    console.log(`Credited ${bandsCredited}/${bandRevenueAccumulator.size} bands with sales revenue`);
 
     await completeJobRun({
       jobName: "generate-daily-sales",

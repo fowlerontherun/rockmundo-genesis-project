@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.772",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Record sales revenue now reliably credited to band_balance — fixed silent failures in generate-daily-sales edge function" },
+      { type: 'fix', description: "Band earnings from record sales are now batch-credited once per run with full error handling, preventing missed credits" },
+      { type: 'improvement', description: "Daily sales earnings show aggregated totals per band instead of per-format entries, with detailed metadata" },
+    ],
+  },
+  {
     version: "1.0.771",
     date: "2026-02-16",
     changes: [
