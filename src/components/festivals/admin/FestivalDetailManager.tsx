@@ -424,7 +424,7 @@ function QualityManager({ festivalId }: { festivalId: string }) {
 function SecurityManager({ festivalId, festival }: { festivalId: string; festival: any }) {
   const { data: firms = [] } = useAvailableSecurityFirms(undefined);
   const queryClient = useQueryClient();
-  const [selectedFirmId, setSelectedFirmId] = useState(festival?.security_firm_id || "");
+  const [selectedFirmId, setSelectedFirmId] = useState(festival?.security_firm_id || undefined);
 
   const assignSecurity = useMutation({
     mutationFn: async (firmId: string) => {
