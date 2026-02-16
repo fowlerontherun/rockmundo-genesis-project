@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.794",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Housing image generation now uses the correct image generation API endpoint instead of chat completions, fixing 'No image in response' errors" },
+    ],
+  },
+  {
     version: "1.0.793",
     date: "2026-02-16",
     changes: [

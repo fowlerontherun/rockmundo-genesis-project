@@ -11,18 +11,20 @@ function sleep(ms: number) {
 
 async function generateAndUploadImage(supabase: any, ht: any, apiKey: string): Promise<{ success: boolean; error?: string; imageUrl?: string }> {
   const tierLabel = ht.tier <= 5 ? 'modest' : ht.tier <= 10 ? 'comfortable' : ht.tier <= 15 ? 'upscale' : 'luxury'
-  const prompt = `A beautiful exterior photograph of a ${tierLabel} ${ht.name} in ${ht.country}. The architecture should reflect authentic ${ht.country} style and local building traditions. ${ht.bedrooms} bedroom home. Professional real estate photography, natural daylight, well-maintained property. 4:3 aspect ratio.`
+  const prompt = `A beautiful exterior photograph of a ${tierLabel} ${ht.name} in ${ht.country}. The architecture should reflect authentic ${ht.country} style and local building traditions. ${ht.bedrooms} bedroom home. Professional real estate photography, natural daylight, well-maintained property.`
 
-  const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/images/generations', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-image',
-      messages: [{ role: 'user', content: prompt }],
-      modalities: ['image', 'text'],
+      model: 'dall-e-3',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'standard',
     }),
   })
 
@@ -33,14 +35,21 @@ async function generateAndUploadImage(supabase: any, ht: any, apiKey: string): P
   }
 
   const aiData = await aiResponse.json()
-  const imageDataUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url
+  const imageUrl = aiData.data?.[0]?.url
 
-  if (!imageDataUrl) {
+  if (!imageUrl) {
+    console.error(`No image URL in response for ${ht.id}:`, JSON.stringify(aiData))
     return { success: false, error: 'No image in response' }
   }
 
-  const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, '')
-  const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+  // Download the generated image
+  const imgResponse = await fetch(imageUrl)
+  if (!imgResponse.ok) {
+    return { success: false, error: `Failed to download image: ${imgResponse.status}` }
+  }
+  const imgBlob = await imgResponse.blob()
+  const imgBuffer = await imgBlob.arrayBuffer()
+  const binaryData = new Uint8Array(imgBuffer)
   const fileName = `${ht.country.toLowerCase().replace(/\s+/g, '-')}/${ht.id}.png`
 
   const { error: uploadError } = await supabase.storage
