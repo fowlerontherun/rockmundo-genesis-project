@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.827",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Record label contract offers now have working Accept, Decline, and Counter-Offer buttons for players — counter-offer opens a dialog to propose different advance, royalty split, and quota terms" },
+    ],
+  },
+  {
     version: "1.0.826",
     date: "2026-02-16",
     changes: [

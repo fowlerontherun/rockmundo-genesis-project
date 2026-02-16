@@ -1,11 +1,22 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +40,8 @@ import {
   Music,
   Clock,
   AlertTriangle,
-  FileText
+  FileText,
+  MessageSquare
 } from "lucide-react";
 import { format, addMonths, differenceInDays, differenceInHours } from "date-fns";
 
@@ -74,18 +86,28 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const expiryInfo = getExpiryInfo(offer.expires_at);
+  const [showCounterDialog, setShowCounterDialog] = useState(false);
+  const [counterOffer, setCounterOffer] = useState({
+    advance_amount: offer.advance_amount,
+    royalty_artist_pct: offer.royalty_artist_pct,
+    single_quota: offer.single_quota,
+    album_quota: offer.album_quota,
+  });
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["contract-offers"] });
+    queryClient.invalidateQueries({ queryKey: ["label-contracts"] });
+    queryClient.invalidateQueries({ queryKey: ["label-all-contracts"] });
+    queryClient.invalidateQueries({ queryKey: ["demo-submissions"] });
+    queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
+  };
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      // Band accepts → status becomes "accepted_by_artist"
-      // The label must then activate it to make it "active"
       const { error } = await supabase
         .from("artist_label_contracts")
-        .update({
-          status: "accepted_by_artist",
-        })
+        .update({ status: "accepted_by_artist" })
         .eq("id", offer.id);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -93,16 +115,10 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
         title: "Contract accepted!",
         description: `You've agreed to the terms from ${offer.label_name}. The label will finalize and activate the contract.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["contract-offers"] });
-      queryClient.invalidateQueries({ queryKey: ["label-contracts"] });
-      queryClient.invalidateQueries({ queryKey: ["demo-submissions"] });
+      invalidateAll();
     },
     onError: (error: Error) => {
-      toast({
-        title: "Failed to accept contract",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to accept contract", description: error.message, variant: "destructive" });
     },
   });
 
@@ -112,22 +128,39 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
         .from("artist_label_contracts")
         .update({ status: "rejected" })
         .eq("id", offer.id);
-
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({
-        title: "Offer declined",
-        description: "You can always submit another demo later.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["contract-offers"] });
+      toast({ title: "Offer declined", description: "You can always submit another demo later." });
+      invalidateAll();
     },
     onError: (error: Error) => {
-      toast({
-        title: "Failed to reject offer",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to reject offer", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const counterOfferMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("artist_label_contracts")
+        .update({
+          advance_amount: counterOffer.advance_amount,
+          royalty_artist_pct: counterOffer.royalty_artist_pct,
+          royalty_label_pct: 100 - counterOffer.royalty_artist_pct,
+          single_quota: counterOffer.single_quota,
+          album_quota: counterOffer.album_quota,
+          status: "negotiating",
+        })
+        .eq("id", offer.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Counter-offer sent!", description: "The label will review your proposed terms." });
+      setShowCounterDialog(false);
+      invalidateAll();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to send counter-offer", description: error.message, variant: "destructive" });
     },
   });
 
@@ -296,12 +329,11 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
         </div>
       </CardContent>
 
-      <CardFooter className="flex gap-3">
+      <CardFooter className="flex gap-3 flex-wrap">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="outline"
-              className="flex-1"
               disabled={rejectMutation.isPending || acceptMutation.isPending || isExpired}
             >
               <XCircle className="h-4 w-4 mr-2" />
@@ -324,6 +356,16 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Button
+          variant="secondary"
+          className="flex-1"
+          disabled={counterOfferMutation.isPending || isExpired}
+          onClick={() => setShowCounterDialog(true)}
+        >
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Counter-Offer
+        </Button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -354,6 +396,97 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
           </AlertDialogContent>
         </AlertDialog>
       </CardFooter>
+
+      {/* Counter-Offer Dialog */}
+      <Dialog open={showCounterDialog} onOpenChange={setShowCounterDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Counter-Offer to {offer.label_name}
+            </DialogTitle>
+            <DialogDescription>
+              Propose different terms. The label will review and may accept, reject, or come back with another offer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" /> Advance Amount
+              </Label>
+              <Input
+                type="number"
+                value={counterOffer.advance_amount}
+                onChange={(e) => setCounterOffer(prev => ({ ...prev, advance_amount: Number(e.target.value) }))}
+              />
+              <p className="text-xs text-muted-foreground">Original: ${offer.advance_amount.toLocaleString()}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Percent className="h-4 w-4" /> Your Royalty: {counterOffer.royalty_artist_pct}%
+              </Label>
+              <Slider
+                value={[counterOffer.royalty_artist_pct]}
+                onValueChange={([v]) => setCounterOffer(prev => ({ ...prev, royalty_artist_pct: v }))}
+                min={10}
+                max={90}
+                step={5}
+              />
+              <p className="text-xs text-muted-foreground">
+                Label gets {100 - counterOffer.royalty_artist_pct}% (Original: {offer.royalty_artist_pct}% / {offer.royalty_label_pct}%)
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Disc3 className="h-4 w-4" /> Single Quota
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={counterOffer.single_quota}
+                  onChange={(e) => setCounterOffer(prev => ({ ...prev, single_quota: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Album className="h-4 w-4" /> Album Quota
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={counterOffer.album_quota}
+                  onChange={(e) => setCounterOffer(prev => ({ ...prev, album_quota: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowCounterDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => counterOfferMutation.mutate()}
+                disabled={counterOfferMutation.isPending}
+              >
+                {counterOfferMutation.isPending ? "Sending..." : "Send Counter-Offer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
