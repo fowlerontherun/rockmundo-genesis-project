@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.739",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Added ~50 new cities across Africa (Dakar, Kinshasa, Kampala), Asia (Osaka, Hanoi, Beirut, Doha), South America (Quito, Caracas, San Juan), Eastern Europe (Kyiv, Tbilisi, Sarajevo), and more" },
+      { type: 'feature', description: "Seeded 2-3 small starter venues (cafes, indie venues, clubs) for every city that had zero venues — ~170 new venues total" },
+      { type: 'improvement', description: "All new venues are prestige level 1 with zero fame/fan requirements so new players can perform anywhere in the world" },
+    ],
+  },
+  {
     version: "1.0.738",
     date: "2026-02-16",
     changes: [
