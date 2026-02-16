@@ -80,6 +80,25 @@ export function useMajorEvents() {
   });
 }
 
+export function useMajorEventHistory() {
+  return useQuery({
+    queryKey: ['major-event-history'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('major_event_instances')
+        .select(`
+          *,
+          event:major_events(*)
+        `)
+        .in('status', ['completed', 'past'])
+        .order('event_date', { ascending: false });
+
+      if (error) throw error;
+      return data as MajorEventInstance[];
+    },
+  });
+}
+
 export function useMajorEventPerformances(userId?: string) {
   return useQuery({
     queryKey: ['major-event-performances', userId],

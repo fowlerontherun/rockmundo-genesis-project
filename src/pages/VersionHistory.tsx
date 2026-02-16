@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.749",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Major Events: auto-perform when game date passes event date — no manual triggering needed" },
+      { type: 'feature', description: "Major Events: 3-tab layout — Upcoming, My Performances, and Event History" },
+      { type: 'feature', description: "Major Events: frequency_years column — Olympics/World Cup every 4 years, others annually" },
+      { type: 'improvement', description: "Major Events: history tab shows all past event instances with player performance badges" },
+      { type: 'improvement', description: "Major Events: 'Watch Live' button during in-progress performances" },
+    ],
+  },
+  {
     version: "1.0.748",
     date: "2026-02-16",
     changes: [

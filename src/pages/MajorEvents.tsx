@@ -2,25 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import { useMajorEvents, useMajorEventPerformances, useAcceptMajorEvent } from "@/hooks/useMajorEvents";
+import { useMajorEvents, useMajorEventPerformances, useMajorEventHistory, useAcceptMajorEvent } from "@/hooks/useMajorEvents";
 import { MajorEventSongSelector } from "@/components/major-events/MajorEventSongSelector";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Trophy, 
-  Users, 
-  Star, 
-  DollarSign, 
-  TrendingUp, 
-  Loader2, 
-  Play,
-  CheckCircle,
-  Lock,
-  Sparkles,
-  Music
+  Trophy, Users, Star, DollarSign, TrendingUp, Loader2, Play,
+  CheckCircle, Lock, Sparkles, Music, History, Calendar, Clock
 } from "lucide-react";
 
 const categoryIcons: Record<string, string> = {
@@ -44,6 +35,7 @@ export default function MajorEvents() {
   const navigate = useNavigate();
   const { data: events = [], isLoading } = useMajorEvents();
   const { data: performances = [] } = useMajorEventPerformances(user?.id);
+  const { data: historyInstances = [], isLoading: loadingHistory } = useMajorEventHistory();
   const acceptEvent = useAcceptMajorEvent();
 
   const [selectedInstance, setSelectedInstance] = useState<string | null>(null);
@@ -70,6 +62,8 @@ export default function MajorEvents() {
   const getPerformanceForInstance = (instanceId: string) => {
     return performances.find(p => p.instance_id === instanceId);
   };
+
+  const completedPerformances = performances.filter(p => p.status === 'completed');
 
   if (isLoading) {
     return (
@@ -124,117 +118,224 @@ export default function MajorEvents() {
         </Card>
       )}
 
-      {/* Past Performances */}
-      {performances.filter(p => p.status === 'completed').length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Past Performances</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {performances.filter(p => p.status === 'completed').map(p => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <div>
-                  <p className="font-medium">{p.instance?.event?.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Rating: {(p.overall_rating || 0).toFixed(1)}% · ${(p.cash_earned || 0).toLocaleString()} earned
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/major-events/perform/${p.id}`)}>
-                  View Report
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="upcoming">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="upcoming" className="gap-1">
+            <Calendar className="h-4 w-4" /> Upcoming
+          </TabsTrigger>
+          <TabsTrigger value="my-performances" className="gap-1">
+            <Play className="h-4 w-4" /> My Performances ({completedPerformances.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-1">
+            <History className="h-4 w-4" /> Event History
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Available Events */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Available Events</h2>
-        {events.map((instance) => {
-          const event = instance.event;
-          if (!event) return null;
-
-          const qualified = bandFame >= event.min_fame_required;
-          const existingPerformance = getPerformanceForInstance(instance.id);
-          const catColor = categoryColors[event.category] || categoryColors.sports;
-
-          return (
-            <Card key={instance.id} className={`transition-all ${!qualified ? 'opacity-60' : ''}`}>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{categoryIcons[event.category] || '🎤'}</span>
-                      <div>
-                        <h3 className="text-lg font-bold">{event.name}</h3>
-                        <p className="text-sm text-muted-foreground">{event.description}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className={catColor}>
-                        {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <Users className="h-3 w-3" />
-                        {event.audience_size.toLocaleString()} audience
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        ${(event.base_cash_reward / 1000).toFixed(0)}K - ${(event.max_cash_reward / 1000).toFixed(0)}K
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        {event.fame_multiplier}x fame
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <Star className="h-3 w-3" />
-                        Min Fame: {event.min_fame_required.toLocaleString()}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    {existingPerformance ? (
-                      existingPerformance.status === 'completed' ? (
-                        <Badge className="bg-green-500">
-                          <CheckCircle className="h-3 w-3 mr-1" /> Completed
-                        </Badge>
-                      ) : (
-                        <Button 
-                          onClick={() => navigate(`/major-events/perform/${existingPerformance.id}`)}
-                          className="gap-2"
-                        >
-                          <Play className="h-4 w-4" />
-                          {existingPerformance.status === 'in_progress' ? 'Continue' : 'Perform Now'}
-                        </Button>
-                      )
-                    ) : qualified ? (
-                      <Button
-                        onClick={() => handleAcceptInvitation(instance.id)}
-                        disabled={!activeBand || acceptEvent.isPending}
-                        className="gap-2"
-                      >
-                        {acceptEvent.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                        Accept Invitation
-                      </Button>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <Lock className="h-3 w-3" /> Need {event.min_fame_required} Fame
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+        {/* UPCOMING EVENTS */}
+        <TabsContent value="upcoming" className="space-y-4">
+          {events.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Calendar className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No upcoming events at this time.</p>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ) : (
+            events.map((instance) => {
+              const event = instance.event;
+              if (!event) return null;
+
+              const qualified = bandFame >= event.min_fame_required;
+              const existingPerformance = getPerformanceForInstance(instance.id);
+              const catColor = categoryColors[event.category] || categoryColors.sports;
+
+              return (
+                <Card key={instance.id} className={`transition-all ${!qualified ? 'opacity-60' : ''}`}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{categoryIcons[event.category] || '🎤'}</span>
+                          <div>
+                            <h3 className="text-lg font-bold">{event.name}</h3>
+                            <p className="text-sm text-muted-foreground">{event.description}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className={catColor}>
+                            {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
+                          </Badge>
+                          <Badge variant="outline" className="gap-1">
+                            <Users className="h-3 w-3" />
+                            {event.audience_size.toLocaleString()} audience
+                          </Badge>
+                          <Badge variant="outline" className="gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            ${(event.base_cash_reward / 1000).toFixed(0)}K - ${(event.max_cash_reward / 1000).toFixed(0)}K
+                          </Badge>
+                          <Badge variant="outline" className="gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            {event.fame_multiplier}x fame
+                          </Badge>
+                          <Badge variant="outline" className="gap-1">
+                            <Star className="h-3 w-3" />
+                            Min Fame: {event.min_fame_required.toLocaleString()}
+                          </Badge>
+                          {instance.event_date && (
+                            <Badge variant="outline" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              Month {event.month}, {instance.year}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        {existingPerformance ? (
+                          existingPerformance.status === 'completed' ? (
+                            <Badge className="bg-green-500">
+                              <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                            </Badge>
+                          ) : (
+                            <Button 
+                              onClick={() => navigate(`/major-events/perform/${existingPerformance.id}`)}
+                              className="gap-2"
+                            >
+                              <Play className="h-4 w-4" />
+                              {existingPerformance.status === 'in_progress' ? 'Watch Live' : 'Perform Now'}
+                            </Button>
+                          )
+                        ) : qualified ? (
+                          <Button
+                            onClick={() => handleAcceptInvitation(instance.id)}
+                            disabled={!activeBand || acceptEvent.isPending}
+                            className="gap-2"
+                          >
+                            {acceptEvent.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4" />
+                            )}
+                            Accept Invitation
+                          </Button>
+                        ) : (
+                          <Badge variant="secondary" className="gap-1">
+                            <Lock className="h-3 w-3" /> Need {event.min_fame_required} Fame
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+
+        {/* MY PERFORMANCES */}
+        <TabsContent value="my-performances" className="space-y-4">
+          {completedPerformances.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Trophy className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No completed performances yet. Accept an invitation to get started!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            completedPerformances.map(p => (
+              <Card key={p.id}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">
+                        {categoryIcons[p.instance?.event?.category || 'sports'] || '🎤'}
+                      </span>
+                      <div>
+                        <p className="font-bold">{p.instance?.event?.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Year {p.instance?.year} · Rating: {(p.overall_rating || 0).toFixed(1)}%
+                        </p>
+                        <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                          <span className="text-green-500 font-medium">${(p.cash_earned || 0).toLocaleString()}</span>
+                          <span className="text-yellow-500 font-medium">+{(p.fame_gained || 0).toLocaleString()} fame</span>
+                          <span className="text-pink-500 font-medium">+{(p.fans_gained || 0).toLocaleString()} fans</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/major-events/perform/${p.id}`)}>
+                      View Report
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        {/* EVENT HISTORY */}
+        <TabsContent value="history" className="space-y-4">
+          {loadingHistory ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : historyInstances.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <History className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No past event instances yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            historyInstances.map(instance => {
+              const event = instance.event;
+              if (!event) return null;
+              const playerPerf = performances.find(p => p.instance_id === instance.id && p.status === 'completed');
+              const catColor = categoryColors[event.category] || categoryColors.sports;
+
+              return (
+                <Card key={instance.id} className={playerPerf ? 'border-primary/30' : ''}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{categoryIcons[event.category] || '🎤'}</span>
+                        <div>
+                          <h3 className="font-bold">{event.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Year {instance.year} · {event.audience_size.toLocaleString()} audience
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="outline" className={catColor}>
+                          {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
+                        </Badge>
+                        {playerPerf ? (
+                          <div className="text-right">
+                            <Badge className="bg-green-500/80 text-xs">
+                              Performed — {(playerPerf.overall_rating || 0).toFixed(0)}%
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs mt-1"
+                              onClick={() => navigate(`/major-events/perform/${playerPerf.id}`)}
+                            >
+                              View Report
+                            </Button>
+                          </div>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">Not Performed</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+      </Tabs>
 
       {activeBand && (
         <MajorEventSongSelector
