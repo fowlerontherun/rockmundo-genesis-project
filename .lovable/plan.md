@@ -1,90 +1,187 @@
 
 
-# v1.0.720 — Fix Song Lyrics Overwrite and Generation Recovery
+# v1.0.723 — Release Hype System and Interactive Release Parties
 
-## Problem Summary
+## Overview
 
-Three interrelated issues with AI song generation:
+Currently, there is **no dedicated hype tracking system** for releases. The `promotional_campaigns` table exists but its effects (hypeBoost, streamBoost, etc.) are stored as JSON and **never consumed** by the `generate-daily-sales` edge function. This means promotional campaigns have zero actual impact on sales/streams.
 
-1. **User lyrics being overwritten**: The user's original punk lyrics for "Girls don't buy rounds" were replaced by AI-generated lyrics in the database. The current lyrics prioritization logic has gaps that allow this.
+This plan introduces a proper **release hype score** that accumulates from multiple activities and directly multiplies first-week sales and streams, plus an **interactive Release Party** mini-game reusing the interview system architecture.
 
-2. **Duplicate lyrics in prompt**: The `audio_prompt` shows TWO "Lyrics:" sections concatenated -- the user's originals followed by AI-generated lyrics. The sanitizer isn't fully catching this.
+---
 
-3. **Song stuck in "failed" status**: The song already has a working `audio_url` from a successful Feb 13 generation, but its status was set to "failed" during a later regen attempt that errored out.
+## Current State
+
+- **Releases table** has `pre_order_start_date`, `pre_order_count`, and `promotion_budget` columns (all unused)
+- **Promotional campaigns** store effects like `hypeBoost: 25` but nothing reads them
+- **generate-daily-sales** calculates sales from fame, popularity, quality, and regional multipliers only -- no hype factor
+- **Interview system** works via `interview_questions` table (100 questions, 4 options each with effects), `useInterviewSession` hook, and `InterviewModal` component with a 10-second timer per question
+- No concept of "release week" sales boost or hype decay
+
+---
 
 ## Plan
 
-### 1. Fix the lyrics source in the songs table (Data Fix)
+### 1. Add `hype_score` Column to Releases Table
 
-The song `ed4d2171-e4bf-4aee-9376-bc6420f81dd7` needs its status corrected:
-- It already has a valid `audio_url` -- set `audio_generation_status` back to `completed`
-- The `songs.lyrics` field currently holds AI-generated content; the user's original lyrics exist only in the `audio_prompt` field
+Add a numeric `hype_score` (default 0, range 0-1000) to the `releases` table. This is the central metric that all hype-building activities contribute to.
 
-We'll run a SQL update to fix this specific song's status. The user's original lyrics will need to be manually restored or the user can re-enter them.
+### 2. Create `release_party_questions` Table
 
-### 2. Strengthen lyrics protection in `generate-song-audio`
+New table with 100 release-themed questions, same schema as `interview_questions` but with `media_types` replaced by `party_context` (e.g., "album_launch", "single_drop", "listening_party"). Effects will include `hype_mult`, `fan_mult`, `cash_mult`, and `reputation` shifts.
 
-**Problem**: The `hadOriginalLyrics` guard (line 294) only prevents saving when the song/project already had lyrics. But it doesn't prevent the AI-generated lyrics from being used as `rawLyrics` if a previous run already overwrote the field.
+Question categories (20 each):
+- **Fan Interaction** — "A fan asks you to play an unreleased track..."
+- **Media Spotlight** — "A journalist asks about your creative process..."
+- **Party Vibes** — "The crowd energy is dipping, what do you do..."
+- **Industry Talk** — "A label exec at the party offers you advice..."
+- **Surprises** — "An unexpected guest shows up at your release party..."
 
-**Fix**:
-- Add a check: if `rawLyrics` was sourced from `song.lyrics` but the song already has a completed `audio_url`, skip AI lyrics generation entirely (the song was already generated once)
-- Strengthen `sanitizeLyrics` to also detect the `(You)` / `(Me)` singer markers in AI-generated lyrics as a contamination signal
-- Never save AI-generated lyrics to `songs.lyrics` if the song already has an `audio_url`
+### 3. Create `release_party_results` Table
 
-### 3. Improve the `sanitizeLyrics` duplicate detection
+Track completed release parties per release (one party per release, stores answers and effects).
 
-**Problem**: The function splits on `\n\s*Lyrics:\s*\n` but the concatenation pattern in the stored data may not match this exact whitespace pattern.
+### 4. Hype-Building Activities (What Feeds Hype)
 
-**Fix**:
-- Make the `Lyrics:` split regex more flexible to catch variations
-- Also detect when user lyrics and AI lyrics are concatenated without a `Lyrics:` separator (by checking for dramatically different writing styles via duplicate section markers like two `[Verse 1]` blocks)
+| Activity | Hype Points | Source |
+|---|---|---|
+| Social Media Blitz campaign | +15 | promotional_campaigns |
+| Radio Push campaign | +25 | promotional_campaigns |
+| Playlist Placement campaign | +10 | promotional_campaigns |
+| Press Tour campaign | +50 | promotional_campaigns |
+| Influencer Campaign | +35 | promotional_campaigns |
+| Release Party (interactive) | +50 to +150 | Based on answers |
+| Twaater posts about release | +5 per post | Manual tagging |
+| DikCok videos about release | +10 per video | Manual tagging |
+| Pre-orders | +1 per pre-order | pre_order_count |
+| Song quality (avg) | +0 to +50 | Calculated at release |
 
-### 4. Prevent regeneration when audio already exists
+### 5. Release Party Mini-Game
 
-**Problem**: Line 48 only blocks if status is `completed` AND `audio_url` exists. If status got corrupted to `failed` but audio exists, it allows regen.
+Reuse the `InterviewModal` pattern with a new `ReleasePartyModal` component and `useReleasePartySession` hook:
 
-**Fix**:
-- If a song already has a valid `audio_url`, block regeneration regardless of status (or at least warn), unless explicitly requested by admin override
-- Add a "recovery" path: if status is `failed` but `audio_url` exists, automatically fix the status to `completed` instead of allowing a new generation
+- Triggered from the Release Manager when a release status is "manufacturing" or "released" (within first 7 days)
+- 5 questions (instead of 3 for interviews) with 10-second timer each
+- Questions pulled from `release_party_questions` table filtered by release type
+- Effects: hype_mult (0.5x-1.5x), fan_mult, cash_mult
+- Base hype award: 100 points, modified by answer multipliers (so 50-150 range)
+- One party per release, tracked in `release_party_results`
+- Party adds hype_score to the release directly
 
-### 5. Version bump
+### 6. Hype Impacts Sales (generate-daily-sales Update)
 
-Update `VersionHeader.tsx`, `navigation.tsx`, and `VersionHistory.tsx` to v1.0.720.
+Add a `hypeMultiplier` to the sales calculation:
+
+```
+hypeMultiplier = 1 + (hype_score / 500)
+```
+
+- 0 hype = 1.0x (no change)
+- 250 hype = 1.5x sales
+- 500 hype = 2.0x sales  
+- 1000 hype = 3.0x sales
+
+**First-week boost**: For releases within 7 days of becoming "released", apply an additional 1.5x multiplier on top of the hype multiplier. This stacks, so a 500-hype release in its first week gets 2.0 x 1.5 = 3.0x sales.
+
+**Hype decay**: Each day after the first week, hype_score decays by 5% (so it naturally fades but never fully disappears). This is applied in `generate-daily-sales`.
+
+### 7. Hype Impacts Streams (update-daily-streams)
+
+Similar multiplier applied in the streaming edge function so hype boosts both sales and streams proportionally.
+
+### 8. Campaign Effects Actually Applied
+
+Update `generate-daily-sales` to check for active `promotional_campaigns` and apply their `hypeBoost` to the release's `hype_score` when the campaign completes (or daily during the campaign).
+
+### 9. UI Changes
+
+- **Release Card**: Show hype meter (progress bar 0-1000) on each release
+- **Release Party Button**: "Throw Release Party" button on releases in manufacturing/first-week-released status
+- **ReleasePartyModal**: Full interactive mini-game dialog (reuses InterviewModal design)
+- **Hype breakdown tooltip**: Shows what contributed to the hype score
+
+---
 
 ## Technical Details
 
-### Files to modify:
-- `supabase/functions/generate-song-audio/index.ts` -- lyrics protection, sanitizer improvements, audio_url guard
-- `supabase/functions/admin-generate-song-audio/index.ts` -- same sanitizer improvements
-- `src/components/VersionHeader.tsx` -- version bump
-- `src/components/ui/navigation.tsx` -- version bump
-- `src/pages/VersionHistory.tsx` -- changelog entry
+### Database Migration
 
-### Key code changes in `generate-song-audio/index.ts`:
+```sql
+-- Add hype_score to releases
+ALTER TABLE releases ADD COLUMN hype_score integer DEFAULT 0;
 
-1. After checking existing song (around line 48), add recovery logic:
-```typescript
-// Auto-recover: if song has audio_url but status is 'failed', fix it
-if (existingSong?.audio_url && existingSong?.audio_generation_status === 'failed') {
-  await supabase.from('songs')
-    .update({ audio_generation_status: 'completed' })
-    .eq('id', songId);
-  return new Response(
-    JSON.stringify({ 
-      error: "Song already has generated audio. Status has been recovered to completed.",
-      recovered: true 
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-  );
-}
+-- Release party questions (same structure as interview_questions)
+CREATE TABLE release_party_questions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_text text NOT NULL,
+  party_context text[] DEFAULT '{all}',
+  category text NOT NULL,
+  option_a_text text NOT NULL,
+  option_a_effects jsonb NOT NULL DEFAULT '{}',
+  option_b_text text NOT NULL,
+  option_b_effects jsonb NOT NULL DEFAULT '{}',
+  option_c_text text NOT NULL,
+  option_c_effects jsonb NOT NULL DEFAULT '{}',
+  option_d_text text NOT NULL,
+  option_d_effects jsonb NOT NULL DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Release party results
+CREATE TABLE release_party_results (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  release_id uuid REFERENCES releases(id) NOT NULL,
+  user_id uuid REFERENCES auth.users(id) NOT NULL,
+  band_id uuid REFERENCES bands(id),
+  questions jsonb NOT NULL DEFAULT '[]',
+  total_effects jsonb NOT NULL DEFAULT '{}',
+  hype_awarded integer DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(release_id) -- one party per release
+);
+
+-- Seed 100 release party questions across 5 categories
+INSERT INTO release_party_questions (question_text, category, party_context, ...) VALUES ...
 ```
 
-2. In the lyrics saving section (line 294), add an additional guard:
+### Files to Create
+- `src/components/releases/ReleasePartyModal.tsx` — Interactive mini-game UI (based on InterviewModal)
+- `src/hooks/useReleasePartySession.ts` — Game logic hook (based on useInterviewSession)
+- `src/components/releases/HypeMeter.tsx` — Visual hype bar component
+
+### Files to Modify
+- `supabase/functions/generate-daily-sales/index.ts` — Add hype multiplier, first-week boost, hype decay
+- `supabase/functions/update-daily-streams/index.ts` — Add hype multiplier for streams
+- `src/components/releases/MyReleasesTab.tsx` — Add hype meter and release party button to ReleaseCard
+- `src/components/releases/PromotionalCampaignCard.tsx` — Actually apply hypeBoost to release.hype_score on campaign launch
+- `src/components/VersionHeader.tsx` — Version bump
+- `src/components/ui/navigation.tsx` — Version bump
+- `src/pages/VersionHistory.tsx` — Changelog entry
+
+### Edge Function Changes (generate-daily-sales)
+
 ```typescript
-if (!hadOriginalLyrics && !existingSong?.audio_url) {
-  // Only save if no original lyrics AND no existing audio
+// After fetching release data, get hype_score
+const hypeScore = release.hype_score || 0;
+const hypeMultiplier = 1 + (hypeScore / 500);
+
+// First-week boost check
+const releasedDate = release.manufacturing_complete_at || release.created_at;
+const daysSinceRelease = (Date.now() - new Date(releasedDate).getTime()) / (1000*60*60*24);
+const firstWeekBoost = daysSinceRelease <= 7 ? 1.5 : 1.0;
+
+// Apply to sales calculation
+const calculatedSales = Math.floor(
+  baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier 
+  * marketMultiplier * regionalMultiplier * hypeMultiplier * firstWeekBoost
+);
+
+// Daily hype decay (5% after first week)
+if (daysSinceRelease > 7 && hypeScore > 0) {
+  const decayedHype = Math.floor(hypeScore * 0.95);
+  await supabaseClient.from("releases")
+    .update({ hype_score: decayedHype })
+    .eq("id", release.id);
 }
 ```
-
-3. Improve `sanitizeLyrics` to handle more edge cases with flexible regex patterns.
 
