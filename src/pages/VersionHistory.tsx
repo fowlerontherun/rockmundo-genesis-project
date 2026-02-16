@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.762",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Major events fully rebuilt around the game year system — annual events appear every game year, quadrennial events (Olympics, World Cups) correctly stagger across years" },
+      { type: 'improvement', description: "Upcoming events grouped by Game Year with current year indicator and month names" },
+      { type: 'feature', description: "Each event now shows frequency badge (Annual / Every 4 years) and game month name" },
+      { type: 'improvement', description: "Current in-game date context card shown at the top of Major Events page" },
+      { type: 'improvement', description: "Event history and performance reports now display Game Year and month name instead of raw year numbers" },
+    ],
+  },
+  {
     version: "1.0.761",
     date: "2026-02-16",
     changes: [

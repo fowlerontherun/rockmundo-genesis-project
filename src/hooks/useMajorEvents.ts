@@ -15,6 +15,7 @@ export interface MajorEvent {
   max_cash_reward: number;
   fame_multiplier: number;
   fan_multiplier: number;
+  frequency_years: number;
   image_url: string | null;
   is_active: boolean;
 }
