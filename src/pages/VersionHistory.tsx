@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.721",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed song generation failure — MiniMax Music requires lyrics ≤600 chars, now auto-truncates at section boundaries when lyrics exceed the limit" },
+    ],
+  },
+  {
     version: "1.0.720",
     date: "2026-02-16",
     changes: [
