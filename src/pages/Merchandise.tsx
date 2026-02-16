@@ -193,7 +193,7 @@ const statusVariants: Record<MerchandiseStatus, "default" | "secondary" | "destr
 };
 
 type TabConfig = {
-  value: "overview" | "sales" | "add-product" | "manage-product" | "designer";
+  value: "overview" | "sales" | "add-product" | "manage-product" | "designer" | "manager" | "costs";
   label: string;
   description: string;
   icon: LucideIcon;
@@ -229,6 +229,18 @@ const TAB_CONFIG: TabConfig[] = [
     label: "T-Shirt Designer",
     description: "Plan the visuals",
     icon: Sparkles,
+  },
+  {
+    value: "manager",
+    label: "Manager",
+    description: "Merch manager NPC",
+    icon: Shirt,
+  },
+  {
+    value: "costs",
+    label: "Costs",
+    description: "Operating expenses",
+    icon: BarChart3,
   },
 ];
 
@@ -708,15 +720,15 @@ const Merchandise = () => {
         onValueChange={(value) => setActiveTab(value as TabConfig["value"])}
         className="space-y-6"
       >
-        {/* Mobile Tabs - Icons with short labels */}
-        <TabsList className="grid w-full grid-cols-5 gap-1 rounded-xl bg-muted/40 p-1 md:hidden">
+        {/* Mobile Tabs - Scrollable icons */}
+        <TabsList className="flex w-full overflow-x-auto gap-1 rounded-xl bg-muted/40 p-1 md:hidden">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm min-w-[52px]"
               >
                 <Icon className="h-4 w-4" />
                 <span className="truncate max-w-full text-[10px]">{tab.label.split(' ')[0]}</span>
@@ -726,7 +738,7 @@ const Merchandise = () => {
         </TabsList>
 
         {/* Desktop Tabs - Full labels */}
-        <TabsList className="hidden w-full grid-cols-5 gap-2 rounded-xl bg-muted/40 p-1 md:grid">
+        <TabsList className="hidden w-full gap-1 rounded-xl bg-muted/40 p-1 md:flex flex-wrap">
           {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -1030,17 +1042,6 @@ const Merchandise = () => {
               <CollaborationOffersCard bandId={bandId} />
               <ActiveCollaborationsCard bandId={bandId} />
 
-              {/* Operating Costs */}
-              <OperatingCostsCard
-                totalStock={summary.totalUnits}
-                storageCostDaily={0.10}
-                logisticsRate={logisticsRate}
-                taxRate={0.08}
-                totalRevenue={summary.potentialRevenue}
-              />
-
-              {/* VIP Merch Manager */}
-              <MerchManagerCard bandId={bandId} />
             </div>
           </div>
         </TabsContent>
@@ -1256,6 +1257,20 @@ const Merchandise = () => {
               />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="manager" className="space-y-6">
+          <MerchManagerCard bandId={bandId} />
+        </TabsContent>
+
+        <TabsContent value="costs" className="space-y-6">
+          <OperatingCostsCard
+            totalStock={summary.totalUnits}
+            storageCostDaily={0.10}
+            logisticsRate={logisticsRate}
+            taxRate={0.08}
+            totalRevenue={summary.potentialRevenue}
+          />
         </TabsContent>
       </Tabs>
 
