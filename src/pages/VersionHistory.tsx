@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.787",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed festival page — 'Perform Now' buttons replaced with 'Scheduled' badge on the actual /festivals route (pages/FestivalBrowser.tsx)" },
+    ],
+  },
+  {
     version: "1.0.786",
     date: "2026-02-16",
     changes: [
