@@ -256,7 +256,7 @@ function StageManager({ festivalId, festival }: { festivalId: string; festival: 
               <Select value={newStageGenre} onValueChange={setNewStageGenre}>
                 <SelectTrigger><SelectValue placeholder="Mixed / Any" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Mixed</SelectItem>
+                  <SelectItem value="mixed">Mixed</SelectItem>
                   {MUSIC_GENRES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                 </SelectContent>
               </Select>

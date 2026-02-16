@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.780",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed crash on Festival admin page caused by SelectItem with empty string value" },
+    ],
+  },
+  {
     version: "1.0.779",
     date: "2026-02-16",
     changes: [
