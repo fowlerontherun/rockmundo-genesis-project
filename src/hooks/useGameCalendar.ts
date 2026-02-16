@@ -3,9 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { calculateInGameDate, getCurrentSeason, getMonthName, getSeasonEmoji } from "@/utils/gameCalendar";
 import type { InGameDate } from "@/utils/gameCalendar";
 
+/**
+ * Returns the global in-game date based on the fixed epoch (Jan 1, 2026).
+ * profileCreatedAt is accepted for backwards compat but no longer used.
+ */
 export function useGameCalendar(profileCreatedAt?: Date) {
   return useQuery({
-    queryKey: ["game-calendar", profileCreatedAt?.toISOString()],
+    queryKey: ["game-calendar-global"],
     queryFn: async () => {
       // Fetch calendar config
       const { data: config } = await supabase
@@ -14,14 +18,10 @@ export function useGameCalendar(profileCreatedAt?: Date) {
         .eq("is_active", true)
         .maybeSingle();
 
-      if (!profileCreatedAt || !config) {
-        return null;
-      }
-
       const inGameDate = calculateInGameDate(
-        profileCreatedAt,
-        config.real_world_days_per_game_year,
-        config.real_world_days_per_game_month
+        undefined,
+        config?.real_world_days_per_game_year ?? 120,
+        config?.real_world_days_per_game_month ?? 10
       );
 
       return {
@@ -31,7 +31,6 @@ export function useGameCalendar(profileCreatedAt?: Date) {
         config,
       };
     },
-    enabled: !!profileCreatedAt,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

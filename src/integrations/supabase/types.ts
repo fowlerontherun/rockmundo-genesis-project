@@ -18806,6 +18806,7 @@ export type Database = {
           option_b_effects: Json
           option_b_outcome_text: string
           option_b_text: string
+          season: string | null
           title: string
           updated_at: string
         }
@@ -18824,6 +18825,7 @@ export type Database = {
           option_b_effects?: Json
           option_b_outcome_text: string
           option_b_text: string
+          season?: string | null
           title: string
           updated_at?: string
         }
@@ -18842,6 +18844,7 @@ export type Database = {
           option_b_effects?: Json
           option_b_outcome_text?: string
           option_b_text?: string
+          season?: string | null
           title?: string
           updated_at?: string
         }

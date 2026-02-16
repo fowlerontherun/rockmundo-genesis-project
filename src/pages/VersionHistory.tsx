@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.753",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Game World Year System: fixed epoch (Jan 1, 2026) — all players now share the same in-game date" },
+      { type: 'feature', description: "Season display in header bar showing current season emoji, month name, and game year" },
+      { type: 'feature', description: "Global seasonal visual effects — snowfall, blossoms, leaves, and sparkles rendered on every page" },
+      { type: 'feature', description: "Spring and autumn decorations added to seasonal background effects" },
+      { type: 'feature', description: "Christmas sales boost — progressive multiplier (1.5x→2.5x) during in-game December" },
+      { type: 'feature', description: "Christmas Number One table — records the #1 selling release on Dec 25 each game year" },
+      { type: 'feature', description: "16 seasonal random events added (4 per season) — Snowbound Studio, Summer Anthem, Halloween Special, and more" },
+      { type: 'improvement', description: "Player aging now uses global game year instead of per-player creation date" },
+    ],
+  },
+  {
     version: "1.0.752",
     date: "2026-02-16",
     changes: [

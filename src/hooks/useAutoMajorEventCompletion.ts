@@ -12,9 +12,7 @@ import { useGameData } from "@/hooks/useGameData";
 export function useAutoMajorEventCompletion(userId: string | null) {
   const queryClient = useQueryClient();
   const { profile } = useGameData();
-  const { data: calendar } = useGameCalendar(
-    profile?.created_at ? new Date(profile.created_at) : undefined
-  );
+  const { data: calendar } = useGameCalendar();
   const processingRef = useRef(false);
 
   useEffect(() => {

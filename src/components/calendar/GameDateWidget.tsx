@@ -5,11 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface GameDateWidgetProps {
-  profileCreatedAt?: Date;
+  profileCreatedAt?: Date; // kept for backwards compat, no longer used
 }
 
 export function GameDateWidget({ profileCreatedAt }: GameDateWidgetProps) {
-  const { data: calendar, isLoading } = useGameCalendar(profileCreatedAt);
+  const { data: calendar, isLoading } = useGameCalendar();
 
   if (isLoading) {
     return <Skeleton className="h-20 w-full" />;

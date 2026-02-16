@@ -29,17 +29,22 @@ export interface TravelDisruption {
 const DAYS_PER_GAME_MONTH = 30;
 const MONTHS_PER_YEAR = 12;
 
+/** Fixed epoch: January 1, 2026 = Game Year 1, Month 1, Day 1 */
+export const GAME_EPOCH = new Date("2026-01-01T00:00:00Z");
+
 /**
- * Calculate current in-game date based on character creation date
+ * Calculate current in-game date based on fixed epoch (Jan 1 2026).
+ * All players share the same in-game date.
+ * characterCreatedAt param is kept for backwards compat but ignored.
  */
 export function calculateInGameDate(
-  characterCreatedAt: Date,
+  _characterCreatedAt?: Date,
   daysPerGameYear: number = 120,
   daysPerGameMonth: number = 10
 ): InGameDate {
   const now = new Date();
-  const msElapsed = now.getTime() - characterCreatedAt.getTime();
-  const realWorldDaysElapsed = Math.floor(msElapsed / (1000 * 60 * 60 * 24));
+  const msElapsed = now.getTime() - GAME_EPOCH.getTime();
+  const realWorldDaysElapsed = Math.max(0, Math.floor(msElapsed / (1000 * 60 * 60 * 24)));
 
   // Calculate game days elapsed
   const gameDaysElapsed = Math.floor(

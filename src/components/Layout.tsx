@@ -20,6 +20,8 @@ import { EventNotificationModal } from "@/components/events/EventNotificationMod
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
 import { InterviewModal } from "@/components/pr/InterviewModal";
+import { SeasonalBackground } from "@/components/calendar/SeasonalBackground";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -48,6 +50,9 @@ const Layout = () => {
 
   // Global game event notifications (gig results, offers, completions, etc.)
   useGameEventNotifications();
+
+  // Global game calendar for seasonal effects
+  const { data: calendar } = useGameCalendar();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -91,6 +96,7 @@ const Layout = () => {
           <TutorialTooltip />
         </div>
       </main>
+      {calendar && <SeasonalBackground season={calendar.season} />}
       <FloatingAvatarWidget />
       <EventNotificationModal />
       <InterviewModal />

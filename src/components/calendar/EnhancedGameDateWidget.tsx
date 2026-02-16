@@ -45,7 +45,7 @@ export function EnhancedGameDateWidget({
   playerAge = 16,
   characterBirthDate,
 }: EnhancedGameDateWidgetProps) {
-  const { data: calendar, isLoading } = useGameCalendar(profileCreatedAt);
+  const { data: calendar, isLoading } = useGameCalendar();
 
   if (isLoading) {
     return <Skeleton className="h-48 w-full" />;
