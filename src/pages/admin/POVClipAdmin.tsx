@@ -6,13 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { INSTRUMENT_CLIP_CONFIGS, UNIVERSAL_CLIP_CONFIGS, getTotalClipCount } from '@/data/instrumentClipConfig';
-import { Film, RefreshCw, Play, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Film, RefreshCw, Play, CheckCircle, AlertCircle, Clock, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 export default function POVClipAdmin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [generating, setGenerating] = useState(false);
 
   const { data: clips = [], isLoading } = useQuery({
     queryKey: ['admin-pov-clips'],
@@ -34,7 +33,6 @@ export default function POVClipAdmin() {
 
   const seedClipsMutation = useMutation({
     mutationFn: async () => {
-      // Seed all clip templates into the database
       const templates: any[] = [];
 
       for (const config of INSTRUMENT_CLIP_CONFIGS) {
@@ -82,6 +80,30 @@ export default function POVClipAdmin() {
     },
   });
 
+  const generateBatchMutation = useMutation({
+    mutationFn: async (clipIds?: string[]) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const body: any = { action: 'generate-pov-clips', batchSize: 3 };
+      if (clipIds?.length) body.clipIds = clipIds;
+
+      const { data, error } = await supabase.functions.invoke('generate-sprite', {
+        body,
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({ title: `Generation started for ${data.processed} clips` });
+      queryClient.invalidateQueries({ queryKey: ['admin-pov-clips'] });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Generation error', description: err.message, variant: 'destructive' });
+    },
+  });
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -102,8 +124,15 @@ export default function POVClipAdmin() {
           <p className="text-muted-foreground">Manage AI-generated POV concert clips</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => seedClipsMutation.mutate()} disabled={seedClipsMutation.isPending}>
+          <Button onClick={() => seedClipsMutation.mutate()} disabled={seedClipsMutation.isPending} variant="outline">
             {seedClipsMutation.isPending ? 'Seeding...' : 'Seed All Templates'}
+          </Button>
+          <Button
+            onClick={() => generateBatchMutation.mutate(undefined)}
+            disabled={generateBatchMutation.isPending || pendingCount === 0}
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            {generateBatchMutation.isPending ? 'Generating...' : `Generate Batch (${pendingCount} pending)`}
           </Button>
         </div>
       </div>
@@ -154,12 +183,27 @@ export default function POVClipAdmin() {
                     <Badge variant="secondary" className="text-[10px]">{clip.instrument_family}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{clip.description}</p>
+                  {clip.generation_error && (
+                    <p className="text-xs text-destructive truncate">{clip.generation_error}</p>
+                  )}
                 </div>
-                {clip.video_url && (
-                  <Button variant="ghost" size="sm" asChild>
-                    <a href={clip.video_url} target="_blank" rel="noreferrer"><Play className="h-3 w-3" /></a>
-                  </Button>
-                )}
+                <div className="flex items-center gap-1">
+                  {clip.generation_status === 'failed' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => generateBatchMutation.mutate([clip.id])}
+                      disabled={generateBatchMutation.isPending}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {clip.video_url && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={clip.video_url} target="_blank" rel="noreferrer"><Play className="h-3 w-3" /></a>
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))

@@ -17,16 +17,22 @@ serve(async (req) => {
 
   try {
     const prediction = await req.json()
-    console.log(`[replicate-webhook] Received webhook for prediction ${prediction.id}, status: ${prediction.status}`)
-
-    // Extract songId from the prediction metadata
-    // We store it in the prediction's webhook URL as a query param
     const url = new URL(req.url)
+    
+    // Check if this is a POV clip callback
+    const clipId = url.searchParams.get('clipId')
+    if (clipId) {
+      return await handlePOVClipCallback(prediction, clipId, supabase)
+    }
+
+    // Otherwise handle song audio callback
     const songId = url.searchParams.get('songId')
     
+    console.log(`[replicate-webhook] Received webhook for prediction ${prediction.id}, status: ${prediction.status}`)
+
     if (!songId) {
-      console.error('[replicate-webhook] No songId in webhook URL')
-      return new Response(JSON.stringify({ error: 'Missing songId' }), {
+      console.error('[replicate-webhook] No songId or clipId in webhook URL')
+      return new Response(JSON.stringify({ error: 'Missing songId or clipId' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -42,7 +48,6 @@ serve(async (req) => {
         .update({ audio_generation_status: 'failed' })
         .eq('id', songId)
 
-      // Update any generating attempts to failed
       await supabase
         .from('song_generation_attempts')
         .update({
@@ -189,3 +194,67 @@ serve(async (req) => {
     )
   }
 })
+
+/** Handle POV clip video callback from Replicate */
+async function handlePOVClipCallback(prediction: any, clipId: string, supabase: any) {
+  console.log(`[replicate-webhook] POV clip callback for ${clipId}, status: ${prediction.status}`)
+
+  if (prediction.status === 'failed' || prediction.status === 'canceled') {
+    await supabase.from('pov_clip_templates').update({
+      generation_status: 'failed',
+      generation_error: prediction.error || prediction.status,
+    }).eq('id', clipId)
+
+    return new Response(JSON.stringify({ success: true, status: 'failed' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
+  if (prediction.status !== 'succeeded') {
+    return new Response(JSON.stringify({ success: true, status: prediction.status }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
+  // Extract video URL
+  const output = prediction.output
+  let replicateVideoUrl: string | null = null
+  if (Array.isArray(output)) {
+    replicateVideoUrl = typeof output[0] === 'string' ? output[0] : output[0]?.url || null
+  } else if (typeof output === 'string') {
+    replicateVideoUrl = output
+  }
+
+  if (!replicateVideoUrl) {
+    await supabase.from('pov_clip_templates').update({ generation_status: 'failed', generation_error: 'No video URL in output' }).eq('id', clipId)
+    return new Response(JSON.stringify({ error: 'No video URL' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
+  // Download and upload video
+  const videoResponse = await fetch(replicateVideoUrl)
+  if (!videoResponse.ok) throw new Error(`Failed to download video: ${videoResponse.status}`)
+
+  const videoBlob = await videoResponse.blob()
+  const videoBytes = new Uint8Array(await videoBlob.arrayBuffer())
+  console.log(`[replicate-webhook] POV clip video: ${(videoBytes.length / 1024 / 1024).toFixed(2)} MB`)
+
+  const filename = `clips/${clipId}.mp4`
+  const { error: uploadError } = await supabase.storage.from('pov-clips').upload(filename, videoBytes, { contentType: 'video/mp4', upsert: true })
+  if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+
+  const { data: publicUrlData } = supabase.storage.from('pov-clips').getPublicUrl(filename)
+
+  await supabase.from('pov_clip_templates').update({
+    video_url: publicUrlData.publicUrl,
+    generation_status: 'completed',
+    generation_error: null,
+  }).eq('id', clipId)
+
+  console.log(`[replicate-webhook] SUCCESS: POV clip ${clipId} saved`)
+
+  return new Response(JSON.stringify({ success: true, videoUrl: publicUrlData.publicUrl }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  })
+}
