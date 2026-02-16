@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.731",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed music video earnings not recording to band_earnings — amount column required integer rounding" },
+      { type: 'feature', description: "Band earnings stats grid now shows all source categories: Gigs, Streaming, Merch, Music Videos, Sales, PR & Media" },
+      { type: 'feature', description: "Clickable filter cards in band earnings — click any category to filter the transaction list by source type" },
+      { type: 'improvement', description: "Added proper icons and color coding for music_video, release_sales, and pr_appearance source types" },
+    ],
+  },
+  {
     version: "1.0.730",
     date: "2026-02-16",
     changes: [
