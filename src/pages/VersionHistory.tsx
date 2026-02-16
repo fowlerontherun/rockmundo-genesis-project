@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.727",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Reverted global font-size override that was breaking rem-based layouts (gear page, tabs, dropdowns) — root font-size stays at browser default 16px" },
+    ],
+  },
+  {
     version: "1.0.726",
     date: "2026-02-16",
     changes: [
