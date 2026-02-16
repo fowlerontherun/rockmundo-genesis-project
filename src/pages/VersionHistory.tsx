@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.816",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "generate-pov-clips edge function: batch AI video generation using Gemini first-frame + Replicate MiniMax, with webhook callback for async completion" },
+      { type: 'feature', description: "pov-clip-callback edge function: handles Replicate webhooks, downloads video, uploads to pov-clips storage bucket" },
+      { type: 'feature', description: "Admin POV Clip Manager: Generate Batch button triggers AI clip generation, retry failed clips individually" },
+      { type: 'feature', description: "POV Clip Manager added to Bands & Performance admin navigation" },
+    ],
+  },
+  {
     version: "1.0.815",
     date: "2026-02-16",
     changes: [
