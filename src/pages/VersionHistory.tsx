@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.717",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "RM Radio now plays a Blondie radio host segment every 30 minutes, followed by the current #1 chart song" },
+    ],
+  },
+  {
     version: "1.0.716",
     date: "2026-02-16",
     changes: [
