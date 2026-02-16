@@ -200,6 +200,10 @@ export const useCountryCharts = (
               audio_url,
               audio_generation_status,
               bands(name, artist_name)
+            ),
+            releases(
+              title,
+              bands(name, artist_name)
             )
           `)
           .in("chart_type", chartTypeFilter)
@@ -244,6 +248,10 @@ export const useCountryCharts = (
             genre,
             audio_url,
             audio_generation_status,
+            bands(name, artist_name)
+          ),
+          releases(
+            title,
             bands(name, artist_name)
           )
         `)
@@ -307,6 +315,10 @@ export const useCountryCharts = (
                 genre,
                 audio_url,
                 audio_generation_status,
+                bands(name, artist_name)
+              ),
+              releases(
+                title,
                 bands(name, artist_name)
               )
             `)
@@ -401,8 +413,9 @@ export const useCountryCharts = (
       // Transform aggregated data to ChartEntry format
       const aggregatedEntries = Array.from(aggregatedMap.values()).map(agg => {
         const entry = agg.entry;
-        const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
-        const artistName = bandArtistName || "Unknown Artist";
+        const songBand = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
+        const releaseBand = entry.releases?.bands?.artist_name || entry.releases?.bands?.name;
+        const artistName = songBand || releaseBand || "Unknown Artist";
         
         // For album entries, use release_title; for songs, use song title
         const isAlbumEntry = entry.entry_type === "album";
@@ -486,8 +499,9 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
 
   // Transform real data
   const realEntries: ChartEntry[] = deduplicatedData.map((entry, index) => {
-    const bandArtistName = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
-    const artistName = bandArtistName || "Unknown Artist";
+    const songBand = entry.songs?.bands?.artist_name || entry.songs?.bands?.name;
+    const releaseBand = entry.releases?.bands?.artist_name || entry.releases?.bands?.name;
+    const artistName = songBand || releaseBand || "Unknown Artist";
     
     // For album entries, use release_title; for songs, use song title
     const isAlbumEntry = entry.entry_type === "album";
