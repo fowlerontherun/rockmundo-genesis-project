@@ -15,9 +15,15 @@ import {
   useBuyProperty,
   useStartRental,
   useEndRental,
+  useSellProperty,
+  useToggleRentOut,
+  usePlayerCash,
   calculateWeeklyRent,
+  calculateSellPrice,
+  calculateRentalIncome,
+  calculateDailyUpkeep,
 } from "@/hooks/useHousing";
-import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe } from "lucide-react";
+import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe, TrendingDown, TrendingUp, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -101,6 +107,9 @@ const Housing = () => {
   const buyProperty = useBuyProperty();
   const startRental = useStartRental();
   const endRental = useEndRental();
+  const sellProperty = useSellProperty();
+  const toggleRentOut = useToggleRentOut();
+  const { data: playerCash = 0 } = usePlayerCash();
 
   const [generatingImage, setGeneratingImage] = useState<string | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
@@ -276,6 +285,13 @@ const Housing = () => {
 
         {/* BUY TAB */}
         <TabsContent value="buy" className="space-y-4">
+          {/* Cash balance */}
+          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+            <Banknote className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Your Cash:</span>
+            <span className="text-sm font-bold text-primary">{formatPrice(playerCash)}</span>
+          </div>
+
           {!activeCountry ? (
             <EmptyState icon={MapPin} title="No Country Selected" description="Select a country above to see available properties." />
           ) : loadingHousing ? (
@@ -284,6 +300,7 @@ const Housing = () => {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {housingTypes?.map((ht) => {
                 const owned = ownedIds.has(ht.id);
+                const canAfford = playerCash >= ht.base_price;
                 return (
                   <Card key={ht.id} className={owned ? "border-primary/50 bg-primary/5" : ""}>
                     <CardHeader className="pb-2">
@@ -318,6 +335,9 @@ const Housing = () => {
                         <span className="text-lg font-bold text-primary">{formatPrice(ht.base_price)}</span>
                         <span className="text-xs text-muted-foreground">{activeCountry}</span>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Daily upkeep: {formatPrice(calculateDailyUpkeep(ht.base_price))}
+                      </p>
                     </CardContent>
                     <CardFooter>
                       {owned ? (
@@ -327,10 +347,10 @@ const Housing = () => {
                           className="w-full"
                           size="sm"
                           onClick={() => buyProperty.mutate({ housingType: ht, country: activeCountry! })}
-                          disabled={buyProperty.isPending}
+                          disabled={buyProperty.isPending || !canAfford}
                         >
                           {buyProperty.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <DollarSign className="h-4 w-4 mr-1" />}
-                          Buy Property
+                          {canAfford ? "Buy Property" : "Can't Afford"}
                         </Button>
                       )}
                     </CardFooter>
@@ -427,27 +447,103 @@ const Housing = () => {
           ) : !playerProperties?.length ? (
             <EmptyState icon={Home} title="No Properties" description="You don't own any properties yet." />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {playerProperties.map((pp) => (
-                <Card key={pp.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-xs">{pp.country}</Badge>
-                      {pp.is_primary && <Badge className="text-xs">Primary</Badge>}
+            <>
+              {/* Summary */}
+              {(() => {
+                const totalUpkeep = playerProperties.reduce((s, p) => s + (p.daily_upkeep || calculateDailyUpkeep(p.purchase_price)), 0);
+                const totalRentalIncome = playerProperties.reduce((s, p) => s + (p.is_rented_out ? (p.rental_income_daily || calculateRentalIncome(p.purchase_price)) : 0), 0);
+                const net = totalRentalIncome - totalUpkeep;
+                return (
+                  <div className="flex flex-wrap gap-4 p-3 bg-muted/30 rounded-lg text-sm">
+                    <div className="flex items-center gap-1">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      <span className="text-muted-foreground">Daily Upkeep:</span>
+                      <span className="font-bold text-destructive">{formatPrice(totalUpkeep)}</span>
                     </div>
-                    <CardTitle className="text-base">{pp.housing_types?.name ?? "Property"}</CardTitle>
-                    <CardDescription className="text-xs">
-                      Purchased for {formatPrice(pp.purchase_price)}
-                    </CardDescription>
-                  </CardHeader>
-                  {pp.housing_types?.image_url && (
-                    <CardContent className="pb-2">
-                      <img src={pp.housing_types.image_url} alt={pp.housing_types.name} className="w-full h-32 object-cover rounded-md" />
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
-            </div>
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-muted-foreground">Daily Rental Income:</span>
+                      <span className="font-bold text-green-500">{formatPrice(totalRentalIncome)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-4 w-4" />
+                      <span className="text-muted-foreground">Net Daily:</span>
+                      <span className={`font-bold ${net >= 0 ? "text-green-500" : "text-destructive"}`}>{net >= 0 ? "+" : ""}{formatPrice(net)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {playerProperties.map((pp) => {
+                  const upkeep = pp.daily_upkeep || calculateDailyUpkeep(pp.purchase_price);
+                  const rentalIncome = pp.is_rented_out ? (pp.rental_income_daily || calculateRentalIncome(pp.purchase_price)) : 0;
+                  const sellPrice = calculateSellPrice(pp.purchase_price);
+                  const netDaily = rentalIncome - upkeep;
+
+                  return (
+                    <Card key={pp.id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-xs">{pp.country}</Badge>
+                          <div className="flex gap-1">
+                            {pp.is_primary && <Badge className="text-xs">Primary</Badge>}
+                            {pp.is_rented_out && <Badge variant="secondary" className="text-xs">Rented Out</Badge>}
+                          </div>
+                        </div>
+                        <CardTitle className="text-base">{pp.housing_types?.name ?? "Property"}</CardTitle>
+                        <CardDescription className="text-xs">
+                          Purchased for {formatPrice(pp.purchase_price)}
+                        </CardDescription>
+                      </CardHeader>
+                      {pp.housing_types?.image_url && (
+                        <CardContent className="pb-2">
+                          <img src={pp.housing_types.image_url} alt={pp.housing_types.name} className="w-full h-32 object-cover rounded-md" />
+                        </CardContent>
+                      )}
+                      <CardContent className="pb-2 space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Upkeep/day</span>
+                          <span className="text-destructive font-medium">-{formatPrice(upkeep)}</span>
+                        </div>
+                        {pp.is_rented_out && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Rental income/day</span>
+                            <span className="text-green-500 font-medium">+{formatPrice(rentalIncome)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs border-t border-border pt-1">
+                          <span className="text-muted-foreground">Net daily</span>
+                          <span className={`font-bold ${netDaily >= 0 ? "text-green-500" : "text-destructive"}`}>
+                            {netDaily >= 0 ? "+" : ""}{formatPrice(netDaily)}
+                          </span>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => toggleRentOut.mutate(pp)}
+                          disabled={toggleRentOut.isPending}
+                        >
+                          {pp.is_rented_out ? "Stop Renting" : "Rent Out"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => sellProperty.mutate(pp)}
+                          disabled={sellProperty.isPending}
+                        >
+                          Sell {formatPrice(sellPrice)}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
         </TabsContent>
       </Tabs>
