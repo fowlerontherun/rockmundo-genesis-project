@@ -303,7 +303,7 @@ export async function calculatePerformanceModifiers(
       const query = (supabase as any)
         .from('player_equipment')
         .select('equipment_id, is_equipped')
-        .eq('profile_id', profileId)
+        .eq('user_id', profileId)
         .eq('is_equipped', true);
       
       const result = await query;
