@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.805",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Moved Merchandise Manager and Operating Costs into their own dedicated tabs for cleaner navigation" },
+    ],
+  },
+  {
     version: "1.0.804",
     date: "2026-02-16",
     changes: [
