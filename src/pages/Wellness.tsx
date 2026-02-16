@@ -563,13 +563,13 @@ export default function WellnessPage() {
                               <Button
                                 key={program}
                                 variant="outline"
-                                className="justify-start h-auto py-3"
+                                className="justify-start h-auto py-3 whitespace-normal overflow-visible"
                                 onClick={() => startRecovery({ addictionId: addiction.id, program })}
                                 disabled={isStartingRecovery}
                               >
                                 <div className="text-left">
                                   <p className="font-medium">{details.label}</p>
-                                  <p className="text-xs text-muted-foreground">{details.description}</p>
+                                  <p className="text-xs text-muted-foreground break-words">{details.description}</p>
                                 </div>
                               </Button>
                             );
