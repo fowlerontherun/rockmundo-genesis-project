@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { applyFestivalCareerImpact, type FestivalCareerImpactResult } from "@/utils/festivalCareerImpact";
 
 export interface PerformancePhase {
   id: string;
@@ -41,6 +42,7 @@ export interface PerformanceResult {
   reviewHeadline: string;
   reviewSummary: string;
   highlights: string[];
+  careerImpact?: FestivalCareerImpactResult;
 }
 
 const PERFORMANCE_PHASES: PerformancePhase[] = [
@@ -363,6 +365,8 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
         .eq("id", participationId)
         .single();
 
+      let careerImpact: FestivalCareerImpactResult | undefined;
+
       if (participation) {
         await (supabase as any).from("festival_performance_history").insert({
           participation_id: participationId,
@@ -392,11 +396,37 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
           .update({ status: "performed" })
           .eq("id", participationId);
 
-        // Update band fame and balance
+        // Apply full career impact (fame, fans, chart boosts, streaming multipliers)
         if (bandId) {
+          // Fetch songs the band has in their setlist for this participation
+          let songIds: string[] = [];
+          const { data: setlistData } = await (supabase as any)
+            .from("setlist_songs")
+            .select("song_id, setlists!inner(band_id)")
+            .eq("setlists.band_id", bandId)
+            .limit(18);
+          if (setlistData) {
+            songIds = setlistData.map((s: any) => s.song_id).filter(Boolean);
+          }
+
+          const attendanceEstimate = Math.floor(
+            (result.crowdEnergyAvg / 100) * 10000 + Math.random() * 5000
+          );
+
+          careerImpact = await applyFestivalCareerImpact({
+            bandId,
+            festivalId: participation.event_id,
+            performanceScore: result.performanceScore,
+            crowdEnergyAvg: result.crowdEnergyAvg,
+            slotType: participation.slot_type || "opener",
+            attendanceEstimate,
+            songsPerformedIds: songIds,
+          });
+
+          // Update band balance with payment + merch (fame/fans already handled by career impact)
           const { data: bandUpdate } = await (supabase as any)
             .from("bands")
-            .select("fame, band_balance")
+            .select("band_balance")
             .eq("id", bandId)
             .single();
 
@@ -404,7 +434,6 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
             await (supabase as any)
               .from("bands")
               .update({
-                fame: (bandUpdate.fame || 0) + result.fameEarned,
                 band_balance: (bandUpdate.band_balance || 0) + result.paymentEarned + result.merchRevenue,
               })
               .eq("id", bandId);
@@ -412,6 +441,7 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
         }
       }
 
+      result.careerImpact = careerImpact;
       setIsPerforming(false);
       return result;
     },

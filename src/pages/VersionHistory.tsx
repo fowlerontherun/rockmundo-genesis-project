@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.770",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Festival Career Impact System: performances now generate fame and fan growth (casual/dedicated/superfans) scaled by slot type" },
+      { type: 'feature', description: "Chart & streaming multipliers applied to songs performed at festivals, lasting 3-7 days based on slot type" },
+      { type: 'feature', description: "Song popularity and fame updated after festival performances, with gig play count tracking" },
+      { type: 'improvement', description: "Performance outcome screen now shows detailed fan growth breakdown and active chart/streaming boosts" },
+    ],
+  },
+  {
     version: "1.0.769",
     date: "2026-02-16",
     changes: [

@@ -17,7 +17,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageSquare,
+  Heart,
+  BarChart3,
+  Radio,
 } from "lucide-react";
+import type { FestivalCareerImpactResult } from "@/utils/festivalCareerImpact";
 import { cn } from "@/lib/utils";
 
 interface PerformanceReview {
@@ -46,6 +50,7 @@ interface FestivalPerformanceOutcomeProps {
   earnedFame: number;
   merchSales?: number;
   attendanceEstimate?: number;
+  careerImpact?: FestivalCareerImpactResult;
   onShare?: () => void;
 }
 
@@ -158,6 +163,7 @@ export function FestivalPerformanceOutcome({
   earnedFame,
   merchSales = 0,
   attendanceEstimate = 0,
+  careerImpact,
   onShare,
 }: FestivalPerformanceOutcomeProps) {
   const [showReviews, setShowReviews] = useState(false);
@@ -266,6 +272,66 @@ export function FestivalPerformanceOutcome({
               </p>
             )}
           </div>
+
+          {/* Career Impact: Fan Growth */}
+          {careerImpact && careerImpact.newFansGained > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Heart className="h-4 w-4 text-pink-500" />
+                Fan Growth
+                <Badge variant="outline" className="ml-auto text-xs bg-pink-500/10 text-pink-400 border-pink-500/30">
+                  +{careerImpact.newFansGained} fans
+                </Badge>
+              </h4>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="p-2 bg-muted/50 rounded text-center">
+                  <p className="text-xs text-muted-foreground">Casual</p>
+                  <p className="font-bold">+{careerImpact.casualFans}</p>
+                </div>
+                <div className="p-2 bg-muted/50 rounded text-center">
+                  <p className="text-xs text-muted-foreground">Dedicated</p>
+                  <p className="font-bold text-purple-400">+{careerImpact.dedicatedFans}</p>
+                </div>
+                <div className="p-2 bg-muted/50 rounded text-center">
+                  <p className="text-xs text-muted-foreground">Superfans</p>
+                  <p className="font-bold text-amber-400">+{careerImpact.superfans}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Career Impact: Chart & Streaming Boosts */}
+          {careerImpact && careerImpact.songsBosted > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-semibold flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Chart & Streaming Boosts
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Radio className="h-3.5 w-3.5" />
+                    Streaming Multiplier
+                  </span>
+                  <Badge variant="secondary" className="font-mono">
+                    {careerImpact.streamingMultiplier}x
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Chart Boost
+                  </span>
+                  <Badge variant="secondary" className="font-mono">
+                    {careerImpact.chartBoostMultiplier}x
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {careerImpact.songsBosted} songs boosted • Expires {new Date(careerImpact.chartBoostExpiresAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       
