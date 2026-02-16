@@ -998,20 +998,39 @@ serve(async (req) => {
     // STEP 8: Upsert all chart entries
     // =========================================================================
     if (chartEntries.length > 0) {
+      // Deduplicate entries (keep the one with highest rank/score for each song+chart_type combo)
+      const dedupeMap = new Map<string, any>();
+      for (const entry of chartEntries) {
+        const key = `${entry.song_id || entry.release_id}:${entry.chart_type}:${entry.chart_date}`;
+        const existing = dedupeMap.get(key);
+        if (!existing || (entry.combined_score || 0) > (existing.combined_score || 0) || (entry.plays_count || 0) > (existing.plays_count || 0)) {
+          dedupeMap.set(key, entry);
+        }
+      }
+      const dedupedEntries = Array.from(dedupeMap.values());
+      console.log(`Deduped ${chartEntries.length} -> ${dedupedEntries.length} chart entries`);
+
       // Delete old entries for today first to avoid duplicates
-      await supabaseClient
+      const { error: deleteError, count: deleteCount } = await supabaseClient
         .from("chart_entries")
         .delete()
-        .eq("chart_date", chartDate);
+        .eq("chart_date", chartDate)
+        .select("id", { count: "exact", head: true });
 
-      // Insert all new entries
-      const { error: insertError } = await supabaseClient
-        .from("chart_entries")
-        .insert(chartEntries);
+      console.log(`Deleted ${deleteCount ?? 'unknown'} old entries for ${chartDate}${deleteError ? `, error: ${JSON.stringify(deleteError)}` : ''}`);
 
-      if (insertError) {
-        console.error("Error inserting chart entries:", insertError);
-        throw insertError;
+      // Insert in batches to avoid payload limits
+      const BATCH_SIZE = 200;
+      for (let i = 0; i < dedupedEntries.length; i += BATCH_SIZE) {
+        const batch = dedupedEntries.slice(i, i + BATCH_SIZE);
+        const { error: insertError } = await supabaseClient
+          .from("chart_entries")
+          .insert(batch);
+
+        if (insertError) {
+          console.error(`Error inserting chart entries batch ${i / BATCH_SIZE + 1}:`, JSON.stringify(insertError));
+          throw insertError;
+        }
       }
 
       chartsUpdated = chartEntries.length;

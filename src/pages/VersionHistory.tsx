@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.730",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed music charts not updating since Jan 28 — chart_type column was too narrow (varchar 20→40) causing daily failures" },
+      { type: 'fix', description: "Added deduplication to chart entry generation to prevent unique constraint violations" },
+      { type: 'improvement', description: "Chart updates now use batch inserts for reliability" },
+    ],
+  },
+  {
     version: "1.0.729",
     date: "2026-02-16",
     changes: [
