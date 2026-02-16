@@ -1,77 +1,55 @@
 
-# v1.0.740 -- Expand Travel Connectivity and Reduce All Travel Times by 10%
 
-## Overview
+# v1.0.743 -- Consolidate Band Songs into Active Repertoire + Archived Songs
 
-Travel options are calculated dynamically in `src/utils/dynamicTravel.ts` using Haversine distance. Two issues limit connectivity:
+## What Changes
 
-1. **Missing country connections**: The `CONNECTED_COUNTRIES` map only has ~30 countries. The 50+ newly added countries (e.g., Ukraine, Georgia, Lebanon, Ecuador) have no train connectivity entries, meaning train travel between neighbors is unavailable.
-2. **Inconsistent region values**: New cities were seeded with lowercase regions (`africa`, `asia`, `europe`) while the ship route validation checks capitalized values (`Africa`, `Asia`, `Europe`). This breaks ship travel for ~40 cities.
-3. **Travel times**: All transport durations can be reduced by 10% by increasing effective speeds.
+The Band Manager page currently has two overlapping tabs: **Songs** and **Repertoire**. These will be merged into a single **Repertoire** tab with two sub-views:
 
----
+- **Active** -- Songs available for setlists, rehearsals, recordings, and gigs
+- **Archived** -- Songs shelved from active use; hidden from all selection dialogs
 
-## Changes
+Songs can be moved between Active and Archived with a single click. Archived songs retain all their data (streams, ownership, quality) but are excluded from being picked for setlists, rehearsals, or recordings.
 
-### 1. Expand `CONNECTED_COUNTRIES` map (in `dynamicTravel.ts`)
+## How It Works
 
-Add train connections for all new countries with realistic neighbor links:
-
-- **Eastern Europe**: Ukraine (Poland, Romania, Hungary, Moldova, Belarus), Belarus (Poland, Lithuania, Latvia, Russia), Georgia (Turkey, Armenia), Armenia (Georgia, Turkey), Moldova (Ukraine, Romania), Bosnia and Herzegovina (Croatia, Serbia), Albania (Greece, North Macedonia), North Macedonia (Serbia, Bulgaria, Greece, Albania)
-- **Middle East**: Lebanon (Turkey, Jordan), Jordan (Saudi Arabia, Lebanon), Saudi Arabia (Jordan, UAE), Qatar (Saudi Arabia), UAE (Saudi Arabia)
-- **Asia**: Pakistan (India, China), Bangladesh (India), Sri Lanka (no land), Kazakhstan (Russia, China)
-- **Africa**: Senegal (no rail network -- skip), Tunisia (Algeria), Algeria (Tunisia, Morocco), Uganda (Kenya, Tanzania), Tanzania (Kenya, Uganda, Mozambique), DR Congo (no rail), Angola (no rail), Mozambique (Tanzania, South Africa)
-- **South/Central America**: Ecuador (Colombia, Peru), Bolivia (Peru, Brazil, Argentina, Paraguay), Paraguay (Brazil, Argentina, Bolivia), Venezuela (Colombia, Brazil), Panama (Costa Rica, Colombia), Costa Rica (Panama), Honduras (Guatemala), Dominican Republic (no rail), Guatemala (Honduras, Mexico), Puerto Rico (no rail), Haiti (no rail)
-- **Western Europe**: Luxembourg (France, Germany, Belgium)
-
-### 2. Fix region inconsistency (SQL migration)
-
-Normalize all lowercase region values to capitalized versions:
-```sql
-UPDATE cities SET region = 'Africa' WHERE region = 'africa';
-UPDATE cities SET region = 'Asia' WHERE region = 'asia';
-UPDATE cities SET region = 'Europe' WHERE region = 'europe';
-UPDATE cities SET region = 'Oceania' WHERE region = 'oceania';
-UPDATE cities SET region = 'South America' WHERE region = 'south_america';
-UPDATE cities SET region = 'Caribbean' WHERE region = 'caribbean';
-UPDATE cities SET region = 'Central America' WHERE region = 'central_america';
-UPDATE cities SET region = 'Middle East' WHERE region = 'middle_east';
-```
-
-Also add ship routes for new region pairs:
-- Caribbean to North America, Caribbean to South America
-- Central America to North America, Central America to South America
-- Middle East to Africa (Red Sea routes)
-
-### 3. Reduce all travel times by 10%
-
-Increase all transport speeds by ~11% (which produces a 10% time reduction):
-- Bus: 50 -> 56 km/h
-- Train: 180 -> 200 km/h
-- Plane: 850 -> 944 km/h
-- Ship: 35 -> 39 km/h
-- Private Jet: fixed 3h -> 2.7h (rounded to 2.7)
-
-Also reduce buffer times by 10%:
-- Plane: 3h -> 2.7h
-- Train: 0.5h -> 0.45h
-- Ship: 1h -> 0.9h
-- Bus: 0.25h -> 0.22h
-
-### 4. Version bump
-
-Update to v1.0.740 in `VersionHeader.tsx`, `navigation.tsx`, and `VersionHistory.tsx`.
-
----
+1. **Remove the "Songs" tab** from the Band Manager page -- only "Repertoire" remains
+2. **Add Active/Archived toggle** inside the Repertoire tab (using sub-tabs or a filter toggle)
+3. **Add Archive/Unarchive buttons** on each song card
+4. **Filter archived songs** from the Rehearsals page song picker (currently missing this filter)
+5. The setlist managers already exclude archived songs, so no change needed there
 
 ## Technical Details
 
-### Files to modify:
-1. **`src/utils/dynamicTravel.ts`** -- Add ~40 new country entries to `CONNECTED_COUNTRIES`, increase transport speeds by ~11%, reduce buffer times by 10%, add new valid ship routes for Caribbean/Central America/Middle East, round private jet duration to 2.7h
-2. **New SQL migration** -- Normalize region values to capitalized format for consistency
-3. **`src/components/VersionHeader.tsx`** -- Version bump to 1.0.740
-4. **`src/components/ui/navigation.tsx`** -- Version bump
-5. **`src/pages/VersionHistory.tsx`** -- Add changelog entry
+### Files to modify
 
-### No database route tables needed
-The travel system is entirely dynamic (Haversine distance + mode rules). The only DB fix is normalizing region strings so ship route validation works for all cities.
+1. **`src/pages/BandManager.tsx`**
+   - Remove the "Songs" tab and `BandSongsTab` import
+   - Remove the "songs" TabsTrigger and TabsContent
+   - Adjust the grid from 10 tabs to 9
+
+2. **`src/components/band/BandRepertoireTab.tsx`**
+   - Add an Active/Archived sub-tab toggle at the top of the Songs sub-tab
+   - Filter the songs query results by `archived` status for each view
+   - Add Archive/Unarchive button to each song row (toggle `songs.archived`)
+   - Show count badges on the Active/Archived toggles
+   - The existing "Remove from Repertoire" (Trash) button stays for fully removing a song from the band
+
+3. **`src/pages/Rehearsals.tsx`** (lines ~142-177)
+   - Add `.eq("archived", false)` to both the member songs query and the band-owned songs query so archived songs cannot be selected for rehearsals
+
+4. **`src/components/VersionHeader.tsx`** -- Bump to 1.0.743
+5. **`src/components/ui/navigation.tsx`** -- Bump version
+6. **`src/pages/VersionHistory.tsx`** -- Add changelog entry
+
+### Already handled (no changes needed)
+- `SetlistSongManager.tsx` -- already uses `.neq("archived", true)`
+- `EnhancedSetlistSongManager.tsx` -- already filters archived songs
+- `BandSongsSection.tsx` (band profile page) -- shows only recorded/released songs, separate from management
+
+### Archive/Unarchive logic
+Simple toggle on `songs.archived`:
+```typescript
+await supabase.from("songs").update({ archived: !currentValue }).eq("id", songId);
+```
+
