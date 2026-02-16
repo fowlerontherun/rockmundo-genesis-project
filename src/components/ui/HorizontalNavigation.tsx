@@ -119,6 +119,7 @@ const HorizontalNavigation = () => {
         { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
         { icon: Award, labelKey: "nav.awards", path: "/awards" },
         { icon: Star, labelKey: "nav.eurovision", path: "/events/eurovision" },
+        { icon: Trophy, labelKey: "Major Events", path: "/major-events" },
       ],
     },
     {
@@ -129,6 +130,7 @@ const HorizontalNavigation = () => {
         { icon: Bus, labelKey: "nav.tours", path: "/tour-manager" },
         { icon: Building2, labelKey: "nav.currentCity", path: cityOverviewPath },
         { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse" },
+        { icon: Home, labelKey: "Housing", path: "/housing" },
       ],
     },
     {
