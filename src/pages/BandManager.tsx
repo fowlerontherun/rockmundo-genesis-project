@@ -19,7 +19,7 @@ import { BandEarnings } from '@/components/band/BandEarnings';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
-import { BandSongsTab } from '@/components/band/BandSongsTab';
+
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
 import { FameFansOverview } from '@/components/fame/FameFansOverview';
@@ -288,7 +288,6 @@ export default function BandManager() {
               <span className="sm:hidden">Fame</span>
             </TabsTrigger>
             <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>
-            <TabsTrigger value="songs" className="text-xs sm:text-sm">Songs</TabsTrigger>
             <TabsTrigger value="repertoire" className="flex items-center gap-1 text-xs sm:text-sm">
               <Library className="h-3 w-3" />
               <span className="hidden sm:inline">Repertoire</span>
@@ -360,10 +359,6 @@ export default function BandManager() {
               ))}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="songs" className="space-y-4">
-          <BandSongsTab bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="repertoire" className="space-y-4">

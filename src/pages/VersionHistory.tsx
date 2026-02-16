@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.743",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Consolidated Songs and Repertoire tabs into a single Repertoire tab with Active/Archived sub-views" },
+      { type: 'feature', description: "Songs can be archived and restored with one click — archived songs are excluded from setlists, rehearsals, and recordings" },
+      { type: 'improvement', description: "Rehearsal song picker now filters out archived songs automatically" },
+    ],
+  },
+  {
     version: "1.0.742",
     date: "2026-02-16",
     changes: [

@@ -146,7 +146,8 @@ const Rehearsals = () => {
         const { data: memberSongs, error: memberError } = await supabase
           .from("songs")
           .select("*")
-          .in("user_id", userIds);
+          .in("user_id", userIds)
+          .eq("archived", false);
         
         if (memberError) {
           console.error('[Rehearsals] Error fetching member songs:', memberError);
@@ -159,7 +160,8 @@ const Rehearsals = () => {
       const { data: bandOwnedSongs, error: bandError } = await supabase
         .from("songs")
         .select("*")
-        .eq("band_id", selectedBand.id);
+        .eq("band_id", selectedBand.id)
+        .eq("archived", false);
       
       if (bandError) {
         console.error('[Rehearsals] Error fetching band-owned songs:', bandError);
