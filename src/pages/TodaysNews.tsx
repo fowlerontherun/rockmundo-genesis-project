@@ -19,8 +19,10 @@ import { MerchSalesNews } from "@/components/news/MerchSalesNews";
 import { RandomEventsNews } from "@/components/news/RandomEventsNews";
 import { EarningsNews } from "@/components/news/EarningsNews";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
 export default function TodaysNewsPage() {
   const { t } = useTranslation();
+  const { data: calendar } = useGameCalendar();
   const today = new Date().toISOString().split('T')[0];
 
   const { data: newBands } = useQuery({
@@ -69,9 +71,16 @@ export default function TodaysNewsPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl sm:text-3xl font-oswald">{t('todaysNews.title')}</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+        <div className="flex items-center gap-3">
+          {calendar && (
+            <Badge variant="outline" className="gap-1.5 text-xs">
+              {calendar.seasonEmoji} <span className="capitalize">{calendar.season}</span> · Day {calendar.gameDay}, Yr {calendar.gameYear}
+            </Badge>
+          )}
+          <p className="text-xs sm:text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+        </div>
       </div>
 
       {/* Random Events - urgent attention */}

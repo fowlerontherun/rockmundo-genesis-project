@@ -112,7 +112,7 @@ export const LocationHeader = ({
               {calendar && (
                 <div className="flex items-center gap-1.5 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{calendar.seasonEmoji} Day {calendar.gameDay}, Yr {calendar.gameYear}</span>
+                  <span>{calendar.seasonEmoji} <span className="capitalize">{calendar.season}</span> · Day {calendar.gameDay}, Yr {calendar.gameYear}</span>
                 </div>
               )}
               
