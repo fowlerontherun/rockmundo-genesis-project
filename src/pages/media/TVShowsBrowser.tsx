@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { Tv, Users, Clock, Star, Search, Globe, MapPin } from "lucide-react";
+import { TVNetworkLogo } from "@/components/media/TVNetworkLogo";
 
 interface TVShow {
   id: string;
@@ -175,7 +176,12 @@ const TVShowsBrowser = () => {
           <SelectContent>
             <SelectItem value="all">All Networks</SelectItem>
             {networks?.map(network => (
-              <SelectItem key={network.id} value={network.id}>{network.name}</SelectItem>
+              <SelectItem key={network.id} value={network.id}>
+                <span className="flex items-center gap-2">
+                  <TVNetworkLogo networkName={network.name} size="sm" showTooltip={false} />
+                  {network.name}
+                </span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -219,13 +225,13 @@ const TVShowsBrowser = () => {
                   )}
                 </div>
                 {show.tv_networks && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Tv className="h-3 w-3" />
-                    {show.tv_networks.name}
+                  <div className="flex items-center gap-2 mt-1">
+                    <TVNetworkLogo networkName={show.tv_networks.name} size="sm" />
+                    <span className="text-sm text-muted-foreground">{show.tv_networks.name}</span>
                     {show.tv_networks.country && (
-                      <Badge variant="secondary" className="ml-1 text-xs">{show.tv_networks.country}</Badge>
+                      <Badge variant="secondary" className="text-xs">{show.tv_networks.country}</Badge>
                     )}
-                  </p>
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="space-y-3">

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.745",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "TV Network logos — brand-styled logo badges for 50+ real-world networks (BBC, NBC, ITV, Canal+, ARD, NHK, etc.)" },
+      { type: 'improvement', description: "TV Shows browser now displays network logos on each show card and in the network filter dropdown" },
+      { type: 'improvement', description: "Unknown networks automatically get a deterministic color badge based on their name" },
+    ],
+  },
+  {
     version: "1.0.744",
     date: "2026-02-16",
     changes: [
