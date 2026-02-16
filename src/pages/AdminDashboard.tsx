@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AdminRoute } from "@/components/AdminRoute";
-import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard, ShieldCheck } from "lucide-react";
 import SkillDefinitionsManager from "@/components/admin/SkillDefinitionsManager";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -101,7 +101,16 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/user-roles'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                User Roles
+              </CardTitle>
+              <CardDescription>Manage admin & moderator access</CardDescription>
+            </CardHeader>
+          </Card>
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/production-notes'}>
             <CardHeader>
               <CardTitle>Production Notes</CardTitle>
