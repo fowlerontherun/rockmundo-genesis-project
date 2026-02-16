@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import {
   DollarSign,
@@ -12,6 +13,10 @@ import {
   Store,
   ArrowUpCircle,
   ArrowDownCircle,
+  Video,
+  Radio,
+  ShoppingBag,
+  Filter,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -55,9 +60,13 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
     gigs: 0,
     streaming: 0,
     merchandise: 0,
+    music_video: 0,
+    release_sales: 0,
+    pr: 0,
     other: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [transactionNote, setTransactionNote] = useState('');
@@ -139,19 +148,25 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
         const gigSources = ['gig', 'gig_performance', 'gig_revenue', 'ticket_sales'];
         const streamingSources = ['streaming', 'stream', 'radio'];
         const merchSources = ['merchandise', 'merch', 'merch_sales'];
-        const allKnownSources = [...gigSources, ...streamingSources, ...merchSources];
+        const videoSources = ['music_video'];
+        const salesSources = ['release_sales', 'release'];
+        const prSources = ['pr_appearance'];
+        const allKnownSources = [...gigSources, ...streamingSources, ...merchSources, ...videoSources, ...salesSources, ...prSources, 'leader_deposit', 'leader_withdrawal', 'recording', 'refund'];
         
         const statsCalc = {
           total: earningsData.reduce((sum, e) => sum + e.amount, 0),
           gigs: earningsData.filter(e => gigSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
           streaming: earningsData.filter(e => streamingSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
           merchandise: earningsData.filter(e => merchSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          music_video: earningsData.filter(e => videoSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          release_sales: earningsData.filter(e => salesSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
+          pr: earningsData.filter(e => prSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
           other: earningsData.filter(e => !allKnownSources.includes(e.source)).reduce((sum, e) => sum + e.amount, 0),
         };
         setStats(statsCalc);
       } else {
         setEarnings([]);
-        setStats({ total: 0, gigs: 0, streaming: 0, merchandise: 0, other: 0 });
+        setStats({ total: 0, gigs: 0, streaming: 0, merchandise: 0, music_video: 0, release_sales: 0, pr: 0, other: 0 });
       }
     } catch (error) {
       console.error('Error loading earnings:', error);
@@ -170,18 +185,45 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
     }
   }, [isLeader, loadLeaderProfile]);
 
+  const SOURCE_GROUPS: Record<string, string[]> = {
+    gigs: ['gig', 'gig_performance', 'gig_revenue', 'ticket_sales'],
+    streaming: ['streaming', 'stream', 'radio'],
+    merchandise: ['merchandise', 'merch', 'merch_sales'],
+    music_video: ['music_video'],
+    release_sales: ['release_sales', 'release'],
+    pr: ['pr_appearance'],
+    other: [],
+  };
+
+  const filteredEarnings = useMemo(() => {
+    if (!sourceFilter) return earnings;
+    const sources = SOURCE_GROUPS[sourceFilter];
+    if (!sources || sources.length === 0) {
+      // "other" = everything not in known groups
+      const allKnown = Object.values(SOURCE_GROUPS).flat();
+      return earnings.filter(e => !allKnown.includes(e.source));
+    }
+    return earnings.filter(e => sources.includes(e.source));
+  }, [earnings, sourceFilter]);
+
   const getSourceIcon = (source: string) => {
     switch (source) {
       case 'leader_deposit':
         return <DollarSign className="h-4 w-4" />;
       case 'leader_withdrawal':
         return <Users className="h-4 w-4" />;
-      case 'gig':
+      case 'gig': case 'gig_performance': case 'gig_revenue': case 'ticket_sales':
         return <Music className="h-4 w-4" />;
-      case 'streaming':
+      case 'streaming': case 'stream': case 'radio':
         return <TrendingUp className="h-4 w-4" />;
-      case 'merchandise':
+      case 'merchandise': case 'merch': case 'merch_sales':
         return <Store className="h-4 w-4" />;
+      case 'music_video':
+        return <Video className="h-4 w-4" />;
+      case 'release_sales': case 'release':
+        return <ShoppingBag className="h-4 w-4" />;
+      case 'pr_appearance':
+        return <Radio className="h-4 w-4" />;
       default:
         return <DollarSign className="h-4 w-4" />;
     }
@@ -193,12 +235,18 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
         return 'bg-amber-500/10 text-amber-500';
       case 'leader_withdrawal':
         return 'bg-red-500/10 text-red-500';
-      case 'gig':
+      case 'gig': case 'gig_performance': case 'gig_revenue': case 'ticket_sales':
         return 'bg-blue-500/10 text-blue-500';
-      case 'streaming':
+      case 'streaming': case 'stream': case 'radio':
         return 'bg-green-500/10 text-green-500';
-      case 'merchandise':
+      case 'merchandise': case 'merch': case 'merch_sales':
         return 'bg-purple-500/10 text-purple-500';
+      case 'music_video':
+        return 'bg-pink-500/10 text-pink-500';
+      case 'release_sales': case 'release':
+        return 'bg-cyan-500/10 text-cyan-500';
+      case 'pr_appearance':
+        return 'bg-orange-500/10 text-orange-500';
       default:
         return 'bg-gray-500/10 text-gray-500';
     }
@@ -473,60 +521,58 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
         </Card>
       )}
 
-      {/* Stats Grid */}
+      {/* Stats Grid - clickable filters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Music className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-muted-foreground">Gigs</span>
-            </div>
-            <p className="text-2xl font-bold">${stats.gigs.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">Streaming</span>
-            </div>
-            <p className="text-2xl font-bold">${stats.streaming.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Store className="h-4 w-4 text-purple-500" />
-              <span className="text-sm text-muted-foreground">Merch</span>
-            </div>
-            <p className="text-2xl font-bold">${stats.merchandise.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-muted-foreground">Other</span>
-            </div>
-            <p className="text-2xl font-bold">${stats.other.toLocaleString()}</p>
-          </CardContent>
-        </Card>
+        {[
+          { key: 'gigs', label: 'Gigs', icon: <Music className="h-4 w-4 text-blue-500" />, value: stats.gigs, sources: ['gig', 'gig_performance', 'gig_revenue', 'ticket_sales'] },
+          { key: 'streaming', label: 'Streaming', icon: <TrendingUp className="h-4 w-4 text-green-500" />, value: stats.streaming, sources: ['streaming', 'stream', 'radio'] },
+          { key: 'merchandise', label: 'Merch', icon: <Store className="h-4 w-4 text-purple-500" />, value: stats.merchandise, sources: ['merchandise', 'merch', 'merch_sales'] },
+          { key: 'music_video', label: 'Music Videos', icon: <Video className="h-4 w-4 text-pink-500" />, value: stats.music_video, sources: ['music_video'] },
+          { key: 'release_sales', label: 'Sales', icon: <ShoppingBag className="h-4 w-4 text-cyan-500" />, value: stats.release_sales, sources: ['release_sales', 'release'] },
+          { key: 'pr', label: 'PR & Media', icon: <Radio className="h-4 w-4 text-orange-500" />, value: stats.pr, sources: ['pr_appearance'] },
+          { key: 'other', label: 'Other', icon: <DollarSign className="h-4 w-4 text-muted-foreground" />, value: stats.other, sources: [] },
+        ].filter(s => s.value !== 0).map(stat => (
+          <Card 
+            key={stat.key} 
+            className={`cursor-pointer transition-all hover:ring-1 hover:ring-primary/50 ${sourceFilter === stat.key ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setSourceFilter(sourceFilter === stat.key ? null : stat.key)}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 mb-2">
+                {stat.icon}
+                <span className="text-sm text-muted-foreground">{stat.label}</span>
+              </div>
+              <p className="text-2xl font-bold">${stat.value.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {/* Active filter indicator */}
+      {sourceFilter && (
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Filtered by:</span>
+          <Badge variant="secondary" className="cursor-pointer" onClick={() => setSourceFilter(null)}>
+            {sourceFilter.replace(/_/g, ' ')} ✕
+          </Badge>
+        </div>
+      )}
 
       {/* Earnings History */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Earnings</CardTitle>
-          <CardDescription>Latest income transactions</CardDescription>
+          <CardDescription>Latest income transactions {sourceFilter ? `(${sourceFilter.replace(/_/g, ' ')})` : ''}</CardDescription>
         </CardHeader>
         <CardContent>
-          {earnings.length === 0 ? (
+          {filteredEarnings.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
-              No earnings yet. Start performing gigs to earn money!
+              {sourceFilter ? `No ${sourceFilter.replace(/_/g, ' ')} earnings found.` : 'No earnings yet. Start performing gigs to earn money!'}
             </div>
           ) : (
             <div className="space-y-3">
-              {earnings.map((earning) => (
+              {filteredEarnings.map((earning) => (
                 <div
                   key={earning.id}
                   className="flex items-center justify-between p-3 rounded-lg border"

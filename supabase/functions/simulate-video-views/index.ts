@@ -152,8 +152,10 @@ serve(async (req) => {
 
       // Credit to band balance and create earnings record
       if (song?.band_id && dailyEarnings > 0) {
-        const bandShare = dailyEarnings * 0.7; // 70% to band
+        const bandShare = Math.round(dailyEarnings * 0.7); // 70% to band, rounded for integer column
         
+        if (bandShare <= 0) continue;
+
         const { data: band } = await supabaseClient
           .from("bands")
           .select("band_balance, weekly_fans")
@@ -170,7 +172,7 @@ serve(async (req) => {
             .eq("id", song.band_id);
 
           // Create band_earnings record for tracking
-          await supabaseClient
+          const { error: earningsError } = await supabaseClient
             .from("band_earnings")
             .insert({
               band_id: song.band_id,
@@ -184,6 +186,10 @@ serve(async (req) => {
                 song_id: song.id,
               },
             });
+
+          if (earningsError) {
+            console.error("Error inserting band_earnings for video:", video.id, earningsError);
+          }
         }
       }
 
