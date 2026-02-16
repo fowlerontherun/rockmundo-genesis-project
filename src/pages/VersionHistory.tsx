@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.754",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Crypto Trade button now auto-scrolls to the trading panel so it's immediately visible" },
+      { type: 'fix', description: "Fixed stale holdings data in buy/sell mutations — now fetches fresh data from DB before each trade" },
+    ],
+  },
+  {
     version: "1.0.753",
     date: "2026-02-16",
     changes: [
