@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.712",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed tax and distribution fees displaying 100x too high in My Releases (cents were shown as dollars)" },
+      { type: 'fix', description: "Record sales now properly credit band balance — bands receive spendable cash from daily sales" },
+      { type: 'improvement', description: "Clearer transaction labels in band finances (Record Sales, Video Revenue, Sponsorship, etc.)" },
+    ],
+  },
+  {
     version: "1.0.711",
     date: "2026-02-16",
     changes: [

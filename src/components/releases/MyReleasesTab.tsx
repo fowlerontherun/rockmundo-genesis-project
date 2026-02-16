@@ -154,10 +154,10 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         if (!result[releaseId]) {
           result[releaseId] = { grossRevenue: 0, taxPaid: 0, distributionFees: 0, netRevenue: 0 };
         }
-        result[releaseId].grossRevenue += sale.total_amount || 0;
-        result[releaseId].taxPaid += sale.sales_tax_amount || 0;
-        result[releaseId].distributionFees += sale.distribution_fee || 0;
-        result[releaseId].netRevenue += sale.net_revenue || 0;
+        result[releaseId].grossRevenue += (sale.total_amount || 0) / 100;
+        result[releaseId].taxPaid += (sale.sales_tax_amount || 0) / 100;
+        result[releaseId].distributionFees += (sale.distribution_fee || 0) / 100;
+        result[releaseId].netRevenue += (sale.net_revenue || 0) / 100;
       });
 
       return result;
