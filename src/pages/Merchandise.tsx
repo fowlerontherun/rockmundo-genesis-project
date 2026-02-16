@@ -35,7 +35,10 @@ import {
   TrendingUp,
   ImageIcon,
   Wand2,
+  X,
 } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SalesAnalyticsTab } from "@/components/merchandise/SalesAnalyticsTab";
 import { CollaborationOffersCard } from "@/components/merchandise/CollaborationOffersCard";
 import { ActiveCollaborationsCard } from "@/components/merchandise/ActiveCollaborationsCard";
@@ -247,6 +250,7 @@ const calculateMargin = (product: MerchandiseRecord) => {
 const Merchandise = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
@@ -263,6 +267,7 @@ const Merchandise = () => {
   const [editForm, setEditForm] = useState<FormState>(INITIAL_FORM);
   const [designerForm, setDesignerForm] = useState<DesignerForm>(INITIAL_DESIGNER_FORM);
   const [designerPreview, setDesignerPreview] = useState<string[]>([]);
+  const [enlargedImage, setEnlargedImage] = useState<{ url: string; name: string } | null>(null);
 
   const {
     data: merchandise = [],
@@ -743,30 +748,32 @@ const Merchandise = () => {
               <CardTitle className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <span>Inventory Performance Snapshot</span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={isGeneratingAll || !merchandise?.length}
-                    onClick={() => {
-                      const missing = (merchandise || []).filter((p: any) => !p.design_preview_url);
-                      if (missing.length === 0) {
-                        toast({ title: "All images generated", description: "Every product already has an image." });
-                        return;
-                      }
-                      generateAllMissing(
-                        missing.map((p: any) => ({
-                          merchId: p.id,
-                          itemType: p.item_type ?? "merchandise",
-                          designName: p.design_name ?? "Product",
-                          bandName,
-                          qualityTier: p.quality_tier || "basic",
-                        }))
-                      );
-                    }}
-                  >
-                    {isGeneratingAll ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
-                    Generate All Images
-                  </Button>
+                  {isAdmin() && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isGeneratingAll || !merchandise?.length}
+                      onClick={() => {
+                        const missing = (merchandise || []).filter((p: any) => !p.design_preview_url);
+                        if (missing.length === 0) {
+                          toast({ title: "All images generated", description: "Every product already has an image." });
+                          return;
+                        }
+                        generateAllMissing(
+                          missing.map((p: any) => ({
+                            merchId: p.id,
+                            itemType: p.item_type ?? "merchandise",
+                            designName: p.design_name ?? "Product",
+                            bandName,
+                            qualityTier: p.quality_tier || "basic",
+                          }))
+                        );
+                      }}
+                    >
+                      {isGeneratingAll ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+                      Generate All Images
+                    </Button>
+                  )}
                   <span className="text-sm text-muted-foreground">
                     Real-time totals pulled from your Supabase merchandise table.
                   </span>
@@ -870,9 +877,13 @@ const Merchandise = () => {
                                   <img
                                     src={(product as any).design_preview_url}
                                     alt={product.design_name ?? ""}
-                                    className="h-10 w-10 rounded object-cover border border-border"
+                                    className="h-10 w-10 rounded object-cover border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEnlargedImage({ url: (product as any).design_preview_url, name: product.design_name ?? "" });
+                                    }}
                                   />
-                                ) : (
+                                ) : isAdmin() ? (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -894,6 +905,10 @@ const Merchandise = () => {
                                       <Wand2 className="h-4 w-4 text-muted-foreground" />
                                     )}
                                   </button>
+                                ) : (
+                                  <div className="h-10 w-10 rounded border border-dashed border-muted-foreground/20 flex items-center justify-center bg-muted/30">
+                                    <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+                                  </div>
                                 )}
                                 <div className="flex flex-col">
                                   <span className="font-semibold">{product.design_name}</span>
@@ -1243,6 +1258,22 @@ const Merchandise = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Enlarged image dialog */}
+      <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+        <DialogContent className="sm:max-w-lg p-2">
+          {enlargedImage && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-center pt-2">{enlargedImage.name}</p>
+              <img
+                src={enlargedImage.url}
+                alt={enlargedImage.name}
+                className="w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

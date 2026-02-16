@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.804",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Merchandise images are now clickable — tap to view enlarged on mobile" },
+      { type: 'improvement', description: "Generate Images buttons hidden for non-admin users on Merchandise and Housing pages" },
+    ],
+  },
+  {
     version: "1.0.803",
     date: "2026-02-16",
     changes: [

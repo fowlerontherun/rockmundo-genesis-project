@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useUserRole } from "@/hooks/useUserRole";
 
 function useCountriesWithHousing() {
   return useQuery({
@@ -84,6 +85,7 @@ function useCitiesInCountry(country: string | null) {
 const Housing = () => {
   const { currentCity } = useGameData();
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
 
   // Filter state — defaults to player's current location
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -255,7 +257,7 @@ const Housing = () => {
         </CardContent>
       </Card>
 
-      {housingTypes && housingTypes.some(h => !h.image_url) && (
+      {isAdmin() && housingTypes && housingTypes.some(h => !h.image_url) && (
         <div className="flex items-center gap-3">
           <Button
             size="sm"
@@ -338,7 +340,7 @@ const Housing = () => {
                     <CardContent className="pb-2">
                       {ht.image_url ? (
                         <img src={ht.image_url} alt={ht.name} className="w-full h-32 object-cover rounded-md" />
-                      ) : (
+                      ) : isAdmin() ? (
                         <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
                           <Button
                             variant="ghost"
@@ -353,6 +355,10 @@ const Housing = () => {
                             )}
                             Generate Image
                           </Button>
+                        </div>
+                      ) : (
+                        <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
                         </div>
                       )}
                       <div className="flex items-center justify-between mt-2">
