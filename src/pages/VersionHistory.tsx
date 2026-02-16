@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.722",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Restored original user lyrics for 'Girls don't buy rounds' — AI-generated lyrics had overwritten the database field" },
+      { type: 'fix', description: "Fixed song status restored to 'completed' since valid audio already exists" },
+      { type: 'fix', description: "Cleaned up corrupted audio_prompt that contained duplicate Lyrics: sections" },
+    ],
+  },
+  {
     version: "1.0.721",
     date: "2026-02-16",
     changes: [
