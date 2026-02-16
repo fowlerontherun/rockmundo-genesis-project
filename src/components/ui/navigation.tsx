@@ -17,7 +17,7 @@ import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
-// Radio button moved to Dashboard
+import { RMRadioPlayer } from "@/components/radio/RMRadioPlayer";
 import {
   Home,
   Users,
@@ -80,6 +80,7 @@ type NavItem = {
   path: string;
   search?: string;
   badge?: number;
+  onClick?: () => void;
 };
 
 type NavSection = {
@@ -94,6 +95,7 @@ const Navigation = () => {
   const { signOut } = useAuth();
   const { currentCity } = useGameData();
   const [isOpen, setIsOpen] = useState(false);
+  const [radioOpen, setRadioOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdmin } = useUserRole();
@@ -141,7 +143,7 @@ const Navigation = () => {
         { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
         { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
         { icon: BookOpen, labelKey: "nav.journal", path: "/journal" },
-        { icon: Radio, labelKey: "nav.radioPlayer", path: "/radio-player" },
+        { icon: Radio, labelKey: "nav.radioPlayer", path: "#", onClick: () => setRadioOpen(true) },
       ],
     },
     {
@@ -397,7 +399,7 @@ const Navigation = () => {
                           ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
-                      onClick={() => handleNavigation(item.path, item.search)}
+                      onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path, item.search)}
                       aria-current={isActive(item) ? "page" : undefined}
                       title={collapsed ? label : undefined}
                     >
@@ -636,6 +638,7 @@ const Navigation = () => {
           </Button>
         </div>
       </div>
+      <RMRadioPlayer open={radioOpen} onOpenChange={setRadioOpen} />
     </>
   );
 };

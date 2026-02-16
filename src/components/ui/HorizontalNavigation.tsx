@@ -14,7 +14,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
-// Radio button moved to Dashboard
+import { RMRadioPlayer } from "@/components/radio/RMRadioPlayer";
 import { VersionHeader } from "@/components/VersionHeader";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -33,6 +33,7 @@ type NavItem = {
   path: string;
   search?: string;
   badge?: number;
+  onClick?: () => void;
 };
 
 type NavSection = {
@@ -52,6 +53,7 @@ const HorizontalNavigation = () => {
   const { isAdmin } = useUserRole();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [radioOpen, setRadioOpen] = useState(false);
   const dropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
@@ -66,7 +68,7 @@ const HorizontalNavigation = () => {
         { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
         { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
         { icon: BookOpen, labelKey: "nav.journal", path: "/journal" },
-        { icon: Radio, labelKey: "nav.radioPlayer", path: "/radio-player" },
+        { icon: Radio, labelKey: "nav.radioPlayer", path: "#", onClick: () => setRadioOpen(true) },
       ],
     },
     {
@@ -322,7 +324,7 @@ const HorizontalNavigation = () => {
                               ? "bg-accent text-accent-foreground"
                               : "text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                           }`}
-                          onClick={() => handleNavigation(item.path)}
+                          onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path)}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
                           <span>{t(item.labelKey)}</span>
@@ -378,7 +380,7 @@ const HorizontalNavigation = () => {
                           className={`w-full justify-start gap-3 ${
                             active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent"
                           }`}
-                          onClick={() => handleNavigation(item.path)}
+                          onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path)}
                         >
                           <Icon className="h-4 w-4" />
                           {t(item.labelKey)}
@@ -447,6 +449,7 @@ const HorizontalNavigation = () => {
           </Button>
         </div>
       </div>
+      <RMRadioPlayer open={radioOpen} onOpenChange={setRadioOpen} />
     </>
   );
 };
