@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,16 +236,31 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
             </Badge>
           </div>
           {contractOffers.map((offer) => (
-            <ContractOfferCard
-              key={offer.id}
-              offer={offer}
-              entityName={primaryBandId ? bandEntities[0]?.name ?? "Your Band" : soloEntity?.name ?? "You"}
-            />
+            <div key={offer.id} id={`offer-${offer.id}`} className="transition-all duration-300 rounded-lg">
+              <ContractOfferCard
+                offer={offer}
+                entityName={primaryBandId ? bandEntities[0]?.name ?? "Your Band" : soloEntity?.name ?? "You"}
+              />
+            </div>
           ))}
         </div>
       )}
 
-      <ContractNotificationsPanel playerMessages={playerMessages} adminAlerts={adminAlerts} />
+      <ContractNotificationsPanel
+        playerMessages={playerMessages}
+        adminAlerts={adminAlerts}
+        onNotificationAction={(notification) => {
+          // For offered/pending contracts, scroll to the offer card or contract card
+          const targetId = `contract-${notification.contractId}`;
+          const offerTarget = `offer-${notification.contractId}`;
+          const el = document.getElementById(offerTarget) || document.getElementById(targetId);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("ring-2", "ring-primary", "ring-offset-2");
+            setTimeout(() => el.classList.remove("ring-2", "ring-primary", "ring-offset-2"), 2000);
+          }
+        }}
+      />
 
       {/* No contracts message */}
       {(!contracts || contracts.length === 0) && contractOffers.length === 0 && (
@@ -284,7 +299,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         const albumStatus = getObligationStatus(albumsCompleted, albumQuota, monthsLeft, totalMonths);
 
         return (
-          <Card key={contract.id}>
+          <Card key={contract.id} id={`contract-${contract.id}`} className="transition-all duration-300 rounded-lg">
             <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-lg">

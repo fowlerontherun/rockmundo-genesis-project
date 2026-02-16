@@ -13,6 +13,7 @@ export type ContractNotificationSeverity = "default" | "warning" | "danger" | "s
 
 export interface ContractNotification {
   id: string;
+  contractId: string;
   audience: ContractNotificationAudience;
   category: ContractNotificationCategory;
   severity: ContractNotificationSeverity;
@@ -72,6 +73,7 @@ export const buildContractNotifications = (
     if (contract.status === "pending" || contract.status === "offered") {
       const message: ContractNotification = {
         id: `${contract.id}-offer-player`,
+        contractId: contract.id,
         audience: "player",
         category: "offer",
         severity: "warning",
@@ -84,6 +86,7 @@ export const buildContractNotifications = (
 
       const adminMessage: ContractNotification = {
         id: `${contract.id}-offer-admin`,
+        contractId: contract.id,
         audience: "admin",
         category: "offer",
         severity: "warning",
@@ -101,6 +104,7 @@ export const buildContractNotifications = (
     if (contract.status === "accepted_by_artist") {
       playerMessages.push({
         id: `${contract.id}-accepted-player`,
+        contractId: contract.id,
         audience: "player",
         category: "offer",
         severity: "default",
@@ -113,6 +117,7 @@ export const buildContractNotifications = (
 
       adminAlerts.push({
         id: `${contract.id}-accepted-admin`,
+        contractId: contract.id,
         audience: "admin",
         category: "offer",
         severity: "warning",
@@ -127,6 +132,7 @@ export const buildContractNotifications = (
     if (contract.status === "active" && daysToEnd !== null && daysToEnd <= 30) {
       playerMessages.push({
         id: `${contract.id}-expiry-player`,
+        contractId: contract.id,
         audience: "player",
         category: "expiry",
         severity: "warning",
@@ -139,6 +145,7 @@ export const buildContractNotifications = (
 
       adminAlerts.push({
         id: `${contract.id}-expiry-admin`,
+        contractId: contract.id,
         audience: "admin",
         category: "expiry",
         severity: "warning",
@@ -153,6 +160,7 @@ export const buildContractNotifications = (
     if (contract.status === "terminated") {
       playerMessages.push({
         id: `${contract.id}-terminated-player`,
+        contractId: contract.id,
         audience: "player",
         category: "termination",
         severity: "danger",
@@ -165,6 +173,7 @@ export const buildContractNotifications = (
 
       adminAlerts.push({
         id: `${contract.id}-terminated-admin`,
+        contractId: contract.id,
         audience: "admin",
         category: "termination",
         severity: "danger",
@@ -179,6 +188,7 @@ export const buildContractNotifications = (
     if (recoupProgress >= 100) {
       playerMessages.push({
         id: `${contract.id}-bonus-player`,
+        contractId: contract.id,
         audience: "player",
         category: "bonus",
         severity: "success",
@@ -191,6 +201,7 @@ export const buildContractNotifications = (
 
       adminAlerts.push({
         id: `${contract.id}-bonus-admin`,
+        contractId: contract.id,
         audience: "admin",
         category: "bonus",
         severity: "success",
@@ -205,6 +216,7 @@ export const buildContractNotifications = (
     if (nearingCloseout && releasesRemaining > 0) {
       playerMessages.push({
         id: `${contract.id}-penalty-player`,
+        contractId: contract.id,
         audience: "player",
         category: "penalty",
         severity: "danger",
@@ -217,6 +229,7 @@ export const buildContractNotifications = (
 
       adminAlerts.push({
         id: `${contract.id}-penalty-admin`,
+        contractId: contract.id,
         audience: "admin",
         category: "penalty",
         severity: "danger",
