@@ -19,6 +19,7 @@ interface LabelContractsTabProps {
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-emerald-500/20 text-emerald-500",
   offered: "bg-amber-500/20 text-amber-500",
+  accepted_by_artist: "bg-blue-500/20 text-blue-500",
   completed: "bg-blue-500/20 text-blue-500",
   terminated: "bg-destructive/20 text-destructive",
   rejected: "bg-muted text-muted-foreground",
@@ -65,14 +66,22 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
 
   const activateMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      const startDate = new Date();
       const contract = contracts.find(c => c.id === contractId);
+      if (!contract) throw new Error("Contract not found");
+
+      // Only allow activation if artist has accepted
+      if (contract.status !== "accepted_by_artist") {
+        throw new Error("Artist must accept the offer before the label can activate it");
+      }
+
+      const startDate = new Date();
       const termMonths = contract?.end_date && contract?.start_date
         ? Math.round((new Date(contract.end_date).getTime() - new Date(contract.start_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
         : 24;
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + termMonths);
 
+      // Activate the contract
       const { error } = await supabase
         .from("artist_label_contracts")
         .update({
@@ -82,14 +91,75 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
         })
         .eq("id", contractId);
       if (error) throw error;
+
+      // Pay the advance: credit band balance, debit label balance
+      const advanceAmount = contract.advance_amount || 0;
+      if (advanceAmount > 0 && contract.band_id) {
+        // Credit band
+        const { data: band } = await supabase
+          .from("bands")
+          .select("band_balance")
+          .eq("id", contract.band_id)
+          .single();
+        if (band) {
+          await supabase
+            .from("bands")
+            .update({ band_balance: (band.band_balance || 0) + advanceAmount })
+            .eq("id", contract.band_id);
+        }
+
+        // Debit label
+        const { data: label } = await supabase
+          .from("labels")
+          .select("balance")
+          .eq("id", labelId)
+          .single();
+        if (label) {
+          await supabase
+            .from("labels")
+            .update({ balance: (label.balance || 0) - advanceAmount })
+            .eq("id", labelId);
+        }
+
+        // Log earnings
+        await supabase.from("band_earnings").insert({
+          band_id: contract.band_id,
+          amount: advanceAmount,
+          source: "label_advance",
+          description: `Advance payment from ${contract.bands?.name ? "contract with " : ""}label contract`,
+        });
+
+        // Send inbox notification to band leader
+        const { data: leader } = await supabase
+          .from("band_members")
+          .select("user_id")
+          .eq("band_id", contract.band_id)
+          .eq("role", "leader")
+          .limit(1)
+          .maybeSingle();
+
+        if (leader?.user_id) {
+          await supabase.from("player_inbox").insert({
+            user_id: leader.user_id,
+            category: "record_label" as any,
+            priority: "high" as any,
+            title: "Contract Activated! 🎉",
+            message: `Your contract has been activated! You've received a $${advanceAmount.toLocaleString()} advance. Time to start delivering releases!`,
+            related_entity_id: contractId,
+            related_entity_type: "contract",
+            action_type: "navigate",
+            action_data: { path: "/labels" },
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-all-contracts", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-pending-contract-count", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-roster-contracts", labelId] });
-      toast.success("Contract activated!");
+      toast.success("Contract activated! Advance paid to the band.");
     },
-    onError: () => toast.error("Failed to activate contract"),
+    onError: (err: Error) => toast.error(err.message || "Failed to activate contract"),
   });
 
   const rejectMutation = useMutation({
@@ -215,13 +285,31 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
                       {withdrawMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
                       Withdraw Offer
                     </Button>
+                    <Badge variant="secondary" className="text-xs py-1">
+                      Waiting for artist to accept
+                    </Badge>
+                  </>
+                )}
+
+                {contract.status === "accepted_by_artist" && (
+                  <>
                     <Button
                       size="sm"
                       onClick={() => activateMutation.mutate(contract.id)}
                       disabled={activateMutation.isPending}
                     >
                       {activateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                      Activate Contract
+                      Activate & Pay Advance
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive"
+                      onClick={() => withdrawMutation.mutate(contract.id)}
+                      disabled={withdrawMutation.isPending}
+                    >
+                      {withdrawMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
+                      Withdraw
                     </Button>
                   </>
                 )}

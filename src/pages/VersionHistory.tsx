@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.771",
+    date: "2026-02-16",
+    changes: [
+      { type: 'feature', description: "Dual approval contract flow: band must accept terms first, then label activates and pays the advance" },
+      { type: 'feature', description: "Advance payment on contract activation: band balance credited, label balance debited, earnings logged" },
+      { type: 'feature', description: "Contract offer inbox notification: band leader receives a high-priority inbox message when a label sends an offer" },
+      { type: 'feature', description: "Contract activation inbox notification: band leader notified when the label activates and pays the advance" },
+      { type: 'improvement', description: "Label contract UI shows 'Waiting for artist' badge for offered contracts, 'Activate & Pay Advance' for accepted ones" },
+    ],
+  },
+  {
     version: "1.0.770",
     date: "2026-02-16",
     changes: [

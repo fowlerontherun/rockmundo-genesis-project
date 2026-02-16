@@ -166,6 +166,37 @@ export function ContractDesignerDialog({
           })
           .eq("id", demoSubmissionId);
       }
+
+      // Send inbox notification to band leader
+      if (bandId) {
+        const { data: labelData } = await supabase
+          .from("labels")
+          .select("name")
+          .eq("id", labelId)
+          .single();
+
+        const { data: leader } = await supabase
+          .from("band_members")
+          .select("user_id")
+          .eq("band_id", bandId)
+          .eq("role", "leader")
+          .limit(1)
+          .maybeSingle();
+
+        if (leader?.user_id) {
+          await supabase.from("player_inbox").insert({
+            user_id: leader.user_id,
+            category: "record_label" as any,
+            priority: "high" as any,
+            title: "📝 New Contract Offer!",
+            message: `${labelData?.name || "A record label"} has sent you a contract offer! Advance: $${advance.toLocaleString()}, ${singleQuota} singles, ${albumQuota} albums over ${termMonths} months. Review it in your contracts page.`,
+            related_entity_id: contract.id,
+            related_entity_type: "contract",
+            action_type: "navigate",
+            action_data: { path: "/labels" },
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-all-contracts"] });
