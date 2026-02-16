@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.786",
+    date: "2026-02-16",
+    changes: [
+      { type: 'improvement', description: "Removed unused edge functions: publish-scheduled-twaats and eurovision — freed up deployment slots" },
+      { type: 'fix', description: "Successfully deployed generate-festival-poster edge function (previously blocked by function limit)" },
+    ],
+  },
+  {
     version: "1.0.785",
     date: "2026-02-16",
     changes: [
