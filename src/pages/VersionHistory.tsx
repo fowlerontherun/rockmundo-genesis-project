@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.715",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Fixed gig_outcomes query using wrong column (user_id → band_id) causing dashboard stats to fail" },
+      { type: 'fix', description: "Fixed player_equipment query using wrong column (profile_id → user_id) causing gear performance calculations to fail" },
+    ],
+  },
+  {
     version: "1.0.714",
     date: "2026-02-16",
     changes: [

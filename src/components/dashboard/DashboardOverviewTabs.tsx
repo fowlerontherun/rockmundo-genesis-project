@@ -63,7 +63,12 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
       if (!user?.id) return null;
 
       const client: any = supabase;
-      const gigsResult = await client.from("gig_outcomes").select("id").eq("user_id", user.id);
+      // Get user's bands first, then count gig outcomes via band_id
+      const bandsResult = await client.from("band_members").select("band_id").eq("user_id", user.id);
+      const bandIds = (bandsResult.data || []).map((b: any) => b.band_id);
+      const gigsResult = bandIds.length > 0
+        ? await client.from("gig_outcomes").select("id").in("band_id", bandIds)
+        : { data: [] };
       const songsResult = await client.from("songs").select("id, status").eq("original_writer_id", user.id);
 
       const totalGigs = gigsResult.data?.length || 0;
