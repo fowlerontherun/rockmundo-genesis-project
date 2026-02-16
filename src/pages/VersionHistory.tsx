@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.825",
+    date: "2026-02-16",
+    changes: [
+      { type: 'fix', description: "Album charts now resolve album title from joined releases table instead of stale 'Unknown Album' values in chart_entries.release_title" },
+    ],
+  },
+  {
     version: "1.0.824",
     date: "2026-02-16",
     changes: [

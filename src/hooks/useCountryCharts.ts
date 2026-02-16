@@ -417,10 +417,11 @@ export const useCountryCharts = (
         const releaseBand = entry.releases?.bands?.artist_name || entry.releases?.bands?.name;
         const artistName = songBand || releaseBand || "Unknown Artist";
         
-        // For album entries, use release_title; for songs, use song title
+        // For album entries, use release title (prefer joined releases.title over stale release_title column)
         const isAlbumEntry = entry.entry_type === "album";
-        const displayTitle = isAlbumEntry && entry.release_title 
-          ? entry.release_title 
+        const albumTitle = entry.releases?.title || (entry.release_title !== "Unknown Album" ? entry.release_title : null);
+        const displayTitle = isAlbumEntry && albumTitle
+          ? albumTitle 
           : entry.songs?.title || "Unknown Song";
 
         return {
@@ -503,10 +504,11 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
     const releaseBand = entry.releases?.bands?.artist_name || entry.releases?.bands?.name;
     const artistName = songBand || releaseBand || "Unknown Artist";
     
-    // For album entries, use release_title; for songs, use song title
+    // For album entries, use release title (prefer joined releases.title over stale release_title column)
     const isAlbumEntry = entry.entry_type === "album";
-    const displayTitle = isAlbumEntry && entry.release_title 
-      ? entry.release_title 
+    const albumTitle = entry.releases?.title || (entry.release_title !== "Unknown Album" ? entry.release_title : null);
+    const displayTitle = isAlbumEntry && albumTitle
+      ? albumTitle 
       : entry.songs?.title || "Unknown Song";
     
     const playsCount = entry.plays_count || 0;
