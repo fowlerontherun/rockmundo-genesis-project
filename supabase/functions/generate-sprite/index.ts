@@ -61,12 +61,12 @@ async function handlePOVClipGeneration(body: any, authHeader: string) {
   const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
   const JOB_NAME = "generate-pov-clips";
 
-  // Verify admin
+  // Verify admin via user_roles table
   const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
   if (authError || !user) throw new Error("Unauthorized");
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", user.id).single();
-  if (profile?.role !== "admin") throw new Error("Admin access required");
+  const { data: adminRole } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+  if (!adminRole) throw new Error("Admin access required");
 
   const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
   if (!REPLICATE_API_KEY) throw new Error("REPLICATE_API_KEY not configured");
