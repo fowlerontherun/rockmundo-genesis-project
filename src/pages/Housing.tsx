@@ -1,10 +1,11 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGameData } from "@/hooks/useGameData";
 import {
   useHousingTypes,
@@ -16,19 +17,66 @@ import {
   useEndRental,
   calculateWeeklyRent,
 } from "@/hooks/useHousing";
-import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2 } from "lucide-react";
+import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+
+function useCountriesWithHousing() {
+  return useQuery({
+    queryKey: ["housing-countries"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("housing_types")
+        .select("country")
+        .eq("is_active", true);
+      if (error) throw error;
+      const unique = [...new Set((data ?? []).map(d => d.country))].sort();
+      return unique as string[];
+    },
+  });
+}
+
+function useCitiesInCountry(country: string | null) {
+  return useQuery({
+    queryKey: ["cities-in-country", country],
+    queryFn: async () => {
+      if (!country) return [];
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id, name, cost_of_living")
+        .eq("country", country)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!country,
+  });
+}
 
 const Housing = () => {
   const { currentCity } = useGameData();
   const { user } = useAuth();
-  const country = currentCity?.country ?? null;
-  const costOfLiving = currentCity?.cost_of_living ?? 50;
 
-  const { data: housingTypes, isLoading: loadingHousing } = useHousingTypes(country);
+  // Filter state — defaults to player's current location
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+
+  const { data: countries = [] } = useCountriesWithHousing();
+  const activeCountry = selectedCountry ?? currentCity?.country ?? null;
+  const { data: citiesInCountry = [] } = useCitiesInCountry(activeCountry);
+
+  // Determine effective city for cost_of_living
+  const effectiveCity = useMemo(() => {
+    if (selectedCityId) return citiesInCountry.find(c => c.id === selectedCityId) ?? null;
+    if (!selectedCountry && currentCity?.country === activeCountry) return currentCity;
+    return citiesInCountry[0] ?? null;
+  }, [selectedCityId, selectedCountry, citiesInCountry, currentCity, activeCountry]);
+
+  const costOfLiving = effectiveCity?.cost_of_living ?? 50;
+
+  const { data: housingTypes, isLoading: loadingHousing } = useHousingTypes(activeCountry);
   const { data: rentalTypes, isLoading: loadingRentals } = useRentalTypes();
   const { data: playerProperties, isLoading: loadingProperties } = usePlayerProperties();
   const { data: activeRental, isLoading: loadingRental } = usePlayerRental();
@@ -47,7 +95,7 @@ const Housing = () => {
     setGeneratingImage(housingTypeId);
     try {
       const { data, error } = await supabase.functions.invoke("generate-housing-image", {
-        body: { housing_type_id: housingTypeId, country },
+        body: { housing_type_id: housingTypeId, country: activeCountry },
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["housing-types"] });
@@ -76,12 +124,9 @@ const Housing = () => {
         totalProcessed += data.processed || 0;
         remaining = data.remaining || 0;
         setBatchProgress({ processed: totalProcessed, remaining });
-        
-        // Invalidate cache so UI updates
         queryClient.invalidateQueries({ queryKey: ["housing-types"] });
         
         if (data.processed === 0 && remaining > 0) {
-          // Rate limited or errors, wait and retry
           await new Promise(r => setTimeout(r, 30000));
         }
         
@@ -98,7 +143,7 @@ const Housing = () => {
     setBatchGenerating(false);
   };
 
-  const ownedInCountry = playerProperties?.filter(p => p.country === country) ?? [];
+  const ownedInCountry = playerProperties?.filter(p => p.country === activeCountry) ?? [];
   const ownedIds = new Set(playerProperties?.map(p => p.housing_type_id) ?? []);
 
   const formatPrice = (amount: number) => `$${amount.toLocaleString()}`;
@@ -111,27 +156,93 @@ const Housing = () => {
           Housing
         </h1>
         <p className="text-muted-foreground">
-          {country ? `Browse properties in ${country}` : "Travel to a city to view available properties"}
+          {activeCountry ? `Browse properties in ${activeCountry}` : "Select a country to view available properties"}
         </p>
-        {housingTypes && housingTypes.some(h => !h.image_url) && (
-          <div className="mt-2 flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleBatchGenerate}
-              disabled={batchGenerating}
-            >
-              {batchGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Wand2 className="h-4 w-4 mr-1" />}
-              {batchGenerating ? "Generating..." : "Generate All Missing Images"}
-            </Button>
-            {batchProgress && (
-              <span className="text-xs text-muted-foreground">
-                {batchProgress.processed} done, {batchProgress.remaining} remaining
-              </span>
+      </div>
+
+      {/* Country & City Filters */}
+      <Card className="bg-muted/30">
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                <Globe className="h-3 w-3 inline mr-1" />Country
+              </label>
+              <Select
+                value={activeCountry ?? ""}
+                onValueChange={(val) => {
+                  setSelectedCountry(val);
+                  setSelectedCityId(null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select country..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {countries.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                <MapPin className="h-3 w-3 inline mr-1" />City (affects rental pricing)
+              </label>
+              <Select
+                value={selectedCityId ?? effectiveCity?.id ?? ""}
+                onValueChange={(val) => setSelectedCityId(val)}
+                disabled={!activeCountry || citiesInCountry.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select city..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {citiesInCountry.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} (CoL: {c.cost_of_living})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {currentCity && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedCountry(null);
+                  setSelectedCityId(null);
+                }}
+              >
+                <MapPin className="h-4 w-4 mr-1" />
+                My Location
+              </Button>
             )}
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
+
+      {housingTypes && housingTypes.some(h => !h.image_url) && (
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleBatchGenerate}
+            disabled={batchGenerating}
+          >
+            {batchGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Wand2 className="h-4 w-4 mr-1" />}
+            {batchGenerating ? "Generating..." : "Generate All Missing Images"}
+          </Button>
+          {batchProgress && (
+            <span className="text-xs text-muted-foreground">
+              {batchProgress.processed} done, {batchProgress.remaining} remaining
+            </span>
+          )}
+        </div>
+      )}
 
       <Tabs defaultValue="buy">
         <TabsList className="grid w-full grid-cols-3">
@@ -148,8 +259,8 @@ const Housing = () => {
 
         {/* BUY TAB */}
         <TabsContent value="buy" className="space-y-4">
-          {!country ? (
-            <EmptyState icon={MapPin} title="No City Selected" description="Travel to a city to see available properties." />
+          {!activeCountry ? (
+            <EmptyState icon={MapPin} title="No Country Selected" description="Select a country above to see available properties." />
           ) : loadingHousing ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : (
@@ -188,7 +299,7 @@ const Housing = () => {
                       )}
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-lg font-bold text-primary">{formatPrice(ht.base_price)}</span>
-                        <span className="text-xs text-muted-foreground">{country}</span>
+                        <span className="text-xs text-muted-foreground">{activeCountry}</span>
                       </div>
                     </CardContent>
                     <CardFooter>
@@ -198,7 +309,7 @@ const Housing = () => {
                         <Button
                           className="w-full"
                           size="sm"
-                          onClick={() => buyProperty.mutate({ housingType: ht, country: country! })}
+                          onClick={() => buyProperty.mutate({ housingType: ht, country: activeCountry! })}
                           disabled={buyProperty.isPending}
                         >
                           {buyProperty.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <DollarSign className="h-4 w-4 mr-1" />}
@@ -236,52 +347,59 @@ const Housing = () => {
             </Card>
           )}
 
-          {!country ? (
-            <EmptyState icon={MapPin} title="No City Selected" description="Travel to a city to see rental options." />
+          {!activeCountry ? (
+            <EmptyState icon={MapPin} title="No Country Selected" description="Select a country above to see rental options." />
           ) : loadingRentals ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {rentalTypes?.map((rt) => {
-                const weeklyCost = calculateWeeklyRent(rt.base_weekly_cost, costOfLiving);
-                const isCurrentRental = activeRental?.rental_type_id === rt.id && activeRental?.country === country;
-                return (
-                  <Card key={rt.id} className={isCurrentRental ? "border-primary/50 bg-primary/5" : ""}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">Tier {rt.tier}</Badge>
-                      </div>
-                      <CardTitle className="text-base">{rt.name}</CardTitle>
-                      <CardDescription className="text-xs">{rt.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-primary">{formatPrice(weeklyCost)}/week</span>
-                        <span className="text-xs text-muted-foreground">Base: {formatPrice(rt.base_weekly_cost)}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Daily: {formatPrice(Math.round(weeklyCost / 7))}
-                      </p>
-                    </CardContent>
-                    <CardFooter>
-                      {isCurrentRental ? (
-                        <Badge variant="secondary" className="w-full justify-center">Current Rental</Badge>
-                      ) : (
-                        <Button
-                          className="w-full"
-                          size="sm"
-                          onClick={() => startRental.mutate({ rentalType: rt, country: country!, weeklyCost })}
-                          disabled={startRental.isPending || !!activeRental}
-                        >
-                          {startRental.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Key className="h-4 w-4 mr-1" />}
-                          Start Renting
-                        </Button>
-                      )}
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
+            <>
+              {effectiveCity && (
+                <p className="text-xs text-muted-foreground">
+                  Prices based on {effectiveCity.name} cost of living ({costOfLiving})
+                </p>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {rentalTypes?.map((rt) => {
+                  const weeklyCost = calculateWeeklyRent(rt.base_weekly_cost, costOfLiving);
+                  const isCurrentRental = activeRental?.rental_type_id === rt.id && activeRental?.country === activeCountry;
+                  return (
+                    <Card key={rt.id} className={isCurrentRental ? "border-primary/50 bg-primary/5" : ""}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-xs">Tier {rt.tier}</Badge>
+                        </div>
+                        <CardTitle className="text-base">{rt.name}</CardTitle>
+                        <CardDescription className="text-xs">{rt.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-primary">{formatPrice(weeklyCost)}/week</span>
+                          <span className="text-xs text-muted-foreground">Base: {formatPrice(rt.base_weekly_cost)}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Daily: {formatPrice(Math.round(weeklyCost / 7))}
+                        </p>
+                      </CardContent>
+                      <CardFooter>
+                        {isCurrentRental ? (
+                          <Badge variant="secondary" className="w-full justify-center">Current Rental</Badge>
+                        ) : (
+                          <Button
+                            className="w-full"
+                            size="sm"
+                            onClick={() => startRental.mutate({ rentalType: rt, country: activeCountry!, weeklyCost })}
+                            disabled={startRental.isPending || !!activeRental}
+                          >
+                            {startRental.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Key className="h-4 w-4 mr-1" />}
+                            Start Renting
+                          </Button>
+                        )}
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
         </TabsContent>
 
