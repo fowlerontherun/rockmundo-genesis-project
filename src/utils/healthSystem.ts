@@ -10,6 +10,7 @@ const HEALTH_COSTS = {
   jam_session: 3,
   songwriting: 2,
   travel: 6,
+  release_promo: 4,
   default: 3,
 } as const;
 

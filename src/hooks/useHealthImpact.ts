@@ -80,6 +80,7 @@ export async function applyHealthDrain(
     rehearsal: 3,
     travel: 6,
     busking: 5,
+    release_promo: 4,
     default: 3,
   };
 

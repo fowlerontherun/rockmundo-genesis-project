@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.830",
+    date: "2026-02-17",
+    changes: [
+      { type: 'feature', description: "Promo Tour system — book multi-day promotional campaigns (3/5/7 days) for releases with half-day activity blocks, health/energy drain, and escalating hype rewards" },
+      { type: 'feature', description: "Three promo packages: Quick Blitz (3 days, $600), Standard Push (5 days, $1,250), Full Campaign (7 days, $2,100) with morning/afternoon time slot choice" },
+      { type: 'feature', description: "Daily promo activities include Radio Call-Ins, In-Store Signings, Social Media Marathons, Press Junkets, TV Appearances, Listening Parties, and Acoustic Sessions" },
+      { type: 'feature', description: "Promo days activity-block the player for 6 hours, drain health (12-22) and energy (15-28), and grant hype (25-40 per day scaled by band fame)" },
+      { type: 'feature', description: "10% chance of viral moment during promo — doubles that day's hype gain with a toast notification" },
+      { type: 'feature', description: "New Promotion tab on Release Detail page combining Promo Tours (active) with existing Promotional Campaigns (passive)" },
+      { type: 'improvement', description: "Added release_promo to health system drain rates (4/hr) and scheduling activity types" },
+    ],
+  },
+  {
     version: "1.0.829",
     date: "2026-02-17",
     changes: [
