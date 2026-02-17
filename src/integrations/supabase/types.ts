@@ -2981,6 +2981,7 @@ export type Database = {
       }
       cities: {
         Row: {
+          climate_type: string | null
           cost_of_living: number | null
           country: string
           created_at: string | null
@@ -3001,6 +3002,7 @@ export type Database = {
           venues: number | null
         }
         Insert: {
+          climate_type?: string | null
           cost_of_living?: number | null
           country: string
           created_at?: string | null
@@ -3021,6 +3023,7 @@ export type Database = {
           venues?: number | null
         }
         Update: {
+          climate_type?: string | null
           cost_of_living?: number | null
           country?: string
           created_at?: string | null

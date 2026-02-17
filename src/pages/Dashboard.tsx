@@ -336,6 +336,7 @@ const Dashboard = () => {
             <LocationHeader 
               cityName={currentCity.name}
               country={currentCity.country}
+              cityId={currentCity.id}
               musicScene={currentCity.music_scene}
               timezone={currentCity.timezone}
             />

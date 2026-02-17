@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.828",
+    date: "2026-02-17",
+    changes: [
+      { type: 'feature', description: "Weather system — every city now has a realistic climate type (tropical, arid, mediterranean, oceanic, continental, subtropical, subarctic, equatorial) with seasonal weather patterns" },
+      { type: 'feature', description: "Current weather (condition, emoji, temperature) displayed on dashboard LocationHeader next to season info" },
+      { type: 'feature', description: "Deterministic daily weather — same game day shows same weather for all players, changes each in-game day" },
+      { type: 'feature', description: "Weather-based genre popularity modifiers — rainy weather boosts Blues/Jazz, sunny boosts Pop/Reggae, stormy boosts Metal/Punk, etc." },
+      { type: 'feature', description: "Weather affects travel — disruption warnings shown in travel booking dialog based on origin and destination weather" },
+    ],
+  },
+  {
     version: "1.0.827",
     date: "2026-02-16",
     changes: [

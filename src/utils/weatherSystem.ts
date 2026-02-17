@@ -149,3 +149,34 @@ export function getWeatherDescription(weather: Weather): string {
 
   return `${descriptions[weather.condition]} (${weather.temperature}°C)`;
 }
+
+/**
+ * Genre popularity modifier based on weather conditions.
+ * Returns a multiplier (e.g. 1.1 = +10% boost, 0.9 = -10%).
+ */
+export function getWeatherGenreModifier(
+  weather: WeatherCondition,
+  genre: string
+): number {
+  const g = genre.toLowerCase();
+
+  const boosts: Record<WeatherCondition, string[]> = {
+    rainy: ["blues", "jazz", "soul", "indie", "lo-fi"],
+    sunny: ["pop", "reggae", "dancehall", "latin", "ska", "funk"],
+    snowy: ["classical", "ambient", "folk", "acoustic"],
+    stormy: ["metal", "punk", "industrial", "hardcore", "grunge"],
+    cloudy: ["alternative", "shoegaze", "post-rock", "dream pop"],
+  };
+
+  const dampens: Record<WeatherCondition, string[]> = {
+    rainy: ["pop", "reggae", "dancehall"],
+    sunny: ["metal", "industrial", "grunge"],
+    snowy: ["reggae", "dancehall", "latin"],
+    stormy: ["pop", "acoustic", "folk"],
+    cloudy: [],
+  };
+
+  if (boosts[weather]?.some((b) => g.includes(b))) return 1.12;
+  if (dampens[weather]?.some((d) => g.includes(d))) return 0.90;
+  return 1.0;
+}

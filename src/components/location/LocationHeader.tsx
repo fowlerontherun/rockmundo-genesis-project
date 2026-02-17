@@ -2,13 +2,15 @@ import { CountryFlag } from "./CountryFlag";
 import { getCountryData } from "@/data/countryData";
 import { getCityFlavor } from "@/data/cityFlavor";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Music, Clock, Calendar } from "lucide-react";
+import { MapPin, Music, Clock, Calendar, Thermometer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { useWeather } from "@/hooks/useWeather";
 
 interface LocationHeaderProps {
   cityName: string;
   country: string;
+  cityId?: string | null;
   musicScene?: number | null;
   timezone?: string | null;
   className?: string;
@@ -17,6 +19,7 @@ interface LocationHeaderProps {
 export const LocationHeader = ({
   cityName,
   country,
+  cityId,
   musicScene,
   timezone,
   className
@@ -24,6 +27,7 @@ export const LocationHeader = ({
   const countryData = getCountryData(country);
   const cityFlavorData = getCityFlavor(cityName);
   const { data: calendar } = useGameCalendar();
+  const { data: weather } = useWeather(cityId);
   
   // Get current time in city's timezone
   const getLocalTime = () => {
@@ -113,6 +117,13 @@ export const LocationHeader = ({
                 <div className="flex items-center gap-1.5 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>{calendar.seasonEmoji} <span className="capitalize">{calendar.season}</span> · Day {calendar.gameDay}, Yr {calendar.gameYear}</span>
+                </div>
+              )}
+
+              {weather && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Thermometer className="h-4 w-4 text-muted-foreground" />
+                  <span>{weather.emoji} {weather.temperature}°C <span className="capitalize text-muted-foreground">{weather.condition}</span></span>
                 </div>
               )}
               
