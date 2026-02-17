@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.829",
+    date: "2026-02-17",
+    changes: [
+      { type: 'fix', description: "Gig performance scores now scale with actual skill tree levels, equipped gear bonuses, and player attributes (stage presence + charisma) instead of using a static skill_contribution value" },
+      { type: 'improvement', description: "Edge function process-gig-song now fetches live skill_progress per band member role, applies gear rarity/stat multipliers, and calculates stage skill average from attributes" },
+      { type: 'improvement', description: "Performance calculator weights updated to match client-side: songQuality 25%, rehearsal 20%, chemistry 15%, equipment 12%, crew 8%, member skills 10%, stage skills 10%" },
+      { type: 'improvement', description: "Song quality normalization (0-1000 → 0-100) and member skill normalization (0-150 → 0-100) now applied consistently in both client and server calculations" },
+      { type: 'feature', description: "Variance, momentum-style event rolls, and venue capacity multipliers now included in server-side gig processing for more dynamic outcomes" },
+    ],
+  },
+  {
     version: "1.0.828",
     date: "2026-02-17",
     changes: [
