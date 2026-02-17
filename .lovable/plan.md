@@ -1,74 +1,108 @@
 
-# Fix: Gig Outcomes Not Reflecting Skill Growth
 
-## Problem
-Your skills and attributes are growing, but gig outcomes stay similar because the **edge function that processes gig songs** (`process-gig-song`) uses a static `skill_contribution` column (defaulting to 50) instead of reading your actual skill tree data. It also completely ignores:
-- Stage presence and charisma attributes
-- Genre skill bonuses
-- Equipped gear bonuses
-- Improvisation skill (variance reducer)
+# Release Promo Tour -- Multi-Day Marketing Grind (v1.0.830)
 
-The client-side code (`gigExecution.ts`) already uses all of these correctly, but the server-side edge function that handles automated gig completions does not.
+## Overview
+Add a new "Promo Tour" system to the Release Detail page. When players launch a promo tour for a release, they commit to **half-day blocks (6 hours) over several consecutive days** of gruelling promotional work -- radio call-ins, in-store signings, podcast appearances, street flyering, and social media marathons. Each day's session activity-blocks the player, drains health/energy, increases stress, and costs money, but steadily builds hype for the release.
 
-## Solution
-Update the `process-gig-song` edge function to fetch live skill data, matching the client-side calculation.
+## What Players Will See
 
-## Changes
+**New "Promotion" tab on the Release Detail page** with:
+- A selection of Promo Tour packages (3, 5, or 7 day tours)
+- Each day creates a 6-hour scheduled activity block (morning or afternoon slot choice)
+- Daily cost shown upfront (e.g. $200/day for transport, materials, food)
+- Health/energy/stress impact warnings before booking
+- Progress tracker showing completed vs remaining promo days
+- Hype accumulated so far with a running total
+- Daily activity descriptions (varies each day for flavour)
 
-### 1. Update `supabase/functions/process-gig-song/index.ts`
+**Example 3-Day Promo Tour:**
+| Day | Activity | Hype | Health Drain | Energy Cost | Stress |
+|-----|----------|------|-------------|-------------|--------|
+| 1 | Radio Call-Ins and Podcast Taping | +25 | -15 | -20 | +10 |
+| 2 | In-Store Signing and Street Flyering | +30 | -20 | -25 | +12 |
+| 3 | Social Media Marathon and Fan Meet | +35 | -12 | -15 | +15 |
 
-**Replace the static skill lookup** with live skill tree queries:
+**During each promo day:**
+- Player is activity-blocked for 6 hours (half a day)
+- Health and energy drain applied on completion
+- Stress increases (new `stress` field on profiles, or we use existing energy as proxy)
+- Hype added to the release's `hype_score`
+- Small fame and follower gains
+- Random bonus events possible (viral moment, celebrity endorsement)
 
-- Fetch `skill_progress` records for each band member based on their `instrument_role` (using the same role-to-skill mapping as `skillGearPerformance.ts`)
-- Fetch equipped gear bonuses from `player_equipment` joined with `equipment_items`
-- Fetch player attributes (`stage_presence`, `charisma`) from `profiles`
-- Add `stageSkillAverage` to the `PerformanceFactors` interface in the edge function
-- Calculate `memberSkillAverage` from live skill tree levels + gear multipliers instead of static `skill_contribution`
-- Calculate `stageSkillAverage` from attributes (60% stage_presence + 40% charisma)
+## Promo Tour Packages
 
-**Key code changes:**
-- Add a `ROLE_SKILL_MAP` constant mapping roles like "Lead Guitar" to skill slugs like `["guitar", "instruments_basic_electric_guitar"]`
-- After fetching band members, look up each member's `profile_id` from `profiles` table
-- Query `skill_progress` for matching skill slugs, take the highest level
-- Query `player_equipment` for equipped gear with `stat_boosts`
-- Apply gear multiplier to skill level (matching `skillGearPerformance.ts` logic)
-- Add `stageSkillAverage` field to the `PerformanceFactors` interface
-- Update `calculateSongPerformance` in the edge function to incorporate stage skills with a 10% weight (matching the client-side weights)
+| Package | Days | Daily Cost | Total Cost | Total Hype | Health Impact |
+|---------|------|-----------|------------|------------|---------------|
+| Quick Blitz | 3 | $200 | $600 | ~90 | Moderate |
+| Standard Push | 5 | $250 | $1,250 | ~175 | Heavy |
+| Full Campaign | 7 | $300 | $2,100 | ~280 | Brutal |
 
-### 2. Update `supabase/functions/process-gig-song/index.ts` - Performance Calculator
+Hype values scale with band fame (higher fame = bigger audiences = more hype per session).
 
-Update the edge function's `calculateSongPerformance` to match the client-side version's weights and factors:
+## Technical Plan
 
-Current (edge function):
-```
-songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
-equipment: 0.15, crew: 0.10, memberSkills: 0.15
-```
+### 1. New Component: `PromoTourCard.tsx`
 
-Updated to match client-side:
-```
-songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
-equipment: 0.12, crew: 0.08, memberSkills: 0.10, stageSkills: 0.10
-```
+Create `src/components/releases/PromoTourCard.tsx`:
+- Shows available tour packages when no active tour exists
+- Displays progress tracker when a tour is in progress
+- Each package shows: duration, daily cost, total cost, expected hype gain, health warning
+- Booking creates all scheduled activity entries upfront for consecutive days
+- Uses `player_scheduled_activities` with activity_type `"release_promo"` and half-day blocks
+- Deducts total cost from player cash on booking
+- Stores tour metadata in release's promotional_campaigns table (or a JSON metadata field)
 
-Also add:
-- Song quality normalization from 0-1000 scale to 0-100 (client-side does this, edge function doesn't)
-- Member skill normalization from 0-150 to 0-100 range
-- Variance, momentum, and improvisation support (matching client-side logic)
+### 2. Promo Tour Booking Logic
 
-### 3. Version Bump to v1.0.829
+When a player books a promo tour:
+1. Check player cash balance covers total cost
+2. Check health is above 30 (refuse if exhausted/burned out)
+3. Check for scheduling conflicts across all tour days
+4. Create one `player_scheduled_activities` entry per day (6-hour blocks)
+5. Create a `promotional_campaigns` record to track overall tour progress
+6. Deduct cost from player's personal cash
 
-Update `VersionHeader.tsx` and `VersionHistory.tsx` with changelog entry explaining that gig outcomes now properly scale with skill tree progress, equipped gear, and player attributes.
+### 3. Promo Tour Completion Logic
+
+Each day's activity completion (handled by existing auto-completion or manual check):
+- Apply health drain: 15-20 per session (6hrs at ~3/hr rate)
+- Apply energy drain: 15-25 per session
+- Add hype to release: 25-40 per day (scaled by fame)
+- Add small fame bonus: 5-15 per day
+- Add follower bonus: 10-30 per day
+- Random event roll (10% chance): viral moment doubles that day's hype
+
+A new `usePromoTourCompletion` hook will check for completed promo day activities and apply rewards/drains.
+
+### 4. Update Release Detail Page
+
+Add a "Promotion" tab to `ReleaseDetail.tsx` containing:
+- The existing `PromotionalCampaignCard` (passive campaigns)
+- The new `PromoTourCard` (active promo tours)
+- A separator between the two sections
+
+### 5. Health System Integration
+
+Add `"release_promo"` to the health cost map in both:
+- `src/utils/healthSystem.ts` -- rate of 4/hr (moderate-heavy drain)
+- `src/hooks/useHealthImpact.ts` -- same rate for consistency
+
+### 6. Version Bump to v1.0.830
 
 ---
 
-## Technical Details
+## Files to Create
+- `src/components/releases/PromoTourCard.tsx` -- main promo tour UI and booking logic
+- `src/hooks/usePromoTourCompletion.ts` -- auto-completion hook for promo day rewards
 
-**Root Cause:** Two separate performance calculators exist -- one client-side (rich, uses live data) and one in the edge function (simplified, uses static data). The edge function path is used for all automated gig completions.
+## Files to Edit
+- `src/pages/ReleaseDetail.tsx` -- add Promotion tab with both campaign cards
+- `src/utils/healthSystem.ts` -- add `release_promo` health drain rate
+- `src/hooks/useHealthImpact.ts` -- add `release_promo` to health costs map
+- `src/components/VersionHeader.tsx` -- bump to v1.0.830
+- `src/pages/VersionHistory.tsx` -- changelog entry
 
-**Files to modify:**
-- `supabase/functions/process-gig-song/index.ts` -- main fix: live skill data + updated weights
-- `src/components/VersionHeader.tsx` -- version bump
-- `src/pages/VersionHistory.tsx` -- changelog
-
-**Impact:** After this fix, every gig (both manual and automated) will reflect your actual skill levels, gear quality, and attributes. Higher skills will directly translate to better performance scores, more fame, more fans, and better grades.
+## No Database Migration Needed
+Uses existing tables: `promotional_campaigns` for tour tracking, `player_scheduled_activities` for daily blocks, `profiles` for cash/health/energy. Tour day details stored in `metadata` JSON.
