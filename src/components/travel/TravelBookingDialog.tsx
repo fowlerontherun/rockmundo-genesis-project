@@ -3,6 +3,9 @@ import { AuthContext } from "@/hooks/use-auth-context";
 import { useTravelBooking } from "@/hooks/useTravelBooking";
 import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/travelSystem";
 import { checkTravelDisruptions } from "@/utils/gameCalendar";
+import { checkWeatherTravelImpact } from "@/utils/weatherSystem";
+import { useWeather } from "@/hooks/useWeather";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { WeatherDisruptionAlert } from "@/components/travel/WeatherDisruptionAlert";
 import { DepartureTimePicker } from "@/components/travel/DepartureTimePicker";
 import { getNextAvailableDeparture, isValidDeparture } from "@/utils/transportSchedules";
@@ -46,8 +49,11 @@ export function TravelBookingDialog({
 }: TravelBookingDialogProps) {
   const { user } = useContext(AuthContext);
   const travelMutation = useTravelBooking();
+  const { data: calendar } = useGameCalendar();
+  const { data: originWeather } = useWeather(currentCityId);
   const [routes, setRoutes] = useState<TravelRoute[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<TravelRoute | null>(null);
+  const { data: destWeather } = useWeather(selectedRoute?.to_city_id);
   const [playerMoney, setPlayerMoney] = useState(0);
   const [loading, setLoading] = useState(false);
   const [disruption, setDisruption] = useState<TravelDisruption | null>(null);
@@ -209,7 +215,28 @@ export function TravelBookingDialog({
             {selectedRoute && (
               <>
                 {disruption && <WeatherDisruptionAlert disruption={disruption} />}
-                
+
+                {/* Weather-based travel warnings */}
+                {calendar && selectedRoute && (originWeather || destWeather) && (() => {
+                  const warnings: string[] = [];
+                  if (originWeather) {
+                    const impact = checkWeatherTravelImpact(originWeather.condition, selectedRoute.transport_type, calendar.season);
+                    if (impact.isDisrupted) warnings.push(`Origin: ${impact.message}`);
+                  }
+                  if (destWeather) {
+                    const impact = checkWeatherTravelImpact(destWeather.condition, selectedRoute.transport_type, calendar.season);
+                    if (impact.isDisrupted) warnings.push(`Destination: ${impact.message}`);
+                  }
+                  if (warnings.length === 0) return null;
+                  return (
+                    <div className="rounded-lg bg-warning/10 border border-warning/30 p-3 space-y-1">
+                      <p className="text-sm font-medium text-warning">⚠️ Weather Advisory</p>
+                      {warnings.map((w, i) => (
+                        <p key={i} className="text-xs text-muted-foreground">{w}</p>
+                      ))}
+                    </div>
+                  );
+                })()}
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <div className="flex items-center gap-3">
