@@ -39,6 +39,7 @@ const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
   festival_attendance: Music,
   festival_performance: Guitar,
   release_manufacturing: Headphones,
+  release_promo: Star,
   other: Clock,
 };
 
@@ -62,6 +63,7 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   festival_attendance: "bg-lime-500/10 border-lime-500/30 text-lime-700 dark:text-lime-300",
   festival_performance: "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300",
   release_manufacturing: "bg-sky-500/10 border-sky-500/30 text-sky-700 dark:text-sky-300",
+  release_promo: "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300",
   other: "bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300",
 };
 

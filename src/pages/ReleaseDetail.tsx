@@ -4,12 +4,45 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Music2, Radio, Video, TrendingUp, DollarSign } from "lucide-react";
+import { ArrowLeft, Music2, Radio, Video, TrendingUp, DollarSign, Megaphone } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PromotionalCampaignCard } from "@/components/releases/PromotionalCampaignCard";
+import { PromoTourCard } from "@/components/releases/PromoTourCard";
+import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
 
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  // Fetch current user + profile for promo tour
+  const { data: userData } = useQuery({
+    queryKey: ["current-user-profile-release"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("cash, health, energy, user_id")
+        .eq("user_id", user.id)
+        .single();
+      const { data: bandMember } = await supabase
+        .from("band_members")
+        .select("band_id, bands(fame)")
+        .eq("user_id", user.id)
+        .eq("role", "leader")
+        .maybeSingle();
+      return {
+        userId: user.id,
+        cash: profile?.cash ?? 0,
+        health: profile?.health ?? 100,
+        energy: profile?.energy ?? 100,
+        bandId: (bandMember as any)?.band_id || "",
+        bandFame: (bandMember as any)?.bands?.fame || 0,
+      };
+    },
+  });
+
+  usePromoTourCompletion(userData?.userId);
 
   const { data: release, isLoading } = useQuery({
     queryKey: ["release-detail", id],
@@ -126,6 +159,10 @@ export default function ReleaseDetail() {
           <TabsTrigger value="streaming">Streaming</TabsTrigger>
           <TabsTrigger value="videos">Music Videos</TabsTrigger>
           <TabsTrigger value="radio">Radio</TabsTrigger>
+          <TabsTrigger value="promotion">
+            <Megaphone className="h-3 w-3 mr-1" />
+            Promotion
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="songs" className="space-y-4">
@@ -244,6 +281,30 @@ export default function ReleaseDetail() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="promotion" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {userData && id && (
+              <PromoTourCard
+                releaseId={id}
+                releaseTitle={release.title}
+                bandId={userData.bandId}
+                bandFame={userData.bandFame}
+                playerCash={userData.cash}
+                playerHealth={userData.health}
+                playerEnergy={userData.energy}
+                userId={userData.userId}
+              />
+            )}
+            {id && userData && (
+              <PromotionalCampaignCard
+                releaseId={id}
+                releaseTitle={release.title}
+                bandBalance={userData.cash}
+              />
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
