@@ -1,100 +1,74 @@
 
+# Fix: Gig Outcomes Not Reflecting Skill Growth
 
-# Weather System Implementation
+## Problem
+Your skills and attributes are growing, but gig outcomes stay similar because the **edge function that processes gig songs** (`process-gig-song`) uses a static `skill_contribution` column (defaulting to 50) instead of reading your actual skill tree data. It also completely ignores:
+- Stage presence and charisma attributes
+- Genre skill bonuses
+- Equipped gear bonuses
+- Improvisation skill (variance reducer)
 
-## Overview
-Add a realistic climate and weather system to every city. Weather changes with the in-game seasons, is displayed on the dashboard alongside the season info, and can affect travel disruptions and genre popularity.
+The client-side code (`gigExecution.ts`) already uses all of these correctly, but the server-side edge function that handles automated gig completions does not.
 
-## What Players Will See
+## Solution
+Update the `process-gig-song` edge function to fetch live skill data, matching the client-side calculation.
 
-**On the Dashboard / LocationHeader:**
-- Current weather condition with emoji and temperature next to the existing season display (e.g., "Winter -- 5C Rainy")
-- Weather updates each time the page loads based on the city's climate type and current season
+## Changes
 
-**During Travel:**
-- Weather-based disruption warnings when booking travel (storms delay flights, snow cancels routes, etc.)
+### 1. Update `supabase/functions/process-gig-song/index.ts`
 
-**Genre Popularity:**
-- Certain weather/season combos slightly boost or dampen genre popularity (e.g., rainy weather boosts Blues/Jazz streams, sunny weather boosts Pop/Reggae)
+**Replace the static skill lookup** with live skill tree queries:
 
----
+- Fetch `skill_progress` records for each band member based on their `instrument_role` (using the same role-to-skill mapping as `skillGearPerformance.ts`)
+- Fetch equipped gear bonuses from `player_equipment` joined with `equipment_items`
+- Fetch player attributes (`stage_presence`, `charisma`) from `profiles`
+- Add `stageSkillAverage` to the `PerformanceFactors` interface in the edge function
+- Calculate `memberSkillAverage` from live skill tree levels + gear multipliers instead of static `skill_contribution`
+- Calculate `stageSkillAverage` from attributes (60% stage_presence + 40% charisma)
 
-## Climate Types
+**Key code changes:**
+- Add a `ROLE_SKILL_MAP` constant mapping roles like "Lead Guitar" to skill slugs like `["guitar", "instruments_basic_electric_guitar"]`
+- After fetching band members, look up each member's `profile_id` from `profiles` table
+- Query `skill_progress` for matching skill slugs, take the highest level
+- Query `player_equipment` for equipped gear with `stat_boosts`
+- Apply gear multiplier to skill level (matching `skillGearPerformance.ts` logic)
+- Add `stageSkillAverage` field to the `PerformanceFactors` interface
+- Update `calculateSongPerformance` in the edge function to incorporate stage skills with a 10% weight (matching the client-side weights)
 
-Each city gets a `climate_type` based on its real-world geography:
+### 2. Update `supabase/functions/process-gig-song/index.ts` - Performance Calculator
 
-| Climate Type | Example Cities | Characteristics |
-|---|---|---|
-| `tropical` | Bangkok, Kingston, Manila | Hot year-round, rainy seasons, no snow |
-| `arid` | Dubai, Cairo, Phoenix | Very hot summers, mild winters, rare rain |
-| `mediterranean` | Barcelona, Rome, LA | Warm dry summers, mild wet winters |
-| `oceanic` | London, Dublin, Seattle | Mild temps, frequent rain/cloud |
-| `continental` | Moscow, Chicago, Berlin | Hot summers, cold snowy winters |
-| `subtropical` | Tokyo, Sydney, Buenos Aires | Warm/humid, moderate seasons |
-| `subarctic` | Helsinki, Reykjavik | Very cold winters, cool summers, heavy snow |
-| `equatorial` | Singapore, Jakarta | Hot and rainy year-round |
+Update the edge function's `calculateSongPerformance` to match the client-side version's weights and factors:
 
----
-
-## Technical Plan
-
-### 1. Database: Add `climate_type` column to `cities`
-
-Migration adds a `climate_type` text column and populates it for all 180 cities based on latitude, region, and real-world climate data. No new tables needed -- the existing `seasonal_weather_patterns` table will be populated.
-
-### 2. Database: Seed `seasonal_weather_patterns` for all 180 cities x 4 seasons
-
-A migration will insert 720 rows (180 cities x 4 seasons) into the existing empty `seasonal_weather_patterns` table. Each row contains:
-- Weather condition probabilities (sunny/cloudy/rainy/stormy/snowy percentages)
-- Average temperature in Celsius
-- Travel disruption chance
-
-Climate-type lookup tables in the migration will map each climate to realistic seasonal values. For example:
-- `continental` winter: 10% sunny, 25% cloudy, 15% rainy, 10% stormy, 40% snowy, avg -5C
-- `tropical` summer: 30% sunny, 30% cloudy, 30% rainy, 10% stormy, 0% snowy, avg 32C
-
-### 3. New Hook: `useWeather`
-
-A React hook that fetches or generates weather for the player's current city:
-- Queries `seasonal_weather_patterns` for the city + current season
-- Deterministically generates today's weather using the in-game day as a seed (so weather stays consistent within the same game day for all players)
-- Returns: `{ condition, temperature, emoji, description }`
-- Cached with 5-minute stale time
-
-### 4. UI: Update `LocationHeader` component
-
-Add weather display next to the existing season/calendar line:
+Current (edge function):
 ```
-Winter -- 5C Rainy  |  Day 15, Yr 2
+songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
+equipment: 0.15, crew: 0.10, memberSkills: 0.15
 ```
 
-### 5. Update `weatherSystem.ts`
+Updated to match client-side:
+```
+songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
+equipment: 0.12, crew: 0.08, memberSkills: 0.10, stageSkills: 0.10
+```
 
-- Modify `generateDailyWeather` to use a seeded random based on game day (so weather is consistent per day, not random on every page load)
-- Add a `getWeatherGenreModifier` function that returns a multiplier for genre streams/popularity based on current weather
+Also add:
+- Song quality normalization from 0-1000 scale to 0-100 (client-side does this, edge function doesn't)
+- Member skill normalization from 0-150 to 0-100 range
+- Variance, momentum, and improvisation support (matching client-side logic)
 
-### 6. Integrate weather into travel booking
+### 3. Version Bump to v1.0.829
 
-Update `TravelBookingDialog` to check weather at both origin and destination cities and show disruption warnings using the existing `WeatherDisruptionAlert` component.
-
-### 7. Version bump to v1.0.828
-
-Update `VersionHeader` and `VersionHistory` with the weather system changes.
+Update `VersionHeader.tsx` and `VersionHistory.tsx` with changelog entry explaining that gig outcomes now properly scale with skill tree progress, equipped gear, and player attributes.
 
 ---
 
-## Files to Create
-- `src/hooks/useWeather.ts` -- new hook for fetching current weather
+## Technical Details
 
-## Files to Edit
-- `src/utils/weatherSystem.ts` -- seeded random, genre modifier function
-- `src/components/location/LocationHeader.tsx` -- display weather inline with season
-- `src/components/travel/TravelBookingDialog.tsx` -- weather disruption check
+**Root Cause:** Two separate performance calculators exist -- one client-side (rich, uses live data) and one in the edge function (simplified, uses static data). The edge function path is used for all automated gig completions.
+
+**Files to modify:**
+- `supabase/functions/process-gig-song/index.ts` -- main fix: live skill data + updated weights
 - `src/components/VersionHeader.tsx` -- version bump
-- `src/pages/VersionHistory.tsx` -- changelog entry
+- `src/pages/VersionHistory.tsx` -- changelog
 
-## Database Migration
-- Add `climate_type` column to `cities`
-- Populate `climate_type` for all 180 cities using latitude/region mapping
-- Seed all 720 rows in `seasonal_weather_patterns` with realistic climate data
-
+**Impact:** After this fix, every gig (both manual and automated) will reflect your actual skill levels, gear quality, and attributes. Higher skills will directly translate to better performance scores, more fame, more fans, and better grades.
