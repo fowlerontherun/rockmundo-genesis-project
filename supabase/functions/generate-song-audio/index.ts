@@ -583,6 +583,18 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   
   let cleaned = lyrics.trim()
   
+  // Strip [AI Generated] prefix
+  cleaned = cleaned.replace(/^\[AI Generated\]\s*/i, '').trim()
+  
+  // Strip AI preamble like "Here are your song lyrics for ..."
+  cleaned = cleaned.replace(/^Here are (?:your |the )?(?:song )?lyrics (?:for|to) [""]?[^"""\n]*[""]?:\s*/i, '').trim()
+  
+  // Convert markdown bold section markers **Verse 1** to [Verse 1]
+  cleaned = cleaned.replace(/\*\*(Verse\s*\d*|Chorus\s*\d*|Bridge\s*\d*|Pre-?Chorus\s*\d*|Outro\s*\d*|Intro\s*\d*|Hook\s*\d*|Post-?Chorus\s*\d*|Final Chorus)\*\*/gi, (_, section) => `[${section.trim()}]`)
+  
+  // Strip markdown stage directions in parentheses at start (e.g. "(Intro - Fast, driving guitar riff)")
+  cleaned = cleaned.replace(/^\((?:Intro|Outro)\s*[-–—].*?\)\s*/gi, '').trim()
+  
   // If lyrics contain "Style:" anywhere, they likely contain the full prompt - extract just lyrics
   if (cleaned.toLowerCase().includes('style:')) {
     console.log('[sanitizeLyrics] Detected Style: in lyrics, extracting actual lyrics')
@@ -607,7 +619,6 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   cleaned = cleaned.replace(/^\s*lyrics:\s*/i, '').trim()
   
   // Remove any duplicate Lyrics: sections — keep only the FIRST set of lyrics
-  // More flexible regex to catch variations like "Lyrics:\n", "Lyrics: \n", "\nLyrics:\n"
   const lyricsSections = cleaned.split(/\n\s*Lyrics:\s*\n?/i)
   if (lyricsSections.length > 1) {
     console.log(`[sanitizeLyrics] Detected ${lyricsSections.length} Lyrics: sections, keeping first only`)
@@ -623,7 +634,6 @@ function sanitizeLyrics(lyrics: string | null): string | null {
   // Also detect duplicate song structures (two [Verse 1] or [Verse] markers = concatenated songs)
   const verseMatches = [...cleaned.matchAll(/\[(verse\s*\d*)\]/gi)]
   if (verseMatches.length > 1) {
-    // Check if there are duplicate verse numbers (e.g. two [Verse 1])
     const verseLabels = verseMatches.map(m => m[1].toLowerCase().replace(/\s+/g, ''))
     const seen = new Set<string>()
     let duplicateIndex = -1
@@ -667,8 +677,12 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   
   console.log(`[generate-song-audio] Using actual lyrics: ${cleanedLyrics.length} chars`)
 
-  // Normalize section markers for MiniMax (standard [Verse], [Chorus] format)
+  // Convert markdown bold section markers **Verse 1** to [Verse 1] before normalizing
   let normalized = cleanedLyrics
+    .replace(/\*\*(Verse\s*\d*|Chorus\s*\d*|Bridge\s*\d*|Pre-?Chorus\s*\d*|Outro\s*\d*|Intro\s*\d*|Hook\s*\d*|Post-?Chorus\s*\d*|Final Chorus)\*\*/gi, (_, section) => `[${section.trim()}]`)
+
+  // Normalize section markers for MiniMax (standard [Verse], [Chorus] format)
+  normalized = normalized
     .replace(/\[Verse\s*(\d*)\]/gi, (_, num) => `[Verse${num ? ' ' + num : ''}]`)
     .replace(/\[Chorus\s*(\d*)\]/gi, (_, num) => `[Chorus${num ? ' ' + num : ''}]`)
     .replace(/\[Bridge\s*(\d*)\]/gi, (_, num) => `[Bridge${num ? ' ' + num : ''}]`)
@@ -677,9 +691,12 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     .replace(/\[Intro\s*\d*\]/gi, '[Intro]')
     .replace(/\[Hook\s*\d*\]/gi, '[Hook]')
     .replace(/\[Post-?Chorus\s*\d*\]/gi, '[Post-Chorus]')
+    .replace(/\[Final Chorus\]/gi, '[Chorus]')
     // Remove chord annotations and singer markers that waste space
     .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
     .replace(/\((She|He|Both|You|Me)\)\s*/gi, '')
+    // Remove markdown stage directions in parentheses
+    .replace(/\((?:Intro|Outro)\s*[-–—].*?\)/gi, '')
 
   // Check if there are section markers
   const hasMarkers = /\[(Verse|Chorus|Bridge|Outro|Intro|Hook|Pre-Chorus|Post-Chorus)\]/i.test(normalized)
