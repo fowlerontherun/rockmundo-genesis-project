@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.831",
+    date: "2026-02-18",
+    changes: [
+      { type: 'fix', description: "Fixed AI song generation failing when lyrics contain AI preamble text ('Here are your song lyrics for...') — now stripped during sanitization" },
+      { type: 'fix', description: "Fixed markdown bold section markers (**Verse 1**, **Chorus**) not being recognized — now converted to standard [Verse 1], [Chorus] format" },
+      { type: 'fix', description: "Fixed stage direction parentheses (e.g. '(Intro - Fast, driving guitar riff)') causing lyrics to exceed 600-char limit" },
+      { type: 'improvement', description: "Lyrics sanitization now handles **Final Chorus** → [Chorus] conversion for better MiniMax compatibility" },
+    ],
+  },
+  {
     version: "1.0.830",
     date: "2026-02-17",
     changes: [
