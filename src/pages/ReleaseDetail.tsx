@@ -52,9 +52,9 @@ export default function ReleaseDetail() {
         .select(`
           *,
           songs:release_songs(song:songs(*)),
-          streaming:song_releases(*, platform:streaming_platforms(*)),
-          videos:music_videos(*),
-          radio:radio_submissions(*)
+          streaming:song_releases!song_releases_release_id_fkey(*, platform:streaming_platforms!song_releases_platform_id_fkey(*)),
+          videos:music_videos!music_videos_release_id_fkey(*),
+          radio:radio_submissions!radio_submissions_release_id_fkey(*)
         `)
         .eq("id", id)
         .single();
