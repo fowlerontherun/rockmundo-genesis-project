@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.832",
+    date: "2026-02-18",
+    changes: [
+      { type: 'fix', description: "Fixed Release Detail page not loading — resolved ambiguous FK relationships in Supabase query for song_releases, music_videos, and radio_submissions" },
+      { type: 'fix', description: "Promotion tab now visible on Release Detail page with Promo Tour booking and passive campaign cards" },
+    ],
+  },
+  {
     version: "1.0.831",
     date: "2026-02-18",
     changes: [
