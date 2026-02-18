@@ -1,18 +1,6 @@
-# Welcome to your Lovable project
+# Rockmundo Beta 
 
 ## Project info
-
-**URL**: https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
 
 **Use your preferred IDE**
 
@@ -35,13 +23,6 @@ npm i
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
 **Use GitHub Codespaces**
 
 - Navigate to the main page of your repository.
@@ -116,15 +97,3 @@ Key PR fields to keep consistent:
 - **Deployment considerations**: Environment variable updates or migrations.
 
 See `docs/pr-workflow-guide.md` for a full checklist, environment variable expectations, and backlog items.
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
