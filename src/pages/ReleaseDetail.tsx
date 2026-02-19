@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,8 @@ import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "songs";
 
   // Fetch current user + profile for promo tour
   const { data: userData } = useQuery({
@@ -47,20 +50,27 @@ export default function ReleaseDetail() {
   const { data: release, isLoading } = useQuery({
     queryKey: ["release-detail", id],
     queryFn: async () => {
+      // Fetch release + songs (no ambiguous FKs)
       const { data, error } = await supabase
         .from("releases")
-        .select(`
-          *,
-          songs:release_songs(song:songs(*)),
-          streaming:song_releases!song_releases_release_id_fkey(*, platform:streaming_platforms!song_releases_platform_id_fkey(*)),
-          videos:music_videos!music_videos_release_id_fkey(*),
-          radio:radio_submissions!radio_submissions_release_id_fkey(*)
-        `)
+        .select(`*, songs:release_songs(song:songs(*))`)
         .eq("id", id)
         .single();
-
       if (error) throw error;
-      return data;
+
+      // Fetch related data separately to avoid FK ambiguity with chart_albums view
+      const [streamingRes, videosRes, radioRes] = await Promise.all([
+        supabase.from("song_releases").select("*, platform:streaming_platforms(*)").eq("release_id", id!),
+        supabase.from("music_videos").select("*").eq("release_id", id!),
+        supabase.from("radio_submissions").select("*").eq("release_id", id!),
+      ]);
+
+      return {
+        ...data,
+        streaming: streamingRes.data || [],
+        videos: videosRes.data || [],
+        radio: radioRes.data || [],
+      };
     },
     enabled: !!id,
   });
@@ -153,7 +163,7 @@ export default function ReleaseDetail() {
         </Card>
       </div>
 
-      <Tabs defaultValue="songs" className="w-full">
+      <Tabs defaultValue={initialTab} className="w-full">
         <TabsList>
           <TabsTrigger value="songs">Songs</TabsTrigger>
           <TabsTrigger value="streaming">Streaming</TabsTrigger>
