@@ -17,7 +17,7 @@ import {
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper
+  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper, Megaphone
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { HypeMeter } from "./HypeMeter";
@@ -383,6 +383,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
+            onPromo={() => navigate(`/release/${release.id}?tab=promotion`)}
             onAddPhysical={() => setAddPhysicalRelease(release)}
             onAnalytics={() => setAnalyticsRelease(release)}
             onReorder={(format) => {
@@ -452,13 +453,14 @@ interface ReleaseCardProps {
   onEdit: () => void;
   onCancel: () => void;
   onViewDetails: () => void;
+  onPromo?: () => void;
   onAddPhysical?: () => void;
   onAnalytics?: () => void;
   onReorder?: (format: any) => void;
   onParty?: () => void;
 }
 
-function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -720,77 +722,90 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onA
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2 border-t">
+        <div className="flex flex-wrap gap-1.5 pt-2 border-t">
           <Button 
             variant="default" 
             size="sm"
+            className="text-xs px-2 h-7"
             onClick={onViewDetails}
           >
-            View Details
+            Details
           </Button>
-          {release.release_status !== "released" && release.release_status !== "cancelled" && (
+          {release.release_status === "released" && (
             <>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs px-2 h-7"
+                onClick={onAnalytics}
+              >
+                <BarChart3 className="h-3 w-3 mr-1" />
+                Analytics
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs px-2 h-7"
+                onClick={onPromo}
+              >
+                <Megaphone className="h-3 w-3 mr-1" />
+                Promo
+              </Button>
+              {(() => {
+                const existingPhysical = release.release_formats?.filter((f: any) => 
+                  ["cd", "vinyl", "cassette"].includes(f.format_type)
+                ) || [];
+                const hasAllPhysical = existingPhysical.length >= 3;
+                if (!hasAllPhysical) {
+                  return (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-xs px-2 h-7"
+                      onClick={onAddPhysical}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Physical
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
+            </>
+          )}
           {(release.release_status === "released" || release.release_status === "manufacturing") && (
             <>
               {release.release_status === "manufacturing" || !release.release_party_done ? (
                 <Button 
                   variant="outline" 
                   size="sm"
+                  className="text-xs px-2 h-7"
                   onClick={onParty}
                 >
-                  <PartyPopper className="h-4 w-4 mr-1" />
-                  Release Party
+                  <PartyPopper className="h-3 w-3 mr-1" />
+                  Party
                 </Button>
               ) : null}
             </>
           )}
-          <Button 
+          {release.release_status !== "released" && release.release_status !== "cancelled" && (
+            <>
+              <Button 
                 variant="outline" 
                 size="sm"
+                className="text-xs px-2 h-7"
                 onClick={onEdit}
               >
-                Edit Release
+                Edit
               </Button>
               <Button 
                 variant="destructive" 
                 size="sm"
+                className="text-xs px-2 h-7"
                 onClick={onCancel}
               >
-                <XCircle className="h-4 w-4 mr-1" />
+                <XCircle className="h-3 w-3 mr-1" />
                 Cancel
-              </Button>
-            </>
-          )}
-          {release.release_status === "released" && (
-            <>
-              {/* Check if physical formats can still be added */}
-              {(() => {
-                const existingPhysical = release.release_formats?.filter((f: any) => 
-                  ["cd", "vinyl", "cassette"].includes(f.format_type)
-                ) || [];
-                const hasAllPhysical = existingPhysical.length >= 3;
-                
-                if (!hasAllPhysical) {
-                  return (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={onAddPhysical}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Physical
-                    </Button>
-                  );
-                }
-                return null;
-              })()}
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={onAnalytics}
-              >
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Analytics
               </Button>
             </>
           )}

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.833",
+    date: "2026-02-19",
+    changes: [
+      { type: 'fix', description: "Fixed Release Detail page showing 'Release not found' — split embedded FK queries to avoid PostgREST ambiguity with chart_albums view" },
+      { type: 'improvement', description: "Compact release card buttons — Details, Analytics, Promo, Physical, Party now fit on one row with smaller text and wrap on mobile" },
+      { type: 'feature', description: "Added Promo button to released release cards for quick access to the Promotion tab" },
+    ],
+  },
+  {
     version: "1.0.832",
     date: "2026-02-18",
     changes: [
