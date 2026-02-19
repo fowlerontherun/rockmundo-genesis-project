@@ -20444,6 +20444,7 @@ export type Database = {
           pre_order_count: number | null
           pre_order_start_date: string | null
           promotion_budget: number | null
+          release_party_done: boolean
           release_status: string
           release_type: string
           revenue_share_enabled: boolean | null
@@ -20481,6 +20482,7 @@ export type Database = {
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
+          release_party_done?: boolean
           release_status?: string
           release_type: string
           revenue_share_enabled?: boolean | null
@@ -20518,6 +20520,7 @@ export type Database = {
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
+          release_party_done?: boolean
           release_status?: string
           release_type?: string
           revenue_share_enabled?: boolean | null

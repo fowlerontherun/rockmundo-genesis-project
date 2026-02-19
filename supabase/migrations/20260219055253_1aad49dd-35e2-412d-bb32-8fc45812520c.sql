@@ -1,0 +1,1 @@
+ALTER TABLE public.releases ADD COLUMN IF NOT EXISTS release_party_done boolean NOT NULL DEFAULT false;

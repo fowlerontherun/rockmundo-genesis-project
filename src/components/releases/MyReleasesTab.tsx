@@ -773,20 +773,16 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onP
               })()}
             </>
           )}
-          {(release.release_status === "released" || release.release_status === "manufacturing") && (
-            <>
-              {release.release_status === "manufacturing" || !release.release_party_done ? (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs px-2 h-7"
-                  onClick={onParty}
-                >
-                  <PartyPopper className="h-3 w-3 mr-1" />
-                  Party
-                </Button>
-              ) : null}
-            </>
+          {(release.release_status === "released" || release.release_status === "manufacturing") && !release.release_party_done && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-xs px-2 h-7"
+              onClick={onParty}
+            >
+              <PartyPopper className="h-3 w-3 mr-1" />
+              Party
+            </Button>
           )}
           {release.release_status !== "released" && release.release_status !== "cancelled" && (
             <>
