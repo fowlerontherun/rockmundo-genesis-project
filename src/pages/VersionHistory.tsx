@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.834",
+    date: "2026-02-19",
+    changes: [
+      { type: 'fix', description: "Release parties now limited to one per release — Party button hidden after completion, and release_party_done flag set in database" },
+    ],
+  },
+  {
     version: "1.0.833",
     date: "2026-02-19",
     changes: [

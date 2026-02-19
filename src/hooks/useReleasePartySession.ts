@@ -180,7 +180,7 @@ export const useReleasePartySession = (
 
       await supabase
         .from("releases")
-        .update({ hype_score: newHype } as any)
+        .update({ hype_score: newHype, release_party_done: true } as any)
         .eq("id", releaseId);
 
       queryClient.invalidateQueries({ queryKey: ["releases"] });
