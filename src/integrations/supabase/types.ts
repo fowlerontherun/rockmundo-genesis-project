@@ -2589,6 +2589,69 @@ export type Database = {
         }
         Relationships: []
       }
+      character_relationships: {
+        Row: {
+          affection_score: number
+          attraction_score: number
+          created_at: string
+          entity_a_id: string
+          entity_a_type: string
+          entity_b_id: string
+          entity_b_name: string
+          entity_b_type: string
+          id: string
+          jealousy_score: number
+          last_decay_at: string | null
+          last_interaction_at: string | null
+          loyalty_score: number
+          metadata: Json | null
+          relationship_types: string[]
+          trust_score: number
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          affection_score?: number
+          attraction_score?: number
+          created_at?: string
+          entity_a_id: string
+          entity_a_type?: string
+          entity_b_id: string
+          entity_b_name?: string
+          entity_b_type: string
+          id?: string
+          jealousy_score?: number
+          last_decay_at?: string | null
+          last_interaction_at?: string | null
+          loyalty_score?: number
+          metadata?: Json | null
+          relationship_types?: string[]
+          trust_score?: number
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          affection_score?: number
+          attraction_score?: number
+          created_at?: string
+          entity_a_id?: string
+          entity_a_type?: string
+          entity_b_id?: string
+          entity_b_name?: string
+          entity_b_type?: string
+          id?: string
+          jealousy_score?: number
+          last_decay_at?: string | null
+          last_interaction_at?: string | null
+          loyalty_score?: number
+          metadata?: Json | null
+          relationship_types?: string[]
+          trust_score?: number
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
       character_sprite_assets: {
         Row: {
           anchor_x: number | null
@@ -20173,6 +20236,115 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "city_districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_events: {
+        Row: {
+          created_at: string
+          event_key: string
+          event_type: string
+          id: string
+          message: string | null
+          new_value: number | null
+          old_value: number | null
+          processed: boolean | null
+          relationship_id: string
+          score_name: string | null
+          threshold: number | null
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+          event_type: string
+          id?: string
+          message?: string | null
+          new_value?: number | null
+          old_value?: number | null
+          processed?: boolean | null
+          relationship_id: string
+          score_name?: string | null
+          threshold?: number | null
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          event_type?: string
+          id?: string
+          message?: string | null
+          new_value?: number | null
+          old_value?: number | null
+          processed?: boolean | null
+          relationship_id?: string
+          score_name?: string | null
+          threshold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_events_relationship_id_fkey"
+            columns: ["relationship_id"]
+            isOneToOne: false
+            referencedRelation: "character_relationships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_interactions: {
+        Row: {
+          affection_change: number | null
+          attraction_change: number | null
+          context_id: string | null
+          context_type: string | null
+          created_at: string
+          description: string | null
+          id: string
+          initiated_by: string | null
+          interaction_type: string
+          jealousy_change: number | null
+          loyalty_change: number | null
+          metadata: Json | null
+          relationship_id: string
+          trust_change: number | null
+        }
+        Insert: {
+          affection_change?: number | null
+          attraction_change?: number | null
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          initiated_by?: string | null
+          interaction_type: string
+          jealousy_change?: number | null
+          loyalty_change?: number | null
+          metadata?: Json | null
+          relationship_id: string
+          trust_change?: number | null
+        }
+        Update: {
+          affection_change?: number | null
+          attraction_change?: number | null
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          initiated_by?: string | null
+          interaction_type?: string
+          jealousy_change?: number | null
+          loyalty_change?: number | null
+          metadata?: Json | null
+          relationship_id?: string
+          trust_change?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_interactions_relationship_id_fkey"
+            columns: ["relationship_id"]
+            isOneToOne: false
+            referencedRelation: "character_relationships"
             referencedColumns: ["id"]
           },
         ]

@@ -230,3 +230,6 @@ verify_jwt = false
 
 [functions.generate-merch-image]
 verify_jwt = false
+
+[functions.relationship-decay]
+verify_jwt = false
