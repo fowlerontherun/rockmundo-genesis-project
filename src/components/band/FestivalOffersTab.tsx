@@ -33,10 +33,7 @@ export const FestivalOffersTab = ({ bandId }: FestivalOffersTabProps) => {
                   <CardContent className="pt-6">
                     <div className="space-y-4">
                       <div>
-                        <h3 className="text-xl font-bold">{offer.festival?.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {offer.festival?.city?.name}
-                        </p>
+                        <h3 className="text-xl font-bold">{offer.festival?.title}</h3>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -129,7 +126,7 @@ export const FestivalOffersTab = ({ bandId }: FestivalOffersTabProps) => {
               {respondedOffers.map((offer) => (
                 <div key={offer.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="font-semibold">{offer.festival?.name}</p>
+                    <p className="font-semibold">{offer.festival?.title}</p>
                     <p className="text-sm text-muted-foreground">
                       {new Date(offer.slot_date).toLocaleDateString()}
                     </p>

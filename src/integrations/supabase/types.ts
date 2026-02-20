@@ -6856,6 +6856,79 @@ export type Database = {
           },
         ]
       }
+      festival_slot_offers: {
+        Row: {
+          additional_perks: string[] | null
+          band_id: string
+          created_at: string
+          expires_at: string | null
+          festival_id: string
+          guaranteed_payment: number
+          id: string
+          message: string | null
+          responded_at: string | null
+          slot_date: string
+          slot_time: string | null
+          slot_type: string
+          stage_slot_id: string | null
+          status: string
+        }
+        Insert: {
+          additional_perks?: string[] | null
+          band_id: string
+          created_at?: string
+          expires_at?: string | null
+          festival_id: string
+          guaranteed_payment?: number
+          id?: string
+          message?: string | null
+          responded_at?: string | null
+          slot_date: string
+          slot_time?: string | null
+          slot_type?: string
+          stage_slot_id?: string | null
+          status?: string
+        }
+        Update: {
+          additional_perks?: string[] | null
+          band_id?: string
+          created_at?: string
+          expires_at?: string | null
+          festival_id?: string
+          guaranteed_payment?: number
+          id?: string
+          message?: string | null
+          responded_at?: string | null
+          slot_date?: string
+          slot_time?: string | null
+          slot_type?: string
+          stage_slot_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_slot_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_slot_offers_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_slot_offers_stage_slot_id_fkey"
+            columns: ["stage_slot_id"]
+            isOneToOne: false
+            referencedRelation: "festival_stage_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_sponsorships: {
         Row: {
           brand_id: string | null

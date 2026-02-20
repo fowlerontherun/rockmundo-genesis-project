@@ -13,7 +13,7 @@ export const useFestivalSlotOffers = (bandId?: string) => {
         .from("festival_slot_offers")
         .select(`
           *,
-          festival:festivals(id, name, start_date, end_date, city:cities(name)),
+          festival:game_events(id, title, start_date, end_date),
           band:bands(id, name)
         `)
         .order("created_at", { ascending: false });
