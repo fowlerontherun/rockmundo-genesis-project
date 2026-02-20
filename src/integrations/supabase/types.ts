@@ -21055,6 +21055,152 @@ export type Database = {
         }
         Relationships: []
       }
+      romantic_events: {
+        Row: {
+          attraction_change: number | null
+          commitment_change: number | null
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_stage: string | null
+          old_stage: string | null
+          passion_change: number | null
+          reputation_axis: string | null
+          reputation_change: number | null
+          romance_id: string
+          suspicion_change: number | null
+          tension_change: number | null
+        }
+        Insert: {
+          attraction_change?: number | null
+          commitment_change?: number | null
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_stage?: string | null
+          old_stage?: string | null
+          passion_change?: number | null
+          reputation_axis?: string | null
+          reputation_change?: number | null
+          romance_id: string
+          suspicion_change?: number | null
+          tension_change?: number | null
+        }
+        Update: {
+          attraction_change?: number | null
+          commitment_change?: number | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_stage?: string | null
+          old_stage?: string | null
+          passion_change?: number | null
+          reputation_axis?: string | null
+          reputation_change?: number | null
+          romance_id?: string
+          suspicion_change?: number | null
+          tension_change?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "romantic_events_romance_id_fkey"
+            columns: ["romance_id"]
+            isOneToOne: false
+            referencedRelation: "romantic_relationships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      romantic_relationships: {
+        Row: {
+          affair_detected: boolean
+          affair_detected_at: string | null
+          affair_suspicion: number
+          attraction_score: number
+          commitment_score: number
+          compatibility_score: number
+          created_at: string
+          end_reason: string | null
+          ended_by: string | null
+          id: string
+          initiated_by: string | null
+          is_active: boolean
+          is_secret: boolean
+          last_date_at: string | null
+          metadata: Json | null
+          partner_a_id: string
+          partner_a_type: string
+          partner_b_id: string
+          partner_b_name: string
+          partner_b_type: string
+          passion_score: number
+          stage: string
+          stage_changed_at: string | null
+          tension_score: number
+          updated_at: string
+        }
+        Insert: {
+          affair_detected?: boolean
+          affair_detected_at?: string | null
+          affair_suspicion?: number
+          attraction_score?: number
+          commitment_score?: number
+          compatibility_score?: number
+          created_at?: string
+          end_reason?: string | null
+          ended_by?: string | null
+          id?: string
+          initiated_by?: string | null
+          is_active?: boolean
+          is_secret?: boolean
+          last_date_at?: string | null
+          metadata?: Json | null
+          partner_a_id: string
+          partner_a_type?: string
+          partner_b_id: string
+          partner_b_name?: string
+          partner_b_type?: string
+          passion_score?: number
+          stage?: string
+          stage_changed_at?: string | null
+          tension_score?: number
+          updated_at?: string
+        }
+        Update: {
+          affair_detected?: boolean
+          affair_detected_at?: string | null
+          affair_suspicion?: number
+          attraction_score?: number
+          commitment_score?: number
+          compatibility_score?: number
+          created_at?: string
+          end_reason?: string | null
+          ended_by?: string | null
+          id?: string
+          initiated_by?: string | null
+          is_active?: boolean
+          is_secret?: boolean
+          last_date_at?: string | null
+          metadata?: Json | null
+          partner_a_id?: string
+          partner_a_type?: string
+          partner_b_id?: string
+          partner_b_name?: string
+          partner_b_type?: string
+          passion_score?: number
+          stage?: string
+          stage_changed_at?: string | null
+          tension_score?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       season_genre_modifiers: {
         Row: {
           created_at: string

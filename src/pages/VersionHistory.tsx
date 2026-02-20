@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.844",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Romantic Progression System — 9-stage romance arc: Flirting → Dating → Exclusive → Public → Engaged → Married → Separated → Divorced → Secret Affair" },
+      { type: 'feature', description: "Each romance stage unlocks new interactions, affects reputation, emotional state, and band chemistry if partners share a band" },
+      { type: 'feature', description: "Attraction algorithm combining fame gap, genre overlap, personality match, reputation alignment, and proximity" },
+      { type: 'feature', description: "Compatibility scoring from trait overlap/conflicts, genre alignment, ambition match, and lifestyle similarity" },
+      { type: 'feature', description: "Affair detection probability engine — suspicion builds per interaction, influenced by fame, venue type, social media activity, and rival vigilance" },
+      { type: 'feature', description: "Rejection consequences scale with relationship depth and publicity — deeper breakups cause more happiness loss, resentment, and reputation damage" },
+    ],
+  },
+  {
     version: "1.0.843",
     date: "2026-02-20",
     changes: [
