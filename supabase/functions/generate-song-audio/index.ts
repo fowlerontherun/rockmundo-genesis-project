@@ -709,14 +709,14 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     const midpoint = Math.ceil(lines.length / 2)
     const verse = lines.slice(0, midpoint).join('\n')
     const chorus = lines.slice(midpoint).join('\n') || lines.slice(0, Math.min(4, lines.length)).join('\n')
-    return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
+    normalized = `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
+  } else {
+    // Clean up extra whitespace
+    normalized = normalized.replace(/\n{3,}/g, '\n\n').trim()
+    normalized = normalized.replace(/^\n+/, '')
   }
 
-  // Clean up extra whitespace
-  normalized = normalized.replace(/\n{3,}/g, '\n\n').trim()
-  normalized = normalized.replace(/^\n+/, '')
-
-  // MiniMax Music requires lyrics between 10-600 characters — truncate smartly if needed
+  // MiniMax Music requires lyrics between 10-600 characters — ALWAYS enforce this limit
   if (normalized.length > 600) {
     console.log(`[generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to 600 char limit`)
     const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
@@ -731,11 +731,23 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     if (truncated.trim().length >= 10) {
       normalized = truncated.trim()
     } else {
-      normalized = normalized.substring(0, 600)
+      // Hard truncate at 600 chars as last resort
+      normalized = normalized.substring(0, 597) + '...'
       const lastNewline = normalized.lastIndexOf('\n')
       if (lastNewline > 100) normalized = normalized.substring(0, lastNewline).trim()
     }
     console.log(`[generate-song-audio] Truncated lyrics to ${normalized.length} chars`)
+  }
+
+  // Final safety net - absolute hard limit
+  if (normalized.length > 600) {
+    normalized = normalized.substring(0, 597).trim()
+    console.log(`[generate-song-audio] Hard-capped lyrics to ${normalized.length} chars`)
+  }
+
+  if (normalized.length < 10) {
+    console.log(`[generate-song-audio] Lyrics too short after processing (${normalized.length} chars), using placeholder`)
+    return generateVariedPlaceholderLyrics(songTitle, genre)
   }
 
   console.log(`[generate-song-audio] Formatted lyrics for MiniMax: ${normalized.length} chars`)

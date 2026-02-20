@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.836",
+    date: "2026-02-20",
+    changes: [
+      { type: 'fix', description: "Fixed AI song generation failing due to lyrics exceeding MiniMax 600-char limit — all code paths now enforce truncation with a final safety net" },
+    ],
+  },
+  {
     version: "1.0.835",
     date: "2026-02-20",
     changes: [
