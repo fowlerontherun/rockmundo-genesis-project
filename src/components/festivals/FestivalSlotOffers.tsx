@@ -41,10 +41,10 @@ export const FestivalSlotOffers = ({ bandId }: FestivalSlotOffersProps) => {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-lg">{offer.festival?.name}</CardTitle>
+                    <CardTitle className="text-lg">{offer.festival?.title}</CardTitle>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{offer.festival?.city?.name}</span>
+                      <Music className="h-4 w-4" />
+                      <span>{offer.slot_type} slot</span>
                     </div>
                   </div>
                   <Badge variant="outline" className="bg-primary/10">
@@ -62,14 +62,14 @@ export const FestivalSlotOffers = ({ bandId }: FestivalSlotOffersProps) => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{offer.performance_time || "TBD"}</span>
+                    <span>{offer.slot_time || "TBD"}</span>
                   </div>
                 </div>
                 
-                {offer.offered_payment && (
+                {offer.guaranteed_payment > 0 && (
                   <div className="p-3 bg-muted/50 rounded-lg">
                     <span className="text-sm text-muted-foreground">Offered Payment:</span>
-                    <span className="ml-2 font-semibold text-primary">${offer.offered_payment.toLocaleString()}</span>
+                    <span className="ml-2 font-semibold text-primary">${Number(offer.guaranteed_payment).toLocaleString()}</span>
                   </div>
                 )}
 
@@ -110,7 +110,7 @@ export const FestivalSlotOffers = ({ bandId }: FestivalSlotOffersProps) => {
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{offer.festival?.name}</p>
+                    <p className="font-medium">{offer.festival?.title}</p>
                     <p className="text-sm text-muted-foreground">{offer.slot_type} slot</p>
                   </div>
                   <Badge variant={offer.status === "accepted" ? "default" : "secondary"}>

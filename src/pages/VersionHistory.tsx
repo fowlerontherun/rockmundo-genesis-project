@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.838",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Created festival_slot_offers database table so bands can receive and respond to festival performance invitations" },
+      { type: 'feature', description: "Added inbox notifications when a band receives a festival slot offer — all band members get notified with actionable deep-link to the Festival Offers tab" },
+      { type: 'fix', description: "Fixed Festival Slot Offers UI to correctly reference game_events table fields (title instead of name) and guaranteed_payment" },
+    ],
+  },
+  {
     version: "1.0.837",
     date: "2026-02-20",
     changes: [
