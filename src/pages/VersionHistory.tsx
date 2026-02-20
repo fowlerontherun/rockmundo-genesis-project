@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.840",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Restock button on sold-out and low-stock merchandise items — choose quantity and reorder directly from the inventory table" },
+    ],
+  },
+  {
     version: "1.0.839",
     date: "2026-02-20",
     changes: [
