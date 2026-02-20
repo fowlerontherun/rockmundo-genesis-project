@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.839",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Full contract negotiation system — accept, reject, or counter-offer label deals with a 3-strike system where the label walks away after 3 counters" },
+      { type: 'feature', description: "Acceptance likelihood bar shows risk of each counter-offer based on how aggressive your ask is and how many rounds you've used" },
+      { type: 'feature', description: "Label auto-responds to counter-offers by meeting you partway (45% round 1, 30% round 2), with revised terms visible alongside original offer" },
+      { type: 'feature', description: "Counter round indicator with visual dots and warnings — final counter shows destructive styling with walk-away warning" },
+      { type: 'fix', description: "Contract offers now remain visible during negotiation (previously vanished after countering due to status filter only including 'offered')" },
+    ],
+  },
+  {
     version: "1.0.838",
     date: "2026-02-20",
     changes: [
