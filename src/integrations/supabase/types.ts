@@ -2497,6 +2497,60 @@ export type Database = {
           },
         ]
       }
+      character_emotional_states: {
+        Row: {
+          created_at: string
+          happiness: number
+          id: string
+          inspiration: number
+          interaction_modifier: number
+          jealousy: number
+          last_decay_at: string | null
+          last_event_at: string | null
+          loneliness: number
+          obsession: number
+          performance_modifier: number
+          profile_id: string
+          resentment: number
+          songwriting_modifier: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          happiness?: number
+          id?: string
+          inspiration?: number
+          interaction_modifier?: number
+          jealousy?: number
+          last_decay_at?: string | null
+          last_event_at?: string | null
+          loneliness?: number
+          obsession?: number
+          performance_modifier?: number
+          profile_id: string
+          resentment?: number
+          songwriting_modifier?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          happiness?: number
+          id?: string
+          inspiration?: number
+          interaction_modifier?: number
+          jealousy?: number
+          last_decay_at?: string | null
+          last_event_at?: string | null
+          loneliness?: number
+          obsession?: number
+          performance_modifier?: number
+          profile_id?: string
+          resentment?: number
+          songwriting_modifier?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       character_generations: {
         Row: {
           created_at: string | null
@@ -5737,6 +5791,57 @@ export type Database = {
           title?: string
           updated_at?: string
           video_url?: string
+        }
+        Relationships: []
+      }
+      emotional_state_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_source: string
+          event_type: string
+          happiness_change: number | null
+          id: string
+          inspiration_change: number | null
+          jealousy_change: number | null
+          loneliness_change: number | null
+          metadata: Json | null
+          obsession_change: number | null
+          profile_id: string
+          resentment_change: number | null
+          source_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_source: string
+          event_type: string
+          happiness_change?: number | null
+          id?: string
+          inspiration_change?: number | null
+          jealousy_change?: number | null
+          loneliness_change?: number | null
+          metadata?: Json | null
+          obsession_change?: number | null
+          profile_id: string
+          resentment_change?: number | null
+          source_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_source?: string
+          event_type?: string
+          happiness_change?: number | null
+          id?: string
+          inspiration_change?: number | null
+          jealousy_change?: number | null
+          loneliness_change?: number | null
+          metadata?: Json | null
+          obsession_change?: number | null
+          profile_id?: string
+          resentment_change?: number | null
+          source_id?: string | null
         }
         Relationships: []
       }
