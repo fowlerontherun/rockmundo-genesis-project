@@ -8032,6 +8032,86 @@ export type Database = {
           },
         ]
       }
+      generated_media_articles: {
+        Row: {
+          body_text: string
+          controversy_score: number
+          created_at: string
+          drama_event_id: string | null
+          expires_at: string | null
+          featured: boolean
+          headline: string
+          id: string
+          is_breaking: boolean
+          is_published: boolean
+          mentioned_entity_ids: string[] | null
+          mentioned_entity_names: string[] | null
+          metadata: Json | null
+          outlet_name: string
+          outlet_tone: string
+          reader_count: number
+          sentiment_score: number
+          share_count: number
+          source_type: string
+          subheadline: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          body_text: string
+          controversy_score?: number
+          created_at?: string
+          drama_event_id?: string | null
+          expires_at?: string | null
+          featured?: boolean
+          headline: string
+          id?: string
+          is_breaking?: boolean
+          is_published?: boolean
+          mentioned_entity_ids?: string[] | null
+          mentioned_entity_names?: string[] | null
+          metadata?: Json | null
+          outlet_name: string
+          outlet_tone?: string
+          reader_count?: number
+          sentiment_score?: number
+          share_count?: number
+          source_type?: string
+          subheadline?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          body_text?: string
+          controversy_score?: number
+          created_at?: string
+          drama_event_id?: string | null
+          expires_at?: string | null
+          featured?: boolean
+          headline?: string
+          id?: string
+          is_breaking?: boolean
+          is_published?: boolean
+          mentioned_entity_ids?: string[] | null
+          mentioned_entity_names?: string[] | null
+          metadata?: Json | null
+          outlet_name?: string
+          outlet_tone?: string
+          reader_count?: number
+          sentiment_score?: number
+          share_count?: number
+          source_type?: string
+          subheadline?: string | null
+          tags?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_media_articles_drama_event_id_fkey"
+            columns: ["drama_event_id"]
+            isOneToOne: false
+            referencedRelation: "social_drama_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gettit_comment_votes: {
         Row: {
           comment_id: string
@@ -22431,6 +22511,105 @@ export type Database = {
           starts_at?: string
           theme?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      social_drama_events: {
+        Row: {
+          chart_boost: number
+          created_at: string
+          description: string
+          drama_category: string
+          effect_duration_days: number
+          effects_active: boolean
+          effects_expire_at: string | null
+          fame_change: number
+          fan_loyalty_change: number
+          follow_up_event_id: string | null
+          headline: string
+          id: string
+          is_active: boolean
+          media_article_id: string | null
+          metadata: Json | null
+          primary_entity_id: string
+          primary_entity_name: string
+          primary_entity_type: string
+          reputation_impact: Json
+          resolved: boolean
+          resolved_at: string | null
+          secondary_entity_id: string | null
+          secondary_entity_name: string | null
+          secondary_entity_type: string | null
+          severity: string
+          streaming_multiplier: number
+          twaater_hashtag: string | null
+          updated_at: string
+          viral_score: number | null
+          went_viral: boolean
+        }
+        Insert: {
+          chart_boost?: number
+          created_at?: string
+          description: string
+          drama_category: string
+          effect_duration_days?: number
+          effects_active?: boolean
+          effects_expire_at?: string | null
+          fame_change?: number
+          fan_loyalty_change?: number
+          follow_up_event_id?: string | null
+          headline: string
+          id?: string
+          is_active?: boolean
+          media_article_id?: string | null
+          metadata?: Json | null
+          primary_entity_id: string
+          primary_entity_name: string
+          primary_entity_type: string
+          reputation_impact?: Json
+          resolved?: boolean
+          resolved_at?: string | null
+          secondary_entity_id?: string | null
+          secondary_entity_name?: string | null
+          secondary_entity_type?: string | null
+          severity?: string
+          streaming_multiplier?: number
+          twaater_hashtag?: string | null
+          updated_at?: string
+          viral_score?: number | null
+          went_viral?: boolean
+        }
+        Update: {
+          chart_boost?: number
+          created_at?: string
+          description?: string
+          drama_category?: string
+          effect_duration_days?: number
+          effects_active?: boolean
+          effects_expire_at?: string | null
+          fame_change?: number
+          fan_loyalty_change?: number
+          follow_up_event_id?: string | null
+          headline?: string
+          id?: string
+          is_active?: boolean
+          media_article_id?: string | null
+          metadata?: Json | null
+          primary_entity_id?: string
+          primary_entity_name?: string
+          primary_entity_type?: string
+          reputation_impact?: Json
+          resolved?: boolean
+          resolved_at?: string | null
+          secondary_entity_id?: string | null
+          secondary_entity_name?: string | null
+          secondary_entity_type?: string | null
+          severity?: string
+          streaming_multiplier?: number
+          twaater_hashtag?: string | null
+          updated_at?: string
+          viral_score?: number | null
+          went_viral?: boolean
         }
         Relationships: []
       }

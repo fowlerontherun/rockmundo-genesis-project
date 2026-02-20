@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.846",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Social Drama Event Generator — 12 drama categories: public breakups, affairs exposed, diss tracks, on-stage fights, surprise weddings, custody disputes, and more" },
+      { type: 'feature', description: "Auto-generated media articles from 8 outlets (The Scandal Sheet, Music Insider, Gossip Riff, etc.) with tone-specific coverage based on fame and controversy level" },
+      { type: 'feature', description: "Each event modifies reputation (4 axes), fan loyalty (-50 to +50), streaming multiplier (0.5x–3.0x), chart boost, and fame — with viral amplification" },
+      { type: 'feature', description: "Viral detection system: explosive events have up to 90% viral chance, boosting all impacts by 1.5x and streaming by 1.3x" },
+      { type: 'feature', description: "Generated articles table for AI news/radio integration — supports breaking news, featured articles, sentiment scoring, and controversy tracking" },
+      { type: 'feature', description: "Active drama streaming multiplier hook compounds all ongoing drama effects for real-time impact on streaming calculations" },
+    ],
+  },
+  {
     version: "1.0.845",
     date: "2026-02-20",
     changes: [
