@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.842",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Unified character relationship system — scalable backend for Player↔Player, Player↔NPC, and Player↔Band relationships with 5 core scores (affection, trust, attraction, loyalty, jealousy)" },
+      { type: 'feature', description: "Multiple simultaneous relationship types per pair (friend, rival, bandmate, mentor, partner, etc.) with public/private/leaked visibility states" },
+      { type: 'feature', description: "Interaction history logging with automatic score changes and threshold event detection (e.g. trust broken, loyalty betrayal)" },
+      { type: 'feature', description: "Hybrid decay system — daily cron edge function decays scores after 3-day grace period, scaling with inactivity duration" },
+      { type: 'feature', description: "React Query hooks for full CRUD, interaction logging, get-or-create patterns, and unprocessed event polling" },
+    ],
+  },
+  {
     version: "1.0.841",
     date: "2026-02-20",
     changes: [
