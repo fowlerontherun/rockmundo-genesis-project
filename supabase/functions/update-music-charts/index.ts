@@ -412,6 +412,33 @@ serve(async (req) => {
       totalPhysical: number;
     }>();
 
+    // Pre-fetch ALL-TIME cumulative sales per song for total_sales display
+    const { data: allTimeSalesData } = await supabaseClient
+      .from("release_sales")
+      .select(`
+        quantity_sold,
+        release_formats!inner(
+          format_type,
+          release:releases!inner(
+            release_songs:release_songs!release_songs_release_id_fkey(
+              song:songs!inner(id)
+            )
+          )
+        )
+      `);
+
+    const allTimeSalesBySong = new Map<string, number>();
+    for (const sale of allTimeSalesData || []) {
+      const release = sale.release_formats?.release;
+      if (!release?.release_songs) continue;
+      for (const rs of release.release_songs) {
+        const songId = rs.song?.id;
+        if (!songId) continue;
+        allTimeSalesBySong.set(songId, (allTimeSalesBySong.get(songId) || 0) + sale.quantity_sold);
+      }
+    }
+    console.log(`Pre-fetched all-time sales for ${allTimeSalesBySong.size} songs`);
+
     for (const salesType of salesTypes) {
       const { data: salesData, error: salesError } = await supabaseClient
         .from("release_sales")
@@ -555,8 +582,8 @@ serve(async (req) => {
             song_id: songId,
             chart_type: salesType.type,
             rank: index + 1,
-            plays_count: sales, // Total weekly sales for this format
-            weekly_plays: sales, // Weekly is same as total for sales charts
+            plays_count: allTimeSalesBySong.get(songId) || sales, // All-time cumulative sales
+            weekly_plays: sales, // Weekly sales for this format
             combined_score: 0,
             chart_date: chartDate,
             genre: info?.genre,
@@ -580,7 +607,7 @@ serve(async (req) => {
             song_id: songId,
             chart_type: scopedType(salesType.type, "single"),
             rank: index + 1,
-            plays_count: sales,
+            plays_count: allTimeSalesBySong.get(songId) || sales,
             weekly_plays: sales,
             combined_score: 0,
             chart_date: chartDate,
@@ -604,7 +631,7 @@ serve(async (req) => {
           release_title: entry.releaseTitle,
           chart_type: scopedType(salesType.type, "album"),
           rank: index + 1,
-          plays_count: entry.totalSales,
+          plays_count: allTimeSalesBySong.get(entry.leadSongId!) || entry.totalSales,
           weekly_plays: entry.totalSales,
           combined_score: 0,
           chart_date: chartDate,
@@ -627,7 +654,7 @@ serve(async (req) => {
           release_title: entry.releaseTitle,
           chart_type: scopedType(salesType.type, "ep"),
           rank: index + 1,
-          plays_count: entry.totalSales,
+          plays_count: allTimeSalesBySong.get(entry.leadSongId!) || entry.totalSales,
           weekly_plays: entry.totalSales,
           combined_score: 0,
           chart_date: chartDate,

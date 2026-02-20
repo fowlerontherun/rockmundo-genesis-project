@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.841",
+    date: "2026-02-20",
+    changes: [
+      { type: 'fix', description: "Charts now show correct Weekly vs Total values — sales charts display cumulative all-time sales for 'Total' and weekly sales for 'This Week' instead of showing the same number for both" },
+      { type: 'improvement', description: "Old releases now decay in sales and streams over time — graduated age multiplier reduces daily output from 1.5x (first week) down to 0.2x (6+ months) to mirror real-world music economics" },
+    ],
+  },
+  {
     version: "1.0.840",
     date: "2026-02-20",
     changes: [

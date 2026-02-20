@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
         total_revenue,
         band_id,
         user_id,
+        created_at,
         songs!inner(band_id)
       `)
       .eq('is_active', true)
@@ -99,11 +100,21 @@ Deno.serve(async (req) => {
       try {
         const baseStreams = Math.floor(Math.random() * 4900) + 100;
         
+        // Age decay: older releases get fewer streams over time
+        const releaseDate = release.created_at ? new Date(release.created_at) : new Date();
+        const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
+        const ageDecay = daysSinceRelease <= 7 ? 1.5
+          : daysSinceRelease <= 30 ? 1.0
+          : daysSinceRelease <= 60 ? 0.7
+          : daysSinceRelease <= 90 ? 0.5
+          : daysSinceRelease <= 180 ? 0.35
+          : 0.2;
+        
         // Apply hype multiplier from release
         const songHype = releaseHypeMap.get(release.song_id) || 0;
         const streamHypeMultiplier = 1 + (songHype / 500);
         
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier);
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay);
         // Use decimal revenue instead of floor to avoid $0 at low stream counts
         const dailyRevenue = Number((dailyStreams * 0.004).toFixed(2));
 
