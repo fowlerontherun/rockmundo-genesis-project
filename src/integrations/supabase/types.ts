@@ -226,6 +226,7 @@ export type Database = {
           artist_profile_id: string | null
           band_id: string | null
           contract_value: number | null
+          counter_count: number
           created_at: string | null
           deal_type_id: string
           demo_submission_id: string | null
@@ -233,9 +234,14 @@ export type Database = {
           expires_at: string | null
           id: string
           label_id: string
+          last_action_by: string
           manufacturing_covered: boolean | null
           marketing_support: number | null
           masters_owned_by_artist: boolean | null
+          original_advance: number | null
+          original_album_quota: number | null
+          original_royalty_pct: number | null
+          original_single_quota: number | null
           recouped_amount: number | null
           release_quota: number
           releases_completed: number | null
@@ -259,6 +265,7 @@ export type Database = {
           artist_profile_id?: string | null
           band_id?: string | null
           contract_value?: number | null
+          counter_count?: number
           created_at?: string | null
           deal_type_id: string
           demo_submission_id?: string | null
@@ -266,9 +273,14 @@ export type Database = {
           expires_at?: string | null
           id?: string
           label_id: string
+          last_action_by?: string
           manufacturing_covered?: boolean | null
           marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
+          original_advance?: number | null
+          original_album_quota?: number | null
+          original_royalty_pct?: number | null
+          original_single_quota?: number | null
           recouped_amount?: number | null
           release_quota: number
           releases_completed?: number | null
@@ -292,6 +304,7 @@ export type Database = {
           artist_profile_id?: string | null
           band_id?: string | null
           contract_value?: number | null
+          counter_count?: number
           created_at?: string | null
           deal_type_id?: string
           demo_submission_id?: string | null
@@ -299,9 +312,14 @@ export type Database = {
           expires_at?: string | null
           id?: string
           label_id?: string
+          last_action_by?: string
           manufacturing_covered?: boolean | null
           marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
+          original_advance?: number | null
+          original_album_quota?: number | null
+          original_royalty_pct?: number | null
+          original_single_quota?: number | null
           recouped_amount?: number | null
           release_quota?: number
           releases_completed?: number | null

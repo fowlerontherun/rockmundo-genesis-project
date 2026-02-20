@@ -150,17 +150,31 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
           territories,
           created_at,
           expires_at,
+          counter_count,
+          last_action_by,
+          original_advance,
+          original_royalty_pct,
+          original_single_quota,
+          original_album_quota,
           demo_submission_id,
           labels(name, reputation_score),
           demo_submissions(songs(title, quality_score))
         `)
-        .eq("status", "offered")
+        .in("status", ["offered", "negotiating"])
         .or(filters.join(",")) as any;
 
       const { data, error } = await query;
       if (error) throw error;
 
-      return (data ?? []).map((offer: any) => ({
+      // Filter: only show offers where it's the label's turn (or fresh offers)
+      const filtered = (data ?? []).filter((offer: any) => {
+        if (offer.status === 'offered') return true;
+        // For negotiating, only show when label has responded
+        if (offer.status === 'negotiating' && offer.last_action_by === 'label') return true;
+        return false;
+      });
+
+      return filtered.map((offer: any) => ({
         id: offer.id,
         label_id: offer.label_id,
         label_name: offer.labels?.name ?? "Unknown Label",
@@ -178,6 +192,12 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         demo_song_quality: offer.demo_submissions?.songs?.quality_score ?? 0,
         created_at: offer.created_at,
         expires_at: offer.expires_at,
+        counter_count: offer.counter_count ?? 0,
+        last_action_by: offer.last_action_by ?? 'label',
+        original_advance: offer.original_advance,
+        original_royalty_pct: offer.original_royalty_pct,
+        original_single_quota: offer.original_single_quota,
+        original_album_quota: offer.original_album_quota,
       }));
     },
   });
