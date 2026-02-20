@@ -1,108 +1,84 @@
 
 
-# Release Promo Tour -- Multi-Day Marketing Grind (v1.0.830)
+## Record Contract Negotiation System - v1.0.839
 
-## Overview
-Add a new "Promo Tour" system to the Release Detail page. When players launch a promo tour for a release, they commit to **half-day blocks (6 hours) over several consecutive days** of gruelling promotional work -- radio call-ins, in-store signings, podcast appearances, street flyering, and social media marathons. Each day's session activity-blocks the player, drains health/energy, increases stress, and costs money, but steadily builds hype for the release.
+### Problem
+Contract offers exist in the database and the `ContractOfferCard` component has Accept/Reject/Counter-Offer buttons, but:
+- The offer query only fetches contracts with status `offered`, so once you counter-offer (status changes to `negotiating`), the card vanishes
+- There is no label auto-response logic -- countering just sets the status and nothing happens
+- There is no tracking of how many counter-offers have been made (3-strike limit)
+- There is no "likelihood of acceptance" indicator
+- Inbox notifications exist for new offers but don't deep-link to actionable buttons
 
-## What Players Will See
+### Plan
 
-**New "Promotion" tab on the Release Detail page** with:
-- A selection of Promo Tour packages (3, 5, or 7 day tours)
-- Each day creates a 6-hour scheduled activity block (morning or afternoon slot choice)
-- Daily cost shown upfront (e.g. $200/day for transport, materials, food)
-- Health/energy/stress impact warnings before booking
-- Progress tracker showing completed vs remaining promo days
-- Hype accumulated so far with a running total
-- Daily activity descriptions (varies each day for flavour)
+#### 1. Database Migration
+Add columns to `artist_label_contracts` to support the negotiation loop:
+- `counter_count` (integer, default 0) -- tracks how many times the player has countered
+- `original_advance` (integer) -- stores the label's original offer terms for comparison
+- `original_royalty_pct` (integer) -- original royalty percentage
+- `original_single_quota` (integer) -- original single quota
+- `original_album_quota` (integer) -- original album quota
+- `last_action_by` (text, default 'label') -- who made the last move: 'label' or 'artist'
 
-**Example 3-Day Promo Tour:**
-| Day | Activity | Hype | Health Drain | Energy Cost | Stress |
-|-----|----------|------|-------------|-------------|--------|
-| 1 | Radio Call-Ins and Podcast Taping | +25 | -15 | -20 | +10 |
-| 2 | In-Store Signing and Street Flyering | +30 | -20 | -25 | +12 |
-| 3 | Social Media Marathon and Fan Meet | +35 | -12 | -15 | +15 |
+#### 2. Update ContractOfferCard to Handle Negotiating Status
+- Expand the query in `MyContractsTab.tsx` to fetch contracts with status `offered` OR `negotiating` (where `last_action_by = 'label'`, meaning the label has responded)
+- Show the label's counter-terms alongside the player's original request
+- Display a "Likelihood of Acceptance" progress bar based on:
+  - How close the player's ask is to the original offer
+  - How many counters have been used (decreases with each round)
+  - Formula: starts at ~70%, drops ~20% per counter round, and further drops based on how aggressive the ask is
 
-**During each promo day:**
-- Player is activity-blocked for 6 hours (half a day)
-- Health and energy drain applied on completion
-- Stress increases (new `stress` field on profiles, or we use existing energy as proxy)
-- Hype added to the release's `hype_score`
-- Small fame and follower gains
-- Random bonus events possible (viral moment, celebrity endorsement)
+#### 3. Label Auto-Response Logic
+When the player submits a counter-offer, add client-side logic (in the counter-offer mutation's `onSuccess`) that simulates the label responding after a brief delay:
+- **Round 1-2**: The label meets the player partway (moves 30-50% toward the player's ask from the original terms) and sets `last_action_by = 'label'`, `status = 'offered'` so the card reappears
+- **Round 3**: The label auto-rejects (`status = 'rejected'`) -- the player pushed too hard
+- Each label response slightly adjusts the contract terms and increments tracking
 
-## Promo Tour Packages
+#### 4. Acceptance Likelihood Bar
+Add a visual progress bar on the `ContractOfferCard` showing how likely the label is to accept if the player hits "Accept" or how risky a counter is:
+- Green zone (60-100%): Label is receptive
+- Yellow zone (30-59%): Getting risky
+- Red zone (0-29%): Label likely to walk away
+- The bar factors in: counter_count, difference from original terms, and label reputation
 
-| Package | Days | Daily Cost | Total Cost | Total Hype | Health Impact |
-|---------|------|-----------|------------|------------|---------------|
-| Quick Blitz | 3 | $200 | $600 | ~90 | Moderate |
-| Standard Push | 5 | $250 | $1,250 | ~175 | Heavy |
-| Full Campaign | 7 | $300 | $2,100 | ~280 | Brutal |
+#### 5. Inbox Notification Enhancement
+The existing `ContractDesignerDialog` already sends inbox notifications with deep-links. This plan will also send a notification when the label responds to a counter-offer, so the player gets notified in their inbox with a "Review Counter" CTA that scrolls to the offer card.
 
-Hype values scale with band fame (higher fame = bigger audiences = more hype per session).
+### Technical Details
 
-## Technical Plan
+**Files to modify:**
+- **Database migration**: Add `counter_count`, `original_advance`, `original_royalty_pct`, `original_single_quota`, `original_album_quota`, `last_action_by` columns
+- **`src/components/labels/MyContractsTab.tsx`**: Update the contract offers query to include `negotiating` status offers where label has responded
+- **`src/components/labels/ContractOfferCard.tsx`**: Add acceptance likelihood bar, show counter round indicator (e.g., "Counter 1 of 3"), update counter mutation to store originals on first counter and trigger label auto-response
+- **`src/components/labels/ContractNegotiationDialog.tsx`**: Add the likelihood bar and counter-round warning here too
+- **`src/components/VersionHeader.tsx`**: Bump to v1.0.839
+- **`src/pages/VersionHistory.tsx`**: Add changelog entry
 
-### 1. New Component: `PromoTourCard.tsx`
+**Negotiation flow:**
 
-Create `src/components/releases/PromoTourCard.tsx`:
-- Shows available tour packages when no active tour exists
-- Displays progress tracker when a tour is in progress
-- Each package shows: duration, daily cost, total cost, expected hype gain, health warning
-- Booking creates all scheduled activity entries upfront for consecutive days
-- Uses `player_scheduled_activities` with activity_type `"release_promo"` and half-day blocks
-- Deducts total cost from player cash on booking
-- Stores tour metadata in release's promotional_campaigns table (or a JSON metadata field)
+```text
+Label sends offer (status: 'offered', last_action_by: 'label')
+  |
+  +--> Player ACCEPTS --> status: 'accepted_by_artist'
+  |
+  +--> Player REJECTS --> status: 'rejected'
+  |
+  +--> Player COUNTERS (round 1) --> status: 'negotiating', counter_count: 1
+       |
+       Label auto-responds (meets halfway) --> status: 'offered', last_action_by: 'label'
+       |
+       +--> Player ACCEPTS revised terms
+       |
+       +--> Player COUNTERS (round 2) --> counter_count: 2
+            |
+            Label auto-responds (smaller concession) --> status: 'offered'
+            |
+            +--> Player ACCEPTS
+            |
+            +--> Player COUNTERS (round 3) --> counter_count: 3
+                 |
+                 Label AUTO-REJECTS --> status: 'rejected'
+                 Inbox notification: "Label walked away"
+```
 
-### 2. Promo Tour Booking Logic
-
-When a player books a promo tour:
-1. Check player cash balance covers total cost
-2. Check health is above 30 (refuse if exhausted/burned out)
-3. Check for scheduling conflicts across all tour days
-4. Create one `player_scheduled_activities` entry per day (6-hour blocks)
-5. Create a `promotional_campaigns` record to track overall tour progress
-6. Deduct cost from player's personal cash
-
-### 3. Promo Tour Completion Logic
-
-Each day's activity completion (handled by existing auto-completion or manual check):
-- Apply health drain: 15-20 per session (6hrs at ~3/hr rate)
-- Apply energy drain: 15-25 per session
-- Add hype to release: 25-40 per day (scaled by fame)
-- Add small fame bonus: 5-15 per day
-- Add follower bonus: 10-30 per day
-- Random event roll (10% chance): viral moment doubles that day's hype
-
-A new `usePromoTourCompletion` hook will check for completed promo day activities and apply rewards/drains.
-
-### 4. Update Release Detail Page
-
-Add a "Promotion" tab to `ReleaseDetail.tsx` containing:
-- The existing `PromotionalCampaignCard` (passive campaigns)
-- The new `PromoTourCard` (active promo tours)
-- A separator between the two sections
-
-### 5. Health System Integration
-
-Add `"release_promo"` to the health cost map in both:
-- `src/utils/healthSystem.ts` -- rate of 4/hr (moderate-heavy drain)
-- `src/hooks/useHealthImpact.ts` -- same rate for consistency
-
-### 6. Version Bump to v1.0.830
-
----
-
-## Files to Create
-- `src/components/releases/PromoTourCard.tsx` -- main promo tour UI and booking logic
-- `src/hooks/usePromoTourCompletion.ts` -- auto-completion hook for promo day rewards
-
-## Files to Edit
-- `src/pages/ReleaseDetail.tsx` -- add Promotion tab with both campaign cards
-- `src/utils/healthSystem.ts` -- add `release_promo` health drain rate
-- `src/hooks/useHealthImpact.ts` -- add `release_promo` to health costs map
-- `src/components/VersionHeader.tsx` -- bump to v1.0.830
-- `src/pages/VersionHistory.tsx` -- changelog entry
-
-## No Database Migration Needed
-Uses existing tables: `promotional_campaigns` for tour tracking, `player_scheduled_activities` for daily blocks, `profiles` for cash/health/energy. Tour day details stored in `metadata` JSON.
