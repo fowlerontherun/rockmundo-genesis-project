@@ -72,6 +72,18 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        social: {
+          love: "hsl(var(--social-love))",
+          tension: "hsl(var(--social-tension))",
+          chemistry: "hsl(var(--social-chemistry))",
+          trust: "hsl(var(--social-trust))",
+          loyalty: "hsl(var(--social-loyalty))",
+          jealousy: "hsl(var(--social-jealousy))",
+          attraction: "hsl(var(--social-attraction))",
+          drama: "hsl(var(--social-drama))",
+          warm: "hsl(var(--social-warm))",
+          cold: "hsl(var(--social-cold))",
+        },
       },
       backgroundImage: {
         'gradient-primary': 'var(--gradient-primary)',
@@ -81,6 +93,9 @@ export default {
       boxShadow: {
         'electric': 'var(--shadow-electric)',
         'glow': 'var(--shadow-glow)',
+        'love': 'var(--shadow-love)',
+        'tension-glow': 'var(--shadow-tension)',
+        'chemistry-glow': 'var(--shadow-chemistry)',
       },
       borderRadius: {
         lg: "var(--radius)",

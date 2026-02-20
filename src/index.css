@@ -52,6 +52,24 @@
     --shadow-electric: 0 0 24px hsl(197 88% 60% / 0.35);
     --shadow-glow: 0 0 48px hsl(195 95% 68% / 0.25);
 
+    /* Social System Tokens */
+    --social-love: 340 82% 60%;
+    --social-love-glow: 340 82% 60% / 0.3;
+    --social-tension: 0 72% 55%;
+    --social-tension-glow: 0 72% 55% / 0.3;
+    --social-chemistry: 270 70% 58%;
+    --social-chemistry-glow: 270 70% 58% / 0.35;
+    --social-trust: 197 88% 60%;
+    --social-loyalty: 152 64% 48%;
+    --social-jealousy: 43 96% 62%;
+    --social-attraction: 320 72% 62%;
+    --social-drama: 348 79% 52%;
+    --social-warm: 24 95% 58%;
+    --social-cold: 210 60% 50%;
+    --shadow-love: 0 0 20px hsl(340 82% 60% / 0.3);
+    --shadow-tension: 0 0 20px hsl(0 72% 55% / 0.3);
+    --shadow-chemistry: 0 0 20px hsl(270 70% 58% / 0.3);
+
     /* Sidebar colors */
     --sidebar-background: 222 62% 7%;
     --sidebar-foreground: 210 22% 88%;
@@ -367,13 +385,43 @@
 }
 
 @keyframes glow {
-  from {
-    box-shadow: 0 0 6px hsl(197 88% 60% / 0.35);
-  }
-  to {
-    box-shadow: 0 0 28px hsl(197 88% 60% / 0.65);
-  }
+  from { box-shadow: 0 0 6px hsl(197 88% 60% / 0.35); }
+  to { box-shadow: 0 0 28px hsl(197 88% 60% / 0.65); }
 }
+
+/* Social System Animations */
+@keyframes pulse-love {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--social-love) / 0.3); }
+  50% { box-shadow: 0 0 24px hsl(var(--social-love) / 0.6); }
+}
+@keyframes pulse-tension {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--social-tension) / 0.3); }
+  50% { box-shadow: 0 0 24px hsl(var(--social-tension) / 0.6); }
+}
+@keyframes pulse-chemistry {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--social-chemistry) / 0.3); }
+  50% { box-shadow: 0 0 24px hsl(var(--social-chemistry) / 0.6); }
+}
+@keyframes score-fill {
+  from { width: 0%; }
+  to { width: var(--score-width); }
+}
+@keyframes stat-flash {
+  0% { background-color: transparent; }
+  25% { background-color: hsl(var(--social-chemistry) / 0.2); }
+  100% { background-color: transparent; }
+}
+@keyframes emotional-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-love { animation: pulse-love 2s ease-in-out infinite; }
+.animate-pulse-tension { animation: pulse-tension 1.5s ease-in-out infinite; }
+.animate-pulse-chemistry { animation: pulse-chemistry 2.5s ease-in-out infinite; }
+.animate-score-fill { animation: score-fill 0.8s ease-out forwards; }
+.animate-stat-flash { animation: stat-flash 0.6s ease-out; }
+.animate-emotional-flicker { animation: emotional-flicker 0.3s ease-in-out 3; }
 
 /* VIP Badge Shimmer Animation */
 @keyframes shimmer {
