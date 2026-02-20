@@ -1,84 +1,56 @@
 
+## Fix Chart Display and Nerf Old Release Sales/Streams - v1.0.841
 
-## Record Contract Negotiation System - v1.0.839
+### Problem 1: Charts Show Same Values for "Weekly" and "Total"
 
-### Problem
-Contract offers exist in the database and the `ContractOfferCard` component has Accept/Reject/Counter-Offer buttons, but:
-- The offer query only fetches contracts with status `offered`, so once you counter-offer (status changes to `negotiating`), the card vanishes
-- There is no label auto-response logic -- countering just sets the status and nothing happens
-- There is no tracking of how many counter-offers have been made (3-strike limit)
-- There is no "likelihood of acceptance" indicator
-- Inbox notifications exist for new offers but don't deep-link to actionable buttons
+**Root Cause:** In `update-music-charts`, sales chart entries set both `plays_count` and `weekly_plays` to the same weekly sales number (line 558-559). The UI's `getTotalValue()` reads `total_sales`, which is mapped from `plays_count` -- so "Weekly" and "Total" display identical numbers.
 
-### Plan
+For streaming charts, it's slightly different: `plays_count` = total all-time streams, `weekly_plays` = weekly streams. But in the UI, `getTotalValue()` for non-combined charts returns `entry.total_sales`, which is also mapped from `plays_count` (the weekly sales figure for sales charts).
 
-#### 1. Database Migration
-Add columns to `artist_label_contracts` to support the negotiation loop:
-- `counter_count` (integer, default 0) -- tracks how many times the player has countered
-- `original_advance` (integer) -- stores the label's original offer terms for comparison
-- `original_royalty_pct` (integer) -- original royalty percentage
-- `original_single_quota` (integer) -- original single quota
-- `original_album_quota` (integer) -- original album quota
-- `last_action_by` (text, default 'label') -- who made the last move: 'label' or 'artist'
+**Fix:**
+- In `update-music-charts`, for sales chart entries: set `plays_count` to the **all-time cumulative sales** for that song (fetched from `releases.total_units_sold` or summed from `release_sales`), and keep `weekly_plays` as the weekly figure
+- In `useCountryCharts.ts`, ensure `total_sales` maps to the correct cumulative figure
 
-#### 2. Update ContractOfferCard to Handle Negotiating Status
-- Expand the query in `MyContractsTab.tsx` to fetch contracts with status `offered` OR `negotiating` (where `last_action_by = 'label'`, meaning the label has responded)
-- Show the label's counter-terms alongside the player's original request
-- Display a "Likelihood of Acceptance" progress bar based on:
-  - How close the player's ask is to the original offer
-  - How many counters have been used (decreases with each round)
-  - Formula: starts at ~70%, drops ~20% per counter round, and further drops based on how aggressive the ask is
+### Problem 2: Old Releases Never Decline in Sales or Streams
 
-#### 3. Label Auto-Response Logic
-When the player submits a counter-offer, add client-side logic (in the counter-offer mutation's `onSuccess`) that simulates the label responding after a brief delay:
-- **Round 1-2**: The label meets the player partway (moves 30-50% toward the player's ask from the original terms) and sets `last_action_by = 'label'`, `status = 'offered'` so the card reappears
-- **Round 3**: The label auto-rejects (`status = 'rejected'`) -- the player pushed too hard
-- Each label response slightly adjusts the contract terms and increments tracking
+**Root Cause:** Both edge functions give every active release the same base sales/streams regardless of how long ago it was released:
+- `update-daily-streams`: Base streams = random 100-5000/day with no age factor
+- `generate-daily-sales`: Base sales = config-driven random range with only a first-week boost (1.5x), then flat 1.0x forever. Hype decays but base sales do not.
 
-#### 4. Acceptance Likelihood Bar
-Add a visual progress bar on the `ContractOfferCard` showing how likely the label is to accept if the player hits "Accept" or how risky a counter is:
-- Green zone (60-100%): Label is receptive
-- Yellow zone (30-59%): Getting risky
-- Red zone (0-29%): Label likely to walk away
-- The bar factors in: counter_count, difference from original terms, and label reputation
+This means "Christmas Mother Cluckers" gets the same daily streams and sales months after release as it did in week 2.
 
-#### 5. Inbox Notification Enhancement
-The existing `ContractDesignerDialog` already sends inbox notifications with deep-links. This plan will also send a notification when the label responds to a counter-offer, so the player gets notified in their inbox with a "Review Counter" CTA that scrolls to the offer card.
+**Fix:** Add an **age decay multiplier** to both functions:
+- Week 1: 1.5x boost (already exists for sales)
+- Week 2-4: 1.0x (no change)
+- Month 2: 0.7x
+- Month 3: 0.5x
+- Month 4+: 0.35x
+- Month 6+: 0.2x (long tail -- songs never fully die but drastically reduce)
 
-### Technical Details
+This mirrors real-world music economics where most songs see 80%+ of their lifetime sales/streams in the first few weeks.
 
-**Files to modify:**
-- **Database migration**: Add `counter_count`, `original_advance`, `original_royalty_pct`, `original_single_quota`, `original_album_quota`, `last_action_by` columns
-- **`src/components/labels/MyContractsTab.tsx`**: Update the contract offers query to include `negotiating` status offers where label has responded
-- **`src/components/labels/ContractOfferCard.tsx`**: Add acceptance likelihood bar, show counter round indicator (e.g., "Counter 1 of 3"), update counter mutation to store originals on first counter and trigger label auto-response
-- **`src/components/labels/ContractNegotiationDialog.tsx`**: Add the likelihood bar and counter-round warning here too
-- **`src/components/VersionHeader.tsx`**: Bump to v1.0.839
-- **`src/pages/VersionHistory.tsx`**: Add changelog entry
+### Technical Changes
 
-**Negotiation flow:**
+**1. `supabase/functions/update-daily-streams/index.ts`**
+- After calculating `baseStreams` (line 100), fetch or compute the release age from `song_releases.created_at`
+- Apply an age decay multiplier before the final `dailyStreams` calculation
+- Formula: `ageDecay = daysSinceRelease <= 7 ? 1.5 : daysSinceRelease <= 30 ? 1.0 : daysSinceRelease <= 60 ? 0.7 : daysSinceRelease <= 90 ? 0.5 : daysSinceRelease <= 180 ? 0.35 : 0.2`
+- Add `created_at` to the song_releases SELECT query
 
-```text
-Label sends offer (status: 'offered', last_action_by: 'label')
-  |
-  +--> Player ACCEPTS --> status: 'accepted_by_artist'
-  |
-  +--> Player REJECTS --> status: 'rejected'
-  |
-  +--> Player COUNTERS (round 1) --> status: 'negotiating', counter_count: 1
-       |
-       Label auto-responds (meets halfway) --> status: 'offered', last_action_by: 'label'
-       |
-       +--> Player ACCEPTS revised terms
-       |
-       +--> Player COUNTERS (round 2) --> counter_count: 2
-            |
-            Label auto-responds (smaller concession) --> status: 'offered'
-            |
-            +--> Player ACCEPTS
-            |
-            +--> Player COUNTERS (round 3) --> counter_count: 3
-                 |
-                 Label AUTO-REJECTS --> status: 'rejected'
-                 Inbox notification: "Label walked away"
-```
+**2. `supabase/functions/generate-daily-sales/index.ts`**
+- Replace the binary `firstWeekBoost` (line 280) with the same graduated age decay curve
+- The existing `daysSinceRelease` calculation (line 279) already provides the needed data
+- Apply the decay multiplier in the `calculatedSales` formula (line 282-284)
 
+**3. `supabase/functions/update-music-charts/index.ts`**
+- For sales chart entries (lines 548-567), fetch cumulative all-time sales per song from `release_sales` (summing all `quantity_sold` without the 7-day filter) and set `plays_count` to the cumulative total
+- Keep `weekly_plays` as the weekly figure (current behavior)
+- Same fix for scoped entries, album entries, and EP entries
+
+**4. `src/hooks/useCountryCharts.ts`**
+- Verify `total_sales` mapping correctly uses `plays_count` (which will now be cumulative for sales charts)
+- No changes expected if the chart generation fix is done correctly
+
+**5. Version bump**
+- `src/components/VersionHeader.tsx`: Update to v1.0.841
+- `src/pages/VersionHistory.tsx`: Add changelog entry documenting both the chart display fix and the sales/stream age decay nerf
