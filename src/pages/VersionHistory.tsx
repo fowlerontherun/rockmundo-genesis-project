@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.837",
+    date: "2026-02-20",
+    changes: [
+      { type: 'fix', description: "Fixed gigs only playing partial setlists — complete-gig now processes all unplayed songs server-side before finalizing, so gigs complete properly even when browser is closed" },
+    ],
+  },
+  {
     version: "1.0.836",
     date: "2026-02-20",
     changes: [

@@ -42,8 +42,8 @@ serve(async (req) => {
       throw new Error('Gig outcome not found');
     }
 
-    // Get all song performances
-    const { data: performances, error: perfError } = await supabaseClient
+    // Get all song performances already recorded
+    const { data: existingPerformances, error: perfError } = await supabaseClient
       .from('gig_song_performances')
       .select('*')
       .eq('gig_outcome_id', outcome.id)
@@ -54,10 +54,69 @@ serve(async (req) => {
       throw perfError;
     }
 
-    if (!performances || performances.length === 0) {
-      console.log('No performances found, gig may not have been processed yet');
-      throw new Error('No song performances found - gig may not have been processed');
+    const performedPositions = new Set((existingPerformances || []).map((p: any) => p.position));
+    console.log(`[complete-gig] Found ${performedPositions.size} existing song performances`);
+
+    // === SERVER-SIDE: Process any unplayed songs ===
+    // This ensures gigs complete properly even if the browser was closed
+    if (gig.setlist_id) {
+      const { data: setlistSongs } = await supabaseClient
+        .from('setlist_songs')
+        .select('*, songs!inner(id, title, duration_seconds, quality_score)')
+        .eq('setlist_id', gig.setlist_id)
+        .order('position');
+
+      if (setlistSongs && setlistSongs.length > 0) {
+        const unplayedSongs = setlistSongs.filter((_: any, idx: number) => !performedPositions.has(idx));
+        
+        if (unplayedSongs.length > 0) {
+          console.log(`[complete-gig] Processing ${unplayedSongs.length} unplayed songs server-side`);
+          
+          for (const setlistSong of unplayedSongs) {
+            const songPosition = setlistSongs.indexOf(setlistSong);
+            try {
+              // Call process-gig-song for each unplayed song
+              const { error: processError } = await supabaseClient.functions.invoke('process-gig-song', {
+                body: {
+                  gigId: gig.id,
+                  outcomeId: outcome.id,
+                  songId: setlistSong.song_id,
+                  position: songPosition
+                }
+              });
+              
+              if (processError) {
+                console.error(`[complete-gig] Failed to process song at position ${songPosition}:`, processError);
+              } else {
+                console.log(`[complete-gig] Processed song: ${setlistSong.songs?.title} at position ${songPosition}`);
+              }
+            } catch (songErr) {
+              console.error(`[complete-gig] Error processing song ${setlistSong.song_id}:`, songErr);
+            }
+          }
+          
+          // Update gig position to reflect all songs played
+          await supabaseClient
+            .from('gigs')
+            .update({ current_song_position: setlistSongs.length })
+            .eq('id', gigId);
+        }
+      }
     }
+
+    // Re-fetch all performances after processing missing songs
+    const { data: performances } = await supabaseClient
+      .from('gig_song_performances')
+      .select('*')
+      .eq('gig_outcome_id', outcome.id)
+      .order('position');
+
+    if (!performances || performances.length === 0) {
+      console.log('[complete-gig] No performances even after server-side processing');
+      throw new Error('No song performances found - gig could not be processed');
+    }
+
+    console.log(`[complete-gig] Total performances for final calculation: ${performances.length}`);
 
     // Calculate overall rating (average of all songs) - max is 25
     const avgRating = performances.reduce((sum, p) => sum + (p.performance_score || 0), 0) / performances.length;
