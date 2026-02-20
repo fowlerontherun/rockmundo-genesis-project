@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.848",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Social & Relationships hub now fully wired to real Supabase data — character relationships from character_relationships table, drama events from social_drama_events, emotional state from character_emotional_states" },
+      { type: 'feature', description: "Emotional State panel shows live happiness, loneliness, inspiration, jealousy, resentment, and obsession from the dynamic emotional engine" },
+      { type: 'feature', description: "Gameplay Modifiers section displays real songwriting, performance, and interaction modifiers calculated from emotional state" },
+      { type: 'feature', description: "Drama Feed tab shows real social drama events with severity styling, viral indicators, streaming multipliers, fame changes, and trending hashtags from actual data" },
+      { type: 'feature', description: "Romance tab filters real character relationships by partner/ex_partner types with live score gauges" },
+      { type: 'improvement', description: "Proper loading skeletons and empty states throughout the Social hub" },
+      { type: 'improvement', description: "Removed all mock/hardcoded data from the Relationships page" },
+    ],
+  },
+  {
     version: "1.0.847",
     date: "2026-02-20",
     changes: [

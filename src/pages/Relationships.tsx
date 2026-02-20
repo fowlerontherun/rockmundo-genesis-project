@@ -1,30 +1,28 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, Users, Swords, Music, Sparkles, Search,
   Flame, Theater, Baby, Activity, TrendingUp,
-  Shield, Zap, Star, Crown,
+  Shield, Zap, Star, Crown, AlertCircle,
 } from "lucide-react";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
-import { EmotionalStatePanel } from "@/components/social/EmotionalStatePanel";
+import { useCharacterRelationships } from "@/hooks/useCharacterRelationships";
+import { useSocialDramaEvents, useMediaArticles } from "@/hooks/useSocialDramaGenerator";
+import { useEmotionalState, useEmotionalModifiers } from "@/hooks/useEmotionalEngine";
+import { useOptionalGameData } from "@/hooks/useGameData";
+import { useAuth } from "@/hooks/use-auth-context";
+import type { CharacterRelationship } from "@/types/character-relationships";
+import { formatDistanceToNow } from "date-fns";
 
-// ── Mock data for demonstration ─────────────────────────────────────────
-const MOCK_RELATIONSHIPS = [
-  { id: "1", name: "Luna Voss", type: ["friend", "bandmate"] as string[], affection: 72, trust: 85, attraction: 40, loyalty: 90, jealousy: 10, avatar: "LV", fame: 4200, status: "positive" },
-  { id: "2", name: "Rex Thunder", type: ["rival"] as string[], affection: -30, trust: 15, attraction: 5, loyalty: 8, jealousy: 65, avatar: "RT", fame: 8900, status: "negative" },
-  { id: "3", name: "Mia Sterling", type: ["partner", "collaborator"] as string[], affection: 88, trust: 70, attraction: 92, loyalty: 75, jealousy: 35, avatar: "MS", fame: 3100, status: "romantic" },
-  { id: "4", name: "DJ Krush", type: ["mentor"] as string[], affection: 55, trust: 90, attraction: 10, loyalty: 80, jealousy: 0, avatar: "DK", fame: 15000, status: "positive" },
-  { id: "5", name: "Zara Night", type: ["ex_partner", "rival"] as string[], affection: -15, trust: 20, attraction: 60, loyalty: 5, jealousy: 80, avatar: "ZN", fame: 6700, status: "tense" },
-  { id: "6", name: "Tommy Bass", type: ["bandmate", "friend"] as string[], affection: 60, trust: 75, attraction: 5, loyalty: 85, jealousy: 15, avatar: "TB", fame: 2800, status: "positive" },
-];
-
+// ── Filter categories ─────────────────────────────────────────
 const FILTER_CATEGORIES = [
   { key: "all", label: "All", icon: Users },
   { key: "friend", label: "Friends", icon: Heart },
@@ -35,13 +33,14 @@ const FILTER_CATEGORIES = [
   { key: "ex_partner", label: "Exes", icon: Theater },
 ];
 
-const DRAMA_FEED = [
-  { id: "d1", headline: "Luna Voss spotted leaving studio with mystery collaborator", category: "scandal", time: "2h ago", impact: "minor" },
-  { id: "d2", headline: "Rex Thunder releases diss track targeting YOUR band!", category: "rivalry", time: "5h ago", impact: "major" },
-  { id: "d3", headline: "Surprise engagement! Mia Sterling says yes backstage", category: "romance", time: "1d ago", impact: "viral" },
-  { id: "d4", headline: "On-stage confrontation at Metro Arena goes viral", category: "scandal", time: "2d ago", impact: "major" },
-  { id: "d5", headline: "Tommy Bass dedicates new song to bandmates", category: "positive", time: "3d ago", impact: "minor" },
-];
+// ── Visual helpers ─────────────────────────────────────────────
+function deriveStatus(rel: CharacterRelationship): string {
+  const types = rel.relationship_types ?? [];
+  if (types.includes("partner")) return "romantic";
+  if (types.includes("rival") || types.includes("nemesis")) return "negative";
+  if (types.includes("ex_partner") || rel.jealousy_score > 60) return "tense";
+  return "positive";
+}
 
 function getStatusGlow(status: string) {
   switch (status) {
@@ -55,29 +54,78 @@ function getStatusGlow(status: string) {
 
 function getTypeColor(type: string) {
   switch (type) {
-    case "friend": case "close_friend": return "bg-social-friendship/20 text-social-friendship border-social-friendship/30";
+    case "friend": case "close_friend": case "best_friend": return "bg-social-friendship/20 text-social-friendship border-social-friendship/30";
     case "rival": case "nemesis": return "bg-social-rivalry/20 text-social-rivalry border-social-rivalry/30";
     case "partner": return "bg-social-love/20 text-social-love border-social-love/30";
     case "bandmate": return "bg-social-chemistry/20 text-social-chemistry border-social-chemistry/30";
     case "mentor": case "protege": return "bg-social-loyalty/20 text-social-loyalty border-social-loyalty/30";
     case "ex_partner": return "bg-social-tension/20 text-social-tension border-social-tension/30";
     case "collaborator": return "bg-social-trust/20 text-social-trust border-social-trust/30";
+    case "fan": return "bg-social-attraction/20 text-social-attraction border-social-attraction/30";
+    case "business_contact": return "bg-muted text-muted-foreground border-border";
     default: return "bg-muted text-muted-foreground";
   }
 }
 
+function getInitials(name: string) {
+  return name.split(/\s+/).map(w => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function getSeverityStyle(severity: string) {
+  switch (severity) {
+    case "explosive": return "border-social-love/40 bg-social-love/5";
+    case "major": return "border-social-tension/40 bg-social-tension/5";
+    case "moderate": return "border-social-chemistry/20 bg-social-chemistry/5";
+    default: return "border-border";
+  }
+}
+
+// ── Main Page ──────────────────────────────────────────────────
 export default function RelationshipsPage() {
+  const { user } = useAuth();
+  const gameData = useOptionalGameData();
+  const profileId = gameData?.profile?.id;
+
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>("1");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const filtered = MOCK_RELATIONSHIPS.filter((r) => {
-    if (filter !== "all" && !r.type.includes(filter)) return false;
-    if (search && !r.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // Real data hooks
+  const { data: relationships = [], isLoading: relsLoading } = useCharacterRelationships();
+  const { data: dramaEvents = [], isLoading: dramaLoading } = useSocialDramaEvents(profileId);
+  const { data: emotionalState, isLoading: emotionLoading } = useEmotionalState();
+  const { songwritingModifier, performanceModifier, interactionModifier } = useEmotionalModifiers();
 
-  const selected = MOCK_RELATIONSHIPS.find((r) => r.id === selectedId) ?? null;
+  // Filter relationships
+  const filtered = useMemo(() => {
+    return relationships.filter((r) => {
+      if (filter !== "all" && !(r.relationship_types ?? []).includes(filter as any)) return false;
+      if (search && !r.entity_b_name.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [relationships, filter, search]);
+
+  const selected = useMemo(() => {
+    if (!selectedId) return filtered[0] ?? null;
+    return relationships.find((r) => r.id === selectedId) ?? null;
+  }, [relationships, filtered, selectedId]);
+
+  // Romance tab: filter for partners and exes
+  const romanticRelationships = useMemo(() => {
+    return relationships.filter(r => {
+      const types = r.relationship_types ?? [];
+      return types.includes("partner") || types.includes("ex_partner");
+    });
+  }, [relationships]);
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-20 text-center">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+        <p className="text-lg font-medium text-muted-foreground">Log in to view your relationships</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -92,11 +140,9 @@ export default function RelationshipsPage() {
             Manage your connections, track chemistry, and navigate the drama of the music world.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {MOCK_RELATIONSHIPS.length} connections
-          </Badge>
-        </div>
+        <Badge variant="outline" className="text-xs">
+          {relationships.length} connections
+        </Badge>
       </div>
 
       {/* Main Tabs */}
@@ -140,147 +186,177 @@ export default function RelationshipsPage() {
             <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Connections</CardTitle>
-                <CardDescription>{filtered.length} shown</CardDescription>
+                <CardDescription>{relsLoading ? "Loading..." : `${filtered.length} shown`}</CardDescription>
               </CardHeader>
               <ScrollArea className="h-[520px]">
                 <CardContent className="space-y-2 pr-4">
-                  <AnimatePresence mode="popLayout">
-                    {filtered.map((rel) => (
-                      <motion.div
-                        key={rel.id}
-                        layout
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                      >
-                        <button
-                          onClick={() => setSelectedId(rel.id)}
-                          className={cn(
-                            "w-full text-left p-3 rounded-lg border transition-all duration-200 hover:bg-accent/50",
-                            selectedId === rel.id ? getStatusGlow(rel.status) : "border-border",
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
-                              rel.status === "romantic" ? "bg-social-love/20 text-social-love" :
-                              rel.status === "negative" ? "bg-social-rivalry/20 text-social-rivalry" :
-                              "bg-primary/20 text-primary"
-                            )}>
-                              {rel.avatar}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{rel.name}</p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {rel.type.map((t) => (
-                                  <Badge key={t} variant="outline" className={cn("text-[10px] px-1.5 py-0", getTypeColor(t))}>
-                                    {t.replace("_", " ")}
-                                  </Badge>
-                                ))}
+                  {relsLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                    ))
+                  ) : filtered.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">No connections found</p>
+                      <p className="text-xs mt-1">Interact with NPCs and players to build relationships</p>
+                    </div>
+                  ) : (
+                    <AnimatePresence mode="popLayout">
+                      {filtered.map((rel) => {
+                        const status = deriveStatus(rel);
+                        return (
+                          <motion.div
+                            key={rel.id}
+                            layout
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                          >
+                            <button
+                              onClick={() => setSelectedId(rel.id)}
+                              className={cn(
+                                "w-full text-left p-3 rounded-lg border transition-all duration-200 hover:bg-accent/50",
+                                selectedId === rel.id || (!selectedId && selected?.id === rel.id) ? getStatusGlow(status) : "border-border",
+                              )}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={cn(
+                                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
+                                  status === "romantic" ? "bg-social-love/20 text-social-love" :
+                                  status === "negative" ? "bg-social-rivalry/20 text-social-rivalry" :
+                                  "bg-primary/20 text-primary"
+                                )}>
+                                  {getInitials(rel.entity_b_name)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{rel.entity_b_name}</p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {(rel.relationship_types ?? []).map((t) => (
+                                      <Badge key={t} variant="outline" className={cn("text-[10px] px-1.5 py-0", getTypeColor(t))}>
+                                        {t.replace(/_/g, " ")}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground capitalize">{rel.entity_b_type}</p>
+                                  {rel.last_interaction_at && (
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {formatDistanceToNow(new Date(rel.last_interaction_at), { addSuffix: true })}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">{rel.fame.toLocaleString()}</p>
-                              <p className="text-[10px] text-muted-foreground">fame</p>
-                            </div>
-                          </div>
-                        </button>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                            </button>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  )}
                 </CardContent>
               </ScrollArea>
             </Card>
 
             {/* Detail Panel */}
-            {selected ? (
-              <Card className={cn("border transition-all duration-300", getStatusGlow(selected.status))}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold",
-                        selected.status === "romantic" ? "bg-social-love/20 text-social-love" :
-                        selected.status === "negative" ? "bg-social-rivalry/20 text-social-rivalry" :
-                        "bg-primary/20 text-primary"
-                      )}>
-                        {selected.avatar}
+            {selected ? (() => {
+              const status = deriveStatus(selected);
+              return (
+                <Card className={cn("border transition-all duration-300", getStatusGlow(status))}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold",
+                          status === "romantic" ? "bg-social-love/20 text-social-love" :
+                          status === "negative" ? "bg-social-rivalry/20 text-social-rivalry" :
+                          "bg-primary/20 text-primary"
+                        )}>
+                          {getInitials(selected.entity_b_name)}
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl">{selected.entity_b_name}</CardTitle>
+                          <CardDescription>
+                            {selected.entity_b_type} • {(selected.relationship_types ?? []).map(t => t.replace(/_/g, " ")).join(", ")}
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-xl">{selected.name}</CardTitle>
-                        <CardDescription>
-                          Fame {selected.fame.toLocaleString()} • {selected.type.map(t => t.replace("_", " ")).join(", ")}
-                        </CardDescription>
+                      <div className="flex gap-1.5">
+                        {(selected.relationship_types ?? []).map((t) => (
+                          <Badge key={t} className={cn("text-xs", getTypeColor(t))}>
+                            {t.replace(/_/g, " ")}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
-                    <div className="flex gap-1.5">
-                      {selected.type.map((t) => (
-                        <Badge key={t} className={cn("text-xs", getTypeColor(t))}>
-                          {t.replace("_", " ")}
-                        </Badge>
-                      ))}
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Emotional Metrics */}
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-social-chemistry" />
+                        Emotional Metrics
+                      </h3>
+                      <div className="grid grid-cols-5 gap-3">
+                        <ScoreGauge label="Affection" value={selected.affection_score} max={100} min={-100} color="social-love" variant="bar" size="sm" glowOnHigh />
+                        <ScoreGauge label="Trust" value={selected.trust_score} max={100} color="social-trust" variant="bar" size="sm" glowOnHigh />
+                        <ScoreGauge label="Attraction" value={selected.attraction_score} max={100} color="social-attraction" variant="bar" size="sm" />
+                        <ScoreGauge label="Loyalty" value={selected.loyalty_score} max={100} color="social-loyalty" variant="bar" size="sm" glowOnHigh />
+                        <ScoreGauge label="Jealousy" value={selected.jealousy_score} max={100} color="social-tension" variant="bar" size="sm" />
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Emotional Metrics */}
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-social-chemistry" />
-                      Emotional Metrics
-                    </h3>
-                    <div className="grid grid-cols-5 gap-3">
-                      <ScoreGauge label="Affection" value={selected.affection} max={100} min={-100} color="social-love" variant="bar" size="sm" glowOnHigh />
-                      <ScoreGauge label="Trust" value={selected.trust} max={100} color="social-trust" variant="bar" size="sm" glowOnHigh />
-                      <ScoreGauge label="Attraction" value={selected.attraction} max={100} color="social-attraction" variant="bar" size="sm" />
-                      <ScoreGauge label="Loyalty" value={selected.loyalty} max={100} color="social-loyalty" variant="bar" size="sm" glowOnHigh />
-                      <ScoreGauge label="Jealousy" value={selected.jealousy} max={100} color="social-tension" variant="bar" size="sm" />
-                    </div>
-                  </div>
 
-                  {/* Quick Actions */}
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-primary" />
-                      Quick Actions
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {["Chat", "Gift", "Collaborate", "Challenge", "Flirt", "Confront"].map((action) => (
-                        <Button key={action} size="sm" variant="outline" className="text-xs">
-                          {action}
-                        </Button>
-                      ))}
+                    {/* Quick Actions */}
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-primary" />
+                        Quick Actions
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {["Chat", "Gift", "Collaborate", "Challenge", "Flirt", "Confront"].map((action) => (
+                          <Button key={action} size="sm" variant="outline" className="text-xs">
+                            {action}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Gameplay Modifiers */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-border p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Song Quality</p>
-                      <p className="text-lg font-bold text-social-chemistry">
-                        {(0.7 + selected.trust / 200 + selected.loyalty / 300).toFixed(2)}x
-                      </p>
+                    {/* Gameplay Modifiers */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-lg border border-border p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Song Quality</p>
+                        <p className="text-lg font-bold text-social-chemistry">
+                          {(0.7 + selected.trust_score / 200 + selected.loyalty_score / 300).toFixed(2)}x
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Collab Bonus</p>
+                        <p className="text-lg font-bold text-social-trust">
+                          +{Math.round(selected.affection_score * 0.3 + selected.trust_score * 0.2)}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Drama Risk</p>
+                        <p className="text-lg font-bold text-social-tension">
+                          {Math.min(100, Math.round(selected.jealousy_score * 0.8 + (100 - selected.trust_score) * 0.2))}%
+                        </p>
+                      </div>
                     </div>
-                    <div className="rounded-lg border border-border p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Collab Bonus</p>
-                      <p className="text-lg font-bold text-social-trust">
-                        +{Math.round(selected.affection * 0.3 + selected.trust * 0.2)}%
-                      </p>
+
+                    {/* Visibility & metadata */}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="text-[10px]">{selected.visibility}</Badge>
+                      {selected.last_interaction_at && (
+                        <span>Last interaction: {formatDistanceToNow(new Date(selected.last_interaction_at), { addSuffix: true })}</span>
+                      )}
                     </div>
-                    <div className="rounded-lg border border-border p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Drama Risk</p>
-                      <p className="text-lg font-bold text-social-tension">
-                        {Math.min(100, Math.round(selected.jealousy * 0.8 + (100 - selected.trust) * 0.2))}%
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
+                  </CardContent>
+                </Card>
+              );
+            })() : (
               <Card className="flex items-center justify-center h-full">
                 <CardContent className="text-center text-muted-foreground py-20">
                   <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                  <p>Select a connection to view details</p>
+                  <p>{relsLoading ? "Loading connections..." : "Select a connection to view details"}</p>
                 </CardContent>
               </Card>
             )}
@@ -299,39 +375,59 @@ export default function RelationshipsPage() {
                 <CardDescription>Latest relationship events and scandals in the music world</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {DRAMA_FEED.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className={cn(
-                      "p-4 rounded-lg border transition-all",
-                      item.impact === "viral" && "border-social-love/40 bg-social-love/5",
-                      item.impact === "major" && "border-social-tension/40 bg-social-tension/5",
-                      item.impact === "minor" && "border-border",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{item.headline}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="text-[10px]">{item.category}</Badge>
-                          <span className="text-xs text-muted-foreground">{item.time}</span>
+                {dramaLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                  ))
+                ) : dramaEvents.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Theater className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No drama events yet</p>
+                    <p className="text-xs mt-1">Events will appear here as social drama unfolds in the game world</p>
+                  </div>
+                ) : (
+                  dramaEvents.map((item) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={cn("p-4 rounded-lg border transition-all", getSeverityStyle(item.severity))}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{item.headline}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="text-[10px]">{item.drama_category}</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                            </span>
+                            {item.streaming_multiplier !== 1 && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                🎵 {item.streaming_multiplier.toFixed(1)}x streams
+                              </Badge>
+                            )}
+                            {item.fame_change !== 0 && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                ⭐ {item.fame_change > 0 ? "+" : ""}{item.fame_change} fame
+                              </Badge>
+                            )}
+                          </div>
                         </div>
+                        {item.went_viral && (
+                          <Badge className="bg-social-love/20 text-social-love border-social-love/30 text-[10px] animate-pulse">
+                            🔥 VIRAL
+                          </Badge>
+                        )}
+                        {!item.went_viral && item.severity === "major" && (
+                          <Badge className="bg-social-tension/20 text-social-tension border-social-tension/30 text-[10px]">
+                            ⚡ MAJOR
+                          </Badge>
+                        )}
                       </div>
-                      {item.impact === "viral" && (
-                        <Badge className="bg-social-love/20 text-social-love border-social-love/30 text-[10px] animate-pulse">
-                          🔥 VIRAL
-                        </Badge>
-                      )}
-                      {item.impact === "major" && (
-                        <Badge className="bg-social-tension/20 text-social-tension border-social-tension/30 text-[10px]">
-                          ⚡ MAJOR
-                        </Badge>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -344,12 +440,19 @@ export default function RelationshipsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {["#SurpriseEngagement", "#DissTrackWar", "#BandBreakup", "#StudioDrama", "#SecretAffair"].map((tag, i) => (
-                  <div key={tag} className="flex items-center justify-between">
-                    <span className="text-sm text-social-chemistry font-medium">{tag}</span>
-                    <span className="text-xs text-muted-foreground">{(5 - i) * 12}k posts</span>
-                  </div>
-                ))}
+                {dramaEvents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No trending topics yet</p>
+                ) : (
+                  dramaEvents
+                    .filter(e => e.twaater_hashtag)
+                    .slice(0, 5)
+                    .map((e, i) => (
+                      <div key={e.id} className="flex items-center justify-between">
+                        <span className="text-sm text-social-chemistry font-medium truncate">{e.twaater_hashtag}</span>
+                        <Badge variant="outline" className="text-[10px]">{e.severity}</Badge>
+                      </div>
+                    ))
+                )}
               </CardContent>
             </Card>
           </div>
@@ -366,27 +469,45 @@ export default function RelationshipsPage() {
               <CardDescription>Track your romantic progressions and compatibility</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {MOCK_RELATIONSHIPS.filter(r => r.type.includes("partner") || r.type.includes("ex_partner")).map((rel) => (
-                  <div key={rel.id} className={cn("rounded-lg border p-4", getStatusGlow(rel.status))}>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-social-love/20 text-social-love flex items-center justify-center font-bold">
-                        {rel.avatar}
+              {relsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-lg" />)}
+                </div>
+              ) : romanticRelationships.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Flame className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No romantic connections yet</p>
+                  <p className="text-xs mt-1">Build attraction with characters to start a romance</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {romanticRelationships.map((rel) => {
+                    const status = deriveStatus(rel);
+                    const isActive = (rel.relationship_types ?? []).includes("partner");
+                    return (
+                      <div key={rel.id} className={cn("rounded-lg border p-4", getStatusGlow(status))}>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-full bg-social-love/20 text-social-love flex items-center justify-center font-bold">
+                            {getInitials(rel.entity_b_name)}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{rel.entity_b_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isActive ? "💕 Active Romance" : "💔 Former Flame"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <ScoreGauge label="Attraction" value={rel.attraction_score} max={100} color="social-attraction" variant="bar" size="sm" />
+                          <ScoreGauge label="Jealousy Risk" value={rel.jealousy_score} max={100} color="social-tension" variant="bar" size="sm" />
+                          <ScoreGauge label="Affection" value={Math.max(0, rel.affection_score)} max={100} color="social-love" variant="bar" size="sm" />
+                          <ScoreGauge label="Loyalty" value={rel.loyalty_score} max={100} color="social-loyalty" variant="bar" size="sm" />
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">{rel.name}</p>
-                        <p className="text-xs text-muted-foreground">{rel.type.includes("partner") ? "💕 Active Romance" : "💔 Former Flame"}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <ScoreGauge label="Attraction" value={rel.attraction} max={100} color="social-attraction" variant="bar" size="sm" />
-                      <ScoreGauge label="Jealousy Risk" value={rel.jealousy} max={100} color="social-tension" variant="bar" size="sm" />
-                      <ScoreGauge label="Affection" value={Math.max(0, rel.affection)} max={100} color="social-love" variant="bar" size="sm" />
-                      <ScoreGauge label="Loyalty" value={rel.loyalty} max={100} color="social-loyalty" variant="bar" size="sm" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -410,7 +531,7 @@ export default function RelationshipsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Emotional State Widget (embedded) */}
+      {/* Emotional State Widget (real data) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="border-social-chemistry/20">
           <CardHeader className="pb-3">
@@ -420,18 +541,24 @@ export default function RelationshipsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Happiness", value: 72, color: "social-friendship" },
-                { label: "Loneliness", value: 15, color: "social-trust" },
-                { label: "Inspiration", value: 88, color: "social-chemistry" },
-                { label: "Jealousy", value: 25, color: "social-tension" },
-                { label: "Resentment", value: 8, color: "social-rivalry" },
-                { label: "Obsession", value: 30, color: "social-love" },
-              ].map((e) => (
-                <ScoreGauge key={e.label} label={e.label} value={e.value} max={100} color={e.color} variant="bar" size="sm" />
-              ))}
-            </div>
+            {emotionLoading ? (
+              <div className="grid grid-cols-3 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Happiness", value: emotionalState?.happiness ?? 50, color: "social-friendship" },
+                  { label: "Loneliness", value: emotionalState?.loneliness ?? 0, color: "social-trust" },
+                  { label: "Inspiration", value: emotionalState?.inspiration ?? 50, color: "social-chemistry" },
+                  { label: "Jealousy", value: emotionalState?.jealousy ?? 0, color: "social-tension" },
+                  { label: "Resentment", value: emotionalState?.resentment ?? 0, color: "social-rivalry" },
+                  { label: "Obsession", value: emotionalState?.obsession ?? 0, color: "social-love" },
+                ].map((e) => (
+                  <ScoreGauge key={e.label} label={e.label} value={e.value} max={100} color={e.color} variant="bar" size="sm" />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card className="border-border">
@@ -443,10 +570,26 @@ export default function RelationshipsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { label: "Songwriting Quality", value: "+12%", desc: "High inspiration & happiness" },
-              { label: "Performance Energy", value: "+8%", desc: "Low loneliness, strong bonds" },
-              { label: "Fan Engagement", value: "+15%", desc: "Active social life attracts fans" },
-              { label: "Drama Susceptibility", value: "22%", desc: "Moderate jealousy levels" },
+              {
+                label: "Songwriting Quality",
+                value: `${songwritingModifier >= 1 ? "+" : ""}${((songwritingModifier - 1) * 100).toFixed(0)}%`,
+                desc: "Based on your emotional state",
+              },
+              {
+                label: "Performance Energy",
+                value: `${performanceModifier >= 1 ? "+" : ""}${((performanceModifier - 1) * 100).toFixed(0)}%`,
+                desc: "How your emotions affect live shows",
+              },
+              {
+                label: "Interaction Success",
+                value: `${interactionModifier >= 1 ? "+" : ""}${((interactionModifier - 1) * 100).toFixed(0)}%`,
+                desc: "Chance boost for social interactions",
+              },
+              {
+                label: "Active Relationships",
+                value: String(relationships.length),
+                desc: "Total character connections",
+              },
             ].map((mod) => (
               <div key={mod.label} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
