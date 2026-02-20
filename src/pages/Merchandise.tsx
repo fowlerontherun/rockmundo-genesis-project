@@ -27,6 +27,7 @@ import {
   Loader2,
   PackagePlus,
   RefreshCcw,
+  RefreshCw,
   Trash2,
   UploadCloud,
   BarChart3,
@@ -40,6 +41,8 @@ import {
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import { SalesAnalyticsTab } from "@/components/merchandise/SalesAnalyticsTab";
 import { CollaborationOffersCard } from "@/components/merchandise/CollaborationOffersCard";
 import { ActiveCollaborationsCard } from "@/components/merchandise/ActiveCollaborationsCard";
@@ -259,6 +262,87 @@ const calculateMargin = (product: MerchandiseRecord) => {
   if (sale <= 0) return 0;
   return (sale - safeNumber(product.cost_to_produce)) / sale;
 };
+
+function RestockPopover({ productId, productName, currentStock, costPerUnit, bandId }: {
+  productId: string;
+  productName: string;
+  currentStock: number;
+  costPerUnit: number;
+  bandId: string;
+}) {
+  const [qty, setQty] = useState("50");
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const restockMutation = useMutation({
+    mutationFn: async () => {
+      const amount = Math.max(1, parseInt(qty) || 50);
+      const { error } = await supabase
+        .from("player_merchandise")
+        .update({ stock_quantity: currentStock + amount })
+        .eq("id", productId);
+      if (error) throw error;
+      return amount;
+    },
+    onSuccess: (amount) => {
+      const cost = amount * costPerUnit;
+      toast({
+        title: `Restocked ${productName}`,
+        description: `+${amount} units ordered for $${cost.toLocaleString()} production cost.`,
+      });
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["player-merchandise", bandId] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Restock failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-6 w-6" title="Restock">
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 space-y-3" align="end">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Restock {productName}</p>
+          <p className="text-xs text-muted-foreground">Current: {currentStock} units</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Order Quantity</Label>
+          <Input
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            className="h-8 text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Cost: ${((parseInt(qty) || 0) * costPerUnit).toLocaleString()}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {[25, 50, 100].map((n) => (
+            <Button key={n} variant="outline" size="sm" className="flex-1 text-xs h-7" onClick={() => setQty(String(n))}>
+              {n}
+            </Button>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          className="w-full"
+          onClick={() => restockMutation.mutate()}
+          disabled={restockMutation.isPending || (parseInt(qty) || 0) < 1}
+        >
+          {restockMutation.isPending ? "Ordering..." : "Place Order"}
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const Merchandise = () => {
   const queryClient = useQueryClient();
@@ -955,7 +1039,18 @@ const Merchandise = () => {
                             <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
                             <TableCell className="hidden lg:table-cell">{currencyFormatter.format(potential)}</TableCell>
                             <TableCell>
-                              <Badge variant={statusVariants[status]}>{statusLabels[status]}</Badge>
+                              <div className="flex items-center gap-1.5">
+                                <Badge variant={statusVariants[status]}>{statusLabels[status]}</Badge>
+                                {(status === "sold_out" || status === "low_stock") && (
+                                  <RestockPopover
+                                    productId={product.id}
+                                    productName={product.design_name ?? "Item"}
+                                    currentStock={safeNumber(product.stock_quantity)}
+                                    costPerUnit={safeNumber(product.cost_to_produce)}
+                                    bandId={bandId!}
+                                  />
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
