@@ -53,7 +53,7 @@ export default function ReleaseDetail() {
       // Fetch release + songs (no ambiguous FKs)
       const { data, error } = await supabase
         .from("releases")
-        .select(`*, songs:release_songs(song:songs(*))`)
+        .select(`*, songs:release_songs!release_songs_release_id_fkey(song:songs(*))`)
         .eq("id", id)
         .single();
       if (error) throw error;

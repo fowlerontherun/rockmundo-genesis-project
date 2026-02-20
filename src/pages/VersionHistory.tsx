@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.835",
+    date: "2026-02-20",
+    changes: [
+      { type: 'fix', description: "Fixed Release Detail 'Release not found' error — disambiguated release_songs FK (release_id vs album_release_id) in Supabase query" },
+    ],
+  },
+  {
     version: "1.0.834",
     date: "2026-02-19",
     changes: [
