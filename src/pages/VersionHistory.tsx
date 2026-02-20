@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.845",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Enhanced Band Chemistry Engine — 4-axis system: Overall Chemistry, Romantic Tension, Creative Alignment, Conflict Index" },
+      { type: 'feature', description: "18 drama event presets across romantic, creative, rivalry, public, escalation, and positive categories with severity tiers" },
+      { type: 'feature', description: "Gameplay modifiers auto-calculated: song quality (0.6–1.5x), performance rating (0.5–1.5x), member leave risk (0–80%), drama chance (2–60%)" },
+      { type: 'feature', description: "Drama trigger engine responds dynamically to breakups, rivalries, creative disagreements, public scandals, gigs, and songwriting" },
+      { type: 'feature', description: "Drama resolution system with 5 resolution types (apologize, ignore, escalate, band vote, leader decision) each with distinct chemistry impacts" },
+      { type: 'feature', description: "Weekly natural drift: conflict/tension decay, creative alignment regresses toward 50, high conflict slowly erodes overall chemistry" },
+    ],
+  },
+  {
     version: "1.0.844",
     date: "2026-02-20",
     changes: [

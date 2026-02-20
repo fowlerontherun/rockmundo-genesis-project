@@ -1413,6 +1413,94 @@ export type Database = {
           },
         ]
       }
+      band_drama_events: {
+        Row: {
+          band_id: string
+          chemistry_change: number | null
+          conflict_index_change: number | null
+          created_at: string
+          creative_alignment_change: number | null
+          description: string | null
+          drama_type: string
+          id: string
+          instigator_member_id: string | null
+          media_coverage: boolean
+          member_leave_risk: number | null
+          metadata: Json | null
+          public_knowledge: boolean
+          resolution_type: string | null
+          resolved: boolean
+          resolved_at: string | null
+          romantic_tension_change: number | null
+          severity: string
+          target_member_id: string | null
+        }
+        Insert: {
+          band_id: string
+          chemistry_change?: number | null
+          conflict_index_change?: number | null
+          created_at?: string
+          creative_alignment_change?: number | null
+          description?: string | null
+          drama_type: string
+          id?: string
+          instigator_member_id?: string | null
+          media_coverage?: boolean
+          member_leave_risk?: number | null
+          metadata?: Json | null
+          public_knowledge?: boolean
+          resolution_type?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          romantic_tension_change?: number | null
+          severity?: string
+          target_member_id?: string | null
+        }
+        Update: {
+          band_id?: string
+          chemistry_change?: number | null
+          conflict_index_change?: number | null
+          created_at?: string
+          creative_alignment_change?: number | null
+          description?: string | null
+          drama_type?: string
+          id?: string
+          instigator_member_id?: string | null
+          media_coverage?: boolean
+          member_leave_risk?: number | null
+          metadata?: Json | null
+          public_knowledge?: boolean
+          resolution_type?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          romantic_tension_change?: number | null
+          severity?: string
+          target_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_drama_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_drama_events_instigator_member_id_fkey"
+            columns: ["instigator_member_id"]
+            isOneToOne: false
+            referencedRelation: "band_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_drama_events_target_member_id_fkey"
+            columns: ["target_member_id"]
+            isOneToOne: false
+            referencedRelation: "band_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_earnings: {
         Row: {
           amount: number
@@ -2355,12 +2443,16 @@ export type Database = {
           band_balance: number | null
           casual_fans: number | null
           chemistry_level: number | null
+          chemistry_modifiers: Json | null
           cohesion_score: number | null
           collective_fame_earned: number | null
+          conflict_index: number
           created_at: string | null
+          creative_alignment: number
           days_together: number | null
           dedicated_fans: number | null
           description: string | null
+          drama_cooldown_until: string | null
           fame: number | null
           fame_multiplier: number | null
           genre: string | null
@@ -2376,6 +2468,7 @@ export type Database = {
           is_solo_artist: boolean | null
           jam_count: number | null
           last_chemistry_update: string | null
+          last_drama_event_at: string | null
           last_fame_calculation: string | null
           leader_id: string
           leadership_votes_history: Json | null
@@ -2387,6 +2480,7 @@ export type Database = {
           popularity: number | null
           primary_genre: string | null
           regional_fame: Json | null
+          romantic_tension: number
           secondary_genres: string[] | null
           sound_description: string | null
           status: Database["public"]["Enums"]["band_status"]
@@ -2401,12 +2495,16 @@ export type Database = {
           band_balance?: number | null
           casual_fans?: number | null
           chemistry_level?: number | null
+          chemistry_modifiers?: Json | null
           cohesion_score?: number | null
           collective_fame_earned?: number | null
+          conflict_index?: number
           created_at?: string | null
+          creative_alignment?: number
           days_together?: number | null
           dedicated_fans?: number | null
           description?: string | null
+          drama_cooldown_until?: string | null
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
@@ -2422,6 +2520,7 @@ export type Database = {
           is_solo_artist?: boolean | null
           jam_count?: number | null
           last_chemistry_update?: string | null
+          last_drama_event_at?: string | null
           last_fame_calculation?: string | null
           leader_id: string
           leadership_votes_history?: Json | null
@@ -2433,6 +2532,7 @@ export type Database = {
           popularity?: number | null
           primary_genre?: string | null
           regional_fame?: Json | null
+          romantic_tension?: number
           secondary_genres?: string[] | null
           sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
@@ -2447,12 +2547,16 @@ export type Database = {
           band_balance?: number | null
           casual_fans?: number | null
           chemistry_level?: number | null
+          chemistry_modifiers?: Json | null
           cohesion_score?: number | null
           collective_fame_earned?: number | null
+          conflict_index?: number
           created_at?: string | null
+          creative_alignment?: number
           days_together?: number | null
           dedicated_fans?: number | null
           description?: string | null
+          drama_cooldown_until?: string | null
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
@@ -2468,6 +2572,7 @@ export type Database = {
           is_solo_artist?: boolean | null
           jam_count?: number | null
           last_chemistry_update?: string | null
+          last_drama_event_at?: string | null
           last_fame_calculation?: string | null
           leader_id?: string
           leadership_votes_history?: Json | null
@@ -2479,6 +2584,7 @@ export type Database = {
           popularity?: number | null
           primary_genre?: string | null
           regional_fame?: Json | null
+          romantic_tension?: number
           secondary_genres?: string[] | null
           sound_description?: string | null
           status?: Database["public"]["Enums"]["band_status"]
