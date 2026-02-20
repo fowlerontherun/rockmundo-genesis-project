@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.843",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Dynamic Emotional Engine — each character tracks 6 emotional attributes (Happiness, Loneliness, Inspiration, Jealousy, Resentment, Obsession) that shift based on game events" },
+      { type: 'feature', description: "Auto-calculated gameplay modifiers: songwriting quality (±50%), performance impact (±50%), and social interaction success (±50%) derived from emotional state via DB trigger" },
+      { type: 'feature', description: "30+ event presets for relationship, gig, songwriting, chart, band, social, and news systems — each with calibrated emotional impacts" },
+      { type: 'feature', description: "Modular integration hooks: useEmotionalModifiers() for songwriting/gig systems, useApplyEmotionPreset() for one-line event triggers from any game system" },
+    ],
+  },
+  {
     version: "1.0.842",
     date: "2026-02-20",
     changes: [
