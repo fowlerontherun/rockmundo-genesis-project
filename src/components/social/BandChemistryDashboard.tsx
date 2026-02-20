@@ -219,5 +219,3 @@ export function BandChemistryDashboard({
   );
 }
 
-// Missing import
-import { Check } from "lucide-react";

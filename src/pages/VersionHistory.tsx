@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.847",
+    date: "2026-02-20",
+    changes: [
+      { type: 'feature', description: "Complete Social & Relationships UI overhaul — replaced old friends-only page with full social hub featuring Network, Drama Feed, Romance, and Family tabs" },
+      { type: 'feature', description: "Social Network Dashboard with filterable categories (friends, rivals, romance, bandmates, mentors, exes), search, animated relationship cards with status-based glow effects" },
+      { type: 'feature', description: "Character detail panel showing 5 emotional metrics (affection, trust, attraction, loyalty, jealousy) with animated gauges and gameplay modifier previews" },
+      { type: 'feature', description: "Drama & Media Feed tab with tabloid-style event cards, viral/major impact indicators, and trending hashtag sidebar" },
+      { type: 'feature', description: "Romance tab with partner/ex tracking, compatibility metrics, and stage-based progression indicators" },
+      { type: 'feature', description: "Embedded Emotional State widget showing 6 emotions (happiness, loneliness, inspiration, jealousy, resentment, obsession) with real-time gameplay modifiers" },
+      { type: 'improvement', description: "Fixed duplicate import build error in BandChemistryDashboard component" },
+    ],
+  },
+  {
     version: "1.0.846",
     date: "2026-02-20",
     changes: [
