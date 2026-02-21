@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.849",
+    date: "2026-02-21",
+    changes: [
+      { type: 'fix', description: "Fixed VIP checkout error — replaced inactive Stripe product/price IDs with new active ones for Monthly, Quarterly, and Annual tiers" },
+    ],
+  },
+  {
     version: "1.0.848",
     date: "2026-02-20",
     changes: [
