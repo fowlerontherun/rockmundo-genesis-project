@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.850",
+    date: "2026-02-21",
+    changes: [
+      { type: 'improvement', description: "Expanded VIP feature lists across all pages — VipSubscribe now showcases 12 detailed features including recording, touring, awards, PR, merch, and streaming royalties" },
+      { type: 'improvement', description: "Updated VipGate, VipStatusCard, and VipSuccess pages with comprehensive feature descriptions matching actual in-game systems" },
+      { type: 'improvement', description: "VIP subscribe page features grid upgraded from 4 to 12 items in a 3-column layout with icon badges" },
+    ],
+  },
+  {
     version: "1.0.849",
     date: "2026-02-21",
     changes: [

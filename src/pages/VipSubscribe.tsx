@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Check, Zap, Building2, Radio, Users, Sparkles, Loader2 } from "lucide-react";
+import { Crown, Check, Zap, Building2, Radio, Users, Sparkles, Loader2, Music, Mic2, MapPin, Heart, Trophy, MessageSquare, Store, Shield, Volume2 } from "lucide-react";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,10 +51,18 @@ const VIP_TIERS: Record<string, VipTier> = {
 };
 
 const VIP_FEATURES = [
-  { icon: Building2, title: "Business Empire", description: "Create and manage holding companies, record labels, venues, and more" },
-  { icon: Radio, title: "Radio Voting", description: "Vote on song rankings and influence the charts" },
-  { icon: Users, title: "Hire Employees", description: "Build teams for your businesses with managers, guards, and staff" },
-  { icon: Sparkles, title: "Exclusive Features", description: "Access VIP-only content, chat channels, and events" },
+  { icon: Building2, title: "Business Empire", description: "Create holding companies, record labels, security firms, merch factories, studios, venues, and more" },
+  { icon: Radio, title: "Radio Chart Voting", description: "Vote on radio song rankings and directly influence the in-game music charts" },
+  { icon: Music, title: "Song Recording & Release", description: "Record songs in studios, release singles and albums, and earn royalties from streaming and sales" },
+  { icon: Mic2, title: "Live Gig Audio", description: "Hear AI-generated audio during gig reviews — an immersive VIP-only playback experience" },
+  { icon: MapPin, title: "World Touring", description: "Book gigs across cities worldwide, travel with your band, and build regional fame" },
+  { icon: Users, title: "Hire Employees & Crew", description: "Staff your businesses with managers, guards, and roadies. Hire touring crew for your band" },
+  { icon: Heart, title: "Social & Relationships", description: "Build deep character relationships — romance, rivalries, band drama, and family legacies" },
+  { icon: Trophy, title: "Awards & Nominations", description: "Get nominated for in-game award shows, walk the red carpet, and win prestigious prizes" },
+  { icon: MessageSquare, title: "VIP Chat Channels", description: "Access exclusive VIP-only chat rooms and social features within the community" },
+  { icon: Store, title: "Merchandise & Sales", description: "Design and sell band merchandise, manage physical product manufacturing and distribution" },
+  { icon: Shield, title: "PR & Media Control", description: "Run press campaigns, manage media appearances, and control your public image" },
+  { icon: Volume2, title: "Streaming & Royalties", description: "Distribute music to streaming platforms, track daily plays, and collect royalty earnings" },
 ];
 
 export default function VipSubscribe() {
@@ -211,20 +219,24 @@ export default function VipSubscribe() {
 
               <ul className="space-y-2">
                 <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span>All VIP features included</span>
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span>All 12+ VIP features included</span>
                 </li>
                 <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span>Create unlimited companies</span>
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span>Create & manage companies</span>
                 </li>
                 <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span>Radio voting access</span>
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span>Radio voting & chart influence</span>
                 </li>
                 <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span>Priority support</span>
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span>Record, release & earn royalties</span>
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span>VIP gig audio & social features</span>
                 </li>
               </ul>
 
@@ -251,14 +263,21 @@ export default function VipSubscribe() {
 
       {/* Features Section */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-center">What's Included</h2>
+        <h2 className="text-2xl font-bold text-center">Everything You Unlock</h2>
+        <p className="text-center text-muted-foreground max-w-lg mx-auto">
+          VIP opens up the full RockMundo experience — from business empires to award shows.
+        </p>
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {VIP_FEATURES.map((feature, i) => (
-            <Card key={i} className="bg-card/50">
+            <Card key={i} className="bg-card/50 hover:border-amber-500/30 transition-colors">
               <CardContent className="p-4 space-y-2">
-                <feature.icon className="h-8 w-8 text-amber-500" />
-                <h3 className="font-semibold">{feature.title}</h3>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-amber-500/10 p-2">
+                    <feature.icon className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <h3 className="font-semibold text-sm">{feature.title}</h3>
+                </div>
                 <p className="text-sm text-muted-foreground">{feature.description}</p>
               </CardContent>
             </Card>
