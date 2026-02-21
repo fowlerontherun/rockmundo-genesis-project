@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.851",
+    date: "2026-02-21",
+    changes: [
+      { type: 'feature', description: "Seeded 12 NPC character relationships (rivals, mentors, partners, bandmates, nemeses, business contacts, proteges, fans, collaborators, and exes) for a rich social network" },
+      { type: 'feature', description: "Auto-sync trigger: accepted friendships now automatically create bidirectional character_relationships entries" },
+      { type: 'fix', description: "Fixed 0 connections showing on Relationships page — existing friendships now synced into the character_relationships system" },
+    ],
+  },
+  {
     version: "1.0.850",
     date: "2026-02-21",
     changes: [
