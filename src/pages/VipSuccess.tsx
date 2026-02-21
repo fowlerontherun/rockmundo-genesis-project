@@ -67,20 +67,28 @@ export default function VipSuccess() {
             <h3 className="font-semibold text-sm">You can now:</h3>
             <ul className="text-sm space-y-2 text-muted-foreground">
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                Create and manage holding companies
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                Create companies, labels, venues & studios
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                Own record labels, venues, and studios
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                Record songs, release music & earn royalties
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                Vote on radio chart rankings
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                Vote on radio charts & influence rankings
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                Access exclusive VIP features
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                Tour worldwide & build city-by-city fame
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                Hire crew, run PR & sell merchandise
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                VIP gig audio, awards & exclusive chat
               </li>
             </ul>
           </div>

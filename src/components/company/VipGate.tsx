@@ -72,10 +72,13 @@ export const VipGate = ({
             VIP members enjoy exclusive access to:
           </p>
           <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-            <li>• Create and manage business empires</li>
-            <li>• Own record labels, venues, and more</li>
-            <li>• Hire employees and grow your wealth</li>
-            <li>• Exclusive VIP chat and features</li>
+            <li>• Create companies, labels, venues & studios</li>
+            <li>• Record songs, release albums & earn royalties</li>
+            <li>• Vote on radio charts & influence rankings</li>
+            <li>• Tour the world & build city-by-city fame</li>
+            <li>• Hire employees, crew & grow your wealth</li>
+            <li>• VIP gig audio, social features & chat</li>
+            <li>• Awards, PR campaigns & merch sales</li>
           </ul>
         </div>
       </CardContent>

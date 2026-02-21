@@ -162,14 +162,16 @@ export const VipStatusCard = ({ compact = false }: VipStatusCardProps) => {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Build your business empire, vote on radio charts, and access exclusive features!
+          Build your business empire, record music, tour the world, and dominate the charts!
         </p>
         
         <ul className="text-xs text-muted-foreground space-y-1">
-          <li>• Create and manage companies</li>
-          <li>• Own record labels, venues, studios</li>
-          <li>• Vote on radio song rankings</li>
-          <li>• Exclusive VIP chat access</li>
+          <li>• Create companies, labels, venues & studios</li>
+          <li>• Record songs & earn streaming royalties</li>
+          <li>• Vote on radio chart rankings</li>
+          <li>• Tour worldwide & build regional fame</li>
+          <li>• VIP gig audio, chat & social features</li>
+          <li>• Awards, PR campaigns & merchandise</li>
         </ul>
 
         <Button 
