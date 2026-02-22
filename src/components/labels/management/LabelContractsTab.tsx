@@ -135,7 +135,7 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
           .from("band_members")
           .select("user_id")
           .eq("band_id", contract.band_id)
-          .eq("role", "leader")
+          .in("role", ["leader", "Founder", "founder", "co-leader"])
           .limit(1)
           .maybeSingle();
 

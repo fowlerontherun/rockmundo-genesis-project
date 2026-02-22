@@ -174,6 +174,42 @@ export function RequestContractDialog({
       return;
     }
 
+    // Notify the label owner about the incoming request
+    // (The artist-side notification is handled by the DB trigger)
+    if (label) {
+      try {
+        const { data: labelOwner } = await supabase
+          .from("labels")
+          .select("owner_id")
+          .eq("id", label.id)
+          .single();
+
+        if (labelOwner?.owner_id) {
+          // owner_id is a profile id, look up user_id
+          const { data: ownerProfile } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("id", labelOwner.owner_id)
+            .single();
+
+          if (ownerProfile?.user_id) {
+            await supabase.from("player_inbox").insert({
+              user_id: ownerProfile.user_id,
+              category: "record_label" as any,
+              priority: "normal" as any,
+              title: "📩 Contract Request Received",
+              message: `${selectedEntity?.name || "An artist"} has requested a contract with ${label.name}. Review their proposal in your label's contracts tab.`,
+              related_entity_type: "contract",
+              action_type: "navigate",
+              action_data: { path: `/labels/${label.id}/manage` },
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to notify label owner:", e);
+      }
+    }
+
     toast({
       title: "Contract request sent",
       description: "The label has received your proposal and will review it shortly.",
