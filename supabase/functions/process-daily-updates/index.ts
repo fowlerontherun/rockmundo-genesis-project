@@ -536,15 +536,171 @@ Deno.serve(async (req) => {
       console.error('Error in modeling completion:', modelErr)
     }
 
+    // === NPC LABEL SCOUTING ===
+    console.log('=== NPC Label Scouting ===')
+    let npcOffersGenerated = 0
+    try {
+      // Get all NPC labels (no owner)
+      const { data: npcLabels } = await supabase
+        .from('labels')
+        .select('id, name, reputation_score, genre_focus, balance')
+        .is('owner_id', null)
+        .gt('balance', 10000)
+
+      // Get all active bands with their fame/genre
+      const { data: allBands } = await supabase
+        .from('bands')
+        .select('id, name, fame, genre, total_fans, status')
+        .eq('status', 'active')
+        .gt('fame', 50) // Minimum fame threshold to be scouted
+
+      // Get existing active/offered contracts to avoid duplicates
+      const { data: existingContracts } = await supabase
+        .from('artist_label_contracts')
+        .select('band_id, label_id, status')
+        .in('status', ['offered', 'pending', 'active', 'negotiating', 'accepted_by_artist'])
+
+      // Get a deal type for offers
+      const { data: dealTypes } = await supabase
+        .from('label_deal_types')
+        .select('id, name, default_artist_royalty, default_label_royalty, default_term_months, default_release_quota')
+        .limit(5)
+
+      if (npcLabels && allBands && dealTypes && dealTypes.length > 0) {
+        const existingPairs = new Set(
+          (existingContracts || []).map(c => `${c.band_id}:${c.label_id}`)
+        )
+
+        for (const band of allBands) {
+          // Daily scouting chance based on fame tier
+          // Higher fame = higher chance of being scouted
+          let scoutChance: number
+          if (band.fame >= 1000000) scoutChance = 0.15       // 15% daily for megastars
+          else if (band.fame >= 100000) scoutChance = 0.10    // 10% for established
+          else if (band.fame >= 10000) scoutChance = 0.06     // 6% for mid-tier
+          else if (band.fame >= 1000) scoutChance = 0.03      // 3% for emerging
+          else if (band.fame >= 100) scoutChance = 0.01       // 1% for newcomers
+          else scoutChance = 0.005                             // 0.5% for unknowns
+
+          if (Math.random() > scoutChance) continue
+
+          // Count existing offers for this band (cap at 3 pending offers)
+          const pendingOffers = (existingContracts || []).filter(
+            c => c.band_id === band.id && ['offered', 'pending', 'negotiating'].includes(c.status)
+          ).length
+          if (pendingOffers >= 3) continue
+
+          // Find compatible NPC labels (genre overlap or high rep labels scout broadly)
+          const bandGenreLower = (band.genre || '').toLowerCase()
+          const compatibleLabels = npcLabels.filter(label => {
+            // Skip if already has a deal with this label
+            if (existingPairs.has(`${band.id}:${label.id}`)) return false
+
+            // Genre matching
+            const labelGenres = (label.genre_focus || []).map((g: string) => g.toLowerCase())
+            const genreMatch = labelGenres.some((g: string) =>
+              bandGenreLower.includes(g) || g.includes(bandGenreLower)
+            )
+
+            // High-rep labels scout more broadly
+            if (label.reputation_score >= 80) return genreMatch || Math.random() < 0.3
+            return genreMatch
+          })
+
+          if (compatibleLabels.length === 0) continue
+
+          // Pick the best-fit label (weighted by reputation)
+          const chosenLabel = compatibleLabels[Math.floor(Math.random() * compatibleLabels.length)]
+
+          // Pick a deal type (weighted by band fame)
+          let dealType
+          if (band.fame >= 100000) {
+            // High fame = better deals offered
+            dealType = dealTypes.find(d => d.name === 'Distribution Deal') || dealTypes[0]
+          } else if (band.fame >= 10000) {
+            dealType = dealTypes.find(d => d.name === 'Standard Deal') || dealTypes[0]
+          } else {
+            dealType = dealTypes.find(d => d.name === '360 Deal') || dealTypes[0]
+          }
+
+          // Calculate offer terms based on band fame & label reputation
+          const fameMultiplier = Math.min(10, Math.max(0.1, band.fame / 10000))
+          const repMultiplier = chosenLabel.reputation_score / 75
+
+          // Advance: $500 to $500,000 scaled by fame & label rep
+          const baseAdvance = 2000 + Math.floor(fameMultiplier * repMultiplier * 15000)
+          const advance = Math.min(500000, Math.max(500, baseAdvance + Math.floor(Math.random() * baseAdvance * 0.3)))
+
+          // Royalty: higher fame = better royalty for artist
+          const baseRoyalty = dealType.default_artist_royalty || 15
+          const fameRoyaltyBonus = Math.min(15, Math.floor(fameMultiplier * 3))
+          const artistRoyalty = Math.min(50, baseRoyalty + fameRoyaltyBonus)
+
+          // Term: 12-36 months
+          const termMonths = dealType.default_term_months || 24
+
+          // Release quota
+          const singleQuota = Math.max(2, Math.min(8, Math.floor(2 + fameMultiplier)))
+          const albumQuota = Math.max(1, Math.min(4, Math.floor(fameMultiplier * 0.5)))
+          const releaseQuota = singleQuota + albumQuota
+
+          // Territories based on label reputation
+          let territories: string[]
+          if (chosenLabel.reputation_score >= 85) territories = ['NA', 'EU', 'UK', 'ASIA', 'LATAM', 'OCEANIA']
+          else if (chosenLabel.reputation_score >= 75) territories = ['NA', 'EU', 'UK']
+          else territories = ['NA']
+
+          const startDate = new Date()
+          const endDate = new Date()
+          endDate.setMonth(endDate.getMonth() + termMonths)
+
+          const contractValue = advance + singleQuota * 5000 + albumQuota * 25000
+
+          const { error: insertError } = await supabase
+            .from('artist_label_contracts')
+            .insert({
+              label_id: chosenLabel.id,
+              band_id: band.id,
+              deal_type_id: dealType.id,
+              status: 'offered',
+              last_action_by: 'label',
+              advance_amount: advance,
+              royalty_artist_pct: artistRoyalty,
+              royalty_label_pct: 100 - artistRoyalty,
+              single_quota: singleQuota,
+              album_quota: albumQuota,
+              release_quota: releaseQuota,
+              termination_fee_pct: Math.floor(20 + Math.random() * 30),
+              manufacturing_covered: chosenLabel.reputation_score >= 75,
+              territories,
+              contract_value: contractValue,
+              start_date: startDate.toISOString(),
+              end_date: endDate.toISOString(),
+            })
+
+          if (insertError) {
+            console.error(`Error creating NPC offer for band ${band.name}:`, insertError)
+          } else {
+            existingPairs.add(`${band.id}:${chosenLabel.id}`)
+            npcOffersGenerated++
+            console.log(`NPC offer: ${chosenLabel.name} → ${band.name} ($${advance} advance, ${artistRoyalty}% royalty)`)
+          }
+        }
+      }
+      console.log(`NPC label scouting complete: ${npcOffersGenerated} offers generated`)
+    } catch (scoutError) {
+      console.error('Error in NPC label scouting:', scoutError)
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs + rentalsCharged,
+      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs + rentalsCharged + npcOffersGenerated,
       errorCount,
       resultSummary: {
         profiles_processed: processedProfiles,
@@ -556,6 +712,7 @@ Deno.serve(async (req) => {
         rentals_charged: rentalsCharged,
         rentals_defaulted: rentalsDefaulted,
         modeling_completed: modelingCompleted,
+        npc_offers_generated: npcOffersGenerated,
       },
     })
 
@@ -567,6 +724,7 @@ Deno.serve(async (req) => {
         player_syncs: playerSyncs,
         ticket_sales_updated: ticketSalesUpdated,
         pr_offers_generated: prOffersGenerated,
+        npc_offers_generated: npcOffersGenerated,
         errors: errorCount,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
