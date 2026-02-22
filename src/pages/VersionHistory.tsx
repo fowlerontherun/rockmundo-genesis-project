@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.853",
+    date: "2026-02-22",
+    changes: [
+      { type: 'feature', description: "Automated NPC label scouting system — NPC labels now periodically scout bands based on fame, genre compatibility, and label reputation, generating realistic contract offers" },
+      { type: 'feature', description: "Scouting probability scales with band fame tier: 0.5% daily for unknowns up to 15% for megastars, with genre matching and label reputation weighting" },
+      { type: 'feature', description: "Offer terms auto-calculated: advance ($500–$500K), royalty split, release quotas, territories, and deal type all scale with band fame and label prestige" },
+      { type: 'improvement', description: "Offers capped at 3 pending per band to prevent inbox spam, with duplicate label-band pair prevention" },
+    ],
+  },
+  {
     version: "1.0.852",
     date: "2026-02-22",
     changes: [
