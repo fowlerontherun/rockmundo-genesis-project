@@ -1,56 +1,45 @@
 
-## Fix Chart Display and Nerf Old Release Sales/Streams - v1.0.841
+# Fix Record Contract Accept/Reject + Seed NPC Label Offers (v1.0.852)
 
-### Problem 1: Charts Show Same Values for "Weekly" and "Total"
+## Problem Identified
 
-**Root Cause:** In `update-music-charts`, sales chart entries set both `plays_count` and `weekly_plays` to the same weekly sales number (line 558-559). The UI's `getTotalValue()` reads `total_sales`, which is mapped from `plays_count` -- so "Weekly" and "Total" display identical numbers.
+Two root causes were found:
 
-For streaming charts, it's slightly different: `plays_count` = total all-time streams, `weekly_plays` = weekly streams. But in the UI, `getTotalValue()` for non-combined charts returns `entry.total_sales`, which is also mapped from `plays_count` (the weekly sales figure for sales charts).
+1. **RLS Policy Mismatch**: The update policy for `artist_label_contracts` checks `band_members.role = 'leader'`, but your band member role is stored as `'Founder'`. This means the accept/reject/counter mutations silently fail due to Row Level Security denying the update.
 
-**Fix:**
-- In `update-music-charts`, for sales chart entries: set `plays_count` to the **all-time cumulative sales** for that song (fetched from `releases.total_units_sold` or summed from `release_sales`), and keep `weekly_plays` as the weekly figure
-- In `useCountryCharts.ts`, ensure `total_sales` maps to the correct cumulative figure
+2. **No NPC Label Offers**: The band only has offers from your own label ("Fowler Record"). There are no other NPC labels making offers, so the user sees no competing offers to compare against.
 
-### Problem 2: Old Releases Never Decline in Sales or Streams
+## Plan
 
-**Root Cause:** Both edge functions give every active release the same base sales/streams regardless of how long ago it was released:
-- `update-daily-streams`: Base streams = random 100-5000/day with no age factor
-- `generate-daily-sales`: Base sales = config-driven random range with only a first-week boost (1.5x), then flat 1.0x forever. Hype decays but base sales do not.
+### Step 1: Fix the RLS Update Policy
+Update the RLS policy "Artists can update their own contract offers" to accept both `'leader'` and `'Founder'` roles (and any leadership-equivalent role like `'founder'`), making the accept/reject/counter buttons functional.
 
-This means "Christmas Mother Cluckers" gets the same daily streams and sales months after release as it did in week 2.
+```sql
+-- Drop and recreate the policy with inclusive role check
+DROP POLICY "Artists can update their own contract offers" ON artist_label_contracts;
+CREATE POLICY "Artists can update their own contract offers" ON artist_label_contracts
+  FOR UPDATE USING (
+    artist_profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
+    OR band_id IN (
+      SELECT band_id FROM band_members
+      WHERE user_id = auth.uid()
+      AND role IN ('leader', 'Founder', 'founder', 'co-leader')
+    )
+  );
+```
 
-**Fix:** Add an **age decay multiplier** to both functions:
-- Week 1: 1.5x boost (already exists for sales)
-- Week 2-4: 1.0x (no change)
-- Month 2: 0.7x
-- Month 3: 0.5x
-- Month 4+: 0.35x
-- Month 6+: 0.2x (long tail -- songs never fully die but drastically reduce)
+### Step 2: Seed NPC Label Offers
+Insert 3-4 contract offers from existing NPC labels in the database for the band "Fowler and the Growlers", giving the player competing deals to evaluate:
+- A low-advance / high-royalty indie label offer
+- A high-advance / low-royalty major label offer
+- A balanced mid-tier offer
+- Each with different term lengths, quotas, and territories
 
-This mirrors real-world music economics where most songs see 80%+ of their lifetime sales/streams in the first few weeks.
+### Step 3: Update Version
+Bump version to `1.0.852` in `VersionHeader.tsx` and add a changelog entry in `VersionHistory.tsx` documenting the RLS fix and NPC offer seeding.
 
-### Technical Changes
+## Technical Details
 
-**1. `supabase/functions/update-daily-streams/index.ts`**
-- After calculating `baseStreams` (line 100), fetch or compute the release age from `song_releases.created_at`
-- Apply an age decay multiplier before the final `dailyStreams` calculation
-- Formula: `ageDecay = daysSinceRelease <= 7 ? 1.5 : daysSinceRelease <= 30 ? 1.0 : daysSinceRelease <= 60 ? 0.7 : daysSinceRelease <= 90 ? 0.5 : daysSinceRelease <= 180 ? 0.35 : 0.2`
-- Add `created_at` to the song_releases SELECT query
-
-**2. `supabase/functions/generate-daily-sales/index.ts`**
-- Replace the binary `firstWeekBoost` (line 280) with the same graduated age decay curve
-- The existing `daysSinceRelease` calculation (line 279) already provides the needed data
-- Apply the decay multiplier in the `calculatedSales` formula (line 282-284)
-
-**3. `supabase/functions/update-music-charts/index.ts`**
-- For sales chart entries (lines 548-567), fetch cumulative all-time sales per song from `release_sales` (summing all `quantity_sold` without the 7-day filter) and set `plays_count` to the cumulative total
-- Keep `weekly_plays` as the weekly figure (current behavior)
-- Same fix for scoped entries, album entries, and EP entries
-
-**4. `src/hooks/useCountryCharts.ts`**
-- Verify `total_sales` mapping correctly uses `plays_count` (which will now be cumulative for sales charts)
-- No changes expected if the chart generation fix is done correctly
-
-**5. Version bump**
-- `src/components/VersionHeader.tsx`: Update to v1.0.841
-- `src/pages/VersionHistory.tsx`: Add changelog entry documenting both the chart display fix and the sales/stream age decay nerf
+- The existing `ContractOfferCard` component already has full accept/reject/counter-offer UI with the three-strike negotiation loop -- it just needs the RLS fix to allow mutations
+- NPC offers will be inserted with `status: 'offered'`, `last_action_by: 'label'`, and `demo_submission_id: null` (the card handles null demos gracefully, showing "Demo" as fallback title)
+- The `MyContractsTab` query filters for `status IN ('offered', 'negotiating')` and `last_action_by = 'label'`, so new offers will appear immediately
