@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.852",
+    date: "2026-02-22",
+    changes: [
+      { type: 'feature', description: "Database trigger automatically sends inbox notifications when new contract offers are inserted — covers UI offers, NPC-seeded deals, and all future insertion paths" },
+      { type: 'feature', description: "Label owners now receive inbox notifications when artists submit contract requests" },
+      { type: 'fix', description: "Fixed band leader role query to include Founder/founder/co-leader roles — contract activation notifications and offer notifications now reach the correct user" },
+      { type: 'improvement', description: "Removed duplicate manual inbox notification from ContractDesignerDialog — the DB trigger handles it universally" },
+    ],
+  },
+  {
     version: "1.0.851",
     date: "2026-02-21",
     changes: [
