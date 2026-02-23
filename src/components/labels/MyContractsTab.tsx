@@ -139,6 +139,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         .from("artist_label_contracts")
         .select(`
           id,
+          status,
           label_id,
           advance_amount,
           royalty_artist_pct,
@@ -158,7 +159,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
           original_album_quota,
           demo_submission_id,
           labels(name, reputation_score),
-          demo_submissions(songs(title, quality_score))
+          demo_submissions!artist_label_contracts_demo_submission_id_fkey(songs(title, quality_score))
         `)
         .in("status", ["offered", "negotiating"])
         .or(filters.join(",")) as any;

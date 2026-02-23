@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.855",
+    date: "2026-02-23",
+    changes: [
+      { type: 'fix', description: "Fixed contract offer Accept/Decline/Counter buttons not working due to a Supabase relationship ambiguity error (PGRST201) in the contract-offers query" },
+    ],
+  },
+  {
     version: "1.0.854",
     date: "2026-02-23",
     changes: [
