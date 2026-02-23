@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.854",
+    date: "2026-02-23",
+    changes: [
+      { type: 'feature', description: "Contracts tab now shows a pulsing badge with the number of pending contract offers so players can instantly see when action is needed" },
+      { type: 'improvement', description: "Auto-switches to the Contracts tab when pending offers exist, ensuring players don't miss new contract opportunities from NPC label scouting" },
+    ],
+  },
+  {
     version: "1.0.853",
     date: "2026-02-22",
     changes: [

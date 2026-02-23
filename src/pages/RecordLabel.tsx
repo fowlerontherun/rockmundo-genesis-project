@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@/hooks/useTranslation";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,8 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Scale, Crown, Lock } from "lucide-react";
+import { Loader2, Plus, Scale, Crown, Lock, FileText } from "lucide-react";
+import { Badge as BadgeUI } from "@/components/ui/badge";
 import { LabelDirectory } from "@/components/labels/LabelDirectory";
 import { MyContractsTab } from "@/components/labels/MyContractsTab";
 import { ReleasePipelineTab } from "@/components/labels/ReleasePipelineTab";
@@ -138,6 +139,41 @@ const RecordLabel = () => {
       return data as TerritoryRow[];
     },
   });
+
+  // Count pending contract offers for badge on Contracts tab
+  const bandIds = artistEntities.filter(e => e.type === 'band').map(e => e.id);
+  const soloId = artistEntities.find(e => e.type === 'solo')?.id;
+  
+  const { data: pendingOfferCount = 0 } = useQuery({
+    queryKey: ["pending-offer-count", soloId, bandIds.join(",")],
+    queryFn: async () => {
+      const filters: string[] = [];
+      if (soloId) filters.push(`artist_profile_id.eq.${soloId}`);
+      if (bandIds.length > 0) {
+        filters.push(`band_id.in.(${bandIds.map(id => `"${id}"`).join(",")})`);
+      }
+      if (filters.length === 0) return 0;
+
+      const { count, error } = await supabase
+        .from("artist_label_contracts")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["offered", "negotiating"])
+        .or(filters.join(","));
+
+      if (error) return 0;
+      return count ?? 0;
+    },
+    enabled: artistEntities.length > 0,
+  });
+
+  // Auto-switch to Contracts tab when there are pending offers
+  const [hasAutoSwitched, setHasAutoSwitched] = useState(false);
+  useEffect(() => {
+    if (pendingOfferCount > 0 && !hasAutoSwitched && activeTab === "my-labels") {
+      setActiveTab("contracts");
+      setHasAutoSwitched(true);
+    }
+  }, [pendingOfferCount, hasAutoSwitched, activeTab]);
 
   if (!userId) {
     return (
@@ -323,7 +359,14 @@ const RecordLabel = () => {
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="my-labels">My Labels</TabsTrigger>
             <TabsTrigger value="directory">Browse</TabsTrigger>
-            <TabsTrigger value="contracts">Contracts</TabsTrigger>
+            <TabsTrigger value="contracts" className="relative">
+              Contracts
+              {pendingOfferCount > 0 && (
+                <BadgeUI variant="destructive" className="ml-1.5 h-5 min-w-5 px-1 text-[10px] animate-pulse">
+                  {pendingOfferCount}
+                </BadgeUI>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="releases">Releases</TabsTrigger>
             <TabsTrigger value="royalties">Royalties</TabsTrigger>
           </TabsList>
