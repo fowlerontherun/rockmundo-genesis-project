@@ -1,97 +1,117 @@
 
-
-# Inbox Notifications for New Contract Offers (v1.0.852)
+# Company Financial System Overhaul (v1.0.856)
 
 ## Problem
 
-Contract offers can arrive from multiple paths, but inbox notifications are inconsistent:
+Every company type in the game allows hiring staff, buying upgrades, and purchasing equipment -- but none of these actions actually deduct money from the company balance or record a transaction. The actions succeed silently without any financial impact, making the business simulation unrealistic.
 
-1. **ContractDesignerDialog** (label admin designing a custom offer) -- already sends an inbox notification, but only finds band leaders with `role = 'leader'`, missing users with `role = 'Founder'` or `'founder'`. Also does not notify solo artists (offers with `artist_profile_id` but no `band_id`).
-2. **Database-seeded / NPC offers** -- inserted directly into `artist_label_contracts` with no notification trigger, so the player never knows they arrived.
-3. **RequestContractDialog** (artist requesting a deal) -- no notification to the label owner that a request was received.
+**All 7 subsidiary types are affected:**
+- Security Firm (guards, upgrades)
+- Merchandise Factory (workers, upgrades)
+- Logistics Company (drivers, upgrades, vehicles)
+- Venue (staff, upgrades)
+- Rehearsal Studio (staff, equipment, upgrades)
+- Recording Studio (staff, equipment, upgrades)
+- Record Label (staff)
 
-## Plan
+Additionally, the Security Firm management page never renders its upgrades panel.
 
-### Step 1: Create a database trigger for automatic notifications
+The self-contract flow (offering your own band a deal and accepting it) is already working correctly.
 
-Create a PostgreSQL trigger function `notify_new_contract_offer()` that fires `AFTER INSERT` on `artist_label_contracts`. This covers all insertion paths (UI, NPC seeding, future automation) with a single mechanism.
+## Solution
 
-The trigger will:
-- Look up the label name from `labels`
-- Determine the recipient: if `band_id` is set, find the band leader/founder's `user_id`; if `artist_profile_id` is set, find the profile's `user_id`
-- Insert a `player_inbox` row with category `record_label`, priority `high`, a descriptive title and message including label name and advance amount, and `action_type = 'navigate'` with `action_data = '{"path": "/labels"}'`
-- Only fire for offers with `status IN ('offered', 'pending')` (skip `active`, `rejected`, etc.)
-
-### Step 2: Fix the band leader role query
-
-Update the trigger (and existing code in `ContractDesignerDialog.tsx` and `LabelContractsTab.tsx`) to query band members with `role IN ('leader', 'Founder', 'founder', 'co-leader')` instead of just `'leader'`.
-
-### Step 3: Add notification for label owner on inbound requests
-
-In `RequestContractDialog.tsx`, after the successful contract insert, send a `player_inbox` notification to the label owner informing them of the incoming contract request.
-
-### Step 4: Remove duplicate notification from ContractDesignerDialog
-
-Since the DB trigger now handles the notification on insert, remove the manual `player_inbox.insert` block from `ContractDesignerDialog.tsx` to avoid double-notifying.
-
-### Step 5: Update version to 1.0.852
-
-Bump `VersionHeader.tsx` and add changelog entry in `VersionHistory.tsx`.
+Create a shared utility function `deductCompanyBalance` and wire it into every hire/upgrade/equipment mutation. Each action will:
+1. Look up the parent company from the subsidiary entity
+2. Check the company has sufficient balance
+3. Deduct the cost from the company balance
+4. Record a `company_transactions` entry with the appropriate category and description
 
 ## Technical Details
 
-**Trigger SQL (simplified):**
-```sql
-CREATE OR REPLACE FUNCTION notify_new_contract_offer()
-RETURNS trigger AS $$
-DECLARE
-  v_label_name TEXT;
-  v_recipient_id UUID;
-  v_advance TEXT;
-BEGIN
-  IF NEW.status NOT IN ('offered', 'pending') THEN
-    RETURN NEW;
-  END IF;
+### Step 1: Create a shared helper `src/hooks/useCompanyBalanceDeduction.ts`
 
-  SELECT name INTO v_label_name FROM labels WHERE id = NEW.label_id;
+A reusable function that:
+- Takes `companyId`, `amount`, `description`, and `category`
+- Fetches current company balance
+- Throws if insufficient funds
+- Updates `companies.balance`
+- Inserts a `company_transactions` row (negative amount, type `expense`)
+- Also export a helper to resolve `companyId` from a subsidiary entity (e.g., given a `security_firm_id`, look up the firm's `company_id`)
 
-  IF NEW.band_id IS NOT NULL THEN
-    SELECT user_id INTO v_recipient_id FROM band_members
-    WHERE band_id = NEW.band_id
-      AND role IN ('leader','Founder','founder','co-leader')
-    LIMIT 1;
-  ELSIF NEW.artist_profile_id IS NOT NULL THEN
-    SELECT user_id INTO v_recipient_id FROM profiles
-    WHERE id = NEW.artist_profile_id;
-  END IF;
+### Step 2: Fix each hook to deduct balance
 
-  IF v_recipient_id IS NOT NULL THEN
-    INSERT INTO player_inbox (user_id, category, priority, title, message,
-      related_entity_id, related_entity_type, action_type, action_data)
-    VALUES (
-      v_recipient_id, 'record_label', 'high',
-      'New Contract Offer!',
-      COALESCE(v_label_name, 'A label') || ' wants to sign you! Advance: $' ||
-        TO_CHAR(NEW.advance_amount, 'FM999,999,999') || '. Review in your contracts.',
-      NEW.id, 'contract', 'navigate', '{"path":"/labels"}'::jsonb
-    );
-  END IF;
+**`src/hooks/useSecurityFirm.ts` -- `useHireGuard`**
+- Before inserting guard, look up `security_firms.company_id` from `firmId`
+- Calculate hiring cost (one-time fee = `salaryPerEvent * 10` as a signing bonus)
+- Call `deductCompanyBalance`
+- Record transaction: "Hired guard: {name}"
 
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+**`src/components/security/SecurityUpgradesManager.tsx` -- `installUpgradeMutation`**
+- After computing `cost`, look up `company_id` from `security_firms`
+- Call `deductCompanyBalance`
+- Record transaction: "Security upgrade: {name} Lv{level}"
 
-CREATE TRIGGER on_new_contract_offer
-  AFTER INSERT ON artist_label_contracts
-  FOR EACH ROW
-  EXECUTE FUNCTION notify_new_contract_offer();
-```
+**`src/hooks/useMerchFactory.ts` -- `useHireWorker`**
+- Look up `company_id` via `merch_factories.company_id` from `factory_id`
+- Deduct hiring fee (weekly_salary * 4 as a month's advance)
+- Record transaction: "Hired factory worker: {name}"
 
-**Files to modify:**
-- New SQL migration (trigger)
-- `src/components/labels/management/ContractDesignerDialog.tsx` -- remove manual inbox insert (now handled by trigger)
-- `src/components/labels/management/LabelContractsTab.tsx` -- fix role query in activation notification
-- `src/components/labels/RequestContractDialog.tsx` -- add notification to label owner
-- `src/components/VersionHeader.tsx` -- bump to 1.0.852
-- `src/pages/VersionHistory.tsx` -- add changelog entry
+**`src/components/merch-factory/FactoryUpgradesManager.tsx` -- `installUpgradeMutation`**
+- Look up `company_id` from `merch_factories`
+- Call `deductCompanyBalance` with the upgrade cost
 
+**`src/hooks/useLogisticsBusiness.ts` -- `useHireDriver`**
+- Look up `company_id` from `logistics_companies`
+- Deduct hiring fee (salary_per_day * 30)
+- Record transaction
+
+**`src/hooks/useLogisticsBusiness.ts` -- `usePurchaseLogisticsUpgrade`**
+- Look up `company_id` from `logistics_companies`
+- Deduct upgrade cost
+
+**`src/hooks/useVenueBusiness.ts` -- `useHireVenueStaff`**
+- Look up `company_id` from `venues`
+- Deduct hiring fee (salary_weekly * 4)
+
+**`src/hooks/useVenueBusiness.ts` -- `useInstallVenueUpgrade`**
+- Look up `company_id` from `venues`
+- Deduct the `cost` parameter
+
+**`src/hooks/useRehearsalStudioBusiness.ts` -- `useHireRehearsalStaff`, `useAddRehearsalEquipment`, `useInstallRehearsalUpgrade`**
+- Look up `company_id` via `rehearsal_rooms` -> `rehearsal_studios` -> `company_id`
+- Deduct costs
+
+**`src/hooks/useRecordingStudioBusiness.ts` -- `useHireRecordingStudioStaff`, `useAddRecordingStudioEquipment`, `useInstallRecordingStudioUpgrade`**
+- Look up `company_id` via `recording_studios.company_id`
+- Deduct costs
+
+**`src/hooks/useLabelBusiness.ts` -- `useHireLabelStaff`**
+- Look up `company_id` from `labels`
+- Deduct hiring fee (salary_monthly as first month's pay)
+
+### Step 3: Add the SecurityUpgradesManager to the SecurityFirmManagement page
+
+`src/pages/SecurityFirmManagement.tsx` currently doesn't render the upgrades panel. Add it below the ContractsList with `companyBalance={company.balance}`.
+
+### Step 4: Invalidate balance queries after mutations
+
+Every mutation's `onSuccess` must also invalidate `company-balance` and `company-transactions` queries so the UI reflects the new balance immediately.
+
+### Step 5: Update version to 1.0.856
+
+Bump `VersionHeader.tsx` and add a changelog entry in `VersionHistory.tsx`.
+
+## Files to modify
+- **New**: `src/hooks/useCompanyBalanceDeduction.ts`
+- `src/hooks/useSecurityFirm.ts`
+- `src/hooks/useMerchFactory.ts`
+- `src/hooks/useLogisticsBusiness.ts`
+- `src/hooks/useVenueBusiness.ts`
+- `src/hooks/useRehearsalStudioBusiness.ts`
+- `src/hooks/useRecordingStudioBusiness.ts`
+- `src/hooks/useLabelBusiness.ts`
+- `src/components/security/SecurityUpgradesManager.tsx`
+- `src/components/merch-factory/FactoryUpgradesManager.tsx`
+- `src/pages/SecurityFirmManagement.tsx`
+- `src/components/VersionHeader.tsx`
+- `src/pages/VersionHistory.tsx`
