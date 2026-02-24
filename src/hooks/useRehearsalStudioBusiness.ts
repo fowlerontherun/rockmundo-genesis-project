@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { deductCompanyBalance, getCompanyIdFromRehearsalRoom, COMPANY_BALANCE_QUERY_KEYS } from "./useCompanyBalanceDeduction";
 import type { 
   RehearsalStudioBusiness, 
   RehearsalRoomStaff, 
@@ -143,6 +144,16 @@ export function useHireRehearsalStaff() {
 
   return useMutation({
     mutationFn: async (staff: Omit<RehearsalRoomStaff, 'id' | 'created_at' | 'updated_at' | 'hire_date' | 'performance_rating' | 'is_active'>) => {
+      const companyId = await getCompanyIdFromRehearsalRoom(staff.room_id);
+      const hiringCost = staff.salary || 1000;
+
+      await deductCompanyBalance({
+        companyId,
+        amount: hiringCost,
+        description: `Hired rehearsal staff: ${staff.name}`,
+        category: "staff",
+      });
+
       const { data, error } = await supabase
         .from('rehearsal_room_staff')
         .insert({
@@ -160,10 +171,11 @@ export function useHireRehearsalStaff() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-staff', data.room_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast({ title: "Staff Hired", description: `${data.name} has been hired successfully.` });
     },
     onError: (error) => {
-      toast({ title: "Error", description: "Failed to hire staff member.", variant: "destructive" });
+      toast({ title: "Error", description: `Failed to hire staff: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
       console.error(error);
     },
   });
@@ -175,6 +187,18 @@ export function useAddRehearsalEquipment() {
 
   return useMutation({
     mutationFn: async (equipment: Omit<RehearsalRoomEquipment, 'id' | 'created_at' | 'updated_at' | 'condition' | 'is_available'>) => {
+      const companyId = await getCompanyIdFromRehearsalRoom(equipment.room_id);
+      const cost = equipment.hourly_rate ? equipment.hourly_rate * 100 : 5000;
+
+      if (cost > 0) {
+        await deductCompanyBalance({
+          companyId,
+          amount: cost,
+          description: `Rehearsal equipment: ${equipment.equipment_name}`,
+          category: "equipment",
+        });
+      }
+
       const { data, error } = await supabase
         .from('rehearsal_room_equipment')
         .insert(equipment)
@@ -186,10 +210,11 @@ export function useAddRehearsalEquipment() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-equipment', data.room_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast({ title: "Equipment Added", description: `${data.equipment_name} has been added to inventory.` });
     },
     onError: (error) => {
-      toast({ title: "Error", description: "Failed to add equipment.", variant: "destructive" });
+      toast({ title: "Error", description: `Failed to add equipment: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
       console.error(error);
     },
   });
@@ -201,6 +226,18 @@ export function useInstallRehearsalUpgrade() {
 
   return useMutation({
     mutationFn: async (upgrade: Omit<RehearsalRoomUpgrade, 'id' | 'created_at' | 'installed_at'>) => {
+      const companyId = await getCompanyIdFromRehearsalRoom(upgrade.room_id);
+      const cost = upgrade.cost || 0;
+
+      if (cost > 0) {
+        await deductCompanyBalance({
+          companyId,
+          amount: cost,
+          description: `Rehearsal upgrade: ${upgrade.name} Lv${upgrade.level}`,
+          category: "upgrade",
+        });
+      }
+
       const { data, error } = await supabase
         .from('rehearsal_room_upgrades')
         .insert(upgrade)
@@ -212,10 +249,11 @@ export function useInstallRehearsalUpgrade() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-upgrades', data.room_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast({ title: "Upgrade Installed", description: `${data.name} has been installed.` });
     },
     onError: (error) => {
-      toast({ title: "Error", description: "Failed to install upgrade.", variant: "destructive" });
+      toast({ title: "Error", description: `Failed to install upgrade: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
       console.error(error);
     },
   });

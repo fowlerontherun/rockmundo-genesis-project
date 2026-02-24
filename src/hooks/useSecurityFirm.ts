@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { SecurityFirm, SecurityGuard, SecurityContract } from "@/types/security";
+import { deductCompanyBalance, getCompanyIdFromSecurityFirm, COMPANY_BALANCE_QUERY_KEYS } from "./useCompanyBalanceDeduction";
 
 export const useSecurityFirm = (companyId: string | undefined) => {
   return useQuery<SecurityFirm | null>({
@@ -103,6 +104,16 @@ export const useHireGuard = () => {
       skillLevel: number;
       salaryPerEvent: number;
     }) => {
+      const companyId = await getCompanyIdFromSecurityFirm(firmId);
+      const hiringCost = salaryPerEvent * 10;
+
+      await deductCompanyBalance({
+        companyId,
+        amount: hiringCost,
+        description: `Hired guard: ${name}`,
+        category: "staff",
+      });
+
       const { data, error } = await supabase
         .from("security_guards")
         .insert({
@@ -120,6 +131,7 @@ export const useHireGuard = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["security-guards", variables.firmId] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast.success("Guard hired successfully!");
     },
     onError: (error: Error) => {

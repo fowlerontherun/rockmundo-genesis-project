@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { deductCompanyBalance, getCompanyIdFromMerchFactory, COMPANY_BALANCE_QUERY_KEYS } from "./useCompanyBalanceDeduction";
 import type { 
   MerchFactory, 
   MerchProductCatalog, 
@@ -269,6 +270,16 @@ export function useHireWorker() {
       skill_level?: number;
       salary_weekly?: number;
     }) => {
+      const companyId = await getCompanyIdFromMerchFactory(worker.factory_id);
+      const hiringCost = (worker.salary_weekly || 500) * 4;
+
+      await deductCompanyBalance({
+        companyId,
+        amount: hiringCost,
+        description: `Hired factory worker: ${worker.name}`,
+        category: "staff",
+      });
+
       const { data, error } = await supabase
         .from('merch_factory_workers')
         .insert(worker)
@@ -280,6 +291,7 @@ export function useHireWorker() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['merch-factory-workers', variables.factory_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast.success("Worker hired successfully!");
     },
     onError: (error) => {
