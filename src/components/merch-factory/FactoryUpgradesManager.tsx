@@ -8,6 +8,7 @@ import { Factory, ArrowUp, Lock, Zap, Check } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { deductCompanyBalance, getCompanyIdFromMerchFactory, COMPANY_BALANCE_QUERY_KEYS } from "@/hooks/useCompanyBalanceDeduction";
 
 interface FactoryUpgradesManagerProps {
   factoryId: string;
@@ -106,6 +107,15 @@ export function FactoryUpgradesManager({ factoryId, companyBalance = 0 }: Factor
         throw new Error('Maximum level reached');
       }
 
+      // Deduct from company balance
+      const companyId = await getCompanyIdFromMerchFactory(factoryId);
+      await deductCompanyBalance({
+        companyId,
+        amount: cost,
+        description: `Factory upgrade: ${upgradeType.name} Lv${newLevel}`,
+        category: "upgrade",
+      });
+
       const { error } = await supabase
         .from('merch_factory_upgrades')
         .upsert({
@@ -127,6 +137,7 @@ export function FactoryUpgradesManager({ factoryId, companyBalance = 0 }: Factor
       toast.success(`Upgrade installed! Level ${data.newLevel}`);
       queryClient.invalidateQueries({ queryKey: ['merch-factory-upgrades', factoryId] });
       queryClient.invalidateQueries({ queryKey: ['merch-factory-quality-modifier', factoryId] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
     },
     onError: (error: Error) => {
       toast.error(`Failed: ${error.message}`);

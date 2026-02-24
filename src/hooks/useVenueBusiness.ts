@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { VenueStaff, VenueBooking, VenueFinancialTransaction, VenueUpgrade } from "@/types/venue-business";
+import { deductCompanyBalance, getCompanyIdFromVenue, COMPANY_BALANCE_QUERY_KEYS } from "./useCompanyBalanceDeduction";
 
 export function useCompanyVenues(companyId: string | undefined) {
   return useQuery({
@@ -53,6 +54,16 @@ export function useHireVenueStaff() {
       skill_level?: number;
       salary_weekly?: number;
     }) => {
+      const companyId = await getCompanyIdFromVenue(staff.venue_id);
+      const hiringCost = (staff.salary_weekly || 500) * 4;
+
+      await deductCompanyBalance({
+        companyId,
+        amount: hiringCost,
+        description: `Hired venue staff: ${staff.name}`,
+        category: "staff",
+      });
+
       const { data, error } = await supabase
         .from('venue_staff')
         .insert(staff)
@@ -64,6 +75,7 @@ export function useHireVenueStaff() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['venue-staff', variables.venue_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast.success("Staff hired successfully!");
     },
     onError: (error) => {
@@ -221,6 +233,17 @@ export function useInstallVenueUpgrade() {
       cost: number;
       description?: string;
     }) => {
+      const companyId = await getCompanyIdFromVenue(upgrade.venue_id);
+
+      if (upgrade.cost > 0) {
+        await deductCompanyBalance({
+          companyId,
+          amount: upgrade.cost,
+          description: `Venue upgrade: ${upgrade.upgrade_type} Lv${upgrade.upgrade_level}`,
+          category: "upgrade",
+        });
+      }
+
       const { data, error } = await supabase
         .from('venue_upgrades')
         .insert(upgrade)
@@ -232,6 +255,7 @@ export function useInstallVenueUpgrade() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['venue-upgrades', variables.venue_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast.success("Upgrade installed!");
     },
     onError: (error) => {

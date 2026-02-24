@@ -8,6 +8,7 @@ import { Shield, ArrowUp, DollarSign, Zap, Lock, Check } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { deductCompanyBalance, getCompanyIdFromSecurityFirm, COMPANY_BALANCE_QUERY_KEYS } from "@/hooks/useCompanyBalanceDeduction";
 
 interface SecurityUpgradesManagerProps {
   firmId: string;
@@ -107,6 +108,15 @@ export function SecurityUpgradesManager({ firmId, companyBalance = 0 }: Security
         throw new Error('Maximum level reached');
       }
 
+      // Deduct from company balance
+      const companyId = await getCompanyIdFromSecurityFirm(firmId);
+      await deductCompanyBalance({
+        companyId,
+        amount: cost,
+        description: `Security upgrade: ${upgradeType.name} Lv${newLevel}`,
+        category: "upgrade",
+      });
+
       // Insert or update upgrade
       const { error } = await supabase
         .from('security_firm_upgrades')
@@ -129,6 +139,7 @@ export function SecurityUpgradesManager({ firmId, companyBalance = 0 }: Security
       toast.success(`Upgrade installed! Level ${data.newLevel}`);
       queryClient.invalidateQueries({ queryKey: ['security-firm-upgrades', firmId] });
       queryClient.invalidateQueries({ queryKey: ['security-firm-quality-modifier', firmId] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       setSelectedUpgrade(null);
     },
     onError: (error: Error) => {

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.856",
+    date: "2026-02-24",
+    changes: [
+      { type: 'feature', description: "Company Financial System Overhaul — all 7 subsidiary types (Security, Merch Factory, Logistics, Venue, Rehearsal Studio, Recording Studio, Record Label) now deduct from parent company balance when hiring staff, purchasing equipment, or installing upgrades" },
+      { type: 'feature', description: "Shared deductCompanyBalance utility ensures consistent balance checks, deductions, and company_transactions logging across all subsidiary actions" },
+      { type: 'feature', description: "Added Security Firm Upgrades panel to the Security Firm Management page — previously missing from the UI" },
+      { type: 'fix', description: "Hiring staff, buying equipment, and installing upgrades no longer succeed silently — they now require sufficient company funds and record expense transactions" },
+    ],
+  },
+  {
     version: "1.0.855",
     date: "2026-02-23",
     changes: [

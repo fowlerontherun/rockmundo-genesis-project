@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { LabelFinancialTransaction, LabelStaff, LabelDistributionDeal } from "@/types/label-business";
+import { deductCompanyBalance, getCompanyIdFromLabel, COMPANY_BALANCE_QUERY_KEYS } from "./useCompanyBalanceDeduction";
 
 export function useLabelFinancials(labelId: string | undefined) {
   return useQuery({
@@ -84,6 +85,16 @@ export function useHireLabelStaff() {
       specialty_genre?: string;
       salary_monthly?: number;
     }) => {
+      const companyId = await getCompanyIdFromLabel(staff.label_id);
+      const hiringCost = staff.salary_monthly || 2000;
+
+      await deductCompanyBalance({
+        companyId,
+        amount: hiringCost,
+        description: `Hired label staff: ${staff.name} (${staff.role})`,
+        category: "staff",
+      });
+
       const { data, error } = await supabase
         .from('label_staff')
         .insert(staff)
@@ -95,6 +106,7 @@ export function useHireLabelStaff() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['label-staff', variables.label_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast.success("Staff member hired!");
     },
     onError: (error) => {

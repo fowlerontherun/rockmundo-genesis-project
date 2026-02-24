@@ -7,6 +7,7 @@ import { useSecurityFirm } from "@/hooks/useSecurityFirm";
 import { useCompany } from "@/hooks/useCompanies";
 import { GuardRoster } from "@/components/security/GuardRoster";
 import { ContractsList } from "@/components/security/ContractsList";
+import { SecurityUpgradesManager } from "@/components/security/SecurityUpgradesManager";
 import { LICENSE_LEVEL_NAMES, LICENSE_LEVEL_VENUE_CAPACITY, EQUIPMENT_QUALITY_NAMES } from "@/types/security";
 import { VipGate } from "@/components/company/VipGate";
 
@@ -125,6 +126,9 @@ const SecurityFirmManagement = () => {
 
         {/* Contracts */}
         <ContractsList firmId={firm.id} />
+
+        {/* Upgrades */}
+        <SecurityUpgradesManager firmId={firm.id} companyBalance={company.balance || 0} />
       </div>
     </VipGate>
   );

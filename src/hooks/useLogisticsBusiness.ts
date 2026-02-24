@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { deductCompanyBalance, getCompanyIdFromLogistics, COMPANY_BALANCE_QUERY_KEYS } from "./useCompanyBalanceDeduction";
 import type {
   LogisticsCompany,
   LogisticsFleetVehicle,
@@ -184,6 +185,17 @@ export function useHireDriver() {
 
   return useMutation({
     mutationFn: async (data: Partial<LogisticsDriver>) => {
+      if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
+      const companyId = await getCompanyIdFromLogistics(data.logistics_company_id);
+      const hiringCost = (data.salary_per_day || 100) * 30;
+
+      await deductCompanyBalance({
+        companyId,
+        amount: hiringCost,
+        description: `Hired driver: ${data.name || 'Unknown'}`,
+        category: "staff",
+      });
+
       const { data: result, error } = await supabase
         .from("logistics_drivers")
         .insert(data as any)
@@ -195,6 +207,7 @@ export function useHireDriver() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["logistics-drivers", variables.logistics_company_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
     },
   });
 }
@@ -245,6 +258,19 @@ export function usePurchaseLogisticsUpgrade() {
 
   return useMutation({
     mutationFn: async (data: Partial<LogisticsUpgrade>) => {
+      if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
+      const companyId = await getCompanyIdFromLogistics(data.logistics_company_id);
+      const cost = data.cost || 0;
+
+      if (cost > 0) {
+        await deductCompanyBalance({
+          companyId,
+          amount: cost,
+          description: `Logistics upgrade: ${data.upgrade_type || 'Unknown'}`,
+          category: "upgrade",
+        });
+      }
+
       const { data: result, error } = await supabase
         .from("logistics_upgrades")
         .insert(data as any)
@@ -256,6 +282,7 @@ export function usePurchaseLogisticsUpgrade() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["logistics-upgrades", variables.logistics_company_id] });
+      COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
     },
   });
 }
