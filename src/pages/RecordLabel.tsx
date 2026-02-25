@@ -63,7 +63,7 @@ const RecordLabel = () => {
           .maybeSingle(),
         supabase
           .from("band_members")
-          .select("band_id, role, bands(id, name, genre)")
+          .select("band_id, role, bands:bands!band_members_band_id_fkey(id, name, genre)")
           .eq("user_id", userId),
       ]);
 

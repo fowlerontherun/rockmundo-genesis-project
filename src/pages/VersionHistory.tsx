@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.858",
+    date: "2026-02-25",
+    changes: [
+      { type: 'fix', description: "Fixed contract offers not appearing for band contracts — the artist-entities query on the Record Label page failed silently with a PGRST201 FK ambiguity error between band_members and bands, causing band_id filters to be missing from contract queries" },
+    ],
+  },
+  {
     version: "1.0.857",
     date: "2026-02-25",
     changes: [
