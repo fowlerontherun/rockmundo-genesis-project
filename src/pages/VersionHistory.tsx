@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.857",
+    date: "2026-02-25",
+    changes: [
+      { type: 'fix', description: "Fixed schedule page gigs not loading due to ambiguous FK relationship (PGRST201) — disambiguated bands and tours joins in gigs query" },
+      { type: 'fix', description: "Fixed tour travel not processing — edge function was using wrong column name 'travel_cost' instead of 'cost_paid' for player_travel_history, and missing required 'travel_duration_hours' field" },
+      { type: 'fix', description: "Fixed tour travel edge function filter on joined table status that prevented PostgREST from matching active tours — moved to client-side filtering" },
+    ],
+  },
+  {
     version: "1.0.856",
     date: "2026-02-24",
     changes: [
