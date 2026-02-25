@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
         travel_cost,
         departure_date,
         arrival_date,
+        travel_duration_hours,
         tours!inner(
           id,
           band_id,
@@ -39,14 +40,19 @@ Deno.serve(async (req) => {
         )
       `)
       .lte('departure_date', now)
-      .in('tours.status', ['active', 'scheduled', 'booked'])
 
     if (legsError) {
       console.error('[process-tour-travel] Error fetching tour legs:', legsError)
       throw legsError
     }
 
-    console.log(`[process-tour-travel] Found ${dueLegs?.length || 0} due tour travel legs`)
+    // Filter to only active/scheduled/booked tours client-side (avoids PostgREST .in on joined table issues)
+    const activeDueLegs = (dueLegs || []).filter((leg: any) => {
+      const tourStatus = leg.tours?.status
+      return ['active', 'scheduled', 'booked'].includes(tourStatus)
+    })
+
+    console.log(`[process-tour-travel] Found ${activeDueLegs.length} due tour travel legs (from ${dueLegs?.length || 0} total)`)
 
     let processedCount = 0
     let travelCreated = 0
@@ -65,13 +71,11 @@ Deno.serve(async (req) => {
       
       for (const travel of inProgressTravels) {
         try {
-          // Mark travel as completed
           await supabase
             .from('player_travel_history')
             .update({ status: 'completed' })
             .eq('id', travel.id)
 
-          // Update player's current city
           await supabase
             .from('profiles')
             .update({
@@ -90,7 +94,7 @@ Deno.serve(async (req) => {
     }
 
     // STEP 2: Process new tour legs
-    for (const leg of dueLegs || []) {
+    for (const leg of activeDueLegs) {
       try {
         const tour = (leg as any).tours
         if (!tour?.band_id) {
@@ -117,7 +121,7 @@ Deno.serve(async (req) => {
         for (const member of members || []) {
           if (!member.user_id) continue
 
-          // Check if travel already exists for this user and leg (by tour_leg_id)
+          // Check if travel already exists for this user and leg
           const { data: existingTravel } = await supabase
             .from('player_travel_history')
             .select('id, status')
@@ -132,19 +136,25 @@ Deno.serve(async (req) => {
 
           // Determine travel status based on current time vs arrival time
           const arrivalTime = new Date(leg.arrival_date)
+          const departureTime = new Date(leg.departure_date)
           const status = arrivalTime <= new Date() ? 'completed' : 'in_progress'
 
-          // Create player travel history entry
+          // Calculate duration in hours
+          const durationHours = leg.travel_duration_hours || 
+            Math.max(1, Math.round((arrivalTime.getTime() - departureTime.getTime()) / (1000 * 60 * 60)))
+
+          // Create player travel history entry with correct column names
           const { error: travelError } = await supabase
             .from('player_travel_history')
             .insert({
               user_id: member.user_id,
               from_city_id: leg.from_city_id,
               to_city_id: leg.to_city_id,
-              transport_type: leg.travel_mode,
-              travel_cost: 0, // Tour already paid for travel
+              transport_type: leg.travel_mode || 'bus',
+              cost_paid: 0, // Tour already paid for travel
               departure_time: leg.departure_date,
               arrival_time: leg.arrival_date,
+              travel_duration_hours: durationHours,
               status: status,
               tour_leg_id: leg.id,
             })
