@@ -85,15 +85,36 @@ export function useHireLabelStaff() {
       specialty_genre?: string;
       salary_monthly?: number;
     }) => {
-      const companyId = await getCompanyIdFromLabel(staff.label_id);
       const hiringCost = staff.salary_monthly || 2000;
 
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired label staff: ${staff.name} (${staff.role})`,
-        category: "staff",
-      });
+      // Try to deduct from parent company if label is a subsidiary
+      try {
+        const companyId = await getCompanyIdFromLabel(staff.label_id);
+        await deductCompanyBalance({
+          companyId,
+          amount: hiringCost,
+          description: `Hired label staff: ${staff.name} (${staff.role})`,
+          category: "staff",
+        });
+      } catch (e) {
+        // Label may not have a parent company — deduct from label balance instead
+        const { data: label, error: labelError } = await supabase
+          .from('labels')
+          .select('balance')
+          .eq('id', staff.label_id)
+          .single();
+
+        if (labelError || !label) throw new Error("Label not found");
+        if ((label.balance || 0) < hiringCost) {
+          throw new Error(`Insufficient label funds. Need $${hiringCost.toLocaleString()} but only have $${(label.balance || 0).toLocaleString()}`);
+        }
+
+        const { error: updateError } = await supabase
+          .from('labels')
+          .update({ balance: (label.balance || 0) - hiringCost })
+          .eq('id', staff.label_id);
+        if (updateError) throw updateError;
+      }
 
       const { data, error } = await supabase
         .from('label_staff')
@@ -107,6 +128,8 @@ export function useHireLabelStaff() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['label-staff', variables.label_id] });
       COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
+      queryClient.invalidateQueries({ queryKey: ['label-finance', variables.label_id] });
+      queryClient.invalidateQueries({ queryKey: ['my-labels'] });
       toast.success("Staff member hired!");
     },
     onError: (error) => {

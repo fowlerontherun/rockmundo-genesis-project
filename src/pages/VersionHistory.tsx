@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.859",
+    date: "2026-02-26",
+    changes: [
+      { type: 'fix', description: "Fixed record label staff hiring failing with 'Label company not found' — labels without a parent company now deduct from label balance instead" },
+      { type: 'fix', description: "Fixed gig stage skills always being default — fetchStageSkillAverage was querying profiles table instead of player_attributes where stage_presence and charisma are stored" },
+      { type: 'fix', description: "Fixed gig member skills showing 0 — added player attributes (musical_ability, technical_mastery, rhythm_sense) as a baseline when skill tree progress is empty, and added instrument skill fallback for cross-skill applicability" },
+      { type: 'improvement', description: "Added detailed logging to process-gig-song edge function for skill calculations to aid debugging" },
+    ],
+  },
+  {
     version: "1.0.858",
     date: "2026-02-25",
     changes: [
