@@ -1,0 +1,2 @@
+ALTER TABLE artist_label_contracts DROP CONSTRAINT artist_label_contracts_status_check;
+ALTER TABLE artist_label_contracts ADD CONSTRAINT artist_label_contracts_status_check CHECK (status = ANY (ARRAY['pending','offered','negotiating','accepted_by_artist','active','fulfilled','breached','expired','terminated','rejected','completed']));

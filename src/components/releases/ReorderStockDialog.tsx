@@ -26,9 +26,9 @@ interface ReorderStockDialogProps {
 }
 
 const MANUFACTURING_DAYS: Record<string, number> = {
-  vinyl: 14,
-  cd: 7,
-  cassette: 5,
+  vinyl: 2,
+  cd: 2,
+  cassette: 2,
 };
 
 export function ReorderStockDialog({ open, onOpenChange, format, release }: ReorderStockDialogProps) {
