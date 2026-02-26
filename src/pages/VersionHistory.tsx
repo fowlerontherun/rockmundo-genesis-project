@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.860",
+    date: "2026-02-26",
+    changes: [
+      { type: 'fix', description: "Fixed 'artist_label_contracts_status_check' constraint violation when accepting contracts — added 'accepted_by_artist' and 'negotiating' as valid contract statuses in the database" },
+      { type: 'fix', description: "Physical format sales (vinyl, CD, cassette) now correctly stop when stock reaches 0 — no phantom sales until restocked" },
+      { type: 'improvement', description: "Reduced restock manufacturing time from 5-14 days to 2 days for all physical formats (vinyl, CD, cassette)" },
+    ],
+  },
+  {
     version: "1.0.859",
     date: "2026-02-26",
     changes: [
