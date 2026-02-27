@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.862",
+    date: "2026-02-27",
+    changes: [
+      { type: 'fix', description: "Fixed Recorded Songs tab filters overflowing on mobile — search, genre, and sort controls now stack and use full width on small screens" },
+    ],
+  },
+  {
     version: "1.0.861",
     date: "2026-02-27",
     changes: [
