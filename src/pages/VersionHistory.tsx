@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.861",
+    date: "2026-02-27",
+    changes: [
+      { type: 'fix', description: "Fixed label upgrades not applying beyond level 1 — missing RLS UPDATE policy on label_upgrades table meant money was deducted but upgrades silently failed" },
+      { type: 'fix', description: "Fixed all songs having quality 100 — the create_song_from_completed_project DB trigger was capping quality at LEAST(100,...) instead of using the full 0-1000 scale from the songwriting project" },
+      { type: 'fix', description: "Removed duplicate DB trigger on songwriting_projects that was firing song creation twice" },
+      { type: 'fix', description: "Retroactively corrected quality scores for existing songs that were incorrectly capped at 100" },
+    ],
+  },
+  {
     version: "1.0.860",
     date: "2026-02-26",
     changes: [
