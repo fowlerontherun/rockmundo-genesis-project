@@ -156,8 +156,8 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by title or artist..."
@@ -166,10 +166,10 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Select value={genreFilter} onValueChange={setGenreFilter}>
-            <SelectTrigger className="w-[140px]">
-              <Filter className="h-4 w-4 mr-2" />
+            <SelectTrigger className="w-full">
+              <Filter className="h-4 w-4 mr-2 shrink-0" />
               <SelectValue placeholder="Genre" />
             </SelectTrigger>
             <SelectContent>
@@ -180,8 +180,8 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[160px]">
-              <ArrowUpDown className="h-4 w-4 mr-2" />
+            <SelectTrigger className="w-full">
+              <ArrowUpDown className="h-4 w-4 mr-2 shrink-0" />
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
