@@ -276,14 +276,18 @@ serve(async (req) => {
           const hypeScore = (release as any).hype_score || 0;
           const hypeMultiplier = 1 + (hypeScore / 500);
           const releasedDate = (release as any).manufacturing_complete_at || release.created_at;
-          const daysSinceRelease = releasedDate ? (Date.now() - new Date(releasedDate).getTime()) / (1000 * 60 * 60 * 24) : 999;
-          // Graduated age decay: new releases sell more, old releases taper off
-          const ageDecay = daysSinceRelease <= 7 ? 1.5
-            : daysSinceRelease <= 30 ? 1.0
-            : daysSinceRelease <= 60 ? 0.7
-            : daysSinceRelease <= 90 ? 0.5
-            : daysSinceRelease <= 180 ? 0.35
-            : 0.2;
+          const realDaysSinceRelease = releasedDate ? (Date.now() - new Date(releasedDate).getTime()) / (1000 * 60 * 60 * 24) : 999;
+          // Convert to game days (game runs at 3x speed: 10 real days = 30 game days)
+          const gameDaysSinceRelease = realDaysSinceRelease * 3;
+          // Graduated age decay based on GAME days: new releases sell more, old releases taper off
+          const ageDecay = gameDaysSinceRelease <= 7 ? 1.5
+            : gameDaysSinceRelease <= 14 ? 1.2
+            : gameDaysSinceRelease <= 30 ? 1.0
+            : gameDaysSinceRelease <= 60 ? 0.7
+            : gameDaysSinceRelease <= 90 ? 0.5
+            : gameDaysSinceRelease <= 180 ? 0.35
+            : gameDaysSinceRelease <= 360 ? 0.2
+            : 0.1;
 
           const calculatedSales = Math.floor(
             baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier * hypeMultiplier * ageDecay * christmasMultiplier

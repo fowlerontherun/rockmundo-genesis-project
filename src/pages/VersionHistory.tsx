@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.864",
+    date: "2026-02-28",
+    changes: [
+      { type: 'fix', description: "Fixed songs not dropping in charts/sales over time — age decay now uses game-time days (3x real days) instead of real days, so older releases properly lose sales momentum" },
+      { type: 'improvement', description: "Added more granular age decay tiers: 14-day boost window, and a 0.1x long tail for songs over 1 game year old" },
+    ],
+  },
+  {
     version: "1.0.863",
     date: "2026-02-28",
     changes: [
