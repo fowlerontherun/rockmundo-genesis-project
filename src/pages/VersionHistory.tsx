@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.863",
+    date: "2026-02-28",
+    changes: [
+      { type: 'fix', description: "Fixed tour travel not moving players — process-tour-travel now sets is_traveling, travel_arrives_at on profiles and creates player_scheduled_activities for activity blocking" },
+      { type: 'fix', description: "Fixed tour travel always showing 12 hours — travel legs now calculate real duration using Haversine distance and transport mode speeds instead of spanning full days" },
+      { type: 'fix', description: "Tour travel legs now include travel_duration_hours and proper arrival_date based on departure + calculated duration" },
+      { type: 'improvement', description: "Tour travel departure set to 8 AM the day after a gig instead of midnight, with arrival based on actual travel time" },
+    ],
+  },
+  {
     version: "1.0.862",
     date: "2026-02-27",
     changes: [

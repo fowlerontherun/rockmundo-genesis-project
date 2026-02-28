@@ -558,25 +558,60 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         }
       }
 
-      // Create travel legs between consecutive venues
+      // Create travel legs between consecutive venues with real durations
       if (venueMatches.length > 1) {
+        // Fetch city coordinates for duration calculation
+        const cityIds = [...new Set(venueMatches.map(v => v.cityId))];
+        const { data: citiesData } = await supabase
+          .from('cities')
+          .select('id, latitude, longitude')
+          .in('id', cityIds);
+        
+        const cityCoords = new Map(
+          (citiesData || []).map(c => [c.id, { lat: c.latitude, lon: c.longitude }])
+        );
+
         const travelLegs = [];
         for (let i = 0; i < venueMatches.length - 1; i++) {
           const fromVenue = venueMatches[i];
           const toVenue = venueMatches[i + 1];
           
+          // Depart morning after the gig (8 AM)
           const departureDate = new Date(fromVenue.date);
           departureDate.setDate(departureDate.getDate() + 1);
-          const arrivalDate = new Date(toVenue.date);
+          departureDate.setHours(8, 0, 0, 0);
+
+          // Calculate real duration from city coordinates
+          const from = cityCoords.get(fromVenue.cityId);
+          const to = cityCoords.get(toVenue.cityId);
+          let durationHours = 6; // fallback
+          const mode = state.travelMode || 'bus';
+          
+          if (from?.lat && from?.lon && to?.lat && to?.lon) {
+            const R = 6371;
+            const dLat = (to.lat - from.lat) * Math.PI / 180;
+            const dLon = (to.lon - from.lon) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+            const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            
+            const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
+            const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
+            const speed = speeds[mode] || 56;
+            const buffer = buffers[mode] || 0.3;
+            durationHours = Math.max(1, Math.round((distanceKm / speed + buffer) * 10) / 10);
+          }
+
+          const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
           
           travelLegs.push({
             tour_id: tour.id,
             from_city_id: fromVenue.cityId,
             to_city_id: toVenue.cityId,
-            travel_mode: state.travelMode || 'bus',
+            travel_mode: mode,
             travel_cost: 0,
             departure_date: departureDate.toISOString(),
             arrival_date: arrivalDate.toISOString(),
+            travel_duration_hours: Math.ceil(durationHours),
             sequence_order: i,
           });
         }

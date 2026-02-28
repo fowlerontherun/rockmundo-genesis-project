@@ -203,6 +203,15 @@ const TourManager = () => {
         .eq('id', tourId)
         .single();
 
+      // Fetch city coordinates for real duration calculation
+      const cityIds = [...new Set(tourVenuesData.flatMap(v => v.city_id ? [v.city_id] : []))];
+      const { data: citiesData } = await supabase
+        .from('cities')
+        .select('id, latitude, longitude')
+        .in('id', cityIds);
+      const cityCoordMap: Record<string, { lat: number | null; lon: number | null }> = {};
+      (citiesData || []).forEach(c => { cityCoordMap[c.id] = { lat: c.latitude, lon: c.longitude }; });
+
       // Create travel legs between consecutive venues
       const travelLegs = [];
       for (let i = 0; i < tourVenuesData.length - 1; i++) {
@@ -211,13 +220,28 @@ const TourManager = () => {
         
         const departureDate = new Date(fromVenue.date);
         departureDate.setDate(departureDate.getDate() + 1);
-        const arrivalDate = new Date(toVenue.date);
+        departureDate.setHours(8, 0, 0, 0);
         
-        // Ensure travel_mode is a valid value
         let travelMode = tour?.travel_mode || 'bus';
         if (!['bus', 'train', 'plane', 'ship', 'tour_bus'].includes(travelMode)) {
           travelMode = 'bus';
         }
+
+        // Calculate real duration from city coordinates
+        const from = cityCoordMap[fromVenue.city_id];
+        const to = cityCoordMap[toVenue.city_id];
+        let durationHours = 6;
+        if (from?.lat && from?.lon && to?.lat && to?.lon) {
+          const R = 6371;
+          const dLat = (to.lat - from.lat) * Math.PI / 180;
+          const dLon = (to.lon - from.lon) * Math.PI / 180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+          const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
+          const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
+          durationHours = Math.max(1, Math.round((distanceKm / (speeds[travelMode] || 56) + (buffers[travelMode] || 0.3)) * 10) / 10);
+        }
+        const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
         
         travelLegs.push({
           tour_id: tourId,
@@ -227,6 +251,7 @@ const TourManager = () => {
           travel_cost: 0,
           departure_date: departureDate.toISOString(),
           arrival_date: arrivalDate.toISOString(),
+          travel_duration_hours: Math.ceil(durationHours),
           sequence_order: i,
         });
       }
