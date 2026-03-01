@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.865",
+    date: "2026-03-01",
+    changes: [
+      { type: 'feature', description: "Territory-Based Distribution System — choose which countries to release in with distance-based pricing (Domestic 1x, Regional 1.5x, Continental 2.5x, Intercontinental 4x for physical)" },
+      { type: 'feature', description: "New Territory Selection step in the Release Wizard (now 5 steps) — countries grouped by region with per-country cost breakdown and auto-selected home country" },
+      { type: 'feature', description: "Per-territory daily sales generation — sales now calculated per-country using band_country_fans fame data instead of a single global multiplier" },
+      { type: 'feature', description: "Territory-aware streaming — streams weighted by country fame, listener_region now maps to actual distribution territories" },
+      { type: 'feature', description: "Territory-aware streaming charts — regional charts (US, UK, etc.) only include songs distributed to that region's territories" },
+      { type: 'feature', description: "Spillover system — 10% passive sales/streams in countries adjacent to active territories" },
+      { type: 'improvement', description: "Streaming Distribution step now shows selected territories and platform count" },
+      { type: 'improvement', description: "Release cost now includes territory distribution fees — visible in the wizard total" },
+    ],
+  },
+  {
     version: "1.0.864",
     date: "2026-02-28",
     changes: [

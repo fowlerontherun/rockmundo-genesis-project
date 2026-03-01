@@ -19,7 +19,6 @@ Deno.serve(async (req) => {
     console.log('Starting auto-distribute-streaming function...');
 
     // Find releases that completed manufacturing and have streaming platforms
-    // Use raw query to properly check for non-empty arrays
     const { data: allReleases, error: releasesError } = await supabase
       .from('releases')
       .select(`
@@ -55,9 +54,20 @@ Deno.serve(async (req) => {
     console.log(`Found ${releases.length} releases to process`);
     let distributionCount = 0;
 
+    // Pre-fetch territories for all releases being processed
+    const releaseIds = releases.map(r => r.id);
+    const { data: allTerritories } = await supabase
+      .from('release_territories')
+      .select('release_id, country, is_active')
+      .in('release_id', releaseIds)
+      .eq('is_active', true);
+
     for (const release of releases) {
       const platformIds = release.streaming_platforms || [];
-      console.log(`Processing release ${release.id} with ${platformIds.length} platforms`);
+      const releaseTerritories = (allTerritories || []).filter(t => t.release_id === release.id);
+      const territoryCountries = releaseTerritories.map(t => t.country);
+      
+      console.log(`Processing release ${release.id} with ${platformIds.length} platforms, ${territoryCountries.length} territories`);
       
       for (const platformId of platformIds) {
         // Get platform name for logging
@@ -88,7 +98,7 @@ Deno.serve(async (req) => {
               userId = band?.leader_id;
             }
             
-            // Create song release with all required fields
+            // Create song release with territory info
             const { error: insertError } = await supabase
               .from('song_releases')
               .insert({
@@ -109,7 +119,7 @@ Deno.serve(async (req) => {
               console.error(`Error inserting song_release: ${insertError.message}`);
             } else {
               distributionCount++;
-              console.log(`Distributed song ${releaseSong.song_id} to ${platform?.platform_name || platformId}`);
+              console.log(`Distributed song ${releaseSong.song_id} to ${platform?.platform_name || platformId} (${territoryCountries.length} territories)`);
             }
           } else {
             console.log(`Song ${releaseSong.song_id} already distributed to ${platform?.platform_name || platformId}`);

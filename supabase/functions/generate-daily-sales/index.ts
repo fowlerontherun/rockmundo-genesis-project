@@ -116,6 +116,7 @@ serve(async (req) => {
         release_type,
         hype_score,
         manufacturing_complete_at,
+        home_country,
         bands(id, fame, popularity, chemistry_level, home_city_id),
         release_formats(id, format_type, retail_price, quantity),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
@@ -153,44 +154,31 @@ serve(async (req) => {
     const marketMultiplier = Math.max(1, Math.min(marketScarcityMaxMultiplier, 100 / Math.max(activeBandCount || 100, marketScarcityMinBands)));
     console.log(`Market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
-    // Helper function to calculate regional sales multiplier
-    function calculateRegionalSalesMultiplier(countryFame: number, hasPerformed: boolean, globalFame: number): number {
-      // Base multiplier from country fame (0.5x to 2x) scaled by regional weight
-      const countryBase = 0.5 + (countryFame / 10000) * 1.5 * regionalFameWeight;
-      // Bonus for having performed in the country (configurable)
-      const performedBonusMult = hasPerformed ? performedCountryBonus : 1.0;
-      // Global fame provides a floor (never go below 0.3x of what global fame would give)
-      const globalFloor = 0.3 + (globalFame / fameDivisor) * 0.7;
-      return Math.max(countryBase * performedBonusMult, globalFloor);
+    // Pre-fetch all release territories
+    const releaseIds = (releases || []).map(r => r.id);
+    let allTerritories: any[] = [];
+    if (releaseIds.length > 0) {
+      const { data: territories } = await supabaseClient
+        .from("release_territories")
+        .select("release_id, country, distance_tier, cost_multiplier, is_active")
+        .in("release_id", releaseIds)
+        .eq("is_active", true);
+      allTerritories = territories || [];
     }
 
-    // Helper to get distribution rate by format
-    function getDistributionRate(formatType: string): number {
-      switch (formatType) {
-        case "digital": return digitalDistributionRate;
-        case "cd": return cdDistributionRate;
-        case "vinyl": return vinylDistributionRate;
-        case "cassette": return cassetteDistributionRate;
-        default: return 0.25; // default 25%
-      }
-    }
-
-    // Helper to get city sales tax rate
-    async function getCitySalesTaxRate(cityId: string | null): Promise<number> {
-      if (!cityId) return defaultSalesTaxRate;
-      
-      const { data: cityLaws } = await supabaseClient
-        .from("city_laws")
-        .select("sales_tax_rate")
-        .eq("city_id", cityId)
-        .is("effective_until", null)
-        .maybeSingle();
-      
-      if (cityLaws?.sales_tax_rate != null) {
-        return cityLaws.sales_tax_rate / 100;
-      }
-      return defaultSalesTaxRate;
-    }
+    // Region adjacency for spillover
+    const regionAdjacency: Record<string, string[]> = {
+      "Europe": ["Middle East", "Africa"],
+      "Middle East": ["Europe", "Asia", "Africa"],
+      "Africa": ["Europe", "Middle East"],
+      "North America": ["Central America", "Caribbean", "South America"],
+      "Central America": ["North America", "South America", "Caribbean"],
+      "Caribbean": ["North America", "Central America", "South America"],
+      "South America": ["North America", "Central America", "Caribbean"],
+      "Asia": ["Oceania", "Middle East", "South East Asia"],
+      "South East Asia": ["Asia", "Oceania"],
+      "Oceania": ["Asia", "South East Asia"],
+    };
 
     for (const release of releases || []) {
       try {
@@ -208,27 +196,38 @@ serve(async (req) => {
         // Get city sales tax rate
         const salesTaxRate = await getCitySalesTaxRate(homeCityId);
 
-        // Fetch regional fame data for bands
-        let regionalMultiplier = 1.0;
+        // Get territories for this release
+        const releaseTerritories = allTerritories.filter(t => t.release_id === release.id);
+        const hasTerritories = releaseTerritories.length > 0;
+
+        // Fetch ALL country fans for this band
+        let countryFansMap = new Map<string, { fame: number; has_performed: boolean; total_fans: number }>();
+        let globalFame = artistFame;
+        
         if (release.band_id) {
           const { data: countryFans } = await supabaseClient
             .from("band_country_fans")
-            .select("fame, has_performed, total_fans")
+            .select("country, fame, has_performed, total_fans")
             .eq("band_id", release.band_id);
           
           if (countryFans && countryFans.length > 0) {
-            // Calculate weighted global fame
+            for (const cf of countryFans) {
+              countryFansMap.set(cf.country, cf);
+            }
             const totalFans = countryFans.reduce((sum, cf) => sum + (cf.total_fans || 0), 0);
-            const globalFame = totalFans > 0 
+            globalFame = totalFans > 0 
               ? countryFans.reduce((sum, cf) => sum + (cf.fame || 0) * (cf.total_fans || 0), 0) / totalFans
               : artistFame;
-            
-            // Use home country fame for base sales calculation
-            const homeCountryData = countryFans.find(cf => true); // Default to first entry
-            const countryFame = homeCountryData?.fame || artistFame;
-            const hasPerformed = homeCountryData?.has_performed || false;
-            
-            regionalMultiplier = calculateRegionalSalesMultiplier(countryFame, hasPerformed, globalFame);
+          }
+        }
+
+        // If no territories, use legacy global logic
+        let regionalMultiplier = 1.0;
+        if (!hasTerritories) {
+          // Legacy: use first country fan entry like before
+          const firstEntry = countryFansMap.values().next().value;
+          if (firstEntry) {
+            regionalMultiplier = calculateRegionalSalesMultiplier(firstEntry.fame, firstEntry.has_performed, globalFame);
           }
         }
 
@@ -289,111 +288,129 @@ serve(async (req) => {
             : gameDaysSinceRelease <= 360 ? 0.2
             : 0.1;
 
-          const calculatedSales = Math.floor(
-            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * regionalMultiplier * hypeMultiplier * ageDecay * christmasMultiplier
-          );
+          // Territory-aware sales: generate per-country if territories exist
+          const territoriesToProcess = hasTerritories 
+            ? releaseTerritories 
+            : [{ country: null, distance_tier: 'domestic', cost_multiplier: 1.0 }]; // Legacy single entry
 
-          // For digital, no stock limit. For physical, cap at available stock
-          const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
-
-          if (actualSales > 0) {
-            // retail_price is stored in CENTS — convert to dollars for revenue calc
-            const retailPriceDollars = retailPrice / 100;
-            const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
-            
-            // Calculate tax and distribution deductions
-            const distributionRate = getDistributionRate(format.format_type);
-            const salesTaxAmount = Math.round(grossRevenue * salesTaxRate * 100) / 100;
-            const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
-            const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
-            
-            // Store in cents in release_sales
-            const unitPriceCents = retailPrice; // already in cents
-            const totalAmountCents = Math.round(grossRevenue * 100);
-            const salesTaxCents = Math.round(salesTaxAmount * 100);
-            const distributionFeeCents = Math.round(distributionFee * 100);
-            const netRevenueCents = Math.round(netRevenue * 100);
-
-            await supabaseClient.from("release_sales").insert({
-              release_format_id: format.id,
-              quantity_sold: actualSales,
-              unit_price: unitPriceCents,
-              total_amount: totalAmountCents,
-              sale_date: new Date().toISOString().split("T")[0],
-              platform: isDigital ? "digital_store" : "physical_store",
-              // New tax/distribution columns
-              sales_tax_amount: salesTaxCents,
-              sales_tax_rate: salesTaxRate * 100,
-              distribution_fee: distributionFeeCents,
-              distribution_rate: distributionRate * 100,
-              net_revenue: netRevenueCents,
-              city_id: homeCityId,
-            });
-
-            // Only decrement stock for physical formats
-            if (!isDigital) {
-              await supabaseClient
-                .from("release_formats")
-                .update({ quantity: (format.quantity || 0) - actualSales })
-                .eq("id", format.id);
+          for (const territory of territoriesToProcess) {
+            // Calculate per-territory regional multiplier
+            let territoryRegionalMult = regionalMultiplier;
+            if (hasTerritories && territory.country) {
+              const countryData = countryFansMap.get(territory.country);
+              const countryFame = countryData?.fame || 0;
+              const hasPerformed = countryData?.has_performed || false;
+              territoryRegionalMult = calculateRegionalSalesMultiplier(countryFame, hasPerformed, globalFame);
+              // Scale down sales for more expensive territories (harder markets)
+              territoryRegionalMult *= (1 / Math.sqrt(territory.cost_multiplier || 1));
             }
 
-            // Update release revenue with GROSS (in dollars for display)
-            await supabaseClient.rpc("increment_release_revenue", {
-              release_id: release.id,
-              amount: grossRevenue,
-            });
+            const calculatedSales = Math.floor(
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier
+              / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1) // Split sales across territories
+            );
 
-            // Update per-format and total unit counters on release
-            const formatColumn = format.format_type === "digital" ? "digital_sales" 
-              : format.format_type === "cd" ? "cd_sales"
-              : format.format_type === "vinyl" ? "vinyl_sales"
-              : format.format_type === "cassette" ? "cassette_sales"
-              : null;
-            
-            if (formatColumn) {
-              const updateObj: Record<string, any> = {};
-              // Fetch current values to increment
-              const { data: currentRelease } = await supabaseClient
-                .from("releases")
-                .select(`total_units_sold, ${formatColumn}`)
-                .eq("id", release.id)
-                .single();
+            // For digital, no stock limit. For physical, cap at available stock
+            const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
+
+            if (actualSales > 0) {
+              // retail_price is stored in CENTS — convert to dollars for revenue calc
+              const retailPriceDollars = retailPrice / 100;
+              const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
               
-              if (currentRelease) {
-                updateObj.total_units_sold = (currentRelease.total_units_sold || 0) + actualSales;
-                updateObj[formatColumn] = (currentRelease[formatColumn] || 0) + actualSales;
-                await supabaseClient.from("releases").update(updateObj).eq("id", release.id);
-              }
-            }
+              // Calculate tax and distribution deductions
+              const distributionRate = getDistributionRate(format.format_type);
+              const salesTaxAmount = Math.round(grossRevenue * salesTaxRate * 100) / 100;
+              const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
+              const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
+              
+              // Store in cents in release_sales
+              const unitPriceCents = retailPrice;
+              const totalAmountCents = Math.round(grossRevenue * 100);
+              const salesTaxCents = Math.round(salesTaxAmount * 100);
+              const distributionFeeCents = Math.round(distributionFee * 100);
+              const netRevenueCents = Math.round(netRevenue * 100);
 
-            // Accumulate NET revenue per band for batch crediting at end
-            if (release.band_id) {
-              const existing = bandRevenueAccumulator.get(release.band_id) || { netRevenue: 0, grossRevenue: 0, units: 0, taxRate: salesTaxRate, formats: [] };
-              existing.netRevenue += netRevenue;
-              existing.grossRevenue += grossRevenue;
-              existing.units += actualSales;
-              if (!existing.formats.includes(format.format_type)) {
-                existing.formats.push(format.format_type);
+              await supabaseClient.from("release_sales").insert({
+                release_format_id: format.id,
+                quantity_sold: actualSales,
+                unit_price: unitPriceCents,
+                total_amount: totalAmountCents,
+                sale_date: new Date().toISOString().split("T")[0],
+                platform: isDigital ? "digital_store" : "physical_store",
+                sales_tax_amount: salesTaxCents,
+                sales_tax_rate: salesTaxRate * 100,
+                distribution_fee: distributionFeeCents,
+                distribution_rate: distributionRate * 100,
+                net_revenue: netRevenueCents,
+                city_id: homeCityId,
+                country: territory.country || null,
+              });
+
+              // Only decrement stock for physical formats
+              if (!isDigital) {
+                await supabaseClient
+                  .from("release_formats")
+                  .update({ quantity: (format.quantity || 0) - actualSales })
+                  .eq("id", format.id);
               }
-              bandRevenueAccumulator.set(release.band_id, existing);
-            }
-            const famePerSale = isDigital ? 0.1 : 0.2;
-            for (const rs of release.release_songs || []) {
-              if (rs.song_id) {
-                const fameGain = Math.floor(actualSales * famePerSale);
-                if (fameGain > 0) {
-                  await supabaseClient.rpc('update_song_fame', {
-                    p_song_id: rs.song_id,
-                    p_fame_amount: fameGain,
-                    p_source: 'sales'
-                  });
+
+              // Update release revenue with GROSS (in dollars for display)
+              await supabaseClient.rpc("increment_release_revenue", {
+                release_id: release.id,
+                amount: grossRevenue,
+              });
+
+              // Update per-format and total unit counters on release
+              const formatColumn = format.format_type === "digital" ? "digital_sales" 
+                : format.format_type === "cd" ? "cd_sales"
+                : format.format_type === "vinyl" ? "vinyl_sales"
+                : format.format_type === "cassette" ? "cassette_sales"
+                : null;
+              
+              if (formatColumn) {
+                const updateObj: Record<string, any> = {};
+                const { data: currentRelease } = await supabaseClient
+                  .from("releases")
+                  .select(`total_units_sold, ${formatColumn}`)
+                  .eq("id", release.id)
+                  .single();
+                
+                if (currentRelease) {
+                  updateObj.total_units_sold = (currentRelease.total_units_sold || 0) + actualSales;
+                  updateObj[formatColumn] = (currentRelease[formatColumn] || 0) + actualSales;
+                  await supabaseClient.from("releases").update(updateObj).eq("id", release.id);
                 }
               }
-            }
 
-            totalSales += actualSales;
-          }
+              // Accumulate NET revenue per band for batch crediting at end
+              if (release.band_id) {
+                const existing = bandRevenueAccumulator.get(release.band_id) || { netRevenue: 0, grossRevenue: 0, units: 0, taxRate: salesTaxRate, formats: [] };
+                existing.netRevenue += netRevenue;
+                existing.grossRevenue += grossRevenue;
+                existing.units += actualSales;
+                if (!existing.formats.includes(format.format_type)) {
+                  existing.formats.push(format.format_type);
+                }
+                bandRevenueAccumulator.set(release.band_id, existing);
+              }
+              const famePerSale = isDigital ? 0.1 : 0.2;
+              for (const rs of release.release_songs || []) {
+                if (rs.song_id) {
+                  const fameGain = Math.floor(actualSales * famePerSale);
+                  if (fameGain > 0) {
+                    await supabaseClient.rpc('update_song_fame', {
+                      p_song_id: rs.song_id,
+                      p_fame_amount: fameGain,
+                      p_source: 'sales'
+                    });
+                  }
+                }
+              }
+
+              totalSales += actualSales;
+            }
+          } // end territory loop
         }
         // Hype decay: 5% per day after first week
         const hypeScoreVal = (release as any).hype_score || 0;

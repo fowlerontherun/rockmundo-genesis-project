@@ -20974,6 +20974,54 @@ export type Database = {
           },
         ]
       }
+      release_territories: {
+        Row: {
+          cost_multiplier: number
+          country: string
+          created_at: string
+          distance_tier: string
+          distribution_cost: number
+          id: string
+          is_active: boolean
+          release_id: string
+        }
+        Insert: {
+          cost_multiplier?: number
+          country: string
+          created_at?: string
+          distance_tier?: string
+          distribution_cost?: number
+          id?: string
+          is_active?: boolean
+          release_id: string
+        }
+        Update: {
+          cost_multiplier?: number
+          country?: string
+          created_at?: string
+          distance_tier?: string
+          distribution_cost?: number
+          id?: string
+          is_active?: boolean
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_territories_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_territories_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       releases: {
         Row: {
           artist_name: string
@@ -20986,6 +21034,7 @@ export type Database = {
           created_at: string
           digital_sales: number | null
           format_type: string | null
+          home_country: string | null
           hype_score: number | null
           id: string
           is_greatest_hits: boolean | null
@@ -21024,6 +21073,7 @@ export type Database = {
           created_at?: string
           digital_sales?: number | null
           format_type?: string | null
+          home_country?: string | null
           hype_score?: number | null
           id?: string
           is_greatest_hits?: boolean | null
@@ -21062,6 +21112,7 @@ export type Database = {
           created_at?: string
           digital_sales?: number | null
           format_type?: string | null
+          home_country?: string | null
           hype_score?: number | null
           id?: string
           is_greatest_hits?: boolean | null

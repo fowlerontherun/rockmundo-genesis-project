@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { ReleaseTypeSelector, ReleaseType } from "./ReleaseTypeSelector";
 import { SongSelectionStep, SongSelection } from "./SongSelectionStep";
 import { FormatSelectionStep } from "./FormatSelectionStep";
+import { TerritorySelectionStep, TerritorySelection } from "./TerritorySelectionStep";
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -37,6 +38,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [artistName, setArtistName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState<SongSelection[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<any[]>([]);
+  const [selectedTerritories, setSelectedTerritories] = useState<TerritorySelection[]>([]);
   const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
@@ -56,6 +58,34 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       return data?.bands || null;
     }
   });
+
+  // Get band's home country & region from home city
+  const { data: bandHomeInfo } = useQuery({
+    queryKey: ["band-home-info", userBand?.id],
+    queryFn: async () => {
+      if (!userBand?.home_city_id) return null;
+      const { data } = await supabase
+        .from("cities")
+        .select("country, region")
+        .eq("id", userBand.home_city_id)
+        .single();
+      return data;
+    },
+    enabled: !!userBand?.home_city_id,
+  });
+
+  // Auto-select home country as territory when bandHomeInfo loads
+  useEffect(() => {
+    if (bandHomeInfo && selectedTerritories.length === 0) {
+      setSelectedTerritories([{
+        country: bandHomeInfo.country,
+        region: bandHomeInfo.region,
+        distanceTier: "domestic",
+        costMultiplier: 1.0,
+        distributionCost: hasPhysicalFormats ? 5000 : 1000,
+      }]);
+    }
+  }, [bandHomeInfo]);
 
   // Check greatest hits eligibility
   const { data: greatestHitsEligibility } = useQuery({
@@ -81,6 +111,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     }
   }, [userBand, artistName]);
 
+  const hasPhysicalFormats = selectedFormats.some(f => 
+    f.format_type === "vinyl" || f.format_type === "cd" || f.format_type === "cassette"
+  );
+
   // Calculate manufacturing completion date
   const getManufacturingCompleteDate = () => {
     if (selectedFormats.length === 0) return addDays(new Date(), 2);
@@ -93,10 +127,13 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const manufacturingCompleteDate = getManufacturingCompleteDate();
   const isScheduledTooEarly = scheduledReleaseDate && isBefore(scheduledReleaseDate, manufacturingCompleteDate);
 
+  const territoryCost = selectedTerritories.reduce((sum, t) => sum + t.distributionCost, 0);
+
   const createRelease = useMutation({
     mutationFn: async () => {
-      // Calculate total cost and manufacturing time (2-14 days based on format complexity)
-      const totalCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
+      // Calculate total cost including territory distribution
+      const formatCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
+      const totalCost = formatCost + territoryCost;
       
       const manufacturingDays = selectedFormats.reduce((max, format) => {
         const days = MANUFACTURING_DAYS[format.format_type] || 2;
@@ -130,9 +167,9 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           band_id: userBand.id,
           amount: -totalCost,
           source: "release",
-          description: `Release manufacturing: ${title}`,
+          description: `Release manufacturing: ${title} (includes $${(territoryCost / 100).toFixed(2)} distribution to ${selectedTerritories.length} territories)`,
           earned_by_user_id: userId,
-          metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type) }
+          metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type), territories: selectedTerritories.length }
         });
       }
 
@@ -154,11 +191,32 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           revenue_share_enabled: revenueShareEnabled,
           revenue_share_percentage: revenueShareEnabled ? 10 : null,
           manufacturing_discount_percentage: revenueShareEnabled ? 50 : null,
+          home_country: bandHomeInfo?.country || null,
         })
         .select()
         .single();
 
       if (releaseError) throw releaseError;
+
+      // Save territories
+      if (selectedTerritories.length > 0) {
+        const territoryInserts = selectedTerritories.map(t => ({
+          release_id: release.id,
+          country: t.country,
+          distance_tier: t.distanceTier,
+          cost_multiplier: t.costMultiplier,
+          distribution_cost: t.distributionCost,
+          is_active: true,
+        }));
+
+        const { error: territoryError } = await supabase
+          .from("release_territories")
+          .insert(territoryInserts);
+
+        if (territoryError) {
+          console.error("Error saving territories:", territoryError);
+        }
+      }
 
       // Update last_greatest_hits_date if this is a greatest hits album
       if (releaseType === "greatest_hits" && userBand?.id) {
@@ -168,14 +226,13 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           .eq("id", release.id);
       }
 
-      // Add songs with their recording versions - use actual song UUIDs
+      // Add songs with their recording versions
       const songInserts = selectedSongs.map((song, index) => ({
         release_id: release.id,
         song_id: song.songId,
         track_number: index + 1,
         is_b_side: releaseType === "single" && index === 1,
         recording_version: song.version,
-        // Track album exclusivity - only for regular albums, not greatest hits
         album_release_id: releaseType === "album" ? release.id : null
       }));
 
@@ -203,7 +260,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         bandId: userBand?.id,
         activityType: 'release_created',
         activityCategory: 'release',
-        description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}" - Manufacturing in progress`,
+        description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}" - Manufacturing in progress (${selectedTerritories.length} territories)`,
         amount: -totalCost,
         metadata: {
           releaseId: release.id,
@@ -214,6 +271,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           songCount: selectedSongs.length,
           manufacturingDays,
           streamingPlatforms: selectedStreamingPlatforms,
+          territories: selectedTerritories.map(t => t.country),
+          territoryCost,
           revenueShareEnabled
         }
       });
@@ -233,7 +292,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       
       toast({ 
         title: "Release Created!", 
-        description: `Manufacturing will complete in ${manufacturingDays} days. ${
+        description: `Manufacturing will complete in ${manufacturingDays} days. Distributing to ${selectedTerritories.length} territories. ${
           release.scheduled_release_date 
             ? `Release scheduled for ${new Date(release.scheduled_release_date).toLocaleDateString()}.` 
             : ''
@@ -258,6 +317,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setArtistName("");
     setSelectedSongs([]);
     setSelectedFormats([]);
+    setSelectedTerritories([]);
     setSelectedStreamingPlatforms([]);
     setScheduledReleaseDate(null);
     setRevenueShareEnabled(false);
@@ -276,7 +336,11 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       toast({ title: "Error", description: "Please select at least one format", variant: "destructive" });
       return;
     }
-    if (step < 4) {
+    if (step === 4 && selectedTerritories.length === 0) {
+      toast({ title: "Error", description: "Please select at least one territory", variant: "destructive" });
+      return;
+    }
+    if (step < 5) {
       setStep(step + 1);
     }
   };
@@ -285,7 +349,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Release - Step {step} of 4</DialogTitle>
+          <DialogTitle>Create New Release - Step {step} of 5</DialogTitle>
         </DialogHeader>
 
         {step === 1 && (
@@ -353,6 +417,18 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         )}
 
         {step === 4 && (
+          <TerritorySelectionStep
+            selectedTerritories={selectedTerritories}
+            onTerritoriesChange={setSelectedTerritories}
+            homeCountry={bandHomeInfo?.country || null}
+            homeRegion={bandHomeInfo?.region || null}
+            isPhysical={hasPhysicalFormats}
+            onBack={() => setStep(3)}
+            onNext={handleNext}
+          />
+        )}
+
+        {step === 5 && (
           <div className="space-y-4">
             {isScheduledTooEarly && (
               <Alert variant="destructive">
@@ -366,9 +442,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             <StreamingDistributionStep
               selectedPlatforms={selectedStreamingPlatforms}
               onPlatformsChange={setSelectedStreamingPlatforms}
-              onBack={() => setStep(3)}
+              onBack={() => setStep(4)}
               onSubmit={() => createRelease.mutate()}
               isLoading={createRelease.isPending}
+              selectedTerritories={selectedTerritories}
             />
           </div>
         )}

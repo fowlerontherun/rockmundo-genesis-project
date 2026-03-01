@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Headphones } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Headphones, Globe } from "lucide-react";
+import { TerritorySelection } from "./TerritorySelectionStep";
 
 interface StreamingDistributionStepProps {
   selectedPlatforms: string[];
@@ -12,6 +14,7 @@ interface StreamingDistributionStepProps {
   onBack: () => void;
   onSubmit: () => void;
   isLoading: boolean;
+  selectedTerritories?: TerritorySelection[];
 }
 
 export function StreamingDistributionStep({
@@ -19,7 +22,8 @@ export function StreamingDistributionStep({
   onPlatformsChange,
   onBack,
   onSubmit,
-  isLoading
+  isLoading,
+  selectedTerritories = []
 }: StreamingDistributionStepProps) {
   const { data: platforms } = useQuery({
     queryKey: ["streaming-platforms"],
@@ -65,6 +69,27 @@ export function StreamingDistributionStep({
         You can also manually distribute later from the Streaming Platforms page.
       </p>
 
+      {selectedTerritories.length > 0 && (
+        <Card className="p-3 bg-muted/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Streaming in {selectedTerritories.length} territories:</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {selectedTerritories.slice(0, 10).map((t) => (
+              <Badge key={t.country} variant="secondary" className="text-[10px]">
+                {t.country}
+              </Badge>
+            ))}
+            {selectedTerritories.length > 10 && (
+              <Badge variant="secondary" className="text-[10px]">
+                +{selectedTerritories.length - 10} more
+              </Badge>
+            )}
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         {platforms?.map((platform) => {
           const isSelected = selectedPlatforms.includes(platform.id);
@@ -96,6 +121,7 @@ export function StreamingDistributionStep({
         <Card className="p-4 bg-primary/5">
           <p className="text-sm font-medium">
             {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? 's' : ''} selected for auto-distribution
+            {selectedTerritories.length > 0 && ` across ${selectedTerritories.length} territories`}
           </p>
         </Card>
       )}
