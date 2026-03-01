@@ -54,14 +54,70 @@ serve(async (req) => {
 
     const bandMap = new Map(bands?.map(b => [b.id, b.name]) || []);
 
+    // Pre-fetch release territories for all songs to determine regional eligibility
+    const songIds = songs.map(s => s.id);
+    const { data: releaseSongs } = await supabase
+      .from("release_songs")
+      .select("song_id, release_id")
+      .in("song_id", songIds);
+    
+    const releaseIdsForSongs = [...new Set((releaseSongs || []).map(rs => rs.release_id).filter(Boolean))];
+    let songTerritoryMap = new Map<string, string[]>(); // song_id -> country[]
+    
+    if (releaseIdsForSongs.length > 0) {
+      const { data: territories } = await supabase
+        .from("release_territories")
+        .select("release_id, country")
+        .in("release_id", releaseIdsForSongs)
+        .eq("is_active", true);
+      
+      // Map song_id to their territory countries
+      for (const rs of releaseSongs || []) {
+        const songTerritories = (territories || [])
+          .filter(t => t.release_id === rs.release_id)
+          .map(t => t.country);
+        const existing = songTerritoryMap.get(rs.song_id) || [];
+        songTerritoryMap.set(rs.song_id, [...new Set([...existing, ...songTerritories])]);
+      }
+    }
+
+    // Map regions to countries for chart filtering
+    const regionCountryMap: Record<string, string[]> = {
+      "US": ["United States"],
+      "UK": ["United Kingdom"],
+      "DE": ["Germany"],
+      "FR": ["France"],
+      "JP": ["Japan"],
+      "BR": ["Brazil"],
+      "AU": ["Australia"],
+      "CA": ["Canada"],
+      "MX": ["Mexico"],
+    };
+
     let chartsCreated = 0;
 
     // Generate charts for each platform, region, and chart type
     for (const platform of platforms) {
       for (const region of regions) {
         for (const chartType of chartTypes) {
-          // Create chart entries with some randomization
-          const shuffledSongs = [...songs].sort(() => Math.random() - 0.5);
+          // Filter songs by territory for regional charts
+          let eligibleSongs = songs;
+          if (region !== "GLOBAL") {
+            const regionCountries = regionCountryMap[region] || [];
+            eligibleSongs = songs.filter(song => {
+              const territories = songTerritoryMap.get(song.id) || [];
+              // If no territories defined (legacy), include in all charts
+              if (territories.length === 0) return true;
+              // Check if any territory country matches the chart region
+              return regionCountries.some(rc => territories.includes(rc)) || 
+                // Spillover: 10% chance for songs in adjacent territories
+                Math.random() < 0.1;
+            });
+          }
+
+          if (eligibleSongs.length === 0) continue;
+
+          const shuffledSongs = [...eligibleSongs].sort(() => Math.random() - 0.5);
           const chartSize = chartType === "viral_50" ? 50 : 40;
           const chartSongs = shuffledSongs.slice(0, chartSize);
 
@@ -82,11 +138,14 @@ serve(async (req) => {
               movement = "same";
             }
 
-            // Calculate streams based on position and quality
+            // Territory bonus: songs in more territories rank higher
+            const territoryCount = (songTerritoryMap.get(song.id) || []).length;
+            const territoryBonus = Math.sqrt(Math.max(1, territoryCount)) * 0.5;
+
             const baseStreams = (chartSize - position + 1) * 100000;
             const qualityBonus = (song.quality_score || 50) * 1000;
             const randomFactor = 0.8 + Math.random() * 0.4;
-            const streams = Math.floor((baseStreams + qualityBonus) * randomFactor);
+            const streams = Math.floor((baseStreams + qualityBonus) * randomFactor * (1 + territoryBonus));
 
             return {
               position,

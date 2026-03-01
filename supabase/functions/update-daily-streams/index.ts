@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
         band_id,
         user_id,
         created_at,
+        release_id,
         songs!inner(band_id)
       `)
       .eq('is_active', true)
@@ -68,13 +69,22 @@ Deno.serve(async (req) => {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
     
-    // Market scarcity bonus: fewer bands = more streams per release
-    // At 10 bands: 5x boost, at 50 bands: 2x, at 100+ bands: 1x
     const marketMultiplier = Math.max(1, Math.min(5, 100 / Math.max(activeBandCount || 100, 20)));
     console.log(`Stream market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
     const AGE_GROUPS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
-    const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ', 'Middle East', 'Africa', 'South East Asia'];
+
+    // Pre-fetch all territories for releases linked to these song_releases
+    const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
+    let allTerritories: any[] = [];
+    if (releaseIds.length > 0) {
+      const { data: territories } = await supabase
+        .from('release_territories')
+        .select('release_id, country, is_active')
+        .in('release_id', releaseIds)
+        .eq('is_active', true);
+      allTerritories = territories || [];
+    }
 
     // Pre-fetch all release hype scores for streaming releases
     const songIds = (streamingReleases || []).map(r => r.song_id).filter(Boolean);
@@ -96,11 +106,27 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Pre-fetch band country fans for territory weighting
+    const bandIds = [...new Set((streamingReleases || []).map(r => r.band_id || (r.songs as any)?.band_id).filter(Boolean))];
+    let bandCountryFansMap = new Map<string, Map<string, number>>();
+    if (bandIds.length > 0) {
+      const { data: bcf } = await supabase
+        .from('band_country_fans')
+        .select('band_id, country, fame, total_fans')
+        .in('band_id', bandIds);
+      
+      for (const entry of bcf || []) {
+        if (!bandCountryFansMap.has(entry.band_id)) {
+          bandCountryFansMap.set(entry.band_id, new Map());
+        }
+        bandCountryFansMap.get(entry.band_id)!.set(entry.country, entry.fame || 0);
+      }
+    }
+
     for (const release of streamingReleases || []) {
       try {
         const baseStreams = Math.floor(Math.random() * 4900) + 100;
         
-        // Age decay: older releases get fewer streams over time
         const releaseDate = release.created_at ? new Date(release.created_at) : new Date();
         const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
         const ageDecay = daysSinceRelease <= 7 ? 1.5
@@ -110,21 +136,46 @@ Deno.serve(async (req) => {
           : daysSinceRelease <= 180 ? 0.35
           : 0.2;
         
-        // Apply hype multiplier from release
         const songHype = releaseHypeMap.get(release.song_id) || 0;
         const streamHypeMultiplier = 1 + (songHype / 500);
         
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay);
-        // Use decimal revenue instead of floor to avoid $0 at low stream counts
+        // Get territories for this release
+        const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
+        const hasTerritories = releaseTerritories.length > 0;
+        const bandId = release.band_id || (release.songs as any)?.band_id;
+        const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
+
+        // Pick listener region based on territories
+        let listenerRegion: string;
+        if (hasTerritories) {
+          // Weighted random: pick country based on fame in that country
+          const weightedCountries = releaseTerritories.map(t => {
+            const fame = bandFans?.get(t.country) || 1;
+            return { country: t.country, weight: fame };
+          });
+          const totalWeight = weightedCountries.reduce((s, c) => s + c.weight, 0);
+          let roll = Math.random() * totalWeight;
+          listenerRegion = weightedCountries[0].country;
+          for (const wc of weightedCountries) {
+            roll -= wc.weight;
+            if (roll <= 0) { listenerRegion = wc.country; break; }
+          }
+        } else {
+          const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ', 'Middle East', 'Africa', 'South East Asia'];
+          listenerRegion = REGIONS[Math.floor(Math.random() * REGIONS.length)];
+        }
+
+        // Territory bonus: more territories = more total streams
+        const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
+
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus);
         const dailyRevenue = Number((dailyStreams * 0.004).toFixed(2));
 
-        // Generate realistic listener metrics
-        const listenerRatio = 0.4 + Math.random() * 0.4; // 40-80% unique listeners
+        const listenerRatio = 0.4 + Math.random() * 0.4;
         const uniqueListeners = Math.max(1, Math.floor(dailyStreams * listenerRatio));
-        const skipRate = Number((10 + Math.random() * 25).toFixed(1)); // 10-35%
-        const completionRate = Number((55 + Math.random() * 35).toFixed(1)); // 55-90%
+        const skipRate = Number((10 + Math.random() * 25).toFixed(1));
+        const completionRate = Number((55 + Math.random() * 35).toFixed(1));
         const ageGroup = AGE_GROUPS[Math.floor(Math.random() * AGE_GROUPS.length)];
-        const region = REGIONS[Math.floor(Math.random() * REGIONS.length)];
 
         const { error: updateError } = await supabase
           .from('song_releases')
@@ -142,13 +193,13 @@ Deno.serve(async (req) => {
           song_release_id: release.id,
           analytics_date: new Date().toISOString().split('T')[0],
           daily_streams: dailyStreams,
-          daily_revenue: Math.floor(dailyRevenue), // Convert to integer for DB column
+          daily_revenue: Math.floor(dailyRevenue),
           platform_id: release.platform_id,
           unique_listeners: uniqueListeners,
           skip_rate: skipRate,
           completion_rate: completionRate,
           listener_age_group: ageGroup,
-          listener_region: region,
+          listener_region: listenerRegion,
         });
 
         // Update song fame based on streams (1 fame per 1000 streams)
