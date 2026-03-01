@@ -1,117 +1,148 @@
 
-# Company Financial System Overhaul (v1.0.856)
 
-## Problem
+# Territory-Based Distribution System (v1.0.865)
 
-Every company type in the game allows hiring staff, buying upgrades, and purchasing equipment -- but none of these actions actually deduct money from the company balance or record a transaction. The actions succeed silently without any financial impact, making the business simulation unrealistic.
+## Overview
+This update adds country-level territory selection to both **physical releases** and **streaming distribution**. Players choose which countries to release in, pay distance-based distribution costs, and all sales/streams/charts become territory-aware.
 
-**All 7 subsidiary types are affected:**
-- Security Firm (guards, upgrades)
-- Merchandise Factory (workers, upgrades)
-- Logistics Company (drivers, upgrades, vehicles)
-- Venue (staff, upgrades)
-- Rehearsal Studio (staff, equipment, upgrades)
-- Recording Studio (staff, equipment, upgrades)
-- Record Label (staff)
+---
 
-Additionally, the Security Firm management page never renders its upgrades panel.
+## 1. New Database Table: `release_territories`
 
-The self-contract flow (offering your own band a deal and accepting it) is already working correctly.
+Tracks which countries a release is distributed to (for both physical sales and streaming).
 
-## Solution
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| release_id | uuid FK -> releases | |
+| country | text | Country name (matches cities.country / band_country_fans.country) |
+| distance_tier | text | 'domestic', 'regional', 'continental', 'intercontinental' |
+| cost_multiplier | numeric | 1.0 / 1.5 / 2.5 / 4.0 |
+| distribution_cost | integer | Total cost in cents for this territory |
+| is_active | boolean DEFAULT true | Can disable territory later |
+| created_at | timestamptz | |
 
-Create a shared utility function `deductCompanyBalance` and wire it into every hire/upgrade/equipment mutation. Each action will:
-1. Look up the parent company from the subsidiary entity
-2. Check the company has sufficient balance
-3. Deduct the cost from the company balance
-4. Record a `company_transactions` entry with the appropriate category and description
+RLS: Users can manage territories for releases they own (via release -> band -> band_members or release.user_id).
 
-## Technical Details
+Also adds `home_country` text column to the `releases` table for quick distance-tier lookups.
 
-### Step 1: Create a shared helper `src/hooks/useCompanyBalanceDeduction.ts`
+---
 
-A reusable function that:
-- Takes `companyId`, `amount`, `description`, and `category`
-- Fetches current company balance
-- Throws if insufficient funds
-- Updates `companies.balance`
-- Inserts a `company_transactions` row (negative amount, type `expense`)
-- Also export a helper to resolve `companyId` from a subsidiary entity (e.g., given a `security_firm_id`, look up the firm's `company_id`)
+## 2. Distance Tier Pricing
 
-### Step 2: Fix each hook to deduct balance
+Based on the band's home city region vs the target country's region (using `cities.region`):
 
-**`src/hooks/useSecurityFirm.ts` -- `useHireGuard`**
-- Before inserting guard, look up `security_firms.company_id` from `firmId`
-- Calculate hiring cost (one-time fee = `salaryPerEvent * 10` as a signing bonus)
-- Call `deductCompanyBalance`
-- Record transaction: "Hired guard: {name}"
+| Tier | Rule | Physical Multiplier | Digital/Streaming Multiplier |
+|------|------|---------------------|------------------------------|
+| Domestic | Same country | 1.0x | 1.0x |
+| Regional | Same region (e.g. both Europe) | 1.5x | 1.1x |
+| Continental | Adjacent regions | 2.5x | 1.2x |
+| Intercontinental | Far regions (e.g. Europe -> Asia) | 4.0x | 1.3x |
 
-**`src/components/security/SecurityUpgradesManager.tsx` -- `installUpgradeMutation`**
-- After computing `cost`, look up `company_id` from `security_firms`
-- Call `deductCompanyBalance`
-- Record transaction: "Security upgrade: {name} Lv{level}"
+Region adjacency map:
+- Europe <-> Middle East, Africa
+- North America <-> Central America, Caribbean, South America
+- Asia <-> Oceania, Middle East
+- Everything else = intercontinental
 
-**`src/hooks/useMerchFactory.ts` -- `useHireWorker`**
-- Look up `company_id` via `merch_factories.company_id` from `factory_id`
-- Deduct hiring fee (weekly_salary * 4 as a month's advance)
-- Record transaction: "Hired factory worker: {name}"
+---
 
-**`src/components/merch-factory/FactoryUpgradesManager.tsx` -- `installUpgradeMutation`**
-- Look up `company_id` from `merch_factories`
-- Call `deductCompanyBalance` with the upgrade cost
+## 3. Release Wizard Changes
 
-**`src/hooks/useLogisticsBusiness.ts` -- `useHireDriver`**
-- Look up `company_id` from `logistics_companies`
-- Deduct hiring fee (salary_per_day * 30)
-- Record transaction
+### New Step 4: "Territory Selection" (wizard becomes 5 steps)
 
-**`src/hooks/useLogisticsBusiness.ts` -- `usePurchaseLogisticsUpgrade`**
-- Look up `company_id` from `logistics_companies`
-- Deduct upgrade cost
+**New component: `TerritorySelectionStep.tsx`**
+- Lists all countries from the `cities` table, grouped by region
+- Each country shows a distance tier badge and per-country cost
+- "Select All in Region" buttons per region group
+- Home country auto-selected and marked as "Domestic"
+- Running cost total at the bottom
+- Base distribution cost: $50/country for physical, $10/country for digital/streaming, multiplied by tier
 
-**`src/hooks/useVenueBusiness.ts` -- `useHireVenueStaff`**
-- Look up `company_id` from `venues`
-- Deduct hiring fee (salary_weekly * 4)
+### Updated `CreateReleaseDialog.tsx`:
+- Add step 4 (territories) between format selection (step 3) and streaming platforms (step 5)
+- Store `selectedTerritories` state with country + tier + cost
+- Total cost now includes territory distribution fees
+- Save territories to `release_territories` table on submit
+- Cache band's home country from their home city
 
-**`src/hooks/useVenueBusiness.ts` -- `useInstallVenueUpgrade`**
-- Look up `company_id` from `venues`
-- Deduct the `cost` parameter
+### Updated `StreamingDistributionStep.tsx`:
+- Now receives selected territories and only distributes to streaming platforms **in those territories**
+- Shows which countries streaming will be active in
 
-**`src/hooks/useRehearsalStudioBusiness.ts` -- `useHireRehearsalStaff`, `useAddRehearsalEquipment`, `useInstallRehearsalUpgrade`**
-- Look up `company_id` via `rehearsal_rooms` -> `rehearsal_studios` -> `company_id`
-- Deduct costs
+---
 
-**`src/hooks/useRecordingStudioBusiness.ts` -- `useHireRecordingStudioStaff`, `useAddRecordingStudioEquipment`, `useInstallRecordingStudioUpgrade`**
-- Look up `company_id` via `recording_studios.company_id`
-- Deduct costs
+## 4. Sales Engine Updates (`generate-daily-sales`)
 
-**`src/hooks/useLabelBusiness.ts` -- `useHireLabelStaff`**
-- Look up `company_id` from `labels`
-- Deduct hiring fee (salary_monthly as first month's pay)
+Currently sales use a single `regionalMultiplier` from the first `band_country_fans` entry. This changes to **per-territory sales generation**:
 
-### Step 3: Add the SecurityUpgradesManager to the SecurityFirmManagement page
+1. Fetch `release_territories` for each release
+2. For each active territory:
+   - Look up `band_country_fans` for that specific country
+   - Calculate country-specific fame multiplier
+   - Generate sales scaled by that country's fame, fans, and performance history
+   - Record the `country` on each `release_sales` row (column already exists)
+3. Physical stock is shared globally (decremented from same pool)
+4. **Spillover**: Countries adjacent to active territories get 10% passive sales even without a territory entry
+5. Releases with NO territories (legacy) continue using current global logic
 
-`src/pages/SecurityFirmManagement.tsx` currently doesn't render the upgrades panel. Add it below the ContractsList with `companyBalance={company.balance}`.
+---
 
-### Step 4: Invalidate balance queries after mutations
+## 5. Streaming Updates (`update-daily-streams`)
 
-Every mutation's `onSuccess` must also invalidate `company-balance` and `company-transactions` queries so the UI reflects the new balance immediately.
+Currently streams are generated globally with random regions. This changes to:
 
-### Step 5: Update version to 1.0.856
+1. Check `release_territories` for the release's parent release
+2. Generate streams weighted by territory -- more streams in countries where the band has fame/fans
+3. The `listener_region` on `streaming_analytics_daily` now maps to actual territory countries
+4. Countries without a territory entry get minimal spillover streams (10%)
 
-Bump `VersionHeader.tsx` and add a changelog entry in `VersionHistory.tsx`.
+---
 
-## Files to modify
-- **New**: `src/hooks/useCompanyBalanceDeduction.ts`
-- `src/hooks/useSecurityFirm.ts`
-- `src/hooks/useMerchFactory.ts`
-- `src/hooks/useLogisticsBusiness.ts`
-- `src/hooks/useVenueBusiness.ts`
-- `src/hooks/useRehearsalStudioBusiness.ts`
-- `src/hooks/useRecordingStudioBusiness.ts`
-- `src/hooks/useLabelBusiness.ts`
-- `src/components/security/SecurityUpgradesManager.tsx`
-- `src/components/merch-factory/FactoryUpgradesManager.tsx`
-- `src/pages/SecurityFirmManagement.tsx`
-- `src/components/VersionHeader.tsx`
-- `src/pages/VersionHistory.tsx`
+## 6. Charts Integration (`update-music-charts`)
+
+The chart system already supports per-region charts via `listener_region`. With territory-aware streaming:
+- Regional charts will naturally reflect where songs are actually distributed
+- Songs only distributed in the UK won't appear on US charts (unless spillover)
+- The `country` field on `release_sales` feeds into sales-based chart calculations
+
+No structural changes needed to the charts engine -- it will automatically pick up the territory-filtered data.
+
+---
+
+## 7. Streaming Charts (`simulate-streaming-charts`)
+
+This function generates simulated platform charts. It will be updated to:
+- Weight chart positions by territory presence -- songs distributed in more countries rank higher
+- Regional chart entries (US, UK, etc.) only include songs distributed to that region's territories
+
+---
+
+## 8. Auto-Distribute Streaming (`auto-distribute-streaming`)
+
+When manufacturing completes and auto-distribution triggers:
+- Only create `song_releases` entries for platforms in the selected territories
+- Each `song_release` gets tagged with the territory's country
+
+---
+
+## Technical File Changes Summary
+
+| File | Change |
+|------|--------|
+| **New migration SQL** | Create `release_territories` table + RLS; add `home_country` to releases |
+| **New: `TerritorySelectionStep.tsx`** | Country picker grouped by region with cost breakdown |
+| **Edit: `CreateReleaseDialog.tsx`** | 5-step wizard, territory state, save territories on submit |
+| **Edit: `StreamingDistributionStep.tsx`** | Receives territories, shows country context |
+| **Edit: `generate-daily-sales/index.ts`** | Per-territory sales loop with country-specific fame |
+| **Edit: `update-daily-streams/index.ts`** | Territory-weighted stream generation |
+| **Edit: `auto-distribute-streaming/index.ts`** | Territory-aware distribution |
+| **Edit: `simulate-streaming-charts/index.ts`** | Territory-weighted chart positions |
+| **Edit: `VersionHeader.tsx`** | Bump to 1.0.865 |
+| **Edit: `VersionHistory.tsx`** | Add changelog |
+
+### Backward Compatibility
+- Existing releases without territories default to global behavior (current logic unchanged)
+- The territory step pre-selects the band's home country
+- No data migration needed for existing releases
+
