@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.866",
+    date: "2026-03-02",
+    changes: [
+      { type: 'fix', description: "Charts now show period-specific data (daily/weekly/monthly/yearly) instead of inflated all-time cumulative totals" },
+      { type: 'fix', description: "Fixed chart aggregation using peak values instead of summing rolling windows across dates" },
+      { type: 'fix', description: "Sales chart columns now correctly use weekly_plays (period data) instead of plays_count (all-time)" },
+      { type: 'feature', description: "Per-country sales chart entries — selecting a country now shows that country's specific sales data" },
+      { type: 'improvement', description: "Chart column labels now reflect the selected time period (e.g. 'This Month Sales' instead of 'Total Sales')" },
+    ],
+  },
+  {
     version: "1.0.865",
     date: "2026-03-01",
     changes: [

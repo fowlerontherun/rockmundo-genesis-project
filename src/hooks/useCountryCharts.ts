@@ -63,20 +63,20 @@ export const getMetricLabels = (chartType: ChartType, timeRange: ChartTimeRange 
   
   switch (chartType) {
     case "combined":
-      return { weekly: "Chart Pts", total: "Streams" };
+      return { weekly: "Chart Pts", total: `${timeLabel} Streams` };
     case "streaming":
-      return { weekly: timeLabel, total: "Total Streams" };
+      return { weekly: timeLabel, total: `${timeLabel} Streams` };
     case "radio_airplay":
-      return { weekly: "Listeners", total: "Total Plays" };
+      return { weekly: "Listeners", total: `${timeLabel} Plays` };
     case "digital_sales":
-      return { weekly: timeLabel, total: "Total Sales" };
+      return { weekly: timeLabel, total: `${timeLabel} Sales` };
     case "cd_sales":
     case "vinyl_sales":
     case "cassette_sales":
     case "record_sales":
-      return { weekly: timeLabel, total: "Total Sales" };
+      return { weekly: timeLabel, total: `${timeLabel} Sales` };
     default:
-      return { weekly: timeLabel, total: "Total" };
+      return { weekly: timeLabel, total: timeLabel };
   }
 };
 
@@ -385,20 +385,21 @@ export const useCountryCharts = (
         const existing = aggregatedMap.get(key);
 
         if (existing) {
-          existing.totalPlays += entry.plays_count || 0;
-          existing.totalWeeklyPlays += entry.weekly_plays || 0;
-          existing.totalCombinedScore += entry.combined_score || 0;
+          // Use PEAK weekly_plays for ranking (not sum — each day's weekly_plays is already a rolling window)
+          existing.totalWeeklyPlays = Math.max(existing.totalWeeklyPlays, entry.weekly_plays || 0);
+          existing.totalCombinedScore = Math.max(existing.totalCombinedScore, entry.combined_score || 0);
           existing.maxWeeksOnChart = Math.max(existing.maxWeeksOnChart, entry.weeks_on_chart || 1);
-          // Keep the latest trend info
+          // Keep the latest entry's data for display
           if (entry.chart_date > existing.entry.chart_date) {
             existing.latestTrend = entry.trend || "stable";
             existing.latestTrendChange = entry.trend_change || 0;
+            existing.totalPlays = entry.weekly_plays || 0; // Use period data, not all-time
             existing.entry = entry;
           }
         } else {
           aggregatedMap.set(key, {
             entry,
-            totalPlays: entry.plays_count || 0,
+            totalPlays: entry.weekly_plays || 0, // Use period data, not all-time cumulative
             totalWeeklyPlays: entry.weekly_plays || 0,
             totalCombinedScore: entry.combined_score || 0,
             latestTrend: entry.trend || "stable",

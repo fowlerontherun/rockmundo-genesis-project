@@ -90,17 +90,16 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
     if (chartType === "combined") {
       return entry.combined_score;
     }
-    if (chartType === "streaming") {
-      return entry.weekly_plays;
-    }
-    return entry.plays_count; // For sales, plays_count IS the weekly sales
+    // Always use weekly_plays for period-specific data (not plays_count which is all-time cumulative)
+    return entry.weekly_plays;
   };
 
   const getTotalValue = (entry: ChartEntry) => {
     if (chartType === "combined") {
-      return entry.plays_count; // Show streams as "total" for combined
+      return entry.weekly_plays; // Period streams
     }
-    return entry.total_sales;
+    // Show period total, not all-time
+    return entry.weekly_plays;
   };
 
   return (
