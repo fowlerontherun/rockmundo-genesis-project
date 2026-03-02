@@ -445,6 +445,7 @@ serve(async (req) => {
         .select(`
           release_format_id,
           quantity_sold,
+          country,
           release_formats!inner(
             format_type,
             release:releases!inner(
@@ -480,6 +481,10 @@ serve(async (req) => {
       const songSalesByScope = new Map<string, number>();
       const songInfoByScope = new Map<string, any>();
       
+      // Per-country sales aggregation
+      const songSalesByCountry = new Map<string, Map<string, number>>(); // country -> (songId -> sales)
+      const uniqueSalesCountries = new Set<string>();
+      
       // Album/EP aggregation: aggregate sales by release_id for albums/EPs
       const albumSalesAgg = new Map<string, {
         releaseId: string;
@@ -513,6 +518,17 @@ serve(async (req) => {
 
           const currentSales = songSales.get(song.id) || 0;
           songSales.set(song.id, currentSales + sale.quantity_sold);
+
+          // Per-country sales tracking
+          const saleCountry = (sale as any).country;
+          if (saleCountry && saleCountry !== "all") {
+            uniqueSalesCountries.add(saleCountry);
+            if (!songSalesByCountry.has(saleCountry)) {
+              songSalesByCountry.set(saleCountry, new Map());
+            }
+            const countryMap = songSalesByCountry.get(saleCountry)!;
+            countryMap.set(song.id, (countryMap.get(song.id) || 0) + sale.quantity_sold);
+          }
 
           // Track for combined chart
           const existingSales = weeklySalesMap.get(song.id) || {
@@ -594,6 +610,35 @@ serve(async (req) => {
         });
 
       chartEntries.push(...salesEntries);
+
+      // Create per-country sales chart entries
+      for (const country of uniqueSalesCountries) {
+        const countrySales = songSalesByCountry.get(country);
+        if (!countrySales || countrySales.size === 0) continue;
+
+        const countryEntries = Array.from(countrySales.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 100)
+          .map(([songId, sales], index) => {
+            const info = songInfo.get(songId);
+            return {
+              song_id: songId,
+              chart_type: salesType.type,
+              rank: index + 1,
+              plays_count: sales,
+              weekly_plays: sales,
+              combined_score: 0,
+              chart_date: chartDate,
+              genre: info?.genre,
+              country: country,
+              sale_type: salesType.format,
+              entry_type: "song",
+            };
+          });
+
+        chartEntries.push(...countryEntries);
+      }
+      console.log(`Generated per-country ${salesType.type} entries for ${uniqueSalesCountries.size} countries`);
 
       // Create scoped entries for singles (individual songs)
       const scopedSalesEntries = Array.from(songSalesByScope.entries())
