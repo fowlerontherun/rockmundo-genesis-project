@@ -95,18 +95,18 @@ export default function RecordingStudio() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold flex items-center gap-3">
-            <Music className="h-8 w-8 text-primary" />
-            {t('recording.title')}
+    <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-3">
+            <Music className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+            <span className="truncate">{t('recording.title')}</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
             {t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
           </p>
         </div>
-        <Button onClick={() => setWizardOpen(true)} size="lg">
+        <Button onClick={() => setWizardOpen(true)} size="default" className="w-full sm:w-auto flex-shrink-0">
           <Plus className="h-5 w-5 mr-2" />
           {t('recording.startSession', 'New Recording')}
         </Button>

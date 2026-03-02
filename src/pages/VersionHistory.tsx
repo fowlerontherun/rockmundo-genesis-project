@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.867",
+    date: "2026-03-02",
+    changes: [
+      { type: 'fix', description: "Recording Studio page now fits properly on mobile screens with responsive header, smaller text, and no horizontal overflow" },
+    ],
+  },
+  {
     version: "1.0.866",
     date: "2026-03-02",
     changes: [
