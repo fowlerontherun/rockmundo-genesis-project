@@ -64,10 +64,10 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
   const allChannels = [...baseChannels, ...cityChannels];
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 h-[calc(100vh-20rem)] min-h-[300px] max-h-[600px]">
+    <div className="w-full min-w-0 max-w-full overflow-hidden flex flex-col sm:flex-row gap-4 h-[calc(100vh-20rem)] min-h-[300px] max-h-[600px]">
       {/* Channel list - horizontal scroll on mobile, vertical sidebar on desktop */}
-      <ScrollArea className="sm:w-48 shrink-0 border rounded-lg bg-card">
-        <div className="p-2 flex sm:flex-col sm:space-y-1 gap-1 sm:gap-0">
+      <ScrollArea className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card">
+        <div className="w-max min-w-full p-2 flex sm:flex-col sm:space-y-1 gap-1 sm:gap-0">
           <div className="hidden sm:block px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
             Main Channels
           </div>
@@ -78,7 +78,7 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
                 key={channel.key}
                 variant={selectedChannel === channel.key ? "secondary" : "ghost"}
                 className={cn(
-                  "justify-start gap-2 shrink-0",
+                  "justify-start gap-2 shrink-0 max-w-full",
                   "sm:w-full",
                   selectedChannel === channel.key && "bg-accent"
                 )}
@@ -103,7 +103,7 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
                     key={channel.key}
                     variant={selectedChannel === channel.key ? "secondary" : "ghost"}
                     className={cn(
-                      "justify-start gap-2 shrink-0",
+                      "justify-start gap-2 shrink-0 max-w-full",
                       "sm:w-full",
                       selectedChannel === channel.key && "bg-accent"
                     )}
@@ -120,7 +120,7 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
         </div>
       </ScrollArea>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 min-w-0">
         <RealtimeChatPanel
           channelKey={selectedChannel}
           title={allChannels.find(c => c.key === selectedChannel)?.label || "Chat"}

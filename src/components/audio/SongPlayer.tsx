@@ -131,12 +131,12 @@ export const SongPlayer = ({
 
   if (compact) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("flex flex-wrap items-center gap-2 sm:flex-nowrap", className)}>
         <audio ref={audioRef} src={audioUrl} preload="metadata" />
         <Button
           size="icon"
           variant="ghost"
-          className="h-8 w-8"
+          className="h-8 w-8 shrink-0"
           onClick={togglePlay}
           disabled={isLoading}
         >
@@ -148,7 +148,7 @@ export const SongPlayer = ({
             <Play className="h-4 w-4" />
           )}
         </Button>
-        <div className="flex-1 min-w-0">
+        <div className="order-3 w-full min-w-0 sm:order-none sm:flex-1">
           <Slider
             value={[currentTime]}
             max={duration || 100}
@@ -157,7 +157,7 @@ export const SongPlayer = ({
             className="w-full"
           />
         </div>
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
+        <span className="order-2 ml-auto text-[11px] text-muted-foreground whitespace-nowrap sm:order-none sm:ml-0 sm:text-xs">
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
         {showShare && audioUrl && songId && (

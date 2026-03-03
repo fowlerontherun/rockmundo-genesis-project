@@ -269,7 +269,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   };
 
   const renderHeaderMeta = () => (
-    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
       <div
         className={cn(
           "flex items-center gap-2 rounded-full px-3 py-1",
@@ -292,7 +292,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
   if (!user) {
     return (
-      <Card className={cn("flex h-full flex-col", className)}>
+      <Card className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}>
         <CardHeader>
           <CardTitle>{title}</CardTitle>
         </CardHeader>
@@ -306,15 +306,15 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   }
 
   return (
-    <Card className={cn("flex h-full flex-col", className)}>
+    <Card className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}>
       <CardHeader className="space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <CardTitle className="text-lg font-semibold break-words">{title}</CardTitle>
           {renderHeaderMeta()}
         </div>
-        <p className="text-xs text-muted-foreground">Channel: {channelKey}</p>
+        <p className="text-xs text-muted-foreground break-words">Channel: {channelKey}</p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 p-4">
+      <CardContent className="flex min-w-0 flex-1 flex-col gap-4 p-4">
         <ScrollArea
           ref={scrollAreaRef}
           className="flex-1 max-h-64 rounded-md border border-border/50 bg-muted/20 p-3"
@@ -325,7 +325,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
                 <div className="text-xs font-semibold text-muted-foreground">
                   {msg.displayName}
                 </div>
-                <div className="text-sm text-foreground">{msg.message}</div>
+                <div className="text-sm text-foreground break-words">{msg.message}</div>
                 <div className="text-[10px] text-muted-foreground/80">
                   {new Date(msg.created_at).toLocaleTimeString()}
                 </div>
@@ -338,7 +338,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
             )}
           </div>
         </ScrollArea>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -346,7 +346,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
             placeholder="Type a message..."
             className="flex-1"
           />
-          <Button onClick={sendMessage} disabled={!message.trim()}>
+          <Button onClick={sendMessage} disabled={!message.trim()} className="w-full sm:w-auto">
             Send
           </Button>
         </div>

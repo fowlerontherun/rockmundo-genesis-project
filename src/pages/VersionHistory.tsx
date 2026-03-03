@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.869",
+    date: "2026-03-03",
+    changes: [
+      { type: 'fix', description: "Fixed mobile overflow in Recorded Songs cards — metadata, quality panel, and audio controls now stack responsively on small screens" },
+      { type: 'fix', description: "Fixed mobile overflow in dashboard chat channels — channel list and realtime chat panel now stay within viewport width" },
+      { type: 'improvement', description: "Improved compact audio player wrapping behavior to prevent horizontal clipping on narrow devices" },
+    ],
+  },
+  {
     version: "1.0.868",
     date: "2026-03-03",
     changes: [
@@ -31,7 +40,6 @@ const versionHistory: VersionEntry[] = [
     version: "1.0.866",
     date: "2026-03-02",
     changes: [
-      { type: 'fix', description: "Charts now show period-specific data (daily/weekly/monthly/yearly) instead of inflated all-time cumulative totals" },
       { type: 'fix', description: "Fixed chart aggregation using peak values instead of summing rolling windows across dates" },
       { type: 'fix', description: "Sales chart columns now correctly use weekly_plays (period data) instead of plays_count (all-time)" },
       { type: 'feature', description: "Per-country sales chart entries — selecting a country now shows that country's specific sales data" },
