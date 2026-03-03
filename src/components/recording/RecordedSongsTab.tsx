@@ -154,7 +154,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full overflow-x-hidden">
       {/* Filters */}
       <div className="flex flex-col gap-3">
         <div className="relative">
@@ -166,7 +166,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
             className="pl-9"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Select value={genreFilter} onValueChange={setGenreFilter}>
             <SelectTrigger className="w-full">
               <Filter className="h-4 w-4 mr-2 shrink-0" />
@@ -201,7 +201,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
         {filteredSongs.length} of {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''} shown
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-w-full">
         {filteredSongs.map((item) => {
           const hasAudio = item.song.audio_url && item.song.audio_generation_status === 'completed';
           const artistName = item.song.bands?.artist_name || item.song.bands?.name || 'Unknown Artist';
@@ -209,11 +209,11 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
           return (
             <Card key={item.song.id}>
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 min-w-0 space-y-3">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Music className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold truncate">{item.song.title}</h3>
+                      <Music className="h-4 w-4 text-primary shrink-0" />
+                      <h3 className="font-semibold break-words min-w-0">{item.song.title}</h3>
                       <Badge variant="secondary" className="text-xs">{item.song.genre}</Badge>
                       {hasAudio && (
                         <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
@@ -235,7 +235,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Star className="h-3.5 w-3.5 text-yellow-500" />
                         <span>Quality: <span className="font-medium text-foreground">{item.song.quality_score || 0}</span></span>
@@ -274,7 +274,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
                     {/* Audio Player & Share for AI-generated songs */}
                     {hasAudio && (
                       <div className="mt-3 pt-3 border-t space-y-2">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs text-muted-foreground">Listen & Share:</p>
                           <SongShareButtons 
                             songId={item.song.id}
@@ -295,11 +295,13 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
                     )}
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">{item.song.quality_score || 0}</div>
-                    <div className="text-xs text-muted-foreground">Quality</div>
+                  <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/30 px-3 py-2 lg:min-w-[96px] lg:flex-col lg:items-end lg:justify-start lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
+                    <div className="text-left lg:text-right">
+                      <div className="text-xl sm:text-2xl font-bold text-primary">{item.song.quality_score || 0}</div>
+                      <div className="text-xs text-muted-foreground">Quality</div>
+                    </div>
                     {item.totalQualityGained > 0 && (
-                      <div className="text-xs text-green-600 mt-1">
+                      <div className="text-xs text-green-600 lg:mt-1">
                         +{item.totalQualityGained} total
                       </div>
                     )}
