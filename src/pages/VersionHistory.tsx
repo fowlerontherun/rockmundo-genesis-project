@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.868",
+    date: "2026-03-03",
+    changes: [
+      { type: 'fix', description: "Fixed numeric overflow error when hiring label staff — widened skill_level and performance_rating DB columns from numeric(3,2) to numeric(5,2)" },
+    ],
+  },
+  {
     version: "1.0.867",
     date: "2026-03-02",
     changes: [
