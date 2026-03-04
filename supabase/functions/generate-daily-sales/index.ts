@@ -8,6 +8,46 @@ import {
   startJobRun,
 } from "../_shared/job-logger.ts";
 
+// Helper: get sales tax rate for a city
+async function getCitySalesTaxRate(cityId: string | null, client?: any): Promise<number> {
+  if (!cityId || !client) return 0.10;
+  try {
+    const { data } = await client
+      .from("cities")
+      .select("sales_tax_rate")
+      .eq("id", cityId)
+      .single();
+    return data?.sales_tax_rate != null ? data.sales_tax_rate / 100 : 0.10;
+  } catch {
+    return 0.10;
+  }
+}
+
+// Helper: get distribution rate by format type
+function getDistributionRate(formatType: string): number {
+  switch (formatType) {
+    case "digital": return 0.30;
+    case "cd": return 0.20;
+    case "vinyl": return 0.15;
+    case "cassette": return 0.15;
+    default: return 0.20;
+  }
+}
+
+// Helper: calculate regional sales multiplier based on country fame
+function calculateRegionalSalesMultiplier(
+  countryFame: number,
+  hasPerformed: boolean,
+  globalFame: number
+): number {
+  let baseMultiplier = 0.1 + (Math.min(countryFame, 1000) / 1000) * 0.9;
+  if (!hasPerformed && countryFame <= 100) {
+    baseMultiplier = Math.min(baseMultiplier, 0.3);
+  }
+  const globalFloor = 0.05 + (Math.min(globalFame, 10000) / 10000) * 0.2;
+  return Math.max(baseMultiplier, globalFloor);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -194,7 +234,7 @@ serve(async (req) => {
         const homeCityId = band?.home_city_id || null;
 
         // Get city sales tax rate
-        const salesTaxRate = await getCitySalesTaxRate(homeCityId);
+        const salesTaxRate = await getCitySalesTaxRate(homeCityId, supabaseClient);
 
         // Get territories for this release
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.id);

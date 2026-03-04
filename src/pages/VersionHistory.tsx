@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.870",
+    date: "2026-03-04",
+    changes: [
+      { type: 'fix', description: "Fixed record sales not generating for 3 days — restored missing helper functions (getCitySalesTaxRate, getDistributionRate, calculateRegionalSalesMultiplier) in the generate-daily-sales edge function" },
+    ],
+  },
+  {
     version: "1.0.869",
     date: "2026-03-03",
     changes: [
