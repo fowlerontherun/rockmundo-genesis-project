@@ -13,7 +13,8 @@ import {
   Heart,
   MessageCircle,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Lightbulb
 } from 'lucide-react';
 
 interface GigAnalytics {
@@ -216,6 +217,84 @@ export function PostGigAnalytics({ gigId }: { gigId: string }) {
                   </span>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Manager's Suggestions */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-primary" />
+                Manager's Suggestions
+              </CardTitle>
+              <CardDescription>Your manager's tips for improving future gigs</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(() => {
+                const suggestions: { text: string; priority: 'high' | 'medium' | 'low' }[] = [];
+                const skillAvg = outcome.skill_performance_avg || 0;
+                const synergy = outcome.band_synergy_modifier || 1;
+                const crowd = outcome.crowd_engagement || 1;
+                const setlist = outcome.setlist_quality_score || 0;
+                const rating = outcome.overall_rating || 0;
+                const attendance = outcome.attendance_percentage || 0;
+
+                if (skillAvg < 50) {
+                  suggestions.push({ text: "Your band's instrument skills are dragging you down. Invest in skill training and better gear — it'll make a huge difference on stage.", priority: 'high' });
+                } else if (skillAvg < 75) {
+                  suggestions.push({ text: "Your musicianship is decent but there's room to grow. Keep practicing your instruments and upgrading your equipment.", priority: 'medium' });
+                }
+
+                if (synergy < 1.2) {
+                  suggestions.push({ text: "Band chemistry needs work. Schedule more rehearsals together and try to resolve any drama between members.", priority: synergy < 0.8 ? 'high' : 'medium' });
+                }
+
+                if (setlist < 60) {
+                  suggestions.push({ text: "Your setlist could be stronger. Focus on well-rehearsed, high-quality songs and consider the flow between tracks.", priority: 'high' });
+                }
+
+                if (crowd < 1.0) {
+                  suggestions.push({ text: "The crowd wasn't fully engaged. Level up your stage presence and charisma attributes to connect better with the audience.", priority: 'medium' });
+                }
+
+                if (attendance < 60) {
+                  suggestions.push({ text: "The venue felt empty. Consider playing smaller venues that match your fame level, or promote the gig more beforehand.", priority: 'medium' });
+                } else if (attendance >= 95) {
+                  suggestions.push({ text: "Sold out show — amazing! You might be ready to move up to bigger venues.", priority: 'low' });
+                }
+
+                if (rating < 12) {
+                  suggestions.push({ text: "Tough gig. Focus on the basics: rehearse your songs until they're perfected, keep your band chemistry high, and make sure your gear is up to scratch.", priority: 'high' });
+                } else if (rating >= 20) {
+                  suggestions.push({ text: "Incredible performance! Keep this momentum going. Your fans will remember this one.", priority: 'low' });
+                }
+
+                if (!outcome.promoter_modifier || outcome.promoter_modifier <= 0) {
+                  suggestions.push({ text: "Consider hiring a promoter for your next gig — they can boost your score and bring in more fans.", priority: 'low' });
+                }
+
+                if (suggestions.length === 0) {
+                  suggestions.push({ text: "Solid all-around performance. Keep up the good work and keep pushing for bigger venues!", priority: 'low' });
+                }
+
+                const priorityColors = {
+                  high: 'border-destructive/30 bg-destructive/10',
+                  medium: 'border-yellow-500/30 bg-yellow-500/10',
+                  low: 'border-green-500/30 bg-green-500/10'
+                };
+                const priorityLabels = { high: '⚠️ Priority', medium: '💡 Tip', low: '✨ Great' };
+
+                return suggestions.map((s, i) => (
+                  <div key={i} className={`p-3 rounded-lg border ${priorityColors[s.priority]}`}>
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0 text-xs mt-0.5">
+                        {priorityLabels[s.priority]}
+                      </Badge>
+                      <p className="text-sm">{s.text}</p>
+                    </div>
+                  </div>
+                ));
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

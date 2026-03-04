@@ -272,7 +272,16 @@ async function fetchLiveMemberSkillAverage(
   let counted = 0;
 
   for (const member of members) {
-    if (!member.user_id) continue;
+    // NPC members (no user_id) get a baseline skill level based on their tier
+    if (!member.user_id) {
+      const npcTier = member.touring_member_tier || 1;
+      // NPC baseline: tier 1=40, tier 2=60, tier 3=80, tier 4=100
+      const npcBaseline = Math.min(120, 30 + npcTier * 20);
+      totalEffective += npcBaseline;
+      counted++;
+      console.log(`[process-gig-song] NPC member role=${member.instrument_role}: baseline=${npcBaseline} (tier ${npcTier})`);
+      continue;
+    }
 
     // Get profile_id for this user
     const { data: profile } = await supabaseClient
@@ -283,6 +292,8 @@ async function fetchLiveMemberSkillAverage(
 
     if (!profile) {
       console.log(`[process-gig-song] No profile found for user ${member.user_id}`);
+      totalEffective += 50; // Default baseline
+      counted++;
       continue;
     }
 
@@ -294,7 +305,7 @@ async function fetchLiveMemberSkillAverage(
 
     console.log(`[process-gig-song] Member ${member.user_id} role=${role}, slugs=${relevantSlugs.length}`);
 
-    // Fetch skill progress — try exact slugs first, then fall back to ALL instrument skills
+    // Fetch skill progress
     let skillLevel = 0;
     if (relevantSlugs.length > 0) {
       const { data: skillData } = await supabaseClient
@@ -316,41 +327,47 @@ async function fetchLiveMemberSkillAverage(
         .like('skill_slug', 'instruments_%');
 
       if (allSkills && allSkills.length > 0) {
-        // Use the highest instrument skill as a general musical ability indicator
-        let maxLevel = 0;
-        for (const s of allSkills) {
-          if (s.current_level != null && s.current_level > maxLevel) {
-            maxLevel = s.current_level;
-          }
-        }
-        // Use 50% of the best instrument skill as a cross-skill baseline
         skillLevel = Math.round(getSkillLevelFromProgress(allSkills, allSkills.map((s: any) => s.skill_slug)) * 0.5);
         console.log(`[process-gig-song] Fallback: using best instrument skills (${allSkills.length} entries), level=${skillLevel}`);
       }
     }
 
-    // Also factor in player attributes (musical_ability, technical_mastery) as a baseline
-    const { data: attrs } = await supabaseClient
+    // Factor in player attributes as a baseline
+    // Query by profile_id first, fall back to user_id
+    let attrs: any = null;
+    const { data: attrsByProfile } = await supabaseClient
       .from('player_attributes')
       .select('musical_ability, technical_mastery, rhythm_sense')
-      .eq('user_id', member.user_id)
-      .single();
+      .eq('profile_id', profile.id)
+      .maybeSingle();
+    
+    if (attrsByProfile) {
+      attrs = attrsByProfile;
+    } else {
+      const { data: attrsByUser } = await supabaseClient
+        .from('player_attributes')
+        .select('musical_ability, technical_mastery, rhythm_sense')
+        .eq('user_id', member.user_id)
+        .maybeSingle();
+      attrs = attrsByUser;
+    }
 
     if (attrs) {
-      const attrBonus = (
-        (attrs.musical_ability ?? 5) * 0.4 +
-        (attrs.technical_mastery ?? 5) * 0.3 +
-        (attrs.rhythm_sense ?? 5) * 0.3
-      );
-      // Attributes 0-20, normalize to 0-50 bonus range
-      const normalizedAttrBonus = Math.round((attrBonus / 20) * 50);
+      const rawMusical = attrs.musical_ability ?? 5;
+      const rawTechnical = attrs.technical_mastery ?? 5;
+      const rawRhythm = attrs.rhythm_sense ?? 5;
+      
+      // Normalize: attributes can be 0-1000+, map to 0-50 bonus range
+      const attrAvg = rawMusical * 0.4 + rawTechnical * 0.3 + rawRhythm * 0.3;
+      const normalizedAttrBonus = Math.round(Math.min(50, (Math.min(attrAvg, 1000) / 1000) * 50));
+      
       // Blend: if skill tree is trained, it dominates; otherwise attributes provide a baseline
       if (skillLevel === 0) {
         skillLevel = normalizedAttrBonus;
       } else {
         skillLevel = Math.round(skillLevel * 0.7 + normalizedAttrBonus * 0.3);
       }
-      console.log(`[process-gig-song] After attribute blend: skillLevel=${skillLevel}, attrs=${JSON.stringify(attrs)}`);
+      console.log(`[process-gig-song] After attribute blend: skillLevel=${skillLevel}, attrs musical=${rawMusical} technical=${rawTechnical} rhythm=${rawRhythm}`);
     }
 
     // Fetch equipped gear bonus
@@ -404,27 +421,50 @@ async function fetchStageSkillAverage(
   let counted = 0;
 
   for (const member of members) {
-    if (!member.user_id) continue;
-
-    // Stage attributes are in player_attributes table, NOT profiles
-    const { data: attrs } = await supabaseClient
-      .from('player_attributes')
-      .select('stage_presence, charisma, crowd_engagement')
-      .eq('user_id', member.user_id)
-      .single();
-
-    if (!attrs) {
-      console.log(`[process-gig-song] No player_attributes found for user ${member.user_id}`);
+    if (!member.user_id) {
+      // NPC members get baseline stage skills based on tier
+      const npcTier = member.touring_member_tier || 1;
+      const npcStage = Math.min(80, 25 + npcTier * 15);
+      totalStage += npcStage;
+      counted++;
       continue;
     }
 
-    // 60% stage_presence + 40% charisma (matching plan)
+    // Try profile_id first, then user_id
+    let attrs: any = null;
+    const { data: profile } = await supabaseClient
+      .from('profiles').select('id').eq('user_id', member.user_id).maybeSingle();
+    
+    if (profile) {
+      const { data: a } = await supabaseClient
+        .from('player_attributes')
+        .select('stage_presence, charisma, crowd_engagement')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      attrs = a;
+    }
+    if (!attrs) {
+      const { data: a } = await supabaseClient
+        .from('player_attributes')
+        .select('stage_presence, charisma, crowd_engagement')
+        .eq('user_id', member.user_id)
+        .maybeSingle();
+      attrs = a;
+    }
+
+    if (!attrs) {
+      totalStage += 40;
+      counted++;
+      continue;
+    }
+
     const stagePresence = attrs.stage_presence ?? 5;
     const charisma = attrs.charisma ?? 5;
-    // Attributes are typically 0-20 scale, normalize to 0-100
-    const normalized = ((stagePresence * 0.6 + charisma * 0.4) / 20) * 100;
+    // Attributes can be 0-1000+, normalize to 0-100
+    const raw = stagePresence * 0.6 + charisma * 0.4;
+    const normalized = Math.min(100, (Math.min(raw, 1000) / 1000) * 100);
     console.log(`[process-gig-song] Stage skills for ${member.user_id}: presence=${stagePresence}, charisma=${charisma}, normalized=${normalized}`);
-    totalStage += Math.min(100, normalized);
+    totalStage += normalized;
     counted++;
   }
 
@@ -590,12 +630,12 @@ serve(async (req) => {
       equipmentQuality,
       crewSkillLevel,
       songQuality: song.quality_score,
-      rehearsalLevel: rehearsal?.rehearsal_level
+      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
     });
 
     const factors: PerformanceFactors = {
       songQuality: song.quality_score || 50,
-      rehearsalLevel: rehearsal?.rehearsal_level || 0,
+      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10, // 0-10 scale → 0-100
       bandChemistry: gig.bands.chemistry_level || 0,
       equipmentQuality,
       crewSkillLevel,

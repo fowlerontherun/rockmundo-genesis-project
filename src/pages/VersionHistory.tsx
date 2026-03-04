@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.871",
+    date: "2026-03-04",
+    changes: [
+      { type: 'fix', description: "Fixed gig performance scores being too low — rehearsal level was not scaled (0-10 fed as 0-100), NPC band members were skipped instead of given baseline skills, and player attribute normalization used wrong scale" },
+      { type: 'feature', description: "Added Manager's Suggestions section to post-gig analytics showing actionable tips based on weak performance factors" },
+    ],
+  },
+  {
     version: "1.0.870",
     date: "2026-03-04",
     changes: [
