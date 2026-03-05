@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.884",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Added Stage Practice to the Music navigation section, Music Hub page, and horizontal navigation" },
+    ],
+  },
+  {
     version: "1.0.883",
     date: "2026-03-05",
     changes: [

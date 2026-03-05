@@ -165,6 +165,7 @@ export const en = {
     songManager: "Song Manager",
     songMarket: "Song Market",
     songRankings: "Song Rankings",
+    stagePractice: "Stage Practice",
     bandBrowser: "Band Browser",
     bandVehicles: "Band Vehicles",
     bandRiders: "Band Riders",

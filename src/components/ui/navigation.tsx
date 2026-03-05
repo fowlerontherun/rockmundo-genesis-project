@@ -71,6 +71,7 @@ import {
   Film,
   Inbox,
   Ticket,
+  Gamepad2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -171,6 +172,7 @@ const Navigation = () => {
         { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
         { icon: Store, labelKey: "nav.songMarket", path: "/song-market" },
         { icon: Trophy, labelKey: "nav.songRankings", path: "/song-rankings" },
+        { icon: Gamepad2, labelKey: "nav.stagePractice", path: "/stage-practice" },
       ],
     },
     {
