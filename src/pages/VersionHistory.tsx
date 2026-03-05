@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.881",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Record sales formula: switched from flat-log fame scaling (max ~4.5x) to squared-log curve (max ~27x for 15M fame) to restore realistic daily sales volumes" },
+      { type: 'feature', description: "Added fan-base multiplier to daily sales — bands with more fans now generate proportionally more sales (sqrt scaling)" },
+    ],
+  },
+  {
     version: "1.0.880",
     date: "2026-03-05",
     changes: [

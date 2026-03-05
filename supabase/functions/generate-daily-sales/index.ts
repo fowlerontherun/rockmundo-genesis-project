@@ -277,10 +277,18 @@ serve(async (req) => {
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
-        // Logarithmic fame scaling: fame 100→1.5x, 1K→2x, 10K→3x, 100K→3.5x, 1M→4x, 5M→4.3x
-        const fameMultiplier = 1 + Math.log10(Math.max(artistFame, 1)) * 0.5;
-        const popularityMultiplier = 1 + Math.log10(Math.max(artistPopularity, 1)) * 0.3;
+        // Squared-log fame scaling: fame 100→3x, 1K→5.5x, 10K→9x, 100K→13.5x, 1M→19x, 15M→27x
+        const logFame = Math.log10(Math.max(artistFame, 1));
+        const fameMultiplier = 1 + Math.pow(logFame, 2) * 0.5;
+        // Squared-log popularity scaling
+        const logPop = Math.log10(Math.max(artistPopularity, 1));
+        const popularityMultiplier = 1 + Math.pow(logPop, 2) * 0.3;
         const qualityMultiplier = 0.5 + (avgQuality / 100) * 1.0; // 0.5x at 0 quality, 1.5x at 100
+        // Fan base multiplier: more fans = more buyers (sqrt scaling to prevent runaway)
+        const totalFans = countryFansMap.size > 0 
+          ? Array.from(countryFansMap.values()).reduce((sum, cf) => sum + (cf.total_fans || 0), 0)
+          : 0;
+        const fansMultiplier = totalFans > 0 ? 1 + Math.sqrt(totalFans) * 0.005 : 1.0;
 
         for (const format of release.release_formats || []) {
           // Skip formats with no retail price set
@@ -346,7 +354,7 @@ serve(async (req) => {
             }
 
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1) // Split sales across territories
             );
 
