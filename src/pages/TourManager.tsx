@@ -396,8 +396,9 @@ const TourManager = () => {
 
        const dayKey = (iso: string | null | undefined) => {
          if (!iso) return "";
-         // Use local date formatting consistently (tour_venues dates are stored at 00:00 UTC).
-         return format(new Date(iso), "yyyy-MM-dd");
+         // Use substring to avoid timezone-related date shifts
+         // Both tour_venues.date and gigs.scheduled_date store YYYY-MM-DD at the start
+         return typeof iso === 'string' ? iso.substring(0, 10) : "";
        };
       
       (venuesResult.data || []).forEach(v => { venuesMap[v.id] = v; });

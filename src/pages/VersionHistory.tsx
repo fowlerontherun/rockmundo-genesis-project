@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.872",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Geographic Route Optimization — tour venues are now ordered by nearest-neighbor algorithm with country grouping, so world tours complete all gigs in one country before moving to the next, minimizing travel time" },
+      { type: 'fix', description: "Fixed tour details showing blank ratings and income — date matching between tour venues and gig outcomes was timezone-sensitive, now uses consistent date substring comparison" },
+    ],
+  },
+  {
     version: "1.0.871",
     date: "2026-03-04",
     changes: [
