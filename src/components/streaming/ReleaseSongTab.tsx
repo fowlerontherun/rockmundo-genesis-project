@@ -66,16 +66,6 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
       const song = unreleasedSongs?.find((s) => s.id === selectedSong);
       if (!song) throw new Error("Song not found");
 
-      // Check quality requirements
-      for (const platformId of selectedPlatforms) {
-        const platform = platforms?.find((p) => p.id === platformId);
-        if (platform && song.quality_score < platform.min_quality_requirement) {
-          throw new Error(
-            `Song quality (${song.quality_score}) doesn't meet ${platform.platform_name}'s requirement (${platform.min_quality_requirement})`
-          );
-        }
-      }
-
       // Get platform names for each selected platform
       const platformDetails = platforms?.filter(p => selectedPlatforms.includes(p.id)) || [];
 
@@ -166,11 +156,7 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
           <CardDescription>Choose where to release your song</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {platforms?.map((platform) => {
-            const selectedSongData = unreleasedSongs?.find((s) => s.id === selectedSong);
-            const meetsRequirement = !selectedSongData || selectedSongData.quality_score >= platform.min_quality_requirement;
-
-            return (
+          {platforms?.map((platform) => (
               <div key={platform.id} className="flex items-start space-x-3 p-3 rounded-lg border">
                 <Checkbox
                   id={platform.id}
@@ -182,7 +168,6 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
                       setSelectedPlatforms(selectedPlatforms.filter((id) => id !== platform.id));
                     }
                   }}
-                  disabled={!meetsRequirement}
                 />
                 <div className="flex-1">
                   <Label htmlFor={platform.id} className="font-medium cursor-pointer">
@@ -191,15 +176,9 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
                   <div className="text-sm text-muted-foreground mt-1">
                     ${(platform.base_payout_per_stream * 1000).toFixed(2)} per 1k streams
                   </div>
-                  {platform.min_quality_requirement > 0 && (
-                    <Badge variant={meetsRequirement ? "outline" : "destructive"} className="text-xs mt-1">
-                      Min Quality: {platform.min_quality_requirement}
-                    </Badge>
-                  )}
                 </div>
               </div>
-            );
-          })}
+            ))}
         </CardContent>
       </Card>
 

@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.888",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Normalized all radio station genres to match the MUSIC_GENRES skill list (consistent casing/formatting)" },
+      { type: 'feature', description: "Expanded radio station genre coverage — Hip Hop stations now accept Boom Bap, Trap, Drill, Phonk, Grime, and more subgenres" },
+      { type: 'feature', description: "Rock/Metal stations now accept Punk Rock, Modern Rock, and Metalcore/Djent" },
+      { type: 'feature', description: "Pop/EDM stations now accept K-Pop/J-Pop and Hyperpop; Electronic stations accept Synthwave and Lo-Fi Hip Hop" },
+      { type: 'improvement', description: "Removed all streaming platform quality restrictions — any song can now be distributed to any platform" },
+      { type: 'improvement', description: "Removed quality gate UI from song release flow (no more 'Min Quality' badges or disabled checkboxes)" },
+    ],
+  },
+  {
     version: "1.0.887",
     date: "2026-03-05",
     changes: [

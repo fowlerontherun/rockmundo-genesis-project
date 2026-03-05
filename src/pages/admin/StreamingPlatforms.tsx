@@ -71,10 +71,6 @@ const AdminStreamingPlatforms = () => {
                     <span className="text-muted-foreground">Quality Mult:</span>
                     <div className="font-medium">{platform.quality_multiplier}x</div>
                   </div>
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Min Quality:</span>
-                    <div className="font-medium">{platform.min_quality_requirement}</div>
-                  </div>
                 </div>
                 <Button variant="outline" size="sm" className="w-full">
                   Edit
