@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +12,23 @@ import {
   Heart, Users, Swords, Music, Sparkles, Search,
   Flame, Theater, Baby, Activity, TrendingUp,
   Shield, Zap, Star, Crown, AlertCircle,
+  UserPlus, MessageSquare, Gift, Handshake,
 } from "lucide-react";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
-import { useCharacterRelationships } from "@/hooks/useCharacterRelationships";
-import { useSocialDramaEvents, useMediaArticles } from "@/hooks/useSocialDramaGenerator";
+import { InteractionModal, type InteractionOption, type InteractionResult } from "@/components/social/InteractionModal";
+import { useCharacterRelationships, useLogInteraction } from "@/hooks/useCharacterRelationships";
+import { useSocialDramaEvents } from "@/hooks/useSocialDramaGenerator";
 import { useEmotionalState, useEmotionalModifiers } from "@/hooks/useEmotionalEngine";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useFriendships } from "@/features/relationships/hooks/useFriendships";
+import { FriendshipList } from "@/features/relationships/components/FriendshipList";
+import { FriendSearchDialog } from "@/features/relationships/components/FriendSearchDialog";
+import { DirectMessagePanel } from "@/features/relationships/components/DirectMessagePanel";
+import { resolveRelationshipPairKey } from "@/features/relationships/api";
+import { INTERACTION_PRESETS } from "@/types/character-relationships";
 import type { CharacterRelationship } from "@/types/character-relationships";
+import type { DecoratedFriendship } from "@/features/relationships/types";
 import { formatDistanceToNow } from "date-fns";
 
 // ── Filter categories ─────────────────────────────────────────
@@ -32,6 +41,16 @@ const FILTER_CATEGORIES = [
   { key: "mentor", label: "Mentors", icon: Star },
   { key: "ex_partner", label: "Exes", icon: Theater },
 ];
+
+// ── Quick Action → Interaction Preset mapping ─────────────────
+const QUICK_ACTION_MAP: Record<string, { presetKey: string; label: string; icon: React.ReactNode; description: string }> = {
+  Chat: { presetKey: "casual_chat", label: "Casual Chat", icon: <MessageSquare className="h-4 w-4 text-social-friendship" />, description: "Have a friendly conversation" },
+  Gift: { presetKey: "gift", label: "Send a Gift", icon: <Gift className="h-4 w-4 text-social-love" />, description: "Give a thoughtful gift to strengthen your bond" },
+  Collaborate: { presetKey: "collaboration", label: "Propose Collaboration", icon: <Handshake className="h-4 w-4 text-social-chemistry" />, description: "Work together on music" },
+  Challenge: { presetKey: "competition", label: "Friendly Challenge", icon: <Swords className="h-4 w-4 text-social-rivalry" />, description: "Challenge them to a musical duel" },
+  Flirt: { presetKey: "flirt", label: "Flirt", icon: <Heart className="h-4 w-4 text-social-love" />, description: "Show romantic interest" },
+  Confront: { presetKey: "argument", label: "Confront", icon: <Zap className="h-4 w-4 text-social-tension" />, description: "Address an issue head-on" },
+};
 
 // ── Visual helpers ─────────────────────────────────────────────
 function deriveStatus(rel: CharacterRelationship): string {
@@ -80,21 +99,84 @@ function getSeverityStyle(severity: string) {
   }
 }
 
+// Build InteractionOption from a quick action
+function buildInteractionOption(actionKey: string, rel: CharacterRelationship): InteractionOption {
+  const mapping = QUICK_ACTION_MAP[actionKey];
+  const preset = INTERACTION_PRESETS[mapping.presetKey];
+  const impacts = Object.entries(preset)
+    .filter(([_, v]) => v !== 0)
+    .map(([k, v]) => ({
+      label: k.replace("_change", "").replace("_", " "),
+      change: v as number,
+    }));
+
+  // Success probability based on trust and affection
+  const baseProb = 50 + (rel.trust_score / 4) + (rel.affection_score / 5);
+  const prob = Math.min(95, Math.max(10, Math.round(baseProb)));
+
+  return {
+    id: mapping.presetKey,
+    label: mapping.label,
+    description: mapping.description,
+    icon: mapping.icon,
+    successProbability: prob,
+    emotionalImpact: impacts,
+  };
+}
+
 // ── Main Page ──────────────────────────────────────────────────
 export default function RelationshipsPage() {
   const { user } = useAuth();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
+  const profileUserId = gameData?.profile?.user_id;
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Friends state
+  const [selectedFriendship, setSelectedFriendship] = useState<DecoratedFriendship | null>(null);
+  const [friendSearchOpen, setFriendSearchOpen] = useState(false);
+
+  // Interaction modal state
+  const [interactionTarget, setInteractionTarget] = useState<CharacterRelationship | null>(null);
+  const [interactionModalOpen, setInteractionModalOpen] = useState(false);
 
   // Real data hooks
   const { data: relationships = [], isLoading: relsLoading } = useCharacterRelationships();
   const { data: dramaEvents = [], isLoading: dramaLoading } = useSocialDramaEvents(profileId);
   const { data: emotionalState, isLoading: emotionLoading } = useEmotionalState();
   const { songwritingModifier, performanceModifier, interactionModifier } = useEmotionalModifiers();
+  const logInteraction = useLogInteraction();
+
+  // Friends hooks
+  const {
+    friendships,
+    loading: friendsLoading,
+    acceptRequest,
+    declineRequest,
+    removeFriend,
+    sendRequest,
+  } = useFriendships(profileId);
+
+  // Pending friend request count for badge
+  const pendingCount = useMemo(() => {
+    return friendships.filter(f => f.friendship.status === "pending" && !f.isRequester).length;
+  }, [friendships]);
+
+  // Exclude already-connected profile IDs from friend search
+  const excludeProfileIds = useMemo(() => {
+    const ids = friendships.map(f => f.otherProfile?.id).filter(Boolean) as string[];
+    if (profileId) ids.push(profileId);
+    return ids;
+  }, [friendships, profileId]);
+
+  // DM channel for selected friend
+  const dmChannel = useMemo(() => {
+    if (!selectedFriendship?.otherProfile?.id || !profileId) return null;
+    return `dm:${resolveRelationshipPairKey(profileId, selectedFriendship.otherProfile.id)}`;
+  }, [selectedFriendship, profileId]);
 
   // Filter relationships
   const filtered = useMemo(() => {
@@ -110,13 +192,81 @@ export default function RelationshipsPage() {
     return relationships.find((r) => r.id === selectedId) ?? null;
   }, [relationships, filtered, selectedId]);
 
-  // Romance tab: filter for partners and exes
+  // Romance tab
   const romanticRelationships = useMemo(() => {
     return relationships.filter(r => {
       const types = r.relationship_types ?? [];
       return types.includes("partner") || types.includes("ex_partner");
     });
   }, [relationships]);
+
+  // Handle Quick Action click → open InteractionModal
+  const handleQuickAction = useCallback((rel: CharacterRelationship) => {
+    setInteractionTarget(rel);
+    setInteractionModalOpen(true);
+  }, []);
+
+  // Handle interaction selection from modal
+  const handleInteractionSelect = useCallback(async (optionId: string): Promise<InteractionResult> => {
+    if (!interactionTarget || !profileId) {
+      return { success: false, title: "Error", description: "Missing data", impacts: [] };
+    }
+
+    const preset = INTERACTION_PRESETS[optionId];
+    if (!preset) {
+      return { success: false, title: "Error", description: "Unknown interaction", impacts: [] };
+    }
+
+    // Roll for success
+    const baseProb = 50 + (interactionTarget.trust_score / 4) + (interactionTarget.affection_score / 5);
+    const prob = Math.min(95, Math.max(10, baseProb));
+    const roll = Math.random() * 100;
+    const success = roll <= prob;
+
+    // Scale changes based on success/failure
+    const multiplier = success ? 1 : -0.5;
+    const changes = {
+      affection_change: Math.round((preset.affection_change ?? 0) * multiplier),
+      trust_change: Math.round((preset.trust_change ?? 0) * multiplier),
+      attraction_change: Math.round((preset.attraction_change ?? 0) * multiplier),
+      loyalty_change: Math.round((preset.loyalty_change ?? 0) * multiplier),
+      jealousy_change: preset.jealousy_change ?? 0,
+    };
+
+    try {
+      await logInteraction.mutateAsync({
+        relationship_id: interactionTarget.id,
+        interaction_type: optionId,
+        description: `${success ? "Successful" : "Failed"} ${optionId.replace(/_/g, " ")} with ${interactionTarget.entity_b_name}`,
+        initiated_by: profileId,
+        ...changes,
+      });
+    } catch {
+      return { success: false, title: "Error", description: "Failed to log interaction", impacts: [] };
+    }
+
+    const impacts = Object.entries(changes)
+      .filter(([_, v]) => v !== 0)
+      .map(([k, v]) => ({
+        label: k.replace("_change", "").replace(/_/g, " "),
+        change: v,
+      }));
+
+    return {
+      success,
+      title: success ? "Success!" : "It didn't go well...",
+      description: success
+        ? `Your ${optionId.replace(/_/g, " ")} with ${interactionTarget.entity_b_name} went great!`
+        : `Your ${optionId.replace(/_/g, " ")} with ${interactionTarget.entity_b_name} backfired.`,
+      impacts,
+    };
+  }, [interactionTarget, profileId, logInteraction]);
+
+  // Build interaction options for selected target
+  const interactionOptions = useMemo(() => {
+    if (!interactionTarget) return [];
+    return Object.keys(QUICK_ACTION_MAP).map(key => buildInteractionOption(key, interactionTarget));
+  }, [interactionTarget]);
 
   if (!user) {
     return (
@@ -140,19 +290,111 @@ export default function RelationshipsPage() {
             Manage your connections, track chemistry, and navigate the drama of the music world.
           </p>
         </div>
-        <Badge variant="outline" className="text-xs">
-          {relationships.length} connections
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {friendships.filter(f => f.friendship.status === "accepted").length} friends
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {relationships.length} connections
+          </Badge>
+        </div>
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="network" className="space-y-6">
+      <Tabs defaultValue="friends" className="space-y-6">
         <TabsList className="bg-card border border-border">
+          <TabsTrigger value="friends" className="gap-2 relative">
+            <UserPlus className="h-4 w-4" /> Friends
+            {pendingCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-social-love text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {pendingCount}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="network" className="gap-2"><Users className="h-4 w-4" /> Network</TabsTrigger>
           <TabsTrigger value="drama" className="gap-2"><Theater className="h-4 w-4" /> Drama Feed</TabsTrigger>
           <TabsTrigger value="romance" className="gap-2"><Flame className="h-4 w-4" /> Romance</TabsTrigger>
           <TabsTrigger value="legacy" className="gap-2"><Baby className="h-4 w-4" /> Family</TabsTrigger>
         </TabsList>
+
+        {/* ── FRIENDS TAB ──────────────────────────────────────── */}
+        <TabsContent value="friends" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Your Friends</h2>
+              <p className="text-sm text-muted-foreground">Manage friendships, accept requests, and chat with other players</p>
+            </div>
+            <Button onClick={() => setFriendSearchOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Find Players
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr,1.4fr] gap-4">
+            {/* Friend List */}
+            <FriendshipList
+              friendships={friendships}
+              loading={friendsLoading}
+              onSelect={(f) => setSelectedFriendship(f)}
+              selectedFriendshipId={selectedFriendship?.friendship.id ?? null}
+              onAccept={acceptRequest}
+              onDecline={declineRequest}
+              onRemove={removeFriend}
+            />
+
+            {/* Friend Detail + DM Panel */}
+            {selectedFriendship && selectedFriendship.friendship.status === "accepted" && dmChannel && profileUserId ? (
+              <div className="space-y-4">
+                {/* Friend Info Card */}
+                <Card className="border-social-friendship/30">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-social-friendship/20 text-social-friendship flex items-center justify-center text-lg font-bold">
+                        {getInitials(selectedFriendship.otherProfile?.display_name || selectedFriendship.otherProfile?.username || "?")}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold">
+                          {selectedFriendship.otherProfile?.display_name || selectedFriendship.otherProfile?.username}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            Level {selectedFriendship.otherProfile?.level ?? 1}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            ⭐ {selectedFriendship.otherProfile?.fame?.toLocaleString() ?? 0} fame
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* DM Panel */}
+                <DirectMessagePanel
+                  channel={dmChannel}
+                  currentUserId={profileUserId}
+                  otherDisplayName={selectedFriendship.otherProfile?.display_name || selectedFriendship.otherProfile?.username || "Friend"}
+                />
+              </div>
+            ) : (
+              <Card className="flex items-center justify-center h-full min-h-[400px]">
+                <CardContent className="text-center text-muted-foreground py-20">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm font-medium">Select a friend to start chatting</p>
+                  <p className="text-xs mt-1">Accept pending requests or find new players to connect with</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Friend Search Dialog */}
+          <FriendSearchDialog
+            open={friendSearchOpen}
+            onOpenChange={setFriendSearchOpen}
+            excludeProfileIds={excludeProfileIds}
+            onSelectProfile={sendRequest}
+          />
+        </TabsContent>
 
         {/* ── NETWORK TAB ──────────────────────────────────────── */}
         <TabsContent value="network" className="space-y-4">
@@ -305,15 +547,22 @@ export default function RelationshipsPage() {
                       </div>
                     </div>
 
-                    {/* Quick Actions */}
+                    {/* Quick Actions — now wired to InteractionModal */}
                     <div>
                       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                         <Zap className="h-4 w-4 text-primary" />
                         Quick Actions
                       </h3>
                       <div className="flex flex-wrap gap-2">
-                        {["Chat", "Gift", "Collaborate", "Challenge", "Flirt", "Confront"].map((action) => (
-                          <Button key={action} size="sm" variant="outline" className="text-xs">
+                        {Object.keys(QUICK_ACTION_MAP).map((action) => (
+                          <Button
+                            key={action}
+                            size="sm"
+                            variant="outline"
+                            className="text-xs gap-1.5"
+                            onClick={() => handleQuickAction(selected)}
+                          >
+                            {QUICK_ACTION_MAP[action].icon}
                             {action}
                           </Button>
                         ))}
@@ -446,7 +695,7 @@ export default function RelationshipsPage() {
                   dramaEvents
                     .filter(e => e.twaater_hashtag)
                     .slice(0, 5)
-                    .map((e, i) => (
+                    .map((e) => (
                       <div key={e.id} className="flex items-center justify-between">
                         <span className="text-sm text-social-chemistry font-medium truncate">{e.twaater_hashtag}</span>
                         <Badge variant="outline" className="text-[10px]">{e.severity}</Badge>
@@ -602,6 +851,18 @@ export default function RelationshipsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Interaction Modal */}
+      <InteractionModal
+        open={interactionModalOpen}
+        onOpenChange={setInteractionModalOpen}
+        title="Interact"
+        subtitle={interactionTarget ? `Choose how to interact with ${interactionTarget.entity_b_name}` : undefined}
+        targetName={interactionTarget?.entity_b_name ?? ""}
+        options={interactionOptions}
+        onSelectOption={handleInteractionSelect}
+        isProcessing={logInteraction.isPending}
+      />
     </div>
   );
 }
