@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.874",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Fixed tour details showing 0 attendance, no ratings, and no revenue — the gigs query was silently failing because it referenced a non-existent 'song_count' column on the setlists table, causing all gig data matching to return empty" },
+    ],
+  },
+  {
     version: "1.0.873",
     date: "2026-03-05",
     changes: [

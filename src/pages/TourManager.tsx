@@ -373,7 +373,7 @@ const TourManager = () => {
           tickets_sold, 
           payment, 
           status,
-          setlists(id, name, song_count)
+          setlists(id, name)
         `).eq('tour_id', selectedTour.id)
       ]);
       
@@ -410,13 +410,13 @@ const TourManager = () => {
          if (g.venue_id) {
            const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
            gigsMap[key] = {
-             id: g.id,
-             setlist_id: g.setlist_id,
-             setlist_name: g.setlists?.name || null,
-             setlist_song_count: g.setlists?.song_count || null,
-             tickets_sold: g.tickets_sold ?? null,
-             payment: g.payment ?? null,
-             status: g.status ?? null,
+              id: g.id,
+              setlist_id: g.setlist_id,
+              setlist_name: g.setlists?.name || null,
+              setlist_song_count: null,
+              tickets_sold: g.tickets_sold ?? null,
+              payment: g.payment ?? null,
+              status: g.status ?? null,
            };
          }
        });
@@ -427,14 +427,14 @@ const TourManager = () => {
           ticket_revenue: o.ticket_revenue,
           net_profit: o.net_profit,
         };
-      });
+       });
       
        return (data || []).map(tv => {
-        const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
-        const city = venue?.city_id ? citiesMap[venue.city_id] : (tv.city_id ? citiesMap[tv.city_id] : null);
-         const gigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` : "";
-         const gig = gigKey ? gigsMap[gigKey] : null;
-        const outcome = gig?.id ? outcomesMap[gig.id] : null;
+         const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
+         const city = venue?.city_id ? citiesMap[venue.city_id] : (tv.city_id ? citiesMap[tv.city_id] : null);
+          const gigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` : "";
+          const gig = gigKey ? gigsMap[gigKey] : null;
+         const outcome = gig?.id ? outcomesMap[gig.id] : null;
         return {
           ...tv,
           venue: venue ? {
