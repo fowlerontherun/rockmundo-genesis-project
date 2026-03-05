@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.878",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Stage Practice now plays AI-generated background music matching the selected song genre via ElevenLabs" },
+      { type: 'feature', description: "Added flashing red hazard triangles that randomly appear — hitting them costs a life, but letting them pass is safe" },
+      { type: 'feature', description: "Added sound effects for note hits, misses, and hazard triggers via ElevenLabs SFX" },
+      { type: 'improvement', description: "Slowed down note fall speeds across all difficulty levels for better playability" },
+      { type: 'feature', description: "Screen flashes red when a hazard is hit for dramatic feedback" },
+      { type: 'feature', description: "Music mute toggle button added to game controls" },
+    ],
+  },
+  {
     version: "1.0.877",
     date: "2026-03-05",
     changes: [

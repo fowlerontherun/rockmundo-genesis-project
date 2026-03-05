@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Heart, Pause, Play } from 'lucide-react';
+import { Heart, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   type GameNote,
@@ -19,15 +19,16 @@ interface StagePracticeGameProps {
   songTitle: string;
   instrumentSlug: string;
   skillLevel: number;
+  audioUrl?: string | null;
   onGameOver: (state: GameState) => void;
 }
 
-// Lane colors (HSL-based to match design system)
+// Lane colors
 const LANE_COLORS = [
-  { h: 0, s: 80, l: 60 },    // red
-  { h: 200, s: 80, l: 60 },  // blue
-  { h: 120, s: 60, l: 50 },  // green
-  { h: 45, s: 90, l: 55 },   // amber
+  { h: 0, s: 80, l: 60 },
+  { h: 200, s: 80, l: 60 },
+  { h: 120, s: 60, l: 50 },
+  { h: 45, s: 90, l: 55 },
 ];
 
 const laneHsl = (lane: number) => `hsl(${LANE_COLORS[lane].h}, ${LANE_COLORS[lane].s}%, ${LANE_COLORS[lane].l}%)`;
@@ -35,10 +36,90 @@ const laneHsla = (lane: number, a: number) => `hsla(${LANE_COLORS[lane].h}, ${LA
 
 let nextNoteId = 0;
 
+// ─── Web Audio API SFX synthesizer ──────────────────────────────
+function playHitSfx() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+    setTimeout(() => ctx.close(), 200);
+  } catch {}
+}
+
+function playPerfectSfx() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1046, ctx.currentTime);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1318, ctx.currentTime);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc2.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+    osc2.stop(ctx.currentTime + 0.2);
+    setTimeout(() => ctx.close(), 250);
+  } catch {}
+}
+
+function playMissSfx() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+    setTimeout(() => ctx.close(), 300);
+  } catch {}
+}
+
+function playHazardSfx() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, ctx.currentTime);
+    osc.frequency.setValueAtTime(100, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(150, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+    setTimeout(() => ctx.close(), 350);
+  } catch {}
+}
+
 export function StagePracticeGame({
   songTitle,
   instrumentSlug,
   skillLevel,
+  audioUrl,
   onGameOver,
 }: StagePracticeGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,11 +131,37 @@ export function StagePracticeGame({
   const animRef = useRef<number>(0);
   const playerLaneRef = useRef(Math.floor(LANE_COUNT / 2));
   const feedbackRef = useRef<{ text: string; color: string; time: number } | null>(null);
+  const hazardFlashRef = useRef(0);
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
 
   const [gameState, setGameState] = useState<GameState>({ ...INITIAL_GAME_STATE, phase: 'playing' });
   const [playerLane, setPlayerLane] = useState(Math.floor(LANE_COUNT / 2));
+  const [musicMuted, setMusicMuted] = useState(false);
 
   const laneWidth = CANVAS_WIDTH / LANE_COUNT;
+
+  // ─── Background music ─────────────────────────────────────────
+  useEffect(() => {
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.loop = true;
+      audio.volume = 0.25;
+      bgMusicRef.current = audio;
+      audio.play().catch(() => {});
+    }
+    return () => {
+      bgMusicRef.current?.pause();
+      bgMusicRef.current = null;
+    };
+  }, [audioUrl]);
+
+  const toggleMusic = () => {
+    const m = bgMusicRef.current;
+    if (m) {
+      m.muted = !m.muted;
+      setMusicMuted(m.muted);
+    }
+  };
 
   // ─── Note spawning ─────────────────────────────────────────────
   const spawnNote = useCallback(() => {
@@ -65,8 +172,9 @@ export function StagePracticeGame({
 
     let type: GameNote['type'] = 'normal';
     const roll = Math.random();
-    if (roll < diff.bonusNoteChance) type = 'bonus';
-    else if (roll < diff.bonusNoteChance + diff.holdNoteChance) type = 'hold';
+    if (roll < diff.hazardChance) type = 'hazard';
+    else if (roll < diff.hazardChance + diff.bonusNoteChance) type = 'bonus';
+    else if (roll < diff.hazardChance + diff.bonusNoteChance + diff.holdNoteChance) type = 'hold';
 
     const note: GameNote = {
       id: `n${nextNoteId++}`,
@@ -76,7 +184,7 @@ export function StagePracticeGame({
       fallSpeed: speed,
       y: -NOTE_RADIUS,
       hitWindow: diff.hitWindowMs,
-      xpMultiplier: type === 'bonus' ? 2 : 1,
+      xpMultiplier: type === 'bonus' ? 2 : type === 'hazard' ? 0 : 1,
       active: true,
       holdDuration: type === 'hold' ? 400 + Math.random() * 300 : undefined,
     };
@@ -89,7 +197,6 @@ export function StagePracticeGame({
     const notes = notesRef.current;
     const hitZone = HIT_ZONE_Y;
 
-    // Find closest active note in player's lane near the hit zone
     let bestNote: GameNote | null = null;
     let bestDist = Infinity;
 
@@ -103,22 +210,49 @@ export function StagePracticeGame({
     }
 
     if (!bestNote) return;
-
     const timingPx = bestDist;
-    const perfectThreshold = 15;
     const goodThreshold = 35;
+    if (timingPx > goodThreshold) return;
 
+    // Hazard hit — lose a life!
+    if (bestNote.type === 'hazard') {
+      bestNote.active = false;
+      const s = stateRef.current;
+      s.combo = 0;
+      s.lives -= 1;
+      hazardFlashRef.current = s.elapsedMs;
+      playHazardSfx();
+
+      feedbackRef.current = {
+        text: '⚠ HAZARD!',
+        color: 'hsl(0, 100%, 50%)',
+        time: s.elapsedMs,
+      };
+
+      if (s.lives <= 0) {
+        s.phase = 'gameover';
+        setGameState({ ...s });
+        cancelAnimationFrame(animRef.current);
+        bgMusicRef.current?.pause();
+        onGameOver({ ...s });
+        return;
+      }
+      setGameState({ ...s });
+      return;
+    }
+
+    const perfectThreshold = 15;
     let accuracy: HitAccuracy;
     let points: number;
 
     if (timingPx <= perfectThreshold) {
       accuracy = 'perfect';
       points = 100 * bestNote.xpMultiplier;
-    } else if (timingPx <= goodThreshold) {
+      playPerfectSfx();
+    } else {
       accuracy = 'good';
       points = 50 * bestNote.xpMultiplier;
-    } else {
-      return; // Too far
+      playHitSfx();
     }
 
     bestNote.active = false;
@@ -131,7 +265,6 @@ export function StagePracticeGame({
     else s.goodHits += 1;
     if (s.combo > s.longestCombo) s.longestCombo = s.combo;
 
-    // Combo bonus
     if (s.combo > 0 && s.combo % 10 === 0) {
       s.score += s.combo * 5;
     }
@@ -145,21 +278,20 @@ export function StagePracticeGame({
     };
 
     setGameState({ ...s });
-  }, []);
+  }, [onGameOver]);
 
-  // ─── Update accuracy ──────────────────────────────────────────
   const updateAccuracy = (s: GameState) => {
     const total = s.notesHit + s.notesMissed;
     s.accuracy = total > 0 ? Math.round((s.notesHit / total) * 100) : 100;
   };
 
-  // ─── Handle miss ──────────────────────────────────────────────
   const handleMiss = useCallback(() => {
     const s = stateRef.current;
     s.notesMissed += 1;
     s.combo = 0;
     s.lives -= 1;
     updateAccuracy(s);
+    playMissSfx();
 
     feedbackRef.current = {
       text: 'MISS',
@@ -171,16 +303,16 @@ export function StagePracticeGame({
       s.phase = 'gameover';
       setGameState({ ...s });
       cancelAnimationFrame(animRef.current);
+      bgMusicRef.current?.pause();
       onGameOver({ ...s });
       return;
     }
     setGameState({ ...s });
   }, [onGameOver]);
 
-  // ─── Level progression ────────────────────────────────────────
   const checkLevelUp = useCallback(() => {
     const s = stateRef.current;
-    const threshold = s.level * 8; // need 8 hits per level
+    const threshold = s.level * 8;
     if (s.notesHit >= threshold) {
       s.level += 1;
       setGameState({ ...s });
@@ -197,30 +329,28 @@ export function StagePracticeGame({
     s.elapsedMs += dt;
     const diff = difficultyRef.current;
 
-    // Spawn notes
-    const spawnInt = Math.max(300, diff.spawnInterval - s.level * diff.spawnIntervalDecrement);
+    const spawnInt = Math.max(400, diff.spawnInterval - s.level * diff.spawnIntervalDecrement);
     if (s.elapsedMs - lastSpawnRef.current >= spawnInt) {
       spawnNote();
       lastSpawnRef.current = s.elapsedMs;
     }
 
-    // Update notes
     const notes = notesRef.current;
     for (let i = notes.length - 1; i >= 0; i--) {
       const note = notes[i];
       if (!note.active) continue;
       note.y += (note.fallSpeed * dt) / 1000;
 
-      // Missed – passed hit zone
       if (note.y > HIT_ZONE_Y + 40) {
         note.active = false;
-        handleMiss();
+        if (note.type !== 'hazard') {
+          handleMiss();
+        }
+        // Hazards that pass are safe
       }
     }
 
-    // Clean up inactive notes
     notesRef.current = notes.filter(n => n.active || n.y < CANVAS_HEIGHT + 50);
-
     checkLevelUp();
     drawFrame();
 
@@ -236,10 +366,18 @@ export function StagePracticeGame({
 
     const w = CANVAS_WIDTH;
     const h = CANVAS_HEIGHT;
+    const elapsed = stateRef.current.elapsedMs;
 
-    // Background
+    // Background (with hazard flash)
     ctx.fillStyle = 'hsl(220, 25%, 8%)';
     ctx.fillRect(0, 0, w, h);
+
+    const hazardFlashAge = elapsed - hazardFlashRef.current;
+    if (hazardFlashAge < 300 && hazardFlashRef.current > 0) {
+      const flashAlpha = (1 - hazardFlashAge / 300) * 0.35;
+      ctx.fillStyle = `hsla(0, 100%, 40%, ${flashAlpha})`;
+      ctx.fillRect(0, 0, w, h);
+    }
 
     // Lane dividers
     ctx.strokeStyle = 'hsla(220, 20%, 25%, 0.4)';
@@ -262,7 +400,7 @@ export function StagePracticeGame({
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Hit zone glow at player lane
+    // Hit zone glow
     const pLane = playerLaneRef.current;
     const plx = pLane * laneWidth + laneWidth / 2;
     const grad = ctx.createRadialGradient(plx, HIT_ZONE_Y, 5, plx, HIT_ZONE_Y, 40);
@@ -277,41 +415,70 @@ export function StagePracticeGame({
       const cx = note.lane * laneWidth + laneWidth / 2;
       const cy = note.y;
 
-      // Glow
-      const ng = ctx.createRadialGradient(cx, cy, 2, cx, cy, NOTE_RADIUS + 8);
-      ng.addColorStop(0, note.type === 'bonus' ? 'hsla(45, 100%, 60%, 0.5)' : laneHsla(note.lane, 0.5));
-      ng.addColorStop(1, 'transparent');
-      ctx.fillStyle = ng;
-      ctx.beginPath();
-      ctx.arc(cx, cy, NOTE_RADIUS + 8, 0, Math.PI * 2);
-      ctx.fill();
+      if (note.type === 'hazard') {
+        // Flashing red triangle
+        const flashRate = Math.sin(elapsed * 0.008) * 0.3 + 0.7;
+        const size = NOTE_RADIUS + 4;
 
-      // Note circle
-      ctx.fillStyle = note.type === 'bonus' ? 'hsl(45, 100%, 55%)' : laneHsl(note.lane);
-      ctx.beginPath();
-      ctx.arc(cx, cy, NOTE_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Hold note indicator
-      if (note.type === 'hold') {
-        ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.8)';
-        ctx.lineWidth = 2;
+        // Glow
+        const hg = ctx.createRadialGradient(cx, cy, 2, cx, cy, size + 12);
+        hg.addColorStop(0, `hsla(0, 100%, 50%, ${0.4 * flashRate})`);
+        hg.addColorStop(1, 'transparent');
+        ctx.fillStyle = hg;
         ctx.beginPath();
-        ctx.arc(cx, cy, NOTE_RADIUS - 5, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+        ctx.arc(cx, cy, size + 12, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Bonus star
-      if (note.type === 'bonus') {
-        ctx.fillStyle = 'hsl(220, 20%, 10%)';
+        // Triangle
+        ctx.fillStyle = `hsla(0, 100%, 50%, ${flashRate})`;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - size);
+        ctx.lineTo(cx - size, cy + size * 0.7);
+        ctx.lineTo(cx + size, cy + size * 0.7);
+        ctx.closePath();
+        ctx.fill();
+
+        // Exclamation mark
+        ctx.fillStyle = 'hsl(0, 0%, 100%)';
         ctx.font = 'bold 14px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('★', cx, cy);
+        ctx.fillText('!', cx, cy + 2);
+      } else {
+        // Glow
+        const ng = ctx.createRadialGradient(cx, cy, 2, cx, cy, NOTE_RADIUS + 8);
+        ng.addColorStop(0, note.type === 'bonus' ? 'hsla(45, 100%, 60%, 0.5)' : laneHsla(note.lane, 0.5));
+        ng.addColorStop(1, 'transparent');
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(cx, cy, NOTE_RADIUS + 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Note circle
+        ctx.fillStyle = note.type === 'bonus' ? 'hsl(45, 100%, 55%)' : laneHsl(note.lane);
+        ctx.beginPath();
+        ctx.arc(cx, cy, NOTE_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (note.type === 'hold') {
+          ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.8)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, NOTE_RADIUS - 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        if (note.type === 'bonus') {
+          ctx.fillStyle = 'hsl(220, 20%, 10%)';
+          ctx.font = 'bold 14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('★', cx, cy);
+        }
       }
     }
 
-    // Player instrument sprite (simple rectangle at bottom)
+    // Player instrument sprite
     const spriteW = laneWidth * 0.7;
     const spriteH = 16;
     const spriteX = pLane * laneWidth + (laneWidth - spriteW) / 2;
@@ -327,8 +494,8 @@ export function StagePracticeGame({
 
     // Feedback text
     const fb = feedbackRef.current;
-    if (fb && stateRef.current.elapsedMs - fb.time < 500) {
-      const alpha = 1 - (stateRef.current.elapsedMs - fb.time) / 500;
+    if (fb && elapsed - fb.time < 500) {
+      const alpha = 1 - (elapsed - fb.time) / 500;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = fb.color;
       ctx.font = 'bold 24px sans-serif';
@@ -359,7 +526,6 @@ export function StagePracticeGame({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [tryHitNote]);
 
-  // ─── Touch controls ───────────────────────────────────────────
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (stateRef.current.phase !== 'playing') return;
     const canvas = canvasRef.current;
@@ -392,11 +558,13 @@ export function StagePracticeGame({
     if (s.phase === 'playing') {
       s.phase = 'paused';
       cancelAnimationFrame(animRef.current);
+      bgMusicRef.current?.pause();
       setGameState({ ...s });
     } else if (s.phase === 'paused') {
       s.phase = 'playing';
       lastFrameRef.current = 0;
       animRef.current = requestAnimationFrame(gameLoop);
+      bgMusicRef.current?.play().catch(() => {});
       setGameState({ ...s });
     }
   };
@@ -441,7 +609,6 @@ export function StagePracticeGame({
           onTouchStart={handleCanvasClick}
         />
 
-        {/* Pause overlay */}
         {gameState.phase === 'paused' && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
             <div className="text-center space-y-3">
@@ -454,13 +621,18 @@ export function StagePracticeGame({
         )}
       </div>
 
-      {/* Controls hint */}
-      <div className="flex items-center gap-3">
+      {/* Controls */}
+      <div className="flex items-center gap-3 flex-wrap justify-center">
         <Button variant="outline" size="sm" onClick={togglePause}>
           <Pause className="h-4 w-4 mr-1" />
           {gameState.phase === 'paused' ? 'Resume' : 'Pause'}
         </Button>
-        <span className="text-xs text-muted-foreground">← → to move • Space/Click to hit</span>
+        {audioUrl && (
+          <Button variant="ghost" size="sm" onClick={toggleMusic}>
+            {musicMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+        )}
+        <span className="text-xs text-muted-foreground">← → move • Space/Click hit • Avoid ⚠ triangles!</span>
       </div>
     </div>
   );

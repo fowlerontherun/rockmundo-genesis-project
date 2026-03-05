@@ -20,7 +20,7 @@ export const INSTRUMENT_LABELS: Record<string, string> = {
 };
 
 // ─── Note types ───────────────────────────────────────────────────────
-export type NoteType = 'normal' | 'hold' | 'bonus';
+export type NoteType = 'normal' | 'hold' | 'bonus' | 'hazard';
 
 export interface GameNote {
   id: string;
@@ -55,58 +55,63 @@ export interface DifficultyProfile {
   noteDensity: number; // notes per wave
   holdNoteChance: number; // 0-1
   bonusNoteChance: number; // 0-1
+  hazardChance: number; // 0-1
 }
 
 export function getDifficultyFromSkill(skillLevel: number): DifficultyProfile {
   if (skillLevel <= 3) {
     return {
       label: 'Beginner',
-      baseSpeed: 120,
-      speedIncrement: 8,
-      spawnInterval: 1400,
-      spawnIntervalDecrement: 40,
+      baseSpeed: 60,
+      speedIncrement: 4,
+      spawnInterval: 1800,
+      spawnIntervalDecrement: 30,
       hitWindowMs: 250,
       noteDensity: 3,
       holdNoteChance: 0,
       bonusNoteChance: 0.05,
+      hazardChance: 0.06,
     };
   }
   if (skillLevel <= 8) {
     return {
       label: 'Intermediate',
-      baseSpeed: 160,
-      speedIncrement: 12,
-      spawnInterval: 1000,
-      spawnIntervalDecrement: 50,
+      baseSpeed: 80,
+      speedIncrement: 6,
+      spawnInterval: 1400,
+      spawnIntervalDecrement: 40,
       hitWindowMs: 180,
       noteDensity: 4,
       holdNoteChance: 0.1,
       bonusNoteChance: 0.08,
+      hazardChance: 0.08,
     };
   }
   if (skillLevel <= 14) {
     return {
       label: 'Advanced',
-      baseSpeed: 210,
-      speedIncrement: 15,
-      spawnInterval: 750,
-      spawnIntervalDecrement: 35,
+      baseSpeed: 110,
+      speedIncrement: 8,
+      spawnInterval: 1000,
+      spawnIntervalDecrement: 30,
       hitWindowMs: 130,
       noteDensity: 5,
       holdNoteChance: 0.15,
       bonusNoteChance: 0.1,
+      hazardChance: 0.1,
     };
   }
   return {
     label: 'Master',
-    baseSpeed: 270,
-    speedIncrement: 18,
-    spawnInterval: 550,
-    spawnIntervalDecrement: 25,
+    baseSpeed: 140,
+    speedIncrement: 10,
+    spawnInterval: 750,
+    spawnIntervalDecrement: 20,
     hitWindowMs: 90,
     noteDensity: 6,
     holdNoteChance: 0.2,
     bonusNoteChance: 0.12,
+    hazardChance: 0.12,
   };
 }
 
@@ -204,6 +209,7 @@ export interface PracticeSong {
   durationSeconds: number;
   bpm: number;
   isDefault: boolean;
+  audioUrl?: string | null;
 }
 
 export const DEFAULT_PRACTICE_SONGS: PracticeSong[] = [

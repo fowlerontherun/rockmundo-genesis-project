@@ -10,6 +10,7 @@ interface SessionConfig {
   songTitle: string;
   instrumentSlug: string;
   skillLevel: number;
+  audioUrl?: string | null;
 }
 
 const StagePractice = () => {
@@ -18,8 +19,8 @@ const StagePractice = () => {
   const [config, setConfig] = useState<SessionConfig | null>(null);
   const [finalState, setFinalState] = useState<GameState | null>(null);
 
-  const handleStart = useCallback((songId: string, songTitle: string, instrumentSlug: string, skillLevel: number) => {
-    setConfig({ songId, songTitle, instrumentSlug, skillLevel });
+  const handleStart = useCallback((songId: string, songTitle: string, instrumentSlug: string, skillLevel: number, audioUrl?: string | null) => {
+    setConfig({ songId, songTitle, instrumentSlug, skillLevel, audioUrl });
     setFinalState(null);
     setPhase('playing');
   }, []);
@@ -49,6 +50,7 @@ const StagePractice = () => {
           songTitle={config.songTitle}
           instrumentSlug={config.instrumentSlug}
           skillLevel={config.skillLevel}
+          audioUrl={config.audioUrl}
           onGameOver={handleGameOver}
         />
       )}

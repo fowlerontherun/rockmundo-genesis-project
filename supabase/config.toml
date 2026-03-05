@@ -233,3 +233,9 @@ verify_jwt = false
 
 [functions.relationship-decay]
 verify_jwt = false
+
+[functions.stage-practice-sfx]
+verify_jwt = false
+
+[functions.stage-practice-music]
+verify_jwt = false
