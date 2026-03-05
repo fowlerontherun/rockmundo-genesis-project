@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.876",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "New Stage Practice mini-game — a 2D vertical rhythm game where notes fall toward a hit zone. Select a recorded song or default practice track, choose an instrument from your skill tree, and hit notes for score and XP" },
+      { type: 'feature', description: "Stage Practice scales difficulty based on instrument skill level — beginners get slower notes and wider hit windows, masters face faster speeds and tighter timing" },
+      { type: 'feature', description: "XP reward system with diminishing returns after 3 daily sessions and a 200 XP daily cap to prevent farming" },
+      { type: 'feature', description: "Full results screen with performance grade (S/A/B/C/D), hit breakdown, combo stats, accuracy percentage, and detailed XP calculation" },
+      { type: 'feature', description: "Modular note system with Normal, Hold, and Bonus note types — designed for future BPM syncing and instrument-specific mechanics" },
+    ],
+  },
+  {
     version: "1.0.875",
     date: "2026-03-05",
     changes: [
