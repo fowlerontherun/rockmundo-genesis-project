@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.885",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Fixed practice track audio uploads failing — added missing INSERT/UPDATE/DELETE RLS policies on practice_track_audio table" },
+    ],
+  },
+  {
     version: "1.0.884",
     date: "2026-03-05",
     changes: [
