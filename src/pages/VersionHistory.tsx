@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.879",
+    date: "2026-03-05",
+    changes: [
+      { type: 'improvement', description: "Stage Practice notes now speed up much faster per level — aggressive speed and spawn ramp for more intensity" },
+      { type: 'feature', description: "~15% of notes now spawn as slow 'breather' notes at 35% speed, adding rhythm variety" },
+      { type: 'improvement', description: "XP earned from Stage Practice is now properly applied to the practiced instrument skill with level-up support" },
+    ],
+  },
+  {
     version: "1.0.878",
     date: "2026-03-05",
     changes: [

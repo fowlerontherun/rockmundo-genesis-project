@@ -58,14 +58,19 @@ export interface DifficultyProfile {
   hazardChance: number; // 0-1
 }
 
+/** Chance that any given note spawns as a "slow breather" note (0-1). */
+export const SLOW_NOTE_CHANCE = 0.15;
+/** Slow notes use this fraction of the normal speed. */
+export const SLOW_NOTE_SPEED_FACTOR = 0.35;
+
 export function getDifficultyFromSkill(skillLevel: number): DifficultyProfile {
   if (skillLevel <= 3) {
     return {
       label: 'Beginner',
-      baseSpeed: 60,
-      speedIncrement: 4,
-      spawnInterval: 1800,
-      spawnIntervalDecrement: 30,
+      baseSpeed: 70,
+      speedIncrement: 12,
+      spawnInterval: 1600,
+      spawnIntervalDecrement: 80,
       hitWindowMs: 250,
       noteDensity: 3,
       holdNoteChance: 0,
@@ -76,10 +81,10 @@ export function getDifficultyFromSkill(skillLevel: number): DifficultyProfile {
   if (skillLevel <= 8) {
     return {
       label: 'Intermediate',
-      baseSpeed: 80,
-      speedIncrement: 6,
-      spawnInterval: 1400,
-      spawnIntervalDecrement: 40,
+      baseSpeed: 90,
+      speedIncrement: 16,
+      spawnInterval: 1300,
+      spawnIntervalDecrement: 90,
       hitWindowMs: 180,
       noteDensity: 4,
       holdNoteChance: 0.1,
@@ -90,10 +95,10 @@ export function getDifficultyFromSkill(skillLevel: number): DifficultyProfile {
   if (skillLevel <= 14) {
     return {
       label: 'Advanced',
-      baseSpeed: 110,
-      speedIncrement: 8,
-      spawnInterval: 1000,
-      spawnIntervalDecrement: 30,
+      baseSpeed: 120,
+      speedIncrement: 20,
+      spawnInterval: 950,
+      spawnIntervalDecrement: 70,
       hitWindowMs: 130,
       noteDensity: 5,
       holdNoteChance: 0.15,
@@ -103,10 +108,10 @@ export function getDifficultyFromSkill(skillLevel: number): DifficultyProfile {
   }
   return {
     label: 'Master',
-    baseSpeed: 140,
-    speedIncrement: 10,
-    spawnInterval: 750,
-    spawnIntervalDecrement: 20,
+    baseSpeed: 150,
+    speedIncrement: 25,
+    spawnInterval: 700,
+    spawnIntervalDecrement: 50,
     hitWindowMs: 90,
     noteDensity: 6,
     holdNoteChance: 0.2,
