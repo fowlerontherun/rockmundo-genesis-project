@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.887",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Backfilled band_id on 14 orphaned songs that were missing band attribution" },
+      { type: 'fix', description: "Fixed song creation trigger to recognize 'Founder' role and fallback to any active band membership" },
+    ],
+  },
+  {
     version: "1.0.886",
     date: "2026-03-05",
     changes: [
