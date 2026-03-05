@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.889",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Added Friends tab as default view on Social & Relationships page with real player friend management" },
+      { type: 'feature', description: "Integrated Direct Message panel inline — select a friend to chat in real-time without leaving the page" },
+      { type: 'feature', description: "Added 'Find Players' button with friend search dialog directly on the Relationships page" },
+      { type: 'feature', description: "Wired Quick Actions (Chat, Gift, Collaborate, Challenge, Flirt, Confront) to the InteractionModal with success rolls and emotional impact" },
+      { type: 'improvement', description: "Pending friend request count badge on Friends tab for visibility" },
+    ],
+  },
+  {
     version: "1.0.888",
     date: "2026-03-05",
     changes: [
