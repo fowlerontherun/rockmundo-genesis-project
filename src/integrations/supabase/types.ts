@@ -18801,6 +18801,36 @@ export type Database = {
           },
         ]
       }
+      practice_track_audio: {
+        Row: {
+          audio_url: string | null
+          genre: string
+          id: string
+          track_id: string
+          track_title: string
+          updated_at: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          genre: string
+          id?: string
+          track_id: string
+          track_title: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          genre?: string
+          id?: string
+          track_id?: string
+          track_title?: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: []
+      }
       prison_events: {
         Row: {
           behavior_max: number | null

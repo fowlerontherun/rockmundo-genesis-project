@@ -194,6 +194,7 @@ const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGiftin
 const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultiplier"));
 const SalesBalanceAdmin = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
 const CityGovernanceAdmin = lazyWithRetry(() => import("./pages/admin/CityGovernanceAdmin"));
+const PracticeTracksAdmin = lazyWithRetry(() => import("./pages/admin/PracticeTracksAdmin"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
@@ -520,6 +521,7 @@ function App() {
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
                     <Route path="admin/pov-clips" element={<POVClipAdmin />} />
+                    <Route path="admin/practice-tracks" element={<PracticeTracksAdmin />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="music-videos" element={<MusicVideos />} />
                     <Route path="gig-booking" element={<GigBooking />} />

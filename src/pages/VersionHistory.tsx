@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.883",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Admin Practice Tracks page — upload custom audio files for each default practice song (admin/practice-tracks)" },
+      { type: 'improvement', description: "Stage Practice now plays admin-uploaded audio as background music instead of AI-generated tracks" },
+      { type: 'feature', description: "Storage bucket 'practice-tracks' for admin audio uploads with public read access" },
+    ],
+  },
+  {
     version: "1.0.882",
     date: "2026-03-05",
     changes: [
