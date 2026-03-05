@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Music, Guitar, Lock, Zap, Star, Play } from 'lucide-react';
+import { Music, Guitar, Lock, Zap, Star, Play, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   INSTRUMENT_LABELS,
   DEFAULT_PRACTICE_SONGS,
@@ -24,6 +25,8 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
   const { user } = useAuth();
   const [selectedSong, setSelectedSong] = useState<PracticeSong | null>(null);
   const [selectedInstrument, setSelectedInstrument] = useState<string>('');
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
+  const [generatingForSongId, setGeneratingForSongId] = useState<string | null>(null);
 
   // Fetch player's instrument skills
   const { data: skills = [], isLoading: loadingSkills } = useQuery({
@@ -44,7 +47,6 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
         .gt('current_level', 0);
       if (error) throw error;
 
-      // Filter to only instrument-like skills
       const instrumentSlugs = Object.keys(INSTRUMENT_LABELS);
       return (data || []).filter(s => instrumentSlugs.includes(s.skill_slug));
     },
@@ -77,14 +79,51 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
     enabled: !!user?.id,
   });
 
+  // Generate background music for default practice tracks
+  const generateMusicMutation = useMutation({
+    mutationFn: async (song: PracticeSong) => {
+      const { data, error } = await supabase.functions.invoke('stage-practice-music', {
+        body: { genre: song.genre, songTitle: song.title },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data.audioUrl as string;
+    },
+    onSuccess: (audioUrl) => {
+      setGeneratedAudioUrl(audioUrl);
+      toast.success('Background music generated!');
+    },
+    onError: (err) => {
+      console.error('Music generation failed:', err);
+      toast.error('Could not generate background music. You can still play without it.');
+      setGeneratingForSongId(null);
+    },
+  });
+
+  const handleSelectSong = (song: PracticeSong) => {
+    setSelectedSong(song);
+    setGeneratedAudioUrl(null);
+    setGeneratingForSongId(null);
+  };
+
+  const handleGenerateMusic = () => {
+    if (!selectedSong || !selectedSong.isDefault) return;
+    setGeneratingForSongId(selectedSong.id);
+    generateMusicMutation.mutate(selectedSong);
+  };
+
   const selectedSkill = skills.find(s => s.skill_slug === selectedInstrument);
   const skillLevel = selectedSkill?.current_level ?? 0;
   const difficulty = getDifficultyFromSkill(skillLevel);
   const canStart = !!selectedSong && !!selectedInstrument && skillLevel > 0;
 
+  const isGenerating = generateMusicMutation.isPending;
+
   const handleStart = () => {
     if (!canStart || !selectedSong) return;
-    onStart(selectedSong.id, selectedSong.title, selectedInstrument, skillLevel, selectedSong.audioUrl);
+    // Use generated audio for default songs, or song's own audio for recorded songs
+    const audioToUse = selectedSong.isDefault ? generatedAudioUrl : selectedSong.audioUrl;
+    onStart(selectedSong.id, selectedSong.title, selectedInstrument, skillLevel, audioToUse);
   };
 
   return (
@@ -114,12 +153,12 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
             </TabsList>
 
             <TabsContent value="default" className="mt-3">
-              <ScrollArea className="h-48">
+              <ScrollArea className="h-56">
                 <div className="space-y-1.5">
                   {DEFAULT_PRACTICE_SONGS.map(song => (
                     <button
                       key={song.id}
-                      onClick={() => setSelectedSong(song)}
+                      onClick={() => handleSelectSong(song)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors text-left ${
                         selectedSong?.id === song.id
                           ? 'border-primary bg-primary/10'
@@ -135,6 +174,39 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
                   ))}
                 </div>
               </ScrollArea>
+
+              {/* Generate Music Button for default tracks */}
+              {selectedSong?.isDefault && (
+                <div className="mt-3 flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateMusic}
+                    disabled={isGenerating || !!generatedAudioUrl}
+                    className="flex-1"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating Music...
+                      </>
+                    ) : generatedAudioUrl ? (
+                      <>
+                        <Music className="h-4 w-4 mr-2" />
+                        Music Ready ✓
+                      </>
+                    ) : (
+                      <>
+                        <Music className="h-4 w-4 mr-2" />
+                        Generate Background Music
+                      </>
+                    )}
+                  </Button>
+                  {!generatedAudioUrl && !isGenerating && (
+                    <span className="text-xs text-muted-foreground">Optional — AI generated</span>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="recorded" className="mt-3">
@@ -143,12 +215,12 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
               ) : recordedSongs.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No recorded songs yet. Use practice tracks instead!</p>
               ) : (
-                <ScrollArea className="h-48">
+                <ScrollArea className="h-56">
                   <div className="space-y-1.5">
                     {recordedSongs.map(song => (
                       <button
                         key={song.id}
-                        onClick={() => setSelectedSong(song)}
+                        onClick={() => handleSelectSong(song)}
                         className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors text-left ${
                           selectedSong?.id === song.id
                             ? 'border-primary bg-primary/10'
@@ -159,6 +231,7 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
                           <p className="font-medium text-sm">{song.title}</p>
                           <p className="text-xs text-muted-foreground">{song.genre}</p>
                         </div>
+                        {song.audioUrl && <Badge variant="secondary" className="text-xs">🎵 Audio</Badge>}
                       </button>
                     ))}
                   </div>
