@@ -18,6 +18,7 @@ import { TourWizard } from "@/components/tours/TourWizard";
 import { MUSIC_GENRES } from "@/data/genres";
 import { getBandFameTitle } from "@/utils/bandFame";
 import { toast } from "sonner";
+import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
 
 interface Tour {
   id: string;
@@ -54,6 +55,8 @@ interface TourVenue {
     city: {
       name: string;
       country: string;
+      latitude?: number | null;
+      longitude?: number | null;
     } | null;
   } | null;
   // Gig-specific data
@@ -359,7 +362,7 @@ const TourManager = () => {
           ? supabase.from('venues').select('id, name, capacity, city_id').in('id', venueIds)
           : { data: [] },
         cityIds.length > 0
-          ? supabase.from('cities').select('id, name, country').in('id', cityIds)
+          ? supabase.from('cities').select('id, name, country, latitude, longitude').in('id', cityIds)
           : { data: [] },
         // Fetch gigs for this tour to get setlist info, tickets_sold, status, and payment
         supabase.from('gigs').select(`
@@ -381,7 +384,7 @@ const TourManager = () => {
         : { data: [] };
       
        const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
-       const citiesMap: Record<string, { id: string; name: string; country: string }> = {};
+       const citiesMap: Record<string, { id: string; name: string; country: string; latitude: number | null; longitude: number | null }> = {};
        // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
        const gigsMap: Record<string, {
          id: string;
@@ -437,7 +440,7 @@ const TourManager = () => {
           venue: venue ? {
             name: venue.name,
             capacity: venue.capacity,
-            city: city ? { name: city.name, country: city.country } : null
+            city: city ? { name: city.name, country: city.country, latitude: city.latitude, longitude: city.longitude } : null
           } : null,
           gig_id: gig?.id || null,
           gig_status: gig?.status || null,
@@ -866,6 +869,33 @@ const TourManager = () => {
                     <p className="text-sm">{selectedTour.description}</p>
                   </div>
                 )}
+
+                {/* Route Map */}
+                {(() => {
+                  const routePoints: RoutePoint[] = tourVenues
+                    .filter((tv) => tv.venue?.city?.latitude != null && tv.venue?.city?.longitude != null)
+                    .map((tv, i) => ({
+                      cityName: tv.venue!.city!.name,
+                      country: tv.venue!.city!.country,
+                      lat: tv.venue!.city!.latitude!,
+                      lng: tv.venue!.city!.longitude!,
+                      index: i,
+                      status: tv.gig_status || tv.status || "scheduled",
+                    }));
+                  return routePoints.length >= 2 ? (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Map className="h-4 w-4" />
+                          Route Map
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <TourRouteMap points={routePoints} />
+                      </CardContent>
+                    </Card>
+                  ) : null;
+                })()}
 
                 {/* Tour Dates & Venues */}
                 <div className="space-y-3">
