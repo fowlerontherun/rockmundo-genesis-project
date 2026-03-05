@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.875",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Fixed tour details still showing $0 revenue/tickets by decoupling gigs metrics from relational setlist joins that could fail silently; gig attendance, ticket revenue, ratings, and profit now load from gigs + gig_outcomes reliably" },
+    ],
+  },
+  {
     version: "1.0.874",
     date: "2026-03-05",
     changes: [
