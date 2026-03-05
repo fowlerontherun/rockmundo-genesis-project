@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.882",
+    date: "2026-03-05",
+    changes: [
+      { type: 'improvement', description: "Stage Practice difficulty significantly increased — faster base speeds, tighter hit windows, more hazards across all tiers" },
+      { type: 'feature', description: "Daily practice XP cap raised from 200 to 500 per instrument with improved XP scaling (higher base, level, accuracy, and combo bonuses)" },
+      { type: 'feature', description: "Stage Practice now uses MiniMax Music-1.5 via Replicate to generate genre-specific background music for practice tracks" },
+      { type: 'feature', description: "Added 4 new default practice tracks: Hip Hop Beat, Jazz Swing, EDM Drop, Country Road" },
+      { type: 'improvement', description: "Generate Background Music button on song selection screen — optional AI-generated backing tracks for default practice songs" },
+    ],
+  },
+  {
     version: "1.0.881",
     date: "2026-03-05",
     changes: [

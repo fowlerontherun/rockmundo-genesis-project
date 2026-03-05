@@ -11,49 +11,88 @@ serve(async (req) => {
   }
 
   try {
-    const { genre } = await req.json();
-    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY not configured");
+    const { genre, songTitle } = await req.json();
+    const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
+    if (!REPLICATE_API_KEY) throw new Error("REPLICATE_API_KEY not configured");
 
-    const prompts: Record<string, string> = {
-      Rock: "Upbeat energetic rock instrumental with driving guitars, steady drums, and bass groove. Perfect for a rhythm game background. No vocals. 120 BPM.",
-      Blues: "Smooth blues shuffle instrumental with clean guitar licks, walking bass, and brushed drums. Relaxed groove. No vocals. 95 BPM.",
-      Punk: "Fast aggressive punk rock instrumental with distorted power chords, rapid drums, and driving bass. High energy. No vocals. 160 BPM.",
-      Pop: "Uplifting pop instrumental with melodic synths, gentle acoustic guitar, and soft percussion. Feel-good vibe. No vocals. 100 BPM.",
-      Metal: "Heavy metal instrumental with chugging riffs, double bass drums, and powerful energy. Intense and aggressive. No vocals. 180 BPM.",
-      Funk: "Groovy funk instrumental with slap bass, wah guitar, tight drums, and brass stabs. Dance-worthy rhythm. No vocals. 105 BPM.",
+    const genrePrompts: Record<string, string> = {
+      "Rock": "Upbeat energetic rock instrumental with driving electric guitars, steady drums, and bass groove. No vocals.",
+      "Blues": "Smooth blues shuffle instrumental with clean guitar licks, walking bass, and brushed drums. Relaxed groove. No vocals.",
+      "Punk Rock": "Fast aggressive punk rock instrumental with distorted power chords, rapid drums, and driving bass. High energy. No vocals.",
+      "Pop": "Uplifting pop instrumental with melodic synths, gentle acoustic guitar, and soft percussion. Feel-good vibe. No vocals.",
+      "Heavy Metal": "Heavy metal instrumental with chugging riffs, double bass drums, and powerful energy. Intense and aggressive. No vocals.",
+      "R&B": "Groovy R&B instrumental with smooth bass, tight drums, and soulful keys. Dance-worthy rhythm. No vocals.",
+      "Hip Hop": "Hip hop instrumental beat with punchy 808 bass, crisp hi-hats, snappy snare, and atmospheric pads. Head-nodding groove. No vocals.",
+      "Jazz": "Swing jazz instrumental with walking upright bass, ride cymbal, piano comping, and smooth horn melodies. No vocals.",
+      "EDM": "High energy EDM instrumental with pulsing synth bass, four-on-the-floor kick, soaring leads, and a big drop. No vocals.",
+      "Country": "Country instrumental with twangy acoustic guitar, pedal steel, steady kick-snare pattern, and fiddle melody. No vocals.",
+      "Reggae": "Laid-back reggae instrumental with offbeat guitar skanks, deep bass, one-drop drum pattern. No vocals.",
+      "Classical": "Orchestral classical piece with strings, woodwinds, and gentle timpani. Elegant and refined. No vocals.",
+      "Electronica": "Ambient electronic instrumental with evolving synth textures, glitchy beats, and deep sub-bass. No vocals.",
+      "Latin": "Latin instrumental with congas, timbales, acoustic guitar, and brass. Salsa-inspired rhythm. No vocals.",
     };
 
-    const prompt = prompts[genre] || prompts["Rock"];
+    // Build style prompt
+    const basePrompt = genrePrompts[genre] || genrePrompts["Rock"];
+    const trackName = songTitle || `${genre || 'Rock'} Practice`;
+    const stylePrompt = `${basePrompt} Perfect as background music for a rhythm game practice session called "${trackName}". 60 seconds.`;
 
-    const response = await fetch("https://api.elevenlabs.io/v1/music", {
+    console.log(`[stage-practice-music] Generating ${genre} track via MiniMax Music-1.5`);
+    console.log(`[stage-practice-music] Style: ${stylePrompt}`);
+
+    // Use MiniMax Music-1.5 via Replicate (synchronous for short tracks)
+    const predictionResponse = await fetch("https://api.replicate.com/v1/models/minimax/music-1.5/predictions", {
       method: "POST",
       headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
+        "Authorization": `Bearer ${REPLICATE_API_KEY}`,
         "Content-Type": "application/json",
+        "Prefer": "wait",
       },
       body: JSON.stringify({
-        prompt,
-        duration_seconds: 60,
+        input: {
+          prompt: stylePrompt,
+          // MiniMax Music-1.5 doesn't need lyrics for instrumentals
+        },
       }),
     });
 
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("ElevenLabs Music error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Music generation failed" }), {
+    if (!predictionResponse.ok) {
+      const errText = await predictionResponse.text();
+      console.error("[stage-practice-music] Replicate error:", predictionResponse.status, errText);
+      return new Response(JSON.stringify({ error: "Music generation failed", detail: errText }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const audioBuffer = await response.arrayBuffer();
-    return new Response(audioBuffer, {
-      headers: { ...corsHeaders, "Content-Type": "audio/mpeg" },
+    const prediction = await predictionResponse.json();
+    console.log(`[stage-practice-music] Prediction status: ${prediction.status}`);
+
+    if (prediction.status === "failed") {
+      console.error("[stage-practice-music] Generation failed:", prediction.error);
+      return new Response(JSON.stringify({ error: "Music generation failed", detail: prediction.error }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // The output is the audio URL
+    const audioUrl = prediction.output;
+    if (!audioUrl) {
+      return new Response(JSON.stringify({ error: "No audio output returned" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`[stage-practice-music] Generated audio URL: ${typeof audioUrl === 'string' ? audioUrl.substring(0, 80) : JSON.stringify(audioUrl)}`);
+
+    return new Response(JSON.stringify({ audioUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("Music error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }), {
+    console.error("[stage-practice-music] Error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

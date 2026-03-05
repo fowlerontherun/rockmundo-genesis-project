@@ -59,64 +59,64 @@ export interface DifficultyProfile {
 }
 
 /** Chance that any given note spawns as a "slow breather" note (0-1). */
-export const SLOW_NOTE_CHANCE = 0.15;
+export const SLOW_NOTE_CHANCE = 0.12;
 /** Slow notes use this fraction of the normal speed. */
-export const SLOW_NOTE_SPEED_FACTOR = 0.35;
+export const SLOW_NOTE_SPEED_FACTOR = 0.3;
 
 export function getDifficultyFromSkill(skillLevel: number): DifficultyProfile {
   if (skillLevel <= 3) {
     return {
       label: 'Beginner',
-      baseSpeed: 70,
-      speedIncrement: 12,
-      spawnInterval: 1600,
-      spawnIntervalDecrement: 80,
-      hitWindowMs: 250,
+      baseSpeed: 100,
+      speedIncrement: 18,
+      spawnInterval: 1300,
+      spawnIntervalDecrement: 100,
+      hitWindowMs: 220,
       noteDensity: 3,
-      holdNoteChance: 0,
-      bonusNoteChance: 0.05,
-      hazardChance: 0.06,
+      holdNoteChance: 0.05,
+      bonusNoteChance: 0.06,
+      hazardChance: 0.10,
     };
   }
   if (skillLevel <= 8) {
     return {
       label: 'Intermediate',
-      baseSpeed: 90,
-      speedIncrement: 16,
-      spawnInterval: 1300,
-      spawnIntervalDecrement: 90,
-      hitWindowMs: 180,
+      baseSpeed: 140,
+      speedIncrement: 22,
+      spawnInterval: 1000,
+      spawnIntervalDecrement: 110,
+      hitWindowMs: 150,
       noteDensity: 4,
-      holdNoteChance: 0.1,
+      holdNoteChance: 0.12,
       bonusNoteChance: 0.08,
-      hazardChance: 0.08,
+      hazardChance: 0.14,
     };
   }
   if (skillLevel <= 14) {
     return {
       label: 'Advanced',
-      baseSpeed: 120,
-      speedIncrement: 20,
-      spawnInterval: 950,
-      spawnIntervalDecrement: 70,
-      hitWindowMs: 130,
+      baseSpeed: 180,
+      speedIncrement: 28,
+      spawnInterval: 750,
+      spawnIntervalDecrement: 90,
+      hitWindowMs: 110,
       noteDensity: 5,
-      holdNoteChance: 0.15,
-      bonusNoteChance: 0.1,
-      hazardChance: 0.1,
+      holdNoteChance: 0.18,
+      bonusNoteChance: 0.10,
+      hazardChance: 0.16,
     };
   }
   return {
     label: 'Master',
-    baseSpeed: 150,
-    speedIncrement: 25,
-    spawnInterval: 700,
-    spawnIntervalDecrement: 50,
-    hitWindowMs: 90,
-    noteDensity: 6,
-    holdNoteChance: 0.2,
+    baseSpeed: 230,
+    speedIncrement: 35,
+    spawnInterval: 550,
+    spawnIntervalDecrement: 60,
+    hitWindowMs: 70,
+    noteDensity: 7,
+    holdNoteChance: 0.22,
     bonusNoteChance: 0.12,
-    hazardChance: 0.12,
+    hazardChance: 0.18,
   };
 }
 
@@ -154,7 +154,7 @@ export const INITIAL_GAME_STATE: GameState = {
 };
 
 // ─── XP calculation ───────────────────────────────────────────────────
-export const DAILY_PRACTICE_XP_CAP = 200;
+export const DAILY_PRACTICE_XP_CAP = 500;
 export const MAX_SESSIONS_BEFORE_DIMINISH = 3;
 
 export interface XpRewardResult {
@@ -175,10 +175,10 @@ export function calculateXpReward(
   sessionsToday: number,
   xpEarnedToday: number,
 ): XpRewardResult {
-  const baseXp = 10;
-  const levelBonus = levelReached * 5;
-  const accuracyBonus = Math.round(accuracyPct * 0.5);
-  const comboBonus = Math.round(longestCombo * 0.3);
+  const baseXp = 15;
+  const levelBonus = levelReached * 8;
+  const accuracyBonus = Math.round(accuracyPct * 0.6);
+  const comboBonus = Math.round(longestCombo * 0.5);
   let totalXp = baseXp + levelBonus + accuracyBonus + comboBonus;
 
   // Diminishing returns after N sessions
@@ -220,10 +220,14 @@ export interface PracticeSong {
 export const DEFAULT_PRACTICE_SONGS: PracticeSong[] = [
   { id: 'default-rock-basics', title: 'Rock Basics', genre: 'Rock', durationSeconds: 120, bpm: 120, isDefault: true },
   { id: 'default-blues-shuffle', title: 'Blues Shuffle', genre: 'Blues', durationSeconds: 90, bpm: 95, isDefault: true },
-  { id: 'default-punk-rush', title: 'Punk Rush', genre: 'Punk', durationSeconds: 80, bpm: 160, isDefault: true },
+  { id: 'default-punk-rush', title: 'Punk Rush', genre: 'Punk Rock', durationSeconds: 80, bpm: 160, isDefault: true },
   { id: 'default-ballad-flow', title: 'Ballad Flow', genre: 'Pop', durationSeconds: 150, bpm: 72, isDefault: true },
-  { id: 'default-metal-storm', title: 'Metal Storm', genre: 'Metal', durationSeconds: 100, bpm: 180, isDefault: true },
-  { id: 'default-funk-groove', title: 'Funk Groove', genre: 'Funk', durationSeconds: 110, bpm: 105, isDefault: true },
+  { id: 'default-metal-storm', title: 'Metal Storm', genre: 'Heavy Metal', durationSeconds: 100, bpm: 180, isDefault: true },
+  { id: 'default-funk-groove', title: 'Funk Groove', genre: 'R&B', durationSeconds: 110, bpm: 105, isDefault: true },
+  { id: 'default-hip-hop-beat', title: 'Hip Hop Beat', genre: 'Hip Hop', durationSeconds: 100, bpm: 90, isDefault: true },
+  { id: 'default-jazz-swing', title: 'Jazz Swing', genre: 'Jazz', durationSeconds: 120, bpm: 130, isDefault: true },
+  { id: 'default-edm-drop', title: 'EDM Drop', genre: 'EDM', durationSeconds: 90, bpm: 140, isDefault: true },
+  { id: 'default-country-road', title: 'Country Road', genre: 'Country', durationSeconds: 110, bpm: 110, isDefault: true },
 ];
 
 // ─── Lane config ──────────────────────────────────────────────────────
