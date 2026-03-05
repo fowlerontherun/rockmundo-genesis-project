@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.877",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Fixed Stage Practice game canvas crash caused by invalid HSL color format in note glow rendering" },
+    ],
+  },
+  {
     version: "1.0.876",
     date: "2026-03-05",
     changes: [

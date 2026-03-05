@@ -24,11 +24,14 @@ interface StagePracticeGameProps {
 
 // Lane colors (HSL-based to match design system)
 const LANE_COLORS = [
-  'hsl(0, 80%, 60%)',    // red
-  'hsl(200, 80%, 60%)',  // blue
-  'hsl(120, 60%, 50%)',  // green
-  'hsl(45, 90%, 55%)',   // amber
+  { h: 0, s: 80, l: 60 },    // red
+  { h: 200, s: 80, l: 60 },  // blue
+  { h: 120, s: 60, l: 50 },  // green
+  { h: 45, s: 90, l: 55 },   // amber
 ];
+
+const laneHsl = (lane: number) => `hsl(${LANE_COLORS[lane].h}, ${LANE_COLORS[lane].s}%, ${LANE_COLORS[lane].l}%)`;
+const laneHsla = (lane: number, a: number) => `hsla(${LANE_COLORS[lane].h}, ${LANE_COLORS[lane].s}%, ${LANE_COLORS[lane].l}%, ${a})`;
 
 let nextNoteId = 0;
 
@@ -276,7 +279,7 @@ export function StagePracticeGame({
 
       // Glow
       const ng = ctx.createRadialGradient(cx, cy, 2, cx, cy, NOTE_RADIUS + 8);
-      ng.addColorStop(0, note.type === 'bonus' ? 'hsla(45, 100%, 60%, 0.5)' : `${LANE_COLORS[note.lane]}80`);
+      ng.addColorStop(0, note.type === 'bonus' ? 'hsla(45, 100%, 60%, 0.5)' : laneHsla(note.lane, 0.5));
       ng.addColorStop(1, 'transparent');
       ctx.fillStyle = ng;
       ctx.beginPath();
@@ -284,7 +287,7 @@ export function StagePracticeGame({
       ctx.fill();
 
       // Note circle
-      ctx.fillStyle = note.type === 'bonus' ? 'hsl(45, 100%, 55%)' : LANE_COLORS[note.lane];
+      ctx.fillStyle = note.type === 'bonus' ? 'hsl(45, 100%, 55%)' : laneHsl(note.lane);
       ctx.beginPath();
       ctx.arc(cx, cy, NOTE_RADIUS, 0, Math.PI * 2);
       ctx.fill();
