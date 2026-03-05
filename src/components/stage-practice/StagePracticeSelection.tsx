@@ -8,8 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Music, Guitar, Lock, Zap, Star, Play, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Music, Guitar, Lock, Zap, Star, Play } from 'lucide-react';
 import {
   INSTRUMENT_LABELS,
   DEFAULT_PRACTICE_SONGS,
@@ -25,8 +24,6 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
   const { user } = useAuth();
   const [selectedSong, setSelectedSong] = useState<PracticeSong | null>(null);
   const [selectedInstrument, setSelectedInstrument] = useState<string>('');
-  const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
-  const [generatingForSongId, setGeneratingForSongId] = useState<string | null>(null);
 
   // Fetch player's instrument skills
   const { data: skills = [], isLoading: loadingSkills } = useQuery({
@@ -79,50 +76,34 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
     enabled: !!user?.id,
   });
 
-  // Generate background music for default practice tracks
-  const generateMusicMutation = useMutation({
-    mutationFn: async (song: PracticeSong) => {
-      const { data, error } = await supabase.functions.invoke('stage-practice-music', {
-        body: { genre: song.genre, songTitle: song.title },
-      });
+  // Fetch admin-uploaded audio for default practice tracks
+  const { data: trackAudioMap = new Map() } = useQuery({
+    queryKey: ['practice-track-audio-urls'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('practice_track_audio')
+        .select('track_id, audio_url');
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data.audioUrl as string;
-    },
-    onSuccess: (audioUrl) => {
-      setGeneratedAudioUrl(audioUrl);
-      toast.success('Background music generated!');
-    },
-    onError: (err) => {
-      console.error('Music generation failed:', err);
-      toast.error('Could not generate background music. You can still play without it.');
-      setGeneratingForSongId(null);
+      const map = new Map<string, string>();
+      for (const row of data || []) {
+        if (row.audio_url) map.set(row.track_id, row.audio_url);
+      }
+      return map;
     },
   });
-
-  const handleSelectSong = (song: PracticeSong) => {
-    setSelectedSong(song);
-    setGeneratedAudioUrl(null);
-    setGeneratingForSongId(null);
-  };
-
-  const handleGenerateMusic = () => {
-    if (!selectedSong || !selectedSong.isDefault) return;
-    setGeneratingForSongId(selectedSong.id);
-    generateMusicMutation.mutate(selectedSong);
-  };
 
   const selectedSkill = skills.find(s => s.skill_slug === selectedInstrument);
   const skillLevel = selectedSkill?.current_level ?? 0;
   const difficulty = getDifficultyFromSkill(skillLevel);
   const canStart = !!selectedSong && !!selectedInstrument && skillLevel > 0;
 
-  const isGenerating = generateMusicMutation.isPending;
-
   const handleStart = () => {
     if (!canStart || !selectedSong) return;
-    // Use generated audio for default songs, or song's own audio for recorded songs
-    const audioToUse = selectedSong.isDefault ? generatedAudioUrl : selectedSong.audioUrl;
+    // For default songs, use admin-uploaded audio; for recorded songs, use song's own audio
+    let audioToUse = selectedSong.audioUrl;
+    if (selectedSong.isDefault) {
+      audioToUse = trackAudioMap.get(selectedSong.id) || null;
+    }
     onStart(selectedSong.id, selectedSong.title, selectedInstrument, skillLevel, audioToUse);
   };
 
@@ -155,58 +136,33 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
             <TabsContent value="default" className="mt-3">
               <ScrollArea className="h-56">
                 <div className="space-y-1.5">
-                  {DEFAULT_PRACTICE_SONGS.map(song => (
-                    <button
-                      key={song.id}
-                      onClick={() => handleSelectSong(song)}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors text-left ${
-                        selectedSong?.id === song.id
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/40'
-                      }`}
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{song.title}</p>
-                        <p className="text-xs text-muted-foreground">{song.genre} • {Math.floor(song.durationSeconds / 60)}:{String(song.durationSeconds % 60).padStart(2, '0')}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">{song.bpm} BPM</Badge>
-                    </button>
-                  ))}
+                  {DEFAULT_PRACTICE_SONGS.map(song => {
+                    const hasUploadedAudio = trackAudioMap.has(song.id);
+                    return (
+                      <button
+                        key={song.id}
+                        onClick={() => setSelectedSong(song)}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors text-left ${
+                          selectedSong?.id === song.id
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/40'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{song.title}</p>
+                          <p className="text-xs text-muted-foreground">{song.genre} • {Math.floor(song.durationSeconds / 60)}:{String(song.durationSeconds % 60).padStart(2, '0')}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {hasUploadedAudio && (
+                            <Badge variant="secondary" className="text-xs">🎵</Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">{song.bpm} BPM</Badge>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
-
-              {/* Generate Music Button for default tracks */}
-              {selectedSong?.isDefault && (
-                <div className="mt-3 flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateMusic}
-                    disabled={isGenerating || !!generatedAudioUrl}
-                    className="flex-1"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating Music...
-                      </>
-                    ) : generatedAudioUrl ? (
-                      <>
-                        <Music className="h-4 w-4 mr-2" />
-                        Music Ready ✓
-                      </>
-                    ) : (
-                      <>
-                        <Music className="h-4 w-4 mr-2" />
-                        Generate Background Music
-                      </>
-                    )}
-                  </Button>
-                  {!generatedAudioUrl && !isGenerating && (
-                    <span className="text-xs text-muted-foreground">Optional — AI generated</span>
-                  )}
-                </div>
-              )}
             </TabsContent>
 
             <TabsContent value="recorded" className="mt-3">
@@ -220,7 +176,7 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
                     {recordedSongs.map(song => (
                       <button
                         key={song.id}
-                        onClick={() => handleSelectSong(song)}
+                        onClick={() => setSelectedSong(song)}
                         className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors text-left ${
                           selectedSong?.id === song.id
                             ? 'border-primary bg-primary/10'
