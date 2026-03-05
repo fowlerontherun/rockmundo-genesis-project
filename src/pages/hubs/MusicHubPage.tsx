@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Music, GraduationCap, Disc, Music4, Radio, Video, TrendingUp, Store, Trophy } from "lucide-react";
+import { Music, GraduationCap, Disc, Music4, Radio, Video, TrendingUp, Store, Trophy, Gamepad2 } from "lucide-react";
 
 export default function MusicHubPage() {
   return (
@@ -16,6 +16,7 @@ export default function MusicHubPage() {
         { icon: TrendingUp, labelKey: "nav.countryCharts", path: "/country-charts" },
         { icon: Store, labelKey: "nav.songMarket", path: "/song-market" },
         { icon: Trophy, labelKey: "nav.songRankings", path: "/song-rankings" },
+        { icon: Gamepad2, labelKey: "nav.stagePractice", path: "/stage-practice" },
       ]}
     />
   );

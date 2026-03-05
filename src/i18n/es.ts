@@ -161,6 +161,7 @@ export const es: TranslationKeys = {
     songManager: "Gestor de Canciones",
     songMarket: "Mercado de Canciones",
     songRankings: "Rankings de Canciones",
+    stagePractice: "Práctica de Escenario",
     bandBrowser: "Explorar Bandas",
     bandVehicles: "Vehículos de Banda",
     bandRiders: "Riders de Banda",
