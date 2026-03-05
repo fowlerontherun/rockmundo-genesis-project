@@ -360,66 +360,84 @@ const TourManager = () => {
       const [venuesResult, citiesResult, gigsResult] = await Promise.all([
         venueIds.length > 0 
           ? supabase.from('venues').select('id, name, capacity, city_id').in('id', venueIds)
-          : { data: [] },
+          : Promise.resolve({ data: [], error: null }),
         cityIds.length > 0
           ? supabase.from('cities').select('id, name, country, latitude, longitude').in('id', cityIds)
-          : { data: [] },
-        // Fetch gigs for this tour to get setlist info, tickets_sold, status, and payment
+          : Promise.resolve({ data: [], error: null }),
+        // Fetch gigs for this tour (no relational join so metrics never fail due FK/join ambiguity)
         supabase.from('gigs').select(`
-          id, 
-          venue_id, 
-          scheduled_date, 
-          setlist_id, 
-          tickets_sold, 
-          payment, 
-          status,
-          setlists(id, name)
+          id,
+          venue_id,
+          scheduled_date,
+          setlist_id,
+          tickets_sold,
+          payment,
+          status
         `).eq('tour_id', selectedTour.id)
       ]);
+
+      if (venuesResult.error) throw venuesResult.error;
+      if (citiesResult.error) throw citiesResult.error;
+      if (gigsResult.error) throw gigsResult.error;
       
-      // Fetch gig outcomes for ratings
+      // Fetch gig outcomes for ratings/revenue and setlist names independently
       const gigIds = (gigsResult.data || []).map((g: any) => g.id);
-      const outcomesResult = gigIds.length > 0 
-        ? await supabase.from('gig_outcomes').select('gig_id, overall_rating, performance_grade, ticket_revenue, net_profit').in('gig_id', gigIds)
-        : { data: [] };
-      
-       const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
-       const citiesMap: Record<string, { id: string; name: string; country: string; latitude: number | null; longitude: number | null }> = {};
-       // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
-       const gigsMap: Record<string, {
-         id: string;
-         setlist_id: string | null;
-         setlist_name: string | null;
-         setlist_song_count: number | null;
-         tickets_sold: number | null;
-         payment: number | null;
-         status: string | null;
-       }> = {};
+      const setlistIds = Array.from(new Set((gigsResult.data || [])
+        .map((g: any) => g.setlist_id)
+        .filter((id: string | null) => !!id))) as string[];
+
+      const [outcomesResult, setlistsResult] = await Promise.all([
+        gigIds.length > 0
+          ? supabase.from('gig_outcomes').select('gig_id, overall_rating, performance_grade, ticket_revenue, net_profit').in('gig_id', gigIds)
+          : Promise.resolve({ data: [], error: null }),
+        setlistIds.length > 0
+          ? supabase.from('setlists').select('id, name').in('id', setlistIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (outcomesResult.error) throw outcomesResult.error;
+
+      const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
+      const citiesMap: Record<string, { id: string; name: string; country: string; latitude: number | null; longitude: number | null }> = {};
+      const setlistsMap: Record<string, { id: string; name: string }> = {};
+      // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
+      const gigsMap: Record<string, {
+        id: string;
+        setlist_id: string | null;
+        setlist_name: string | null;
+        setlist_song_count: number | null;
+        tickets_sold: number | null;
+        payment: number | null;
+        status: string | null;
+      }> = {};
       const outcomesMap: Record<string, { overall_rating: number | null; performance_grade: string | null; ticket_revenue: number | null; net_profit: number | null }> = {};
 
-       const dayKey = (iso: string | null | undefined) => {
-         if (!iso) return "";
-         // Use substring to avoid timezone-related date shifts
-         // Both tour_venues.date and gigs.scheduled_date store YYYY-MM-DD at the start
-         return typeof iso === 'string' ? iso.substring(0, 10) : "";
-       };
+      const dayKey = (iso: string | null | undefined) => {
+        if (!iso) return "";
+        // Use substring to avoid timezone-related date shifts
+        // Both tour_venues.date and gigs.scheduled_date store YYYY-MM-DD at the start
+        return typeof iso === 'string' ? iso.substring(0, 10) : "";
+      };
       
       (venuesResult.data || []).forEach(v => { venuesMap[v.id] = v; });
       (citiesResult.data || []).forEach(c => { citiesMap[c.id] = c; });
-       (gigsResult.data || []).forEach((g: any) => {
-         if (g.venue_id) {
-           const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
-           gigsMap[key] = {
-              id: g.id,
-              setlist_id: g.setlist_id,
-              setlist_name: g.setlists?.name || null,
-              setlist_song_count: null,
-              tickets_sold: g.tickets_sold ?? null,
-              payment: g.payment ?? null,
-              status: g.status ?? null,
-           };
-         }
-       });
+      (setlistsResult.data || []).forEach((s: any) => {
+        setlistsMap[s.id] = s;
+      });
+      (gigsResult.data || []).forEach((g: any) => {
+        if (g.venue_id) {
+          const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
+          gigsMap[key] = {
+            id: g.id,
+            setlist_id: g.setlist_id,
+            setlist_name: g.setlist_id ? (setlistsMap[g.setlist_id]?.name ?? null) : null,
+            setlist_song_count: null,
+            tickets_sold: g.tickets_sold ?? null,
+            payment: g.payment ?? null,
+            status: g.status ?? null,
+          };
+        }
+      });
       (outcomesResult.data || []).forEach((o: any) => {
         outcomesMap[o.gig_id] = {
           overall_rating: o.overall_rating,
@@ -427,7 +445,7 @@ const TourManager = () => {
           ticket_revenue: o.ticket_revenue,
           net_profit: o.net_profit,
         };
-       });
+      });
       
        return (data || []).map(tv => {
          const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
