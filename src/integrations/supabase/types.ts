@@ -24353,6 +24353,106 @@ export type Database = {
           },
         ]
       }
+      stage_practice_sessions: {
+        Row: {
+          accuracy_pct: number
+          created_at: string
+          difficulty: string
+          id: string
+          instrument_slug: string
+          level_reached: number
+          longest_combo: number
+          notes_hit: number
+          notes_missed: number
+          played_at: string
+          profile_id: string | null
+          score: number
+          song_id: string | null
+          song_title: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          accuracy_pct?: number
+          created_at?: string
+          difficulty?: string
+          id?: string
+          instrument_slug: string
+          level_reached?: number
+          longest_combo?: number
+          notes_hit?: number
+          notes_missed?: number
+          played_at?: string
+          profile_id?: string | null
+          score?: number
+          song_id?: string | null
+          song_title?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          accuracy_pct?: number
+          created_at?: string
+          difficulty?: string
+          id?: string
+          instrument_slug?: string
+          level_reached?: number
+          longest_combo?: number
+          notes_hit?: number
+          notes_missed?: number
+          played_at?: string
+          profile_id?: string | null
+          score?: number
+          song_id?: string | null
+          song_title?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_practice_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_practice_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_practice_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "stage_practice_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "stage_practice_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_practice_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_templates: {
         Row: {
           backdrop_texture_url: string | null

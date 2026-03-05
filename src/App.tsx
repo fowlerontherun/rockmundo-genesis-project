@@ -172,6 +172,7 @@ const BandProfile = lazyWithRetry(() => import("./pages/BandProfile"));
 const BandSearch = lazyWithRetry(() => import("./pages/BandSearch"));
 const BandFinder = lazyWithRetry(() => import("./pages/BandFinder"));
 const BandRankings = lazyWithRetry(() => import("./pages/BandRankings"));
+const StagePractice = lazyWithRetry(() => import("./pages/StagePractice"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
@@ -383,6 +384,7 @@ function App() {
                     <Route path="gear" element={<Gear />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
+                    <Route path="stage-practice" element={<StagePractice />} />
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="song-rankings" element={<SongRankings />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
