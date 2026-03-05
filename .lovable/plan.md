@@ -1,148 +1,60 @@
 
 
-# Territory-Based Distribution System (v1.0.865)
+## Plan: Geographic Route Optimization + Tour Details Fix (v1.0.872)
 
-## Overview
-This update adds country-level territory selection to both **physical releases** and **streaming distribution**. Players choose which countries to release in, pay distance-based distribution costs, and all sales/streams/charts become territory-aware.
+### Problem 1: Tour venues are not geographically ordered
+When auto-booking travel, venues are selected by capacity-fit only — no geographic ordering. A world tour might zigzag between continents instead of completing all nearby gigs first.
 
----
-
-## 1. New Database Table: `release_territories`
-
-Tracks which countries a release is distributed to (for both physical sales and streaming).
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | uuid PK | |
-| release_id | uuid FK -> releases | |
-| country | text | Country name (matches cities.country / band_country_fans.country) |
-| distance_tier | text | 'domestic', 'regional', 'continental', 'intercontinental' |
-| cost_multiplier | numeric | 1.0 / 1.5 / 2.5 / 4.0 |
-| distribution_cost | integer | Total cost in cents for this territory |
-| is_active | boolean DEFAULT true | Can disable territory later |
-| created_at | timestamptz | |
-
-RLS: Users can manage territories for releases they own (via release -> band -> band_members or release.user_id).
-
-Also adds `home_country` text column to the `releases` table for quick distance-tier lookups.
+### Problem 2: Tour details show blank ratings and income
+The tour details dialog fetches `gig_outcomes` data correctly, but the venue list rows show `0` for revenue and no ratings for completed gigs. Investigation shows the data mapping logic looks correct in the query — the issue is likely that `gig_outcomes` fields (`overall_rating`, `ticket_revenue`) are not being populated, OR the gig matching (by `venue_id|date` key) is failing due to date format mismatches between `tour_venues.date` and `gigs.scheduled_date`.
 
 ---
 
-## 2. Distance Tier Pricing
+### Implementation
 
-Based on the band's home city region vs the target country's region (using `cities.region`):
+#### 1. Geographic Route Optimization (`src/hooks/useTourWizard.ts`)
 
-| Tier | Rule | Physical Multiplier | Digital/Streaming Multiplier |
-|------|------|---------------------|------------------------------|
-| Domestic | Same country | 1.0x | 1.0x |
-| Regional | Same region (e.g. both Europe) | 1.5x | 1.1x |
-| Continental | Adjacent regions | 2.5x | 1.2x |
-| Intercontinental | Far regions (e.g. Europe -> Asia) | 4.0x | 1.3x |
+After selecting venues by capacity-fit (lines 247-280), apply a **nearest-neighbor** geographic sort:
 
-Region adjacency map:
-- Europe <-> Middle East, Africa
-- North America <-> Central America, Caribbean, South America
-- Asia <-> Oceania, Middle East
-- Everything else = intercontinental
+- Fetch city coordinates (latitude/longitude) for all matched venue cities
+- Starting from `state.startingCityId` (or first venue), greedily pick the nearest unvisited city using Haversine distance
+- Group venues by country first, then sort within each country group geographically — this ensures all USA gigs complete before moving to South America, etc.
+- The algorithm: sort venues by country (grouped by continent), then within each country cluster apply nearest-neighbor ordering
+- Re-assign dates from `generateTourSchedule` after reordering
 
----
+Also apply geographic ordering when user manually selects venues (`state.selectedVenueIds`).
 
-## 3. Release Wizard Changes
+#### 2. Fix Tour Details Ratings/Income Display (`src/pages/TourManager.tsx`)
 
-### New Step 4: "Territory Selection" (wizard becomes 5 steps)
+- Debug the `dayKey` matching between `tour_venues.date` and `gigs.scheduled_date` — `tour_venues.date` is a plain date string (`2026-03-10`) while `gigs.scheduled_date` may be a full timestamp. The `format(new Date(iso), "yyyy-MM-dd")` call could produce different results depending on timezone. Fix by normalizing both to `YYYY-MM-DD` substring.
+- Also ensure `gig_outcomes.ticket_revenue` is being read — verify the field name matches the DB column. The query selects `ticket_revenue, net_profit` which should work.
+- Display `net_profit` from outcomes when available as the revenue figure.
 
-**New component: `TerritorySelectionStep.tsx`**
-- Lists all countries from the `cities` table, grouped by region
-- Each country shows a distance tier badge and per-country cost
-- "Select All in Region" buttons per region group
-- Home country auto-selected and marked as "Domestic"
-- Running cost total at the bottom
-- Base distribution cost: $50/country for physical, $10/country for digital/streaming, multiplied by tier
+#### 3. Version bump
+- Update `VersionHeader.tsx` to v1.0.872
+- Add changelog entry to `VersionHistory.tsx`
 
-### Updated `CreateReleaseDialog.tsx`:
-- Add step 4 (territories) between format selection (step 3) and streaming platforms (step 5)
-- Store `selectedTerritories` state with country + tier + cost
-- Total cost now includes territory distribution fees
-- Save territories to `release_territories` table on submit
-- Cache band's home country from their home city
+### Technical Details
 
-### Updated `StreamingDistributionStep.tsx`:
-- Now receives selected territories and only distributes to streaming platforms **in those territories**
-- Shows which countries streaming will be active in
+**Nearest-neighbor with country grouping algorithm:**
+```text
+1. Group venues by country
+2. Order country groups by continent proximity to starting city
+3. Within each country, sort by nearest-neighbor from entry point
+4. Concatenate all groups into final ordered list
+5. Assign dates sequentially with rest days
+```
 
----
+**Date matching fix:**
+```typescript
+// Current: format(new Date(iso), "yyyy-MM-dd") — timezone-sensitive
+// Fix: iso.substring(0, 10) for plain date strings, 
+//      or normalize both sides consistently
+```
 
-## 4. Sales Engine Updates (`generate-daily-sales`)
-
-Currently sales use a single `regionalMultiplier` from the first `band_country_fans` entry. This changes to **per-territory sales generation**:
-
-1. Fetch `release_territories` for each release
-2. For each active territory:
-   - Look up `band_country_fans` for that specific country
-   - Calculate country-specific fame multiplier
-   - Generate sales scaled by that country's fame, fans, and performance history
-   - Record the `country` on each `release_sales` row (column already exists)
-3. Physical stock is shared globally (decremented from same pool)
-4. **Spillover**: Countries adjacent to active territories get 10% passive sales even without a territory entry
-5. Releases with NO territories (legacy) continue using current global logic
-
----
-
-## 5. Streaming Updates (`update-daily-streams`)
-
-Currently streams are generated globally with random regions. This changes to:
-
-1. Check `release_territories` for the release's parent release
-2. Generate streams weighted by territory -- more streams in countries where the band has fame/fans
-3. The `listener_region` on `streaming_analytics_daily` now maps to actual territory countries
-4. Countries without a territory entry get minimal spillover streams (10%)
-
----
-
-## 6. Charts Integration (`update-music-charts`)
-
-The chart system already supports per-region charts via `listener_region`. With territory-aware streaming:
-- Regional charts will naturally reflect where songs are actually distributed
-- Songs only distributed in the UK won't appear on US charts (unless spillover)
-- The `country` field on `release_sales` feeds into sales-based chart calculations
-
-No structural changes needed to the charts engine -- it will automatically pick up the territory-filtered data.
-
----
-
-## 7. Streaming Charts (`simulate-streaming-charts`)
-
-This function generates simulated platform charts. It will be updated to:
-- Weight chart positions by territory presence -- songs distributed in more countries rank higher
-- Regional chart entries (US, UK, etc.) only include songs distributed to that region's territories
-
----
-
-## 8. Auto-Distribute Streaming (`auto-distribute-streaming`)
-
-When manufacturing completes and auto-distribution triggers:
-- Only create `song_releases` entries for platforms in the selected territories
-- Each `song_release` gets tagged with the territory's country
-
----
-
-## Technical File Changes Summary
-
-| File | Change |
-|------|--------|
-| **New migration SQL** | Create `release_territories` table + RLS; add `home_country` to releases |
-| **New: `TerritorySelectionStep.tsx`** | Country picker grouped by region with cost breakdown |
-| **Edit: `CreateReleaseDialog.tsx`** | 5-step wizard, territory state, save territories on submit |
-| **Edit: `StreamingDistributionStep.tsx`** | Receives territories, shows country context |
-| **Edit: `generate-daily-sales/index.ts`** | Per-territory sales loop with country-specific fame |
-| **Edit: `update-daily-streams/index.ts`** | Territory-weighted stream generation |
-| **Edit: `auto-distribute-streaming/index.ts`** | Territory-aware distribution |
-| **Edit: `simulate-streaming-charts/index.ts`** | Territory-weighted chart positions |
-| **Edit: `VersionHeader.tsx`** | Bump to 1.0.865 |
-| **Edit: `VersionHistory.tsx`** | Add changelog |
-
-### Backward Compatibility
-- Existing releases without territories default to global behavior (current logic unchanged)
-- The territory step pre-selects the band's home country
-- No data migration needed for existing releases
+### Files to modify:
+- `src/hooks/useTourWizard.ts` — add geographic sorting after venue selection
+- `src/pages/TourManager.tsx` — fix date key matching for gig outcomes display
+- `src/components/VersionHeader.tsx` — version bump
+- `src/pages/VersionHistory.tsx` — changelog
 
