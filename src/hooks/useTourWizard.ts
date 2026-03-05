@@ -171,6 +171,21 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     enabled: state.selectedCountries.length > 0,
   });
 
+  // Fetch city coordinates for geographic sorting
+  const { data: cityCoordinates } = useQuery({
+    queryKey: ['city-coordinates-for-tour', state.selectedCountries],
+    queryFn: async () => {
+      if (state.selectedCountries.length === 0) return [];
+      const { data, error } = await supabase
+        .from('cities')
+        .select('id, name, country, region, latitude, longitude')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Fetch setlists for the band
   const { data: setlists } = useQuery({
     queryKey: ['band-setlists', options.bandId],
@@ -212,6 +227,77 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     return fame >= 5000 && showCount >= 5;
   }, [band?.fame, state.targetShowCount, state.durationDays, state.minRestDays, availableVenues?.length]);
 
+  // Haversine distance helper
+  const haversineDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }, []);
+
+  // Geographic sort: group by country, nearest-neighbor within each group
+  const sortGeographically = useCallback((venues: VenueMatch[], startCityId: string | null): VenueMatch[] => {
+    if (venues.length <= 1 || !cityCoordinates || cityCoordinates.length === 0) return venues;
+
+    const coordMap = new Map(cityCoordinates.map(c => [c.id, { lat: c.latitude!, lon: c.longitude!, region: c.region }]));
+    
+    // Find starting point coordinates
+    let startLat = 0, startLon = 0;
+    if (startCityId && coordMap.has(startCityId)) {
+      const sc = coordMap.get(startCityId)!;
+      startLat = sc.lat; startLon = sc.lon;
+    } else {
+      // Use first venue with coords
+      for (const v of venues) {
+        const c = coordMap.get(v.cityId);
+        if (c) { startLat = c.lat; startLon = c.lon; break; }
+      }
+    }
+
+    // Group venues by country
+    const countryGroups = new Map<string, VenueMatch[]>();
+    for (const v of venues) {
+      const group = countryGroups.get(v.country) || [];
+      group.push(v);
+      countryGroups.set(v.country, group);
+    }
+
+    // Sort country groups by distance from start (using first venue in each country)
+    const sortedCountries = [...countryGroups.entries()].sort(([, aVenues], [, bVenues]) => {
+      const aCoord = coordMap.get(aVenues[0].cityId);
+      const bCoord = coordMap.get(bVenues[0].cityId);
+      if (!aCoord || !bCoord) return 0;
+      const aDist = haversineDistance(startLat, startLon, aCoord.lat, aCoord.lon);
+      const bDist = haversineDistance(startLat, startLon, bCoord.lat, bCoord.lon);
+      return aDist - bDist;
+    });
+
+    // Within each country, apply nearest-neighbor from entry point
+    const result: VenueMatch[] = [];
+    let currentLat = startLat, currentLon = startLon;
+
+    for (const [, countryVenues] of sortedCountries) {
+      const remaining = [...countryVenues];
+      while (remaining.length > 0) {
+        let nearestIdx = 0;
+        let nearestDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+          const c = coordMap.get(remaining[i].cityId);
+          if (!c) continue;
+          const dist = haversineDistance(currentLat, currentLon, c.lat, c.lon);
+          if (dist < nearestDist) { nearestDist = dist; nearestIdx = i; }
+        }
+        const picked = remaining.splice(nearestIdx, 1)[0];
+        result.push(picked);
+        const pickedCoord = coordMap.get(picked.cityId);
+        if (pickedCoord) { currentLat = pickedCoord.lat; currentLon = pickedCoord.lon; }
+      }
+    }
+
+    return result;
+  }, [cityCoordinates, haversineDistance]);
+
   // Generate venue matches for the tour
   const venueMatches = useMemo((): VenueMatch[] => {
     if (!availableVenues || availableVenues.length === 0) return [];
@@ -221,14 +307,12 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       availableVenues.length
     );
     
+    let rawMatches: VenueMatch[];
+    
     // If user manually selected venues, use those
     if (state.selectedVenueIds.length > 0) {
       const selectedVenues = availableVenues.filter(v => state.selectedVenueIds.includes(v.id));
-      const schedule = state.startDate 
-        ? generateTourSchedule(new Date(state.startDate), selectedVenues.length, state.minRestDays)
-        : [];
-      
-      return selectedVenues.map((v, i) => ({
+      rawMatches = selectedVenues.map((v) => ({
         venueId: v.id,
         venueName: v.name,
         cityId: v.city_id || '',
@@ -239,48 +323,55 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         basePayment: v.base_payment || 0,
         bookingFee: 50,
         estimatedTicketRevenue: 0,
-        date: schedule[i]?.toISOString().split('T')[0] || '',
+        date: '',
         genre: typeof v.genre_bias === 'string' ? v.genre_bias : undefined,
       }));
-    }
-    
-    // Auto-select venues
-    const citiesUsed = new Set<string>();
-    const matches: VenueMatch[] = [];
-    const schedule = state.startDate 
-      ? generateTourSchedule(new Date(state.startDate), showCount, state.minRestDays)
-      : [];
-    
-    // Sort venues by capacity (prefer mid-range for reliability)
-    const sortedVenues = [...availableVenues].sort((a, b) => {
-      const aScore = Math.abs((a.capacity || 0) - (band?.total_fans || 500) * 0.3);
-      const bScore = Math.abs((b.capacity || 0) - (band?.total_fans || 500) * 0.3);
-      return aScore - bScore;
-    });
-    
-    for (const venue of sortedVenues) {
-      if (matches.length >= showCount) break;
-      if (citiesUsed.has(venue.city_id || '')) continue;
+    } else {
+      // Auto-select venues by capacity fit
+      const citiesUsed = new Set<string>();
+      rawMatches = [];
       
-      citiesUsed.add(venue.city_id || '');
-      matches.push({
-        venueId: venue.id,
-        venueName: venue.name,
-        cityId: venue.city_id || '',
-        cityName: venue.cityName,
-        country: venue.country,
-        capacity: venue.capacity || 500,
-        venueType: venue.venue_type || 'club',
-        basePayment: venue.base_payment || 0,
-        bookingFee: 50,
-        estimatedTicketRevenue: 0,
-        date: schedule[matches.length]?.toISOString().split('T')[0] || '',
-        genre: typeof venue.genre_bias === 'string' ? venue.genre_bias : undefined,
+      const sortedVenues = [...availableVenues].sort((a, b) => {
+        const aScore = Math.abs((a.capacity || 0) - (band?.total_fans || 500) * 0.3);
+        const bScore = Math.abs((b.capacity || 0) - (band?.total_fans || 500) * 0.3);
+        return aScore - bScore;
       });
+      
+      for (const venue of sortedVenues) {
+        if (rawMatches.length >= showCount) break;
+        if (citiesUsed.has(venue.city_id || '')) continue;
+        
+        citiesUsed.add(venue.city_id || '');
+        rawMatches.push({
+          venueId: venue.id,
+          venueName: venue.name,
+          cityId: venue.city_id || '',
+          cityName: venue.cityName,
+          country: venue.country,
+          capacity: venue.capacity || 500,
+          venueType: venue.venue_type || 'club',
+          basePayment: venue.base_payment || 0,
+          bookingFee: 50,
+          estimatedTicketRevenue: 0,
+          date: '',
+          genre: typeof venue.genre_bias === 'string' ? venue.genre_bias : undefined,
+        });
+      }
     }
-    
-    return matches;
-  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans]);
+
+    // Apply geographic sorting
+    const sorted = sortGeographically(rawMatches, state.startingCityId);
+
+    // Assign dates after geographic ordering
+    const schedule = state.startDate 
+      ? generateTourSchedule(new Date(state.startDate), sorted.length, state.minRestDays)
+      : [];
+
+    return sorted.map((v, i) => ({
+      ...v,
+      date: schedule[i]?.toISOString().split('T')[0] || '',
+    }));
+  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically]);
 
   // Calculate recommended ticket price
   const recommendedTicketPrice = useMemo(() => {
