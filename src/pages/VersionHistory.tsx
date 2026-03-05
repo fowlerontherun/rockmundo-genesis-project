@@ -14,14 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.885",
+    version: "1.0.886",
     date: "2026-03-05",
     changes: [
-      { type: 'fix', description: "Fixed practice track audio uploads failing — added missing INSERT/UPDATE/DELETE RLS policies on practice_track_audio table" },
+      { type: 'fix', description: "Improved admin practice-track upload UX with explicit uploading toast + stable file picker trigger" },
+      { type: 'fix', description: "Reduced false full-page loading flash during background game-data refetches" },
     ],
   },
   {
-    version: "1.0.884",
+    version: "1.0.885",
     date: "2026-03-05",
     changes: [
       { type: 'feature', description: "Added Stage Practice to the Music navigation section, Music Hub page, and horizontal navigation" },

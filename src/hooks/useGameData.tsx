@@ -433,6 +433,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const activityStatusWarningLoggedRef = useRef(false);
   const activityStatusMetadataSupportedRef = useRef(true);
   const activityFeedSupportsDurationRef = useRef(true);
+  const hasCompletedInitialLoadRef = useRef(false);
 
   const getPostgrestErrorCode = (error: unknown): string | null => {
     if (typeof error !== "object" || error === null || !("code" in error)) {
@@ -1007,11 +1008,14 @@ const useProvideGameData = (): UseGameDataReturn => {
       setCurrentCity(null);
       setDailyXpGrant(null);
       setSupportsActivityProfileFilter(false);
+      hasCompletedInitialLoadRef.current = false;
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (!hasCompletedInitialLoadRef.current) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -1035,6 +1039,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       console.error("Error fetching game data:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch game data");
     } finally {
+      hasCompletedInitialLoadRef.current = true;
       setLoading(false);
     }
   }, [loadProfileDetails, user]);
