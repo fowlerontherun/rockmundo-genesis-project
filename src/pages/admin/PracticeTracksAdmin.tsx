@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +21,7 @@ interface TrackAudioRow {
 export default function PracticeTracksAdmin() {
   const queryClient = useQueryClient();
   const [uploadingTrackId, setUploadingTrackId] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const { data: trackAudio = [], isLoading } = useQuery({
     queryKey: ['practice-track-audio'],
@@ -67,12 +68,19 @@ export default function PracticeTracksAdmin() {
 
       return audioUrl;
     },
-    onSuccess: () => {
+    onMutate: (variables) => {
+      setUploadingTrackId(variables.trackId);
+      const toastId = toast.loading(`Uploading ${variables.song.title}...`);
+      return { toastId, trackTitle: variables.song.title };
+    },
+    onSuccess: (_data, _variables, context) => {
+      if (context?.toastId) toast.dismiss(context.toastId);
       queryClient.invalidateQueries({ queryKey: ['practice-track-audio'] });
-      toast.success('Audio uploaded successfully!');
+      toast.success(`${context?.trackTitle ?? 'Audio'} uploaded successfully!`);
       setUploadingTrackId(null);
     },
-    onError: (err) => {
+    onError: (err, _variables, context) => {
+      if (context?.toastId) toast.dismiss(context.toastId);
       toast.error(`Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setUploadingTrackId(null);
     },
@@ -105,10 +113,13 @@ export default function PracticeTracksAdmin() {
     },
   });
 
-  const handleFileChange = (trackId: string, song: typeof DEFAULT_PRACTICE_SONGS[0], file: File | null) => {
+  const handleFileChange = (trackId: string, song: typeof DEFAULT_PRACTICE_SONGS[0], file: File | null, input: HTMLInputElement | null) => {
     if (!file) return;
-    setUploadingTrackId(trackId);
     uploadMutation.mutate({ trackId, file, song });
+
+    if (input) {
+      input.value = '';
+    }
   };
 
   return (
@@ -167,25 +178,31 @@ export default function PracticeTracksAdmin() {
 
                     <div className="flex-shrink-0">
                       {isUploading ? (
-                        <Button variant="outline" size="sm" disabled>
+                        <Button variant="outline" size="sm" type="button" disabled>
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                           Uploading...
                         </Button>
                       ) : (
-                        <label>
-                          <Button variant="outline" size="sm" asChild>
-                            <span>
-                              <Upload className="h-4 w-4 mr-1" />
-                              {hasAudio ? 'Replace' : 'Upload'}
-                            </span>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => fileInputRefs.current[song.id]?.click()}
+                          >
+                            <Upload className="h-4 w-4 mr-1" />
+                            {hasAudio ? 'Replace' : 'Upload'}
                           </Button>
                           <Input
                             type="file"
                             accept="audio/*"
                             className="hidden"
-                            onChange={(e) => handleFileChange(song.id, song, e.target.files?.[0] || null)}
+                            ref={(el) => {
+                              fileInputRefs.current[song.id] = el;
+                            }}
+                            onChange={(e) => handleFileChange(song.id, song, e.target.files?.[0] || null, e.currentTarget)}
                           />
-                        </label>
+                        </>
                       )}
                     </div>
                   </div>
