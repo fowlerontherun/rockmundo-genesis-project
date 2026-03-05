@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.873",
+    date: "2026-03-05",
+    changes: [
+      { type: 'feature', description: "Added visual Tour Route Map to tour details — shows an SVG map with numbered city pins connected by route lines, with color coding for completed/upcoming/active stops and pulsing animation on the current gig" },
+    ],
+  },
+  {
     version: "1.0.872",
     date: "2026-03-05",
     changes: [
