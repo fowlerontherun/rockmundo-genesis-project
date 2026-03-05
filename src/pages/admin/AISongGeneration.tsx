@@ -68,9 +68,8 @@ export default function AISongGeneration() {
         .from("songs")
         .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, created_at, band_id, bands(name)")
         .in("status", ["recorded", "released"])
-        .not("band_id", "is", null) // Only songs with bands
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(1000);
 
       if (songsError) throw songsError;
 

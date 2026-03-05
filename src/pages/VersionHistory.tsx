@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.880",
+    date: "2026-03-05",
+    changes: [
+      { type: 'fix', description: "Admin AI Song Generation page now shows ALL recorded/released songs including those without a band (previously filtered out songs with no band_id)" },
+      { type: 'improvement', description: "Increased admin song list limit from 500 to 1000 to prevent missing songs" },
+    ],
+  },
+  {
     version: "1.0.879",
     date: "2026-03-05",
     changes: [
