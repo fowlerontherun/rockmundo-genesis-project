@@ -17,7 +17,7 @@ import {
 } from '@/lib/minigames/stagePracticeTypes';
 
 interface StagePracticeSelectionProps {
-  onStart: (songId: string, songTitle: string, instrumentSlug: string, skillLevel: number) => void;
+  onStart: (songId: string, songTitle: string, instrumentSlug: string, skillLevel: number, audioUrl?: string | null) => void;
 }
 
 export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps) {
@@ -58,7 +58,7 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from('songs')
-        .select('id, title, genre, duration_seconds')
+        .select('id, title, genre, duration_seconds, audio_url')
         .eq('user_id', user.id)
         .in('status', ['recorded', 'released', 'completed', 'mastered'])
         .order('created_at', { ascending: false })
@@ -71,6 +71,7 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
         durationSeconds: s.duration_seconds || 180,
         bpm: 120,
         isDefault: false,
+        audioUrl: s.audio_url || null,
       })) as PracticeSong[];
     },
     enabled: !!user?.id,
@@ -83,7 +84,7 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
 
   const handleStart = () => {
     if (!canStart || !selectedSong) return;
-    onStart(selectedSong.id, selectedSong.title, selectedInstrument, skillLevel);
+    onStart(selectedSong.id, selectedSong.title, selectedInstrument, skillLevel, selectedSong.audioUrl);
   };
 
   return (
