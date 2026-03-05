@@ -12,6 +12,8 @@ import {
   CANVAS_HEIGHT,
   HIT_ZONE_Y,
   NOTE_RADIUS,
+  SLOW_NOTE_CHANCE,
+  SLOW_NOTE_SPEED_FACTOR,
   getDifficultyFromSkill,
 } from '@/lib/minigames/stagePracticeTypes';
 
@@ -176,12 +178,16 @@ export function StagePracticeGame({
     else if (roll < diff.hazardChance + diff.bonusNoteChance) type = 'bonus';
     else if (roll < diff.hazardChance + diff.bonusNoteChance + diff.holdNoteChance) type = 'hold';
 
+    // Occasionally spawn a slow "breather" note
+    const isSlow = Math.random() < SLOW_NOTE_CHANCE;
+    const noteSpeed = isSlow ? speed * SLOW_NOTE_SPEED_FACTOR : speed;
+
     const note: GameNote = {
       id: `n${nextNoteId++}`,
       type,
       lane,
       spawnTime: stateRef.current.elapsedMs,
-      fallSpeed: speed,
+      fallSpeed: noteSpeed,
       y: -NOTE_RADIUS,
       hitWindow: diff.hitWindowMs,
       xpMultiplier: type === 'bonus' ? 2 : type === 'hazard' ? 0 : 1,
