@@ -358,54 +358,85 @@ export const useCountryCharts = (
         latestTrend: string;
         latestTrendChange: number;
         maxWeeksOnChart: number;
+        seenDates: Set<string>;
       }>();
+
+      // Determine how to aggregate based on the time range:
+      // - weekly: use peak weekly_plays (each day's weekly_plays is a rolling 7-day window)
+      // - monthly/yearly: estimate daily values (weekly_plays / 7) and sum across unique dates
+      //   to get the true period total without double-counting rolling windows
+      const shouldSumAcrossDays = timeRange === "monthly" || timeRange === "yearly";
 
       // Filter entries based on release category to ensure proper data
       const filteredData = (data || []).filter(entry => {
         if (releaseCategory === "album") {
-          // For album view, only include actual album entries (not individual songs on album charts)
           return entry.entry_type === "album";
         }
         if (releaseCategory === "ep") {
-          // For EP view, only include actual album/EP entries
           return entry.entry_type === "album";
         }
-        // For singles and all, include everything (singles are the default)
         return true;
       });
 
-      console.log("[useCountryCharts] After filtering by category:", filteredData.length);
+      console.log("[useCountryCharts] After filtering by category:", filteredData.length, "mode:", shouldSumAcrossDays ? "sum-daily" : "peak-weekly");
 
       for (const entry of filteredData) {
-        // Use release_id for album/EP entries, song_id for singles
         const key = isAlbumCategory && entry.release_id 
           ? entry.release_id 
           : entry.song_id;
           
+        const weeklyPlays = entry.weekly_plays || 0;
+        const combinedScore = entry.combined_score || 0;
+        // Estimate this day's contribution: weekly_plays is a 7-day rolling total
+        const estimatedDailyPlays = weeklyPlays / 7;
+        const estimatedDailyCombined = combinedScore / 7;
+        const chartDate = entry.chart_date || "";
+        
         const existing = aggregatedMap.get(key);
 
         if (existing) {
-          // Use PEAK weekly_plays for ranking (not sum — each day's weekly_plays is already a rolling window)
-          existing.totalWeeklyPlays = Math.max(existing.totalWeeklyPlays, entry.weekly_plays || 0);
-          existing.totalCombinedScore = Math.max(existing.totalCombinedScore, entry.combined_score || 0);
+          if (shouldSumAcrossDays) {
+            // For monthly/yearly: accumulate estimated daily values across unique dates
+            if (!existing.seenDates.has(chartDate)) {
+              existing.seenDates.add(chartDate);
+              existing.totalWeeklyPlays += estimatedDailyPlays;
+              existing.totalCombinedScore += estimatedDailyCombined;
+            }
+          } else {
+            // For weekly: use peak value (rolling window already covers the period)
+            existing.totalWeeklyPlays = Math.max(existing.totalWeeklyPlays, weeklyPlays);
+            existing.totalCombinedScore = Math.max(existing.totalCombinedScore, combinedScore);
+          }
           existing.maxWeeksOnChart = Math.max(existing.maxWeeksOnChart, entry.weeks_on_chart || 1);
           // Keep the latest entry's data for display
-          if (entry.chart_date > existing.entry.chart_date) {
+          if (chartDate > existing.entry.chart_date) {
             existing.latestTrend = entry.trend || "stable";
             existing.latestTrendChange = entry.trend_change || 0;
-            existing.totalPlays = entry.weekly_plays || 0; // Use period data, not all-time
             existing.entry = entry;
           }
         } else {
+          const initialSeenDates = new Set<string>();
+          if (chartDate) initialSeenDates.add(chartDate);
+          
           aggregatedMap.set(key, {
             entry,
-            totalPlays: entry.weekly_plays || 0, // Use period data, not all-time cumulative
-            totalWeeklyPlays: entry.weekly_plays || 0,
-            totalCombinedScore: entry.combined_score || 0,
+            totalPlays: shouldSumAcrossDays ? estimatedDailyPlays : weeklyPlays,
+            totalWeeklyPlays: shouldSumAcrossDays ? estimatedDailyPlays : weeklyPlays,
+            totalCombinedScore: shouldSumAcrossDays ? estimatedDailyCombined : combinedScore,
             latestTrend: entry.trend || "stable",
             latestTrendChange: entry.trend_change || 0,
             maxWeeksOnChart: entry.weeks_on_chart || 1,
+            seenDates: initialSeenDates,
           });
+        }
+      }
+
+      // Round accumulated values for display
+      if (shouldSumAcrossDays) {
+        for (const agg of aggregatedMap.values()) {
+          agg.totalWeeklyPlays = Math.round(agg.totalWeeklyPlays);
+          agg.totalCombinedScore = Math.round(agg.totalCombinedScore);
+          agg.totalPlays = agg.totalWeeklyPlays;
         }
       }
 
