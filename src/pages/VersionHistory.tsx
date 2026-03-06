@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.892",
+    date: "2026-03-06",
+    changes: [
+      { type: 'fix', description: "Chart time-range filters now produce distinct data: monthly sums estimated daily values across the month, yearly across the year, instead of all showing the same peak-week number" },
+      { type: 'fix', description: "Weekly charts correctly use peak rolling-window value while monthly/yearly aggregate across unique chart dates to avoid double-counting" },
+    ],
+  },
+  {
     version: "1.0.891",
     date: "2026-03-06",
     changes: [
