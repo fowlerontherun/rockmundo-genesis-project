@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.891",
+    date: "2026-03-06",
+    changes: [
+      { type: 'fix', description: "Daily streaming now scales with band fame and fan count — famous bands with large fanbases generate dramatically more streams" },
+      { type: 'improvement', description: "Stream formula uses fame^1.4 scaling and fan engagement multiplier instead of flat random base" },
+    ],
+  },
+  {
     version: "1.0.890",
     date: "2026-03-06",
     changes: [
