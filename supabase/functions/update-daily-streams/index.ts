@@ -123,9 +123,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Pre-fetch band fame and total fans for fame-based stream scaling
+    let bandFameMap = new Map<string, { fame: number; totalFans: number }>();
+    if (bandIds.length > 0) {
+      const { data: bandData } = await supabase
+        .from('bands')
+        .select('id, fame, weekly_fans')
+        .in('id', bandIds);
+      
+      for (const b of bandData || []) {
+        // Also sum total fans across all countries
+        const countryFans = bandCountryFansMap.get(b.id);
+        let totalFans = b.weekly_fans || 0;
+        if (countryFans) {
+          // Use fame sum as proxy for reach if weekly_fans is low
+          totalFans = Math.max(totalFans, [...countryFans.values()].reduce((s, f) => s + f, 0));
+        }
+        bandFameMap.set(b.id, { fame: b.fame || 0, totalFans });
+      }
+    }
+
     for (const release of streamingReleases || []) {
       try {
-        const baseStreams = Math.floor(Math.random() * 4900) + 100;
+        const bandId = release.band_id || (release.songs as any)?.band_id;
+        const bandStats = bandId ? bandFameMap.get(bandId) : undefined;
+        const bandFame = bandStats?.fame || 0;
+        const bandTotalFans = bandStats?.totalFans || 0;
+
+        // Fame-scaled base streams: famous bands get dramatically more streams
+        // Fame 0 → ~100-300, Fame 500 → ~2k-5k, Fame 2000 → ~10k-30k, Fame 10000 → ~50k-150k
+        const fameScale = 1 + Math.pow(bandFame / 100, 1.4);
+        // Fan engagement: each fan contributes a fraction of a daily stream
+        const fanBoost = 1 + (bandTotalFans / 500);
+        const combinedFameMultiplier = Math.sqrt(fameScale * fanBoost);
+        
+        const baseStreams = Math.floor((Math.random() * 200 + 50) * combinedFameMultiplier);
         
         const releaseDate = release.created_at ? new Date(release.created_at) : new Date();
         const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -142,13 +174,11 @@ Deno.serve(async (req) => {
         // Get territories for this release
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
         const hasTerritories = releaseTerritories.length > 0;
-        const bandId = release.band_id || (release.songs as any)?.band_id;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
 
         // Pick listener region based on territories
         let listenerRegion: string;
         if (hasTerritories) {
-          // Weighted random: pick country based on fame in that country
           const weightedCountries = releaseTerritories.map(t => {
             const fame = bandFans?.get(t.country) || 1;
             return { country: t.country, weight: fame };
@@ -222,7 +252,6 @@ Deno.serve(async (req) => {
         }
 
         // Pay band daily streaming revenue
-        const bandId = release.band_id || (release.songs as any)?.band_id;
         if (bandId && dailyRevenue > 0) {
           await supabase.from('band_earnings').insert({
             band_id: bandId,
