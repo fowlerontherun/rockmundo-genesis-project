@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.890",
+    date: "2026-03-06",
+    changes: [
+      { type: 'fix', description: "Re-enabled /world-map route so the tutorial 'visit_world_map' step no longer leads to a 404" },
+    ],
+  },
+  {
     version: "1.0.889",
     date: "2026-03-05",
     changes: [

@@ -529,7 +529,7 @@ function App() {
                     <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="world" element={<WorldEnvironment />} />
-                    {/* <Route path="world-map" element={<WorldMap />} /> */}
+                    <Route path="world-map" element={<WorldMap />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
                     <Route path="gear-shop" element={<MyGear />} />
