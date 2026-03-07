@@ -22,6 +22,7 @@ import { MerchManagerCard } from "@/components/merchandise/MerchManagerCard";
 import { OperatingCostsCard } from "@/components/merchandise/OperatingCostsCard";
 import { useMerchManager } from "@/hooks/useMerchManager";
 import { useMerchImageGenerator } from "@/hooks/useMerchImageGenerator";
+import { startOfDay } from "date-fns";
 import { useMerchRequirements, QUALITY_TIERS, MerchItemRequirement, calculateMerchQuality, getRecommendedPrice, getPricingImpact } from "@/hooks/useMerchRequirements";
 import {
   Loader2,
@@ -389,6 +390,28 @@ const Merchandise = () => {
     },
     enabled: Boolean(bandId),
     staleTime: 30 * 1000,
+  });
+
+  // Fetch today's sales per merchandise item
+  const { data: todaySalesMap = {} } = useQuery<Record<string, number>>({
+    queryKey: ["merch-today-sales", bandId],
+    queryFn: async () => {
+      if (!bandId) return {};
+      const todayStart = startOfDay(new Date()).toISOString();
+      const { data, error } = await (supabase as any)
+        .from("merch_orders")
+        .select("merchandise_id, quantity")
+        .eq("band_id", bandId)
+        .gte("created_at", todayStart);
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      (data || []).forEach((o: any) => {
+        map[o.merchandise_id] = (map[o.merchandise_id] || 0) + (o.quantity || 0);
+      });
+      return map;
+    },
+    enabled: Boolean(bandId),
+    staleTime: 60 * 1000,
   });
 
   useEffect(() => {

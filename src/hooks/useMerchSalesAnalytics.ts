@@ -74,7 +74,7 @@ export const useMerchSalesAnalytics = (bandId: string | null, timeRange: TimeRan
         query = query.gte('created_at', startDate.toISOString());
       }
 
-      const { data: orders, error } = await query;
+      const { data: orders, error } = await query.limit(5000);
 
       if (error) throw error;
 
