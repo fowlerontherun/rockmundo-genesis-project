@@ -100,15 +100,32 @@ export const calculateMerchQuality = (
 
 /**
  * Calculate the recommended sale price for a merch item.
- * Formula: base_cost × 2.5 × qualityPriceMultiplier
+ * For items with production cost: base_cost × 2.5 × qualityPriceMultiplier
+ * For digital/zero-cost items: use a floor based on quality tier
  */
 export const getRecommendedPrice = (
   baseCost: number,
   qualityTier: QualityTier
 ): number => {
   const qualityMultiplier = QUALITY_TIERS[qualityTier].priceMultiplier;
+
+  // Digital items ($0 cost) still have a realistic market price
+  const DIGITAL_FLOOR_PRICES: Record<QualityTier, number> = {
+    poor: 2,
+    basic: 5,
+    standard: 8,
+    premium: 12,
+    exclusive: 20,
+  };
+
+  if (baseCost <= 0) {
+    return Math.round(DIGITAL_FLOOR_PRICES[qualityTier] * qualityMultiplier);
+  }
   return Math.round(baseCost * 2.5 * qualityMultiplier);
 };
+
+/** Maximum allowed selling price for any merch item */
+export const MAX_MERCH_PRICE = 9999;
 
 export type PricingImpact = {
   /** Ratio of actual price to recommended (1.0 = exactly recommended) */
@@ -140,11 +157,9 @@ export const getPricingImpact = (
   actualPrice: number,
   recommendedPrice: number
 ): PricingImpact => {
-  if (recommendedPrice <= 0) {
-    return { ratio: 1, salesMultiplier: 1, fameEffect: 0, fanEffect: 0, label: "Fair Price", color: "text-green-500" };
-  }
-
-  const ratio = actualPrice / recommendedPrice;
+  // Use a minimum recommended price of $5 to prevent division by zero
+  const effectiveRecommended = Math.max(recommendedPrice, 5);
+  const ratio = actualPrice / effectiveRecommended;
 
   if (ratio <= 0.7) {
     return { ratio, salesMultiplier: 1.4, fameEffect: 1, fanEffect: 2, label: "Bargain", color: "text-blue-500" };

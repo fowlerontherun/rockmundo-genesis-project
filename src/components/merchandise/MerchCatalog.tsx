@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Package, Loader2 } from "lucide-react";
 import { MerchItemCard } from "./MerchItemCard";
-import { useMerchRequirements, MerchItemRequirement, QUALITY_TIERS, checkMerchUnlocked, calculateMerchQuality, getRecommendedPrice, getPricingImpact } from "@/hooks/useMerchRequirements";
+import { useMerchRequirements, MerchItemRequirement, QUALITY_TIERS, checkMerchUnlocked, calculateMerchQuality, getRecommendedPrice, getPricingImpact, MAX_MERCH_PRICE } from "@/hooks/useMerchRequirements";
 import { cn } from "@/lib/utils";
 
 interface MerchCatalogProps {
@@ -214,10 +214,19 @@ export const MerchCatalog = ({
                       <Input
                         id="sale-price"
                         type="number"
-                        min={selectedItem.base_cost}
+                        min={Math.max(1, selectedItem.base_cost)}
+                        max={MAX_MERCH_PRICE}
                         value={price}
-                        onChange={(e) => setPrice(e.target.value)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (val > MAX_MERCH_PRICE) {
+                            setPrice(String(MAX_MERCH_PRICE));
+                          } else {
+                            setPrice(e.target.value);
+                          }
+                        }}
                       />
+                      <p className="text-xs text-muted-foreground">Max: ${MAX_MERCH_PRICE.toLocaleString()}</p>
                       {currentPricingImpact && (
                         <p className="text-xs text-muted-foreground">
                           Recommended: <span className="font-medium text-foreground">${currentPricingImpact.recommended}</span>
@@ -318,7 +327,7 @@ export const MerchCatalog = ({
 
                 <Button
                   onClick={handleAddProduct}
-                  disabled={!designName.trim() || isAdding || parseInt(price) < selectedItem.base_cost}
+                  disabled={!designName.trim() || isAdding || parseInt(price) < Math.max(1, selectedItem.base_cost) || parseInt(price) > MAX_MERCH_PRICE}
                   className="w-full"
                 >
                   {isAdding ? (
