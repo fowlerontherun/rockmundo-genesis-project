@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .from("bands")
       .select(`
         id, name, fame, total_fans, casual_fans, dedicated_fans, superfans,
-        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier)
+        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, production_cost)
       `)
       .gt("total_fans", 0);
 
@@ -173,15 +173,18 @@ Deno.serve(async (req) => {
         const selectedCountry = weightedRandomSelect(COUNTRIES);
         const country = selectedCountry.name;
 
-        const unitPrice = selectedMerch.selling_price || 20;
+        const unitPrice = Math.min(selectedMerch.selling_price || 20, 9999); // Cap at max price
+        const productionCost = selectedMerch.production_cost || 0;
         const subtotal = unitPrice * quantity;
+        const totalCost = productionCost * quantity;
 
         // Calculate taxes (keep as decimals for numeric columns)
         const salesTax = Math.round(subtotal * selectedCountry.salesTaxRate * 100) / 100;
         const vat = Math.round(subtotal * selectedCountry.vatRate * 100) / 100;
         // total_price and unit_price are INTEGER columns - must be whole numbers
         const totalPrice = Math.round(subtotal + salesTax + vat);
-        const netRevenue = subtotal; // Band receives pre-tax amount (integer since unitPrice is integer)
+        // Net revenue = sales minus taxes minus production costs
+        const netRevenue = Math.max(0, subtotal - totalCost);
 
         ordersToInsert.push({
           band_id: band.id,
@@ -244,23 +247,29 @@ Deno.serve(async (req) => {
         }
 
         // Add NET revenue (after taxes) to band earnings
+        const bandGrossRevenue = ordersToInsert.reduce((sum, o) => sum + o.total_price, 0);
         const bandNetRevenue = ordersToInsert.reduce((sum, o) => sum + o.net_revenue, 0);
         const bandTotalTaxes = ordersToInsert.reduce((sum, o) => sum + o.sales_tax + o.vat, 0);
+        const bandTotalCosts = ordersToInsert.reduce((sum, o) => sum + (o.unit_price * o.quantity) - o.net_revenue - o.sales_tax - o.vat, 0);
         
-        await supabase.from("band_earnings").insert({
-          band_id: band.id,
-          amount: Math.round(bandNetRevenue),
-          source: "merchandise",
-          description: `Daily merch sales: ${ordersToInsert.length} orders ($${bandTotalTaxes.toFixed(2)} in taxes collected)`,
-          metadata: {
-            orders_count: ordersToInsert.length,
-            gross_revenue: ordersToInsert.reduce((sum, o) => sum + o.total_price, 0),
-            sales_tax_collected: ordersToInsert.reduce((sum, o) => sum + o.sales_tax, 0),
-            vat_collected: ordersToInsert.reduce((sum, o) => sum + o.vat, 0),
-            net_revenue: bandNetRevenue,
-            stock_reduced: Array.from(stockUpdates.entries()).reduce((sum, [_, qty]) => sum + qty, 0),
-          },
-        });
+        // Only credit positive earnings
+        if (bandNetRevenue > 0) {
+          await supabase.from("band_earnings").insert({
+            band_id: band.id,
+            amount: Math.round(bandNetRevenue),
+            source: "merchandise",
+            description: `Daily merch sales: ${ordersToInsert.length} orders (costs: $${Math.abs(bandTotalCosts).toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})`,
+            metadata: {
+              orders_count: ordersToInsert.length,
+              gross_revenue: bandGrossRevenue,
+              production_costs: bandTotalCosts,
+              sales_tax_collected: ordersToInsert.reduce((sum, o) => sum + o.sales_tax, 0),
+              vat_collected: ordersToInsert.reduce((sum, o) => sum + o.vat, 0),
+              net_revenue: bandNetRevenue,
+              stock_reduced: Array.from(stockUpdates.entries()).reduce((sum, [_, qty]) => sum + qty, 0),
+            },
+          });
+        }
 
         console.log(`[${JOB_NAME}] Added $${bandNetRevenue.toFixed(2)} to band earnings (after $${bandTotalTaxes.toFixed(2)} taxes)`);
       }

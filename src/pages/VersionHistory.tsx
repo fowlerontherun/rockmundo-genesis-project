@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.894",
+    date: "2026-03-07",
+    changes: [
+      { type: 'fix', description: "Fixed pricing assessment for zero-cost digital items — $0 production cost items no longer show 'Fair Price' at any price; realistic recommended prices based on quality tier" },
+      { type: 'fix', description: "Merch net revenue now deducts production costs and taxes — bands earn profit, not gross revenue" },
+      { type: 'fix', description: "Added $9,999 max price cap on all merchandise to prevent unrealistic pricing" },
+      { type: 'improvement', description: "Edge function caps selling_price at $9,999 for existing overpriced items during sales simulation" },
+    ],
+  },
+  {
     version: "1.0.893",
     date: "2026-03-07",
     changes: [
