@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.893",
+    date: "2026-03-07",
+    changes: [
+      { type: 'fix', description: "Registered simulate-merch-sales edge function in config.toml so it deploys and runs correctly" },
+      { type: 'fix', description: "Fixed merch sales analytics query hitting Supabase 1000-row default limit — now fetches up to 5000 orders" },
+      { type: 'feature', description: "Added 'Sold Today' column to the merchandise overview table showing daily unit sales per product" },
+    ],
+  },
+  {
     version: "1.0.892",
     date: "2026-03-06",
     changes: [

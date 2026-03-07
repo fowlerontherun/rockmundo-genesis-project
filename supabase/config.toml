@@ -234,6 +234,9 @@ verify_jwt = false
 [functions.relationship-decay]
 verify_jwt = false
 
+[functions.simulate-merch-sales]
+verify_jwt = false
+
 [functions.stage-practice-sfx]
 verify_jwt = false
 
