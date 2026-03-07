@@ -977,6 +977,7 @@ const Merchandise = () => {
                         <TableHead>Sale</TableHead>
                         <TableHead className="hidden md:table-cell">Pricing</TableHead>
                         <TableHead>Stock</TableHead>
+                        <TableHead>Today</TableHead>
                         <TableHead className="hidden lg:table-cell">Potential</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
@@ -1060,6 +1061,15 @@ const Merchandise = () => {
                               </div>
                             </TableCell>
                             <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
+                            <TableCell>
+                              {todaySalesMap[product.id] ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  {todaySalesMap[product.id]} sold
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
                             <TableCell className="hidden lg:table-cell">{currencyFormatter.format(potential)}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1.5">
