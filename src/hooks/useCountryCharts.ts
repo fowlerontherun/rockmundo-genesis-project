@@ -236,7 +236,8 @@ export const useCountryCharts = (
           return [];
         }
 
-        return transformAndDeduplicateEntries(data || [], chartType, releaseCategory);
+        // FIX: For daily view, estimate daily values from the 7-day rolling weekly_plays
+        return transformAndDeduplicateEntries(data || [], chartType, releaseCategory, true);
       }
 
       // For weekly/monthly/yearly, aggregate across multiple dates
