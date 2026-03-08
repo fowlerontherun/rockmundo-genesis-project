@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.961",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Rehearsal → Morale: Completing rehearsals now boosts band morale (+2 for 1hr, +3 for 2hr, +4 for 3hr+), rewarding bands that practice together" },
+      { type: 'feature', description: "Song Release → Reputation: Albums boost public reputation by +5, singles by +2 — releasing music actively builds your public image" },
+      { type: 'feature', description: "Song Release → Morale: Albums boost band morale by +6, singles by +3 — the excitement of putting out new music" },
+      { type: 'improvement', description: "Release manufacturing now updates reputation and morale alongside existing sentiment/media effects in a single transaction" },
+    ],
+  },
+  {
     version: "1.0.960",
     date: "2026-03-08",
     changes: [
