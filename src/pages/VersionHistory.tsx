@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.971",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Relationship Decay → Morale: When trust or loyalty decay below critical thresholds due to neglected relationships, band morale drops (-4 for trust, -3 for loyalty). Neglecting bandmates has consequences" },
+      { type: 'feature', description: "Lottery Win → Morale: Winning the lottery now boosts band morale scaled by prize tier. Jackpot ($250k+) gives +12, big win ($10k+) gives +8, small win ($1k+) gives +5, minimum prize gives +3" },
+      { type: 'feature', description: "University Attendance → Morale: Attending classes gives a small +1 morale boost per day. Graduating/completing a course gives +5 morale — investing in education feels rewarding" },
+      { type: 'improvement', description: "Lottery draw now fetches user_id alongside profile data for band lookup. Relationship decay processes morale penalties within the threshold event loop for efficiency" },
+    ],
+  },
+  {
     version: "1.0.970",
     date: "2026-03-08",
     changes: [
