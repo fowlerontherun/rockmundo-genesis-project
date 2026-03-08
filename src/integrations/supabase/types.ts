@@ -5253,6 +5253,63 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_tattoo_requests: {
+        Row: {
+          artist_id: string
+          body_slot: string
+          completed_tattoo_id: string | null
+          created_at: string | null
+          description: string
+          estimated_quality: number
+          id: string
+          quoted_price: number
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          artist_id: string
+          body_slot: string
+          completed_tattoo_id?: string | null
+          created_at?: string | null
+          description: string
+          estimated_quality?: number
+          id?: string
+          quoted_price?: number
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          artist_id?: string
+          body_slot?: string
+          completed_tattoo_id?: string | null
+          created_at?: string | null
+          description?: string
+          estimated_quality?: number
+          id?: string
+          quoted_price?: number
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_tattoo_requests_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_tattoo_requests_completed_tattoo_id_fkey"
+            columns: ["completed_tattoo_id"]
+            isOneToOne: false
+            referencedRelation: "player_tattoos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demo_submissions: {
         Row: {
           artist_profile_id: string | null
@@ -17823,6 +17880,7 @@ export type Database = {
       player_tattoos: {
         Row: {
           applied_at: string
+          artist_id: string | null
           body_slot: string
           id: string
           infection_cleared_at: string | null
@@ -17836,6 +17894,7 @@ export type Database = {
         }
         Insert: {
           applied_at?: string
+          artist_id?: string | null
           body_slot: string
           id?: string
           infection_cleared_at?: string | null
@@ -17849,6 +17908,7 @@ export type Database = {
         }
         Update: {
           applied_at?: string
+          artist_id?: string | null
           body_slot?: string
           id?: string
           infection_cleared_at?: string | null
@@ -17861,6 +17921,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "player_tattoos_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_artists"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_tattoos_parlour_id_fkey"
             columns: ["parlour_id"]
@@ -24811,6 +24878,59 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      tattoo_artists: {
+        Row: {
+          accepts_custom: boolean
+          bio: string | null
+          created_at: string | null
+          fame_level: number
+          id: string
+          name: string
+          nickname: string | null
+          parlour_id: string
+          price_premium: number
+          quality_bonus: number
+          specialty: string | null
+          total_tattoos_done: number
+        }
+        Insert: {
+          accepts_custom?: boolean
+          bio?: string | null
+          created_at?: string | null
+          fame_level?: number
+          id?: string
+          name: string
+          nickname?: string | null
+          parlour_id: string
+          price_premium?: number
+          quality_bonus?: number
+          specialty?: string | null
+          total_tattoos_done?: number
+        }
+        Update: {
+          accepts_custom?: boolean
+          bio?: string | null
+          created_at?: string | null
+          fame_level?: number
+          id?: string
+          name?: string
+          nickname?: string | null
+          parlour_id?: string
+          price_premium?: number
+          quality_bonus?: number
+          specialty?: string | null
+          total_tattoos_done?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tattoo_artists_parlour_id_fkey"
+            columns: ["parlour_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_parlours"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tattoo_designs: {
         Row: {
