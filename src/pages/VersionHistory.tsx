@@ -23,6 +23,7 @@ const versionHistory: VersionEntry[] = [
       { type: 'improvement', description: "Teaching sessions now look up band membership for both teacher and student separately. Release-prisoners fetches morale alongside reputation for combined update" },
     ],
   },
+  {
     version: "1.0.971",
     date: "2026-03-08",
     changes: [
