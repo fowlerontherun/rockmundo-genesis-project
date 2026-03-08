@@ -480,7 +480,7 @@ export default function WellnessPage() {
                     </div>
                     <Progress value={nearestHospital.effectiveness_rating} className="h-2" />
                     <Button
-                      onClick={() => checkIn()}
+                      onClick={() => checkIn({})}
                       disabled={isCheckingIn || health > 30}
                       className="w-full"
                       variant={health <= 30 ? "destructive" : "outline"}

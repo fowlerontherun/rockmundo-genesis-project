@@ -192,6 +192,12 @@ Deno.serve(async (req) => {
           return false;
         }
 
+        // Boost travel_hazard events for traveling players
+        if (event.category === "travel_hazard" && !player.is_traveling) {
+          return false; // Only traveling players get travel hazards
+        }
+
+        // Boost mental_health events (always eligible)
         return true;
       });
 
