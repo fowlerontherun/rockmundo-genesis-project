@@ -105,8 +105,16 @@ serve(async (req) => {
           offeredDate.setDate(offeredDate.getDate() + daysAhead);
 
           const slotType = band.fame > 5000 ? 'headline' : band.fame > 2000 ? 'support' : 'opening';
-          const basePayout = Math.floor(500 * (1 + band.fame / 10000) * (venue.economy_factor || 1));
-          const ticketPrice = { opening: 15, support: 20, headline: 30 }[slotType] || 20;
+
+          // === SENTIMENT/MEDIA GIG OFFER MODIFIERS (v1.0.947) ===
+          const sentimentScore = (band as any).fan_sentiment_score ?? 0;
+          const mediaIntensity = (band as any).media_intensity ?? 0;
+          const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200;
+          const ticketDemandMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2)); // 0.6 to 1.4
+          const mediaCoverageMod = parseFloat((0.8 + (Math.min(100, mediaIntensity) / 100) * 0.4).toFixed(2)); // 0.8 to 1.2
+
+          const basePayout = Math.floor(500 * (1 + band.fame / 10000) * (venue.economy_factor || 1) * mediaCoverageMod);
+          const ticketPrice = Math.round(({ opening: 15, support: 20, headline: 30 }[slotType] || 20) * ticketDemandMod);
 
           const expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + 5);
