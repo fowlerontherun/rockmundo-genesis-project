@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.983",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Gig Performance → Fan Sentiment: Live shows now directly affect fan_sentiment_score. Amazing shows (22+ rating) give +10 sentiment, great +5, decent +2; bad shows -6, terrible -12. Oversold/overcrowded gigs (>110% capacity) cause additional -3 sentiment penalty" },
+      { type: 'feature', description: "Open Mic → Fan Sentiment: Open mic performances now affect fan sentiment. 85+ rating = +5, 70+ = +2, below 40 = -4. Local fans remember how you performed" },
+      { type: 'feature', description: "Self-Promotion → Fan Sentiment: Completing self-promotion activities now boosts fan sentiment alongside morale. 50+ fans gained = +3, 20+ = +2, any = +1. Staying visible keeps fans engaged" },
+      { type: 'improvement', description: "Fan sentiment now integrated into 19+ functions. All three new integrations write sentiment in the same DB transaction as morale/reputation for zero extra queries" },
+    ],
+  },
+  {
     version: "1.0.982",
     date: "2026-03-08",
     changes: [

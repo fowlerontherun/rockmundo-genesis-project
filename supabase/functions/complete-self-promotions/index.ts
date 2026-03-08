@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         // Update band's fame, fans, and morale
         const { data: currentBand } = await supabase
           .from("bands")
-          .select("fame, total_fans, morale")
+          .select("fame, total_fans, morale, fan_sentiment_score")
           .eq("id", activity.band_id)
           .single();
 
@@ -110,14 +110,22 @@ Deno.serve(async (req) => {
           const curMorale = (currentBand as any).morale ?? 50;
           const moraleBoost = fansGained >= 50 ? 3 : fansGained >= 20 ? 2 : 1;
 
+          // === SELF-PROMOTION → FAN SENTIMENT (v1.0.983) ===
+          // Promoting yourself keeps fans engaged and aware
+          const curSent = (currentBand as any).fan_sentiment_score ?? 0;
+          const sentBoost = fansGained >= 50 ? 3 : fansGained >= 20 ? 2 : 1;
+
           await supabase
             .from("bands")
             .update({
               fame: (currentBand.fame || 0) + fameGained,
               total_fans: (currentBand.total_fans || 0) + fansGained,
               morale: Math.min(100, curMorale + moraleBoost),
+              fan_sentiment_score: Math.min(100, curSent + sentBoost),
             } as any)
             .eq("id", activity.band_id);
+          
+          console.log(`Self-promo: +${fansGained} fans → morale +${moraleBoost}, sent +${sentBoost}`);
         }
 
         // Record fame event
