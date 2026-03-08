@@ -68,6 +68,7 @@ serve(async (req) => {
 
     // === FETCH BAND SENTIMENT FOR RADIO ENGAGEMENT (v1.0.951) ===
     const bandSentimentMap = new Map<string, number>();
+    const bandReputationMap = new Map<string, number>();
     const bandIds = new Set<string>();
     for (const p of playlists || []) {
       const song = p.songs as any;
