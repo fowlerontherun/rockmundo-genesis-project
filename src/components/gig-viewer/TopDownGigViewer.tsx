@@ -316,6 +316,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
   const attendancePercent = Math.round((attendance / capacity) * 100);
   const isLive = gig?.status === 'in_progress';
   const venueType = (gig?.venues as any)?.venue_type || null;
+  const bandName = (gig?.bands as any)?.name || '';
 
   // Genre visuals
   const currentGenre = currentSong?.songs?.genre || null;

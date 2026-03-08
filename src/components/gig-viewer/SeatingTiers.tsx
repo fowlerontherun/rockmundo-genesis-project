@@ -33,9 +33,11 @@ export const SeatingTiers = ({ venueType, attendancePercent, mood, intensity }: 
       }
       return { seats, tierIdx };
     });
-  }, [tierCount, attendancePercent, venueType]);
+  }, [tierCount, attendancePercent, venueType, hasSeating]);
 
   const isActive = mood === 'ecstatic' || mood === 'enthusiastic';
+
+  if (!hasSeating) return null;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-[0]">
