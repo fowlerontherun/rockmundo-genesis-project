@@ -342,6 +342,13 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     });
   }, [setlistSongs, performances]);
 
+  // Average score for milestones
+  const averageScore = useMemo(() => {
+    const played = songScores.filter(s => s.played && s.score > 0);
+    if (played.length === 0) return 0;
+    return played.reduce((sum, s) => sum + s.score, 0) / played.length;
+  }, [songScores]);
+
   // Camera zoom styles
   const zoomStyle = cameraZoom === 'stage'
     ? { transform: 'scale(1.5) translateY(15%)', transformOrigin: 'top center' }
