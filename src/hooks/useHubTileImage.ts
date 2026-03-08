@@ -1,40 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
-const BUCKET = "hub-tile-images";
+/** Maps tile path keys to static image filenames in /hub-tiles/ */
+function getTileImagePath(tileKey: string): string {
+  return `/hub-tiles/${tileKey}.png`;
+}
 
-export function useHubTileImage(tileKey: string, prompt: string) {
+export function useHubTileImage(tileKey: string, _prompt: string) {
   return useQuery({
     queryKey: ["hub-tile-image", tileKey],
     queryFn: async () => {
-      // First check if image exists in storage
-      const { data: publicUrl } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(`${tileKey}.png`);
-
-      // Try to fetch the image to see if it exists
+      const path = getTileImagePath(tileKey);
+      // Verify the image exists
       try {
-        const res = await fetch(publicUrl.publicUrl, { method: "HEAD" });
-        if (res.ok) {
-          return publicUrl.publicUrl;
-        }
+        const res = await fetch(path, { method: "HEAD" });
+        if (res.ok) return path;
       } catch {
-        // Image doesn't exist, generate it
+        // fall through
       }
-
-      // Generate via edge function
-      const { data, error } = await supabase.functions.invoke("generate-hub-image", {
-        body: { prompt, tileKey },
-      });
-
-      if (error) {
-        console.error("Failed to generate hub image:", error);
-        return null;
-      }
-
-      return data?.imageUrl || null;
+      return null;
     },
-    staleTime: Infinity, // Images don't change
-    retry: 1,
+    staleTime: Infinity,
+    retry: 0,
   });
 }
