@@ -14,6 +14,8 @@ import {
   Shield, Zap, Star, Crown, AlertCircle,
   UserPlus, MessageSquare, Gift, Handshake,
 } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { InteractionModal, type InteractionOption, type InteractionResult } from "@/components/social/InteractionModal";
 import { useCharacterRelationships, useLogInteraction } from "@/hooks/useCharacterRelationships";
