@@ -93,33 +93,22 @@ const HorizontalNavigation = () => {
         </div>
 
         {/* Horizontal nav - headings only, no dropdowns */}
-        <div className="flex items-center px-2 h-10">
-          {/* Home stays left */}
-          <button
-            className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap text-yellow-400 ${
-              isActive("/dashboard") ? "bg-primary/10" : "hover:bg-accent"
-            }`}
-            onClick={() => handleNavigation("/dashboard")}
-          >
-            {t("nav.home")}
-          </button>
-
-          {/* Remaining hub links centered */}
-          <div className="flex-1 flex items-center justify-center gap-1">
-            {allLinks.filter(l => l.path !== "/dashboard").map((link) => (
-              <button
-                key={link.path}
-                className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
-                  isActive(link.path)
+        <div className="flex items-center justify-center px-2 h-10 gap-1">
+          {allLinks.map((link) => (
+            <button
+              key={link.path}
+              className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
+                link.path === "/dashboard"
+                  ? `text-yellow-400 ${isActive(link.path) ? "bg-primary/10" : "hover:bg-accent"}`
+                  : isActive(link.path)
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-                onClick={() => handleNavigation(link.path)}
-              >
-                {t(link.labelKey)}
-              </button>
-            ))}
-          </div>
+              }`}
+              onClick={() => handleNavigation(link.path)}
+            >
+              {t(link.labelKey)}
+            </button>
+          ))}
         </div>
       </div>
 
