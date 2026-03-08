@@ -22,6 +22,9 @@ const EVENT_ICONS: Record<string, string> = {
   gig_cancellation: "❌",
   twaater_post: "🐦",
   controversy: "⚠️",
+  radio_play: "📻",
+  music_video_views: "🎬",
+  viral_video: "🔥",
 };
 
 interface SentimentEventLogProps {
