@@ -74,6 +74,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const band = bandRes.data;
   const members = membersRes.data || [];
   const merch = merchRes.data || [];
+  const stageBehavior: string = (behaviorRes as any)?.data?.stage_behavior || 'standard';
 
   if (!band) throw new Error('Band not found');
 
