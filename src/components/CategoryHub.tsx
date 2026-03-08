@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/useTranslation";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import type { LucideIcon } from "lucide-react";
 
 interface HubTile {
@@ -10,6 +11,7 @@ interface HubTile {
   labelKey: string;
   path: string;
   description?: string;
+  imageUrl?: string;
 }
 
 interface TileGroup {
@@ -29,21 +31,37 @@ export const CategoryHub = ({ titleKey, description, tiles, groups }: CategoryHu
   const { t } = useTranslation();
 
   const renderTileGrid = (tilesToRender: HubTile[]) => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
       {tilesToRender.map((tile) => {
         const Icon = tile.icon;
         return (
           <Card
             key={tile.path}
-            className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group"
+            className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group overflow-hidden"
             onClick={() => navigate(tile.path)}
           >
-            <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
-              <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Icon className="h-7 w-7 text-primary" />
-              </div>
-              <span className="text-sm font-medium">{t(tile.labelKey)}</span>
-            </CardContent>
+            {tile.imageUrl ? (
+              <>
+                <AspectRatio ratio={16 / 9}>
+                  <img
+                    src={tile.imageUrl}
+                    alt={t(tile.labelKey)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </AspectRatio>
+                <CardContent className="p-3">
+                  <span className="text-sm font-medium truncate block">{t(tile.labelKey)}</span>
+                </CardContent>
+              </>
+            ) : (
+              <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
+                <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Icon className="h-7 w-7 text-primary" />
+                </div>
+                <span className="text-sm font-medium line-clamp-2">{t(tile.labelKey)}</span>
+              </CardContent>
+            )}
           </Card>
         );
       })}
