@@ -11,6 +11,7 @@ import { SongTransition } from "./SongTransition";
 import { AudienceInteractions } from "./AudienceInteractions";
 import { SeatingTiers } from "./SeatingTiers";
 import { PerformanceMilestones } from "./PerformanceMilestones";
+import { CrowdDetails } from "./CrowdDetails";
 import { getStageTheme } from "./StageThemes";
 import { getGenreVisuals, getGenreLightingColor } from "./GenreVisuals";
 import {
