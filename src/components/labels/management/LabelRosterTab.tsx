@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Users, UserMinus, Music, Disc3, Album, DollarSign, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ScoutOfferDialog } from "./ScoutOfferDialog";
+import { RecoupmentTracker } from "../RecoupmentTracker";
 
 interface LabelRosterTabProps {
   labelId: string;
