@@ -29,6 +29,7 @@ const ACTIVITY_AP_RATES: Record<string, number> = {
 
 const DEFAULT_AP_RATE = 0.50;
 const DAILY_ACTIVITY_XP_CAP = 250;
+const DAILY_ACTIVITY_AP_CAP = 20; // Hard cap on AP from activities (stipend can add up to 30 more → 50 max total)
 
 function getApRateForActivity(activityType: string): number {
   return ACTIVITY_AP_RATES[activityType] ?? DEFAULT_AP_RATE;
