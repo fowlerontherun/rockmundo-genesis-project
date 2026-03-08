@@ -3,8 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { TrendingUp, Users, Music, Radio, Globe, Activity, Calendar } from "lucide-react";
+import { TrendingUp, Users, Music, Radio, Globe, Activity, Calendar, Building2, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { GenreTrendsWidget } from "@/components/world/GenreTrendsWidget";
+import { getWorldEconomicOverview } from "@/utils/cityEconomy";
+import { calculateInGameDate } from "@/utils/gameCalendar";
+import { useMemo } from "react";
 
 const WorldPulse = () => {
   const { data: recentActivity = [] } = useQuery({
