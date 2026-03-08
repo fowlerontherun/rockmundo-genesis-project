@@ -3479,6 +3479,234 @@ const djClubConfigs: TieredSkillConfig[] = [
 ];
 
 // ============================================================================
+// MODELING & FASHION SKILLS
+// ============================================================================
+const modelingConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "modeling",
+    category: "Modeling & Fashion",
+    track: "Posing",
+    icon: "camera",
+    tiers: {
+      Basic: { name: "Basic Posing", description: "Learn angles, expressions, and body language for the camera.", slug: "modeling_basic_posing" },
+      Professional: { name: "Professional Posing", description: "Deliver versatile poses that convey mood, brand, and editorial vision.", slug: "modeling_professional_posing" },
+      Mastery: { name: "Posing Mastery", description: "Every frame is iconic — your poses define campaigns and eras.", slug: "modeling_mastery_posing" },
+    },
+  },
+  {
+    prefix: "modeling",
+    category: "Modeling & Fashion",
+    track: "Runway Walking",
+    icon: "footprints",
+    tiers: {
+      Basic: { name: "Basic Runway", description: "Walk with confidence, maintain pace, and hit your mark.", slug: "modeling_basic_runway" },
+      Professional: { name: "Professional Runway", description: "Command the catwalk with signature walks and dramatic turns.", slug: "modeling_professional_runway" },
+      Mastery: { name: "Runway Mastery", description: "Your runway presence stops shows and trends globally.", slug: "modeling_mastery_runway" },
+    },
+  },
+  {
+    prefix: "modeling",
+    category: "Modeling & Fashion",
+    track: "Camera Presence",
+    icon: "video",
+    tiers: {
+      Basic: { name: "Basic Camera Work", description: "Stay natural, follow direction, and avoid common beginner mistakes.", slug: "modeling_basic_camera" },
+      Professional: { name: "Professional Camera Presence", description: "Engage the lens with magnetism and convey emotion effortlessly.", slug: "modeling_professional_camera" },
+      Mastery: { name: "Camera Mastery", description: "The camera loves you — every shot is cover-worthy.", slug: "modeling_mastery_camera" },
+    },
+  },
+  {
+    prefix: "modeling",
+    category: "Modeling & Fashion",
+    track: "Commercial Modeling",
+    icon: "shopping-bag",
+    tiers: {
+      Basic: { name: "Basic Commercial", description: "Smile, look approachable, and sell everyday products.", slug: "modeling_basic_commercial" },
+      Professional: { name: "Professional Commercial", description: "Land national campaigns and bring brand stories to life.", slug: "modeling_professional_commercial" },
+      Mastery: { name: "Commercial Mastery", description: "You are the face of the biggest brands on earth.", slug: "modeling_mastery_commercial" },
+    },
+  },
+  {
+    prefix: "modeling",
+    category: "Modeling & Fashion",
+    track: "Editorial Modeling",
+    icon: "sparkles",
+    tiers: {
+      Basic: { name: "Basic Editorial", description: "Interpret artistic concepts and work with creative teams.", slug: "modeling_basic_editorial" },
+      Professional: { name: "Professional Editorial", description: "Bring avant-garde visions to life for top magazines.", slug: "modeling_professional_editorial" },
+      Mastery: { name: "Editorial Mastery", description: "Your editorial work is art — museum-worthy and genre-defining.", slug: "modeling_mastery_editorial" },
+    },
+  },
+  {
+    prefix: "modeling",
+    category: "Modeling & Fashion",
+    track: "Brand Collaboration",
+    icon: "handshake",
+    tiers: {
+      Basic: { name: "Basic Brand Work", description: "Represent brands authentically and build early partnerships.", slug: "modeling_basic_brand" },
+      Professional: { name: "Professional Brand Strategy", description: "Negotiate multi-campaign deals and manage brand relationships.", slug: "modeling_professional_brand" },
+      Mastery: { name: "Brand Empire", description: "Launch your own brand or become the lifetime face of a fashion house.", slug: "modeling_mastery_brand" },
+    },
+  },
+];
+
+// ============================================================================
+// FASHION DESIGN SKILLS
+// ============================================================================
+const fashionDesignConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "fashion",
+    category: "Fashion & Clothing",
+    track: "Fashion Fundamentals",
+    icon: "palette",
+    tiers: {
+      Basic: {
+        name: "Basic Fashion Knowledge",
+        description: "Study fashion history, silhouettes, and style principles.",
+        slug: "fashion_basic_fundamentals",
+        prerequisites: [{ slug: "modeling_basic_posing", requiredValue: 100 }],
+      },
+      Professional: { name: "Professional Fashion Theory", description: "Analyze trends, forecast seasons, and develop design philosophy.", slug: "fashion_professional_fundamentals" },
+      Mastery: { name: "Fashion Mastery", description: "You set the trends — your vision shapes the industry.", slug: "fashion_mastery_fundamentals" },
+    },
+  },
+  {
+    prefix: "fashion",
+    category: "Fashion & Clothing",
+    track: "Textile & Materials",
+    icon: "scissors",
+    tiers: {
+      Basic: {
+        name: "Basic Textiles",
+        description: "Identify fabrics, understand weaves, and learn material properties.",
+        slug: "fashion_basic_textiles",
+        prerequisites: [{ slug: "modeling_basic_posing", requiredValue: 100 }],
+      },
+      Professional: { name: "Professional Materials", description: "Source premium fabrics and work with exotic textiles.", slug: "fashion_professional_textiles" },
+      Mastery: { name: "Textile Mastery", description: "Develop proprietary fabrics and revolutionize material science in fashion.", slug: "fashion_mastery_textiles" },
+    },
+  },
+  {
+    prefix: "fashion",
+    category: "Fashion & Clothing",
+    track: "Pattern Making",
+    icon: "ruler",
+    tiers: {
+      Basic: {
+        name: "Basic Patterns",
+        description: "Draft basic patterns, take measurements, and create templates.",
+        slug: "fashion_basic_patterns",
+        prerequisites: [{ slug: "modeling_basic_posing", requiredValue: 100 }],
+      },
+      Professional: { name: "Professional Pattern Design", description: "Engineer complex patterns for couture and ready-to-wear.", slug: "fashion_professional_patterns" },
+      Mastery: { name: "Pattern Mastery", description: "Your pattern innovations redefine garment construction.", slug: "fashion_mastery_patterns" },
+    },
+  },
+  {
+    prefix: "fashion",
+    category: "Fashion & Clothing",
+    track: "Style & Aesthetics",
+    icon: "eye",
+    tiers: {
+      Basic: {
+        name: "Basic Styling",
+        description: "Coordinate outfits, understand color theory, and build mood boards.",
+        slug: "fashion_basic_styling",
+        prerequisites: [{ slug: "modeling_basic_posing", requiredValue: 100 }],
+      },
+      Professional: { name: "Professional Aesthetics", description: "Curate collections with cohesive visual narratives.", slug: "fashion_professional_styling" },
+      Mastery: { name: "Style Mastery", description: "Your aesthetic is instantly recognizable and globally influential.", slug: "fashion_mastery_styling" },
+    },
+  },
+  {
+    prefix: "fashion",
+    category: "Fashion & Clothing",
+    track: "Fashion Business",
+    icon: "briefcase",
+    tiers: {
+      Basic: {
+        name: "Basic Fashion Business",
+        description: "Understand fashion supply chains, pricing, and retail basics.",
+        slug: "fashion_basic_business",
+        prerequisites: [{ slug: "modeling_basic_posing", requiredValue: 100 }],
+      },
+      Professional: { name: "Professional Fashion Management", description: "Manage production runs, distribution, and fashion house operations.", slug: "fashion_professional_business" },
+      Mastery: { name: "Fashion Empire", description: "Build a global fashion empire with multiple revenue streams.", slug: "fashion_mastery_business" },
+    },
+  },
+];
+
+// ============================================================================
+// CLOTHING DESIGN SKILLS
+// ============================================================================
+const clothingDesignConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "clothing",
+    category: "Clothing Design",
+    track: "Garment Construction",
+    icon: "shirt",
+    tiers: {
+      Basic: {
+        name: "Basic Construction",
+        description: "Sew seams, set zippers, and assemble basic garments.",
+        slug: "clothing_basic_construction",
+        prerequisites: [{ slug: "fashion_basic_fundamentals", requiredValue: 250 }],
+      },
+      Professional: { name: "Professional Garment Making", description: "Construct tailored pieces with precision finishing and quality control.", slug: "clothing_professional_construction" },
+      Mastery: { name: "Construction Mastery", description: "Your construction quality rivals the finest ateliers in the world.", slug: "clothing_mastery_construction" },
+    },
+  },
+  {
+    prefix: "clothing",
+    category: "Clothing Design",
+    track: "Clothing Branding",
+    icon: "tag",
+    tiers: {
+      Basic: {
+        name: "Basic Clothing Brand",
+        description: "Create a brand identity, logo, and positioning strategy.",
+        slug: "clothing_basic_branding",
+        prerequisites: [{ slug: "fashion_basic_fundamentals", requiredValue: 250 }],
+      },
+      Professional: { name: "Professional Brand Identity", description: "Build brand recognition through marketing, collabs, and storytelling.", slug: "clothing_professional_branding" },
+      Mastery: { name: "Brand Legend", description: "Your brand is a cultural icon — worn by celebrities and revered globally.", slug: "clothing_mastery_branding" },
+    },
+  },
+  {
+    prefix: "clothing",
+    category: "Clothing Design",
+    track: "Genre Aesthetics",
+    icon: "palette",
+    tiers: {
+      Basic: {
+        name: "Basic Genre Style",
+        description: "Study the visual identities of music genres and subcultures.",
+        slug: "clothing_basic_genre_aesthetics",
+        prerequisites: [{ slug: "fashion_basic_fundamentals", requiredValue: 250 }],
+      },
+      Professional: { name: "Professional Genre Fashion", description: "Design genre-authentic clothing that resonates with fan communities.", slug: "clothing_professional_genre_aesthetics" },
+      Mastery: { name: "Genre Fashion Mastery", description: "Your designs define the look of entire music movements.", slug: "clothing_mastery_genre_aesthetics" },
+    },
+  },
+  {
+    prefix: "clothing",
+    category: "Clothing Design",
+    track: "Retail & Commerce",
+    icon: "store",
+    tiers: {
+      Basic: {
+        name: "Basic Retail",
+        description: "Set up a shop, price items, and manage basic inventory.",
+        slug: "clothing_basic_retail",
+        prerequisites: [{ slug: "fashion_basic_fundamentals", requiredValue: 250 }],
+      },
+      Professional: { name: "Professional Shop Management", description: "Optimize sales, manage staff, and run multi-location retail.", slug: "clothing_professional_retail" },
+      Mastery: { name: "Retail Empire", description: "Your retail operation is a global chain with flagship stores worldwide.", slug: "clothing_mastery_retail" },
+    },
+  },
+];
+
+// ============================================================================
 // BUILD AND EXPORT
 // ============================================================================
 const { definitions, relationships } = buildSkillTree([
@@ -3499,7 +3727,10 @@ const { definitions, relationships } = buildSkillTree([
   ...improvisationConfigs,
   ...audiencePsychologyConfigs,
   ...musicHealthConfigs,
-  ...djClubConfigs
+  ...djClubConfigs,
+  ...modelingConfigs,
+  ...fashionDesignConfigs,
+  ...clothingDesignConfigs,
 ]);
 
 export const SKILL_TREE_DEFINITIONS: SkillDefinitionRecord[] = definitions;
