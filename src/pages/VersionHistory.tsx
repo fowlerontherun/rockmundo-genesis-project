@@ -14,11 +14,12 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.0.978",
+    version: "1.0.979",
     date: "2026-03-08",
     changes: [
+      { type: 'feature', description: "Self-Promotion (individual) → Morale: Completing self-promotion activities now boosts band morale based on fans gained. 50+ fans = +3, 20+ = +2, any = +1. Hustling for your band feels rewarding" },
       { type: 'feature', description: "Daily Streaming Revenue → Morale: Accumulated streaming income now boosts band morale daily. $500+/day = +4, $100+ = +3, $20+ = +2, any revenue = +1. Seeing royalties roll in keeps spirits high" },
-      { type: 'improvement', description: "update-daily-streams now accumulates per-band streaming revenue across all song releases, then applies a single morale boost per band after the streaming loop for efficiency" },
+      { type: 'improvement', description: "process-self-promotion now fetches current band data including morale before updating, applying morale boost in the same transaction. update-daily-streams accumulates per-band revenue for efficient single morale update" },
     ],
   },
   {
