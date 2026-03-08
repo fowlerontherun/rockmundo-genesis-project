@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { Settings2, MapPin } from 'lucide-react';
+import { FanSentimentWidget } from '@/components/world/FanSentimentWidget';
+import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
