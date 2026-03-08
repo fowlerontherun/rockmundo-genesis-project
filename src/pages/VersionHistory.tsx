@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.999",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Navigation Consolidation: Reduced 12 navigation sections (~80 items) to 5 streamlined sections — Home, Music, Band & Live, World & Social, Career & Business. Full access to all features still available via hub tile pages" },
+      { type: 'improvement', description: "Merged hub pages: Band + Live + Events → Band & Live Hub, World + Social + Media → World & Social Hub, Career + Commerce → Career & Business Hub. Old hub URLs redirect automatically" },
+      { type: 'improvement', description: "Simplified mobile bottom bar shortcuts: Home, Music, Band, World. Desktop horizontal nav and sidebar both use the new 5-section structure" },
+    ],
+  },
+  {
     version: "1.0.998",
     date: "2026-03-08",
     changes: [

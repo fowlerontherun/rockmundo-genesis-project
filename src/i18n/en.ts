@@ -178,6 +178,9 @@ export const en = {
     producerCareer: "Producer Career",
     clothingDesigner: "Fashion Designer",
     clothingShop: "Clothing Shop",
+    bandLive: "Band & Live",
+    worldSocial: "World & Social",
+    careerBusiness: "Career & Business",
   },
 
   // Journal Page

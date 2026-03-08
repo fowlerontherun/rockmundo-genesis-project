@@ -178,6 +178,9 @@ export const es: TranslationKeys = {
     events: "Eventos",
     career: "Carrera",
     commerce: "Comercio",
+    bandLive: "Banda y En Vivo",
+    worldSocial: "Mundo y Social",
+    careerBusiness: "Carrera y Negocios",
   },
   
   todaysNews: {

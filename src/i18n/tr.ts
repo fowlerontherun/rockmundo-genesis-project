@@ -180,6 +180,9 @@ export const tr: TranslationKeys = {
     events: "Etkinlikler",
     career: "Kariyer",
     commerce: "Ticaret",
+    bandLive: "Grup ve Canlı",
+    worldSocial: "Dünya ve Sosyal",
+    careerBusiness: "Kariyer ve İş",
   },
   
   // Today's News Page

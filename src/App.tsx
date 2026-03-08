@@ -261,14 +261,9 @@ const Lottery = lazyWithRetry(() => import("./pages/Lottery"));
 const Housing = lazyWithRetry(() => import("./pages/Housing"));
 const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
 const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
-const BandHub = lazyWithRetry(() => import("./pages/hubs/BandHub"));
-const LiveHub = lazyWithRetry(() => import("./pages/hubs/LiveHub"));
-const EventsHub = lazyWithRetry(() => import("./pages/hubs/EventsHub"));
-const WorldHub = lazyWithRetry(() => import("./pages/hubs/WorldHub"));
-const SocialHub = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
-const CareerHub = lazyWithRetry(() => import("./pages/hubs/CareerHub"));
-const CommerceHub = lazyWithRetry(() => import("./pages/hubs/CommerceHub"));
-const MediaHubPage = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
+const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
+const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
+const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -436,14 +431,18 @@ function App() {
                     {/* Category hub pages */}
                     <Route path="hub/character" element={<CharacterHub />} />
                     <Route path="hub/music" element={<MusicHubPage />} />
-                    <Route path="hub/band" element={<BandHub />} />
-                    <Route path="hub/live" element={<LiveHub />} />
-                    <Route path="hub/events" element={<EventsHub />} />
-                    <Route path="hub/world" element={<WorldHub />} />
-                    <Route path="hub/social" element={<SocialHub />} />
-                    <Route path="hub/career" element={<CareerHub />} />
-                    <Route path="hub/commerce" element={<CommerceHub />} />
-                    <Route path="hub/media" element={<MediaHubPage />} />
+                    <Route path="hub/band-live" element={<BandLiveHub />} />
+                    <Route path="hub/world-social" element={<WorldSocialHub />} />
+                    <Route path="hub/career-business" element={<CareerBusinessHub />} />
+                    {/* Old hub redirects */}
+                    <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
+                    <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
+                    <Route path="hub/events" element={<Navigate to="/hub/band-live" replace />} />
+                    <Route path="hub/world" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/social" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/media" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/career" element={<Navigate to="/hub/career-business" replace />} />
+                    <Route path="hub/commerce" element={<Navigate to="/hub/career-business" replace />} />
                     <Route path="modeling" element={<Modeling />} />
                     <Route path="producer-career" element={<ProducerCareer />} />
                     <Route path="clothing-designer" element={<ClothingDesigner />} />
