@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.933",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "World Pulse: Genre Trends tab — see which genres are Hot 🔥 or Cold ❄️ with real-time trend scores" },
+      { type: 'feature', description: "World Pulse: City Economies tab — view all major cities' economic phases with earnings/cost/tourism multipliers" },
+      { type: 'feature', description: "UI Components: GenreTrendsWidget, CityEconomyCard, CityEconomyBadge, ReputationMoralePanel created for reuse across pages" },
+      { type: 'improvement', description: "World Pulse now has 5 tabs: Trending, Genre Trends, City Economies, Charts, Activity" },
+    ],
+  },
+  {
     version: "1.0.932",
     date: "2026-03-08",
     changes: [

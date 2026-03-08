@@ -3,8 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { TrendingUp, Users, Music, Radio, Globe, Activity, Calendar } from "lucide-react";
+import { TrendingUp, Users, Music, Radio, Globe, Activity, Calendar, Building2, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { GenreTrendsWidget } from "@/components/world/GenreTrendsWidget";
+import { getWorldEconomicOverview } from "@/utils/cityEconomy";
+import { calculateInGameDate } from "@/utils/gameCalendar";
+import { useMemo } from "react";
 
 const WorldPulse = () => {
   const { data: recentActivity = [] } = useQuery({
@@ -49,6 +53,11 @@ const WorldPulse = () => {
     },
   });
 
+  const worldEconomy = useMemo(() => {
+    const gameDate = calculateInGameDate();
+    return getWorldEconomicOverview(gameDate.realWorldDaysElapsed);
+  }, []);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
@@ -62,6 +71,8 @@ const WorldPulse = () => {
       <Tabs defaultValue="trending" className="w-full">
         <TabsList>
           <TabsTrigger value="trending">Trending Now</TabsTrigger>
+          <TabsTrigger value="genres">Genre Trends</TabsTrigger>
+          <TabsTrigger value="economy">City Economies</TabsTrigger>
           <TabsTrigger value="charts">Global Charts</TabsTrigger>
           <TabsTrigger value="activity">Recent Activity</TabsTrigger>
         </TabsList>
@@ -102,6 +113,49 @@ const WorldPulse = () => {
                   <p>No trending artists yet</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="genres" className="space-y-4">
+          <GenreTrendsWidget />
+        </TabsContent>
+
+        <TabsContent value="economy" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                World Economic Overview
+              </CardTitle>
+              <CardDescription>City economies fluctuate — plan your tours around boom periods for maximum earnings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {worldEconomy.map((city) => {
+                  const phaseColors: Record<string, string> = {
+                    boom: "bg-green-500/15 text-green-700 border-green-500/30",
+                    growth: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+                    stable: "bg-muted text-muted-foreground border-border",
+                    recession: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+                    depression: "bg-red-500/15 text-red-700 border-red-500/30",
+                  };
+                  return (
+                    <div key={city.city} className="flex items-center justify-between p-2.5 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-sm w-28 truncate">{city.city}</span>
+                        <Badge variant="outline" className={`text-[10px] ${phaseColors[city.phase] || ""}`}>
+                          {city.label}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Earn: <strong className="text-foreground">{city.multiplier}x</strong></span>
+                        <span>Cost: <strong className="text-foreground">{city.costMultiplier}x</strong></span>
+                        <span>Tourism: <strong className="text-foreground">+{Math.round(city.tourismBonus * 100)}%</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
