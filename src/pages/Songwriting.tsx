@@ -1726,7 +1726,6 @@ const Songwriting = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
       <Card className="overflow-hidden">
         <CardContent className="p-4 md:py-6">
           <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
