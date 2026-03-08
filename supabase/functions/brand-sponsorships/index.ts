@@ -166,16 +166,28 @@ async function handleGenerateOffers(
 
         if (pendingCount && pendingCount >= 5) continue;
 
-        const eligiblePartners = (partners as BrandPartner[]).filter(
-          (partner) => (band.fame ?? 0) >= (partner.fame_floor ?? 0)
-        );
+        // === REPUTATION & SENTIMENT MODIFIERS (v1.0.991) ===
+        const repScore = (band as any).reputation_score ?? 0;
+        const sentScore = (band as any).fan_sentiment_score ?? 0;
+        const isToxic = repScore <= -60;
+        // Reputation scales cash offers: 0.8x (toxic) to 1.2x (iconic)
+        const repMod = parseFloat((0.8 + ((repScore + 100) / 200) * 0.4).toFixed(2));
+
+        const eligiblePartners = (partners as BrandPartner[]).filter((partner) => {
+          if ((band.fame ?? 0) < (partner.fame_floor ?? 0)) return false;
+          // Toxic bands are skipped by established/titan tier brands
+          if (isToxic && (partner.wealth_tier === "established" || partner.wealth_tier === "titan")) return false;
+          return true;
+        });
 
         const options = eligiblePartners.map((partner) => ({
           partner,
           weight: computeWeight(partner),
         }));
 
-        const toCreate = weightedSample(options, Math.min(3, options.length));
+        // Sentiment ≥ 30 grants +1 offer slot (brands want engaged fanbases)
+        const maxOffers = Math.min(options.length, sentScore >= 30 ? 4 : 3);
+        const toCreate = weightedSample(options, maxOffers);
 
         for (const { partner, weight } of toCreate) {
           const cooldownDays = partner.cooldown_days ?? 7;
