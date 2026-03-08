@@ -5,6 +5,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper: get company owner's band reputation
+async function getCompanyOwnerReputation(supabase: any, companyId: string): Promise<{ bandId: string | null; repScore: number }> {
+  try {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('owner_id')
+      .eq('id', companyId)
+      .single();
+    if (!company?.owner_id) return { bandId: null, repScore: 0 };
+
+    const { data: member } = await supabase
+      .from('band_members')
+      .select('band_id, bands(id, reputation_score, morale)')
+      .eq('user_id', company.owner_id)
+      .eq('role', 'leader')
+      .limit(1)
+      .single();
+    if (member?.bands) {
+      return { bandId: member.band_id, repScore: member.bands.reputation_score ?? 0 };
+    }
+  } catch (_e) { /* no band */ }
+  return { bandId: null, repScore: 0 };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -19,7 +43,6 @@ Deno.serve(async (req) => {
   try {
     const now = new Date().toISOString();
 
-    // Get completed gigs at company-owned venues that haven't been processed
     const { data: completedGigs, error: gigsError } = await supabase
       .from('gigs')
       .select(`
@@ -50,11 +73,13 @@ Deno.serve(async (req) => {
     let processedCount = 0;
     let totalRevenue = 0;
 
+    // Cache reputation lookups per company
+    const repCache: Record<string, { bandId: string | null; repScore: number }> = {};
+
     for (const gig of completedGigs || []) {
       const venue = gig.venues as any;
       if (!venue?.company_id) continue;
 
-      // Check if already processed
       const { data: existingTx } = await supabase
         .from('company_transactions')
         .select('id')
@@ -63,15 +88,22 @@ Deno.serve(async (req) => {
 
       if (existingTx) continue;
 
-      // Calculate venue's cut (typically 15-30% of ticket revenue)
+      // Get reputation modifier for this venue's company owner
+      if (!repCache[venue.company_id]) {
+        repCache[venue.company_id] = await getCompanyOwnerReputation(supabase, venue.company_id);
+      }
+      const { bandId, repScore } = repCache[venue.company_id];
+      // Revenue scaling: 0.9x (toxic) → 1.1x (iconic)
+      const repMod = parseFloat((0.9 + ((repScore + 100) / 200) * 0.2).toFixed(3));
+
       const venueTicketCut = (gig.ticket_revenue || 0) * 0.20;
       const venueBarRevenue = gig.bar_sales || 0;
       const venueMerchCut = (gig.merchandise_sales || 0) * 0.10;
       
-      const totalVenueRevenue = venueTicketCut + venueBarRevenue + venueMerchCut;
+      const baseRevenue = venueTicketCut + venueBarRevenue + venueMerchCut;
+      const totalVenueRevenue = Math.round(baseRevenue * repMod);
 
       if (totalVenueRevenue > 0) {
-        // Credit company balance
         const { data: company } = await supabase
           .from('companies')
           .select('balance')
@@ -84,12 +116,10 @@ Deno.serve(async (req) => {
           .from('companies')
           .update({ 
             balance: newBalance,
-            total_revenue: supabase.rpc ? newBalance : undefined,
             updated_at: now
           })
           .eq('id', venue.company_id);
 
-        // Record transaction
         await supabase
           .from('company_transactions')
           .insert({
@@ -101,20 +131,34 @@ Deno.serve(async (req) => {
             metadata: {
               gig_id: gig.id,
               venue_id: venue.id,
-              ticket_cut: venueTicketCut,
-              bar_sales: venueBarRevenue,
-              merch_cut: venueMerchCut
+              ticket_cut: Math.round(venueTicketCut * repMod),
+              bar_sales: Math.round(venueBarRevenue * repMod),
+              merch_cut: Math.round(venueMerchCut * repMod),
+              reputation_modifier: repMod
             }
           });
 
         processedCount++;
         totalRevenue += totalVenueRevenue;
 
-        console.log(`[process-venue-bookings] Processed gig ${gig.id}: $${totalVenueRevenue.toFixed(2)}`);
+        // Award +1 morale for successful venue revenue
+        if (bandId) {
+          const { data: band } = await supabase
+            .from('bands')
+            .select('morale')
+            .eq('id', bandId)
+            .single();
+          if (band) {
+            const newMorale = Math.min(100, (band.morale ?? 50) + 1);
+            await supabase.from('bands').update({ morale: newMorale }).eq('id', bandId);
+          }
+        }
+
+        console.log(`[process-venue-bookings] Gig ${gig.id}: $${totalVenueRevenue} (repMod ${repMod})`);
       }
     }
 
-    // Process venue bookings (private events, rehearsals, etc.)
+    // Process venue bookings (private events)
     const { data: venueBookings } = await supabase
       .from('venue_bookings')
       .select(`
@@ -138,7 +182,6 @@ Deno.serve(async (req) => {
       const venue = booking.venues as any;
       if (!venue?.company_id) continue;
 
-      // Check if already processed
       const { data: existingTx } = await supabase
         .from('company_transactions')
         .select('id')
@@ -147,7 +190,15 @@ Deno.serve(async (req) => {
 
       if (existingTx) continue;
 
-      const bookingFee = booking.booking_fee || 0;
+      // Get reputation modifier
+      if (!repCache[venue.company_id]) {
+        repCache[venue.company_id] = await getCompanyOwnerReputation(supabase, venue.company_id);
+      }
+      const { bandId: bId, repScore: rScore } = repCache[venue.company_id];
+      const bookingRepMod = parseFloat((0.9 + ((rScore + 100) / 200) * 0.2).toFixed(3));
+
+      const baseBookingFee = booking.booking_fee || 0;
+      const bookingFee = Math.round(baseBookingFee * bookingRepMod);
       
       if (bookingFee > 0) {
         const { data: company } = await supabase
@@ -174,8 +225,21 @@ Deno.serve(async (req) => {
             amount: bookingFee,
             description: `Venue booking at ${venue.name}`,
             category: 'venue_booking',
-            metadata: { booking_id: booking.id }
+            metadata: { booking_id: booking.id, reputation_modifier: bookingRepMod }
           });
+
+        // Award +1 morale for booking revenue
+        if (bId) {
+          const { data: band } = await supabase
+            .from('bands')
+            .select('morale')
+            .eq('id', bId)
+            .single();
+          if (band) {
+            const newMorale = Math.min(100, (band.morale ?? 50) + 1);
+            await supabase.from('bands').update({ morale: newMorale }).eq('id', bId);
+          }
+        }
 
         processedCount++;
         totalRevenue += bookingFee;

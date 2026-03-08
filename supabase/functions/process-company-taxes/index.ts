@@ -19,7 +19,24 @@ function calculateTaxRate(taxableIncome: number): number {
       return bracket.rate;
     }
   }
-  return 0.25; // Default highest rate
+  return 0.25;
+}
+
+// Helper: get owner's band reputation score
+async function getOwnerBandReputation(supabase: any, ownerId: string): Promise<{ bandId: string | null; repScore: number }> {
+  try {
+    const { data: member } = await supabase
+      .from('band_members')
+      .select('band_id, bands(id, reputation_score)')
+      .eq('user_id', ownerId)
+      .eq('role', 'leader')
+      .limit(1)
+      .single();
+    if (member?.bands) {
+      return { bandId: member.band_id, repScore: member.bands.reputation_score ?? 0 };
+    }
+  } catch (_e) { /* no band */ }
+  return { bandId: null, repScore: 0 };
 }
 
 Deno.serve(async (req) => {
@@ -32,17 +49,13 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Starting monthly tax processing...");
+    console.log("[process-company-taxes] Starting monthly tax processing...");
 
-    // Get current tax period (previous month)
     const now = new Date();
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const taxPeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-    
-    // Due date is 7 days from now
     const dueDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Get all active companies
     const { data: companies, error: companiesError } = await supabase
       .from("companies")
       .select("id, owner_id, name, balance")
@@ -53,13 +66,12 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch companies: ${companiesError.message}`);
     }
 
-    console.log(`Processing taxes for ${companies?.length || 0} companies`);
+    console.log(`[process-company-taxes] Processing taxes for ${companies?.length || 0} companies`);
 
     let taxRecordsCreated = 0;
     let taxesPaidAutomatically = 0;
 
     for (const company of companies || []) {
-      // Check if tax record already exists for this period
       const { data: existingTax } = await supabase
         .from("company_tax_records")
         .select("id")
@@ -68,11 +80,15 @@ Deno.serve(async (req) => {
         .single();
 
       if (existingTax) {
-        console.log(`Tax record already exists for ${company.name} - ${taxPeriod}`);
+        console.log(`[process-company-taxes] Tax record already exists for ${company.name} - ${taxPeriod}`);
         continue;
       }
 
-      // Get transactions from last month
+      // Fetch owner's band reputation for tax discount
+      const { bandId, repScore } = await getOwnerBandReputation(supabase, company.owner_id);
+      // Tax modifier: 1.0x (toxic) → 0.9x (iconic) — reputable companies get tax discount
+      const taxMod = parseFloat((1.0 - ((repScore + 100) / 200) * 0.1).toFixed(3));
+
       const startOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
       const endOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 59);
 
@@ -83,7 +99,6 @@ Deno.serve(async (req) => {
         .gte("created_at", startOfLastMonth.toISOString())
         .lte("created_at", endOfLastMonth.toISOString());
 
-      // Calculate revenue and expenses
       let grossRevenue = 0;
       let deductibleExpenses = 0;
 
@@ -98,15 +113,17 @@ Deno.serve(async (req) => {
 
       const taxableIncome = Math.max(0, grossRevenue - deductibleExpenses);
       const taxRate = calculateTaxRate(taxableIncome);
-      const taxAmount = Math.round(taxableIncome * taxRate);
+      // Apply reputation-based tax discount
+      const baseTax = Math.round(taxableIncome * taxRate);
+      const taxAmount = Math.round(baseTax * taxMod);
 
-      // Only create tax record if there's tax to pay
       if (taxAmount <= 0) {
-        console.log(`No tax due for ${company.name} (income: $${taxableIncome})`);
+        console.log(`[process-company-taxes] No tax due for ${company.name} (income: $${taxableIncome})`);
         continue;
       }
 
-      // Get company settings for auto-pay
+      console.log(`[process-company-taxes] ${company.name}: base tax $${baseTax}, repMod ${taxMod}, final $${taxAmount}`);
+
       const { data: settings } = await supabase
         .from("company_settings")
         .select("auto_pay_taxes")
@@ -117,7 +134,6 @@ Deno.serve(async (req) => {
       const canAfford = Number(company.balance) >= taxAmount;
       const shouldAutoPay = autoPay && canAfford;
 
-      // Create tax record
       const { error: insertError } = await supabase
         .from("company_tax_records")
         .insert({
@@ -134,13 +150,12 @@ Deno.serve(async (req) => {
         });
 
       if (insertError) {
-        console.error(`Failed to create tax record for ${company.name}: ${insertError.message}`);
+        console.error(`[process-company-taxes] Failed to create tax record for ${company.name}: ${insertError.message}`);
         continue;
       }
 
       taxRecordsCreated++;
 
-      // Auto-pay if enabled and affordable
       if (shouldAutoPay) {
         const { error: updateError } = await supabase
           .from("companies")
@@ -148,7 +163,6 @@ Deno.serve(async (req) => {
           .eq("id", company.id);
 
         if (!updateError) {
-          // Record transaction
           await supabase.from("company_transactions").insert({
             company_id: company.id,
             transaction_type: "expense",
@@ -156,10 +170,23 @@ Deno.serve(async (req) => {
             description: `Monthly tax payment - ${taxPeriod}`,
           });
           taxesPaidAutomatically++;
-          console.log(`Auto-paid $${taxAmount} tax for ${company.name}`);
+          console.log(`[process-company-taxes] Auto-paid $${taxAmount} tax for ${company.name}`);
+
+          // Morale impact: paying taxes is stressful (-2 morale)
+          if (bandId) {
+            const { data: band } = await supabase
+              .from('bands')
+              .select('morale')
+              .eq('id', bandId)
+              .single();
+            if (band) {
+              const newMorale = Math.max(0, (band.morale ?? 50) - 2);
+              await supabase.from('bands').update({ morale: newMorale }).eq('id', bandId);
+              console.log(`[process-company-taxes] Applied -2 morale to band ${bandId} (tax stress)`);
+            }
+          }
         }
       } else if (!canAfford && taxAmount > 0) {
-        // Send notification about unpaid taxes
         await supabase.from("notifications").insert({
           user_id: company.owner_id,
           type: "company_alert",
@@ -170,7 +197,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check for overdue taxes and update status
+    // Check for overdue taxes
     const { data: overdueTaxes, error: overdueError } = await supabase
       .from("company_tax_records")
       .select("id, company_id, tax_amount")
@@ -184,10 +211,10 @@ Deno.serve(async (req) => {
           .update({ status: "overdue" })
           .eq("id", tax.id);
       }
-      console.log(`Marked ${overdueTaxes.length} tax records as overdue`);
+      console.log(`[process-company-taxes] Marked ${overdueTaxes.length} tax records as overdue`);
     }
 
-    console.log(`Tax processing complete: ${taxRecordsCreated} records created, ${taxesPaidAutomatically} auto-paid`);
+    console.log(`[process-company-taxes] Complete: ${taxRecordsCreated} records created, ${taxesPaidAutomatically} auto-paid`);
 
     return new Response(
       JSON.stringify({ 
@@ -199,7 +226,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Tax processing error:", error);
+    console.error("[process-company-taxes] Error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
