@@ -25,18 +25,11 @@ const Education = () => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
-      <header className="space-y-3 sm:space-y-4 text-center md:text-left">
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-          {t('education.hub', 'Education Hub')}
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-          {t('education.title', 'Build your creative intelligence')}
-        </h1>
-        <p className="max-w-3xl text-sm sm:text-base text-muted-foreground">
-          {t('education.subtitle', 'Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.')}
-        </p>
-      </header>
+    <PageLayout>
+      <PageHeader
+        title={t('education.title', 'Build your creative intelligence')}
+        subtitle={t('education.subtitle', 'Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.')}
+      />
 
       <Tabs defaultValue={defaultValue} className="mt-6 sm:mt-8 space-y-6">
         {/* Mobile: Scrollable tabs */}
