@@ -25,6 +25,7 @@ interface TopDownStageProps {
   genreVisuals?: GenreVisualConfig | null;
   crowdMood?: string;
   showStats?: boolean;
+  isFinale?: boolean;
 }
 
 // Instrument config with position + animations
