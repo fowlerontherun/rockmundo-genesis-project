@@ -334,7 +334,39 @@ export const useUnderworldStore = () => {
 
       if (purchaseError) throw purchaseError;
 
-      return { success: true, expiresAt, storedInInventory: shouldStoreInInventory };
+      // === Crime → Arrest check ===
+      // Drug purchases and contraband have a chance of arrest
+      let arrestResult = null;
+      const isDrugPurchase = product.category === 'consumable' || product.category === 'drug';
+      if (isDrugPurchase) {
+        // Dynamic import to avoid circular deps
+        const { rollForArrest } = await import("@/utils/crimeSystem");
+        
+        // Get player's current city drug policy
+        let drugPolicy = 'prohibited';
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("current_city_id, fame")
+            .eq("user_id", user.id)
+            .single();
+          
+          if (profile?.current_city_id) {
+            const { data: laws } = await (supabase as any)
+              .from("city_laws")
+              .select("drug_policy")
+              .eq("city_id", profile.current_city_id)
+              .maybeSingle();
+            if (laws?.drug_policy) drugPolicy = laws.drug_policy;
+          }
+          
+          arrestResult = rollForArrest('drug_purchase', drugPolicy, profile?.fame || 0);
+        } catch (_e) {
+          // Crime system is non-critical
+        }
+      }
+
+      return { success: true, expiresAt, storedInInventory: shouldStoreInInventory, arrestResult };
     },
     onSuccess: (result, { product }) => {
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
@@ -343,12 +375,20 @@ export const useUnderworldStore = () => {
       queryClient.invalidateQueries({ queryKey: ["underworld-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
-      toast({
-        title: "Purchase Complete",
-        description: result.storedInInventory 
-          ? `${product.name} has been added to your inventory!`
-          : `You acquired ${product.name}!`,
-      });
+      if (result.arrestResult?.arrested) {
+        toast({
+          title: "🚔 You've Been Arrested!",
+          description: `${result.arrestResult.description}. Bail: $${result.arrestResult.bailAmount}. Sentence: ${result.arrestResult.sentenceDays} days.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Purchase Complete",
+          description: result.storedInInventory 
+            ? `${product.name} has been added to your inventory!`
+            : `You acquired ${product.name}!`,
+        });
+      }
     },
     onError: (error: Error) => {
       toast({

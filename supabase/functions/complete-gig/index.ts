@@ -127,6 +127,37 @@ serve(async (req) => {
     const avgChemistry = performances.reduce((sum, p) => sum + (p.chemistry_contrib || 0), 0) / performances.length;
     const avgMemberSkill = performances.reduce((sum, p) => sum + (p.member_skill_contrib || 0), 0) / performances.length;
 
+    // === CLOTHING GIG BONUS — Genre-matched clothing buffs ===
+    let clothingFanBonus = 1;
+    let clothingMerchBonus = 1;
+    try {
+      const bandGenre = gig.bands?.genre || '';
+      if (bandGenre) {
+        // Get equipped clothing with genre_style for all band members
+        const { data: equippedClothing } = await supabaseClient
+          .from('player_equipped_clothing')
+          .select('genre_style')
+          .in('user_id', (members => members?.map((m: any) => m.user_id) || [])(
+            (await supabaseClient.from('band_members').select('user_id').eq('band_id', gig.band_id).eq('is_touring_member', false)).data
+          ))
+          .not('genre_style', 'is', null);
+
+        if (equippedClothing && equippedClothing.length > 0) {
+          const normalise = (g: string) => g.toLowerCase().replace(/[\s&-]+/g, '_');
+          const normalGig = normalise(bandGenre);
+          const matchedItems = equippedClothing.filter((c: any) => normalise(c.genre_style) === normalGig).length;
+
+          if (matchedItems > 0) {
+            clothingFanBonus = 1 + Math.min(matchedItems, 3) * 0.05;
+            clothingMerchBonus = 1 + Math.min(matchedItems, 3) * 0.03;
+            console.log(`Clothing bonus: ${matchedItems} genre-matched items → fan ${clothingFanBonus}x, merch ${clothingMerchBonus}x`);
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Clothing bonus check skipped (table may not exist):', e);
+    }
+
     // === MERCHANDISE SALES FROM ACTUAL INVENTORY ===
     const { data: merchInventory } = await supabaseClient
       .from('player_merchandise')
@@ -143,7 +174,7 @@ serve(async (req) => {
       // Purchase rate: 5-25% based on performance rating (0-25 scale)
       const basePurchaseRate = 0.05 + (Math.min(1, (gig.bands.fame || 0) / 5000) * 0.05);
       const performanceBonus = Math.min(1.5, avgRating / 18);
-      const actualPurchaseRate = basePurchaseRate * performanceBonus;
+      const actualPurchaseRate = basePurchaseRate * performanceBonus * clothingMerchBonus;
       
       const numberOfBuyers = Math.round(outcome.actual_attendance * actualPurchaseRate);
       
@@ -250,13 +281,13 @@ serve(async (req) => {
       'S': 3.0, 'A': 2.0, 'B': 1.5, 'C': 1.0, 'D': 0.5, 'F': 0.2
     };
 
-    // Calculate new fans from this gig
+    // Calculate new fans from this gig (with clothing bonus)
     const gradeMultiplier = GRADE_MULTIPLIERS[performanceGrade] || 1.0;
     const ratingBonus = avgRating / 25; // 0-1 based on rating
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
     // Add ±20% random variance to fan conversion for more unpredictable outcomes
     const fanVariance = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance;
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains
