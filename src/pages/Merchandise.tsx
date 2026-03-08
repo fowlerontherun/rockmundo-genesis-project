@@ -354,7 +354,23 @@ const Merchandise = () => {
   const bandName = primaryBand?.bands?.name ?? "Band";
   const bandFame = primaryBand?.bands?.fame ?? 0;
   const bandFans = primaryBand?.bands?.weekly_fans ?? 0;
-  const playerLevel = 10; // TODO: Get from profile
+
+  // Get actual player level from profile
+  const { data: playerProfile } = useQuery({
+    queryKey: ["player-profile-level"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("level")
+        .eq("user_id", user.id)
+        .single();
+      if (error) return null;
+      return data;
+    },
+  });
+  const playerLevel = playerProfile?.level ?? 1;
 
   const { manager, logisticsRate } = useMerchManager(bandId);
   const { generateImage, isGenerating, generatingId, generateAllMissing, isGeneratingAll } = useMerchImageGenerator(bandId);
