@@ -54,6 +54,7 @@ const getScoreColor = (score: number) => {
 };
 
 export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps) => {
+  const navigate = useNavigate();
   const { triggerNightlifeEvent, isProcessing } = useNightlifeEvents();
   const { performDjSetAsync, isPerforming } = useDjPerformance();
   const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
