@@ -263,6 +263,10 @@ const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const Lottery = lazyWithRetry(() => import("./pages/Lottery"));
 const Housing = lazyWithRetry(() => import("./pages/Housing"));
+const CasinoLobby = lazyWithRetry(() => import("./pages/Casino"));
+const CasinoBlackjack = lazyWithRetry(() => import("./pages/casino/Blackjack"));
+const CasinoRoulette = lazyWithRetry(() => import("./pages/casino/Roulette"));
+const CasinoSlots = lazyWithRetry(() => import("./pages/casino/Slots"));
 const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
 const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
@@ -433,6 +437,10 @@ function App() {
                     
                     <Route path="lottery" element={<Lottery />} />
                     <Route path="housing" element={<Housing />} />
+                    <Route path="casino" element={<CasinoLobby />} />
+                    <Route path="casino/blackjack" element={<CasinoBlackjack />} />
+                    <Route path="casino/roulette" element={<CasinoRoulette />} />
+                    <Route path="casino/slots" element={<CasinoSlots />} />
                     
                     {/* Category hub pages */}
                     <Route path="hub/character" element={<CharacterHub />} />

@@ -147,6 +147,7 @@ export const es: TranslationKeys = {
     myCompanies: "Empresa",
     adminPanel: "Panel de Admin",
     underworld: "Inframundo",
+    casino: "Casino",
     more: "Más",
     openMenu: "Abrir menú de navegación",
     toggleMenu: "Alternar menú de navegación",

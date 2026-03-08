@@ -149,6 +149,7 @@ export const tr: TranslationKeys = {
     myCompanies: "Şirket",
     adminPanel: "Yönetici Paneli",
     underworld: "Yeraltı Dünyası",
+    casino: "Kumarhane",
     more: "Daha Fazla",
     openMenu: "Menüyü aç",
     toggleMenu: "Menüyü değiştir",

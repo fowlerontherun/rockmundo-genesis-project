@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.010",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Casino system with three playable mini-games: Blackjack, Roulette, and Slot Machine" },
+      { type: 'feature', description: "Blackjack: Hit, Stand, Double Down with animated card dealing and dealer AI" },
+      { type: 'feature', description: "Roulette: Full number grid, outside bets (red/black, odd/even, dozens), spinning wheel animation" },
+      { type: 'feature', description: "Slots: Music-themed 3-reel machine with weighted symbols, auto-spin, and jackpot system" },
+      { type: 'feature', description: "Casino lobby with session stats (wins/losses) and gambling addiction integration" },
+      { type: 'feature', description: "Casino transactions table tracking all bets, payouts, and game metadata" },
+    ],
+  },
+  {
     version: "1.1.009",
     date: "2026-03-08",
     changes: [

@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Globe, Plane, Bus, Building2, Home, Twitter, Video, Heart, HandHeart, UserPlus, Sparkles, Ticket, Radio, Tv, Newspaper, BookOpen, Mic, Film } from "lucide-react";
+import { Globe, Plane, Bus, Building2, Home, Twitter, Video, Heart, HandHeart, UserPlus, Sparkles, Ticket, Radio, Tv, Newspaper, BookOpen, Mic, Film, Dices } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 
 export default function WorldSocialHub() {
@@ -31,6 +31,7 @@ export default function WorldSocialHub() {
             { icon: HandHeart, labelKey: "nav.gettit", path: "/gettit", imagePrompt: "A Reddit-style forum with music discussion threads, upvotes, and community posts" },
             { icon: UserPlus, labelKey: "nav.playerSearch", path: "/players/search", imagePrompt: "A search interface showing musician profiles with instruments and genre tags" },
             { icon: Sparkles, labelKey: "nav.underworld", path: "/underworld", imagePrompt: "A dark underground club scene with mysterious lighting and shadowy figures dealing" },
+            { icon: Dices, labelKey: "nav.casino", path: "/casino", imagePrompt: "A neon-lit casino floor with roulette wheels, card tables, and slot machines glowing in the dark" },
             { icon: Ticket, labelKey: "Lottery", path: "/lottery", imagePrompt: "A golden lottery ticket with sparkles and a spinning prize wheel" },
           ],
         },
