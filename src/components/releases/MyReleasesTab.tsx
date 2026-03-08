@@ -481,332 +481,84 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onP
   
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex gap-4">
-            {release.artwork_url ? (
-              <img
-                src={release.artwork_url}
-                alt={release.title}
-                className="w-20 h-20 object-cover rounded-md shadow-md"
-              />
-            ) : (
-              <div className="w-20 h-20 bg-gradient-to-br from-muted to-muted/50 rounded-md flex items-center justify-center shadow-inner">
-                <Disc className="h-8 w-8 text-muted-foreground" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="truncate">{release.title}</CardTitle>
-                <Badge variant={statusConfig.variant} className="flex items-center gap-1">
-                  <StatusIcon className="h-3 w-3" />
-                  {statusConfig.label}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">{release.artist_name}</p>
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span className="capitalize font-medium">{typeConfig.label}</span>
-                <span>•</span>
-                <span>{totalTracks} track{totalTracks !== 1 ? "s" : ""}</span>
-                {avgQuality > 0 && (
-                  <>
-                    <span>•</span>
-                    <span>Avg Quality: {avgQuality}</span>
-                  </>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Created {formatDistanceToNow(new Date(release.created_at), { addSuffix: true })}
-              </p>
-            </div>
+      <div className="flex gap-3 p-3">
+        {release.artwork_url ? (
+          <img src={release.artwork_url} alt={release.title} className="w-14 h-14 object-cover rounded-md shadow-sm flex-shrink-0" />
+        ) : (
+          <div className="w-14 h-14 bg-gradient-to-br from-muted to-muted/50 rounded-md flex items-center justify-center shadow-inner flex-shrink-0">
+            <Disc className="h-6 w-6 text-muted-foreground" />
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Hype Meter */}
-        {(release.hype_score > 0 || release.release_status === "manufacturing" || release.release_status === "released") && (
-          <HypeMeter hypeScore={release.hype_score || 0} />
         )}
-
-        {/* Manufacturing Progress */}
-        {release.release_status === "manufacturing" && (
-          <ManufacturingProgress
-            createdAt={release.created_at}
-            manufacturingCompleteAt={release.manufacturing_complete_at}
-            status={release.release_status}
-          />
-        )}
-
-        {/* Financial Breakdown */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="bg-muted/30 rounded-lg p-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <DollarSign className="h-3.5 w-3.5" />
-              <span>Mfg Cost</span>
-            </div>
-            <p className="font-semibold">${(release.total_cost || 0).toLocaleString()}</p>
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-sm truncate">{release.title}</h3>
+            <Badge variant={statusConfig.variant} className="text-[10px] px-1.5 py-0 h-4 flex items-center gap-0.5">
+              <StatusIcon className="h-2.5 w-2.5" />
+              {statusConfig.label}
+            </Badge>
+            <span className="text-[10px] text-muted-foreground capitalize">{typeConfig.label}</span>
           </div>
-          <div className="bg-muted/30 rounded-lg p-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>Gross Revenue</span>
-            </div>
-            <p className="font-semibold text-green-600">${(release.total_revenue || 0).toLocaleString()}</p>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+            <span>{release.artist_name}</span>
+            <span>•</span>
+            <span>{totalTracks} track{totalTracks !== 1 ? "s" : ""}</span>
+            {avgQuality > 0 && (<><span>•</span><span>Q: {avgQuality}</span></>)}
+            {release.bands && (<><span>•</span><span>{release.bands.name}</span></>)}
+            <span>•</span>
+            <span>{formatDistanceToNow(new Date(release.created_at), { addSuffix: true })}</span>
           </div>
-          <div className="bg-muted/30 rounded-lg p-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <DollarSign className="h-3.5 w-3.5" />
-              <span>Tax Paid</span>
-            </div>
-            <p className="font-semibold text-orange-500">${(financials?.taxPaid || 0).toLocaleString()}</p>
+          <div className="flex items-center gap-3 text-[11px] flex-wrap">
+            <span className="text-muted-foreground">Cost: <strong>${(release.total_cost || 0).toLocaleString()}</strong></span>
+            <span className="text-green-600">Rev: <strong>${(release.total_revenue || 0).toLocaleString()}</strong></span>
+            {(() => {
+              const profit = (release.total_revenue || 0) - (release.total_cost || 0) - (financials?.taxPaid || 0) - (financials?.distributionFees || 0);
+              return <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>P/L: <strong>${profit.toLocaleString()}</strong></span>;
+            })()}
+            {release.total_streams > 0 && <span className="text-muted-foreground"><Play className="h-3 w-3 inline mr-0.5" />{release.total_streams.toLocaleString()}</span>}
+            {release.units_sold > 0 && <span className="text-muted-foreground">Sold: {release.units_sold.toLocaleString()}</span>}
           </div>
-          <div className="bg-muted/30 rounded-lg p-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <DollarSign className="h-3.5 w-3.5" />
-              <span>Dist. Fees</span>
-            </div>
-            <p className="font-semibold text-orange-500">${(financials?.distributionFees || 0).toLocaleString()}</p>
-          </div>
-          {(() => {
-            const profit = (release.total_revenue || 0) - (release.total_cost || 0) - (financials?.taxPaid || 0) - (financials?.distributionFees || 0);
-            return (
-              <div className="bg-muted/30 rounded-lg p-3">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  <span>Profit/Loss</span>
-                </div>
-                <p className={`font-semibold ${profit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                  ${profit.toLocaleString()}
-                </p>
-              </div>
-            );
-          })()}
-          {totalUnitsOrdered > 0 && (
-            <div className="bg-muted/30 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                <Package className="h-3.5 w-3.5" />
-                <span>Units Ordered</span>
-              </div>
-              <p className="font-semibold">{totalUnitsOrdered.toLocaleString()}</p>
-            </div>
-          )}
-          {release.total_streams && (
-            <div className="bg-muted/30 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                <Play className="h-3.5 w-3.5" />
-                <span>Streams</span>
-              </div>
-              <p className="font-semibold">{release.total_streams.toLocaleString()}</p>
-            </div>
-          )}
-          {release.units_sold && (
-            <div className="bg-muted/30 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                <BarChart3 className="h-3.5 w-3.5" />
-                <span>Units Sold</span>
-              </div>
-              <p className="font-semibold">{release.units_sold.toLocaleString()}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Formats Section */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm flex items-center gap-2">
-            <Disc className="h-4 w-4" />
-            Formats
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {release.release_formats?.length > 0 ? (
-              release.release_formats.map((fmt: any) => {
-                const isLowStock = fmt.format_type !== 'digital' && fmt.format_type !== 'streaming' && fmt.quantity < 50;
-                const isSoldOut = fmt.format_type !== 'digital' && fmt.format_type !== 'streaming' && fmt.quantity <= 0;
-                
+          {release.release_formats?.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {release.release_formats.map((fmt: any) => {
+                const isSoldOut = !['digital', 'streaming'].includes(fmt.format_type) && fmt.quantity <= 0;
                 return (
-                  <div 
-                    key={fmt.id} 
-                    className={`bg-muted/50 rounded-lg px-3 py-2 text-sm ${isSoldOut ? 'border border-destructive/50' : isLowStock ? 'border border-warning/50' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {fmt.format_type === "vinyl" && <Disc className="h-4 w-4" />}
-                      {fmt.format_type === "cd" && <Disc className="h-4 w-4" />}
-                      {fmt.format_type === "digital" && <Music className="h-4 w-4" />}
-                      {fmt.format_type === "streaming" && <Radio className="h-4 w-4" />}
-                      {fmt.format_type === "cassette" && <Music className="h-4 w-4" />}
-                      <span className="capitalize font-medium">{fmt.format_type}</span>
-                    </div>
-                    {fmt.quantity !== undefined && fmt.format_type !== 'digital' && fmt.format_type !== 'streaming' && (
-                      <p className={`text-xs mt-1 ${isSoldOut ? 'text-destructive font-medium' : isLowStock ? 'text-warning' : 'text-muted-foreground'}`}>
-                        {isSoldOut ? 'SOLD OUT' : `${fmt.quantity} units remaining`}
-                      </p>
-                    )}
-                    {fmt.release_date && (
-                      <p className="text-xs text-muted-foreground">
-                        Release: {formatDate(new Date(fmt.release_date), "MMM d, yyyy")}
-                      </p>
-                    )}
-                    {fmt.manufacturing_status && (
-                      <Badge variant="outline" className="mt-1 text-xs">
-                        {fmt.manufacturing_status}
-                      </Badge>
-                    )}
-                    {release.release_status === "released" && (isSoldOut || isLowStock) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-full text-xs"
-                        onClick={() => onReorder?.(fmt)}
-                      >
-                        <Package className="h-3 w-3 mr-1" />
-                        Reorder Stock
-                      </Button>
-                    )}
-                  </div>
+                  <Badge key={fmt.id} variant="outline" className={`text-[10px] px-1.5 py-0 h-4 capitalize ${isSoldOut ? 'border-destructive/50 text-destructive' : ''}`}>
+                    {fmt.format_type}{!['digital', 'streaming'].includes(fmt.format_type) && <span className="ml-1">{isSoldOut ? '∅' : fmt.quantity}</span>}
+                  </Badge>
                 );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground">No formats selected</p>
-            )}
-          </div>
-        </div>
-
-        {/* Tracklist */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm flex items-center gap-2">
-            <Music className="h-4 w-4" />
-            Tracklist
-          </h4>
-          <ReleaseTracklistWithAudio 
-            tracks={release.release_songs || []}
-            showAudio={release.release_status === "released"}
-          />
-        </div>
-
-        {/* Scheduled Release Date */}
-        {release.scheduled_release_date && (
-          <div className="flex items-center gap-2 text-sm bg-primary/10 rounded-lg p-3">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span>Scheduled Release:</span>
-            <span className="font-medium">
-              {formatDate(new Date(release.scheduled_release_date), "MMMM d, yyyy")}
-            </span>
-          </div>
-        )}
-
-        {/* Band/Artist Info */}
-        {release.bands && (
-          <div className="flex items-center gap-4 text-sm bg-muted/30 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{release.bands.name}</span>
+              })}
             </div>
-            <Badge variant="outline">Fame: {release.bands.fame || 0}</Badge>
-            {release.bands.total_fans > 0 && (
-              <Badge variant="outline">{release.bands.total_fans.toLocaleString()} fans</Badge>
+          )}
+          {(release.hype_score > 0 || release.release_status === "manufacturing" || release.release_status === "released") && (
+            <HypeMeter hypeScore={release.hype_score || 0} />
+          )}
+          {release.release_status === "manufacturing" && (
+            <ManufacturingProgress createdAt={release.created_at} manufacturingCompleteAt={release.manufacturing_complete_at} status={release.release_status} />
+          )}
+          <div className="flex flex-wrap gap-1 pt-1">
+            <Button variant="default" size="sm" className="text-[10px] px-2 h-6" onClick={onViewDetails}>Details</Button>
+            {release.release_status === "released" && (
+              <>
+                <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onAnalytics}><BarChart3 className="h-2.5 w-2.5 mr-0.5" />Analytics</Button>
+                <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onPromo}><Megaphone className="h-2.5 w-2.5 mr-0.5" />Promo</Button>
+                {(() => {
+                  const ep = release.release_formats?.filter((f: any) => ["cd", "vinyl", "cassette"].includes(f.format_type)) || [];
+                  return ep.length < 3 ? <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onAddPhysical}><Plus className="h-2.5 w-2.5 mr-0.5" />Physical</Button> : null;
+                })()}
+              </>
+            )}
+            {(release.release_status === "released" || release.release_status === "manufacturing") && !release.release_party_done && (
+              <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onParty}><PartyPopper className="h-2.5 w-2.5 mr-0.5" />Party</Button>
+            )}
+            {release.release_status !== "released" && release.release_status !== "cancelled" && (
+              <>
+                <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onEdit}>Edit</Button>
+                <Button variant="destructive" size="sm" className="text-[10px] px-2 h-6" onClick={onCancel}><XCircle className="h-2.5 w-2.5 mr-0.5" />Cancel</Button>
+              </>
             )}
           </div>
-        )}
-
-        {/* Predictions for unreleased */}
-        {(release.release_status === "planned" || release.release_status === "manufacturing") && (
-          <ReleasePredictions
-            artistFame={release.bands?.fame || release.profiles?.fame || 0}
-            artistPopularity={release.bands?.popularity || release.profiles?.popularity || 0}
-            songQuality={avgQuality}
-            bandChemistry={release.bands?.chemistry_level}
-            releaseType={release.release_type}
-            formatTypes={release.release_formats?.map((f: any) => f.format_type) || []}
-            trackCount={totalTracks}
-          />
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-          <Button 
-            variant="default" 
-            size="sm"
-            className="text-xs px-2 h-7"
-            onClick={onViewDetails}
-          >
-            Details
-          </Button>
-          {release.release_status === "released" && (
-            <>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-xs px-2 h-7"
-                onClick={onAnalytics}
-              >
-                <BarChart3 className="h-3 w-3 mr-1" />
-                Analytics
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-xs px-2 h-7"
-                onClick={onPromo}
-              >
-                <Megaphone className="h-3 w-3 mr-1" />
-                Promo
-              </Button>
-              {(() => {
-                const existingPhysical = release.release_formats?.filter((f: any) => 
-                  ["cd", "vinyl", "cassette"].includes(f.format_type)
-                ) || [];
-                const hasAllPhysical = existingPhysical.length >= 3;
-                if (!hasAllPhysical) {
-                  return (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-xs px-2 h-7"
-                      onClick={onAddPhysical}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Physical
-                    </Button>
-                  );
-                }
-                return null;
-              })()}
-            </>
-          )}
-          {(release.release_status === "released" || release.release_status === "manufacturing") && !release.release_party_done && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="text-xs px-2 h-7"
-              onClick={onParty}
-            >
-              <PartyPopper className="h-3 w-3 mr-1" />
-              Party
-            </Button>
-          )}
-          {release.release_status !== "released" && release.release_status !== "cancelled" && (
-            <>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-xs px-2 h-7"
-                onClick={onEdit}
-              >
-                Edit
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                className="text-xs px-2 h-7"
-                onClick={onCancel}
-              >
-                <XCircle className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
-            </>
-          )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.022",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Streaming Platforms: Removed redundant 'Release' tab — use Release Manager instead" },
+      { type: 'improvement', description: "My Releases: Compact card layout — artwork, metadata, financials, formats, and actions all in a single dense row" },
+    ],
+  },
+  {
     version: "1.1.020",
     date: "2026-03-08",
     changes: [
