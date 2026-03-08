@@ -855,6 +855,19 @@ Deno.serve(async (req) => {
 
           fanDecayBands++;
           totalFansLost += casualLost;
+
+          // Inbox: Significant fan loss (>50 fans)
+          if (churn >= 50) {
+            const { data: decayMembers } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', band.id)
+              .not('user_id', 'is', null)
+            for (const m of decayMembers || []) {
+              if (!m.user_id) continue
+              await sendInbox(m.user_id, 'social', 'normal', '📉 Fan Decline', `Your band lost ${churn} fans due to inactivity. Play gigs or release music to keep fans engaged!`, { band_id: band.id, fans_lost: churn, days_inactive: daysSinceActivity }, 'navigate', { route: '/band' })
+            }
+          }
         } catch (decayErr) {
           console.error(`Fan decay error for band ${band.id}:`, decayErr);
         }
