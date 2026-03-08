@@ -14,6 +14,8 @@ import { TattooDesignCard } from "@/components/tattoo/TattooDesignCard";
 import { TattooInfectionAlert } from "@/components/tattoo/TattooInfectionAlert";
 import { TattooArtistCard, type TattooArtist } from "@/components/tattoo/TattooArtistCard";
 import { CustomTattooDialog } from "@/components/tattoo/CustomTattooDialog";
+import { TextTattooCreator } from "@/components/tattoo/TextTattooCreator";
+import { getFontCss } from "@/data/tattooFonts";
 import {
   BODY_SLOTS,
   TATTOO_CATEGORIES,
