@@ -201,7 +201,7 @@ export const fetchLabelRevenueDashboard = async (
     throw contractError;
   }
 
-  const contracts: ContractQueryRow[] = (contractRows ?? []) as ContractQueryRow[];
+  const contracts: ContractQueryRow[] = (contractRows ?? []) as unknown as ContractQueryRow[];
   const contractReports = contracts.map(buildContractReport);
   const contractIdSet = contracts.map((contract) => contract.id);
 
