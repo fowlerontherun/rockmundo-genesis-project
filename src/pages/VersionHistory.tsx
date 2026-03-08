@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.920",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Education seeding — 16 new skill books for modeling, fashion design, and clothing design skills with unique authors and progression-appropriate pricing" },
+      { type: 'feature', description: "8 new legendary mentors: Naomi Fierce (London, posing), Karl Stein (Paris, fashion theory), Valentina Rossi (Milan, textiles), Alexander Wu (Tokyo, construction), Tyra LaRue (NYC, runway), Isabella Fontaine (Paris, styling), Marcus Blackwell (LA, branding), Yuki Shimada (Seoul, genre aesthetics)" },
+      { type: 'feature', description: "20 new university courses across London, Milan, and Seoul — covering modeling fundamentals through advanced garment engineering and brand management" },
+      { type: 'improvement', description: "All 45 modeling/fashion/clothing skill slugs registered in skill_definitions table for book FK compatibility" },
+    ],
+  },
+  {
     version: "1.0.919",
     date: "2026-03-08",
     changes: [
