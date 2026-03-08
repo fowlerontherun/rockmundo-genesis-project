@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.985",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Morale → Rehearsal Effectiveness: Band morale now modifies XP earned and chemistry gained from rehearsals. 0.7x at 0 morale → 1.3x at 100 morale. Demoralized bands have distracted, unproductive rehearsals; energized bands get more out of practice" },
+      { type: 'feature', description: "Morale → Self-Promotion Effectiveness: Both self-promotion functions now apply a morale modifier (0.7x–1.3x) to fame and fan gains. Enthusiastic bands promote themselves more convincingly" },
+      { type: 'improvement', description: "Morale now used as INPUT modifier in 6 systems: gig payouts, recording quality, gig fame/fan conversion, random event frequency, rehearsal effectiveness, and self-promotion gains. Creates positive feedback loop: good morale → better results → more morale" },
+    ],
+  },
+  {
     version: "1.0.984",
     date: "2026-03-08",
     changes: [

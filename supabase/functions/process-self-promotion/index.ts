@@ -76,12 +76,20 @@ serve(async (req) => {
     const bandFame = activity.bands?.fame || 0;
     const fameMultiplier = 1 + Math.min(bandFame / 1000, 0.5); // Max 50% bonus
     
+    // === MORALE → SELF-PROMOTION EFFECTIVENESS (v1.0.985) ===
+    let promoMoraleMod = 1.0;
+    try {
+      const { data: bMorale } = await supabaseClient.from('bands').select('morale').eq('id', activity.band_id).single();
+      const mVal = (bMorale as any)?.morale ?? 50;
+      promoMoraleMod = parseFloat((0.7 + (Math.max(0, Math.min(100, mVal)) / 100) * 0.6).toFixed(2));
+    } catch (_e) { /* non-critical */ }
+    
     const fameGained = Math.floor(
-      (Math.random() * (catalogEntry.base_fame_max - catalogEntry.base_fame_min) + catalogEntry.base_fame_min) * fameMultiplier
+      (Math.random() * (catalogEntry.base_fame_max - catalogEntry.base_fame_min) + catalogEntry.base_fame_min) * fameMultiplier * promoMoraleMod
     );
     
     const fansGained = Math.floor(
-      (Math.random() * (catalogEntry.base_fan_max - catalogEntry.base_fan_min) + catalogEntry.base_fan_min) * fameMultiplier
+      (Math.random() * (catalogEntry.base_fan_max - catalogEntry.base_fan_min) + catalogEntry.base_fan_min) * fameMultiplier * promoMoraleMod
     );
 
     // Update the activity with results

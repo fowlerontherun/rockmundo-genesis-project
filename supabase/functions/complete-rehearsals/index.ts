@@ -147,8 +147,19 @@ Deno.serve(async (req) => {
 
         // Calculate XP and chemistry based on duration
         const baseXpPerHour = 10 + Math.floor(Math.random() * 10)
-        const xpEarned = Math.floor(baseXpPerHour * durationHours)
-        const chemistryGain = Math.floor(durationHours * 2) + 1
+        
+        // === MORALE → REHEARSAL EFFECTIVENESS (v1.0.985) ===
+        // High morale = more productive rehearsals; low morale = distracted, less effective
+        let rehearsalMoraleMod = 1.0
+        try {
+          const { data: bandM } = await supabase.from('bands').select('morale').eq('id', rehearsal.band_id).single()
+          const moraleVal = (bandM as any)?.morale ?? 50
+          rehearsalMoraleMod = parseFloat((0.7 + (Math.max(0, Math.min(100, moraleVal)) / 100) * 0.6).toFixed(2)) // 0.7x to 1.3x
+          console.log(`Rehearsal morale: ${moraleVal} → effectiveness ${rehearsalMoraleMod}x`)
+        } catch (_e) { /* non-critical */ }
+        
+        const xpEarned = Math.floor(baseXpPerHour * durationHours * rehearsalMoraleMod)
+        const chemistryGain = Math.floor((durationHours * 2 + 1) * rehearsalMoraleMod)
 
         // Update rehearsal record - this will trigger the database trigger
         const { error: updateError } = await supabase
