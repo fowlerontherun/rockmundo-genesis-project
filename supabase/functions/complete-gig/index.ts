@@ -330,7 +330,13 @@ serve(async (req) => {
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
     // Add ±20% random variance to fan conversion for more unpredictable outcomes
     const fanVariance = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus * moraleMod;
+    // === FAN SENTIMENT → FAN CONVERSION (v1.0.986) ===
+    // When fans love you (high sentiment), attendees are more likely to become fans. When hostile, fewer convert.
+    const fanSentVal = (gig.bands as any)?.fan_sentiment_score ?? 0;
+    const fanSentT = (Math.max(-100, Math.min(100, fanSentVal)) + 100) / 200;
+    const fanSentMod = parseFloat((0.6 + fanSentT * 0.8).toFixed(2)); // 0.6x–1.4x
+    console.log(`Fan conversion sentiment modifier: ${fanSentMod}x (sentiment=${fanSentVal})`);
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus * moraleMod * fanSentMod;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains
