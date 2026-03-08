@@ -21,7 +21,8 @@ const versionHistory: VersionEntry[] = [
       { type: 'fix', description: "Genres: Replaced all hardcoded genre arrays across onboarding, city elections, venue filters, and genre trends with centralized MUSIC_GENRES import" },
     ],
   },
-    {
+  {
+    version: "1.1.023",
     date: "2026-03-08",
     changes: [
       { type: 'feature', description: "Holidays: Expanded from 6 to 12 destinations with stunning AI-generated photos, location details, highlights, stress/creativity ratings, and tiered pricing (Budget → Ultra Luxury)" },
