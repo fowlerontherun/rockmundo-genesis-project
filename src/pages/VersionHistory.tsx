@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.952",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Sentiment → Ticket Sales: Daily ticket demand now scaled 0.6x (hostile) to 1.4x (fanatical) based on band fan sentiment" },
+      { type: 'feature', description: "Sentiment → Organic Followers: Twaater organic follower growth now scaled 0.6x–1.4x by band sentiment score" },
+      { type: 'improvement', description: "Ticket sales simulation pre-fetches band sentiment in batch for efficiency" },
+      { type: 'improvement', description: "Organic follower calculation includes sentiment in target follower formula for band-owned accounts" },
+    ],
+  },
+  {
     version: "1.0.951",
     date: "2026-03-08",
     changes: [

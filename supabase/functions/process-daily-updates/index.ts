@@ -269,6 +269,19 @@ Deno.serve(async (req) => {
         console.error('Error fetching gigs for ticket sales:', gigsError)
       } else if (scheduledGigs && scheduledGigs.length > 0) {
         console.log(`Processing ticket sales for ${scheduledGigs.length} gigs`)
+
+        // Pre-fetch band sentiment for ticket demand (v1.0.952)
+        const gigBandIds = [...new Set(scheduledGigs.map(g => g.band_id).filter(Boolean))];
+        const ticketSentimentMap = new Map<string, number>();
+        if (gigBandIds.length > 0) {
+          const { data: bandSentiments } = await supabase
+            .from('bands')
+            .select('id, fan_sentiment_score')
+            .in('id', gigBandIds);
+          for (const b of bandSentiments || []) {
+            ticketSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+          }
+        }
         
         for (const gig of scheduledGigs) {
           try {
@@ -302,6 +315,11 @@ Deno.serve(async (req) => {
             // Calculate daily sales
             const advanceBookingBonus = Math.min(0.3, (daysBooked / 14) * 0.3)
             const priceSensitivity = Math.max(0.5, 1 - ((gig.ticket_price || 20) / 100) * 0.3)
+
+            // Sentiment ticket demand modifier (v1.0.952): 0.6x hostile → 1.4x fanatical
+            const ticketSentiment = ticketSentimentMap.get(gig.band_id) ?? 0;
+            const ticketSentimentT = (Math.max(-100, Math.min(100, ticketSentiment)) + 100) / 200;
+            const ticketDemandMod = parseFloat((0.6 + ticketSentimentT * 0.8).toFixed(2));
             
             let baseDailyRate: number
             if (drawPower >= 1.0) baseDailyRate = 0.25 + (drawPower - 1) * 0.5
@@ -309,7 +327,7 @@ Deno.serve(async (req) => {
             else if (drawPower >= 0.4) baseDailyRate = 0.05 + (drawPower - 0.4) * 0.2
             else baseDailyRate = 0.02 + drawPower * 0.08
             
-            const dailySaleRate = baseDailyRate * priceSensitivity * (1 + advanceBookingBonus)
+            const dailySaleRate = baseDailyRate * priceSensitivity * (1 + advanceBookingBonus) * ticketDemandMod
             let ticketsToday = Math.round(venueCapacity * dailySaleRate)
             
             // Urgency bonus as gig approaches
