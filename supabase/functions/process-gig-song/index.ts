@@ -562,6 +562,13 @@ serve(async (req) => {
 
       const result = calculatePerformanceItemScore(itemFactors);
 
+      // Fetch band morale for performance item modifier
+      const { data: bandMoraleData } = await supabaseClient.from('bands').select('morale').eq('id', bandId).single();
+      const itemMorale = Math.max(0, Math.min(100, bandMoraleData?.morale ?? 50));
+      const itemMoraleMod = parseFloat((0.85 + (itemMorale / 100) * 0.30).toFixed(3));
+      const moraleItemScore = Number(Math.max(0, Math.min(25, result.score * itemMoraleMod)).toFixed(2));
+      console.log(`[process-gig-song] Performance item: raw=${result.score}, morale=${itemMorale}, afterMorale=${moraleItemScore}`);
+
       const { data: performance, error: perfError } = await supabaseClient
         .from('gig_song_performances')
         .insert({
@@ -571,7 +578,7 @@ serve(async (req) => {
           item_type: 'performance_item',
           song_title: perfItem.name,
           position,
-          performance_score: result.score,
+          performance_score: moraleItemScore,
           crowd_response: result.crowdResponse,
           song_quality_contrib: result.score * 0.35,
           rehearsal_contrib: 0,

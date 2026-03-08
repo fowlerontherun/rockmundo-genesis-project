@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.990",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Morale → Live Gig Performance: Band morale now acts as a final multiplier on all gig song and performance item scores. 0.85x at 0 morale → 1.0x at 50 → 1.15x at 100. Miserable bands play worse; euphoric bands deliver exceptional shows" },
+      { type: 'feature', description: "Reputation → PR Offer Generation: Band reputation now gates and scales PR media offers. Toxic bands (rep ≤ -60) are excluded from TV and film opportunities entirely. All offer compensation, fame boosts, and fan boosts are scaled by reputation (0.8x toxic → 1.2x iconic)" },
+      { type: 'feature', description: "Reputation → PR Offer Volume: Respected bands (rep ≥ 40) receive +1 additional PR offer slot per generation cycle. Better reputation = more media attention" },
+      { type: 'improvement', description: "Morale now affects 7 systems: gig payouts, recording quality, gig fame/fan conversion, random events, rehearsals, self-promotion, and live performance scoring. Reputation now affects 10+ systems including PR offer generation with gating, scaling, and volume bonuses" },
+    ],
+  },
+  {
     version: "1.0.989",
     date: "2026-03-08",
     changes: [

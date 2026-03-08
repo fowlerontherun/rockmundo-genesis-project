@@ -402,6 +402,11 @@ serve(async (req) => {
           const expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + 7);
 
+          // Apply reputation modifier to compensation and boosts
+          compensation = Math.round(compensation * repMod);
+          fameBoost = Math.round(fameBoost * repMod);
+          fanBoost = Math.round(fanBoost * repMod);
+
           // Create the offer with cooldown info
           const { error: insertError } = await supabaseClient
             .from('pr_media_offers')
