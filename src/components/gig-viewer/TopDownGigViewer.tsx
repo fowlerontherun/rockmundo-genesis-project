@@ -4,6 +4,10 @@ import { TopDownStage, type StageMember } from "./TopDownStage";
 import { TopDownCrowd } from "./TopDownCrowd";
 import { TopDownHUD } from "./TopDownHUD";
 import { TopDownCommentary, type CommentaryEntry } from "./TopDownCommentary";
+import { VenueFeatures } from "./VenueFeatures";
+import { ViewerControls } from "./ViewerControls";
+import { getStageTheme } from "./StageThemes";
+import { getGenreVisuals, getGenreLightingColor } from "./GenreVisuals";
 import {
   generateEnhancedCommentary,
   getVenueType,
@@ -13,7 +17,6 @@ import {
   type BandContext,
 } from "@/utils/enhancedCommentaryGenerator";
 
-// Local commentary pools (migrated from old TextGigViewer)
 const ARRIVAL_COMMENTS = [
   "The lights dim as the band takes the stage to thunderous applause!",
   "A roar erupts from the crowd as the musicians walk out!",
@@ -94,6 +97,11 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
   const [momentum, setMomentum] = useState(0);
   const processedIds = useRef<Set<string>>(new Set());
 
+  // Viewer controls state
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [cameraZoom, setCameraZoom] = useState<'full' | 'stage'>('full');
+  const [showStats, setShowStats] = useState(false);
+
   const addComment = useCallback((type: string, message: string, variant?: CommentaryEntry['variant']) => {
     setCommentary(prev => {
       if (prev[prev.length - 1]?.message === message) return prev;
@@ -106,7 +114,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     const load = async () => {
       const { data: gigData } = await supabase
         .from('gigs')
-        .select('*, bands!gigs_band_id_fkey(name), venues!gigs_venue_id_fkey(name, capacity, location)')
+        .select('*, bands!gigs_band_id_fkey(name), venues!gigs_venue_id_fkey(name, capacity, location, venue_type)')
         .eq('id', gigId)
         .single();
 
@@ -122,7 +130,6 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
           setSetlistSongs(songs || []);
         }
 
-        // Load band members
         const { data: bandMembers } = await supabase
           .from('band_members')
           .select('id, instrument_role, vocal_role, user_id, profiles:user_id(display_name)')
@@ -141,9 +148,9 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     };
 
     load();
-    const interval = setInterval(load, 5000);
+    const interval = setInterval(load, 5000 / playbackSpeed);
     return () => clearInterval(interval);
-  }, [gigId]);
+  }, [gigId, playbackSpeed]);
 
   // Arrival commentary
   useEffect(() => {
@@ -163,27 +170,23 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     const score = perf.performance_score || 15;
     const response = perf.crowd_response || 'engaged';
 
-    // Momentum
     const change = response === 'ecstatic' ? 1.5 : response === 'enthusiastic' ? 0.5 : response === 'engaged' ? 0 : response === 'mixed' ? -0.5 : -1;
     setMomentum(prev => Math.max(-3, Math.min(3, prev + change)));
 
-    // Song start
     const energy = score >= 18 ? 'high_energy' : score >= 12 ? 'medium_energy' : 'low_energy';
     const template = getRandomItem(SONG_START[energy]);
     addComment('song_start', template.replace('{title}', title));
 
-    // Crowd reaction after delay
     setTimeout(() => {
       const reactions = CROWD_REACTIONS[response] || CROWD_REACTIONS.engaged;
       const variant = (response === 'ecstatic' || response === 'enthusiastic') ? 'success' : response === 'disappointed' ? 'destructive' : 'default';
       addComment('crowd_reaction', getRandomItem(reactions), variant as CommentaryEntry['variant']);
-    }, 1500);
+    }, 1500 / playbackSpeed);
 
-    // Special moment (20% chance)
     if (Math.random() < 0.2 && score >= 15) {
-      setTimeout(() => addComment('special_moment', getRandomItem(SPECIAL_MOMENTS), 'success'), 3000);
+      setTimeout(() => addComment('special_moment', getRandomItem(SPECIAL_MOMENTS), 'success'), 3000 / playbackSpeed);
     }
-  }, [setlistSongs, addComment]);
+  }, [setlistSongs, addComment, playbackSpeed]);
 
   // Poll performances
   useEffect(() => {
@@ -207,7 +210,6 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
           perfs.forEach(p => processPerf(p));
           setPerformances(perfs);
 
-          // Update member scores from latest performance
           if (perfs.length > 0) {
             const latest = perfs[perfs.length - 1];
             setMembers(prev => prev.map(m => ({
@@ -221,9 +223,8 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     };
 
     loadPerfs();
-    const interval = setInterval(loadPerfs, 3000);
+    const interval = setInterval(loadPerfs, 3000 / playbackSpeed);
 
-    // Realtime subscription
     const channel = supabase
       .channel('topdown-perfs')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gig_song_performances' }, (payload) => {
@@ -236,7 +237,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [gig?.id, processPerf]);
+  }, [gig?.id, processPerf, playbackSpeed]);
 
   // Gig status subscription
   useEffect(() => {
@@ -266,34 +267,67 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
   const capacity = gig?.venues?.capacity || 100;
   const attendancePercent = Math.round((attendance / capacity) * 100);
   const isLive = gig?.status === 'in_progress';
+  const venueType = (gig?.venues as any)?.venue_type || null;
 
+  // Genre visuals
+  const currentGenre = currentSong?.songs?.genre || null;
+  const genreVisuals = useMemo(() => getGenreVisuals(currentGenre), [currentGenre]);
+
+  // Genre-aware lighting color
   const lightingColor = useMemo(() => {
-    if (crowdMood === 'ecstatic') return 'hsl(20, 90%, 50%)';
-    if (crowdMood === 'enthusiastic') return 'hsl(120, 70%, 45%)';
-    if (crowdMood === 'mixed') return 'hsl(45, 80%, 50%)';
-    if (crowdMood === 'disappointed') return 'hsl(0, 60%, 40%)';
-    return 'hsl(220, 70%, 50%)';
-  }, [crowdMood]);
+    return getGenreLightingColor(genreVisuals, crowdMood);
+  }, [genreVisuals, crowdMood]);
+
+  // Stage theme
+  const stageTheme = useMemo(() => getStageTheme(venueType), [venueType]);
+
+  // Song scores for HUD
+  const songScores = useMemo(() => {
+    return setlistSongs.map((ss, i) => {
+      const perf = performances.find(p => p.song_id === ss.song_id);
+      return {
+        title: ss.songs?.title || 'Unknown',
+        score: perf?.performance_score || 0,
+        played: !!perf,
+      };
+    });
+  }, [setlistSongs, performances]);
+
+  // Camera zoom styles
+  const zoomStyle = cameraZoom === 'stage'
+    ? { transform: 'scale(1.5) translateY(15%)', transformOrigin: 'top center' }
+    : {};
 
   return (
     <div className="relative w-full rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: '16/10' }}>
-      {/* Stage area — top 55% */}
-      <div className="absolute top-0 left-0 right-0" style={{ height: '55%' }}>
-        <TopDownStage
-          members={members}
-          intensity={intensity}
-          songEnergy={songEnergy}
-          lightingColor={lightingColor}
-        />
-      </div>
+      <div style={zoomStyle} className="w-full h-full transition-transform duration-500">
+        {/* Stage area — top 55% */}
+        <div className="absolute top-0 left-0 right-0" style={{ height: '55%' }}>
+          <TopDownStage
+            members={members}
+            intensity={intensity}
+            songEnergy={songEnergy}
+            lightingColor={lightingColor}
+            venueType={venueType}
+            genreVisuals={genreVisuals}
+            crowdMood={crowdMood}
+            showStats={showStats}
+          />
+        </div>
 
-      {/* Crowd area — bottom 45% */}
-      <div className="absolute bottom-0 left-0 right-0" style={{ height: '45%' }}>
-        <TopDownCrowd
-          attendancePercent={attendancePercent}
-          mood={crowdMood}
-          intensity={intensity}
-        />
+        {/* Crowd area — bottom 45% */}
+        <div className="absolute bottom-0 left-0 right-0" style={{ height: '45%' }}>
+          {/* Venue features layer */}
+          <VenueFeatures theme={stageTheme} intensity={intensity} />
+
+          <TopDownCrowd
+            attendancePercent={attendancePercent}
+            mood={crowdMood}
+            intensity={intensity}
+            genreVisuals={genreVisuals}
+            songEnergy={songEnergy}
+          />
+        </div>
       </div>
 
       {/* HUD overlay */}
@@ -307,10 +341,22 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
         attendance={attendance}
         venueCapacity={capacity}
         isLive={isLive}
+        momentum={momentum}
+        songScores={songScores}
       />
 
       {/* Commentary overlay */}
       <TopDownCommentary entries={commentary} />
+
+      {/* Viewer controls */}
+      <ViewerControls
+        playbackSpeed={playbackSpeed}
+        onSpeedChange={setPlaybackSpeed}
+        cameraZoom={cameraZoom}
+        onCameraChange={setCameraZoom}
+        showStats={showStats}
+        onStatsToggle={setShowStats}
+      />
     </div>
   );
 };

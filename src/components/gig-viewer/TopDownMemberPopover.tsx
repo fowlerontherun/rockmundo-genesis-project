@@ -16,18 +16,21 @@ interface TopDownMemberPopoverProps {
 }
 
 export const TopDownMemberPopover = ({ member, children }: TopDownMemberPopoverProps) => {
-  const scoreColor = (member.performanceScore || 0) >= 18 
-    ? 'text-green-400' 
-    : (member.performanceScore || 0) >= 12 
-      ? 'text-yellow-400' 
+  const score = member.performanceScore || 0;
+  const scoreColor = score >= 18
+    ? 'text-green-400'
+    : score >= 12
+      ? 'text-yellow-400'
       : 'text-red-400';
+
+  const energyState = score >= 20 ? '🔥 On Fire' : score >= 16 ? '⚡ Focused' : score >= 10 ? '🎵 Playing' : '😓 Struggling';
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-52 bg-black/90 border-primary/30 text-white p-3" side="top">
+      <PopoverContent className="w-56 bg-black/90 border-primary/30 text-white p-3" side="top">
         <div className="space-y-2">
           <p className="font-bold text-sm truncate">{member.name}</p>
           <div className="flex items-center gap-1 flex-wrap">
@@ -40,16 +43,38 @@ export const TopDownMemberPopover = ({ member, children }: TopDownMemberPopoverP
               </Badge>
             )}
           </div>
+
+          {/* Energy state */}
+          <div className="text-[11px] text-muted-foreground">{energyState}</div>
+
           {member.performanceScore !== undefined && (
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Score</span>
-              <span className={scoreColor}>{member.performanceScore.toFixed(1)}</span>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Score</span>
+                <span className={scoreColor}>{member.performanceScore.toFixed(1)}</span>
+              </div>
+              {/* Score bar */}
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${score >= 18 ? 'bg-green-500' : score >= 12 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                  style={{ width: `${Math.min(100, (score / 25) * 100)}%` }}
+                />
+              </div>
             </div>
           )}
+
           {member.skillContribution !== undefined && (
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Skill</span>
-              <span>{member.skillContribution}%</span>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Skill Contribution</span>
+                <span>{member.skillContribution}%</span>
+              </div>
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, member.skillContribution)}%` }}
+                />
+              </div>
             </div>
           )}
         </div>

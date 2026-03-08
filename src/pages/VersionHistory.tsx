@@ -14,6 +14,23 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.902",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Venue-themed stage backgrounds — 8 distinct themes (Bar, Indie Venue, Rock Club, Concert Hall, Arena, Stadium, Festival Ground, Outdoor) with unique floor patterns, backdrops, curtains, and ambient glow" },
+      { type: 'feature', description: "Stage equipment system — monitor wedges, amp stacks, drum risers, speaker stacks, pedalboards, mic stands, and cable runs that scale with venue size (minimal → massive)" },
+      { type: 'feature', description: "Dynamic lighting rig — spotlight cones, moving head beams, laser beams, strobe effects, wash lights, fog machine, LED front strips, and overhead truss all reactive to song energy and crowd mood" },
+      { type: 'feature', description: "Enhanced pixel-art band member sprites with detailed head/torso/arms/legs, instrument-specific arm animations (strumming, drumming, keys), performance glow rings, and floating vocal notes" },
+      { type: 'feature', description: "Genre-reactive visuals system — 30+ genre configs mapping to unique color palettes, crowd behaviors (mosh/bounce/sway/hype), lighting styles, bass pulse effects, and particle types" },
+      { type: 'feature', description: "Venue features layer — crowd barriers with security guards, photo pit with camera flashes, sound desk (FOH), merch booth, bar area, and VIP sections scaled by venue type" },
+      { type: 'feature', description: "Enhanced crowd with size-varied dots by zone (front/mid/back), phone flashlights during ballads, crowd surfer animation, circle pit for metal/punk, and sequential wave effects" },
+      { type: 'feature', description: "Viewer controls — playback speed (1x/2x/4x), camera zoom toggle (full venue vs stage close-up), and stats overlay toggle showing per-member scores" },
+      { type: 'improvement', description: "HUD upgraded with song progress bar, momentum meter (-3 to +3), performance grade (S/A/B/C/D), and expandable setlist mini-view with per-song scores" },
+      { type: 'improvement', description: "Commentary now color-coded with type icons (🎸 song, 👥 crowd, ⭐ special, 🎆 finale)" },
+      { type: 'improvement', description: "Member popover now shows energy state, score bar chart, and skill contribution bar" },
+    ],
+  },
+  {
     version: "1.0.901",
     date: "2026-03-08",
     changes: [
