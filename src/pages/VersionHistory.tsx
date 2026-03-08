@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.942",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Band Sentiment Drift: Band-level fan_sentiment_score now drifts toward neutral daily (±0.5/day), matching profile-level drift" },
+      { type: 'feature', description: "Idle Equipment Degradation: All player equipment loses 0.2–0.5 condition per day from storage wear, humidity, and aging — even without gigs" },
+      { type: 'improvement', description: "Daily updates summary log now includes band sentiment drift and equipment degradation counts for monitoring" },
+    ],
+  },
+  {
     version: "1.0.941",
     date: "2026-03-08",
     changes: [
