@@ -299,13 +299,14 @@ const Dashboard = () => {
           </TabsList>
         </div>
 
-        {/* Profile Tab - Now with sub-tabs */}
+        {/* Profile Tab - Reorganized for clarity */}
         <TabsContent value="profile" className="space-y-4">
-          {/* Character Avatar & Info */}
+
+          {/* ── Section 1: Hero Card ── */}
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20 border-2 border-primary/30">
+              <div className="flex items-start gap-4">
+                <Avatar className="h-20 w-20 border-2 border-primary/30 flex-shrink-0">
                   <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
                   <AvatarFallback className="text-2xl">
                     <User className="h-10 w-10" />
@@ -315,20 +316,35 @@ const Dashboard = () => {
                   <h2 className="text-xl font-bold text-foreground truncate">
                     {profile?.display_name || profile?.username || "Unknown"}
                   </h2>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                    {profile?.age && (
-                      <span>Age {profile.age}</span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+                    {profile?.age && <span>Age {profile.age}</span>}
+                    {profile?.gender && <span className="capitalize">{profile.gender}</span>}
+                    {currentCity && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {currentCity.name}, {currentCity.country}
+                      </span>
                     )}
-                    {profile?.gender && (
-                      <span className="capitalize">{profile.gender}</span>
-                    )}
+                  </div>
+                  {/* Vitals row */}
+                  <div className="flex flex-wrap items-center gap-3 mt-2">
+                    <div className="flex items-center gap-1.5">
+                      <Heart className="h-3.5 w-3.5 text-destructive" />
+                      <Progress value={profile?.health || 100} className="h-1.5 w-16" />
+                      <span className="text-xs text-muted-foreground">{profile?.health || 100}%</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-warning" />
+                      <Progress value={profile?.energy || 100} className="h-1.5 w-16" />
+                      <span className="text-xs text-muted-foreground">{profile?.energy || 100}%</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Location Header - Shows country flag, city name, and local flavor */}
+          {/* ── Section 2: Location Banner ── */}
           {currentCity && (
             <LocationHeader 
               cityName={currentCity.name}
@@ -339,19 +355,19 @@ const Dashboard = () => {
             />
           )}
 
-          {/* VIP Status Card */}
+          {/* ── Section 3: Key Stats Grid ── */}
+          <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
+
+          {/* ── Section 4: VIP Status ── */}
           <VipStatusCard />
 
-          {/* Character Identity & Reputation Cards */}
+          {/* ── Section 5: Character Identity & Reputation ── */}
           <div className="grid gap-4 md:grid-cols-2">
             <CharacterIdentityCard />
             <ReputationCard />
           </div>
 
-          {/* Overview Tabs */}
-          <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
-
-          {/* Recent Activity */}
+          {/* ── Section 6: Recent Activity ── */}
           <Card>
             <CardHeader>
               <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
