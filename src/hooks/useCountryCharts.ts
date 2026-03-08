@@ -404,6 +404,9 @@ export const useCountryCharts = (
               existing.totalWeeklyPlays += estimatedDailyPlays;
               existing.totalCombinedScore += estimatedDailyCombined;
             }
+            // Also track peak weekly value as a floor
+            existing.peakWeeklyPlays = Math.max(existing.peakWeeklyPlays || 0, weeklyPlays);
+            existing.peakCombinedScore = Math.max(existing.peakCombinedScore || 0, combinedScore);
           } else {
             // For weekly: use peak value (rolling window already covers the period)
             existing.totalWeeklyPlays = Math.max(existing.totalWeeklyPlays, weeklyPlays);
@@ -429,15 +432,19 @@ export const useCountryCharts = (
             latestTrendChange: entry.trend_change || 0,
             maxWeeksOnChart: entry.weeks_on_chart || 1,
             seenDates: initialSeenDates,
+            peakWeeklyPlays: weeklyPlays,
+            peakCombinedScore: combinedScore,
           });
         }
       }
 
-      // Round accumulated values for display
+      // Round accumulated values for display and ensure floor of weekly peak
       if (shouldSumAcrossDays) {
         for (const agg of aggregatedMap.values()) {
-          agg.totalWeeklyPlays = Math.round(agg.totalWeeklyPlays);
-          agg.totalCombinedScore = Math.round(agg.totalCombinedScore);
+          // FIX: Ensure monthly/yearly totals are at least the weekly peak
+          // This prevents the case where weekly > monthly due to estimation
+          agg.totalWeeklyPlays = Math.round(Math.max(agg.totalWeeklyPlays, agg.peakWeeklyPlays || 0));
+          agg.totalCombinedScore = Math.round(Math.max(agg.totalCombinedScore, agg.peakCombinedScore || 0));
           agg.totalPlays = agg.totalWeeklyPlays;
         }
       }
