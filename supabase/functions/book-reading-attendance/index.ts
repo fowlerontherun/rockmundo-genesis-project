@@ -241,8 +241,11 @@ async function processAttendance(supabaseClient: any) {
             const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
             if (bd) {
               const moraleBoost = isComplete ? 4 : 1; // +4 for finishing book, +1 per reading day
-              await supabaseClient.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', bm.band_id);
+              const newMorale = Math.min(100, ((bd as any).morale ?? 50) + moraleBoost);
+              await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
               if (isComplete) console.log(`Book completed morale boost: +${moraleBoost} for band ${bm.band_id}`);
+              // Health event log
+              try { await supabaseClient.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'book_reading', description: isComplete ? 'Finished reading a skill book' : 'Daily book reading session' }); } catch (_) {}
             }
           }
         } catch (_e) { /* non-critical */ }

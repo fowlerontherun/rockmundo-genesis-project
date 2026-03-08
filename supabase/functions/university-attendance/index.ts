@@ -441,8 +441,11 @@ serve(async (req) => {
             if (band) {
               const curM = (band as any).morale ?? 50;
               const moraleBoost = isCompleted ? 5 : 1; // +5 for graduating, +1 per class
-              await supabaseClient.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bm.band_id);
+              const newMorale = Math.min(100, curM + moraleBoost);
+              await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
               if (isCompleted) console.log(`University graduation morale boost: +${moraleBoost} for band ${bm.band_id}`);
+              // Health event log
+              try { await supabaseClient.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'university', description: isCompleted ? 'University course graduated' : 'University class attended' }); } catch (_) {}
             }
           }
         } catch (_e) { /* non-critical */ }

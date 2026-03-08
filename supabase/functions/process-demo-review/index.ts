@@ -414,8 +414,11 @@ Deno.serve(async (req) => {
               const { data: bd } = await supabase.from('bands').select('morale').eq('id', demo.band_id).single();
               if (bd) {
                 const moralePenalty = -2;
-                await supabase.from('bands').update({ morale: Math.max(0, (bd.morale ?? 50) + moralePenalty) }).eq('id', demo.band_id);
+                const newMorale2 = Math.max(0, (bd.morale ?? 50) + moralePenalty);
+                await supabase.from('bands').update({ morale: newMorale2 }).eq('id', demo.band_id);
                 console.log(`Demo rejected → morale ${moralePenalty} for band ${demo.band_id}`);
+                // Health event log
+                try { await supabase.from('band_health_events').insert({ band_id: demo.band_id, event_type: 'morale', delta: moralePenalty, new_value: newMorale2, source: 'demo_rejected', description: `Demo rejected by label: ${label.name}` }); } catch (_) {}
               }
             } catch (e) { console.log('Morale penalty error:', e); }
           }
