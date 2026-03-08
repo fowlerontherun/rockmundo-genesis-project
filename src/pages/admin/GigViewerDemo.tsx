@@ -226,6 +226,13 @@ const GigViewerDemo = () => {
                         genreVisuals={genreVisuals}
                         songEnergy={songEnergy}
                       />
+                      <CrowdDetails
+                        attendancePercent={attendancePercent}
+                        mood={crowdMood}
+                        intensity={intensity}
+                        genreVisuals={genreVisuals}
+                        songEnergy={songEnergy}
+                      />
                     </div>
                   </div>
 
