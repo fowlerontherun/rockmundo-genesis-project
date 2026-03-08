@@ -141,7 +141,11 @@ serve(async (req) => {
         const minFame = (sub.magazines as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        const approved = isEligible && Math.random() < 0.65;
+        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
+        const bandRep = (sub.bands as any)?.reputation_score ?? 0;
+        const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200;
+        const repModifiedApproval = 0.65 * (0.5 + repT);
+        const approved = isEligible && Math.random() < repModifiedApproval;
 
         if (approved) {
           const magazine = sub.magazines as any;
