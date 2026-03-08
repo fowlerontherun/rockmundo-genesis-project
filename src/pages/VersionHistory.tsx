@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.934",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Weather → Gig Impact: Weather now affects gig attendance (outdoor sunny +15%, stormy -60%), crowd mood, and merch sales with indoor/outdoor venue distinction" },
+      { type: 'feature', description: "Band Rivalry System: Bands competing in the same genre/city develop rivalries (budding → legendary) — boosting fan engagement (+25%), media coverage (+30%), and chart competition" },
+      { type: 'feature', description: "Tour Fatigue Mechanics: Consecutive gigs without rest degrade performance (fresh 1.05x → burnout 0.6x) with escalating injury risk and morale damage" },
+      { type: 'improvement', description: "Rivalry detection auto-evaluates genre match, fame parity, and shared city activity to seed natural rivalries" },
+      { type: 'improvement', description: "Fatigue system counts consecutive gig dates and calculates rest days needed for recovery (1-4 days)" },
+      { type: 'improvement', description: "Weather gig impact differentiates indoor venues (rain boosts attendance) vs outdoor (rain devastates)" },
+    ],
+  },
+  {
     version: "1.0.933",
     date: "2026-03-08",
     changes: [
