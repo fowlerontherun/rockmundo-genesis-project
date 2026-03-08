@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.950",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Sentiment Trend Chart: Band overview now shows an area chart visualizing sentiment score over time from logged events" },
+      { type: 'feature', description: "Daily Drift Logging: Band sentiment daily drift now logs events to band_sentiment_events with batch inserts for efficiency" },
+      { type: 'improvement', description: "Band overview layout: Trend chart and event log displayed side-by-side on desktop for better monitoring" },
+      { type: 'improvement', description: "Chart includes zero reference line, tooltips with event type and change values, and gradient fill" },
+    ],
+  },
+  {
     version: "1.0.949",
     date: "2026-03-08",
     changes: [
