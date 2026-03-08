@@ -32,13 +32,11 @@ const Finances = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Financial Command Center</h1>
-        <p className="text-sm text-muted-foreground">
-          Monitor personal and band finances, track investments, and explore funding pathways to keep your music dreams funded.
-        </p>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Financial Command Center"
+        subtitle="Monitor personal and band finances, track investments, and explore funding pathways to keep your music dreams funded."
+      />
 
       {/* Summary Cards */}
       <FinanceSummaryCards summary={summary} />
