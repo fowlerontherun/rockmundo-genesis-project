@@ -7,6 +7,8 @@ import { InvestmentsTab } from "@/components/finance/InvestmentsTab";
 import { LoansTab } from "@/components/finance/LoansTab";
 import { TransactionsList } from "@/components/finance/TransactionsList";
 import { Loader2 } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const Finances = () => {
   const { 
