@@ -97,6 +97,50 @@ Deno.serve(async (req) => {
           expense_breakdown: expensesByCategory
         });
 
+      // Also generate monthly report (if first day of month or every 7 days as summary)
+      const isFirstOfMonth = now.getDate() <= 7;
+      if (isFirstOfMonth) {
+        const { data: monthlyTx } = await supabase
+          .from('company_transactions')
+          .select('*')
+          .eq('company_id', company.id)
+          .gte('created_at', monthAgo.toISOString())
+          .lte('created_at', now.toISOString());
+
+        let monthlyRevenue = 0;
+        let monthlyExpenses = 0;
+        const monthlyRevenueByCategory: Record<string, number> = {};
+        const monthlyExpensesByCategory: Record<string, number> = {};
+
+        for (const tx of monthlyTx || []) {
+          if (tx.amount > 0) {
+            monthlyRevenue += tx.amount;
+            monthlyRevenueByCategory[tx.category || 'other'] = (monthlyRevenueByCategory[tx.category || 'other'] || 0) + tx.amount;
+          } else {
+            monthlyExpenses += Math.abs(tx.amount);
+            monthlyExpensesByCategory[tx.category || 'other'] = (monthlyExpensesByCategory[tx.category || 'other'] || 0) + Math.abs(tx.amount);
+          }
+        }
+
+        const monthlyNet = monthlyRevenue - monthlyExpenses;
+        const monthlyMargin = monthlyRevenue > 0 ? (monthlyNet / monthlyRevenue) * 100 : 0;
+
+        await supabase
+          .from('company_financial_reports')
+          .insert({
+            company_id: company.id,
+            report_period: 'monthly',
+            period_start: monthAgo.toISOString(),
+            period_end: now.toISOString(),
+            total_revenue: monthlyRevenue,
+            total_expenses: monthlyExpenses,
+            net_profit: monthlyNet,
+            profit_margin: monthlyMargin,
+            revenue_breakdown: monthlyRevenueByCategory,
+            expense_breakdown: monthlyExpensesByCategory
+          });
+      }
+
       // Update/Insert KPIs
       const kpis = [
         { name: 'Weekly Revenue', value: totalRevenue, unit: 'currency', category: 'financial' },
