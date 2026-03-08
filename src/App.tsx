@@ -437,6 +437,10 @@ function App() {
                     
                     <Route path="lottery" element={<Lottery />} />
                     <Route path="housing" element={<Housing />} />
+                    <Route path="casino" element={<CasinoLobby />} />
+                    <Route path="casino/blackjack" element={<CasinoBlackjack />} />
+                    <Route path="casino/roulette" element={<CasinoRoulette />} />
+                    <Route path="casino/slots" element={<CasinoSlots />} />
                     
                     {/* Category hub pages */}
                     <Route path="hub/character" element={<CharacterHub />} />

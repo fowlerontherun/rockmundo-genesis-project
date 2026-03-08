@@ -151,6 +151,7 @@ export const en = {
     myCompanies: "Company",
     adminPanel: "Admin Panel",
     underworld: "Underworld",
+    casino: "Casino",
     more: "More",
     openMenu: "Open navigation menu",
     toggleMenu: "Toggle navigation menu",
