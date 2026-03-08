@@ -14,6 +14,27 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.925",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Teaching: Self-teaching prevention — players can no longer teach themselves" },
+      { type: 'fix', description: "Teaching: Friendship validation — only accepted friends can be taught" },
+      { type: 'fix', description: "Teaching: Max student cap enforced — Basic/Professional limited to 1 active student, Mastery to 2" },
+      { type: 'fix', description: "Teaching: Duplicate session prevention — can't start two sessions for same skill+student combo" },
+      { type: 'fix', description: "Teaching: XP calculation now deterministic based on teacher skill level (not random)" },
+      { type: 'feature', description: "Teaching: Session cancellation with confirmation dialog" },
+      { type: 'feature', description: "Teaching: Auto-completion of expired sessions on page load" },
+      { type: 'feature', description: "Teaching: Progress bar and time remaining display for active sessions" },
+      { type: 'feature', description: "Teaching: XP preview before starting a session shows per-day and total XP" },
+      { type: 'feature', description: "Teaching: Real-time validation errors shown before submit" },
+      { type: 'improvement', description: "Teaching: Loading states for friends and sessions data" },
+      { type: 'improvement', description: "Teaching: Skill selector shows current level, sorted by highest" },
+      { type: 'improvement', description: "Teaching: Role badges (Teaching/Learning) on session cards" },
+      { type: 'improvement', description: "Teaching: Cancelled sessions shown separately in History tab" },
+      { type: 'improvement', description: "Teaching: Tier comparison cards in unlocked state with university XP comparison" },
+    ],
+  },
+  {
     version: "1.0.924",
     date: "2026-03-08",
     changes: [
