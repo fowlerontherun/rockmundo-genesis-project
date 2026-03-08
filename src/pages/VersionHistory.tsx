@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.008",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Added image prompts to all hub tiles across Band, World, Commerce, Events, Social, Live, Media, and Career hubs for rich AI-generated tile images" },
+    ],
+  },
+  {
     version: "1.1.007",
     date: "2026-03-08",
     changes: [
