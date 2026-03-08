@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
