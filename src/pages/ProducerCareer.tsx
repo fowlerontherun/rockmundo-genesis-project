@@ -316,3 +316,11 @@ function ProducerCareerInner() {
     </div>
   );
 }
+
+export default function ProducerCareer() {
+  return (
+    <SkillSystemProvider>
+      <ProducerCareerInner />
+    </SkillSystemProvider>
+  );
+}

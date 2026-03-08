@@ -1,9 +1,10 @@
 import { useGameData } from "@/hooks/useGameData";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
+import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { ModelingOffersPanel } from "@/components/modeling/ModelingOffersPanel";
 
-export default function Modeling() {
+function ModelingInner() {
   const { user } = useAuth();
   const { profile } = useGameData();
   const { progress } = useSkillSystem();
@@ -16,7 +17,6 @@ export default function Modeling() {
     );
   }
 
-  // Build skill levels map from skill progress
   const skillLevels: Record<string, number> = {};
   for (const p of progress) {
     skillLevels[p.skill_slug] = p.current_level ?? 0;
@@ -34,5 +34,13 @@ export default function Modeling() {
         skillLevels={skillLevels}
       />
     </div>
+  );
+}
+
+export default function Modeling() {
+  return (
+    <SkillSystemProvider>
+      <ModelingInner />
+    </SkillSystemProvider>
   );
 }
