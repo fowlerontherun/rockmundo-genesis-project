@@ -29,13 +29,40 @@ export default function ReleaseConfig() {
     vinyl_price_per_sale: 25,
   });
 
-  // For now, just use local state since we don't have a game_config table
-  // This will be stored in the database when the table is created
+  // Load existing config from game_config table
+  const { data: savedConfig } = useQuery({
+    queryKey: ["game-config", "release_costs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("game_config")
+        .select("config_value")
+        .eq("config_key", "release_costs")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.config_value as typeof config | null;
+    },
+  });
+
+  // Sync loaded config into state on first load
+  useEffect(() => {
+    if (savedConfig) {
+      setConfig(prev => ({ ...prev, ...savedConfig }));
+    }
+  }, [savedConfig]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // TODO: Save to database when game_config table is created
-      console.log("Saving release config:", config);
+      const { error } = await supabase
+        .from("game_config")
+        .upsert(
+          {
+            config_key: "release_costs",
+            config_value: config as any,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "config_key" }
+        );
+      if (error) throw error;
       return config;
     },
     onSuccess: () => {
