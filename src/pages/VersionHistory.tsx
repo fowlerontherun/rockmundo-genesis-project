@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.944",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Gig Cancellation → Sentiment: Cancelling shows now penalizes fan sentiment (-5 to -15 based on how last-minute the cancellation is)" },
+      { type: 'feature', description: "Music Video → Sentiment + Media: Completed music videos grant +6 fan sentiment, +12 media intensity, and +6 media fatigue" },
+      { type: 'improvement', description: "Sentiment penalties scale with cancellation timing — early cancellations are less punishing than day-of cancellations" },
+      { type: 'improvement', description: "Media fatigue reduction applied to music video intensity gains — diminishing returns for frequent video releases" },
+    ],
+  },
+  {
     version: "1.0.943",
     date: "2026-03-08",
     changes: [

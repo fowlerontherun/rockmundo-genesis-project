@@ -137,6 +137,25 @@ export function useGigCancellation() {
           });
       }
 
+      // === FAN SENTIMENT PENALTY (v1.0.944) ===
+      // Cancelling shows angers fans — severity scales with how last-minute it is
+      try {
+        const sentimentPenalty = details.daysUntilGig >= 14 ? -5 : details.daysUntilGig >= 3 ? -10 : -15;
+        const { data: bandSentiment } = await supabase
+          .from('bands')
+          .select('fan_sentiment_score')
+          .eq('id', details.bandId)
+          .single();
+
+        const currentScore = (bandSentiment as any)?.fan_sentiment_score ?? 0;
+        await supabase.from('bands').update({
+          fan_sentiment_score: Math.max(-100, currentScore + sentimentPenalty),
+        } as any).eq('id', details.bandId);
+        console.log(`[GigCancellation] Sentiment ${sentimentPenalty} for band ${details.bandId}`);
+      } catch (sentErr) {
+        console.error('[GigCancellation] Failed to update sentiment:', sentErr);
+      }
+
       toast({
         title: 'Gig Cancelled',
         description: details.refundAmount > 0 
