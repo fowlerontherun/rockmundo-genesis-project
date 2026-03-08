@@ -112,16 +112,10 @@ const Navigation = () => {
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     home: true,
-    character: true,
     music: true,
-    band: true,
-    live: true,
-    events: true,
-    world: true,
-    social: true,
-    career: true,
-    commerce: true,
-    media: true,
+    bandLive: true,
+    worldSocial: true,
+    careerBusiness: true,
     admin: true,
   });
 
