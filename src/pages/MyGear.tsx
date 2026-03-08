@@ -1,6 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench } from "lucide-react";
 import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
+import { calculateRepairCost } from "@/utils/equipmentDegradation";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -120,6 +125,10 @@ const MyGear: React.FC = () => {
   const [loadout, setLoadout] = useState<LoadoutState>(() => createFreshLoadout());
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
+  const [repairingId, setRepairingId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     data: equipmentData,
     isLoading: loadingInventory,
@@ -132,6 +141,39 @@ const MyGear: React.FC = () => {
       ? inventoryError.message
       : String(inventoryError)
     : null;
+
+  const handleRepair = useCallback(async (itemId: string, condition: number, price: number) => {
+    if (!user?.id || repairingId) return;
+    setRepairingId(itemId);
+    try {
+      const { cost } = calculateRepairCost(condition, price, 100);
+
+      // Check player balance
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+
+      const balance = (profile as any)?.balance ?? 0;
+      if (balance < cost) {
+        toast({ title: "Not enough funds", description: `Repair costs $${cost.toLocaleString()} but you only have $${balance.toLocaleString()}`, variant: "destructive" });
+        return;
+      }
+
+      // Deduct and repair
+      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('user_id', user.id);
+      await supabase.from('player_equipment').update({ condition: 100 }).eq('id', itemId);
+
+      toast({ title: "Equipment Repaired!", description: `Restored to pristine condition for $${cost.toLocaleString()}` });
+      queryClient.invalidateQueries({ queryKey: ['player-equipment'] });
+    } catch (err) {
+      console.error('Repair failed:', err);
+      toast({ title: "Repair Failed", description: "Something went wrong.", variant: "destructive" });
+    } finally {
+      setRepairingId(null);
+    }
+  }, [user?.id, repairingId, toast, queryClient]);
 
   const presetGear = useMemo(
     () =>
@@ -596,11 +638,33 @@ const MyGear: React.FC = () => {
                       <div>
                         <p className="text-sm font-semibold">{gear.name}</p>
                         <p className="text-xs text-muted-foreground">{formatSectionList(gear.sections)}</p>
-                        {gear.source === "inventory" && (
-                          <EquipmentConditionBadge condition={
-                            inventory.find(i => i.id === gear.id)?.condition ?? 100
-                          } />
-                        )}
+                        {gear.source === "inventory" && (() => {
+                          const invItem = inventory.find(i => i.id === gear.id);
+                          const cond = invItem?.condition ?? 100;
+                          const needsRepair = cond < 85;
+                          const repairCost = needsRepair && gear.price ? calculateRepairCost(cond, gear.price, 100).cost : 0;
+                          return (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <EquipmentConditionBadge condition={cond} />
+                              {needsRepair && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-5 px-1.5 text-[10px] gap-1"
+                                  disabled={repairingId === gear.id}
+                                  onClick={() => handleRepair(gear.id, cond, gear.price ?? 0)}
+                                >
+                                  {repairingId === gear.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Wrench className="h-3 w-3" />
+                                  )}
+                                  Repair ${repairCost.toLocaleString()}
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant="outline" className={getQualityBadgeClass(gear)}>
