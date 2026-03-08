@@ -76,6 +76,8 @@ export const pt = {
     tattoos: "Tatuagens",
     tattooParlour: "Salão de Tatuagem",
     legacy: "Legado",
+    buySlot: "Comprar Slot",
+    hallOfImmortals: "Salão dos Imortais",
     schedule: "Agenda",
     musicHub: "Hub Musical",
     education: "Educação",

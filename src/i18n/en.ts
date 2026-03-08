@@ -76,6 +76,8 @@ export const en = {
     tattoos: "Tattoos",
     tattooParlour: "Tattoo Parlour",
     legacy: "Legacy",
+    buySlot: "Buy Slot",
+    hallOfImmortals: "Hall of Immortals",
     schedule: "Schedule",
     musicHub: "Music Hub",
     education: "Education",

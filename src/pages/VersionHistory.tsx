@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.007",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Buy Character Slot page: players can purchase extra character slots for £5 each via Stripe checkout" },
+      { type: 'feature', description: "Slot purchase success flow with automatic fulfillment and slot activation" },
+      { type: 'feature', description: "Added buy slot tile to Character Hub for easy access" },
+    ],
+  },
+  {
     version: "1.1.006",
     date: "2026-03-08",
     changes: [

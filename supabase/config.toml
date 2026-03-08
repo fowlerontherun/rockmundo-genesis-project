@@ -251,3 +251,9 @@ verify_jwt = false
 
 [functions.check-character-health-decay]
 verify_jwt = false
+
+[functions.create-slot-checkout]
+verify_jwt = false
+
+[functions.fulfill-slot-purchase]
+verify_jwt = false

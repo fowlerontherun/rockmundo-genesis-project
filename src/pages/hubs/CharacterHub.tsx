@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull } from "lucide-react";
+import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull, UserPlus } from "lucide-react";
 
 export default function CharacterHub() {
   return (
@@ -15,6 +15,7 @@ export default function CharacterHub() {
         { icon: History, labelKey: "nav.statistics", path: "/statistics", imagePrompt: "An infographic dashboard showing career statistics, charts, and achievement milestones" },
         { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy", imagePrompt: "A hall of fame book showing a musician's legendary career timeline and achievements" },
         { icon: Skull, labelKey: "nav.hallOfImmortals", path: "/hall-of-immortals", imagePrompt: "A dark memorial hall with ghostly portraits of fallen rock stars, candles, and flowers" },
+        { icon: UserPlus, labelKey: "nav.buySlot", path: "/buy-character-slot", imagePrompt: "A glowing character slot machine with a plus sign, neon lights, and a price tag" },
       ]}
     />
   );

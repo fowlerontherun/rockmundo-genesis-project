@@ -77,6 +77,8 @@ export const es: TranslationKeys = {
     tattoos: "Tatuajes",
     tattooParlour: "Salón de Tatuajes",
     legacy: "Legado",
+    buySlot: "Comprar Slot",
+    hallOfImmortals: "Salón de los Inmortales",
     schedule: "Horario",
     musicHub: "Centro Musical",
     education: "Educación",

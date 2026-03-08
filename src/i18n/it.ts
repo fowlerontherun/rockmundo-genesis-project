@@ -76,6 +76,8 @@ export const it = {
     tattoos: "Tatuaggi",
     tattooParlour: "Salone di Tatuaggi",
     legacy: "Eredità",
+    buySlot: "Acquista Slot",
+    hallOfImmortals: "Sala degli Immortali",
     schedule: "Calendario",
     musicHub: "Hub Musicale",
     education: "Istruzione",
