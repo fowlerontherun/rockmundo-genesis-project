@@ -28,6 +28,7 @@ export const adminCategories: AdminCategory[] = [
     icon: Users,
     items: [
       { path: "/admin/players", label: "Player Management", description: "Manage user accounts" },
+      { path: "/admin/user-roles", label: "User Roles", description: "Manage admin/moderator roles" },
       { path: "/admin/vip", label: "VIP Management", description: "Grant and manage VIP subscriptions" },
       { path: "/admin/achievements", label: "Achievements", description: "Configure achievement system" },
       { path: "/admin/analytics", label: "Analytics", description: "View player statistics" },
@@ -42,6 +43,7 @@ export const adminCategories: AdminCategory[] = [
     items: [
       { path: "/admin/ai-song-generation", label: "AI Song Generation", description: "Test AI audio generation" },
       { path: "/admin/songwriting", label: "Songwriting", description: "Songwriting configuration" },
+      { path: "/admin/music-videos", label: "Music Videos", description: "Music video management" },
       { path: "/admin/production-notes", label: "Production Notes", description: "Setlist elements" },
       { path: "/admin/song-gifts", label: "Song Gifts", description: "Gift songs to bands" },
       { path: "/admin/skill-definitions", label: "Skill Definitions", description: "Configure skills" },
@@ -50,6 +52,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/streaming-platforms", label: "Streaming Platforms", description: "Manage platforms" },
       { path: "/admin/radio-stations", label: "Radio Stations", description: "Radio network" },
       { path: "/admin/radio-content", label: "Radio Content", description: "Jingles & fake adverts" },
+      { path: "/admin/practice-tracks", label: "Practice Tracks", description: "Stage practice audio" },
     ],
   },
   {
@@ -61,6 +64,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/bands", label: "Band Administration", description: "Band mechanics" },
       { path: "/admin/fame-fans-gifting", label: "Fame & Fans Gifting", description: "Gift fame and fans" },
       { path: "/admin/gigs", label: "Gigs", description: "Gig system configuration" },
+      { path: "/admin/gig-viewer-demo", label: "Gig Viewer Demo", description: "3D gig preview" },
       { path: "/admin/venues", label: "Venues", description: "Venue management" },
       { path: "/admin/rehearsal-rooms", label: "Rehearsal Rooms", description: "Practice spaces" },
       { path: "/admin/stage-equipment", label: "Stage Equipment", description: "Equipment catalog" },
@@ -81,6 +85,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/festivals", label: "Festivals", description: "Festival system" },
       { path: "/admin/eurovision", label: "Eurovision", description: "Eurovision management" },
       { path: "/admin/awards", label: "Awards", description: "Award shows" },
+      { path: "/admin/random-events", label: "Random Events", description: "In-game random events" },
     ],
   },
   {
@@ -146,6 +151,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/labels", label: "Labels", description: "Record labels" },
       { path: "/admin/producers", label: "Producers", description: "Music producers" },
       { path: "/admin/release-config", label: "Release Config", description: "Release settings" },
+      { path: "/admin/skin-collections", label: "Skin Collections", description: "Avatar skin collections" },
     ],
   },
   {

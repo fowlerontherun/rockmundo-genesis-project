@@ -168,7 +168,7 @@ const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/Sta
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const GearItemsAdmin = lazyWithRetry(() => import("./pages/admin/GearItemsAdmin"));
 const PageGraphicsAdmin = lazyWithRetry(() => import("./pages/admin/PageGraphicsAdmin"));
-// const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
+const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTemplatesAdmin"));
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
 const CrowdSoundsAdmin = lazyWithRetry(() => import("./pages/admin/CrowdSoundsAdmin"));
@@ -494,7 +494,7 @@ function App() {
                     <Route path="admin/pr" element={<PublicRelationsAdmin />} />
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
-                    {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
+                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
                     {/* <Route path="admin/3d-gig-viewer" element={<Admin3DGigViewer />} /> */}
                     <Route path="admin/gear-items" element={<GearItemsAdmin />} />
                     <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
@@ -540,7 +540,7 @@ function App() {
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     <Route path="admin/stream-multiplier" element={<StreamMultiplier />} />
-                    {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
+                    {/* Stage Templates route defined above */}
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
