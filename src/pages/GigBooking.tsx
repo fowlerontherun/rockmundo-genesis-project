@@ -987,7 +987,7 @@ const GigBooking = () => {
           initialDate={getNextAvailableDateForVenue(bookingVenue.id)}
         />
       )}
-    </div>
+    </PageLayout>
   );
 };
 

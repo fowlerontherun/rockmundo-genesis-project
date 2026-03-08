@@ -351,7 +351,7 @@ const Travel = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 };
 

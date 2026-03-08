@@ -628,6 +628,6 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>;
+    </PageLayout>;
 };
 export default Dashboard;

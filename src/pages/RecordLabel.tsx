@@ -403,7 +403,7 @@ const RecordLabel = () => {
         currentBalance={personalBalance}
         hasActiveLawyer={hasActiveLawyer}
       />
-    </div>
+    </PageLayout>
   );
 };
 

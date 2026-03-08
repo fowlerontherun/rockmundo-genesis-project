@@ -650,6 +650,6 @@ export default function Festivals() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

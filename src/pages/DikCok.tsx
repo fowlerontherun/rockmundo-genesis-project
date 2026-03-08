@@ -172,6 +172,6 @@ export default function DikCok() {
           {selectedBand && <DikCokBandAnalytics band={selectedBand as any} videos={myBandVideos} />}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

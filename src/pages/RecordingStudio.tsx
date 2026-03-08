@@ -270,6 +270,6 @@ export default function RecordingStudio() {
           songTitle={selectedSession.songs?.title || "Unknown Song"}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }

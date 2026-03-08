@@ -1465,7 +1465,7 @@ const Merchandise = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 };
 

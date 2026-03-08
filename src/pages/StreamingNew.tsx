@@ -256,6 +256,6 @@ export default function StreamingNew() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

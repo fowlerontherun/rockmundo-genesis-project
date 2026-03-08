@@ -396,6 +396,6 @@ export default function BandManager() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

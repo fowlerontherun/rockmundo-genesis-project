@@ -190,7 +190,7 @@ const StreamingPlatforms = () => {
           <PlaylistsTab userId={userId} />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 };
 

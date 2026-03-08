@@ -173,6 +173,6 @@ export default function HallOfFame() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

@@ -827,6 +827,6 @@ export default function Employment() {
             )}
           </TabsContent>
         </Tabs>
-    </div>
+    </PageLayout>
   );
 }

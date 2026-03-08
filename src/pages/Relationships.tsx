@@ -860,6 +860,6 @@ export default function RelationshipsPage() {
         onSelectOption={handleInteractionSelect}
         isProcessing={logInteraction.isPending}
       />
-    </div>
+    </PageLayout>
   );
 }
