@@ -174,7 +174,7 @@ serve(async (req) => {
       // Purchase rate: 5-25% based on performance rating (0-25 scale)
       const basePurchaseRate = 0.05 + (Math.min(1, (gig.bands.fame || 0) / 5000) * 0.05);
       const performanceBonus = Math.min(1.5, avgRating / 18);
-      const actualPurchaseRate = basePurchaseRate * performanceBonus;
+      const actualPurchaseRate = basePurchaseRate * performanceBonus * clothingMerchBonus;
       
       const numberOfBuyers = Math.round(outcome.actual_attendance * actualPurchaseRate);
       

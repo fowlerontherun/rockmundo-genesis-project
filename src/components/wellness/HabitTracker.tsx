@@ -72,6 +72,35 @@ export function HabitTracker() {
           .from("player_habit_completions")
           .insert({ habit_id: habitId, completed_date: today });
         if (error) throw error;
+
+        // Award health and energy for completing a habit
+        if (user?.id) {
+          const habit = habits?.find(h => h.id === habitId);
+          const category = habit?.category || 'custom';
+          
+          // Determine stat boosts based on habit category
+          let healthBoost = 1;
+          let energyBoost = 2;
+          if (category === 'fitness') { healthBoost = 3; energyBoost = 3; }
+          else if (category === 'health') { healthBoost = 4; energyBoost = 1; }
+          else if (category === 'mental') { healthBoost = 2; energyBoost = 4; }
+          else if (category === 'music') { healthBoost = 0; energyBoost = 2; }
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("health, energy")
+            .eq("user_id", user.id)
+            .single();
+
+          if (profile) {
+            const newHealth = Math.min(100, (profile.health ?? 100) + healthBoost);
+            const newEnergy = Math.min(100, (profile.energy ?? 100) + energyBoost);
+            await supabase
+              .from("profiles")
+              .update({ health: newHealth, energy: newEnergy })
+              .eq("user_id", user.id);
+          }
+        }
       } else {
         const { error } = await supabase
           .from("player_habit_completions")
@@ -83,6 +112,8 @@ export function HabitTracker() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["habit-completions"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Habit tracked! Stats updated.");
     },
   });
 
