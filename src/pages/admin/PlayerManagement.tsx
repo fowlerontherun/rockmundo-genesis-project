@@ -70,6 +70,52 @@ export default function PlayerManagement() {
     },
   });
 
+  const giftSlotMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Check current slots
+      const { data: existing } = await supabase
+        .from("character_slots")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const currentExtra = existing?.extra_slots_purchased ?? 0;
+      const currentMax = existing?.max_slots ?? 1;
+
+      if (currentMax >= 5) {
+        throw new Error("Player already has the maximum 5 character slots");
+      }
+
+      if (existing) {
+        const { error } = await supabase
+          .from("character_slots")
+          .update({
+            extra_slots_purchased: currentExtra + 1,
+            max_slots: Math.min(currentMax + 1, 5),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("character_slots")
+          .insert({
+            user_id: userId,
+            extra_slots_purchased: 1,
+            max_slots: 2,
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
+      toast({ title: "Character slot gifted!", description: "Player now has an additional character slot." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to gift slot", description: err.message, variant: "destructive" });
+    },
+  });
+
   const filteredPlayers = players.filter(player =>
     player.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     player.user_id.toLowerCase().includes(searchQuery.toLowerCase())
