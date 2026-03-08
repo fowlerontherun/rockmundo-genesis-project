@@ -460,7 +460,9 @@ serve(async (req) => {
                   user_id,
                   band_id,
                   status
-                )
+                ),
+                is_b_side,
+                track_number
               )
             )
           )
