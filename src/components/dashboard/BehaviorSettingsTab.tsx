@@ -160,6 +160,14 @@ export function BehaviorSettingsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Stage Behavior Selector - top of page */}
+      <StageBehaviorSelector
+        currentBehavior={settings.stage_behavior || 'standard'}
+        unlockedBehaviors={unlockedBehaviors}
+        onSelect={(key) => updateSettings({ stage_behavior: key })}
+        isUpdating={isUpdating}
+      />
+
       {/* Risk Overview Card */}
       <Card>
         <CardHeader>
