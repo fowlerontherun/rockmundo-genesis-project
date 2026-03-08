@@ -204,7 +204,18 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const weatherImpact = getWeatherGigImpact(currentWeather, isOutdoorVenue);
   console.log(`[GigExecution] Weather: ${currentWeather} at ${cityName} (${isOutdoorVenue ? 'outdoor' : 'indoor'}) → attendance ${weatherImpact.attendanceMultiplier}x, merch ${weatherImpact.merchMultiplier}x`);
 
-  // Calculate actual attendance (with variance adjusted by gear reliability, weather, and fatigue)
+  // === FAN SENTIMENT ===
+  const fanSentimentScore = (band as any).fan_sentiment_score ?? 0;
+  const sentiment = getFanSentiment(fanSentimentScore);
+  console.log(`[GigExecution] Fan sentiment: ${sentiment.mood} (${sentiment.score}), ticket ${sentiment.ticketDemandMod}x, merch ${sentiment.merchDemandMod}x`);
+
+  // === MEDIA CYCLE ===
+  const mediaIntensity = (band as any).media_intensity ?? 0;
+  const mediaFatigue = (band as any).media_fatigue ?? 0;
+  const mediaCycle = getMediaCycleState(mediaIntensity, mediaFatigue);
+  console.log(`[GigExecution] Media cycle: ${mediaCycle.phase} (intensity ${mediaCycle.intensity}, fatigue ${mediaCycle.fatigueLevel}), coverage ${mediaCycle.coverageMultiplier}x`);
+
+  // Calculate actual attendance (with variance adjusted by gear reliability, weather, fatigue, and fan sentiment)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
   const riskVarianceExpansion = gearEffects.breakdownRiskPercent / 150;
   const attendanceVarianceRange = 0.3 + riskVarianceExpansion - gearEffects.reliabilityStability * 1.2;
@@ -213,7 +224,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const stabilityBias = gearEffects.reliabilityStability - gearEffects.breakdownRiskPercent / 200;
   const attendanceFromVariance = Math.max(0, 1 + varianceSwing + stabilityBias);
   const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
-  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier;
+  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier * sentiment.ticketDemandMod;
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
