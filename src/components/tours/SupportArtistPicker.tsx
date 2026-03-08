@@ -53,22 +53,33 @@ export function SupportArtistPicker({
     queryKey: ['support-artist-availability', tourDates],
     queryFn: async (): Promise<string[]> => {
       if (!tourDates.length) return [];
-      const { data: conflicts, error } = await (supabase
-        .from('player_scheduled_activities')
-        .select('profile_id')
-        .in('scheduled_date', tourDates)
-        .neq('status', 'cancelled') as any);
 
-      if (error || !conflicts?.length) return [];
+      // Check each tour date for scheduling conflicts
+      const allConflictProfileIds: string[] = [];
+      for (const date of tourDates.slice(0, 30)) {
+        const { data: conflicts } = await supabase
+          .from('player_scheduled_activities' as any)
+          .select('profile_id')
+          .eq('scheduled_date', date)
+          .neq('status', 'cancelled');
 
-      const conflictProfileIds = (conflicts as any[]).map((c: any) => c.profile_id);
+        if (conflicts) {
+          for (const c of conflicts as any[]) {
+            if (c.profile_id && !allConflictProfileIds.includes(c.profile_id)) {
+              allConflictProfileIds.push(c.profile_id);
+            }
+          }
+        }
+      }
 
-      const { data: conflictMembers, error: memberError } = await supabase
+      if (!allConflictProfileIds.length) return [];
+
+      const { data: conflictMembers } = await supabase
         .from('band_members')
-        .select('band_id, user_id')
-        .in('user_id', conflictProfileIds);
+        .select('band_id')
+        .in('user_id', allConflictProfileIds);
 
-      if (memberError || !conflictMembers?.length) return [];
+      if (!conflictMembers?.length) return [];
 
       return [...new Set(conflictMembers.map(m => m.band_id))];
     },
