@@ -445,16 +445,12 @@ export default function Employment() {
   const currentJob = currentEmployment?.jobs ?? null;
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Employment</h1>
-          <p className="text-sm text-muted-foreground">Find jobs to earn money while pursuing your music career</p>
-          {currentCityName && (
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> Currently in: <span className="font-medium">{currentCityName}</span>
-            </p>
-          )}
-        </div>
+    <PageLayout>
+        <PageHeader
+          title="Employment"
+          subtitle={currentCityName ? `Find jobs to earn money while pursuing your music career • Currently in: ${currentCityName}` : "Find jobs to earn money while pursuing your music career"}
+          icon={Briefcase}
+        />
 
         {activityStatus && (
           <Alert>

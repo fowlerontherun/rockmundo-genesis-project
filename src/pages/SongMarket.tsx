@@ -53,6 +53,6 @@ export default function SongMarket() {
           <PurchasedSongsTab userId={userId} />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

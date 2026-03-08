@@ -99,34 +99,21 @@ const StreamingPlatforms = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="space-y-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/music-hub")}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Music Hub
-        </Button>
+    <PageLayout>
+      <PageHeader
+        title="Streaming Platforms"
+        subtitle="Release your music and track performance across platforms"
+        icon={Disc}
+        backTo="/hub/music"
+        backLabel="Back to Music Hub"
+      />
 
-        <div className="flex items-center gap-3">
-          <Disc className="h-10 w-10 text-primary" />
-          <div>
-            <h1 className="text-4xl font-bold">Streaming Platforms</h1>
-            <p className="text-muted-foreground">
-              Release your music and track performance across platforms
-            </p>
-          </div>
-        </div>
-
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            For full release management including physical formats (CD, Vinyl), use the <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/release-manager')}>Release Manager</Button>
-          </AlertDescription>
-        </Alert>
-      </div>
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          For full release management including physical formats (CD, Vinyl), use the <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/release-manager')}>Release Manager</Button>
+        </AlertDescription>
+      </Alert>
 
       <Tabs defaultValue="platforms" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">

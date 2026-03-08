@@ -125,6 +125,6 @@ export default function InboxPage() {
           })}
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

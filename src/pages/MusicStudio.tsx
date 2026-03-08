@@ -131,7 +131,7 @@ const MusicStudio = () => {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   );
 };
 

@@ -83,6 +83,6 @@ export default function ReleaseManager() {
         onOpenChange={setShowCreateDialog}
         userId={userId}
       />
-    </div>
+    </PageLayout>
   );
 }

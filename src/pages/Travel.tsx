@@ -175,16 +175,12 @@ const Travel = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-2">
-          <Globe className="h-6 w-6 md:h-7 md:w-7 text-primary" />
-          {t('travel.title')}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
-        </p>
-      </header>
+    <PageLayout>
+      <PageHeader
+        title={t('travel.title')}
+        subtitle={t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
+        icon={Globe}
+      />
 
       {/* Current Location Card */}
       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">

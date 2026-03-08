@@ -88,7 +88,7 @@ const Finances = () => {
           <TransactionsList transactions={transactions} />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 };
 

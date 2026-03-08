@@ -81,7 +81,7 @@ const Education = () => {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+    </PageLayout>
   );
 };
 

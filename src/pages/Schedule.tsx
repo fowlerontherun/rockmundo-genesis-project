@@ -115,7 +115,7 @@ const Schedule = () => {
           ))}
         </Tabs>
       )}
-    </div>
+    </PageLayout>
   );
 };
 

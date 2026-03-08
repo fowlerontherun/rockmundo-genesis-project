@@ -101,25 +101,22 @@ const Lottery = () => {
   );
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Ticket className="h-6 w-6 text-primary" />
-            Weekly Lottery
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Pick 7 numbers + 1 bonus for a chance to win big!
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <Badge className="bg-primary/10 text-primary text-sm font-bold">
-            🏆 Jackpot: ${jackpotAmount.toLocaleString()}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            Balance: ${cash.toLocaleString()}
-          </Badge>
-        </div>
+    <PageLayout className="max-w-3xl">
+      <PageHeader
+        title="Weekly Lottery"
+        subtitle="Pick 7 numbers + 1 bonus for a chance to win big!"
+        icon={Ticket}
+        actions={
+          <div className="flex flex-col items-end gap-1">
+            <Badge className="bg-primary/10 text-primary text-sm font-bold">
+              🏆 Jackpot: ${jackpotAmount.toLocaleString()}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              Balance: ${cash.toLocaleString()}
+            </Badge>
+          </div>
+        }
+      />
       </div>
 
       <Countdown />

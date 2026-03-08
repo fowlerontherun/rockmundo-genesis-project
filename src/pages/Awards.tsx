@@ -125,7 +125,7 @@ export default function Awards() {
             </CardContent>
           </Card>
         )}
-      </header>
+      {/* end header section */}
 
       <Tabs defaultValue="active">
         <TabsList>

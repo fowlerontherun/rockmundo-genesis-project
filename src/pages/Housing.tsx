@@ -595,7 +595,7 @@ const Housing = () => {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 };
 

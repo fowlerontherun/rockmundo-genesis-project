@@ -13,6 +13,8 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
 import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
