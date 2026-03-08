@@ -617,6 +617,8 @@ const GigBooking = () => {
       <PageHeader
         title={t('gigs.title')}
         subtitle={t('gigs.bookGig', 'Book performances, grow your fanbase, and earn rewards.')}
+        backTo="/hub/band-live"
+        backLabel="Back to Band & Live"
         icon={Ticket}
         actions={
           band ? (

@@ -440,6 +440,8 @@ export default function Festivals() {
       <PageHeader
         title="Festivals"
         subtitle="Perform at major music festivals and gain exposure"
+        backTo="/hub/band-live"
+        backLabel="Back to Band & Live"
         icon={Music2}
       />
 

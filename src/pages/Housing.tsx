@@ -187,6 +187,8 @@ const Housing = () => {
       <PageHeader
         title="Housing"
         subtitle={activeCountry ? `Browse properties in ${activeCountry}` : "Select a country to view available properties"}
+        backTo="/hub/world-social"
+        backLabel="Back to World & Social"
         icon={Home}
       />
 

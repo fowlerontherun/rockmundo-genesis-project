@@ -83,6 +83,8 @@ export default function DikCok() {
         title="DikCok"
         subtitle="Create viral short-form videos and grow your fanbase"
         icon={Video}
+        backTo="/hub/world-social"
+        backLabel="Back to World & Social"
         actions={
           <div className="flex items-center gap-3">
             {userBands.length > 1 && (

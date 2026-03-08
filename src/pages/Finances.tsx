@@ -36,6 +36,8 @@ const Finances = () => {
       <PageHeader
         title="Financial Command Center"
         subtitle="Monitor personal and band finances, track investments, and explore funding pathways to keep your music dreams funded."
+        backTo="/hub/career-business"
+        backLabel="Back to Career & Business"
       />
 
       {/* Summary Cards */}

@@ -29,6 +29,8 @@ const Education = () => {
       <PageHeader
         title={t('education.title', 'Build your creative intelligence')}
         subtitle={t('education.subtitle', 'Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.')}
+        backTo="/hub/music"
+        backLabel="Back to Music Hub"
       />
 
       <Tabs defaultValue={defaultValue} className="mt-6 sm:mt-8 space-y-6">

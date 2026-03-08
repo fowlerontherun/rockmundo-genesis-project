@@ -71,6 +71,8 @@ const MusicStudio = () => {
       <PageHeader
         title="Music Hub"
         subtitle="Your central command center for all things music creation. From writing and recording to releasing and performing, manage every aspect of your musical journey."
+        backTo="/hub/music"
+        backLabel="Back to Music Hub"
         icon={Sparkles}
       />
 

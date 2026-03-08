@@ -66,6 +66,8 @@ export default function InboxPage() {
       <PageHeader
         title="Inbox"
         subtitle={hasUnread ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : undefined}
+        backTo="/dashboard"
+        backLabel="Back to Dashboard"
         icon={InboxIcon}
         actions={
           hasUnread ? (
