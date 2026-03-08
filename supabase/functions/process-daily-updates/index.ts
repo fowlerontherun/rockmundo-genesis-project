@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     // Process bands - award daily fame and fans with configurable rates
     const { data: bands, error: bandsError } = await supabase
       .from('bands')
-      .select('id, fame, weekly_fans, total_fans, popularity, cohesion_score, days_together, chemistry_level, performance_count, created_at, status')
+      .select('id, fame, weekly_fans, total_fans, popularity, cohesion_score, days_together, chemistry_level, performance_count, created_at, status, morale')
 
     if (bandsError) throw bandsError
 
