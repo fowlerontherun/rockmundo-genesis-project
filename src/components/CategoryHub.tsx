@@ -14,6 +14,7 @@ interface HubTile {
   path: string;
   description?: string;
   imagePrompt?: string;
+  tileImageKey?: string;
 }
 
 interface TileGroup {
