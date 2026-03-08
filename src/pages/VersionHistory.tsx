@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.002",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Navigation simplified to hub headings only — removed all dropdown menus and collapsible sub-items from both sidebar and horizontal nav. Each section heading now navigates directly to its hub page" },
+      { type: 'feature', description: "Hub tiles now support AI-generated images via Lovable AI (gemini-2.5-flash-image). Images are generated on-demand and cached in Supabase storage for instant loading on return visits" },
+      { type: 'improvement', description: "Hub tile grid reduced from 5 columns to 4 on large screens to accommodate image cards. Text truncation added to prevent overflow on tile labels" },
+      { type: 'improvement', description: "Layout fit fixes: consistent card sizing, proper aspect ratios on image tiles, and text overflow prevention throughout hub pages" },
+    ],
+  },
+  {
     version: "1.1.001",
     date: "2026-03-08",
     changes: [

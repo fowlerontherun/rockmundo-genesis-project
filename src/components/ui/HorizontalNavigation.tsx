@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -18,106 +17,38 @@ import { RMRadioPlayer } from "@/components/radio/RMRadioPlayer";
 import { VersionHeader } from "@/components/VersionHeader";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
-  Home, Users, Calendar, Music, Music4, TrendingUp, Settings, LogOut,
-  ShoppingCart, Trophy, MapPin, User, Building2, Share2, Heart, HeartPulse,
-  Play, Menu, Globe, Mic, GraduationCap, DollarSign, Plane, ListMusic,
-  Megaphone, Store, Guitar, Award, Briefcase, Newspaper, Radio, History,
-  Video, Disc, Target, Sparkles, Twitter, UserPlus, HandHeart, Handshake,
-  Building, Star, BookOpen, Wrench, Bus, Tv, Film, Inbox, Gamepad2, Palette, Scissors,
+  Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
+  Inbox, History,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-type NavItem = {
+type HubLink = {
   icon: LucideIcon;
   labelKey: string;
   path: string;
-  search?: string;
-  badge?: number;
-  onClick?: () => void;
-};
-
-type NavSection = {
-  titleKey: string;
-  hubPath?: string;
-  items: NavItem[];
 };
 
 const HorizontalNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { currentCity } = useGameData();
   const { toast } = useToast();
   const { t } = useTranslation();
   const { data: unreadInboxCount } = useUnreadInboxCount();
   const { isAdmin } = useUserRole();
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [radioOpen, setRadioOpen] = useState(false);
-  const dropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
-
-  const navSections: NavSection[] = [
-    {
-      titleKey: "nav.home",
-      hubPath: "/dashboard",
-      items: [
-        { icon: Home, labelKey: "nav.dashboard", path: "/dashboard" },
-        { icon: Inbox, labelKey: "nav.inbox", path: "/inbox", badge: unreadInboxCount || undefined },
-        { icon: Calendar, labelKey: "nav.schedule", path: "/schedule" },
-        { icon: Newspaper, labelKey: "nav.todaysNews", path: "/todays-news" },
-        { icon: BookOpen, labelKey: "nav.journal", path: "/journal" },
-        { icon: Radio, labelKey: "nav.radioPlayer", path: "#", onClick: () => setRadioOpen(true) },
-      ],
-    },
-    {
-      titleKey: "nav.music",
-      hubPath: "/hub/music",
-      items: [
-        { icon: Music, labelKey: "nav.songwriting", path: "/songwriting" },
-        { icon: Disc, labelKey: "nav.recording", path: "/recording-studio" },
-        { icon: Music4, labelKey: "nav.releaseManager", path: "/release-manager" },
-        { icon: Radio, labelKey: "nav.streaming", path: "/streaming-platforms" },
-      ],
-    },
-    {
-      titleKey: "nav.bandLive",
-      hubPath: "/hub/band-live",
-      items: [
-        { icon: Users, labelKey: "nav.bandManager", path: "/band" },
-        { icon: Calendar, labelKey: "nav.gigs", path: "/gigs" },
-        { icon: Music, labelKey: "nav.rehearsals", path: "/rehearsals" },
-        { icon: Calendar, labelKey: "nav.festivals", path: "/festivals" },
-      ],
-    },
-    {
-      titleKey: "nav.worldSocial",
-      hubPath: "/hub/world-social",
-      items: [
-        { icon: Globe, labelKey: "nav.cities", path: "/cities" },
-        { icon: Plane, labelKey: "nav.travel", path: "/travel" },
-        { icon: Twitter, labelKey: "nav.twaater", path: "/twaater" },
-        { icon: Heart, labelKey: "nav.relationships", path: "/relationships" },
-      ],
-    },
-    {
-      titleKey: "nav.careerBusiness",
-      hubPath: "/hub/career-business",
-      items: [
-        { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
-        { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
-        { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies" },
-        { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
-      ],
-    },
-    {
-      titleKey: "nav.admin",
-      items: [
-        { icon: Settings, labelKey: "nav.adminPanel", path: "/admin" },
-      ],
-    },
+  const hubLinks: HubLink[] = [
+    { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: Music, labelKey: "nav.music", path: "/hub/music" },
+    { icon: Users, labelKey: "nav.bandLive", path: "/hub/band-live" },
+    { icon: Globe, labelKey: "nav.worldSocial", path: "/hub/world-social" },
+    { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
+    { icon: User, labelKey: "nav.character", path: "/hub/character" },
   ];
+
+  const adminLink: HubLink = { icon: Settings, labelKey: "nav.admin", path: "/admin" };
 
   const isActive = (path: string) => {
     if (location.pathname === path) return true;
@@ -125,13 +56,8 @@ const HorizontalNavigation = () => {
     return location.pathname.startsWith(`${path}/`);
   };
 
-  const sectionHasActive = (section: NavSection) => {
-    return section.items.some((item) => isActive(item.path));
-  };
-
   const handleNavigation = (path: string) => {
     navigate(path);
-    setOpenDropdown(null);
     setMobileOpen(false);
   };
 
@@ -141,31 +67,7 @@ const HorizontalNavigation = () => {
     toast({ title: t('auth.logoutSuccess'), description: t('auth.loggedOutMessage') });
   };
 
-  const handleMouseEnter = (key: string) => {
-    if (dropdownTimeout.current) clearTimeout(dropdownTimeout.current);
-    setOpenDropdown(key);
-  };
-
-  const handleMouseLeave = () => {
-    dropdownTimeout.current = setTimeout(() => setOpenDropdown(null), 250);
-  };
-
-  const handleToggle = (key: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setOpenDropdown((prev) => (prev === key ? null : key));
-  };
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-nav-dropdown]')) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, []);
+  const allLinks = isAdmin() ? [...hubLinks, adminLink] : hubLinks;
 
   return (
     <>
@@ -190,146 +92,38 @@ const HorizontalNavigation = () => {
           </div>
         </div>
 
-        {/* Horizontal nav sections */}
-        <div className="flex items-center px-2 h-10 relative z-[9999]">
+        {/* Horizontal nav - headings only, no dropdowns */}
+        <div className="flex items-center px-2 h-10">
           {/* Home stays left */}
-          {navSections.filter(s => s.titleKey === 'nav.home').map((section) => {
-            const sectionKey = section.titleKey;
-            const isOpen = openDropdown === sectionKey;
-            const hasActive = sectionHasActive(section);
+          <button
+            className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap text-yellow-400 ${
+              isActive("/dashboard") ? "bg-primary/10" : "hover:bg-accent"
+            }`}
+            onClick={() => handleNavigation("/dashboard")}
+          >
+            {t("nav.home")}
+          </button>
 
-            return (
-              <div
-                key={sectionKey}
-                className="relative"
-                data-nav-dropdown
-                onMouseEnter={() => handleMouseEnter(sectionKey)}
-                onMouseLeave={handleMouseLeave}
+          {/* Remaining hub links centered */}
+          <div className="flex-1 flex items-center justify-center gap-1">
+            {allLinks.filter(l => l.path !== "/dashboard").map((link) => (
+              <button
+                key={link.path}
+                className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
+                  isActive(link.path)
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+                onClick={() => handleNavigation(link.path)}
               >
-                <button
-                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap text-yellow-400 ${
-                    hasActive ? "bg-primary/10" : "hover:bg-accent"
-                  }`}
-                  onClick={(e) => {
-                    if (section.hubPath) {
-                      handleNavigation(section.hubPath);
-                    } else {
-                      handleToggle(sectionKey, e);
-                    }
-                  }}
-                >
-                  {t(section.titleKey)}
-                </button>
-
-                {isOpen && (
-                  <div
-                    className="absolute top-full left-0 mt-0.5 min-w-[200px] bg-popover border border-border rounded-md shadow-lg py-1 z-[9999]"
-                    data-nav-dropdown
-                    onMouseEnter={() => handleMouseEnter(sectionKey)}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(item.path);
-                      return (
-                        <button
-                          key={item.path}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                            active
-                              ? "bg-accent text-accent-foreground"
-                              : "text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                          }`}
-                          onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path)}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          <span>{t(item.labelKey)}</span>
-                          {item.badge && item.badge > 0 && (
-                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Remaining sections centered */}
-          <div className="flex-1 flex items-center justify-center">
-          {navSections.filter(s => s.titleKey !== 'nav.home' && (s.titleKey !== 'nav.admin' || isAdmin())).map((section) => {
-            const sectionKey = section.titleKey;
-            const isOpen = openDropdown === sectionKey;
-            const hasActive = sectionHasActive(section);
-
-            return (
-              <div
-                key={sectionKey}
-                className="relative"
-                data-nav-dropdown
-                onMouseEnter={() => handleMouseEnter(sectionKey)}
-                onMouseLeave={handleMouseLeave}
-              >
-                <button
-                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
-                    hasActive
-                      ? "text-primary bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                  onClick={(e) => {
-                    if (section.hubPath) {
-                      handleNavigation(section.hubPath);
-                    } else {
-                      handleToggle(sectionKey, e);
-                    }
-                  }}
-                >
-                  {t(section.titleKey)}
-                </button>
-
-                {/* Dropdown */}
-                {isOpen && (
-                  <div
-                    className="absolute top-full left-0 mt-0.5 min-w-[200px] bg-popover border border-border rounded-md shadow-lg py-1 z-[9999]"
-                    data-nav-dropdown
-                    onMouseEnter={() => handleMouseEnter(sectionKey)}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(item.path);
-                      return (
-                        <button
-                          key={item.path}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                            active
-                              ? "bg-accent text-accent-foreground"
-                              : "text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                          }`}
-                          onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path)}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          <span>{t(item.labelKey)}</span>
-                          {item.badge && item.badge > 0 && (
-                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                {t(link.labelKey)}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Mobile: use sheet-based nav (same as sidebar) */}
+      {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-3 py-2 h-12">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -347,38 +141,23 @@ const HorizontalNavigation = () => {
                 </div>
               </div>
               <nav className="p-3 space-y-1">
-                {navSections.filter(s => s.titleKey !== 'nav.admin' || isAdmin()).map((section) => (
-                  <div key={section.titleKey} className="mb-3">
-                    <h3
-                      className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider px-3 py-1 cursor-pointer hover:text-primary transition-colors"
-                      onClick={() => section.hubPath && handleNavigation(section.hubPath)}
+                {allLinks.map((link) => {
+                  const Icon = link.icon;
+                  const active = isActive(link.path);
+                  return (
+                    <Button
+                      key={link.path}
+                      variant={active ? "secondary" : "ghost"}
+                      className={`w-full justify-start gap-3 ${
+                        active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent"
+                      }`}
+                      onClick={() => handleNavigation(link.path)}
                     >
-                      {t(section.titleKey)}
-                    </h3>
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(item.path);
-                      return (
-                        <Button
-                          key={item.path}
-                          variant={active ? "secondary" : "ghost"}
-                          className={`w-full justify-start gap-3 ${
-                            active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent"
-                          }`}
-                          onClick={() => item.onClick ? item.onClick() : handleNavigation(item.path)}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {t(item.labelKey)}
-                          {item.badge && item.badge > 0 && (
-                            <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </span>
-                          )}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                ))}
+                      <Icon className="h-4 w-4" />
+                      {t(link.labelKey)}
+                    </Button>
+                  );
+                })}
               </nav>
               <div className="p-3 border-t border-sidebar-border">
                 <Button variant="ghost" className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
@@ -399,7 +178,7 @@ const HorizontalNavigation = () => {
         </div>
       </div>
 
-      {/* Mobile bottom nav shortcuts */}
+      {/* Mobile bottom nav shortcuts - keep as-is */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg safe-area-bottom">
         <div className="flex justify-around items-center py-1.5 px-1">
           {[
