@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.953",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Expanded Fan Sentiment model: Added radioEngagementMod (0.7–1.3x), videoViewsMod (0.6–1.4x), and followerGrowthMod (0.6–1.4x) to FanSentiment interface" },
+      { type: 'improvement', description: "Fan Sentiment Widget now shows all 7 impact categories: Merch, Tickets, Streams, Radio, Video, Followers, and Viral chance" },
+      { type: 'improvement', description: "Widget uses distinct icon colors per category for quick visual scanning" },
+    ],
+  },
+  {
     version: "1.0.952",
     date: "2026-03-08",
     changes: [
