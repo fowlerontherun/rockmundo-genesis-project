@@ -31,6 +31,9 @@ import { calculateBandGenreBonus } from "./genreSkillBonus";
 import { getEncoreFameBonus, updateSongsAfterGig } from "./songFamePopularity";
 import { getBehaviorModifiers } from "./stageBehaviors";
 import { checkAndGrantBehaviorUnlocks } from "./behaviorUnlockChecker";
+import { calculateConsecutiveGigs, getFatigueState, type FatigueState } from "./tourFatigue";
+import { getWeatherGigImpact, type WeatherGigImpact } from "./weatherGigImpact";
+import type { WeatherCondition } from "./weatherSystem";
 
 interface GigExecutionData {
   gigId: string;
@@ -56,7 +59,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   }
 
   // Fetch all necessary data in parallel
-  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes] = await Promise.all([
+  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes, recentGigsRes, venueInfoRes] = await Promise.all([
     supabase.from('band_stage_equipment').select('*').eq('band_id', bandId),
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
@@ -68,6 +71,10 @@ export async function executeGigPerformance(data: GigExecutionData) {
       if (!r.data?.leader_id) return { data: null };
       return supabase.from('player_behavior_settings').select('stage_behavior').eq('user_id', r.data.leader_id).maybeSingle();
     }),
+    // Fetch recent gigs for tour fatigue calculation
+    supabase.from('gigs').select('scheduled_date').eq('band_id', bandId).eq('status', 'completed').order('scheduled_date', { ascending: false }).limit(10),
+    // Fetch venue info for weather impact (outdoor check)
+    supabase.from('gigs').select('venue_id, venues!gigs_venue_id_fkey(venue_type, city_id, cities!venues_city_id_fkey(name))').eq('id', gigId).single(),
   ]);
 
   const equipment = equipmentRes.data || [];
@@ -174,7 +181,27 @@ export async function executeGigPerformance(data: GigExecutionData) {
   // Calculate chemistry effects for this performance
   const chemistryEffects = calculateChemistryEffects(bandChemistry);
 
-  // Calculate actual attendance (with variance adjusted by gear reliability and hype)
+  // === TOUR FATIGUE ===
+  const recentGigDates = (recentGigsRes.data || [])
+    .map((g: any) => new Date(g.scheduled_date))
+    .filter((d: Date) => !isNaN(d.getTime()));
+  const consecutiveGigs = calculateConsecutiveGigs(recentGigDates);
+  const fatigueState = getFatigueState(consecutiveGigs);
+  console.log(`[GigExecution] Tour fatigue: ${fatigueState.fatigueLevel} (${consecutiveGigs} consecutive gigs, perf ${fatigueState.performanceModifier}x)`);
+
+  // === WEATHER IMPACT ===
+  const venueInfo = venueInfoRes.data;
+  const isOutdoorVenue = (venueInfo?.venues as any)?.venue_type === 'outdoor' || (venueInfo?.venues as any)?.venue_type === 'festival';
+  // Deterministic weather from city seed (simplified — use sunny as fallback)
+  const weatherConditions: WeatherCondition[] = ["sunny", "cloudy", "rainy", "stormy", "snowy"];
+  const cityName = (venueInfo?.venues as any)?.cities?.name || "Unknown";
+  const daySeed = Math.floor(Date.now() / 86400000);
+  const weatherIdx = (cityName.length * 7 + daySeed) % weatherConditions.length;
+  const currentWeather = weatherConditions[weatherIdx];
+  const weatherImpact = getWeatherGigImpact(currentWeather, isOutdoorVenue);
+  console.log(`[GigExecution] Weather: ${currentWeather} at ${cityName} (${isOutdoorVenue ? 'outdoor' : 'indoor'}) → attendance ${weatherImpact.attendanceMultiplier}x, merch ${weatherImpact.merchMultiplier}x`);
+
+  // Calculate actual attendance (with variance adjusted by gear reliability, weather, and fatigue)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
   const riskVarianceExpansion = gearEffects.breakdownRiskPercent / 150;
   const attendanceVarianceRange = 0.3 + riskVarianceExpansion - gearEffects.reliabilityStability * 1.2;
@@ -183,7 +210,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const stabilityBias = gearEffects.reliabilityStability - gearEffects.breakdownRiskPercent / 200;
   const attendanceFromVariance = Math.max(0, 1 + varianceSwing + stabilityBias);
   const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
-  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier;
+  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier;
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
@@ -232,6 +259,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
     
     // Apply chemistry bonus to performance score
     let chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
+    
+    // Apply tour fatigue modifier
+    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier;
 
     // Apply encore fame bonus (last song = encore)
     const isEncore = index === setlistSongs.length - 1;
@@ -272,8 +302,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
   );
 
   const merchSales = {
-    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier),
-    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier))
+    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier),
+    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier))
   };
 
   // Calculate costs
