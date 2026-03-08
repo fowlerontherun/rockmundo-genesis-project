@@ -113,16 +113,19 @@ export async function applyVideoImpactToSong(
   // Add hype to the song's release
   const { data: release } = await supabase
     .from("song_releases")
-    .select("id, hype")
+    .select("id, total_streams")
     .eq("song_id", songId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (release) {
+    // Boost streams as proxy for video hype impact
+    const currentStreams = release.total_streams || 0;
+    const streamBoost = Math.round(currentStreams * (impact.streamingBoost / 100));
     await supabase
       .from("song_releases")
-      .update({ hype: (release.hype || 0) + impact.hypeGenerated })
+      .update({ total_streams: currentStreams + streamBoost } as any)
       .eq("id", release.id);
   }
 }

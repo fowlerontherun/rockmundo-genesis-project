@@ -100,13 +100,13 @@ export async function checkCollaborationEligibility(
   const userIds2 = members2.map(m => m.user_id).filter(Boolean) as string[];
 
   // Check if any cross-band friendships exist
-  const { data: friendships } = await supabase
+  const { data: friendships } = await (supabase
     .from("friendships")
     .select("id")
     .in("user_id", userIds1)
     .in("friend_id", userIds2)
     .eq("status", "accepted")
-    .limit(1);
+    .limit(1) as any);
 
   if (!friendships?.length) {
     return { eligible: false, reason: "No friendships between band members — get to know each other first!" };
