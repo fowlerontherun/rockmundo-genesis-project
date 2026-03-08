@@ -8,6 +8,8 @@ import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/useTranslation";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const Schedule = () => {
   const { t } = useTranslation();
@@ -20,28 +22,28 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Schedule</h1>
-          <p className="text-sm text-muted-foreground">Plan and manage your activities</p>
-        </div>
-        
-        <div className="flex gap-2 flex-wrap">
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>
-            Songwriting
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>
-            Performance
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>
-            Education
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>
-            Life
-          </Button>
-        </div>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Schedule"
+        subtitle="Plan and manage your activities"
+        icon={Calendar}
+        actions={
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>
+              Songwriting
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>
+              Performance
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>
+              Education
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>
+              Life
+            </Button>
+          </div>
+        }
+      />
 
       <GigLocationWarning />
       
@@ -113,7 +115,7 @@ const Schedule = () => {
           ))}
         </Tabs>
       )}
-    </div>
+    </PageLayout>
   );
 };
 

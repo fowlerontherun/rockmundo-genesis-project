@@ -29,6 +29,8 @@ import {
   Loader2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const performanceSlots = [
   { value: "opening", label: "Opening Act (6:00 PM)" },
@@ -434,19 +436,12 @@ export default function Festivals() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Music2 className="h-10 w-10 text-primary" />
-          <div>
-            <h1 className="text-4xl font-bold">Festivals</h1>
-            <p className="text-muted-foreground">
-              Perform at major music festivals and gain exposure
-            </p>
-          </div>
-        </div>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Festivals"
+        subtitle="Perform at major music festivals and gain exposure"
+        icon={Music2}
+      />
 
       <Tabs defaultValue="upcoming" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
@@ -655,6 +650,6 @@ export default function Festivals() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

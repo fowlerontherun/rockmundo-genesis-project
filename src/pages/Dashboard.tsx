@@ -13,6 +13,8 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
 import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
@@ -250,16 +252,11 @@ const Dashboard = () => {
       }
     });
   };
-  return <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">{t('dashboard.title')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('dashboard.welcome')}, {(profile as any)?.display_name || (profile as any)?.username || "Player"}
-          </p>
-        </div>
-        
-      </div>
+  return <PageLayout>
+      <PageHeader
+        title={t('dashboard.title')}
+        subtitle={`${t('dashboard.welcome')}, ${(profile as any)?.display_name || (profile as any)?.username || "Player"}`}
+      />
 
       <DebtWarningBanner />
       <GigLocationWarning />
@@ -631,6 +628,6 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>;
+    </PageLayout>;
 };
 export default Dashboard;

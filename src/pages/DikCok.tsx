@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, Trophy } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
@@ -76,30 +78,31 @@ export default function DikCok() {
   const myBandVideos = videos?.filter(v => v.band_id === effectiveBandId) || [];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-4xl font-bold flex items-center gap-3"><Video className="h-10 w-10" />DikCok</h1>
-          <p className="text-muted-foreground mt-1">Create viral short-form videos and grow your fanbase</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {userBands.length > 1 && (
-            <Select value={effectiveBandId || ""} onValueChange={setSelectedBandId}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select band" />
-              </SelectTrigger>
-              <SelectContent>
-                {userBands.map((m) => (
-                  <SelectItem key={m.band_id} value={m.band_id}>
-                    {(m.bands as any)?.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} bandGenre={selectedBand.genre} />}
-        </div>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="DikCok"
+        subtitle="Create viral short-form videos and grow your fanbase"
+        icon={Video}
+        actions={
+          <div className="flex items-center gap-3">
+            {userBands.length > 1 && (
+              <Select value={effectiveBandId || ""} onValueChange={setSelectedBandId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select band" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userBands.map((m) => (
+                    <SelectItem key={m.band_id} value={m.band_id}>
+                      {(m.bands as any)?.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} bandGenre={selectedBand.genre} />}
+          </div>
+        }
+      />
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -169,6 +172,6 @@ export default function DikCok() {
           {selectedBand && <DikCokBandAnalytics band={selectedBand as any} videos={myBandVideos} />}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

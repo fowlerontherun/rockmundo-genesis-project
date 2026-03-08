@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp, PartyPopper } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AwardCeremonyExperience } from "@/components/awards/AwardCeremonyExperience";
@@ -101,16 +103,13 @@ export default function Awards() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <PageLayout>
       {/* Header */}
-      <header className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Trophy className="h-8 w-8 text-amber-500" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Music Awards</h1>
-            <p className="text-muted-foreground">Compete for glory at the world's biggest music ceremonies</p>
-          </div>
-        </div>
+      <PageHeader
+        title="Music Awards"
+        subtitle="Compete for glory at the world's biggest music ceremonies"
+        icon={Trophy}
+      />
 
         {/* Player wins summary */}
         {wins.length > 0 && (
@@ -126,7 +125,7 @@ export default function Awards() {
             </CardContent>
           </Card>
         )}
-      </header>
+      {/* end header section */}
 
       <Tabs defaultValue="active">
         <TabsList>
@@ -424,7 +423,7 @@ export default function Awards() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }
 

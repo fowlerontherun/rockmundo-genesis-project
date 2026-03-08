@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Music2, TrendingUp, DollarSign } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { useStreaming } from "@/hooks/useStreaming";
 import { useReleasedSongs } from "@/hooks/useReleasedSongs";
@@ -48,24 +50,20 @@ export default function StreamingNew() {
   const totalRevenue = analytics?.reduce((sum, a) => sum + (a.daily_revenue || 0), 0) || 0;
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/hub/music")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+    <PageLayout>
+      <PageHeader
+        title="Streaming Platforms"
+        subtitle="Release and track your music"
+        icon={Music2}
+        backTo="/hub/music"
+        backLabel="Back to Music Hub"
+        actions={
+          <Button size="lg" onClick={() => setReleaseDialogOpen(true)}>
+            <Music2 className="h-4 w-4 mr-2" />
+            Release Song
           </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Streaming Platforms</h1>
-            <p className="text-sm text-muted-foreground">Release and track your music</p>
-          </div>
-        </div>
-        
-        <Button size="lg" onClick={() => setReleaseDialogOpen(true)}>
-          <Music2 className="h-4 w-4 mr-2" />
-          Release Song
-        </Button>
-      </div>
+        }
+      />
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
         <Card>
@@ -258,6 +256,6 @@ export default function StreamingNew() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

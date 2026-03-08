@@ -14,6 +14,8 @@ import {
   Shield, Zap, Star, Crown, AlertCircle,
   UserPlus, MessageSquare, Gift, Handshake,
 } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { InteractionModal, type InteractionOption, type InteractionResult } from "@/components/social/InteractionModal";
 import { useCharacterRelationships, useLogInteraction } from "@/hooks/useCharacterRelationships";
@@ -278,27 +280,22 @@ export default function RelationshipsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      {/* Page Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-3">
-            <Heart className="h-6 w-6 md:h-7 md:w-7 text-social-love" />
-            Social &amp; Relationships
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your connections, track chemistry, and navigate the drama of the music world.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {friendships.filter(f => f.friendship.status === "accepted").length} friends
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {relationships.length} connections
-          </Badge>
-        </div>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Social & Relationships"
+        subtitle="Manage your connections, track chemistry, and navigate the drama of the music world."
+        icon={Heart}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {friendships.filter(f => f.friendship.status === "accepted").length} friends
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {relationships.length} connections
+            </Badge>
+          </div>
+        }
+      />
 
       {/* Main Tabs */}
       <Tabs defaultValue="friends" className="space-y-6">
@@ -863,6 +860,6 @@ export default function RelationshipsPage() {
         onSelectOption={handleInteractionSelect}
         isProcessing={logInteraction.isPending}
       />
-    </div>
+    </PageLayout>
   );
 }

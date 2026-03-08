@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { BrowseAuctionsTab } from "@/components/marketplace/BrowseAuctionsTab";
 import { MyAuctionListingsTab } from "@/components/marketplace/MyAuctionListingsTab";
@@ -22,26 +24,15 @@ export default function SongMarket() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="space-y-4 mb-8">
-        <Button variant="ghost" onClick={() => navigate("/music")} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Music Hub
-        </Button>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ShoppingBag className="h-10 w-10 text-primary" />
-            <div>
-              <h1 className="text-4xl font-bold">Song Marketplace</h1>
-              <p className="text-muted-foreground">
-                Buy, sell, and auction original songs. Purchased songs cannot be resold.
-              </p>
-            </div>
-          </div>
-          <CreateListingTab userId={userId} />
-        </div>
-      </div>
+    <PageLayout wide>
+      <PageHeader
+        title="Song Marketplace"
+        subtitle="Buy, sell, and auction original songs. Purchased songs cannot be resold."
+        icon={ShoppingBag}
+        backTo="/hub/music"
+        backLabel="Back to Music Hub"
+        actions={<CreateListingTab userId={userId} />}
+      />
 
       <Tabs defaultValue="browse" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
@@ -62,6 +53,6 @@ export default function SongMarket() {
           <PurchasedSongsTab userId={userId} />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

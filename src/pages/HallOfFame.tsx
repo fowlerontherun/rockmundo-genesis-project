@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy, Star, DollarSign, Music, Mic2, Calendar, Medal, Crown, Award } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -53,18 +55,12 @@ export default function HallOfFame() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="flex items-center justify-center gap-3">
-          <Trophy className="h-10 w-10 text-warning" />
-          <h1 className="text-4xl font-bold">Hall of Fame</h1>
-          <Trophy className="h-10 w-10 text-warning" />
-        </div>
-        <p className="text-muted-foreground">
-          Legendary musicians who've left their mark on Rockmundo
-        </p>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Hall of Fame"
+        subtitle="Legendary musicians who've left their mark on Rockmundo"
+        icon={Trophy}
+      />
 
       {/* Sort Tabs */}
       <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as SortType)} className="w-full">
@@ -177,6 +173,6 @@ export default function HallOfFame() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

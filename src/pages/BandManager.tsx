@@ -24,6 +24,8 @@ import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
 import { FameFansOverview } from '@/components/fame/FameFansOverview';
 import { Users, Music, Star, Library } from 'lucide-react';
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
@@ -222,7 +224,7 @@ export default function BandManager() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
+    <PageLayout>
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           {/* Band Info with Logo */}
@@ -394,6 +396,6 @@ export default function BandManager() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

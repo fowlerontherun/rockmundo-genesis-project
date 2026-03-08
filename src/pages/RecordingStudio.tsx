@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,22 +97,20 @@ export default function RecordingStudio() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-2">
-            <Music className="h-6 w-6 md:h-7 md:w-7 text-primary flex-shrink-0" />
-            <span className="truncate">{t('recording.title')}</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
-          </p>
-        </div>
-        <Button onClick={() => setWizardOpen(true)} size="default" className="w-full sm:w-auto flex-shrink-0">
-          <Plus className="h-5 w-5 mr-2" />
-          {t('recording.startSession', 'New Recording')}
-        </Button>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title={t('recording.title')}
+        subtitle={t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
+        icon={Music}
+        backTo="/hub/music"
+        backLabel="Back to Music Hub"
+        actions={
+          <Button onClick={() => setWizardOpen(true)} size="default" className="w-full sm:w-auto flex-shrink-0">
+            <Plus className="h-5 w-5 mr-2" />
+            {t('recording.startSession', 'New Recording')}
+          </Button>
+        }
+      />
 
       {!currentCityId && (
         <Card className="bg-yellow-500/10 border-yellow-500/20">
@@ -270,6 +270,6 @@ export default function RecordingStudio() {
           songTitle={selectedSession.songs?.title || "Unknown Song"}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }

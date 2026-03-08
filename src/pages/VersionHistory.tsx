@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.001",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Migrated 25+ pages to use shared PageLayout and PageHeader components: Dashboard, Songwriting, Recording Studio, Gig Booking, Employment, Finances, Travel, Relationships, Band Manager, Merchandise, Schedule, Release Manager, Streaming, Awards, Housing, Education, Lottery, DikCok, Song Market, Streaming Platforms, Hall of Fame, Record Label, Festivals, Music Hub, and Inbox" },
+      { type: 'improvement', description: "Standardized all page headers from mixed text-3xl/text-4xl sizes to consistent text-2xl md:text-3xl font-oswald via PageHeader component" },
+      { type: 'improvement', description: "Added back-to-hub navigation on sub-pages (Recording Studio, Release Manager, Streaming, Song Market, Streaming Platforms) via PageHeader backTo prop" },
+      { type: 'improvement', description: "Single point of control: changing PageLayout or PageHeader now updates layout/headers across all 25+ migrated pages simultaneously" },
+    ],
+  },
+  {
     version: "1.1.000",
     date: "2026-03-08",
     changes: [

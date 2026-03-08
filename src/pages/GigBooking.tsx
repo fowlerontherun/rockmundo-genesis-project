@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users } from 'lucide-react';
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -611,22 +613,23 @@ const GigBooking = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">{t('gigs.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('gigs.bookGig', 'Book performances, grow your fanbase, and earn rewards.')}</p>
-        </div>
-        {band ? (
-          <Badge variant="secondary" className="w-fit">
-            {t('band.title', 'Managing gigs for')} {band.name}
-          </Badge>
-        ) : (
-          <Button asChild variant="outline">
-            <Link to="/band">{t('band.createBand')}</Link>
-          </Button>
-        )}
-      </div>
+    <PageLayout>
+      <PageHeader
+        title={t('gigs.title')}
+        subtitle={t('gigs.bookGig', 'Book performances, grow your fanbase, and earn rewards.')}
+        icon={Ticket}
+        actions={
+          band ? (
+            <Badge variant="secondary" className="w-fit">
+              {t('band.title', 'Managing gigs for')} {band.name}
+            </Badge>
+          ) : (
+            <Button asChild variant="outline">
+              <Link to="/band">{t('band.createBand')}</Link>
+            </Button>
+          )
+        }
+      />
 
       <Tabs defaultValue="book" className="space-y-4">
         <TabsList>
@@ -984,7 +987,7 @@ const GigBooking = () => {
           initialDate={getNextAvailableDateForVenue(bookingVenue.id)}
         />
       )}
-    </div>
+    </PageLayout>
   );
 };
 

@@ -40,6 +40,8 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -830,14 +832,12 @@ const Merchandise = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Merchandise Operations</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage {bandName}&apos;s merch catalogue, monitor sell-through, and prep your next drop without leaving the control
-          room.
-        </p>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Merchandise Operations"
+        subtitle={`Manage ${bandName}'s merch catalogue, monitor sell-through, and prep your next drop without leaving the control room.`}
+        icon={Shirt}
+      />
 
       <Tabs
         value={activeTab}
@@ -1465,7 +1465,7 @@ const Merchandise = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 };
 
