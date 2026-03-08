@@ -264,7 +264,13 @@ function calculateMatchScore(entity: SponsorshipEntity, brand: SponsorshipBrand)
   const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200; // 0 to 1
   const repMod = 0.3 + repT * 1.2; // 0.3x toxic → 1.5x iconic
 
-  return brandWeight * (1 + fame / 5000) * (1 + momentum / 100) * repMod;
+  // === FAN SENTIMENT → SPONSORSHIP ATTRACTIVENESS (v1.0.988) ===
+  // Brands want bands with engaged, positive fanbases for better campaign ROI
+  const sentScore = (entity.bands as any)?.fan_sentiment_score ?? 0;
+  const sentT = (Math.max(-100, Math.min(100, sentScore)) + 100) / 200;
+  const sentMod = parseFloat((0.7 + sentT * 0.6).toFixed(2)); // 0.7x–1.3x
+
+  return brandWeight * (1 + fame / 5000) * (1 + momentum / 100) * repMod * sentMod;
 }
 
 function normalizeBrandWeight(size: string, wealthScore: number): number {
