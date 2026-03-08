@@ -116,7 +116,7 @@ const StreamingPlatforms = () => {
       </Alert>
 
       <Tabs defaultValue="platforms" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="platforms" className="flex items-center gap-1">
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">Platforms</span>
@@ -124,10 +124,6 @@ const StreamingPlatforms = () => {
           <TabsTrigger value="releases" className="flex items-center gap-1">
             <Music className="h-4 w-4" />
             <span className="hidden sm:inline">My Releases</span>
-          </TabsTrigger>
-          <TabsTrigger value="new-release" className="flex items-center gap-1">
-            <Radio className="h-4 w-4" />
-            <span className="hidden sm:inline">Release</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-1">
             <BarChart3 className="h-4 w-4" />
