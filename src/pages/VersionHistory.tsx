@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.016",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Dashboard: Renamed 'Friends' tab to 'Chat', removed friends list section, chat channels now full-width" },
+      { type: 'feature', description: "Chat channel selector: Added search/filter input to quickly find channels by name" },
+    ],
+  },
+  {
     version: "1.1.015",
     date: "2026-03-08",
     changes: [
