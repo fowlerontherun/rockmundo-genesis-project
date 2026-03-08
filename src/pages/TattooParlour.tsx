@@ -546,7 +546,26 @@ export default function TattooParlour() {
           )}
         </TabsContent>
 
-        <TabsContent value="my-tattoos" className="space-y-4">
+        <TabsContent value="text-tattoo" className="space-y-4">
+          {!currentParlour ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                <Type className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                Select a parlour first from the Shop tab to create text tattoos.
+              </CardContent>
+            </Card>
+          ) : (
+            <TextTattooCreator
+              parlourPriceMultiplier={currentParlour.price_multiplier}
+              artistPricePremium={selectedArtist?.price_premium || 1.0}
+              artistName={selectedArtist?.name}
+              occupiedSlots={occupiedSlots}
+              onPurchase={(data) => textTattooMutation.mutate(data)}
+              isPending={textTattooMutation.isPending}
+              playerCash={profile?.cash || 0}
+            />
+          )}
+        </TabsContent>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
