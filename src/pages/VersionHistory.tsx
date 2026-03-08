@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.024",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Genres: Synced MUSIC_GENRES with full skill tree GENRE_LIST — now 52 genres including Funk, Soul, Gospel, Folk, Bluegrass, Celtic, Ska, Grunge, Progressive Rock, Ambient, Industrial, Dubstep, House, Techno, Trance, Drum and Bass" },
+      { type: 'fix', description: "Genres: Replaced all hardcoded genre arrays across onboarding, city elections, venue filters, and genre trends with centralized MUSIC_GENRES import" },
+    ],
+  },
     version: "1.1.023",
     date: "2026-03-08",
     changes: [
