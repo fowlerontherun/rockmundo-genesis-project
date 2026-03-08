@@ -259,6 +259,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
     
     // Apply chemistry bonus to performance score
     let chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
+    
+    // Apply tour fatigue modifier
+    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier;
 
     // Apply encore fame bonus (last song = encore)
     const isEncore = index === setlistSongs.length - 1;
