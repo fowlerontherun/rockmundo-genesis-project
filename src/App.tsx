@@ -541,6 +541,7 @@ function App() {
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
+                    <Route path="nightclub/:clubId" element={<NightClubDetail />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
                     <Route path="tattoo-parlour" element={<TattooParlour />} />

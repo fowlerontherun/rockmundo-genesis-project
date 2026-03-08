@@ -148,6 +148,14 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                       size="sm"
                       className="w-full md:w-auto"
                       variant="default"
+                      onClick={() => navigate(`/nightclub/${club.id}`)}
+                    >
+                      <ArrowRight className="mr-2 h-4 w-4" /> Enter Club
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="w-full md:w-auto"
+                      variant="secondary"
                       disabled={busy}
                       onClick={() => handleDjSlot(club)}
                     >
