@@ -8,6 +8,7 @@ import { Settings2, MapPin } from 'lucide-react';
 import { FanSentimentWidget } from '@/components/world/FanSentimentWidget';
 import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
 import { SentimentEventLog } from '@/components/band/SentimentEventLog';
+import { SentimentTrendChart } from '@/components/band/SentimentTrendChart';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -205,8 +206,11 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         />
       </div>
 
-      {/* Sentiment Event History */}
-      <SentimentEventLog bandId={band.id} />
+      {/* Sentiment Trend Chart + Event Log */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <SentimentTrendChart bandId={band.id} currentScore={(band as any).fan_sentiment_score ?? 0} />
+        <SentimentEventLog bandId={band.id} />
+      </div>
 
       {/* Main Overview Tabs */}
       <BandOverviewTabs
