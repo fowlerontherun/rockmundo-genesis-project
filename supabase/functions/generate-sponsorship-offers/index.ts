@@ -108,7 +108,7 @@ serve(async (req) => {
 
     const { data: entities, error: entityError } = await supabaseClient
       .from("sponsorship_entities")
-      .select("id, band_id, brand_flags, fame_momentum, event_attendance_score, chart_momentum, max_deals, active_deals, last_offer_at, bands(fame, name)")
+      .select("id, band_id, brand_flags, fame_momentum, event_attendance_score, chart_momentum, max_deals, active_deals, last_offer_at, bands(fame, name, reputation_score)")
       .limit(100);
 
     if (entityError) throw entityError;
