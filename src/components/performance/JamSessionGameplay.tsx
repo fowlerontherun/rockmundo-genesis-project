@@ -189,14 +189,14 @@ export function JamSessionGameplay({
       if (bandId && chemistryBonus > 0) {
         const { data: band } = await supabase
           .from("bands")
-          .select("chemistry")
+          .select("chemistry_level")
           .eq("id", bandId)
           .single();
 
         if (band) {
           await supabase
             .from("bands")
-            .update({ chemistry: Math.min(100, (band.chemistry ?? 50) + chemistryBonus) })
+            .update({ chemistry_level: Math.min(100, (band.chemistry_level ?? 50) + chemistryBonus) })
             .eq("id", bandId);
         }
       }
