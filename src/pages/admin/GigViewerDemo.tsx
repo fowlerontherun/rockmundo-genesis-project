@@ -20,6 +20,7 @@ import { SongTransition } from "@/components/gig-viewer/SongTransition";
 import { AudienceInteractions } from "@/components/gig-viewer/AudienceInteractions";
 import { SeatingTiers } from "@/components/gig-viewer/SeatingTiers";
 import { PerformanceMilestones } from "@/components/gig-viewer/PerformanceMilestones";
+import { CrowdDetails } from "@/components/gig-viewer/CrowdDetails";
 import { getStageTheme } from "@/components/gig-viewer/StageThemes";
 import { getGenreVisuals, getGenreLightingColor, GENRE_VISUALS } from "@/components/gig-viewer/GenreVisuals";
 
