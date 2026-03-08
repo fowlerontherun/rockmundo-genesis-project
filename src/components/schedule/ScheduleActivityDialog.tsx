@@ -34,6 +34,7 @@ const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: st
   festival_performance: { path: '/festivals', icon: Guitar, label: 'Festival Performance', description: 'Perform at a music festival' },
   release_manufacturing: { path: '/release-manager', icon: Headphones, label: 'Release Manufacturing', description: 'Your release is being manufactured' },
   release_promo: { path: '/release-manager', icon: Star, label: 'Release Promo', description: 'Promotional tour for a release' },
+  teaching: { path: '/teaching', icon: GraduationCap, label: 'Teaching Session', description: 'Teach a skill to a friend for bonus XP' },
   other: { path: '/schedule', icon: Calendar, label: 'Other Activity', description: 'Schedule a custom activity' },
 };
 
