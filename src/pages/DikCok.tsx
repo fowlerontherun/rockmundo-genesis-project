@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, Trophy } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
