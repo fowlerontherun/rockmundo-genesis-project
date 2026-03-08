@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
   let streamUpdates = 0;
   let salesUpdates = 0;
   let errorCount = 0;
+  const errorSamples: string[] = [];
 
   try {
     console.log('Starting daily streams and sales update...');
@@ -73,6 +74,15 @@ Deno.serve(async (req) => {
     console.log(`Stream market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
     const AGE_GROUPS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
+    // Deterministic age group weights (realistic distribution)
+    const AGE_WEIGHTS = [
+      { group: '13-17', weight: 0.12 },
+      { group: '18-24', weight: 0.30 },
+      { group: '25-34', weight: 0.25 },
+      { group: '35-44', weight: 0.18 },
+      { group: '45-54', weight: 0.10 },
+      { group: '55+', weight: 0.05 },
+    ];
 
     // Pre-fetch all territories for releases linked to these song_releases
     const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
@@ -132,16 +142,16 @@ Deno.serve(async (req) => {
         .in('id', bandIds);
       
       for (const b of bandData || []) {
-        // Also sum total fans across all countries
         const countryFans = bandCountryFansMap.get(b.id);
         let totalFans = b.weekly_fans || 0;
         if (countryFans) {
-          // Use fame sum as proxy for reach if weekly_fans is low
           totalFans = Math.max(totalFans, [...countryFans.values()].reduce((s, f) => s + f, 0));
         }
         bandFameMap.set(b.id, { fame: b.fame || 0, totalFans });
       }
     }
+
+    const analyticsDate = new Date().toISOString().split('T')[0];
 
     for (const release of streamingReleases || []) {
       try {
@@ -150,10 +160,8 @@ Deno.serve(async (req) => {
         const bandFame = bandStats?.fame || 0;
         const bandTotalFans = bandStats?.totalFans || 0;
 
-        // Fame-scaled base streams: famous bands get dramatically more streams
-        // Fame 0 → ~100-300, Fame 500 → ~2k-5k, Fame 2000 → ~10k-30k, Fame 10000 → ~50k-150k
+        // Fame-scaled base streams
         const fameScale = 1 + Math.pow(bandFame / 100, 1.4);
-        // Fan engagement: each fan contributes a fraction of a daily stream
         const fanBoost = 1 + (bandTotalFans / 500);
         const combinedFameMultiplier = Math.sqrt(fameScale * fanBoost);
         
@@ -176,42 +184,46 @@ Deno.serve(async (req) => {
         const hasTerritories = releaseTerritories.length > 0;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
 
-        // Pick listener region based on territories
-        let listenerRegion: string;
+        // Territory bonus
+        const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
+
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus);
+        // Revenue in whole dollars (integer-safe)
+        const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
+
+        // Build deterministic region breakdown based on territories/fans
+        let regionBreakdown: Array<{ region: string; streams: number; revenue: number }> = [];
+        
         if (hasTerritories) {
           const weightedCountries = releaseTerritories.map(t => {
             const fame = bandFans?.get(t.country) || 1;
             return { country: t.country, weight: fame };
           });
           const totalWeight = weightedCountries.reduce((s, c) => s + c.weight, 0);
-          let roll = Math.random() * totalWeight;
-          listenerRegion = weightedCountries[0].country;
+          
+          // Distribute streams across all territories proportionally
           for (const wc of weightedCountries) {
-            roll -= wc.weight;
-            if (roll <= 0) { listenerRegion = wc.country; break; }
+            const fraction = wc.weight / totalWeight;
+            const regionStreams = Math.max(1, Math.round(dailyStreams * fraction));
+            const regionRevenue = Math.round(regionStreams * 0.004);
+            regionBreakdown.push({ region: wc.country, streams: regionStreams, revenue: regionRevenue });
           }
         } else {
-          const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ', 'Middle East', 'Africa', 'South East Asia'];
-          listenerRegion = REGIONS[Math.floor(Math.random() * REGIONS.length)];
+          const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ'];
+          const REGION_WEIGHTS = [0.30, 0.25, 0.20, 0.10, 0.08, 0.04, 0.03];
+          for (let i = 0; i < REGIONS.length; i++) {
+            const regionStreams = Math.max(1, Math.round(dailyStreams * REGION_WEIGHTS[i]));
+            const regionRevenue = Math.round(regionStreams * 0.004);
+            regionBreakdown.push({ region: REGIONS[i], streams: regionStreams, revenue: regionRevenue });
+          }
         }
 
-        // Territory bonus: more territories = more total streams
-        const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
-
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus);
-        const dailyRevenue = Number((dailyStreams * 0.004).toFixed(2));
-
-        const listenerRatio = 0.4 + Math.random() * 0.4;
-        const uniqueListeners = Math.max(1, Math.floor(dailyStreams * listenerRatio));
-        const skipRate = Number((10 + Math.random() * 25).toFixed(1));
-        const completionRate = Number((55 + Math.random() * 35).toFixed(1));
-        const ageGroup = AGE_GROUPS[Math.floor(Math.random() * AGE_GROUPS.length)];
-
+        // FIX: Use Math.round for integer-safe total_revenue accumulation
         const { error: updateError } = await supabase
           .from('song_releases')
           .update({
             total_streams: (release.total_streams || 0) + dailyStreams,
-            total_revenue: (release.total_revenue || 0) + dailyRevenue,
+            total_revenue: Math.round((release.total_revenue || 0)) + dailyRevenueDollars,
           })
           .eq('id', release.id);
 
@@ -219,18 +231,39 @@ Deno.serve(async (req) => {
           throw updateError;
         }
 
-        await supabase.from('streaming_analytics_daily').insert({
-          song_release_id: release.id,
-          analytics_date: new Date().toISOString().split('T')[0],
-          daily_streams: dailyStreams,
-          daily_revenue: Math.floor(dailyRevenue),
-          platform_id: release.platform_id,
-          unique_listeners: uniqueListeners,
-          skip_rate: skipRate,
-          completion_rate: completionRate,
-          listener_age_group: ageGroup,
-          listener_region: listenerRegion,
-        });
+        // Insert analytics rows per region (deterministic breakdown instead of single random)
+        // Use upsert to be idempotent if run multiple times per day
+        for (const rb of regionBreakdown) {
+          const listenerRatio = 0.4 + Math.random() * 0.4;
+          const uniqueListeners = Math.max(1, Math.floor(rb.streams * listenerRatio));
+          const skipRate = Number((10 + Math.random() * 25).toFixed(1));
+          const completionRate = Number((55 + Math.random() * 35).toFixed(1));
+          
+          // Pick age group deterministically weighted
+          const ageRoll = Math.random();
+          let cumWeight = 0;
+          let ageGroup = AGE_GROUPS[1]; // default 18-24
+          for (const aw of AGE_WEIGHTS) {
+            cumWeight += aw.weight;
+            if (ageRoll <= cumWeight) {
+              ageGroup = aw.group;
+              break;
+            }
+          }
+
+          await supabase.from('streaming_analytics_daily').insert({
+            song_release_id: release.id,
+            analytics_date: analyticsDate,
+            daily_streams: rb.streams,
+            daily_revenue: rb.revenue, // Integer dollars
+            platform_id: release.platform_id,
+            unique_listeners: uniqueListeners,
+            skip_rate: skipRate,
+            completion_rate: completionRate,
+            listener_age_group: ageGroup,
+            listener_region: rb.region,
+          });
+        }
 
         // Update song fame based on streams (1 fame per 1000 streams)
         if (release.song_id) {
@@ -243,19 +276,18 @@ Deno.serve(async (req) => {
             });
           }
           
-          // Hype decays slightly each day but streams boost it
-          const hypeChange = Math.floor(dailyStreams / 5000) - 1; // Net change
+          const hypeChange = Math.floor(dailyStreams / 5000) - 1;
           await supabase.rpc('update_song_hype', {
             p_song_id: release.song_id,
             p_hype_change: hypeChange
           });
         }
 
-        // Pay band daily streaming revenue
-        if (bandId && dailyRevenue > 0) {
+        // Pay band daily streaming revenue (integer dollars)
+        if (bandId && dailyRevenueDollars > 0) {
           await supabase.from('band_earnings').insert({
             band_id: bandId,
-            amount: dailyRevenue,
+            amount: dailyRevenueDollars,
             source: 'streaming',
             description: `Daily streaming revenue`,
             metadata: { 
@@ -269,6 +301,9 @@ Deno.serve(async (req) => {
         streamUpdates++;
       } catch (streamError) {
         errorCount += 1;
+        if (errorSamples.length < 5) {
+          errorSamples.push(`Release ${release.id}: ${(streamError as Error)?.message || String(streamError)}`);
+        }
         console.error(`Error processing streaming release ${release.id}:`, streamError);
       }
     }
@@ -316,33 +351,43 @@ Deno.serve(async (req) => {
           salesUpdates++;
         } catch (salesError) {
           errorCount += 1;
+          if (errorSamples.length < 5) {
+            errorSamples.push(`Format ${format.id}: ${(salesError as Error)?.message || String(salesError)}`);
+          }
           console.error(`Error processing physical sales for format ${format.id}:`, salesError);
         }
       }
     }
 
-    console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales`);
+    const totalProcessed = streamUpdates + salesUpdates;
+    // Mark run as failed if error ratio is very high
+    const isEffectivelyFailed = totalProcessed > 0 && errorCount > totalProcessed * 0.5;
+    
+    console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales (${errorCount} errors)`);
 
     await completeJobRun({
       jobName: 'update-daily-streams',
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: streamUpdates + salesUpdates,
+      processedCount: totalProcessed,
       errorCount,
       resultSummary: {
         streamUpdates,
         salesUpdates,
         errorCount,
+        errorSamples,
+        effectivelyFailed: isEffectivelyFailed,
       },
     });
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: !isEffectivelyFailed,
         streamUpdates,
         salesUpdates,
         errors: errorCount,
+        errorSamples,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -357,6 +402,7 @@ Deno.serve(async (req) => {
         streamUpdates,
         salesUpdates,
         errorCount,
+        errorSamples,
       },
     });
 

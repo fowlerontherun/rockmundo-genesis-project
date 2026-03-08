@@ -512,12 +512,16 @@ serve(async (req) => {
         const leadSong = sortedSongs[0]?.song;
         const leadSongId = leadSong?.id || null;
 
-        for (const releaseSong of release.release_songs) {
+      // FIX: Divide sales across tracks for song-level attribution
+      const trackCount = Math.max(1, release.release_songs.length);
+      const perTrackSales = sale.quantity_sold / trackCount;
+      
+      for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
           if (!song) continue;
 
           const currentSales = songSales.get(song.id) || 0;
-          songSales.set(song.id, currentSales + sale.quantity_sold);
+          songSales.set(song.id, currentSales + perTrackSales);
 
           // Per-country sales tracking
           const saleCountry = (sale as any).country;
@@ -813,9 +817,18 @@ serve(async (req) => {
     for (const [releaseId, albumData] of albumStreamingAggregated) {
       const streamUnits = Math.floor(albumData.weeklyStreams / STREAM_TO_UNIT_RATIO);
       
-      // For now, album combined score is based on aggregated streams
-      // Sales are already per-song, so we'd need to aggregate those too
-      const combinedScore = streamUnits;
+      // FIX: Include album-level sales in combined score
+      // Sum all song-level sales for this release's songs
+      let albumSalesUnits = 0;
+      for (const entry of streamingData || []) {
+        if (entry.release_id === releaseId) {
+          const songSalesData = weeklySalesMap.get(entry.song_id);
+          if (songSalesData) {
+            albumSalesUnits += songSalesData.digital + songSalesData.cd + songSalesData.vinyl + songSalesData.cassette;
+          }
+        }
+      }
+      const combinedScore = streamUnits + albumSalesUnits;
 
       if (combinedScore > 0) {
         albumCombinedScores.set(releaseId, {
@@ -1073,7 +1086,8 @@ serve(async (req) => {
       // Deduplicate entries (keep the one with highest rank/score for each song+chart_type combo)
       const dedupeMap = new Map<string, any>();
       for (const entry of chartEntries) {
-        const key = `${entry.song_id || entry.release_id}:${entry.chart_type}:${entry.chart_date}`;
+        // FIX: Include country in dedupe key to preserve regional chart entries
+        const key = `${entry.song_id || entry.release_id}:${entry.chart_type}:${entry.chart_date}:${entry.country || 'all'}`;
         const existing = dedupeMap.get(key);
         if (!existing || (entry.combined_score || 0) > (existing.combined_score || 0) || (entry.plays_count || 0) > (existing.plays_count || 0)) {
           dedupeMap.set(key, entry);
