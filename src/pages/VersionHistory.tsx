@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.011",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Regenerated Buy Character Slot tile image with person and money theme" },
+      { type: 'fix', description: "Added Current City tile image and tileImageKey override for dynamic city paths" },
+    ],
+  },
+  {
     version: "1.1.010",
     date: "2026-03-08",
     changes: [
