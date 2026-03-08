@@ -145,6 +145,21 @@ Deno.serve(async (req) => {
 
           warningsIssued++;
           console.log(`[check-company-bankruptcy] Warning issued: ${company.name}`);
+
+          // Morale -5 for owner's band on warning
+          if (company.owner_id) {
+            const { data: ownerMember } = await supabase
+              .from('band_members')
+              .select('band_id, bands!inner(morale)')
+              .eq('user_id', company.owner_id)
+              .eq('role', 'leader')
+              .maybeSingle();
+            if (ownerMember && (ownerMember as any).bands) {
+              const newMorale = Math.max(0, ((ownerMember as any).bands.morale ?? 50) - 5);
+              await supabase.from('bands').update({ morale: newMorale }).eq('id', (ownerMember as any).band_id);
+              console.log(`[check-company-bankruptcy] Owner band morale -5 (warning)`);
+            }
+          }
         }
 
       } else if (daysNegative >= 1) {
