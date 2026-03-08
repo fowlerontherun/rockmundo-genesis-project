@@ -29,8 +29,8 @@ export async function checkAndGrantBehaviorUnlocks(userId: string): Promise<Beha
       supabase.from('band_members').select('band_id').eq('user_id', userId).eq('is_touring_member', false),
     ]);
 
-    const fame = profileRes.data?.fame || 0;
-    const playerLevel = profileRes.data?.player_level || 1;
+    const fame = (profileRes.data as any)?.fame || 0;
+    const playerLevel = (profileRes.data as any)?.level || 1;
 
     // Count total gigs played
     let totalGigs = 0;
