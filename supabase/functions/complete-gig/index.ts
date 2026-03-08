@@ -478,6 +478,20 @@ serve(async (req) => {
     const bandRep = (gig.bands as any)?.reputation_score ?? 0;
     const newRep = Math.max(-100, Math.min(100, bandRep + repChange));
 
+    // === GIG PERFORMANCE → FAN SENTIMENT (v1.0.983) ===
+    // Live shows are the most direct fan interaction — sentiment swings hard
+    let sentChange = 0;
+    if (avgRating >= 22) sentChange = 10;       // Amazing show → fans ecstatic
+    else if (avgRating >= 18) sentChange = 5;    // Great show
+    else if (avgRating >= 14) sentChange = 2;    // Decent
+    else if (avgRating < 8) sentChange = -12;    // Terrible → fans angry
+    else if (avgRating < 12) sentChange = -6;    // Bad show
+    // Oversold/undersold affects sentiment
+    const capacityRatio = outcome.actual_attendance / Math.max(1, gig.venues?.capacity || 100);
+    if (capacityRatio > 1.1) sentChange -= 3;    // Oversold/overcrowded
+    const bandSent = (gig.bands as any)?.fan_sentiment_score ?? 0;
+    const newSent = Math.max(-100, Math.min(100, bandSent + sentChange));
+
     const { error: bandError } = await supabaseClient
       .from('bands')
       .update({
@@ -491,10 +505,11 @@ serve(async (req) => {
         superfans: newSuperfans,
         morale: newMorale,
         reputation_score: newRep,
+        fan_sentiment_score: newSent,
       } as any)
       .eq('id', gig.band_id);
 
-    console.log(`Post-gig: morale ${bandMorale}→${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange}), rep ${bandRep}→${newRep} (${repChange > 0 ? '+' : ''}${repChange}) [${performanceGrade}-grade, ${outcome.actual_attendance} attendance]`);
+    console.log(`Post-gig: morale ${bandMorale}→${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange}), rep ${bandRep}→${newRep} (${repChange > 0 ? '+' : ''}${repChange}), sent ${bandSent}→${newSent} (${sentChange > 0 ? '+' : ''}${sentChange}) [${performanceGrade}-grade, ${outcome.actual_attendance} attendance]`);
 
     if (bandError) throw bandError;
 
