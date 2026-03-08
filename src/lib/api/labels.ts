@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { format } from "date-fns";
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
 export type LabelRecord = Tables<"labels">;
@@ -86,7 +85,9 @@ export interface LabelRevenueDashboard {
   };
 }
 
-interface ContractQueryRow extends ContractRecord {
+// The contract/release types from auto-gen don't include revenue columns yet
+// Using `any` extension until types regenerate
+interface ContractQueryRow extends Record<string, any> {
   bands?: { id: string; name: string | null } | null;
   profiles?: { id: string; display_name: string | null } | null;
 }
@@ -132,7 +133,7 @@ const buildContractReport = (contract: ContractQueryRow): ContractRevenueReport 
 };
 
 const buildReleaseReport = (
-  release: ReleaseRecord,
+  release: Record<string, any>,
   contractDisplayName: string,
 ): ReleaseRevenueReport => {
   const streamingRevenue = numberOrZero(release.streaming_revenue);
@@ -200,7 +201,7 @@ export const fetchLabelRevenueDashboard = async (
     throw contractError;
   }
 
-  const contracts: ContractQueryRow[] = (contractRows ?? []) as ContractQueryRow[];
+  const contracts: ContractQueryRow[] = (contractRows ?? []) as unknown as ContractQueryRow[];
   const contractReports = contracts.map(buildContractReport);
   const contractIdSet = contracts.map((contract) => contract.id);
 
@@ -210,7 +211,7 @@ export const fetchLabelRevenueDashboard = async (
     contractNameMap.set(contract.id, name);
   });
 
-  let releases: ReleaseRecord[] = [];
+  let releases: Record<string, any>[] = [];
   if (contractIdSet.length > 0) {
     const { data: releaseRows, error: releaseError } = await supabase
       .from("label_releases")
@@ -221,7 +222,7 @@ export const fetchLabelRevenueDashboard = async (
       throw releaseError;
     }
 
-    releases = (releaseRows ?? []) as ReleaseRecord[];
+    releases = (releaseRows ?? []) as unknown as Record<string, any>[];
   }
 
   const releaseReports = releases.map((release) =>

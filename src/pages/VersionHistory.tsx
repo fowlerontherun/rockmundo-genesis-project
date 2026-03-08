@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.927",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Side Hustles: Removed @ts-nocheck, fixed isLoading→isPending on mutation button" },
+      { type: 'fix', description: "Labels API: Fixed import from deprecated supabase-client to standard client, added type safety for missing revenue columns" },
+      { type: 'feature', description: "Busking: City-aware locations — spots now change based on player's current city (London, NYC, Tokyo, Paris, Berlin + fallback)" },
+      { type: 'feature', description: "Teaching: Server-side XP processing — new edge function processes expired teaching sessions and awards XP via progression system" },
+      { type: 'improvement', description: "Busking: Each city has 3 unique themed locations with lore-appropriate descriptions and reward scaling" },
+      { type: 'improvement', description: "Teaching: XP now routed through progression edge function for proper validation and wallet integration" },
+    ],
+  },
+  {
     version: "1.0.926",
     date: "2026-03-08",
     changes: [
