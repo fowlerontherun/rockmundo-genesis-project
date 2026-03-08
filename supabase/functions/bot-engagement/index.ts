@@ -298,6 +298,27 @@ serve(async (req) => {
       }
     }
 
+    // === BOT ENGAGEMENT → BAND MORALE (v1.0.976) ===
+    // High engagement (lots of likes/replies/follows) gives a small morale boost to band accounts
+    const totalEngagement = repliesCreated + likesCreated + followsCreated;
+    if (totalEngagement >= 5) {
+      try {
+        // Find band accounts that received engagement
+        const bandAccountIds = new Set<string>();
+        for (const pa of playerAccounts || []) {
+          if (pa.owner_type === 'band' && pa.owner_id) bandAccountIds.add(pa.owner_id);
+        }
+        for (const bandId of bandAccountIds) {
+          const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
+          if (bd) {
+            const moraleBoost = totalEngagement >= 20 ? 3 : totalEngagement >= 10 ? 2 : 1;
+            await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', bandId);
+            console.log(`[bot-engagement] Social buzz: ${totalEngagement} engagements → morale +${moraleBoost} for band ${bandId}`);
+          }
+        }
+      } catch (_e) { /* non-critical */ }
+    }
+
     console.log(`[bot-engagement] Completed. Replies: ${repliesCreated}, Likes: ${likesCreated}, Follows: ${followsCreated}`);
 
     return new Response(

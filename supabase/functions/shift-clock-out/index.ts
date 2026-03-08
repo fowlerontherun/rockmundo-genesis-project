@@ -260,6 +260,28 @@ Deno.serve(async (req) => {
           throw activityDeleteError;
         }
 
+        // === WORK SHIFT → BAND MORALE (v1.0.976) ===
+        // Working degrading jobs (fame penalty) hurts band morale; earning decent money gives a small boost
+        try {
+          const { data: bm } = await supabaseClient.from('band_members').select('band_id').eq('user_id', activity.profile_id).eq('is_touring_member', false).limit(1).maybeSingle();
+          if (bm?.band_id) {
+            const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
+            if (bd) {
+              const curMorale = (bd as any).morale ?? 50;
+              // Fame penalty tier jobs hurt morale; good earnings give a small boost
+              let moraleShift = 0;
+              if (dynamicFameImpact < -5) moraleShift = -3; // Humiliating job
+              else if (dynamicFameImpact < 0) moraleShift = -1; // Mildly degrading
+              else if ((shift.earnings || 0) >= 500) moraleShift = 2; // Great pay
+              else if ((shift.earnings || 0) >= 100) moraleShift = 1; // Decent pay
+              if (moraleShift !== 0) {
+                await supabaseClient.from('bands').update({ morale: Math.max(0, Math.min(100, curMorale + moraleShift)) } as any).eq('id', bm.band_id);
+                console.log(`Work shift morale: fame impact ${dynamicFameImpact}, earnings $${shift.earnings} → morale ${moraleShift > 0 ? '+' : ''}${moraleShift}`);
+              }
+            }
+          }
+        } catch (_e) { /* non-critical */ }
+
         processedCount += 1;
         totalEarnings += shift.earnings || 0;
         totalXpAwarded += shift.xp_earned || 0;
