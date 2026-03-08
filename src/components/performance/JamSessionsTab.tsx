@@ -534,6 +534,15 @@ export function JamSessionsTab() {
                         "Join session"
                       )}
                     </Button>
+                    {(isHost || alreadyJoined) && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setActiveJamSessionId(session.id)}
+                        className="w-full sm:w-auto gap-2"
+                      >
+                        <Gamepad2 className="h-4 w-4" /> Start Jamming
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
