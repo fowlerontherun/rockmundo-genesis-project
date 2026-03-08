@@ -36,11 +36,11 @@ Deno.serve(async (req) => {
   try {
     console.log(`[${JOB_NAME}] Starting random event trigger...`);
 
-    // Get active players (logged in within last 7 days)
+    // Get active players (logged in within last 7 days) with travel status
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data: activePlayers, error: playersError } = await supabase
       .from("profiles")
-      .select("user_id, health")
+      .select("user_id, health, is_traveling")
       .gte("updated_at", sevenDaysAgo);
 
     if (playersError) throw playersError;
