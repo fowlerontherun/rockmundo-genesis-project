@@ -174,7 +174,13 @@ serve(async (req) => {
       // Purchase rate: 5-25% based on performance rating (0-25 scale)
       const basePurchaseRate = 0.05 + (Math.min(1, (gig.bands.fame || 0) / 5000) * 0.05);
       const performanceBonus = Math.min(1.5, avgRating / 18);
-      const actualPurchaseRate = basePurchaseRate * performanceBonus * clothingMerchBonus;
+      // === FAN SENTIMENT → MERCH SALES (v1.0.986) ===
+      // Positive sentiment means fans are eager to buy merch; negative means they're disengaged
+      const merchSentiment = (gig.bands as any)?.fan_sentiment_score ?? 0;
+      const merchSentimentT = (Math.max(-100, Math.min(100, merchSentiment)) + 100) / 200;
+      const merchSentimentMod = parseFloat((0.7 + merchSentimentT * 0.6).toFixed(2)); // 0.7x–1.3x
+      const actualPurchaseRate = basePurchaseRate * performanceBonus * clothingMerchBonus * merchSentimentMod;
+      console.log(`Merch sentiment modifier: ${merchSentimentMod}x (sentiment=${merchSentiment})`);
       
       const numberOfBuyers = Math.round(outcome.actual_attendance * actualPurchaseRate);
       
