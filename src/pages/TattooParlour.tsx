@@ -138,7 +138,7 @@ export default function TattooParlour() {
       setSelectedDesign(null);
       
       if (result.isInfected) {
-        toast.error(`Tattoo applied but got INFECTED! Quality: ${result.quality_score}/100. Visit a hospital!`);
+        toast.error(`Tattoo applied but got INFECTED! Quality: ${result.qualityScore}/100. Visit a hospital!`);
       } else {
         toast.success(`Tattoo applied! Quality: ${result.qualityScore}/100. Paid $${result.price}`);
       }
