@@ -53,6 +53,11 @@ const WorldPulse = () => {
     },
   });
 
+  const worldEconomy = useMemo(() => {
+    const gameDate = calculateInGameDate();
+    return getWorldEconomicOverview(gameDate.realWorldDaysElapsed);
+  }, []);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
@@ -66,6 +71,8 @@ const WorldPulse = () => {
       <Tabs defaultValue="trending" className="w-full">
         <TabsList>
           <TabsTrigger value="trending">Trending Now</TabsTrigger>
+          <TabsTrigger value="genres">Genre Trends</TabsTrigger>
+          <TabsTrigger value="economy">City Economies</TabsTrigger>
           <TabsTrigger value="charts">Global Charts</TabsTrigger>
           <TabsTrigger value="activity">Recent Activity</TabsTrigger>
         </TabsList>
