@@ -252,26 +252,77 @@ Deno.serve(async (req) => {
         const bandTotalTaxes = ordersToInsert.reduce((sum, o) => sum + o.sales_tax + o.vat, 0);
         const bandTotalCosts = ordersToInsert.reduce((sum, o) => sum + (o.unit_price * o.quantity) - o.net_revenue - o.sales_tax - o.vat, 0);
         
+        // ── 360 Deal: Check if band has a label contract that takes merch cut ──
+        let labelMerchCut = 0;
+        let finalBandRevenue = bandNetRevenue;
+        
+        try {
+          const { data: active360 } = await supabase
+            .from('artist_label_contracts')
+            .select('id, label_id, royalty_label_pct, deal_type_id, label_deal_types:deal_type_id(name)')
+            .eq('band_id', band.id)
+            .eq('status', 'active')
+            .limit(1)
+            .maybeSingle();
+          
+          if (active360 && bandNetRevenue > 0) {
+            const dealName = (active360 as any).label_deal_types?.name || '';
+            if (dealName === '360 Deal') {
+              const labelPct = (active360.royalty_label_pct || 20) / 100;
+              labelMerchCut = Math.round(bandNetRevenue * labelPct);
+              finalBandRevenue = bandNetRevenue - labelMerchCut;
+              
+              // Credit label
+              const { data: label } = await supabase
+                .from('labels')
+                .select('balance')
+                .eq('id', active360.label_id)
+                .single();
+              
+              if (label) {
+                await supabase
+                  .from('labels')
+                  .update({ balance: (label.balance || 0) + labelMerchCut })
+                  .eq('id', active360.label_id);
+              }
+              
+              await supabase.from('label_financial_transactions').insert({
+                label_id: active360.label_id,
+                transaction_type: 'revenue',
+                amount: labelMerchCut,
+                description: `360 Deal merch cut: ${ordersToInsert.length} orders from ${band.name}`,
+                related_contract_id: active360.id,
+                related_band_id: band.id,
+              });
+              
+              console.log(`[${JOB_NAME}] 360 Deal: label takes $${labelMerchCut} from merch (${(labelPct * 100).toFixed(0)}%)`);
+            }
+          }
+        } catch (e) {
+          console.log(`[${JOB_NAME}] Error checking 360 deal for merch:`, e);
+        }
+        
         // Only credit positive earnings
-        if (bandNetRevenue > 0) {
+        if (finalBandRevenue > 0) {
           await supabase.from("band_earnings").insert({
             band_id: band.id,
-            amount: Math.round(bandNetRevenue),
+            amount: Math.round(finalBandRevenue),
             source: "merchandise",
-            description: `Daily merch sales: ${ordersToInsert.length} orders (costs: $${Math.abs(bandTotalCosts).toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})`,
+            description: `Daily merch sales: ${ordersToInsert.length} orders (costs: $${Math.abs(bandTotalCosts).toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})${labelMerchCut > 0 ? ` [360 deal: $${labelMerchCut} to label]` : ''}`,
             metadata: {
               orders_count: ordersToInsert.length,
               gross_revenue: bandGrossRevenue,
               production_costs: bandTotalCosts,
               sales_tax_collected: ordersToInsert.reduce((sum, o) => sum + o.sales_tax, 0),
               vat_collected: ordersToInsert.reduce((sum, o) => sum + o.vat, 0),
-              net_revenue: bandNetRevenue,
+              net_revenue: finalBandRevenue,
+              label_merch_cut: labelMerchCut,
               stock_reduced: Array.from(stockUpdates.entries()).reduce((sum, [_, qty]) => sum + qty, 0),
             },
           });
         }
 
-        console.log(`[${JOB_NAME}] Added $${bandNetRevenue.toFixed(2)} to band earnings (after $${bandTotalTaxes.toFixed(2)} taxes)`);
+        console.log(`[${JOB_NAME}] Added $${finalBandRevenue.toFixed(2)} to band earnings (after $${bandTotalTaxes.toFixed(2)} taxes${labelMerchCut > 0 ? `, $${labelMerchCut} to label` : ''})`);
       }
     }
 

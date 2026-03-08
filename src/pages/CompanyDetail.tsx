@@ -17,6 +17,7 @@ import { CompanySettingsDialog } from "@/components/company/CompanySettingsDialo
 import { TransferLabelDialog } from "@/components/company/TransferLabelDialog";
 import { CompanyFinanceDialog } from "@/components/company/CompanyFinanceDialog";
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
+import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
@@ -183,9 +184,10 @@ const CompanyDetailContent = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue={isHolding ? "structure" : "overview"} className="space-y-4">
+      <Tabs defaultValue={isHolding ? "structure" : "empire"} className="space-y-4">
         <TabsList>
           {isHolding && <TabsTrigger value="structure">Structure</TabsTrigger>}
+          <TabsTrigger value="empire">Empire</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>
@@ -233,6 +235,10 @@ const CompanyDetailContent = () => {
             </div>
           </TabsContent>
         )}
+
+        <TabsContent value="empire" className="space-y-4">
+          <EmpireDashboard companyId={company.id} companyBalance={company.balance} />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-4">
           <Card>

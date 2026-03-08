@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.899",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "360 Deal now takes label's royalty cut from touring/gig revenue and merch sales — not just recordings" },
+      { type: 'feature', description: "New Empire Dashboard on company detail page showing 30-day aggregate P&L across all subsidiaries with breakdown by type" },
+      { type: 'feature', description: "Artists can now request early release from contracts by paying the termination fee (paid to label, contract terminated immediately)" },
+      { type: 'feature', description: "Deal type badges with tooltip info cards show on active contract views — hover to see full deal terms and effects" },
+      { type: 'improvement', description: "Label P&L now visible under Finances tab with tabbed Overview/Transactions layout" },
+      { type: 'improvement', description: "Empire Dashboard shows label subsidiary balances alongside other company metrics" },
+      { type: 'improvement', description: "Gig and merch earnings descriptions now indicate when 360 deal cuts were applied" },
+    ],
+  },
+  {
     version: "1.0.898",
     date: "2026-03-08",
     changes: [
