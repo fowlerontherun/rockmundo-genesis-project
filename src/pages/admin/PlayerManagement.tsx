@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Users, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Gift } from "lucide-react";
 import { format } from "date-fns";
 
 export default function PlayerManagement() {
@@ -67,6 +67,52 @@ export default function PlayerManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-players"] });
       toast({ title: "Cash granted successfully" });
+    },
+  });
+
+  const giftSlotMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Check current slots
+      const { data: existing } = await supabase
+        .from("character_slots")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const currentExtra = existing?.extra_slots_purchased ?? 0;
+      const currentMax = existing?.max_slots ?? 1;
+
+      if (currentMax >= 5) {
+        throw new Error("Player already has the maximum 5 character slots");
+      }
+
+      if (existing) {
+        const { error } = await supabase
+          .from("character_slots")
+          .update({
+            extra_slots_purchased: currentExtra + 1,
+            max_slots: Math.min(currentMax + 1, 5),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("character_slots")
+          .insert({
+            user_id: userId,
+            extra_slots_purchased: 1,
+            max_slots: 2,
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
+      toast({ title: "Character slot gifted!", description: "Player now has an additional character slot." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to gift slot", description: err.message, variant: "destructive" });
     },
   });
 
@@ -177,6 +223,20 @@ export default function PlayerManagement() {
                         onClick={() => handleGrantCash(player.user_id)}
                       >
                         Grant Cash
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-primary border-primary/30 hover:bg-primary/10"
+                        onClick={() => {
+                          if (confirm(`Gift an extra character slot to ${player.display_name || player.user_id}?`)) {
+                            giftSlotMutation.mutate(player.user_id);
+                          }
+                        }}
+                        disabled={giftSlotMutation.isPending}
+                      >
+                        <Gift className="h-4 w-4 mr-1" />
+                        Gift Slot
                       </Button>
                     </div>
                   </TableCell>
