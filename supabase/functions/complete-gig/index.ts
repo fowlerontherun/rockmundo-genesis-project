@@ -279,12 +279,18 @@ serve(async (req) => {
     const totalRevenue = adjustedTicketRevenue + adjustedMerchRevenue;
     const netProfit = totalRevenue - totalCosts;
 
+    // === MORALE PERFORMANCE MODIFIER (v1.0.958) ===
+    // Band morale affects fame gain and fan conversion: 0.7x at 0 morale, 1.0x at 50, 1.2x at 100
+    const bandMorale = (gig.bands as any)?.morale ?? 50;
+    const moraleMod = parseFloat((0.7 + (Math.max(0, Math.min(100, bandMorale)) / 100) * 0.5).toFixed(2));
+    console.log(`Band morale: ${bandMorale} → performance modifier ${moraleMod}x`);
+
     // Calculate fame gained - balanced formula with variance
     const attendanceMultiplier = 1.0 + Math.log10(Math.max(1, outcome.actual_attendance / 100)) * 0.5;
     const baseFame = (avgRating / 25) * 200;
     // Add ±25% random variance to fame for more unpredictable outcomes
     const fameVariance = 0.75 + Math.random() * 0.50; // 0.75 to 1.25
-    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance);
+    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod);
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5);
@@ -318,7 +324,7 @@ serve(async (req) => {
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
     // Add ±20% random variance to fan conversion for more unpredictable outcomes
     const fanVariance = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus;
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus * moraleMod;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains
@@ -416,6 +422,15 @@ serve(async (req) => {
     const newDedicatedFans = (gig.bands.dedicated_fans || 0) + dedicatedFans;
     const newSuperfans = (gig.bands.superfans || 0) + superfans;
 
+    // === MORALE POST-GIG UPDATE (v1.0.958) ===
+    let moraleChange = 0;
+    if (avgRating >= 22) moraleChange = 8;      // Amazing show
+    else if (avgRating >= 18) moraleChange = 4;  // Great show
+    else if (avgRating >= 14) moraleChange = 1;  // Decent show
+    else if (avgRating < 8) moraleChange = -10;  // Terrible show
+    else if (avgRating < 12) moraleChange = -5;  // Bad show
+    const newMorale = Math.max(0, Math.min(100, bandMorale + moraleChange));
+
     const { error: bandError } = await supabaseClient
       .from('bands')
       .update({
@@ -426,9 +441,12 @@ serve(async (req) => {
         total_fans: newTotalFans,
         casual_fans: newCasualFans,
         dedicated_fans: newDedicatedFans,
-        superfans: newSuperfans
+        superfans: newSuperfans,
+        morale: newMorale,
       })
       .eq('id', gig.band_id);
+
+    console.log(`Morale update: ${bandMorale} → ${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange} from ${performanceGrade}-grade performance)`);
 
     if (bandError) throw bandError;
 

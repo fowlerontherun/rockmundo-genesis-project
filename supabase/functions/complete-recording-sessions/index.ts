@@ -164,11 +164,25 @@ Deno.serve(async (req) => {
           sessionLuckLabel = 'great_flow'
         }
 
+        // === MORALE RECORDING MODIFIER (v1.0.958) ===
+        // Band morale affects creativity in the studio: 0.8x at 0 morale, 1.0x at 50, 1.15x at 100
+        let moraleMod = 1.0
+        if (session.band_id) {
+          const { data: bandData } = await supabase
+            .from('bands')
+            .select('morale')
+            .eq('id', session.band_id)
+            .single()
+          const moraleScore = (bandData as any)?.morale ?? 50
+          moraleMod = parseFloat((0.8 + (Math.max(0, Math.min(100, moraleScore)) / 100) * 0.35).toFixed(2))
+          console.log(`Band morale: ${moraleScore} → recording creativity modifier ${moraleMod}x`)
+        }
+
         // Base improvement scales with duration (1-12 per hour for wider range)
         const baseImprovement = Math.floor(durationHours * (1 + Math.random() * 11))
         
-        // Apply luck multiplier and studio bonus
-        const qualityImprovement = Math.min(40, Math.floor(baseImprovement * sessionLuckMultiplier) + studioQualityBonus)
+        // Apply luck multiplier, studio bonus, and morale modifier
+        const qualityImprovement = Math.min(40, Math.floor(baseImprovement * sessionLuckMultiplier * moraleMod) + studioQualityBonus)
         
         // Calculate new quality (capped at 100)
         const newQuality = Math.min(100, currentQuality + qualityImprovement)
