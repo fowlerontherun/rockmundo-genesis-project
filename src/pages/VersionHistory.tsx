@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.964",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "PR Appearances → Reputation & Morale: Completing PR activities (TV, radio, podcast, magazine, film) now boosts reputation (+2 to +6) and morale (+1 to +5) scaled by media type. TV/Film gives biggest boosts" },
+      { type: 'feature', description: "Jam Sessions → Morale: Completing jam sessions boosts band morale based on synergy score. High synergy (80+) grants +4, good (60+) grants +2, otherwise +1 — jamming together strengthens the band" },
+      { type: 'feature', description: "Media Submissions → Reputation: Getting approved in newspapers (+3), magazines (+4), and podcasts (+3) now boosts public reputation — media coverage builds your image" },
+      { type: 'improvement', description: "PR activity now fetches morale and reputation alongside sentiment/media in a single query for efficient updates" },
+    ],
+  },
+  {
     version: "1.0.963",
     date: "2026-03-08",
     changes: [
