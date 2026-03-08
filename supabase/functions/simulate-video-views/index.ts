@@ -202,6 +202,13 @@ serve(async (req) => {
             bandUpdate.fan_sentiment_score = newSentiment;
           }
 
+          // === MORALE BOOST: Video views feel rewarding (v1.0.968) ===
+          const videoMoraleBoost = isViral ? 6 : dailyViews > 10000 ? 3 : dailyViews > 1000 ? 2 : 0;
+          if (videoMoraleBoost > 0) {
+            const { data: moraleBand } = await supabaseClient.from('bands').select('morale').eq('id', song.band_id).single();
+            bandUpdate.morale = Math.min(100, ((moraleBand as any)?.morale ?? 50) + videoMoraleBoost);
+          }
+
           await supabaseClient
             .from("bands")
             .update(bandUpdate)

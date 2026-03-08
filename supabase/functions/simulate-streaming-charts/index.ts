@@ -200,7 +200,7 @@ serve(async (req) => {
       for (const bId of top10BandIds) {
         const { data: band } = await supabase
           .from('bands')
-          .select('fan_sentiment_score, media_intensity, media_fatigue')
+          .select('fan_sentiment_score, media_intensity, media_fatigue, morale, reputation_score')
           .eq('id', bId)
           .single();
 
@@ -209,9 +209,15 @@ serve(async (req) => {
           const curIntensity = (band as any).media_intensity ?? 0;
           const newSentiment = Math.min(100, curSentiment + 12);
 
+          // === MORALE + REPUTATION BOOST: Charting is a huge deal (v1.0.968) ===
+          const curMorale = (band as any).morale ?? 50;
+          const curRep = (band as any).reputation_score ?? 0;
+
           await supabase.from('bands').update({
             fan_sentiment_score: newSentiment,
             media_intensity: Math.min(100, curIntensity + 15),
+            morale: Math.min(100, curMorale + 8),
+            reputation_score: Math.min(100, curRep + 5),
           } as any).eq('id', bId);
 
           await supabase.from('band_sentiment_events').insert({

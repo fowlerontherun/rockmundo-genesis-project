@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.968",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Video Views → Morale: Viral music videos boost morale by +6, 10k+ daily views give +3, 1k+ give +2. Watching your video blow up is exciting" },
+      { type: 'feature', description: "Streaming Charts → Morale & Reputation: Charting on streaming platforms now boosts morale (+8) and reputation (+5) alongside existing sentiment/media intensity boosts. Charting is a career-defining moment" },
+      { type: 'feature', description: "Career Milestones → Morale: Achieving milestones now boosts band morale. Big milestones (first #1, 100k fans, $1M earned) give +8, regular milestones give +4" },
+      { type: 'improvement', description: "Streaming charts query now fetches morale and reputation alongside sentiment/media fields. Video views update morale in the same band transaction" },
+    ],
+  },
+  {
     version: "1.0.967",
     date: "2026-03-08",
     changes: [
