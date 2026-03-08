@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.939",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "MyGear: Equipment condition badges now display on all owned inventory items — see Pristine/Good/Worn/Damaged/Broken status at a glance" },
+      { type: 'feature', description: "Band Overview: Fan Sentiment widget integrated — see fan mood, merch/ticket/stream demand multipliers, and viral chance for your band" },
+      { type: 'feature', description: "Band Overview: Media Cycle widget integrated — track media phase, intensity, fatigue, and coverage multiplier in real time" },
+      { type: 'improvement', description: "Band overview now shows two simulation widgets side-by-side above the main stats tabs" },
+      { type: 'improvement', description: "Graceful fallbacks for bands without sentiment/media data (defaults to neutral/dormant)" },
+    ],
+  },
+  {
     version: "1.0.938",
     date: "2026-03-08",
     changes: [

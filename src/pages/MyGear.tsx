@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -595,6 +596,11 @@ const MyGear: React.FC = () => {
                       <div>
                         <p className="text-sm font-semibold">{gear.name}</p>
                         <p className="text-xs text-muted-foreground">{formatSectionList(gear.sections)}</p>
+                        {gear.source === "inventory" && (
+                          <EquipmentConditionBadge condition={
+                            inventory.find(i => i.id === gear.id)?.condition ?? 100
+                          } />
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant="outline" className={getQualityBadgeClass(gear)}>
