@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.901",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "A&R staff skill now affects demo review — higher skill scouts lower the acceptance threshold (up to -15), boost evaluation score (+10), and produce better contract terms (lower advances, slightly higher artist royalties)" },
+      { type: 'feature', description: "Contract offers now use the label's preferred deal type instead of a random global one — labels with specific deal types configured will offer those to artists" },
+      { type: 'improvement', description: "Demo review logs now show A&R skill percentage used during evaluation" },
+      { type: 'improvement', description: "Labels without configured deal types fall back to global deal types instead of failing silently" },
+    ],
+  },
+  {
     version: "1.0.900",
     date: "2026-03-08",
     changes: [
