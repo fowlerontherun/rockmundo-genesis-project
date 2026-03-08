@@ -133,7 +133,7 @@ const buildContractReport = (contract: ContractQueryRow): ContractRevenueReport 
 };
 
 const buildReleaseReport = (
-  release: ReleaseRecord,
+  release: Record<string, any>,
   contractDisplayName: string,
 ): ReleaseRevenueReport => {
   const streamingRevenue = numberOrZero(release.streaming_revenue);
