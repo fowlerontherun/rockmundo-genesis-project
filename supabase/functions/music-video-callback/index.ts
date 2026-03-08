@@ -176,6 +176,42 @@ serve(async (req) => {
         });
       }
 
+      // === FAN SENTIMENT + MEDIA BOOST (v1.0.944) ===
+      // Music video releases boost fan sentiment and media attention
+      try {
+        // Get band_id from the song
+        const { data: song } = await supabaseClient
+          .from("songs")
+          .select("band_id")
+          .eq("id", video.song_id)
+          .single();
+
+        if (song?.band_id) {
+          const { data: band } = await supabaseClient
+            .from("bands")
+            .select("fan_sentiment_score, media_intensity, media_fatigue")
+            .eq("id", song.band_id)
+            .single();
+
+          if (band) {
+            const currentSentiment = (band as any).fan_sentiment_score ?? 0;
+            const currentIntensity = (band as any).media_intensity ?? 0;
+            const currentFatigue = (band as any).media_fatigue ?? 0;
+            const fatigueReduction = currentFatigue > 60 ? 0.5 : currentFatigue > 30 ? 0.75 : 1.0;
+
+            await supabaseClient.from("bands").update({
+              fan_sentiment_score: Math.min(100, currentSentiment + 6),
+              media_intensity: Math.min(100, currentIntensity + Math.round(12 * fatigueReduction)),
+              media_fatigue: Math.min(100, currentFatigue + 6),
+            } as any).eq("id", song.band_id);
+
+            console.log(`[music-video-callback] Sentiment +6, media +12 for band ${song.band_id}`);
+          }
+        }
+      } catch (sentErr) {
+        console.error("[music-video-callback] Error applying sentiment/media boost:", sentErr);
+      }
+
       console.log("[music-video-callback] Video generation completed successfully!");
       
     } else if (payload.status === "failed") {
