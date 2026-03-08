@@ -170,9 +170,17 @@ serve(async (req) => {
           const currentSentiment = (band as any).fan_sentiment_score ?? 0;
           const newSentiment = Math.max(-100, Math.min(100, currentSentiment + sentimentBoost));
 
+          // === MORALE BOOST: Radio airplay is exciting (v1.0.967) ===
+          const moraleBoost = listeners > 5000 ? 3 : listeners > 1000 ? 2 : listeners > 200 ? 1 : 0;
+
           const updatePayload: any = { fame: (band.fame || 0) + fameGain };
           if (sentimentBoost > 0) {
             updatePayload.fan_sentiment_score = newSentiment;
+          }
+          if (moraleBoost > 0) {
+            // Fetch current morale for clamped update
+            const { data: moraleBand } = await supabaseClient.from('bands').select('morale').eq('id', song.band_id).single();
+            updatePayload.morale = Math.min(100, ((moraleBand as any)?.morale ?? 50) + moraleBoost);
           }
 
           await supabaseClient

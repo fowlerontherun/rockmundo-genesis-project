@@ -325,6 +325,18 @@ Deno.serve(async (req) => {
           console.log(`[${JOB_NAME}] Error checking 360 deal for merch:`, e);
         }
         
+        // === MORALE BOOST: Merch sales feel rewarding (v1.0.967) ===
+        if (finalBandRevenue > 0) {
+          try {
+            const { data: bd } = await supabase.from('bands').select('morale').eq('id', band.id).single();
+            if (bd) {
+              const moraleBoost = finalBandRevenue >= 5000 ? 4 : finalBandRevenue >= 1000 ? 3 : finalBandRevenue >= 200 ? 2 : 1;
+              await supabase.from('bands').update({ morale: Math.min(100, (bd.morale ?? 50) + moraleBoost) }).eq('id', band.id);
+              console.log(`[${JOB_NAME}] Merch revenue $${finalBandRevenue.toFixed(0)} → morale +${moraleBoost}`);
+            }
+          } catch (e) { console.log(`[${JOB_NAME}] Morale boost error:`, e); }
+        }
+
         // Only credit positive earnings
         if (finalBandRevenue > 0) {
           await supabase.from("band_earnings").insert({

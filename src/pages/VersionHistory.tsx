@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.967",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Demo Review → Morale: Getting a demo accepted by a label now boosts band morale by +5 (exciting news!). Demo rejections reduce morale by -2 (discouraging but recoverable)" },
+      { type: 'feature', description: "Merch Sales → Morale: Daily merchandise revenue now boosts band morale. $5k+ gives +4, $1k+ gives +3, $200+ gives +2, any sales give +1 — seeing fans buy your merch is motivating" },
+      { type: 'feature', description: "Radio Plays → Morale: Significant radio airplay boosts morale alongside existing sentiment. 5k+ listeners give +3, 1k+ give +2, 200+ give +1 — hearing your song on the radio is thrilling" },
+      { type: 'improvement', description: "All three systems now fetch and update morale alongside existing band stat transactions for efficient single-query updates" },
+    ],
+  },
+  {
     version: "1.0.966",
     date: "2026-03-08",
     changes: [
