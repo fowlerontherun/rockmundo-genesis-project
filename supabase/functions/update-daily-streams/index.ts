@@ -425,6 +425,8 @@ Deno.serve(async (req) => {
                 label_share: labelShareDollars,
               },
             });
+            // Track for morale (v1.0.978)
+            bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + bandShareDollars);
           }
         } else if (bandId && dailyRevenueDollars > 0) {
           // No label contract — 100% to band
@@ -439,6 +441,8 @@ Deno.serve(async (req) => {
               platform_id: release.platform_id 
             },
           });
+          // Track for morale (v1.0.978)
+          bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + dailyRevenueDollars);
         }
 
         streamUpdates++;
