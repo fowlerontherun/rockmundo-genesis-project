@@ -23,7 +23,7 @@ import {
   Play, Menu, Globe, Mic, GraduationCap, DollarSign, Plane, ListMusic,
   Megaphone, Store, Guitar, Award, Briefcase, Newspaper, Radio, History,
   Video, Disc, Target, Sparkles, Twitter, UserPlus, HandHeart, Handshake,
-  Building, Star, BookOpen, Wrench, Bus, Tv, Film, Inbox, Gamepad2,
+  Building, Star, BookOpen, Wrench, Bus, Tv, Film, Inbox, Gamepad2, Palette,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
