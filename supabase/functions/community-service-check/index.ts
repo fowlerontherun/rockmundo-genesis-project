@@ -74,6 +74,30 @@ Deno.serve(async (req) => {
           metadata: { sessions_completed: assignment.completed_sessions }
         });
 
+        // === COMMUNITY SERVICE COMPLETION → MORALE & REPUTATION (v1.0.974) ===
+        // Completing community service is redemptive — boosts reputation and morale
+        try {
+          const { data: bm } = await supabase
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', assignment.user_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+          if (bm?.band_id) {
+            const { data: bd } = await supabase.from('bands').select('morale, reputation_score').eq('id', bm.band_id).single();
+            if (bd) {
+              const curM = (bd as any).morale ?? 50;
+              const curR = (bd as any).reputation_score ?? 0;
+              await supabase.from('bands').update({
+                morale: Math.min(100, curM + 6),
+                reputation_score: Math.min(100, curR + 5),
+              } as any).eq('id', bm.band_id);
+              console.log(`[community-service-check] Completed: morale +6, rep +5 for band ${bm.band_id}`);
+            }
+          }
+        } catch (_e) { /* non-critical */ }
+
         completedCount++;
         console.log(`[community-service-check] User ${assignment.user_id} completed community service`);
       }
@@ -157,6 +181,30 @@ Deno.serve(async (req) => {
               sentence_days: sentenceDays
             }
           });
+
+          // === COMMUNITY SERVICE FAILURE → MORALE & REPUTATION (v1.0.974) ===
+          // Failing community service and going to prison is devastating
+          try {
+            const { data: bm2 } = await supabase
+              .from('band_members')
+              .select('band_id')
+              .eq('user_id', assignment.user_id)
+              .eq('is_touring_member', false)
+              .limit(1)
+              .maybeSingle();
+            if (bm2?.band_id) {
+              const { data: bd2 } = await supabase.from('bands').select('morale, reputation_score').eq('id', bm2.band_id).single();
+              if (bd2) {
+                const curM = (bd2 as any).morale ?? 50;
+                const curR = (bd2 as any).reputation_score ?? 0;
+                await supabase.from('bands').update({
+                  morale: Math.max(0, curM - 12),
+                  reputation_score: Math.max(-100, curR - 8),
+                } as any).eq('id', bm2.band_id);
+                console.log(`[community-service-check] Failed: morale -12, rep -8 for band ${bm2.band_id}`);
+              }
+            }
+          } catch (_e) { /* non-critical */ }
 
           failedCount++;
           console.log(`[community-service-check] User ${assignment.user_id} failed community service, imprisoned for ${sentenceDays} days`);

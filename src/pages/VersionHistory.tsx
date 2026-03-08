@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.974",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Community Service Completion → Morale & Reputation: Successfully completing community service boosts morale by +6 and reputation by +5 (redemption arc). Failing community service tanks morale by -12 and reputation by -8" },
+      { type: 'feature', description: "Book Reading → Morale: Reading skill books gives +1 morale per reading day. Completing a book gives +4 morale. Self-improvement through education keeps spirits high" },
+      { type: 'improvement', description: "Community service check now handles both success and failure paths with separate morale/reputation impacts. Book reading morale integrates into the existing attendance processing loop" },
+    ],
+  },
+  {
     version: "1.0.973",
     date: "2026-03-08",
     changes: [
