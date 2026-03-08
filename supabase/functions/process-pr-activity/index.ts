@@ -295,7 +295,7 @@ serve(async (req) => {
 
         const { data: bandData } = await supabaseClient
           .from('bands')
-          .select('fan_sentiment_score, media_intensity, media_fatigue')
+          .select('fan_sentiment_score, media_intensity, media_fatigue, morale, reputation_score')
           .eq('id', bandId)
           .single();
 
@@ -303,7 +303,15 @@ serve(async (req) => {
           const curSentiment = (bandData as any).fan_sentiment_score ?? 0;
           const curIntensity = (bandData as any).media_intensity ?? 0;
           const curFatigue = (bandData as any).media_fatigue ?? 0;
+          const curMorale = (bandData as any).morale ?? 50;
+          const curRep = (bandData as any).reputation_score ?? 0;
           const fatigueReduction = curFatigue > 60 ? 0.5 : curFatigue > 30 ? 0.75 : 1.0;
+
+          // === PR APPEARANCE → REPUTATION & MORALE (v1.0.964) ===
+          const prRepBoost: Record<string, number> = { tv: 5, radio: 3, podcast: 3, magazine: 4, newspaper: 4, online: 2, film: 6 };
+          const prMoraleBoost: Record<string, number> = { tv: 4, radio: 2, podcast: 2, magazine: 3, newspaper: 2, online: 1, film: 5 };
+          const repBoost = prRepBoost[offer.media_type] ?? 2;
+          const moraleBoost = prMoraleBoost[offer.media_type] ?? 1;
 
           const newSentiment = Math.min(100, curSentiment + boosts.sentiment);
           const newIntensity = Math.min(100, curIntensity + Math.round(boosts.intensity * fatigueReduction));
@@ -311,6 +319,8 @@ serve(async (req) => {
             fan_sentiment_score: newSentiment,
             media_intensity: newIntensity,
             media_fatigue: Math.min(100, curFatigue + boosts.fatigue),
+            reputation_score: Math.min(100, curRep + repBoost),
+            morale: Math.min(100, curMorale + moraleBoost),
           } as any).eq('id', bandId);
 
           await supabaseClient.from('band_sentiment_events').insert({

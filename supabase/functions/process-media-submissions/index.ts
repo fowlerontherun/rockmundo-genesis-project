@@ -75,6 +75,15 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
+          // === MEDIA APPROVAL → REPUTATION (v1.0.964) ===
+          try {
+            const { data: bData } = await supabase.from('bands').select('reputation_score').eq('id', sub.band_id).single();
+            if (bData) {
+              const curRep = (bData as any).reputation_score ?? 0;
+              await supabase.from('bands').update({ reputation_score: Math.min(100, curRep + 3) } as any).eq('id', sub.band_id);
+            }
+          } catch (_e) { /* non-critical */ }
+
           results.newspaper.approved++;
           console.log(`[process-media-submissions] Approved newspaper submission ${sub.id} with fame:${fameBoost}, fans:${fanBoost}, $${compensation}`);
         } else {

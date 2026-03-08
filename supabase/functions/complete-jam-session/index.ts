@@ -385,6 +385,42 @@ Deno.serve(async (req) => {
       console.log(`Participant ${participantId}: +${totalXpPerPlayer} XP, +${skillXpGained} skill XP to ${instrumentSkillSlug}`);
     }
 
+    // === JAM SESSION → BAND MORALE (v1.0.964) ===
+    // Good jam sessions boost band morale based on synergy and mood
+    try {
+      // Get band for any participant
+      const firstParticipantId = participantIds[0];
+      if (firstParticipantId) {
+        const { data: bandMember } = await supabase
+          .from('band_members')
+          .select('band_id')
+          .eq('user_id', firstParticipantId)
+          .eq('is_touring_member', false)
+          .limit(1)
+          .maybeSingle();
+
+        if (bandMember?.band_id) {
+          const { data: band } = await supabase
+            .from('bands')
+            .select('morale')
+            .eq('id', bandMember.band_id)
+            .single();
+
+          if (band) {
+            // Synergy 80+ = great jam (+4), 60+ = good (+2), below = okay (+1)
+            const moraleBoost = synergyScore >= 80 ? 4 : synergyScore >= 60 ? 2 : 1;
+            const curMorale = (band as any).morale ?? 50;
+            await supabase.from('bands').update({
+              morale: Math.min(100, curMorale + moraleBoost),
+            } as any).eq('id', bandMember.band_id);
+            console.log(`Jam session morale boost: synergy ${synergyScore} → morale +${moraleBoost}`);
+          }
+        }
+      }
+    } catch (moraleErr) {
+      console.error('Error updating jam session morale:', moraleErr);
+    }
+
     // Update session status
     await supabase
       .from('jam_sessions')
