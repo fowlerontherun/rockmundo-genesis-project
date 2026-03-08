@@ -71,6 +71,7 @@ export function JamSessionsTab() {
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   const [joinAccessCodes, setJoinAccessCodes] = useState<Record<string, string>>({});
   const [jamSessions, setJamSessions] = useState<JamSessionWithHost[]>([]);
+  const [activeJamSessionId, setActiveJamSessionId] = useState<string | null>(null);
 
   const profileDisplayName = useMemo(() => {
     if (!profile) {
