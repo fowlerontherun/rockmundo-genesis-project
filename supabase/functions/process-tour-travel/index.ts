@@ -115,8 +115,11 @@ Deno.serve(async (req) => {
         try {
           const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
           if (bd) {
-            await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + 2) }).eq('id', bandId);
+            const newMorale = Math.min(100, ((bd as any).morale ?? 50) + 2);
+            await supabase.from('bands').update({ morale: newMorale }).eq('id', bandId);
             console.log(`[process-tour-travel] Tour arrival → morale +2 for band ${bandId}`);
+            // Health event log (v1.0.998)
+            try { await supabase.from('band_health_events').insert({ band_id: bandId, event_type: 'morale', delta: 2, new_value: newMorale, source: 'tour_arrival', description: 'Arrived at new tour city' }); } catch (_) {}
           }
         } catch (e) { console.log('[process-tour-travel] Morale error:', e); }
       }

@@ -99,6 +99,16 @@ serve(async (req) => {
               morale: newMorale,
             } as any).eq('id', release.band_id);
 
+            // Health event logs (v1.0.998)
+            const releaseLabel = release.release_type === 'album' ? 'Album' : 'Single';
+            try {
+              await supabaseClient.from('band_health_events').insert([
+                { band_id: release.band_id, event_type: 'sentiment', delta: sentimentBoost, new_value: newSentiment, source: 'release_manufacturing', description: `${releaseLabel} release excited fans` },
+                { band_id: release.band_id, event_type: 'reputation', delta: repBoost, new_value: newRep, source: 'release_manufacturing', description: `${releaseLabel} release boosted public image` },
+                { band_id: release.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'release_manufacturing', description: `${releaseLabel} release: band is thrilled` },
+              ]);
+            } catch (_) {}
+
             await supabaseClient.from('band_sentiment_events').insert({
               band_id: release.band_id,
               event_type: release.release_type === 'album' ? 'album_release' : 'single_release',

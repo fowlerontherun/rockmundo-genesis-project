@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.998",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Health Event Logging Final Batch: 6 remaining edge functions now log to band_health_events, completing 100% coverage. Travel hazards, company taxes, tour arrivals, merch sales, PR appearances (sentiment+reputation+morale), and release manufacturing (sentiment+reputation+morale) all record detailed health stat changes" },
+      { type: 'improvement', description: "All ~25 health-modifying edge functions now have full event audit trail coverage. Players can trace every morale, reputation, and sentiment change back to its source action in the Health Event Log" },
+    ],
+  },
+  {
     version: "1.0.997",
     date: "2026-03-08",
     changes: [
