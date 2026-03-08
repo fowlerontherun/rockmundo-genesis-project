@@ -1077,7 +1077,8 @@ serve(async (req) => {
       // Deduplicate entries (keep the one with highest rank/score for each song+chart_type combo)
       const dedupeMap = new Map<string, any>();
       for (const entry of chartEntries) {
-        const key = `${entry.song_id || entry.release_id}:${entry.chart_type}:${entry.chart_date}`;
+        // FIX: Include country in dedupe key to preserve regional chart entries
+        const key = `${entry.song_id || entry.release_id}:${entry.chart_type}:${entry.chart_date}:${entry.country || 'all'}`;
         const existing = dedupeMap.get(key);
         if (!existing || (entry.combined_score || 0) > (existing.combined_score || 0) || (entry.plays_count || 0) > (existing.plays_count || 0)) {
           dedupeMap.set(key, entry);
