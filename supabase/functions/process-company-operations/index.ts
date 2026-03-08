@@ -149,7 +149,9 @@ Deno.serve(async (req) => {
 
     for (const firm of securityFirms || []) {
       const tierMultiplier = 1 + ((firm.tier || 1) - 1) * 0.4;
-      const dailyCost = (firm.operating_costs || 100) / 7;
+      const baseDailyCost = (firm.operating_costs || 100) / 7;
+      const firmSynergyDiscount = synergyDiscountMap.get(firm.company_id!) || 0;
+      const dailyCost = Math.round(baseDailyCost * (1 - firmSynergyDiscount / 100));
 
       // Count recent gigs in any city — security firms provide event security services
       const { count: recentGigCount } = await supabase
