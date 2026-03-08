@@ -66,7 +66,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
       if (!profile?.id) return null;
       const client: any = supabase;
       const { data } = await client
-        .from("player_skill_progress")
+        .from("skill_progress")
         .select("skill_slug, current_level")
         .eq("profile_id", profile.id);
       if (!data) return null;
