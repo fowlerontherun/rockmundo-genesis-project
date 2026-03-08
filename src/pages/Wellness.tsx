@@ -6,6 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useConditions } from "@/hooks/useConditions";
+import { ConditionsPanel } from "@/components/wellness/ConditionsPanel";
 import {
   Heart,
   Activity,
