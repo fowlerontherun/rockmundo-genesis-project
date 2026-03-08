@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.982",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Open Mic → Reputation: Performing at open mic nights now affects band reputation. 85+ rating = +3, 70+ = +1, below 40 = -2. Building your name on the local circuit matters" },
+      { type: 'feature', description: "Video Release → Reputation: Releasing music videos now boosts reputation. High-hype videos (60+) give +3 rep, others +1. Professional video output builds public credibility" },
+      { type: 'feature', description: "Scandals → Reputation: Random scandal events now cause -10 reputation (or -5 for non-scandal negatives). Scandals now damage morale, sentiment, AND reputation simultaneously" },
+      { type: 'improvement', description: "Reputation system now integrated into 21+ functions. All three new integrations use single-transaction updates alongside existing morale/sentiment writes for efficiency" },
+    ],
+  },
+  {
     version: "1.0.981",
     date: "2026-03-08",
     changes: [
