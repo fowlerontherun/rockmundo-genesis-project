@@ -494,7 +494,7 @@ serve(async (req) => {
       } as any)
       .eq('id', gig.band_id);
 
-    console.log(`Morale update: ${bandMorale} → ${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange} from ${performanceGrade}-grade performance)`);
+    console.log(`Post-gig: morale ${bandMorale}→${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange}), rep ${bandRep}→${newRep} (${repChange > 0 ? '+' : ''}${repChange}) [${performanceGrade}-grade, ${outcome.actual_attendance} attendance]`);
 
     if (bandError) throw bandError;
 
