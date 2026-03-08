@@ -2527,12 +2527,14 @@ export type Database = {
           max_members: number | null
           media_fatigue: number | null
           media_intensity: number | null
+          morale: number | null
           name: string
           next_leadership_vote: string | null
           performance_count: number | null
           popularity: number | null
           primary_genre: string | null
           regional_fame: Json | null
+          reputation_score: number | null
           romantic_tension: number
           secondary_genres: string[] | null
           sound_description: string | null
@@ -2582,12 +2584,14 @@ export type Database = {
           max_members?: number | null
           media_fatigue?: number | null
           media_intensity?: number | null
+          morale?: number | null
           name: string
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
           primary_genre?: string | null
           regional_fame?: Json | null
+          reputation_score?: number | null
           romantic_tension?: number
           secondary_genres?: string[] | null
           sound_description?: string | null
@@ -2637,12 +2641,14 @@ export type Database = {
           max_members?: number | null
           media_fatigue?: number | null
           media_intensity?: number | null
+          morale?: number | null
           name?: string
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
           primary_genre?: string | null
           regional_fame?: Json | null
+          reputation_score?: number | null
           romantic_tension?: number
           secondary_genres?: string[] | null
           sound_description?: string | null
