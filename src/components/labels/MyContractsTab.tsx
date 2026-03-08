@@ -333,6 +333,9 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
                   <Badge variant={STATUS_VARIANTS[contract.status ?? "pending"] ?? "secondary"}>
                     {contract.status}
                   </Badge>
+                  {(contract as any).label_deal_types?.name && (
+                    <DealTypeInfoCard dealTypeName={(contract as any).label_deal_types.name} compact />
+                  )}
                   {(contract as any).manufacturing_covered && (
                     <Badge variant="secondary">Label Pays Manufacturing</Badge>
                   )}
