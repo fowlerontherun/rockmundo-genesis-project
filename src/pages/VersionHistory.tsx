@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.956",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Added reputation_score and morale columns to bands table — health systems now persist properly instead of relying on type casts" },
+      { type: 'feature', description: "Band Morale Drift: Morale drifts ±1/day toward baseline (50), preventing permanent extremes" },
+      { type: 'feature', description: "Band Reputation Drift: Reputation drifts ±0.5/day toward neutral (0), extreme reputations slowly normalize" },
+      { type: 'improvement', description: "Daily updates now process morale and reputation drift before cross-system feedback for correct ordering" },
+    ],
+  },
+  {
     version: "1.0.955",
     date: "2026-03-08",
     changes: [
