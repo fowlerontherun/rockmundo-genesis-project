@@ -68,11 +68,6 @@ export function useNightclubQuests(clubId: string | undefined) {
         rewards: typeof q.rewards === "object" && q.rewards ? q.rewards : {},
         requirements: typeof q.requirements === "object" ? q.requirements : null,
       })) as unknown as NightclubQuest[];
-        ...q,
-        dialogue: Array.isArray(q.dialogue) ? q.dialogue : [],
-        rewards: typeof q.rewards === "object" && q.rewards ? q.rewards : {},
-        requirements: typeof q.requirements === "object" ? q.requirements : null,
-      })) as NightclubQuest[];
     },
     enabled: !!clubId,
   });
