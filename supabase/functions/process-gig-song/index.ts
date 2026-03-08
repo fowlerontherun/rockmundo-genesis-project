@@ -187,29 +187,22 @@ interface PerformanceItemFactors {
 // ── Performance calculators ──
 
 function calculateSongPerformance(factors: PerformanceFactors) {
-  // Normalize song quality from 0-1000 to 0-100 (matching client-side)
+  const bMods = getBehaviorMods(factors.stageBehavior || 'standard');
+
   const normalizedSongQuality = Math.min(100, (factors.songQuality / 1000) * 100);
-  // Normalize member skills from 0-150 to 0-100 (matching client-side)
   const normalizedMemberSkills = Math.min(100, (factors.memberSkillAverage / 150) * 100);
   const normalizedStageSkills = Math.min(100, Math.max(0, factors.stageSkillAverage || 0));
 
   const clamp = (v: number) => Math.min(100, Math.max(0, v || 0));
 
-  // Updated weights matching client-side
   const WEIGHTS = {
-    songQuality: 0.25,
-    rehearsal: 0.20,
-    chemistry: 0.15,
-    equipment: 0.12,
-    crew: 0.08,
-    memberSkills: 0.10,
-    stageSkills: 0.10
+    songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
+    equipment: 0.12, crew: 0.08, memberSkills: 0.10, stageSkills: 0.10
   };
 
-  // Calculate individual contributions (0-100 scale each)
   const songQualityContrib = normalizedSongQuality * WEIGHTS.songQuality;
   const rehearsalContrib = clamp(factors.rehearsalLevel) * WEIGHTS.rehearsal;
-  const chemistryContrib = clamp(factors.bandChemistry) * WEIGHTS.chemistry;
+  const chemistryContrib = clamp(factors.bandChemistry * bMods.chemMult) * WEIGHTS.chemistry;
   const equipmentContrib = clamp(factors.equipmentQuality) * WEIGHTS.equipment;
   const crewContrib = clamp(factors.crewSkillLevel) * WEIGHTS.crew;
   const memberSkillsContrib = normalizedMemberSkills * WEIGHTS.memberSkills;
@@ -217,9 +210,9 @@ function calculateSongPerformance(factors: PerformanceFactors) {
 
   const baseScore =
     songQualityContrib + rehearsalContrib + chemistryContrib +
-    equipmentContrib + crewContrib + memberSkillsContrib + stageSkillsContrib;
+    equipmentContrib + crewContrib + memberSkillsContrib + stageSkillsContrib +
+    bMods.baseBonus;
 
-  // Venue capacity multiplier (matching client-side)
   let capacityMultiplier = 1.0;
   const cap = factors.venueCapacityUsed;
   if (cap >= 95) capacityMultiplier = 1.15;
@@ -228,8 +221,7 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   else if (cap >= 40) capacityMultiplier = 0.95;
   else capacityMultiplier = 0.85;
 
-  // Variance ±15-20% (matching client-side range)
-  const variance = 0.85 + Math.random() * 0.30;
+  const variance = 0.85 + Math.random() * (0.30 * bMods.varianceMult);
 
   // Random event chance (matching client-side)
   let eventMultiplier = 1.0;
