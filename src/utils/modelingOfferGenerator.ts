@@ -24,14 +24,25 @@ const OFFER_REASONS = [
   (_: string) => `Your social media presence impressed a major fashion house`,
 ];
 
+/** Skill requirements per gig type */
+const GIG_TYPE_SKILL_REQUIREMENTS: Record<string, { slug: string; minValue: number }> = {
+  runway: { slug: 'modeling_basic_runway', minValue: 50 },
+  cover_shoot: { slug: 'modeling_basic_camera', minValue: 50 },
+  commercial: { slug: 'modeling_basic_commercial', minValue: 30 },
+  brand_ambassador: { slug: 'modeling_basic_brand', minValue: 50 },
+  photo_shoot: { slug: 'modeling_basic_posing', minValue: 30 },
+  music_video_cameo: { slug: 'modeling_basic_camera', minValue: 20 },
+};
+
 /**
- * Generate 1-3 modeling offers for a user based on their looks/fame.
+ * Generate 1-3 modeling offers for a user based on their looks/fame/skills.
  * Returns the number of offers created.
  */
 export async function generateModelingOffersForUser(
   userId: string,
   looks: number,
   fame: number,
+  skillLevels: Record<string, number> = {},
 ): Promise<number> {
   // Don't generate if cooldown hasn't expired
   if (!isOfferCooldownExpired()) return 0;
@@ -60,8 +71,20 @@ export async function generateModelingOffersForUser(
     return 0;
   }
 
+  // Filter gigs by skill requirements
+  const qualifiedGigs = gigs.filter((gig: any) => {
+    const req = GIG_TYPE_SKILL_REQUIREMENTS[gig.gig_type];
+    if (!req) return true; // no skill req for this type
+    return (skillLevels[req.slug] ?? 0) >= req.minValue;
+  });
+
+  if (qualifiedGigs.length === 0) {
+    setCooldown();
+    return 0;
+  }
+
   // Shuffle and pick 1-3
-  const shuffled = gigs.sort(() => Math.random() - 0.5);
+  const shuffled = qualifiedGigs.sort(() => Math.random() - 0.5);
   const count = Math.min(shuffled.length, Math.floor(Math.random() * 3) + 1);
   const selected = shuffled.slice(0, count);
 

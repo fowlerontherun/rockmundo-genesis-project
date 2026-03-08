@@ -238,6 +238,7 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
         totalEarnings={totalEarnings}
         playerLooks={playerLooks}
         currentTier=""
+        skillLevels={skillLevels}
       />
 
       {/* Active Contracts */}
