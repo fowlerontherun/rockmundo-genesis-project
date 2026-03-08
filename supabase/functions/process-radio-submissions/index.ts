@@ -221,6 +221,15 @@ serve(async (req) => {
           })
           .eq("id", submission.id);
 
+        // === RADIO REJECTION → MORALE HIT (v1.0.975) ===
+        try {
+          const { data: bData } = await supabaseClient.from('bands').select('morale').eq('id', submission.band_id).single();
+          if (bData) {
+            const curMorale = (bData as any).morale ?? 50;
+            await supabaseClient.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', submission.band_id);
+          }
+        } catch (_e) { /* non-critical */ }
+
         rejected++;
       }
       
