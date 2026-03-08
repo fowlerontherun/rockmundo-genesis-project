@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Globe, Plane, Bus, Building2, Home, Twitter, Video, Heart, HandHeart, UserPlus, Sparkles, Ticket, Radio, Tv, Newspaper, BookOpen, Mic, Film } from "lucide-react";
+import { Globe, Plane, Bus, Building2, Home, Twitter, Video, Heart, HandHeart, UserPlus, Sparkles, Ticket, Radio, Tv, Newspaper, BookOpen, Mic, Film, Dices } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 
 export default function WorldSocialHub() {
