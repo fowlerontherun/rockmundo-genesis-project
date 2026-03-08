@@ -48,13 +48,42 @@ export function SupportArtistPicker({
     },
   });
 
-  // TODO: Check availability for each band against tour dates
-  // This would require checking player_scheduled_activities for all band members
+  // Check availability for each band against tour dates
+  const { data: unavailableBandIds = [] } = useQuery({
+    queryKey: ['support-artist-availability', tourDates],
+    queryFn: async () => {
+      if (!tourDates.length) return [];
+      // Find band members who have scheduled activities overlapping tour dates
+      const { data: conflicts, error } = await supabase
+        .from('player_scheduled_activities')
+        .select('profile_id')
+        .in('scheduled_date', tourDates)
+        .neq('status', 'cancelled');
+
+      if (error || !conflicts?.length) return [];
+
+      const conflictProfileIds = conflicts.map(c => c.profile_id);
+
+      // Find which bands those profiles belong to
+      const { data: conflictMembers, error: memberError } = await supabase
+        .from('band_members')
+        .select('band_id, user_id')
+        .in('user_id', conflictProfileIds);
+
+      if (memberError || !conflictMembers?.length) return [];
+
+      return [...new Set(conflictMembers.map(m => m.band_id))];
+    },
+    enabled: tourDates.length > 0,
+  });
 
   const filteredBands = bands?.filter(band => 
-    band.name.toLowerCase().includes(search.toLowerCase()) ||
-    band.genre?.toLowerCase().includes(search.toLowerCase())
+    (band.name.toLowerCase().includes(search.toLowerCase()) ||
+    band.genre?.toLowerCase().includes(search.toLowerCase()))
   ) || [];
+
+  const availableBands = filteredBands.filter(band => !unavailableBandIds.includes(band.id));
+  const busyBands = filteredBands.filter(band => unavailableBandIds.includes(band.id));
 
   const handleSelectBand = (band: typeof bands[0]) => {
     const split = calculateSupportArtistSplit(headlinerFame, band.fame);

@@ -153,8 +153,41 @@ export const useUnderworldStore = () => {
 
         if (cashError) throw cashError;
       } else {
-        // TODO: Implement crypto payment when token holdings are available
-        throw new Error("Crypto payments coming soon");
+        // Crypto payment — deduct from player_token_holdings
+        if (!product.price_token_id || !product.price_token_amount) {
+          throw new Error("Product cannot be purchased with crypto");
+        }
+
+        // Fetch player's token holding
+        const { data: holding, error: holdingError } = await supabase
+          .from("player_token_holdings")
+          .select("id, quantity")
+          .eq("user_id", user.id)
+          .eq("token_id", product.price_token_id)
+          .maybeSingle();
+
+        if (holdingError) throw holdingError;
+
+        if (!holding || holding.quantity < product.price_token_amount) {
+          throw new Error("Insufficient token balance");
+        }
+
+        const newQuantity = holding.quantity - product.price_token_amount;
+
+        if (newQuantity <= 0) {
+          // Remove the holding row if balance is zero
+          const { error: deleteError } = await supabase
+            .from("player_token_holdings")
+            .delete()
+            .eq("id", holding.id);
+          if (deleteError) throw deleteError;
+        } else {
+          const { error: updateError } = await supabase
+            .from("player_token_holdings")
+            .update({ quantity: newQuantity })
+            .eq("id", holding.id);
+          if (updateError) throw updateError;
+        }
       }
 
       // Apply effects based on product category
