@@ -165,6 +165,7 @@ const Navigation = () => {
           <img src={logo} alt="RockMundo" className="h-7 w-auto object-contain" />
           
           <div className="flex items-center gap-0.5">
+            <CharacterSwitcher />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
