@@ -9,6 +9,7 @@ import { FanSentimentWidget } from '@/components/world/FanSentimentWidget';
 import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
 import { SentimentEventLog } from '@/components/band/SentimentEventLog';
 import { SentimentTrendChart } from '@/components/band/SentimentTrendChart';
+import { BandHealthDashboard } from '@/components/band/BandHealthDashboard';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -197,8 +198,15 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         </Card>
       )}
 
-      {/* Fan Sentiment & Media Cycle */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Band Health Dashboard + Fan Sentiment & Media Cycle */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <BandHealthDashboard
+          sentimentScore={(band as any).fan_sentiment_score ?? 0}
+          mediaIntensity={(band as any).media_intensity ?? 0}
+          mediaFatigue={(band as any).media_fatigue ?? 0}
+          reputationScore={(band as any).reputation_score ?? 0}
+          moraleScore={(band as any).morale ?? 50}
+        />
         <FanSentimentWidget score={(band as any).fan_sentiment_score ?? 0} />
         <MediaCycleWidget
           intensity={(band as any).media_intensity ?? 0}
