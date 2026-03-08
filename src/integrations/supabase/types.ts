@@ -2603,6 +2603,196 @@ export type Database = {
           },
         ]
       }
+      casting_call_roles: {
+        Row: {
+          age_range: string | null
+          casting_call_id: string
+          created_at: string
+          description: string | null
+          ethnicity: string | null
+          gender: string | null
+          id: string
+          name: string
+          role_type: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          casting_call_id: string
+          created_at?: string
+          description?: string | null
+          ethnicity?: string | null
+          gender?: string | null
+          id?: string
+          name: string
+          role_type?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          casting_call_id?: string
+          created_at?: string
+          description?: string | null
+          ethnicity?: string | null
+          gender?: string | null
+          id?: string
+          name?: string
+          role_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_call_roles_casting_call_id_fkey"
+            columns: ["casting_call_id"]
+            isOneToOne: false
+            referencedRelation: "casting_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_calls: {
+        Row: {
+          application_deadline: string | null
+          compensation_notes: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_remote_friendly: boolean | null
+          location: string | null
+          project_type: string | null
+          status: string
+          title: string
+          union_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_deadline?: string | null
+          compensation_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_remote_friendly?: boolean | null
+          location?: string | null
+          project_type?: string | null
+          status?: string
+          title: string
+          union_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_deadline?: string | null
+          compensation_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_remote_friendly?: boolean | null
+          location?: string | null
+          project_type?: string | null
+          status?: string
+          title?: string
+          union_status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      casting_reviews: {
+        Row: {
+          created_at: string
+          decision: string
+          feedback: string | null
+          id: string
+          reviewer_profile_id: string | null
+          score: number | null
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision?: string
+          feedback?: string | null
+          id?: string
+          reviewer_profile_id?: string | null
+          score?: number | null
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          feedback?: string | null
+          id?: string
+          reviewer_profile_id?: string | null
+          score?: number | null
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_reviews_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "casting_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_submissions: {
+        Row: {
+          audition_video_url: string | null
+          casting_call_id: string
+          casting_call_role_id: string | null
+          cover_letter: string | null
+          created_at: string
+          experience_summary: string | null
+          id: string
+          portfolio_url: string | null
+          resume_url: string | null
+          status: string
+          talent_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          audition_video_url?: string | null
+          casting_call_id: string
+          casting_call_role_id?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          experience_summary?: string | null
+          id?: string
+          portfolio_url?: string | null
+          resume_url?: string | null
+          status?: string
+          talent_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          audition_video_url?: string | null
+          casting_call_id?: string
+          casting_call_role_id?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          experience_summary?: string | null
+          id?: string
+          portfolio_url?: string | null
+          resume_url?: string | null
+          status?: string
+          talent_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_submissions_casting_call_id_fkey"
+            columns: ["casting_call_id"]
+            isOneToOne: false
+            referencedRelation: "casting_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_submissions_casting_call_role_id_fkey"
+            columns: ["casting_call_role_id"]
+            isOneToOne: false
+            referencedRelation: "casting_call_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_emotional_states: {
         Row: {
           created_at: string
@@ -25098,6 +25288,89 @@ export type Database = {
           spline_scene_url?: string | null
           time_of_day?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      story_choices: {
+        Row: {
+          choice_id: string
+          choice_label: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          node_id: string
+          result_summary: string | null
+          story_id: string
+          story_state_id: string
+          user_id: string
+        }
+        Insert: {
+          choice_id: string
+          choice_label?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          node_id: string
+          result_summary?: string | null
+          story_id: string
+          story_state_id: string
+          user_id: string
+        }
+        Update: {
+          choice_id?: string
+          choice_label?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          node_id?: string
+          result_summary?: string | null
+          story_id?: string
+          story_state_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_choices_story_state_id_fkey"
+            columns: ["story_state_id"]
+            isOneToOne: false
+            referencedRelation: "story_states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_states: {
+        Row: {
+          created_at: string
+          current_node_id: string
+          flags: Json
+          id: string
+          profile_id: string | null
+          story_id: string
+          updated_at: string
+          user_id: string
+          visited_node_ids: string[]
+        }
+        Insert: {
+          created_at?: string
+          current_node_id: string
+          flags?: Json
+          id?: string
+          profile_id?: string | null
+          story_id: string
+          updated_at?: string
+          user_id: string
+          visited_node_ids?: string[]
+        }
+        Update: {
+          created_at?: string
+          current_node_id?: string
+          flags?: Json
+          id?: string
+          profile_id?: string | null
+          story_id?: string
+          updated_at?: string
+          user_id?: string
+          visited_node_ids?: string[]
         }
         Relationships: []
       }

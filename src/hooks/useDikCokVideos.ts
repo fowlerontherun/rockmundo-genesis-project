@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { calculateTrendingScore, type ViralityFactors, type ViralityScore } from "@/utils/dikCokVirality";
+import { differenceInHours } from "date-fns";
 
 export const useDikCokVideos = (bandId?: string) => {
   const { toast } = useToast();
@@ -13,7 +15,7 @@ export const useDikCokVideos = (bandId?: string) => {
         .from("dikcok_videos")
         .select(`
           *,
-          band:bands(id, name, genre, logo_url),
+          band:bands(id, name, genre, logo_url, fame),
           video_type:dikcok_video_types(name, category, difficulty),
           track:songs(id, title)
         `)
@@ -29,6 +31,7 @@ export const useDikCokVideos = (bandId?: string) => {
     },
   });
 
+  // Trending with virality algorithm
   const { data: trending } = useQuery({
     queryKey: ["dikcok-trending"],
     queryFn: async () => {
@@ -36,14 +39,35 @@ export const useDikCokVideos = (bandId?: string) => {
         .from("dikcok_videos")
         .select(`
           *,
-          band:bands(id, name, genre),
+          band:bands(id, name, genre, fame),
           video_type:dikcok_video_types(name, category)
         `)
-        .order("views", { ascending: false })
-        .limit(20);
+        .order("created_at", { ascending: false })
+        .limit(100); // Fetch more, rank by algorithm
 
       if (error) throw error;
-      return data;
+      if (!data) return [];
+
+      // Apply virality algorithm to rank by trending score
+      const now = new Date();
+      const ranked = data
+        .map((video: any) => {
+          const factors: ViralityFactors = {
+            views: video.views || 0,
+            hypeGained: video.hype_gained || 0,
+            fanGain: video.fan_gain || 0,
+            bandFame: video.band?.fame || 0,
+            challengeBonus: !!video.trending_tag,
+            videoAge: differenceInHours(now, new Date(video.created_at)),
+            videoTypeCategory: video.video_type?.category || "default",
+          };
+          const virality = calculateTrendingScore(factors);
+          return { ...video, virality };
+        })
+        .sort((a: any, b: any) => b.virality.trendingScore - a.virality.trendingScore)
+        .slice(0, 20);
+
+      return ranked;
     },
   });
 

@@ -20,8 +20,9 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
-import { Loader2, Lock, Music4 } from "lucide-react";
+import { Loader2, Lock, Music4, Gamepad2 } from "lucide-react";
 import { MUSIC_GENRES } from "@/data/genres";
+import { JamSessionGameplay } from "./JamSessionGameplay";
 
 type JamSessionRow = Database["public"]["Tables"]["jam_sessions"]["Row"];
 
@@ -70,6 +71,7 @@ export function JamSessionsTab() {
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   const [joinAccessCodes, setJoinAccessCodes] = useState<Record<string, string>>({});
   const [jamSessions, setJamSessions] = useState<JamSessionWithHost[]>([]);
+  const [activeJamSessionId, setActiveJamSessionId] = useState<string | null>(null);
 
   const profileDisplayName = useMemo(() => {
     if (!profile) {
@@ -283,6 +285,23 @@ export function JamSessionsTab() {
   };
 
   const isJoining = (sessionId: string) => joiningSessionId === sessionId;
+
+  // If actively jamming, show the gameplay component
+  const activeSession = activeJamSessionId ? jamSessions.find(s => s.id === activeJamSessionId) : null;
+  if (activeSession && user) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <JamSessionGameplay
+          sessionId={activeSession.id}
+          sessionName={activeSession.name}
+          genre={activeSession.genre || "Rock"}
+          userId={user.id}
+          bandId={undefined}
+          onComplete={() => setActiveJamSessionId(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -515,6 +534,15 @@ export function JamSessionsTab() {
                         "Join session"
                       )}
                     </Button>
+                    {(isHost || alreadyJoined) && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setActiveJamSessionId(session.id)}
+                        className="w-full sm:w-auto gap-2"
+                      >
+                        <Gamepad2 className="h-4 w-4" /> Start Jamming
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
