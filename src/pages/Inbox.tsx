@@ -7,6 +7,8 @@ import { useInbox, useUnreadInboxCount, type InboxCategory, type InboxMessage as
 import { InboxMessage } from "@/components/inbox/InboxMessage";
 import { InboxFilters } from "@/components/inbox/InboxFilters";
 import { InboxEmptyState } from "@/components/inbox/InboxEmptyState";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type DateGroup = 'today' | 'yesterday' | 'this_week' | 'older';
 
