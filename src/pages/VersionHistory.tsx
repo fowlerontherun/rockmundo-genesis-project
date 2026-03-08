@@ -25,7 +25,7 @@ const versionHistory: VersionEntry[] = [
       { type: 'improvement', description: "Career tier progress now shows skill requirement bars with lock icons for unmet requirements" },
     ],
   },
-
+  {
     version: "1.0.918",
     date: "2026-03-08",
     changes: [
