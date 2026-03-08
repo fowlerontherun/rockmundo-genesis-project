@@ -279,12 +279,18 @@ serve(async (req) => {
     const totalRevenue = adjustedTicketRevenue + adjustedMerchRevenue;
     const netProfit = totalRevenue - totalCosts;
 
+    // === MORALE PERFORMANCE MODIFIER (v1.0.958) ===
+    // Band morale affects fame gain and fan conversion: 0.7x at 0 morale, 1.0x at 50, 1.2x at 100
+    const bandMorale = (gig.bands as any)?.morale ?? 50;
+    const moraleMod = parseFloat((0.7 + (Math.max(0, Math.min(100, bandMorale)) / 100) * 0.5).toFixed(2));
+    console.log(`Band morale: ${bandMorale} → performance modifier ${moraleMod}x`);
+
     // Calculate fame gained - balanced formula with variance
     const attendanceMultiplier = 1.0 + Math.log10(Math.max(1, outcome.actual_attendance / 100)) * 0.5;
     const baseFame = (avgRating / 25) * 200;
     // Add ±25% random variance to fame for more unpredictable outcomes
     const fameVariance = 0.75 + Math.random() * 0.50; // 0.75 to 1.25
-    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance);
+    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod);
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5);
