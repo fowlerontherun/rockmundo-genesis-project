@@ -67,6 +67,10 @@ Deno.serve(async (req) => {
     let travelCompleted = 0
     if (!inProgressError && inProgressTravels) {
       console.log(`[process-tour-travel] Found ${inProgressTravels.length} in-progress tour travels to complete`)
+
+      // === MORALE BOOST: Arriving at a new tour city is exciting (v1.0.969) ===
+      // Collect unique band_ids from completed travels to boost morale once per band
+      const completedTravelBandIds = new Set<string>();
       
       for (const travel of inProgressTravels) {
         try {
