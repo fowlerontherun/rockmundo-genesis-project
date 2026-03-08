@@ -31,6 +31,9 @@ import { calculateBandGenreBonus } from "./genreSkillBonus";
 import { getEncoreFameBonus, updateSongsAfterGig } from "./songFamePopularity";
 import { getBehaviorModifiers } from "./stageBehaviors";
 import { checkAndGrantBehaviorUnlocks } from "./behaviorUnlockChecker";
+import { calculateConsecutiveGigs, getFatigueState, type FatigueState } from "./tourFatigue";
+import { getWeatherGigImpact, type WeatherGigImpact } from "./weatherGigImpact";
+import type { WeatherCondition } from "./weatherSystem";
 
 interface GigExecutionData {
   gigId: string;
