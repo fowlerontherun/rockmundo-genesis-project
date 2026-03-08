@@ -17820,6 +17820,63 @@ export type Database = {
         }
         Relationships: []
       }
+      player_tattoos: {
+        Row: {
+          applied_at: string
+          body_slot: string
+          id: string
+          infection_cleared_at: string | null
+          ink_color: string
+          is_infected: boolean
+          parlour_id: string | null
+          price_paid: number
+          quality_score: number
+          tattoo_design_id: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string
+          body_slot: string
+          id?: string
+          infection_cleared_at?: string | null
+          ink_color?: string
+          is_infected?: boolean
+          parlour_id?: string | null
+          price_paid?: number
+          quality_score?: number
+          tattoo_design_id: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string
+          body_slot?: string
+          id?: string
+          infection_cleared_at?: string | null
+          ink_color?: string
+          is_infected?: boolean
+          parlour_id?: string | null
+          price_paid?: number
+          quality_score?: number
+          tattoo_design_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_tattoos_parlour_id_fkey"
+            columns: ["parlour_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_parlours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_tattoos_tattoo_design_id_fkey"
+            columns: ["tattoo_design_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_designs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_token_holdings: {
         Row: {
           average_buy_price: number | null
@@ -24754,6 +24811,89 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      tattoo_designs: {
+        Row: {
+          base_price: number
+          body_slot: string
+          category: string
+          created_at: string
+          description: string | null
+          genre_affinity: Json
+          id: string
+          ink_color_primary: string
+          ink_color_secondary: string | null
+          name: string
+        }
+        Insert: {
+          base_price?: number
+          body_slot?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          genre_affinity?: Json
+          id?: string
+          ink_color_primary?: string
+          ink_color_secondary?: string | null
+          name: string
+        }
+        Update: {
+          base_price?: number
+          body_slot?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          genre_affinity?: Json
+          id?: string
+          ink_color_primary?: string
+          ink_color_secondary?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      tattoo_parlours: {
+        Row: {
+          city_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          infection_risk: number
+          name: string
+          price_multiplier: number
+          quality_tier: number
+          specialties: string[] | null
+        }
+        Insert: {
+          city_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          infection_risk?: number
+          name: string
+          price_multiplier?: number
+          quality_tier?: number
+          specialties?: string[] | null
+        }
+        Update: {
+          city_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          infection_risk?: number
+          name?: string
+          price_multiplier?: number
+          quality_tier?: number
+          specialties?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tattoo_parlours_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       territories: {
         Row: {
