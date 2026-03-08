@@ -5,23 +5,25 @@ import { fetchProfileState, type ProfileState } from "./index.ts";
 // Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
 const MAX_SKILL_LEVEL = 100;
 
-// Streak milestone constants
+// Streak milestone constants (AP kept low — total daily AP hard-capped at 50)
 const STREAK_MILESTONES = [
-  { days: 7, bonusSxp: 50, bonusAp: 10 },
-  { days: 14, bonusSxp: 100, bonusAp: 20 },
-  { days: 30, bonusSxp: 200, bonusAp: 40 },
-  { days: 100, bonusSxp: 500, bonusAp: 100 },
-  { days: 365, bonusSxp: 1000, bonusAp: 200 },
+  { days: 7, bonusSxp: 50, bonusAp: 2 },
+  { days: 14, bonusSxp: 100, bonusAp: 3 },
+  { days: 30, bonusSxp: 200, bonusAp: 5 },
+  { days: 100, bonusSxp: 500, bonusAp: 8 },
+  { days: 365, bonusSxp: 1000, bonusAp: 12 },
 ];
 
 // Base stipend amounts
 const BASE_STIPEND_SXP = 100;
-const MAX_STIPEND_AP = 10;
-const MIN_STIPEND_AP = 3;
+const MAX_STIPEND_AP = 8;
+const MIN_STIPEND_AP = 2;
 // AP decays from MAX to MIN as lifetime SXP grows.
 // Full AP until 1000 lifetime SXP, then linear decay to MIN at 10000+ SXP.
 const AP_DECAY_START = 1000;
 const AP_DECAY_END = 10000;
+// Hard cap on total AP from the daily stipend claim (base + streak bonuses)
+const DAILY_STIPEND_AP_CAP = 30;
 
 function getScaledBaseAp(lifetimeSxp: number): number {
   if (lifetimeSxp <= AP_DECAY_START) return MAX_STIPEND_AP;
