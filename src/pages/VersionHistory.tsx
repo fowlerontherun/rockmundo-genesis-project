@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.922",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Player-purchased clothing now appears in avatar wardrobe — clothing marketplace purchases are queryable from the avatar system" },
+      { type: 'feature', description: "Genre-matched clothing gig bonuses — wearing clothing that matches a gig's genre provides +5% fan interaction and +3% merch sales per matched item (caps at 3 items)" },
+      { type: 'feature', description: "Exclusive modeling gig types: Editorial (requires Professional Styling ≥200) and Fashion Week (requires Professional Fashion Fundamentals ≥300)" },
+      { type: 'feature', description: "XP rewards for clothing activities: 30-80 XP for creating items (scales with quality), 10 XP per sale, 30-80 XP per modeling gig (varies by type)" },
+      { type: 'improvement', description: "Modeling gig completion now awards skill-specific XP to the relevant modeling skill (e.g., runway gigs → modeling_basic_runway)" },
+      { type: 'improvement', description: "Shopping addiction already tracked in conditionSystem — clothing purchases now contribute to shopping addiction trigger checks" },
+    ],
+  },
+  {
     version: "1.0.921",
     date: "2026-03-08",
     changes: [

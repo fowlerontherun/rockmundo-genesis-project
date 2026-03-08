@@ -116,7 +116,8 @@ export const useClothingMarketplace = (filters?: {
     onSuccess: (item) => {
       queryClient.invalidateQueries({ queryKey: ["clothing-marketplace"] });
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
-      toast.success(`Purchased "${item.name}"!`);
+      queryClient.invalidateQueries({ queryKey: ["player-purchased-clothing"] });
+      toast.success(`Purchased "${item.name}"! Seller earned +10 XP`);
     },
     onError: (e: Error) => toast.error(e.message),
   });

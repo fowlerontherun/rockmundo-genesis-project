@@ -503,6 +503,7 @@ export const usePlayerAvatar = () => {
     clothingItems,
     faceOptions,
     ownedSkins,
+    purchasedClothing,
     profile,
     saveConfig: saveConfigMutation.mutate,
     isSaving: saveConfigMutation.isPending,
