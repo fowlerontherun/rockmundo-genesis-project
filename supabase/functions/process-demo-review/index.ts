@@ -343,8 +343,11 @@ Deno.serve(async (req) => {
               const { data: bd } = await supabase.from('bands').select('morale').eq('id', demo.band_id).single();
               if (bd) {
                 const moraleBoost = 5;
-                await supabase.from('bands').update({ morale: Math.min(100, (bd.morale ?? 50) + moraleBoost) }).eq('id', demo.band_id);
+                const newMorale = Math.min(100, (bd.morale ?? 50) + moraleBoost);
+                await supabase.from('bands').update({ morale: newMorale }).eq('id', demo.band_id);
                 console.log(`Demo accepted → morale +${moraleBoost} for band ${demo.band_id}`);
+                // Health event log
+                try { await supabase.from('band_health_events').insert({ band_id: demo.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'demo_accepted', description: `Demo accepted by label: ${label.name}` }); } catch (_) {}
               }
             } catch (e) { console.log('Morale boost error:', e); }
           }
