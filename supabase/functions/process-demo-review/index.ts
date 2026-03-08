@@ -14,7 +14,8 @@ interface BandMetrics {
 function generateContractTerms(
   metrics: BandMetrics,
   labelReputation: number,
-  songQuality: number
+  songQuality: number,
+  arSkillBonus: number = 0
 ) {
   const { fame, total_fans, release_count } = metrics;
 
@@ -61,18 +62,23 @@ function generateContractTerms(
   const experienceMultiplier = 1 + Math.min(release_count * 0.05, 0.25);
   const labelFactor = 1 - labelReputation / 400;
 
+  // A&R skill bonus: higher skill scouts get better deals (lower advance for label = saves money)
+  // But also better artist identification = slightly higher royalty offered to attract talent
+  const arAdvanceModifier = 1 - (arSkillBonus * 0.1); // Up to 10% lower advance with max A&R
+  const arRoyaltyBonus = arSkillBonus * 1.5; // Up to +1.5% better artist royalty with max A&R
+
   const rawAdvance = Math.round(
     config.advanceBase +
       (config.advanceMax - config.advanceBase) *
-        fameMultiplier * fanMultiplier * (1 + qualityBonus) * randomFactor * labelFactor
+        fameMultiplier * fanMultiplier * (1 + qualityBonus) * randomFactor * labelFactor * arAdvanceModifier
   );
-  // Cap advance to max for the tier to prevent integer overflow
   const advance = Math.min(rawAdvance, config.advanceMax * 2);
 
   const artistRoyalty = Math.round(
     config.artistRoyaltyBase +
       (config.artistRoyaltyMax - config.artistRoyaltyBase) *
         (fameMultiplier - 1) * experienceMultiplier * (1 + qualityBonus)
+    + arRoyaltyBonus
   );
 
   const clampedArtistRoyalty = Math.min(
@@ -111,16 +117,23 @@ function shouldAcceptDemo(
   songQuality: number,
   bandMetrics: BandMetrics,
   labelReputation: number,
-  genreMatch: boolean
+  genreMatch: boolean,
+  arSkillBonus: number = 0
 ): { accepted: boolean; reason?: string } {
-  // Lower base threshold so more demos get accepted
-  const baseThreshold = 20 + labelReputation * 0.2;
+  // A&R staff skill lowers the acceptance threshold (better scouts find talent easier)
+  // arSkillBonus ranges 0-1 (normalized from skill_level 0-10)
+  const arThresholdReduction = arSkillBonus * 15; // Up to -15 threshold with max A&R
+  const baseThreshold = Math.max(5, 20 + labelReputation * 0.2 - arThresholdReduction);
 
   let score = songQuality;
   score += bandMetrics.fame * 0.5;
   score += Math.log10(Math.max(bandMetrics.total_fans, 1)) * 10;
   score += bandMetrics.release_count * 5;
   if (genreMatch) score += 20;
+  
+  // A&R skill adds a small score bonus (better at evaluating talent)
+  score += arSkillBonus * 10;
+  
   // Add randomness that skews positive
   score += (Math.random() * 30) - 10;
 
@@ -154,21 +167,6 @@ Deno.serve(async (req) => {
 
     console.log("Processing pending demo submissions...");
 
-    // Fetch a global deal type (they are not label-specific)
-    const { data: globalDealType } = await supabase
-      .from("label_deal_types")
-      .select("id")
-      .limit(1)
-      .single();
-
-    if (!globalDealType) {
-      console.error("No deal types found in system");
-      return new Response(
-        JSON.stringify({ error: "No deal types configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Fetch pending demos - process after 2 hours (not 24h, so players see results sooner)
     const { data: pendingDemos, error: demosError } = await supabase
       .from("demo_submissions")
@@ -187,6 +185,61 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Found ${pendingDemos?.length ?? 0} demos to process`);
+
+    // Pre-fetch A&R staff for all labels in this batch
+    const labelIds = [...new Set((pendingDemos || []).map(d => d.label_id).filter(Boolean))];
+    const labelArSkillMap = new Map<string, number>();
+    const labelDealTypeMap = new Map<string, string>();
+
+    if (labelIds.length > 0) {
+      // Fetch A&R staff skill levels per label
+      const { data: arStaff } = await supabase
+        .from("label_staff")
+        .select("label_id, skill_level, role")
+        .in("label_id", labelIds)
+        .eq("role", "a_and_r");
+
+      for (const staff of arStaff || []) {
+        const currentBest = labelArSkillMap.get(staff.label_id) || 0;
+        // Normalize skill_level (0-10) to 0-1 range, take the best A&R scout
+        const normalizedSkill = Math.min(Number(staff.skill_level) || 0, 10) / 10;
+        labelArSkillMap.set(staff.label_id, Math.max(currentBest, normalizedSkill));
+      }
+      console.log(`Loaded A&R skills for ${labelArSkillMap.size} labels`);
+
+      // Fetch preferred deal types per label (most recently created active deal type)
+      // Each label may have different deal types available
+      const { data: dealTypes } = await supabase
+        .from("label_deal_types")
+        .select("id, name, label_id")
+        .in("label_id", labelIds)
+        .order("created_at", { ascending: false });
+
+      for (const dt of dealTypes || []) {
+        if (dt.label_id && !labelDealTypeMap.has(dt.label_id)) {
+          labelDealTypeMap.set(dt.label_id, dt.id);
+        }
+      }
+
+      // Fallback: fetch a global deal type for labels without a specific one
+      if (labelDealTypeMap.size < labelIds.length) {
+        const { data: globalDealTypes } = await supabase
+          .from("label_deal_types")
+          .select("id")
+          .is("label_id", null)
+          .limit(1);
+        
+        const fallbackDealTypeId = globalDealTypes?.[0]?.id || null;
+        if (fallbackDealTypeId) {
+          for (const lid of labelIds) {
+            if (!labelDealTypeMap.has(lid)) {
+              labelDealTypeMap.set(lid, fallbackDealTypeId);
+            }
+          }
+        }
+      }
+      console.log(`Loaded deal type preferences for ${labelDealTypeMap.size} labels`);
+    }
 
     let processed = 0;
     let accepted = 0;
@@ -211,6 +264,16 @@ Deno.serve(async (req) => {
         // Skip bankrupt labels
         if (label.is_bankrupt) {
           console.log(`Skipping demo ${demo.id} - bankrupt label`);
+          continue;
+        }
+
+        // Get A&R skill bonus for this label (0-1 range)
+        const arSkillBonus = labelArSkillMap.get(demo.label_id) || 0;
+        
+        // Get deal type for this label
+        const dealTypeId = labelDealTypeMap.get(demo.label_id);
+        if (!dealTypeId) {
+          console.log(`Skipping demo ${demo.id} - no deal type available`);
           continue;
         }
 
@@ -264,32 +327,34 @@ Deno.serve(async (req) => {
           g.toLowerCase().includes(songGenre) || songGenre.includes(g.toLowerCase())
         );
 
-        // Decide if accepted
+        // Decide if accepted — A&R skill affects acceptance threshold
         const decision = shouldAcceptDemo(
           song.quality_score ?? 0,
           metrics,
           label.reputation_score ?? 0,
-          genreMatch
+          genreMatch,
+          arSkillBonus
         );
 
         if (decision.accepted) {
-          // Generate contract terms
+          // Generate contract terms — A&R skill affects term quality
           const terms = generateContractTerms(
             metrics,
             label.reputation_score ?? 0,
-            song.quality_score ?? 0
+            song.quality_score ?? 0,
+            arSkillBonus
           );
 
           const startDate = new Date();
           const endDate = new Date();
           endDate.setMonth(endDate.getMonth() + terms.term_months);
 
-          // Create contract offer
+          // Create contract offer using label's preferred deal type
           const { data: contract, error: contractError } = await supabase
             .from("artist_label_contracts")
             .insert({
               label_id: label.id,
-              deal_type_id: globalDealType.id,
+              deal_type_id: dealTypeId,
               band_id: demo.band_id || null,
               artist_profile_id: demo.artist_profile_id || null,
               status: "offered",
@@ -326,7 +391,7 @@ Deno.serve(async (req) => {
             .eq("id", demo.id);
 
           accepted++;
-          console.log(`Demo ${demo.id} accepted, contract ${contract.id} created for ${song.title}`);
+          console.log(`Demo ${demo.id} accepted, contract ${contract.id} created for ${song.title} (A&R skill: ${(arSkillBonus * 100).toFixed(0)}%)`);
         } else {
           // Reject demo
           await supabase
