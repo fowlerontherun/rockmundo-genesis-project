@@ -327,6 +327,22 @@ export const usePlayerAvatar = () => {
     enabled: !!profile?.id,
   });
 
+  // Fetch player-purchased clothing from the clothing marketplace
+  const { data: purchasedClothing = [] } = useQuery({
+    queryKey: ['player-purchased-clothing', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('player_clothing_purchases' as never)
+        .select('*, item:player_clothing_items!inner(*)')
+        .eq('buyer_user_id', user.id)
+        .order('purchased_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{ item: Record<string, unknown> }>;
+    },
+    enabled: !!user?.id,
+  });
+
   const saveConfigMutation = useMutation({
     mutationFn: async (config: Partial<AvatarConfig>) => {
       if (!profile?.id) throw new Error('Not authenticated');
@@ -487,6 +503,7 @@ export const usePlayerAvatar = () => {
     clothingItems,
     faceOptions,
     ownedSkins,
+    purchasedClothing,
     profile,
     saveConfig: saveConfigMutation.mutate,
     isSaving: saveConfigMutation.isPending,

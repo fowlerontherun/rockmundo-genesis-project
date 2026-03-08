@@ -122,9 +122,11 @@ export const useClothingBrand = () => {
       if (error) throw error;
       return data as ClothingItem;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["clothing-items"] });
-      toast.success("Item created!");
+      // Award XP for item creation based on quality
+      const xp = Math.floor(30 + (variables.scores.qualityScore / 100) * 50);
+      toast.success(`Item created! +${xp} XP`);
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -32,6 +32,9 @@ const GIG_TYPE_SKILL_REQUIREMENTS: Record<string, { slug: string; minValue: numb
   brand_ambassador: { slug: 'modeling_basic_brand', minValue: 50 },
   photo_shoot: { slug: 'modeling_basic_posing', minValue: 30 },
   music_video_cameo: { slug: 'modeling_basic_camera', minValue: 20 },
+  // Fashion design skills unlock exclusive modeling gig types
+  editorial: { slug: 'fashion_professional_styling', minValue: 200 },
+  fashion_week: { slug: 'fashion_professional_fundamentals', minValue: 300 },
 };
 
 /**
