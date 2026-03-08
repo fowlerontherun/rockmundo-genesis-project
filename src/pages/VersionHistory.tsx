@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.900",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Deal-type-specific revenue rules — Distribution Deal only takes a cut on physical/digital sales (not streaming), Licensing Deal stops collecting after contract expiry, Production Deal applies to recording revenue" },
+      { type: 'feature', description: "Company synergy discounts now actually applied to operating costs — Security+Venue (20%), Factory+Label (15%), Logistics+Factory (10%), capped at 35% total" },
+      { type: 'feature', description: "Monthly financial reports auto-generated alongside weekly reports for all active companies" },
+      { type: 'improvement', description: "Operating cost transaction descriptions now show synergy discount percentage when applied" },
+      { type: 'improvement', description: "Subsidiary operating costs (Security Firms, Factories) also benefit from synergy discounts" },
+      { type: 'fix', description: "Distribution Deal no longer incorrectly takes streaming royalties — now limited to max 20% on sales only" },
+    ],
+  },
+
+  {
     version: "1.0.899",
     date: "2026-03-08",
     changes: [

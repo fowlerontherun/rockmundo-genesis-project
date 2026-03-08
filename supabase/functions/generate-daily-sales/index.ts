@@ -212,16 +212,30 @@ serve(async (req) => {
 
     // Pre-fetch all active label contracts for revenue splitting
     const contractIds = [...new Set((releases || []).map(r => (r as any).label_contract_id).filter(Boolean))];
-    const contractMap = new Map<string, { id: string; label_id: string; advance_amount: number; recouped_amount: number; royalty_artist_pct: number; royalty_label_pct: number; marketing_support: number }>();
+    const contractMap = new Map<string, { id: string; label_id: string; advance_amount: number; recouped_amount: number; royalty_artist_pct: number; royalty_label_pct: number; marketing_support: number; deal_type_name: string; end_date: string }>();
     
     if (contractIds.length > 0) {
       const { data: contracts } = await supabaseClient
         .from("artist_label_contracts")
-        .select("id, label_id, advance_amount, recouped_amount, royalty_artist_pct, royalty_label_pct, marketing_support, status")
+        .select("id, label_id, advance_amount, recouped_amount, royalty_artist_pct, royalty_label_pct, marketing_support, status, deal_type_id, end_date")
         .in("id", contractIds)
         .eq("status", "active");
       
+      // Pre-fetch deal type names
+      const dealTypeIds = [...new Set((contracts || []).map(c => c.deal_type_id).filter(Boolean))];
+      const dealTypeNameMap = new Map<string, string>();
+      if (dealTypeIds.length > 0) {
+        const { data: dealTypes } = await supabaseClient
+          .from("label_deal_types")
+          .select("id, name")
+          .in("id", dealTypeIds);
+        for (const dt of dealTypes || []) {
+          dealTypeNameMap.set(dt.id, dt.name);
+        }
+      }
+      
       for (const c of contracts || []) {
+        const dealTypeName = dealTypeNameMap.get(c.deal_type_id) || "Standard Deal";
         contractMap.set(c.id, {
           id: c.id,
           label_id: c.label_id,
@@ -230,6 +244,8 @@ serve(async (req) => {
           royalty_artist_pct: c.royalty_artist_pct,
           royalty_label_pct: c.royalty_label_pct ?? (100 - c.royalty_artist_pct),
           marketing_support: c.marketing_support ?? 0,
+          deal_type_name: dealTypeName,
+          end_date: c.end_date,
         });
       }
       console.log(`Loaded ${contractMap.size} active label contracts for revenue splitting`);
@@ -453,11 +469,28 @@ serve(async (req) => {
                 }
               }
 
-              // ── Label Revenue Split ──
-              // If release has an active contract, split net revenue
-              if (contract && labelCutPct > 0 && release.band_id) {
-                const labelShareDollars = netRevenue * labelCutPct;
-                const bandShareDollars = netRevenue * (1 - labelCutPct);
+              // ── Label Revenue Split (Deal-Type Aware) ──
+              // Distribution Deal: only takes cut on physical/digital sales (not streaming, which is handled in update-daily-streams)
+              // Licensing Deal: check if contract has expired — if so, skip label cut
+              // Production Deal: label takes recording revenue cut (sales are recording revenue)
+              // Standard Deal: normal recording sales split
+              // 360 Deal: takes cut of everything (gig/merch handled separately in complete-gig/simulate-merch-sales)
+              const dealType = contract?.deal_type_name || "Standard Deal";
+              
+              // Licensing Deal: if contract end date has passed, no label cut
+              const isLicensingExpired = dealType === "Licensing Deal" && contract && new Date(contract.end_date) < new Date();
+              
+              // All deal types get a cut of sales revenue (it's recording/distribution revenue)
+              // Distribution Deal gets a smaller effective cut (only distribution margin)
+              let effectiveLabelCutPct = labelCutPct;
+              if (dealType === "Distribution Deal") {
+                // Distribution deals only take the distribution margin, not full royalty
+                effectiveLabelCutPct = Math.min(labelCutPct, 0.20); // cap at 20%
+              }
+              
+              if (contract && effectiveLabelCutPct > 0 && release.band_id && !isLicensingExpired) {
+                const labelShareDollars = netRevenue * effectiveLabelCutPct;
+                const bandShareDollars = netRevenue * (1 - effectiveLabelCutPct);
 
                 // Check if advance still needs recoupment
                 const currentRecouped = contract.recouped_amount;

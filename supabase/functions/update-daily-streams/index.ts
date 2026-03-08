@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // Pre-fetch label contract info for releases
-    let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number }>();
+    let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number; dealTypeName: string; endDate: string }>();
     if (releaseIds.length > 0) {
       const { data: releasesWithContracts } = await supabase
         .from('releases')
@@ -111,21 +111,37 @@ Deno.serve(async (req) => {
       if (contractIds.length > 0) {
         const { data: contracts } = await supabase
           .from('artist_label_contracts')
-          .select('id, label_id, royalty_label_pct, royalty_artist_pct, advance_amount, recouped_amount, status')
+          .select('id, label_id, royalty_label_pct, royalty_artist_pct, advance_amount, recouped_amount, status, deal_type_id, end_date')
           .in('id', contractIds)
           .eq('status', 'active');
+
+        // Fetch deal type names
+        const dealTypeIds = [...new Set((contracts || []).map(c => c.deal_type_id).filter(Boolean))];
+        const dealTypeNameMap = new Map<string, string>();
+        if (dealTypeIds.length > 0) {
+          const { data: dealTypes } = await supabase
+            .from('label_deal_types')
+            .select('id, name')
+            .in('id', dealTypeIds);
+          for (const dt of dealTypes || []) {
+            dealTypeNameMap.set(dt.id, dt.name);
+          }
+        }
 
         const contractLookup = new Map((contracts || []).map(c => [c.id, c]));
 
         for (const rel of releasesWithContracts || []) {
           const c = contractLookup.get(rel.label_contract_id);
           if (c) {
+            const dealTypeName = dealTypeNameMap.get(c.deal_type_id) || "Standard Deal";
             releaseContractMap.set(rel.id, {
               contractId: c.id,
               labelId: c.label_id,
               labelCutPct: (rel.label_revenue_share_pct ?? c.royalty_label_pct ?? (100 - c.royalty_artist_pct)) / 100,
               advanceAmount: c.advance_amount ?? 0,
               recoupedAmount: c.recouped_amount ?? 0,
+              dealTypeName,
+              endDate: c.end_date,
             });
           }
         }
@@ -315,10 +331,17 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── Label Revenue Split for Streaming ──
+        // ── Label Revenue Split for Streaming (Deal-Type Aware) ──
         const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;
 
-        if (contractInfo && bandId && dailyRevenueDollars > 0) {
+        // Distribution Deal: does NOT take a cut of streaming (only physical/digital sales)
+        // Licensing Deal: if contract expired, skip label cut
+        const isDealExcluded = contractInfo && (
+          contractInfo.dealTypeName === "Distribution Deal" ||
+          (contractInfo.dealTypeName === "Licensing Deal" && new Date(contractInfo.endDate) < new Date())
+        );
+
+        if (contractInfo && !isDealExcluded && bandId && dailyRevenueDollars > 0) {
           const labelShareDollars = Math.round(dailyRevenueDollars * contractInfo.labelCutPct);
           const bandShareDollars = dailyRevenueDollars - labelShareDollars;
 

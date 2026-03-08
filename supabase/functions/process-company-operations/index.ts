@@ -58,10 +58,28 @@ Deno.serve(async (req) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // ==========================================
-    // PHASE 1: Operating Costs (daily from weekly)
+    // PRE-FETCH: Active synergies for discount application
+    // ==========================================
+    const { data: allSynergies } = await supabase
+      .from('company_synergies')
+      .select('company_id, synergy_type, discount_percentage, is_active')
+      .eq('is_active', true);
+
+    // Build a map: company_id -> total synergy discount %
+    const synergyDiscountMap = new Map<string, number>();
+    for (const synergy of allSynergies || []) {
+      const current = synergyDiscountMap.get(synergy.company_id) || 0;
+      synergyDiscountMap.set(synergy.company_id, Math.min(35, current + (synergy.discount_percentage || 0))); // cap at 35%
+    }
+    console.log(`[process-company-operations] Loaded ${allSynergies?.length || 0} active synergies for ${synergyDiscountMap.size} companies`);
+
+    // ==========================================
+    // PHASE 1: Operating Costs (daily from weekly) — with synergy discount
     // ==========================================
     for (const company of companies || []) {
-      const dailyOperatingCost = (company.weekly_operating_costs || 0) / 7;
+      const baseDailyCost = (company.weekly_operating_costs || 0) / 7;
+      const synergyDiscount = synergyDiscountMap.get(company.id) || 0;
+      const dailyOperatingCost = Math.round(baseDailyCost * (1 - synergyDiscount / 100));
       
       if (dailyOperatingCost > 0) {
         const newBalance = (company.balance || 0) - dailyOperatingCost;
@@ -75,7 +93,7 @@ Deno.serve(async (req) => {
           company_id: company.id,
           transaction_type: 'expense',
           amount: -dailyOperatingCost,
-          description: 'Daily operating costs (rent, utilities, insurance)',
+          description: `Daily operating costs${synergyDiscount > 0 ? ` (${synergyDiscount}% synergy discount applied)` : ''}`,
           category: 'operations'
         });
 
@@ -131,7 +149,9 @@ Deno.serve(async (req) => {
 
     for (const firm of securityFirms || []) {
       const tierMultiplier = 1 + ((firm.tier || 1) - 1) * 0.4;
-      const dailyCost = (firm.operating_costs || 100) / 7;
+      const baseDailyCost = (firm.operating_costs || 100) / 7;
+      const firmSynergyDiscount = synergyDiscountMap.get(firm.company_id!) || 0;
+      const dailyCost = Math.round(baseDailyCost * (1 - firmSynergyDiscount / 100));
 
       // Count recent gigs in any city — security firms provide event security services
       const { count: recentGigCount } = await supabase
@@ -189,7 +209,9 @@ Deno.serve(async (req) => {
 
     for (const factory of factories || []) {
       const tierMultiplier = 1 + ((factory.quality_tier || 1) - 1) * 0.3;
-      const dailyCost = (factory.monthly_overhead || 5000) / 30;
+      const baseFactoryCost = (factory.monthly_overhead || 5000) / 30;
+      const factorySynergyDiscount = synergyDiscountMap.get(factory.company_id!) || 0;
+      const dailyCost = Math.round(baseFactoryCost * (1 - factorySynergyDiscount / 100));
 
       // Count recent merch orders as manufacturing activity
       const { count: recentMerchOrders } = await supabase
