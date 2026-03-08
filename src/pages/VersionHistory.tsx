@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.926",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Underworld crypto payments now functional — deducts tokens from player_token_holdings instead of throwing error" },
+      { type: 'fix', description: "Admin Release Config now persists to game_config database table (was a no-op)" },
+      { type: 'fix', description: "Merchandise player level now reads from actual profile instead of hardcoded level 10" },
+      { type: 'fix', description: "Tour support artist picker now checks schedule availability against tour dates" },
+      { type: 'improvement', description: "Support artist picker shows Available/Busy badges based on scheduling conflicts" },
+      { type: 'improvement', description: "Created game_config table with RLS for admin-managed settings" },
+    ],
+  },
+  {
     version: "1.0.925",
     date: "2026-03-08",
     changes: [
