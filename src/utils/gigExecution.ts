@@ -693,5 +693,6 @@ export async function executeGigPerformance(data: GigExecutionData) {
     chemistryLevel: bandChemistry,
     chemistryChange: chemistryImpact,
     mentorDiscovery,
+    stageBehavior,
   };
 }

@@ -237,11 +237,13 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * qualityDifficulty * eventMultiplier;
   const score = Number(Math.max(0, Math.min(25, finalScore)).toFixed(2));
 
+  // Apply crowd engagement multiplier from behavior to thresholds
+  const crowdMult = bMods.crowdMult;
   let crowdResponse = 'mixed';
-  if (score >= 22) crowdResponse = 'ecstatic';
-  else if (score >= 18) crowdResponse = 'enthusiastic';
-  else if (score >= 14) crowdResponse = 'engaged';
-  else if (score >= 10) crowdResponse = 'mixed';
+  if (score >= 22 / crowdMult) crowdResponse = 'ecstatic';
+  else if (score >= 18 / crowdMult) crowdResponse = 'enthusiastic';
+  else if (score >= 14 / crowdMult) crowdResponse = 'engaged';
+  else if (score >= 10 / crowdMult) crowdResponse = 'mixed';
   else crowdResponse = 'disappointed';
 
   const breakdown = {

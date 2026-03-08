@@ -48,7 +48,7 @@ export async function checkAndGrantBehaviorUnlocks(userId: string): Promise<Beha
 
     // Check skill levels if needed
     let skillLevels: Record<string, number> = {};
-    const profileId = profileRes.data ? (profileRes.data as any).id : null;
+    const profileId = profileRes.data?.id || null;
     if (profileId) {
       const { data: skills } = await supabase
         .from('skill_progress')
