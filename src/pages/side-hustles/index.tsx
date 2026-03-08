@@ -330,9 +330,9 @@ const SideHustlesPage = () => {
                   <Button
                     className="w-full"
                     onClick={() => attemptMutation.mutate(activity)}
-                    disabled={attemptMutation.isLoading || !profile?.id}
+                    disabled={attemptMutation.isPending || !profile?.id}
                   >
-                    {attemptMutation.isLoading ? (
+                    {attemptMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Running mini-game…
