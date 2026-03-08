@@ -357,14 +357,14 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                   setReviewGigId(pendingOutcome.gigs.id);
                   setReviewOutcomeId(pendingOutcome.id);
                   setShowReviewChoice(false);
-                  setShow3DViewer(true);
+                  setShowTopDownViewer(true);
                 }}
                 size="lg"
                 className="h-auto flex-col gap-2 py-4"
               >
                 <Monitor className="h-6 w-6" />
-                <span className="font-semibold">3D Stage View</span>
-                <span className="text-xs opacity-80">Watch the band perform on stage with audio & crowd sounds</span>
+                <span className="font-semibold">Watch Performance</span>
+                <span className="text-xs opacity-80">Top-down pixel-art stage view with live commentary</span>
               </Button>
               <Button
                 onClick={handleWatchWithCommentary}
@@ -374,7 +374,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
               >
                 <FileText className="h-6 w-6" />
                 <span className="font-semibold">Commentary Mode</span>
-                <span className="text-xs opacity-80">Experience the gig with live text commentary</span>
+                <span className="text-xs opacity-80">Step-by-step review with detailed commentary</span>
               </Button>
               <Button
                 onClick={handleInstantOutcome}
@@ -390,16 +390,13 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           </DialogContent>
         </Dialog>
         
-        {/* 3D Stage Viewer */}
-        {show3DViewer && reviewGigId && (
-          <VideoGigViewer
-            gigId={reviewGigId}
-            onClose={() => {
-              setShow3DViewer(false);
-              setReviewGigId(null);
-              setReviewOutcomeId(null);
-            }}
-          />
+        {/* Top-Down Pixel Art Stage Viewer */}
+        {showTopDownViewer && reviewGigId && (
+          <Dialog open={showTopDownViewer} onOpenChange={setShowTopDownViewer}>
+            <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+              <TopDownGigViewer gigId={reviewGigId} />
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Gig Review Viewer */}

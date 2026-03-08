@@ -686,33 +686,16 @@ export default function PerformGig() {
               Outcome recorded on {format(new Date(gig.updated_at || gig.scheduled_date), 'PPP p')}.
             </div>
             
-            {/* Viewer Mode Selector for completed gigs */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <GigViewerModeSelector 
-                mode={viewerMode} 
-                onModeChange={setViewerMode}
-              />
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => navigate('/gig-booking')}>
-                  Back to Schedule
-                </Button>
-                <Button onClick={() => setShowOutcome(true)}>
-                  View Report
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => navigate('/gig-booking')}>
+                Back to Schedule
+              </Button>
+              <Button onClick={() => setShowOutcome(true)}>
+                View Report
+              </Button>
             </div>
             
-            {/* Show selected viewer for completed gigs */}
-            {viewerMode === '3d' ? (
-              <VideoGigViewer
-                gigId={gig.id}
-                onClose={() => setViewerMode('text')}
-              />
-            ) : (
-              <TextGigViewer
-                gigId={gig.id}
-              />
-            )}
+            <TopDownGigViewer gigId={gig.id} />
           </CardContent>
         </Card>
       )}

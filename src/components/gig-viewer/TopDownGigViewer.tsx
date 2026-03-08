@@ -213,7 +213,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
             setMembers(prev => prev.map(m => ({
               ...m,
               performanceScore: latest.performance_score || undefined,
-              skillContribution: latest.member_skills_contribution || undefined,
+              skillContribution: latest.member_skill_contrib || undefined,
             })));
           }
         }
