@@ -35,8 +35,8 @@ const Education = () => {
 
       <Tabs defaultValue={defaultValue} className="mt-6 sm:mt-8 space-y-6">
         {/* Mobile: Scrollable tabs */}
-        <div className="lg:hidden">
-          <ScrollArea className="w-full whitespace-nowrap">
+        <div className="lg:hidden overflow-x-auto">
+          <ScrollArea className="w-full whitespace-nowrap pb-2">
             <TabsList className="inline-flex h-auto w-max gap-1 bg-transparent p-0">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -45,10 +45,10 @@ const Education = () => {
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-primary/5"
+                    className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 min-w-[68px]"
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
-                    <span className="text-xs font-medium whitespace-nowrap">{tab.label}</span>
+                    <span className="text-[10px] font-medium whitespace-nowrap">{tab.label}</span>
                   </TabsTrigger>
                 );
               })}
