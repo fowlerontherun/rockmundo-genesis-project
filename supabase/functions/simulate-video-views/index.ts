@@ -63,8 +63,9 @@ serve(async (req) => {
 
     console.log(`Processing ${releasedVideos?.length || 0} released videos`);
 
-    // === FETCH BAND SENTIMENT FOR VIDEO ENGAGEMENT (v1.0.951) ===
+    // === FETCH BAND SENTIMENT & REPUTATION FOR VIDEO ENGAGEMENT (v1.0.951 / v1.0.988) ===
     const bandSentimentMap = new Map<string, number>();
+    const bandReputationMap = new Map<string, number>();
     const bandIds = new Set<string>();
     for (const v of releasedVideos || []) {
       const song = v.songs as any;
@@ -74,13 +75,14 @@ serve(async (req) => {
       try {
         const { data: bandExtras } = await supabaseClient
           .from('bands')
-          .select('id, fan_sentiment_score')
+          .select('id, fan_sentiment_score, reputation_score')
           .in('id', Array.from(bandIds));
         for (const b of bandExtras || []) {
           bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+          bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
         }
       } catch (e) {
-        console.error("Error fetching band sentiment for videos:", e);
+        console.error("Error fetching band sentiment/reputation for videos:", e);
       }
     }
 
