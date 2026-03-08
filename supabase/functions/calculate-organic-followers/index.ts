@@ -66,11 +66,11 @@ serve(async (req) => {
 
     const { data: bands } = await supabase
       .from("bands")
-      .select("id, fame, total_fans, fan_sentiment_score")
+      .select("id, fame, total_fans, fan_sentiment_score, reputation_score")
       .in("id", bandOwnerIds.length > 0 ? bandOwnerIds : ['none']);
 
     const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
-    const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0, sentiment: (b as any).fan_sentiment_score ?? 0 }]));
+    const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0, sentiment: (b as any).fan_sentiment_score ?? 0, reputation: (b as any).reputation_score ?? 0 }]));
 
     let totalFollowersAdded = 0;
 
