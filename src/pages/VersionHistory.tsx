@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.947",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Fan Sentiment → Merch Sales: Daily merch sales now scaled by sentiment demand modifier (0.5x hostile → 1.5x fanatical fans)" },
+      { type: 'feature', description: "Media Intensity → Gig Offer Payouts: Higher media coverage increases gig offer payouts (0.8x dormant → 1.2x peak media)" },
+      { type: 'feature', description: "Fan Sentiment → Ticket Pricing: Gig offers now factor in fan demand for dynamic ticket pricing (0.6x → 1.4x based on mood)" },
+      { type: 'improvement', description: "Merch simulation fetches band sentiment in batch before processing, minimizing extra DB queries" },
+    ],
+  },
+  {
     version: "1.0.946",
     date: "2026-03-08",
     changes: [

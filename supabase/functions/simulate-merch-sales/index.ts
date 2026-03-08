@@ -77,6 +77,23 @@ Deno.serve(async (req) => {
 
     if (bandsError) throw bandsError;
 
+    // === FETCH BAND SENTIMENT FOR MERCH DEMAND (v1.0.947) ===
+    const bandSentimentMap = new Map<string, number>();
+    try {
+      const bandIds = (bandsWithMerch || []).map(b => b.id);
+      if (bandIds.length > 0) {
+        const { data: bandExtras } = await supabase
+          .from('bands')
+          .select('id, fan_sentiment_score')
+          .in('id', bandIds);
+        for (const b of bandExtras || []) {
+          bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+        }
+      }
+    } catch (sentErr) {
+      console.error(`[${JOB_NAME}] Error fetching sentiment:`, sentErr);
+    }
+
     console.log(`[${JOB_NAME}] Found ${bandsWithMerch?.length || 0} bands with fans`);
 
     let totalOrders = 0;
@@ -96,8 +113,14 @@ Deno.serve(async (req) => {
       // Base: 0.1% of fans buy merch per day, scaled by fame
       const baseSalesChance = 0.001;
       const fameMultiplier = 1 + Math.min((band.fame || 0) / 5000, 2); // Max 3x
+
+      // === SENTIMENT MERCH DEMAND MODIFIER (v1.0.947) ===
+      const sentimentScore = bandSentimentMap.get(band.id) ?? 0;
+      const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0 to 1
+      const merchDemandMod = parseFloat((0.5 + sentimentT * 1.0).toFixed(2)); // 0.5x to 1.5x
+
       const dailySalesTarget = Math.max(1, Math.floor(
-        (band.total_fans || 0) * baseSalesChance * fameMultiplier
+        (band.total_fans || 0) * baseSalesChance * fameMultiplier * merchDemandMod
       ));
 
       // Random variation: 50% to 150% of target
