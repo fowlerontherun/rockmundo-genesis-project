@@ -222,7 +222,7 @@ export default function BandManager() {
   );
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           {/* Band Info with Logo */}

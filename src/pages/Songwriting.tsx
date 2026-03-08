@@ -1274,14 +1274,14 @@ const Songwriting = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-7xl">
+      <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
         <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <Music className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-2">
+              <Music className="h-6 w-6 md:h-7 md:w-7 text-primary" />
               {t('songwriting.title')}
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
+            <p className="text-sm text-muted-foreground mt-1">
               {t('songwriting.subtitle')}
             </p>
           </div>

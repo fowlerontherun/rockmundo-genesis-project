@@ -163,7 +163,7 @@ const Travel = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3"></div>
           <div className="h-48 bg-muted rounded"></div>

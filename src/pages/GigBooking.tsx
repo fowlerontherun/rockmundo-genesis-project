@@ -611,11 +611,11 @@ const GigBooking = () => {
   }
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t('gigs.title')}</h1>
-          <p className="text-muted-foreground">{t('gigs.bookGig', 'Book performances, grow your fanbase, and earn rewards.')}</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">{t('gigs.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('gigs.bookGig', 'Book performances, grow your fanbase, and earn rewards.')}</p>
         </div>
         {band ? (
           <Badge variant="secondary" className="w-fit">

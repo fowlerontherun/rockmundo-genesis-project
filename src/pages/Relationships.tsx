@@ -278,15 +278,15 @@ export default function RelationshipsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <Heart className="h-8 w-8 text-social-love" />
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-3">
+            <Heart className="h-6 w-6 md:h-7 md:w-7 text-social-love" />
             Social &amp; Relationships
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your connections, track chemistry, and navigate the drama of the music world.
           </p>
         </div>

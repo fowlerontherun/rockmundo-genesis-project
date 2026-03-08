@@ -48,15 +48,15 @@ export default function StreamingNew() {
   const totalRevenue = analytics?.reduce((sum, a) => sum + (a.daily_revenue || 0), 0) || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/music-hub")}>
+          <Button variant="ghost" onClick={() => navigate("/hub/music")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold">Streaming Platforms</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Streaming Platforms</h1>
             <p className="text-sm text-muted-foreground">Release and track your music</p>
           </div>
         </div>
