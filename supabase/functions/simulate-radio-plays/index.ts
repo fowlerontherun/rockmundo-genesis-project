@@ -66,6 +66,29 @@ serve(async (req) => {
 
     console.log(`Found ${playlists?.length || 0} songs in active playlists`);
 
+    // === FETCH BAND SENTIMENT FOR RADIO ENGAGEMENT (v1.0.951) ===
+    const bandSentimentMap = new Map<string, number>();
+    const bandIds = new Set<string>();
+    for (const p of playlists || []) {
+      const song = p.songs as any;
+      if (song?.band_id) bandIds.add(song.band_id);
+    }
+    if (bandIds.size > 0) {
+      try {
+        const { data: bandExtras } = await supabaseClient
+          .from('bands')
+          .select('id, fan_sentiment_score')
+          .in('id', Array.from(bandIds));
+        for (const b of bandExtras || []) {
+          bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+        }
+      } catch (e) {
+        console.error("Error fetching band sentiment for radio:", e);
+      }
+    }
+
+    const sentimentEventInserts: any[] = [];
+
     // Simulate plays for each song in rotation
     for (const playlist of playlists || []) {
       const show = playlist.radio_shows as any;
@@ -91,10 +114,16 @@ serve(async (req) => {
       // +2% hype/fame per net upvote (capped at +50%)
       const voteMultiplier = 1 + Math.min(0.5, Math.max(0, netVoteScore * 0.02));
 
-      // Calculate hype and streams boost with vote multiplier
+      // === SENTIMENT RADIO ENGAGEMENT MODIFIER (v1.0.951) ===
+      // Positive sentiment = more listener engagement, negative = less
+      const sentimentScore = song.band_id ? (bandSentimentMap.get(song.band_id) ?? 0) : 0;
+      const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0 to 1
+      const radioEngagementMod = parseFloat((0.7 + sentimentT * 0.6).toFixed(2)); // 0.7x to 1.3x
+
+      // Calculate hype and streams boost with vote multiplier and sentiment
       const qualityMult = (song.quality_score || 50) / 100;
-      const hypeGained = Math.round(listeners * 0.05 * qualityMult * voteMultiplier); // 5% of listeners become fans
-      const streamsBoost = Math.round(listeners * 0.1); // 10% go stream the song
+      const hypeGained = Math.round(listeners * 0.05 * qualityMult * voteMultiplier * radioEngagementMod);
+      const streamsBoost = Math.round(listeners * 0.1 * radioEngagementMod);
 
       // Create play record
       const { error: playError } = await supabaseClient
@@ -125,7 +154,7 @@ serve(async (req) => {
       if (song.band_id) {
         const { data: band } = await supabaseClient
           .from("bands")
-          .select("fame")
+          .select("fame, fan_sentiment_score")
           .eq("id", song.band_id)
           .single();
 
@@ -133,10 +162,35 @@ serve(async (req) => {
           const fameGain = Math.round(hypeGained * 0.5 * voteMultiplier);
           const fanGain = Math.round(hypeGained * 0.2);
           
+          // Sentiment boost from significant radio exposure (v1.0.951)
+          let sentimentBoost = 0;
+          if (listeners > 5000) sentimentBoost = 2;
+          else if (listeners > 1000) sentimentBoost = 1;
+
+          const currentSentiment = (band as any).fan_sentiment_score ?? 0;
+          const newSentiment = Math.max(-100, Math.min(100, currentSentiment + sentimentBoost));
+
+          const updatePayload: any = { fame: (band.fame || 0) + fameGain };
+          if (sentimentBoost > 0) {
+            updatePayload.fan_sentiment_score = newSentiment;
+          }
+
           await supabaseClient
             .from("bands")
-            .update({ fame: (band.fame || 0) + fameGain })
+            .update(updatePayload)
             .eq("id", song.band_id);
+
+          if (sentimentBoost > 0) {
+            sentimentEventInserts.push({
+              band_id: song.band_id,
+              event_type: 'radio_play',
+              sentiment_change: sentimentBoost,
+              media_intensity_change: 1,
+              sentiment_after: newSentiment,
+              source: 'simulate-radio-plays',
+              description: `Radio play reached ${listeners.toLocaleString()} listeners on ${station.name}`,
+            });
+          }
 
           // Add regional fame for the station's country
           const stationCountry = station.country;
@@ -173,6 +227,12 @@ serve(async (req) => {
       playsCreated++;
       totalListeners += listeners;
       totalHype += hypeGained;
+    }
+
+    // Batch insert sentiment events (v1.0.951)
+    if (sentimentEventInserts.length > 0) {
+      await supabaseClient.from('band_sentiment_events').insert(sentimentEventInserts);
+      console.log(`Logged ${sentimentEventInserts.length} radio sentiment events`);
     }
 
     console.log(`Created ${playsCreated} plays, ${totalListeners} total listeners, ${totalHype} total hype`);

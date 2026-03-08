@@ -63,17 +63,33 @@ serve(async (req) => {
 
     console.log(`Processing ${releasedVideos?.length || 0} released videos`);
 
+    // === FETCH BAND SENTIMENT FOR VIDEO ENGAGEMENT (v1.0.951) ===
+    const bandSentimentMap = new Map<string, number>();
+    const bandIds = new Set<string>();
+    for (const v of releasedVideos || []) {
+      const song = v.songs as any;
+      if (song?.band_id) bandIds.add(song.band_id);
+    }
+    if (bandIds.size > 0) {
+      try {
+        const { data: bandExtras } = await supabaseClient
+          .from('bands')
+          .select('id, fan_sentiment_score')
+          .in('id', Array.from(bandIds));
+        for (const b of bandExtras || []) {
+          bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+        }
+      } catch (e) {
+        console.error("Error fetching band sentiment for videos:", e);
+      }
+    }
+
+    const sentimentEventInserts: any[] = [];
     const now = new Date();
 
     for (const video of releasedVideos || []) {
       const releaseDate = new Date(video.release_date || video.created_at);
       const daysSinceRelease = Math.max(1, (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // View calculation based on:
-      // - Production quality
-      // - Song quality/hype
-      // - Days since release (decay factor)
-      // - Random viral chance
       
       const song = video.songs as any;
       const qualityMult = (video.production_quality || 50) / 100;
@@ -81,16 +97,22 @@ serve(async (req) => {
       const songQuality = (song?.quality_score || 50) / 100;
       
       // Decay factor - videos get fewer new views over time
-      const decayFactor = Math.max(0.1, 1 - (daysSinceRelease / 60)); // 60 days to 10%
+      const decayFactor = Math.max(0.1, 1 - (daysSinceRelease / 60));
       
       // Base daily views based on quality
       let baseViews = 100 + (video.production_quality || 50) * 10 + songHype;
       
+      // === SENTIMENT VIDEO VIEWS MODIFIER (v1.0.951) ===
+      const sentimentScore = song?.band_id ? (bandSentimentMap.get(song.band_id) ?? 0) : 0;
+      const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200;
+      const videoViewsMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2)); // 0.6x to 1.4x
+
       // Apply multipliers
-      baseViews *= qualityMult * songQuality * decayFactor;
+      baseViews *= qualityMult * songQuality * decayFactor * videoViewsMod;
       
-      // Random viral chance (1% chance of 5-10x views)
-      const isViral = Math.random() < 0.01;
+      // Random viral chance (1% chance of 5-10x views, boosted by positive sentiment)
+      const viralChance = 0.01 + (sentimentT > 0.7 ? (sentimentT - 0.7) * 0.03 : 0); // up to 1.9%
+      const isViral = Math.random() < viralChance;
       if (isViral) {
         baseViews *= 5 + Math.random() * 5;
       }
@@ -139,7 +161,7 @@ serve(async (req) => {
           .single();
 
         if (profile) {
-          const newFans = Math.round(dailyViews * 0.001); // 0.1% of viewers become fans
+          const newFans = Math.round(dailyViews * 0.001);
           await supabaseClient
             .from("profiles")
             .update({ 
@@ -152,24 +174,52 @@ serve(async (req) => {
 
       // Credit to band balance and create earnings record
       if (song?.band_id && dailyEarnings > 0) {
-        const bandShare = Math.round(dailyEarnings * 0.7); // 70% to band, rounded for integer column
+        const bandShare = Math.round(dailyEarnings * 0.7);
         
         if (bandShare <= 0) continue;
 
         const { data: band } = await supabaseClient
           .from("bands")
-          .select("band_balance, weekly_fans")
+          .select("band_balance, weekly_fans, fan_sentiment_score")
           .eq("id", song.band_id)
           .single();
 
         if (band) {
+          // Viral videos boost sentiment (v1.0.951)
+          let sentimentBoost = 0;
+          if (isViral) sentimentBoost = 5;
+          else if (dailyViews > 10000) sentimentBoost = 2;
+          else if (dailyViews > 1000) sentimentBoost = 1;
+
+          const currentSentiment = (band as any).fan_sentiment_score ?? 0;
+          const newSentiment = Math.max(-100, Math.min(100, currentSentiment + sentimentBoost));
+
+          const bandUpdate: any = {
+            band_balance: (band.band_balance || 0) + bandShare,
+            weekly_fans: (band.weekly_fans || 0) + Math.round(dailyViews * 0.001),
+          };
+          if (sentimentBoost > 0) {
+            bandUpdate.fan_sentiment_score = newSentiment;
+          }
+
           await supabaseClient
             .from("bands")
-            .update({ 
-              band_balance: (band.band_balance || 0) + bandShare,
-              weekly_fans: (band.weekly_fans || 0) + Math.round(dailyViews * 0.001),
-            })
+            .update(bandUpdate)
             .eq("id", song.band_id);
+
+          if (sentimentBoost > 0) {
+            sentimentEventInserts.push({
+              band_id: song.band_id,
+              event_type: isViral ? 'viral_video' : 'music_video_views',
+              sentiment_change: sentimentBoost,
+              media_intensity_change: isViral ? 5 : 1,
+              sentiment_after: newSentiment,
+              source: 'simulate-video-views',
+              description: isViral 
+                ? `🔥 "${video.title}" went viral with ${dailyViews.toLocaleString()} views!`
+                : `"${video.title}" gained ${dailyViews.toLocaleString()} views`,
+            });
+          }
 
           // Create band_earnings record for tracking
           const { error: earningsError } = await supabaseClient
@@ -200,6 +250,12 @@ serve(async (req) => {
       if (isViral) {
         console.log(`Video "${video.title}" went viral! ${dailyViews} views today`);
       }
+    }
+
+    // Batch insert sentiment events (v1.0.951)
+    if (sentimentEventInserts.length > 0) {
+      await supabaseClient.from('band_sentiment_events').insert(sentimentEventInserts);
+      console.log(`Logged ${sentimentEventInserts.length} video sentiment events`);
     }
 
     console.log(`Updated ${videosUpdated} videos, ${totalViews} total views, $${totalEarnings.toFixed(2)} earnings`);
