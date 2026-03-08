@@ -109,12 +109,12 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
             );
           })}
           
-          {cityChannels.length > 0 && (
+          {filteredCities.length > 0 && (
             <>
               <div className="hidden sm:block px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase mt-4">
                 Cities
               </div>
-              {cityChannels.map(channel => {
+              {filteredCities.map(channel => {
                 const Icon = channel.icon;
                 return (
                   <Button
