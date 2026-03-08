@@ -633,6 +633,14 @@ serve(async (req) => {
       rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
     });
 
+    // Fetch leader's stage behavior
+    const { data: bandLeader } = await supabaseClient.from('bands').select('leader_id').eq('id', bandId).single();
+    let stageBehavior = 'standard';
+    if (bandLeader?.leader_id) {
+      const { data: behaviorData } = await supabaseClient.from('player_behavior_settings').select('stage_behavior').eq('user_id', bandLeader.leader_id).maybeSingle();
+      if (behaviorData?.stage_behavior) stageBehavior = behaviorData.stage_behavior;
+    }
+
     const factors: PerformanceFactors = {
       songQuality: song.quality_score || 50,
       rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10, // 0-10 scale → 0-100
