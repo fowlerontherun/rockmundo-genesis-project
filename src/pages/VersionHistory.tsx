@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.006",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Admin Player Management: 'Gift Slot' button to grant extra character slots to players directly from the player table" },
+    ],
+  },
+  {
     version: "1.1.005",
     date: "2026-03-08",
     changes: [

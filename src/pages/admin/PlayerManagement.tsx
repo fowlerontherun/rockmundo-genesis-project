@@ -224,6 +224,20 @@ export default function PlayerManagement() {
                       >
                         Grant Cash
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-primary border-primary/30 hover:bg-primary/10"
+                        onClick={() => {
+                          if (confirm(`Gift an extra character slot to ${player.display_name || player.user_id}?`)) {
+                            giftSlotMutation.mutate(player.user_id);
+                          }
+                        }}
+                        disabled={giftSlotMutation.isPending}
+                      >
+                        <Gift className="h-4 w-4 mr-1" />
+                        Gift Slot
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
