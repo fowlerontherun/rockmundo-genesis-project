@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Ticket, Trophy, History, Timer, TicketCheck } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { NumberPicker } from "@/components/lottery/NumberPicker";
 import { DrawResults } from "@/components/lottery/DrawResults";
 import { TicketHistory } from "@/components/lottery/TicketHistory";
