@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.019",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Player Profile: Add Friend / Remove Friend button with pending request states" },
+      { type: 'feature', description: "Player Profile: Accept incoming friend requests directly from profile" },
+      { type: 'feature', description: "Player Profile: Invite to Band dialog with band selection, instrument/vocal role, and optional message" },
+    ],
+  },
+  {
     version: "1.1.018",
     date: "2026-03-08",
     changes: [
