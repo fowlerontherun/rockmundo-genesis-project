@@ -34,6 +34,9 @@ import { checkAndGrantBehaviorUnlocks } from "./behaviorUnlockChecker";
 import { calculateConsecutiveGigs, getFatigueState, type FatigueState } from "./tourFatigue";
 import { getWeatherGigImpact, type WeatherGigImpact } from "./weatherGigImpact";
 import type { WeatherCondition } from "./weatherSystem";
+import { getFanSentiment } from "./fanSentiment";
+import { getMediaCycleState, applyMediaEvent } from "./mediaCycle";
+import { degradeEquipment } from "./equipmentDegradation";
 
 interface GigExecutionData {
   gigId: string;
@@ -201,7 +204,18 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const weatherImpact = getWeatherGigImpact(currentWeather, isOutdoorVenue);
   console.log(`[GigExecution] Weather: ${currentWeather} at ${cityName} (${isOutdoorVenue ? 'outdoor' : 'indoor'}) → attendance ${weatherImpact.attendanceMultiplier}x, merch ${weatherImpact.merchMultiplier}x`);
 
-  // Calculate actual attendance (with variance adjusted by gear reliability, weather, and fatigue)
+  // === FAN SENTIMENT ===
+  const fanSentimentScore = (band as any).fan_sentiment_score ?? 0;
+  const sentiment = getFanSentiment(fanSentimentScore);
+  console.log(`[GigExecution] Fan sentiment: ${sentiment.mood} (${sentiment.score}), ticket ${sentiment.ticketDemandMod}x, merch ${sentiment.merchDemandMod}x`);
+
+  // === MEDIA CYCLE ===
+  const mediaIntensity = (band as any).media_intensity ?? 0;
+  const mediaFatigue = (band as any).media_fatigue ?? 0;
+  const mediaCycle = getMediaCycleState(mediaIntensity, mediaFatigue);
+  console.log(`[GigExecution] Media cycle: ${mediaCycle.phase} (intensity ${mediaCycle.intensity}, fatigue ${mediaCycle.fatigueLevel}), coverage ${mediaCycle.coverageMultiplier}x`);
+
+  // Calculate actual attendance (with variance adjusted by gear reliability, weather, fatigue, and fan sentiment)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
   const riskVarianceExpansion = gearEffects.breakdownRiskPercent / 150;
   const attendanceVarianceRange = 0.3 + riskVarianceExpansion - gearEffects.reliabilityStability * 1.2;
@@ -210,7 +224,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const stabilityBias = gearEffects.reliabilityStability - gearEffects.breakdownRiskPercent / 200;
   const attendanceFromVariance = Math.max(0, 1 + varianceSwing + stabilityBias);
   const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
-  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier;
+  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier * sentiment.ticketDemandMod;
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
@@ -302,8 +316,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
   );
 
   const merchSales = {
-    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier),
-    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier))
+    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier * sentiment.merchDemandMod),
+    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier * sentiment.merchDemandMod))
   };
 
   // Calculate costs
@@ -320,9 +334,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const totalRevenue = bandTicketShare + merchSales.totalRevenue;
   const netProfit = totalRevenue - crewCosts - equipmentWearCost;
 
-  // Calculate fame gained (with behavior modifier)
+  // Calculate fame gained (with behavior modifier + media cycle coverage)
   const behaviorMods = getBehaviorModifiers(stageBehavior);
-  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier * behaviorMods.fameMultiplier);
+  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier * behaviorMods.fameMultiplier * mediaCycle.coverageMultiplier);
 
   // Calculate chemistry impact
   let chemistryImpact = 0;
@@ -705,6 +719,59 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error updating song fame/popularity:', songFameError);
   }
 
+  // === POST-GIG: Equipment Degradation ===
+  try {
+    if (equippedGearItems.length > 0) {
+      for (const gear of equippedGearItems) {
+        const currentCondition = (gear as any).condition ?? 100;
+        const category = gear.category || 'default';
+        const { newCondition, degradationAmount } = degradeEquipment(currentCondition, category);
+        if (degradationAmount > 0) {
+          await supabase
+            .from('player_equipment')
+            .update({ condition: newCondition } as any)
+            .eq('id', gear.id);
+        }
+      }
+      console.log(`[GigExecution] Degraded ${equippedGearItems.length} equipped items`);
+    }
+  } catch (degradeError) {
+    console.error('Error degrading equipment:', degradeError);
+  }
+
+  // === POST-GIG: Media Intensity Boost ===
+  try {
+    const mediaBoost = Math.round(5 + (overallRating / 25) * 10); // 5-15 based on rating
+    const { newIntensity, newFatigue } = applyMediaEvent(mediaIntensity, mediaFatigue, 'gig');
+    await supabase
+      .from('bands')
+      .update({
+        media_intensity: newIntensity,
+        media_fatigue: newFatigue,
+      } as any)
+      .eq('id', bandId);
+    console.log(`[GigExecution] Media: intensity ${mediaIntensity}→${newIntensity}, fatigue ${mediaFatigue}→${newFatigue}`);
+  } catch (mediaError) {
+    console.error('Error updating media cycle:', mediaError);
+  }
+
+  // === POST-GIG: Fan Sentiment Shift ===
+  try {
+    const sentimentEvent = overallRating >= 18 ? 'amazing_gig' : overallRating < 10 ? 'bad_gig' : null;
+    if (sentimentEvent) {
+      const { SENTIMENT_EVENTS } = await import('./fanSentiment');
+      const change = SENTIMENT_EVENTS[sentimentEvent] ?? 0;
+      const newSentiment = Math.max(-100, Math.min(100, fanSentimentScore + change));
+      await supabase
+        .from('bands')
+        .update({ fan_sentiment_score: newSentiment } as any)
+        .eq('id', bandId);
+      console.log(`[GigExecution] Fan sentiment: ${fanSentimentScore}→${newSentiment} (${sentimentEvent})`);
+    }
+  } catch (sentimentError) {
+    console.error('Error updating fan sentiment:', sentimentError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -724,5 +791,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     chemistryChange: chemistryImpact,
     mentorDiscovery,
     stageBehavior,
+    fanSentiment: sentiment,
+    mediaCycle,
   };
 }

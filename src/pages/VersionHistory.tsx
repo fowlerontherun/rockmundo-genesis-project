@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.940",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Fan Sentiment → Gig Pipeline: Fan mood now directly modifies ticket demand (0.6x–1.4x) and merch sales (0.5x–1.5x) during live gig execution" },
+      { type: 'feature', description: "Media Cycle → Gig Pipeline: Fame gained from gigs now scaled by media coverage multiplier (0.2x dormant → 2.0x peak attention)" },
+      { type: 'feature', description: "Equipment Degradation → Gig Pipeline: All equipped player gear degrades after each gig based on category (drums -2.5, keyboards -0.8, etc.)" },
+      { type: 'feature', description: "Post-Gig Media Boost: Gig completion triggers media intensity event, naturally pushing bands into 'building' or 'peak' media phases" },
+      { type: 'feature', description: "Post-Gig Sentiment Shift: Amazing gigs (+8 sentiment) and bad gigs (-8 sentiment) now automatically adjust fan mood" },
+      { type: 'improvement', description: "All new integrations use try/catch with graceful fallbacks — missing DB columns won't break gig execution" },
+    ],
+  },
+  {
     version: "1.0.939",
     date: "2026-03-08",
     changes: [
