@@ -676,6 +676,10 @@ serve(async (req) => {
 
     const result = calculateSongPerformance(factors);
 
+    // Apply morale modifier to final score
+    const moraleSongScore = Number(Math.max(0, Math.min(25, result.score * moraleMod)).toFixed(2));
+    console.log(`[process-gig-song] Song score: raw=${result.score}, afterMorale=${moraleSongScore}`);
+
     const { data: performance, error: perfError } = await supabaseClient
       .from('gig_song_performances')
       .insert({
@@ -685,7 +689,7 @@ serve(async (req) => {
         item_type: 'song',
         song_title: song.title,
         position,
-        performance_score: result.score,
+        performance_score: moraleSongScore,
         crowd_response: result.crowdResponse,
         song_quality_contrib: result.breakdown.songQuality,
         rehearsal_contrib: result.breakdown.rehearsal,
