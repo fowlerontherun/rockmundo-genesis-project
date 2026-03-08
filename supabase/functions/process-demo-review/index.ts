@@ -337,6 +337,18 @@ Deno.serve(async (req) => {
         );
 
         if (decision.accepted) {
+          // === MORALE BOOST: Getting accepted by a label is exciting! (v1.0.967) ===
+          if (demo.band_id) {
+            try {
+              const { data: bd } = await supabase.from('bands').select('morale').eq('id', demo.band_id).single();
+              if (bd) {
+                const moraleBoost = 5;
+                await supabase.from('bands').update({ morale: Math.min(100, (bd.morale ?? 50) + moraleBoost) }).eq('id', demo.band_id);
+                console.log(`Demo accepted → morale +${moraleBoost} for band ${demo.band_id}`);
+              }
+            } catch (e) { console.log('Morale boost error:', e); }
+          }
+
           // Generate contract terms — A&R skill affects term quality
           const terms = generateContractTerms(
             metrics,
@@ -393,6 +405,18 @@ Deno.serve(async (req) => {
           accepted++;
           console.log(`Demo ${demo.id} accepted, contract ${contract.id} created for ${song.title} (A&R skill: ${(arSkillBonus * 100).toFixed(0)}%)`);
         } else {
+          // === MORALE HIT: Demo rejection is discouraging (v1.0.967) ===
+          if (demo.band_id) {
+            try {
+              const { data: bd } = await supabase.from('bands').select('morale').eq('id', demo.band_id).single();
+              if (bd) {
+                const moralePenalty = -2;
+                await supabase.from('bands').update({ morale: Math.max(0, (bd.morale ?? 50) + moralePenalty) }).eq('id', demo.band_id);
+                console.log(`Demo rejected → morale ${moralePenalty} for band ${demo.band_id}`);
+              }
+            } catch (e) { console.log('Morale penalty error:', e); }
+          }
+
           // Reject demo
           await supabase
             .from("demo_submissions")
