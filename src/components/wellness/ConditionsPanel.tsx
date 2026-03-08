@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,8 +31,10 @@ const TREATMENT_LABELS: Record<string, string> = {
 export function ConditionsPanel() {
   const { conditions, aggregatedEffects, treatCondition, isTreating, checkRecovery } = useConditions();
 
-  // Auto-check recovery on render
-  checkRecovery();
+  // Auto-check recovery on mount
+  useEffect(() => {
+    checkRecovery();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (conditions.length === 0) {
     return (
