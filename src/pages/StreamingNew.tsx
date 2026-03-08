@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Music2, TrendingUp, DollarSign } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { useStreaming } from "@/hooks/useStreaming";
 import { useReleasedSongs } from "@/hooks/useReleasedSongs";
