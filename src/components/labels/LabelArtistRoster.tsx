@@ -81,10 +81,10 @@ export function LabelArtistRoster({ labelId }: LabelArtistRosterProps) {
       if (profileIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, stage_name")
+          .select("id, display_name")
           .in("id", profileIds);
         for (const p of profiles || []) {
-          profileNames.set(p.id, p.stage_name);
+          profileNames.set(p.id, p.display_name);
         }
       }
 
