@@ -307,7 +307,8 @@ Deno.serve(async (req) => {
 
       const transportJobs = Math.min((recentTravels || 0) + (recentDistributions || 0), 20 * (lc.tier || 1));
       const perJobFee = 200 * tierMultiplier;
-      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.logistics * tierMultiplier) + (transportJobs * perJobFee / 7));
+      const ownerRepMod = ownerReputationMap.get(lc.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((BASE_ACTIVITY_REVENUE.logistics * tierMultiplier) + (transportJobs * perJobFee / 7)) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
