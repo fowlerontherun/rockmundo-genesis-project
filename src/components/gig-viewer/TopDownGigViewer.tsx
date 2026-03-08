@@ -356,7 +356,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     : {};
 
   return (
-    <div className="relative w-full rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: '16/10' }}>
+    <div className="fixed inset-0 z-50 w-full h-full overflow-hidden bg-black">
       <div style={zoomStyle} className="w-full h-full transition-transform duration-500">
         {/* Weather/atmosphere for outdoor venues */}
         <WeatherAtmosphere venueType={venueType} songEnergy={songEnergy} intensity={intensity} />
