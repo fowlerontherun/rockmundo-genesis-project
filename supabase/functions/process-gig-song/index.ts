@@ -141,6 +141,27 @@ function doesCategoryMatchRole(category: string, subcategory: string | null, rol
   return validCategories.some(vc => catLower.includes(vc) || subLower.includes(vc) || vc.includes(catLower));
 }
 
+// ── Stage Behavior Modifiers (mirrored from client stageBehaviors.ts) ──
+
+const BEHAVIOR_MODIFIERS: Record<string, { baseBonus: number; varianceMult: number; chemMult: number; crowdMult: number }> = {
+  standard:    { baseBonus: 0,   varianceMult: 0.9,  chemMult: 1.0,  crowdMult: 1.0  },
+  aggressive:  { baseBonus: 8,   varianceMult: 1.3,  chemMult: 0.9,  crowdMult: 1.25 },
+  confident:   { baseBonus: 5,   varianceMult: 1.0,  chemMult: 0.95, crowdMult: 1.0  },
+  arrogant:    { baseBonus: 3,   varianceMult: 1.0,  chemMult: 0.8,  crowdMult: 0.95 },
+  friendly:    { baseBonus: 0,   varianceMult: 0.85, chemMult: 1.2,  crowdMult: 1.1  },
+  nervous:     { baseBonus: -8,  varianceMult: 1.4,  chemMult: 1.0,  crowdMult: 0.9  },
+  legendary:   { baseBonus: 12,  varianceMult: 1.2,  chemMult: 0.85, crowdMult: 1.2  },
+  enigmatic:   { baseBonus: 0,   varianceMult: 0.7,  chemMult: 1.0,  crowdMult: 0.85 },
+  chaotic:     { baseBonus: 15,  varianceMult: 1.6,  chemMult: 0.75, crowdMult: 1.3  },
+  virtuoso:    { baseBonus: 10,  varianceMult: 0.75, chemMult: 1.15, crowdMult: 0.9  },
+  provocateur: { baseBonus: 0,   varianceMult: 1.25, chemMult: 0.7,  crowdMult: 1.25 },
+  zen:         { baseBonus: 0,   varianceMult: 0.6,  chemMult: 1.25, crowdMult: 0.85 },
+};
+
+function getBehaviorMods(key: string) {
+  return BEHAVIOR_MODIFIERS[key] || BEHAVIOR_MODIFIERS.standard;
+}
+
 // ── Interfaces ──
 
 interface PerformanceFactors {
@@ -152,6 +173,7 @@ interface PerformanceFactors {
   memberSkillAverage: number;
   stageSkillAverage: number;
   venueCapacityUsed: number;
+  stageBehavior?: string;
 }
 
 interface PerformanceItemFactors {
