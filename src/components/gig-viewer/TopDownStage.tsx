@@ -42,7 +42,8 @@ const INSTRUMENT_CONFIG: Record<string, {
   keys:          { emoji: '🎹', col: 4, row: 1, color: 'bg-teal-500', animType: 'keys', bodyColor: '#14b8a6' },
 };
 
-const DEFAULT_CONFIG = { emoji: '🎵', col: 2, row: 1, color: 'bg-muted', animType: 'sway' as const, bodyColor: '#6b7280' };
+type AnimType = 'strum' | 'drum' | 'bounce' | 'sway' | 'keys';
+const DEFAULT_CONFIG: { emoji: string; col: number; row: number; color: string; animType: AnimType; bodyColor: string } = { emoji: '🎵', col: 2, row: 1, color: 'bg-muted', animType: 'sway', bodyColor: '#6b7280' };
 
 // Member sprite component with detailed pixel art
 const MemberSprite = ({ member, config, idx, songEnergy, bobSpeed, bobAmount, showStats }: {
