@@ -629,7 +629,7 @@ serve(async (req) => {
 
         const { data: currentBand, error: fetchError } = await supabaseClient
           .from("bands")
-          .select("band_balance")
+          .select("band_balance, morale")
           .eq("id", bandId)
           .single();
 
@@ -639,10 +639,21 @@ serve(async (req) => {
           continue;
         }
 
+        // === DAILY SALES → MORALE (v1.0.977) ===
+        // Earning money from sales feels rewarding
+        const curMorale = (currentBand as any).morale ?? 50;
+        const moraleBoost = netAmount >= 1000 ? 3 : netAmount >= 200 ? 2 : netAmount > 0 ? 1 : 0;
+        const newMorale = moraleBoost > 0 ? Math.min(100, curMorale + moraleBoost) : curMorale;
+
         const newBalance = (currentBand?.band_balance || 0) + netAmount;
+        const updatePayload: any = { band_balance: newBalance };
+        if (moraleBoost > 0) {
+          updatePayload.morale = newMorale;
+          console.log(`Daily sales morale: $${netAmount} revenue → morale +${moraleBoost} for band ${bandId}`);
+        }
         const { error: updateError } = await supabaseClient
           .from("bands")
-          .update({ band_balance: newBalance })
+          .update(updatePayload)
           .eq("id", bandId);
 
         if (updateError) {

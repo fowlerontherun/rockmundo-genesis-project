@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.977",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Daily Release Sales → Morale: Earning revenue from physical/digital release sales now boosts band morale. $1000+/day = +3, $200+/day = +2, any sales = +1. Seeing your music sell is validating" },
+      { type: 'improvement', description: "generate-daily-sales now fetches morale alongside band_balance in a single query and applies the morale boost within the same update transaction for efficiency" },
+    ],
+  },
+  {
     version: "1.0.976",
     date: "2026-03-08",
     changes: [
