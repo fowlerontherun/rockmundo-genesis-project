@@ -515,13 +515,17 @@ serve(async (req) => {
         const leadSong = sortedSongs[0]?.song;
         const leadSongId = leadSong?.id || null;
 
-      // FIX: Divide sales across tracks for song-level attribution
-      const trackCount = Math.max(1, release.release_songs.length);
+      // FIX: Divide sales across NON-b-side tracks for song-level attribution
+      const nonBSideTracks = release.release_songs.filter((rs: any) => !rs.is_b_side);
+      const trackCount = Math.max(1, nonBSideTracks.length || release.release_songs.length);
       const perTrackSales = sale.quantity_sold / trackCount;
       
       for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
           if (!song) continue;
+          
+          // FIX: Skip b-sides from singles charts - they should not chart individually
+          if ((releaseSong as any).is_b_side) continue;
 
           const currentSales = songSales.get(song.id) || 0;
           songSales.set(song.id, currentSales + perTrackSales);
