@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.017",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Player Profile page now shows full details: avatar, level, fame, fans, health/energy bars, age, gender, city, VIP status, generation, attributes, and bands" },
+      { type: 'feature', description: "Added Skills tab to Player Profile showing all trained skills with levels, XP progress bars, and last practiced dates" },
+      { type: 'improvement', description: "Stats displayed in a grid (Level, Fame, Fans, Hours Played) with status badges for imprisoned/traveling" },
+    ],
+  },
+  {
     version: "1.1.016",
     date: "2026-03-08",
     changes: [
