@@ -248,7 +248,14 @@ serve(async (req) => {
           const { data: bData } = await supabaseClient.from('bands').select('morale').eq('id', submission.band_id).single();
           if (bData) {
             const curMorale = (bData as any).morale ?? 50;
-            await supabaseClient.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', submission.band_id);
+            const newMorale = Math.max(0, curMorale - 1);
+            await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', submission.band_id);
+            // === HEALTH EVENT LOG (v1.0.996) ===
+            try {
+              await supabaseClient.from('band_health_events').insert({
+                band_id: submission.band_id, event_type: 'morale', delta: -1, new_value: newMorale, source: 'radio_rejection', description: `Radio submission rejected: ${reason}`,
+              });
+            } catch (_logErr) { /* non-critical */ }
           }
         } catch (_e) { /* non-critical */ }
 

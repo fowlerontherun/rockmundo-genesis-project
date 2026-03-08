@@ -268,15 +268,22 @@ Deno.serve(async (req) => {
             const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
             if (bd) {
               const curMorale = (bd as any).morale ?? 50;
-              // Fame penalty tier jobs hurt morale; good earnings give a small boost
               let moraleShift = 0;
-              if (dynamicFameImpact < -5) moraleShift = -3; // Humiliating job
-              else if (dynamicFameImpact < 0) moraleShift = -1; // Mildly degrading
-              else if ((shift.earnings || 0) >= 500) moraleShift = 2; // Great pay
-              else if ((shift.earnings || 0) >= 100) moraleShift = 1; // Decent pay
+              if (dynamicFameImpact < -5) moraleShift = -3;
+              else if (dynamicFameImpact < 0) moraleShift = -1;
+              else if ((shift.earnings || 0) >= 500) moraleShift = 2;
+              else if ((shift.earnings || 0) >= 100) moraleShift = 1;
               if (moraleShift !== 0) {
-                await supabaseClient.from('bands').update({ morale: Math.max(0, Math.min(100, curMorale + moraleShift)) } as any).eq('id', bm.band_id);
+                const newMorale = Math.max(0, Math.min(100, curMorale + moraleShift));
+                await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
                 console.log(`Work shift morale: fame impact ${dynamicFameImpact}, earnings $${shift.earnings} → morale ${moraleShift > 0 ? '+' : ''}${moraleShift}`);
+                // === HEALTH EVENT LOG (v1.0.996) ===
+                try {
+                  const desc = moraleShift < 0 ? `Humiliating work shift (fame ${dynamicFameImpact})` : `Work shift earned $${shift.earnings || 0}`;
+                  await supabaseClient.from('band_health_events').insert({
+                    band_id: bm.band_id, event_type: 'morale', delta: moraleShift, new_value: newMorale, source: 'work_shift', description: desc,
+                  });
+                } catch (_logErr) { /* non-critical */ }
               }
             }
           }

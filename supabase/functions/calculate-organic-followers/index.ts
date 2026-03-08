@@ -155,8 +155,20 @@ serve(async (req) => {
           const { data: bd } = await supabase.from('bands').select('morale').eq('id', account.owner_id).single();
           if (bd) {
             const moraleBoost = botsToFollow.length >= 3 ? 2 : 1;
-            await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', account.owner_id);
+            const newMorale = Math.min(100, ((bd as any).morale ?? 50) + moraleBoost);
+            await supabase.from('bands').update({ morale: newMorale } as any).eq('id', account.owner_id);
             console.log(`[calculate-organic-followers] Band ${account.owner_id}: +${botsToFollow.length} followers → morale +${moraleBoost}`);
+            // === HEALTH EVENT LOG (v1.0.996) ===
+            try {
+              await supabase.from('band_health_events').insert({
+                band_id: account.owner_id,
+                event_type: 'morale',
+                delta: moraleBoost,
+                new_value: newMorale,
+                source: 'organic_followers',
+                description: `Gained ${botsToFollow.length} organic followers on social media`,
+              });
+            } catch (_logErr) { /* non-critical */ }
           }
         } catch (_e) { /* non-critical */ }
       }

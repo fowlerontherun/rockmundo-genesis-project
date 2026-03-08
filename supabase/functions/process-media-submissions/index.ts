@@ -115,7 +115,13 @@ serve(async (req) => {
             const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
             if (bData) {
               const curMorale = (bData as any).morale ?? 50;
-              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+              const newMorale = Math.max(0, curMorale - 1);
+              await supabase.from('bands').update({ morale: newMorale } as any).eq('id', sub.band_id);
+              try {
+                await supabase.from('band_health_events').insert({
+                  band_id: sub.band_id, event_type: 'morale', delta: -1, new_value: newMorale, source: 'media_rejection', description: 'Newspaper submission rejected',
+                });
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
 
@@ -146,7 +152,6 @@ serve(async (req) => {
         const minFame = (sub.magazines as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
         const bandRep = (sub.bands as any)?.reputation_score ?? 0;
         const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200;
         const repModifiedApproval = 0.65 * (0.5 + repT);
@@ -169,17 +174,21 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA APPROVAL → REPUTATION & MORALE (v1.0.975) ===
           try {
             const { data: bData } = await supabase.from('bands').select('reputation_score, morale').eq('id', sub.band_id).single();
             if (bData) {
               const curRep = (bData as any).reputation_score ?? 0;
               const curMorale = (bData as any).morale ?? 50;
-              await supabase.from('bands').update({
-                reputation_score: Math.min(100, curRep + 4),
-                morale: Math.min(100, curMorale + 4),
-              } as any).eq('id', sub.band_id);
+              const newRep = Math.min(100, curRep + 4);
+              const newMorale = Math.min(100, curMorale + 4);
+              await supabase.from('bands').update({ reputation_score: newRep, morale: newMorale } as any).eq('id', sub.band_id);
               console.log(`[process-media-submissions] Magazine approved → rep +4, morale +4 for band ${sub.band_id}`);
+              try {
+                await supabase.from('band_health_events').insert([
+                  { band_id: sub.band_id, event_type: 'morale', delta: 4, new_value: newMorale, source: 'media_approved', description: 'Magazine feature approved' },
+                  { band_id: sub.band_id, event_type: 'reputation', delta: 4, new_value: newRep, source: 'media_approved', description: 'Magazine feature approved' },
+                ]);
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
 
@@ -195,12 +204,17 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA REJECTION → MORALE HIT (v1.0.975) ===
           try {
             const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
             if (bData) {
               const curMorale = (bData as any).morale ?? 50;
-              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+              const newMorale = Math.max(0, curMorale - 1);
+              await supabase.from('bands').update({ morale: newMorale } as any).eq('id', sub.band_id);
+              try {
+                await supabase.from('band_health_events').insert({
+                  band_id: sub.band_id, event_type: 'morale', delta: -1, new_value: newMorale, source: 'media_rejection', description: 'Magazine submission rejected',
+                });
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
 
@@ -231,7 +245,6 @@ serve(async (req) => {
         const minFame = (sub.podcasts as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
         const bandRep = (sub.bands as any)?.reputation_score ?? 0;
         const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200;
         const repModifiedApproval = 0.75 * (0.5 + repT);
@@ -254,17 +267,21 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA APPROVAL → REPUTATION & MORALE (v1.0.975) ===
           try {
             const { data: bData } = await supabase.from('bands').select('reputation_score, morale').eq('id', sub.band_id).single();
             if (bData) {
               const curRep = (bData as any).reputation_score ?? 0;
               const curMorale = (bData as any).morale ?? 50;
-              await supabase.from('bands').update({
-                reputation_score: Math.min(100, curRep + 3),
-                morale: Math.min(100, curMorale + 3),
-              } as any).eq('id', sub.band_id);
+              const newRep = Math.min(100, curRep + 3);
+              const newMorale = Math.min(100, curMorale + 3);
+              await supabase.from('bands').update({ reputation_score: newRep, morale: newMorale } as any).eq('id', sub.band_id);
               console.log(`[process-media-submissions] Podcast approved → rep +3, morale +3 for band ${sub.band_id}`);
+              try {
+                await supabase.from('band_health_events').insert([
+                  { band_id: sub.band_id, event_type: 'morale', delta: 3, new_value: newMorale, source: 'media_approved', description: 'Podcast appearance approved' },
+                  { band_id: sub.band_id, event_type: 'reputation', delta: 3, new_value: newRep, source: 'media_approved', description: 'Podcast appearance approved' },
+                ]);
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
 
@@ -280,12 +297,17 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA REJECTION → MORALE HIT (v1.0.975) ===
           try {
             const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
             if (bData) {
               const curMorale = (bData as any).morale ?? 50;
-              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+              const newMorale = Math.max(0, curMorale - 1);
+              await supabase.from('bands').update({ morale: newMorale } as any).eq('id', sub.band_id);
+              try {
+                await supabase.from('band_health_events').insert({
+                  band_id: sub.band_id, event_type: 'morale', delta: -1, new_value: newMorale, source: 'media_rejection', description: 'Podcast submission rejected',
+                });
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
 
