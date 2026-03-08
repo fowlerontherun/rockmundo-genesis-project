@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { TopDownMemberPopover } from "./TopDownMemberPopover";
 import { StageEquipment } from "./StageEquipment";
 import { StageLighting } from "./StageLighting";
+import { StageParticles } from "./StageParticles";
+import { StagePyrotechnics } from "./StagePyrotechnics";
 import { getStageTheme, type StageThemeConfig } from "./StageThemes";
 import type { GenreVisualConfig } from "./GenreVisuals";
 
