@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { BrowseAuctionsTab } from "@/components/marketplace/BrowseAuctionsTab";
 import { MyAuctionListingsTab } from "@/components/marketplace/MyAuctionListingsTab";
