@@ -134,7 +134,8 @@ export function BehaviorSettingsTab() {
     isUpdating, 
     riskScore, 
     riskLevel,
-    healthModifiers 
+    healthModifiers,
+    unlockedBehaviors,
   } = useBehaviorSettings();
 
   if (isLoading) {
