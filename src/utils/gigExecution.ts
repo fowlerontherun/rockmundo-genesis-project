@@ -29,6 +29,8 @@ import { checkVenueGigDiscovery, type MentorDiscoveryResult } from "./mentorDisc
 import { calculateBandSkillAverage } from "./skillGearPerformance";
 import { calculateBandGenreBonus } from "./genreSkillBonus";
 import { getEncoreFameBonus, updateSongsAfterGig } from "./songFamePopularity";
+import { getBehaviorModifiers } from "./stageBehaviors";
+import { checkAndGrantBehaviorUnlocks } from "./behaviorUnlockChecker";
 
 interface GigExecutionData {
   gigId: string;
@@ -288,8 +290,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const totalRevenue = bandTicketShare + merchSales.totalRevenue;
   const netProfit = totalRevenue - crewCosts - equipmentWearCost;
 
-  // Calculate fame gained
-  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier);
+  // Calculate fame gained (with behavior modifier)
+  const behaviorMods = getBehaviorModifiers(stageBehavior);
+  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier * behaviorMods.fameMultiplier);
 
   // Calculate chemistry impact
   let chemistryImpact = 0;
@@ -351,7 +354,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
         audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
         promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
-        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
+        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2)),
+        stage_behavior_used: stageBehavior,
       })
       .eq('id', existingOutcome.id)
       .select()
@@ -390,7 +394,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
         audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
         promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
-        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
+        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2)),
+        stage_behavior_used: stageBehavior,
       })
       .select()
       .single();
@@ -542,6 +547,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         overallRating,
         performanceGrade: gradeData.grade,
         bandFame: band.fame || 0,
+        behaviorFanMultiplier: behaviorMods.fanConversionMultiplier,
       });
     }
   } catch (fanError) {
@@ -640,6 +646,19 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error checking mentor discovery:', discoveryError);
   }
 
+  // Check for behavior unlocks after gig
+  try {
+    const leaderId = band.leader_id;
+    if (leaderId) {
+      const unlockResult = await checkAndGrantBehaviorUnlocks(leaderId);
+      if (unlockResult.newlyUnlocked.length > 0) {
+        console.log(`[GigExecution] New behaviors unlocked: ${unlockResult.newlyUnlocked.map(b => b.name).join(', ')}`);
+      }
+    }
+  } catch (unlockError) {
+    console.error('Error checking behavior unlocks:', unlockError);
+  }
+
   // Update song fame, popularity, gig counts, and roll for fan favourites
   try {
     await updateSongsAfterGig(
@@ -674,5 +693,6 @@ export async function executeGigPerformance(data: GigExecutionData) {
     chemistryLevel: bandChemistry,
     chemistryChange: chemistryImpact,
     mentorDiscovery,
+    stageBehavior,
   };
 }

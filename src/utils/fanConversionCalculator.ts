@@ -8,6 +8,7 @@ export interface FanConversionInput {
   overallRating: number;
   performanceGrade: string;
   bandFame: number;
+  behaviorFanMultiplier?: number;
 }
 
 export interface FanConversionResult {
@@ -44,6 +45,7 @@ export async function calculateFanConversion(input: FanConversionInput): Promise
     overallRating,
     performanceGrade,
     bandFame,
+    behaviorFanMultiplier = 1.0,
   } = input;
 
   // Get venue city info
@@ -89,7 +91,7 @@ export async function calculateFanConversion(input: FanConversionInput): Promise
   const ratingBonus = (overallRating / 25) * 0.1; // Up to 10% bonus
   const fameBonus = Math.min(0.05, bandFame / 50000); // Up to 5% fame bonus
   
-  const conversionRate = Math.min(0.35, (BASE_CONVERSION_RATE + ratingBonus + fameBonus) * gradeMultiplier);
+  const conversionRate = Math.min(0.35, (BASE_CONVERSION_RATE + ratingBonus + fameBonus) * gradeMultiplier * behaviorFanMultiplier);
 
   // Calculate new fans gained
   const newFansGained = Math.floor(newPotentialFans * conversionRate);

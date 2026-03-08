@@ -23,6 +23,7 @@ import type { FanConversionResult } from "@/utils/fanConversionCalculator";
 import type { GigMoment } from "@/utils/momentHighlightsGenerator";
 import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculator";
 import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
+import { getBehavior } from "@/utils/stageBehaviors";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -92,6 +93,7 @@ interface Props {
   chemistryChange?: number;
   merchItemsSold?: number;
   ticketPrice?: number;
+  stageBehaviorUsed?: string | null;
 }
 
 export const GigOutcomeReport = ({
@@ -112,6 +114,7 @@ export const GigOutcomeReport = ({
   chemistryChange = 0,
   merchItemsSold = 0,
   ticketPrice = 20,
+  stageBehaviorUsed,
 }: Props) => {
   if (!outcome) return null;
 
@@ -334,6 +337,57 @@ export const GigOutcomeReport = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Stage Behavior Used */}
+          {stageBehaviorUsed && (() => {
+            const behavior = getBehavior(stageBehaviorUsed);
+            const mods = behavior.modifiers;
+            return (
+              <Card className="border-accent/30 bg-accent/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <span className="text-xl">{behavior.emoji}</span>
+                    Stage Behavior: {behavior.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{behavior.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {mods.fameMultiplier !== 1.0 && (
+                      <Badge variant={mods.fameMultiplier > 1 ? 'default' : 'destructive'} className="text-xs">
+                        Fame {mods.fameMultiplier > 1 ? '+' : ''}{Math.round((mods.fameMultiplier - 1) * 100)}%
+                      </Badge>
+                    )}
+                    {mods.fanConversionMultiplier !== 1.0 && (
+                      <Badge variant={mods.fanConversionMultiplier > 1 ? 'default' : 'destructive'} className="text-xs">
+                        Fans {mods.fanConversionMultiplier > 1 ? '+' : ''}{Math.round((mods.fanConversionMultiplier - 1) * 100)}%
+                      </Badge>
+                    )}
+                    {mods.crowdEngagement !== 1.0 && (
+                      <Badge variant={mods.crowdEngagement > 1 ? 'default' : 'destructive'} className="text-xs">
+                        Crowd {mods.crowdEngagement > 1 ? '+' : ''}{Math.round((mods.crowdEngagement - 1) * 100)}%
+                      </Badge>
+                    )}
+                    {mods.chemistryEffect !== 1.0 && (
+                      <Badge variant={mods.chemistryEffect > 1 ? 'default' : 'destructive'} className="text-xs">
+                        Chemistry {mods.chemistryEffect > 1 ? '+' : ''}{Math.round((mods.chemistryEffect - 1) * 100)}%
+                      </Badge>
+                    )}
+                    {mods.varianceMultiplier !== 1.0 && (
+                      <Badge variant={mods.varianceMultiplier < 1 ? 'default' : 'outline'} className="text-xs">
+                        Variance {mods.varianceMultiplier > 1 ? '+' : ''}{Math.round((mods.varianceMultiplier - 1) * 100)}%
+                      </Badge>
+                    )}
+                    {mods.baseScoreBonus !== 0 && (
+                      <Badge variant={mods.baseScoreBonus > 0 ? 'default' : 'destructive'} className="text-xs">
+                        Score {mods.baseScoreBonus > 0 ? '+' : ''}{mods.baseScoreBonus}%
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Enhanced Metrics */}
           <EnhancedGigMetrics

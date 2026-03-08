@@ -714,6 +714,7 @@ export default function PerformGig() {
         chemistryLevel={bandChemistry}
         chemistryChange={outcome?.chemistry_impact || outcome?.chemistry_change || 0}
         chemistryMoments={outcome?.chemistryMoments || []}
+        stageBehaviorUsed={outcome?.stage_behavior_used}
       />
     </div>
   );

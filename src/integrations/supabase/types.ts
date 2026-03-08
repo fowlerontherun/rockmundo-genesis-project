@@ -8725,6 +8725,7 @@ export type Database = {
           repeat_attendees: number | null
           skill_performance_avg: number | null
           social_buzz_impact: number | null
+          stage_behavior_used: string | null
           superfans_gained: number | null
           ticket_revenue: number
           total_costs: number
@@ -8771,6 +8772,7 @@ export type Database = {
           repeat_attendees?: number | null
           skill_performance_avg?: number | null
           social_buzz_impact?: number | null
+          stage_behavior_used?: string | null
           superfans_gained?: number | null
           ticket_revenue?: number
           total_costs?: number
@@ -8817,6 +8819,7 @@ export type Database = {
           repeat_attendees?: number | null
           skill_performance_avg?: number | null
           social_buzz_impact?: number | null
+          stage_behavior_used?: string | null
           superfans_gained?: number | null
           ticket_revenue?: number
           total_costs?: number

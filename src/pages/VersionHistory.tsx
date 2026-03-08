@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.910",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Stage behavior now recorded on gig outcomes — post-gig reports display which behavior was active with modifier badges showing fame, fan, crowd, chemistry, variance, and score impacts" },
+      { type: 'feature', description: "Behavior fame and fan conversion multipliers now fully applied during gig execution — aggressive/legendary/provocateur styles boost fame; friendly/nervous/enigmatic boost fan conversion" },
+      { type: 'feature', description: "Automated behavior unlock checker runs after every gig — unlocks Legendary (5k fame), Enigmatic (50 gigs), Chaotic (Stage Presence 15+), Virtuoso (Level 20), Provocateur (10k fame), Zen (100 gigs)" },
+      { type: 'improvement', description: "Edge function crowd response thresholds now factor in behavior crowd engagement multiplier for parity with client-side calculations" },
+      { type: 'improvement', description: "Gig execution return object includes stageBehavior for downstream UI consumption" },
+    ],
+  },
+  {
     version: "1.0.909",
     date: "2026-03-08",
     changes: [
