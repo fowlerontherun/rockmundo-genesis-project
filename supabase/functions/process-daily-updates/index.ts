@@ -772,6 +772,17 @@ Deno.serve(async (req) => {
             existingPairs.add(`${band.id}:${chosenLabel.id}`)
             npcOffersGenerated++
             console.log(`NPC offer: ${chosenLabel.name} → ${band.name} ($${advance} advance, ${artistRoyalty}% royalty)`)
+
+            // Inbox: Notify band members about label offer
+            const { data: bandMembers } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', band.id)
+              .not('user_id', 'is', null)
+            for (const m of bandMembers || []) {
+              if (!m.user_id) continue
+              await sendInbox(m.user_id, 'record_label', 'high', '🏷️ Record Label Offer!', `${chosenLabel.name} is offering your band a deal: $${advance} advance, ${artistRoyalty}% royalty.`, { label_id: chosenLabel.id, label_name: chosenLabel.name, band_id: band.id, advance, royalty: artistRoyalty }, 'navigate', { route: '/band', tab: 'contracts' })
+            }
           }
         }
       }
