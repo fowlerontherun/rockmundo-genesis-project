@@ -478,6 +478,8 @@ Deno.serve(async (req) => {
                 .eq('id', rental.id)
               rentalsDefaulted++
               console.log(`Rental ${rental.id} defaulted - player cannot afford rent`)
+              // Inbox: Eviction alert
+              await sendInbox(rental.user_id, 'financial', 'urgent', '🏠 Eviction Notice!', `You couldn't afford your daily rent of $${dailyCharge}. Your rental has been terminated.`, { rental_id: rental.id, daily_charge: dailyCharge }, 'navigate', { route: '/housing' })
             } else {
               await supabase
                 .from('profiles')
