@@ -125,6 +125,10 @@ const MyGear: React.FC = () => {
   const [loadout, setLoadout] = useState<LoadoutState>(() => createFreshLoadout());
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
+  const [repairingId, setRepairingId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     data: equipmentData,
     isLoading: loadingInventory,
@@ -137,6 +141,39 @@ const MyGear: React.FC = () => {
       ? inventoryError.message
       : String(inventoryError)
     : null;
+
+  const handleRepair = useCallback(async (itemId: string, condition: number, price: number) => {
+    if (!user?.id || repairingId) return;
+    setRepairingId(itemId);
+    try {
+      const { cost } = calculateRepairCost(condition, price, 100);
+
+      // Check player balance
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+
+      const balance = (profile as any)?.balance ?? 0;
+      if (balance < cost) {
+        toast({ title: "Not enough funds", description: `Repair costs $${cost.toLocaleString()} but you only have $${balance.toLocaleString()}`, variant: "destructive" });
+        return;
+      }
+
+      // Deduct and repair
+      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('user_id', user.id);
+      await supabase.from('player_equipment').update({ condition: 100 }).eq('id', itemId);
+
+      toast({ title: "Equipment Repaired!", description: `Restored to pristine condition for $${cost.toLocaleString()}` });
+      queryClient.invalidateQueries({ queryKey: ['player-equipment'] });
+    } catch (err) {
+      console.error('Repair failed:', err);
+      toast({ title: "Repair Failed", description: "Something went wrong.", variant: "destructive" });
+    } finally {
+      setRepairingId(null);
+    }
+  }, [user?.id, repairingId, toast, queryClient]);
 
   const presetGear = useMemo(
     () =>
