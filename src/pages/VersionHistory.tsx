@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.919",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Modeling skill tree — 18 new skills across 6 tracks (Posing, Runway, Camera, Commercial, Editorial, Brand) with Basic→Professional→Mastery progression" },
+      { type: 'feature', description: "Fashion Design skill tree — 15 new skills (Fundamentals, Textiles, Patterns, Style, Business) gated behind modeling_basic_posing ≥100" },
+      { type: 'feature', description: "Clothing Design skill tree — 12 new skills (Construction, Branding, Genre Aesthetics, Retail) gated behind fashion_basic_fundamentals ≥250" },
+      { type: 'improvement', description: "Modeling career tiers now require specific skill levels: Amateur needs Basic Posing ≥50, Rising needs Basic Runway ≥100, Established needs Pro Posing ≥250, Supermodel needs Pro Runway ≥400, Fashion Icon needs Posing Mastery ≥650" },
+      { type: 'improvement', description: "Modeling offers are now filtered by gig-type skill requirements (runway gigs need runway skills, cover shoots need camera skills, etc.)" },
+      { type: 'improvement', description: "Career tier progress now shows skill requirement bars with lock icons for unmet requirements" },
+    ],
+  },
+  {
     version: "1.0.918",
     date: "2026-03-08",
     changes: [

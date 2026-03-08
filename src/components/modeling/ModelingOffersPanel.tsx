@@ -25,6 +25,7 @@ interface ModelingOffersPanelProps {
   userId: string;
   playerLooks: number;
   playerFame: number;
+  skillLevels?: Record<string, number>;
 }
 
 const gigTypeLabels: Record<string, string> = {
@@ -54,7 +55,7 @@ const TIME_SLOTS = [
   { value: "20:00", label: "08:00 PM" },
 ];
 
-export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: ModelingOffersPanelProps) => {
+export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLevels = {} }: ModelingOffersPanelProps) => {
   const queryClient = useQueryClient();
   const [bookingOffer, setBookingOffer] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -115,7 +116,7 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: Modelin
   useEffect(() => {
     if (isLoading) return;
     if ((pendingOffers?.length ?? 0) === 0 && isOfferCooldownExpired()) {
-      generateModelingOffersForUser(userId, playerLooks, playerFame).then((count) => {
+      generateModelingOffersForUser(userId, playerLooks, playerFame, skillLevels).then((count) => {
         if (count > 0) {
           queryClient.invalidateQueries({ queryKey: ["modeling-offers-pending"] });
           toast.info(`${count} new modeling offer${count > 1 ? "s" : ""} arrived!`);
@@ -237,6 +238,7 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: Modelin
         totalEarnings={totalEarnings}
         playerLooks={playerLooks}
         currentTier=""
+        skillLevels={skillLevels}
       />
 
       {/* Active Contracts */}

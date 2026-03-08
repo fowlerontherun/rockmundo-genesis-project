@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
   TrendingUp, Star, Camera, Sparkles, 
-  Crown, Award, Gem 
+  Crown, Award, Gem, Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ interface ModelingCareerProgressProps {
   totalEarnings: number;
   playerLooks: number;
   currentTier: string;
+  skillLevels?: Record<string, number>;
 }
 
 interface CareerTier {
@@ -19,6 +20,7 @@ interface CareerTier {
   label: string;
   minGigs: number;
   minLooks: number;
+  skillRequirement?: { slug: string; label: string; minValue: number };
   icon: React.ElementType;
   perks: string[];
   color: string;
@@ -30,6 +32,7 @@ const CAREER_TIERS: CareerTier[] = [
     label: "Amateur Model",
     minGigs: 0,
     minLooks: 0,
+    skillRequirement: { slug: "modeling_basic_posing", label: "Basic Posing", minValue: 50 },
     icon: Camera,
     perks: ["Local photo shoots", "Basic catalog work"],
     color: "text-muted-foreground",
@@ -39,6 +42,7 @@ const CAREER_TIERS: CareerTier[] = [
     label: "Rising Model",
     minGigs: 3,
     minLooks: 40,
+    skillRequirement: { slug: "modeling_basic_runway", label: "Basic Runway", minValue: 100 },
     icon: TrendingUp,
     perks: ["National campaigns", "Runway shows", "Better compensation"],
     color: "text-primary",
@@ -48,6 +52,7 @@ const CAREER_TIERS: CareerTier[] = [
     label: "Established Model",
     minGigs: 8,
     minLooks: 60,
+    skillRequirement: { slug: "modeling_professional_posing", label: "Pro Posing", minValue: 250 },
     icon: Star,
     perks: ["International work", "Cover shoots", "Brand ambassadorships"],
     color: "text-accent",
@@ -57,6 +62,7 @@ const CAREER_TIERS: CareerTier[] = [
     label: "Supermodel",
     minGigs: 15,
     minLooks: 80,
+    skillRequirement: { slug: "modeling_professional_runway", label: "Pro Runway", minValue: 400 },
     icon: Crown,
     perks: ["Fashion Week invites", "Elite agency representation", "Designer collaborations"],
     color: "text-warning",
@@ -66,6 +72,7 @@ const CAREER_TIERS: CareerTier[] = [
     label: "Fashion Icon",
     minGigs: 25,
     minLooks: 90,
+    skillRequirement: { slug: "modeling_mastery_posing", label: "Posing Mastery", minValue: 650 },
     icon: Gem,
     perks: ["Met Gala attendance", "Own fashion line", "Global brand deals"],
     color: "text-destructive",
@@ -80,16 +87,50 @@ const FASHION_WEEK_EVENTS = [
   { name: "Met Gala", city: "New York", month: "May", prestige: 5 },
 ];
 
+export function checkTierSkillRequirement(
+  tier: typeof CAREER_TIERS[number],
+  skillLevels: Record<string, number>,
+): boolean {
+  if (!tier.skillRequirement) return true;
+  const playerLevel = skillLevels[tier.skillRequirement.slug] ?? 0;
+  return playerLevel >= tier.skillRequirement.minValue;
+}
+
+export function getPlayerModelingTier(
+  totalGigsCompleted: number,
+  playerLooks: number,
+  skillLevels: Record<string, number>,
+): string {
+  let tierId = CAREER_TIERS[0].id;
+  for (const t of CAREER_TIERS) {
+    if (
+      totalGigsCompleted >= t.minGigs &&
+      playerLooks >= t.minLooks &&
+      checkTierSkillRequirement(t, skillLevels)
+    ) {
+      tierId = t.id;
+    }
+  }
+  return tierId;
+}
+
+export { CAREER_TIERS };
+
 export function ModelingCareerProgress({
   totalGigsCompleted,
   totalEarnings,
   playerLooks,
   currentTier,
+  skillLevels = {},
 }: ModelingCareerProgressProps) {
   const getCurrentTier = (): CareerTier => {
     let tier = CAREER_TIERS[0];
     for (const t of CAREER_TIERS) {
-      if (totalGigsCompleted >= t.minGigs && playerLooks >= t.minLooks) {
+      if (
+        totalGigsCompleted >= t.minGigs &&
+        playerLooks >= t.minLooks &&
+        checkTierSkillRequirement(t, skillLevels)
+      ) {
         tier = t;
       }
     }
@@ -111,6 +152,12 @@ export function ModelingCareerProgress({
     : 100;
   const looksProgress = nextTier
     ? Math.min(100, ((playerLooks - tier.minLooks) / (nextTier.minLooks - tier.minLooks)) * 100)
+    : 100;
+
+  const nextSkillReq = nextTier?.skillRequirement;
+  const nextSkillLevel = nextSkillReq ? (skillLevels[nextSkillReq.slug] ?? 0) : 0;
+  const skillProgress = nextSkillReq
+    ? Math.min(100, (nextSkillLevel / nextSkillReq.minValue) * 100)
     : 100;
 
   return (
@@ -163,6 +210,18 @@ export function ModelingCareerProgress({
               </div>
               <Progress value={looksProgress} className="h-2" />
             </div>
+            {nextSkillReq && (
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="flex items-center gap-1">
+                    {skillProgress < 100 && <Lock className="h-3 w-3 text-warning" />}
+                    {nextSkillReq.label} ({nextSkillLevel}/{nextSkillReq.minValue})
+                  </span>
+                  <span>{Math.round(skillProgress)}%</span>
+                </div>
+                <Progress value={skillProgress} className="h-2" />
+              </div>
+            )}
             <div className="mt-2">
               <p className="text-xs text-muted-foreground mb-1">Unlocks:</p>
               <div className="flex flex-wrap gap-1">
@@ -215,8 +274,10 @@ export function ModelingCareerProgress({
         </CardHeader>
         <CardContent className="space-y-2">
           {CAREER_TIERS.map((t) => {
+            const meetsGigsLooks = totalGigsCompleted >= t.minGigs && playerLooks >= t.minLooks;
+            const meetsSkill = checkTierSkillRequirement(t, skillLevels);
+            const isUnlocked = meetsGigsLooks && meetsSkill;
             const isCurrentTier = t.id === tier.id;
-            const isUnlocked = totalGigsCompleted >= t.minGigs && playerLooks >= t.minLooks;
             const Icon = t.icon;
 
             return (
@@ -236,10 +297,16 @@ export function ModelingCareerProgress({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {t.minGigs} gigs • {t.minLooks} looks
+                    {t.skillRequirement && ` • ${t.skillRequirement.label} ≥${t.skillRequirement.minValue}`}
                   </p>
                 </div>
                 {isCurrentTier && <Badge>Current</Badge>}
                 {isUnlocked && !isCurrentTier && <Badge variant="outline">Unlocked</Badge>}
+                {!isUnlocked && meetsGigsLooks && !meetsSkill && (
+                  <Badge variant="outline" className="text-warning border-warning/30">
+                    <Lock className="h-3 w-3 mr-1" /> Skill
+                  </Badge>
+                )}
               </div>
             );
           })}
