@@ -174,6 +174,7 @@ export const en = {
     playerSearch: "Player Search",
     modeling: "Modeling",
     competitiveCharts: "Competitive Charts",
+    producerCareer: "Producer Career",
   },
 
   // Journal Page
