@@ -85,7 +85,9 @@ export interface LabelRevenueDashboard {
   };
 }
 
-interface ContractQueryRow extends ContractRecord {
+// The contract/release types from auto-gen don't include revenue columns yet
+// Using `any` extension until types regenerate
+interface ContractQueryRow extends Record<string, any> {
   bands?: { id: string; name: string | null } | null;
   profiles?: { id: string; display_name: string | null } | null;
 }
