@@ -45,6 +45,7 @@ export async function calculateFanConversion(input: FanConversionInput): Promise
     overallRating,
     performanceGrade,
     bandFame,
+    behaviorFanMultiplier = 1.0,
   } = input;
 
   // Get venue city info
