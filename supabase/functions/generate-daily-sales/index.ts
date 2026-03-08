@@ -265,6 +265,19 @@ serve(async (req) => {
       "Oceania": ["Asia", "South East Asia"],
     };
 
+    // === PRE-FETCH BAND SENTIMENT FOR SALES MODIFIER (v1.0.986) ===
+    const saleBandIds = [...new Set((releases || []).map(r => r.band_id).filter(Boolean))];
+    let bandSentimentSalesMap = new Map<string, number>();
+    if (saleBandIds.length > 0) {
+      const { data: bandSentData } = await supabaseClient
+        .from('bands')
+        .select('id, fan_sentiment_score')
+        .in('id', saleBandIds);
+      for (const b of bandSentData || []) {
+        bandSentimentSalesMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+      }
+    }
+
     for (const release of releases || []) {
       try {
         releasesProcessed += 1;
