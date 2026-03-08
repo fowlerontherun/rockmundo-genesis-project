@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   fetchWorldEnvironmentSnapshot,
   fetchCityEnvironmentDetails,
+  normalizeNightClubRecord,
   type City as CityRecord,
   type CityEnvironmentDetails,
   type CityNightClub,
