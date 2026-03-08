@@ -107,6 +107,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         .select(`
           *,
           labels(id, name, reputation_score),
+          label_deal_types:deal_type_id(name, description),
           label_roster_slots(id, slot_number, status),
           label_releases(id),
           label_royalty_statements(id)
