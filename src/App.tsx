@@ -390,6 +390,7 @@ function App() {
                     <Route path="sponsorships" element={<Sponsorships />} />
                     <Route path="gear" element={<Gear />} />
                     <Route path="education" element={<Education />} />
+                    <Route path="teaching" element={<Teaching />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="stage-practice" element={<StagePractice />} />
                     <Route path="song-market" element={<SongMarket />} />

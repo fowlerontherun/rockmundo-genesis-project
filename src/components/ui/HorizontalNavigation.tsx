@@ -90,6 +90,7 @@ const HorizontalNavigation = () => {
       items: [
         { icon: Music, labelKey: "nav.songwriting", path: "/songwriting" },
         { icon: GraduationCap, labelKey: "nav.education", path: "/education" },
+        { icon: BookOpen, labelKey: "nav.teaching", path: "/teaching" },
         { icon: Disc, labelKey: "nav.recording", path: "/recording-studio" },
         { icon: Music4, labelKey: "nav.releaseManager", path: "/release-manager" },
         { icon: Radio, labelKey: "nav.streaming", path: "/streaming-platforms" },

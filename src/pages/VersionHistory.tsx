@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.924",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Teaching skill tree — 3 tiers (Basic, Professional, Mastery) unlock ability to teach skills to friends" },
+      { type: 'feature', description: "Player-to-player teaching sessions — teach any skill you know to a friend for 1-7 days" },
+      { type: 'feature', description: "Teaching XP exceeds university: students earn 50-120 XP/day, teachers earn 30-60 XP/day (vs university's 15-95)" },
+      { type: 'feature', description: "Teaching page with Teach, Active Sessions, and History tabs" },
+      { type: 'feature', description: "Mastery Teaching tier unlocks group teaching (2 students simultaneously)" },
+      { type: 'improvement', description: "Teaching added as schedulable activity type in the calendar system" },
+      { type: 'improvement', description: "Navigation: Teaching entry added under Music section next to Education" },
+    ],
+  },
+  {
     version: "1.0.923",
     date: "2026-03-08",
     changes: [
