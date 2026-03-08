@@ -167,22 +167,38 @@ Deno.serve(async (req) => {
         // === MORALE RECORDING MODIFIER (v1.0.958) ===
         // Band morale affects creativity in the studio: 0.8x at 0 morale, 1.0x at 50, 1.15x at 100
         let moraleMod = 1.0
+        // === REPUTATION → RECORDING QUALITY (v1.0.987) ===
+        // Respected/iconic bands attract better session vibes, collaborators, and focus
+        let repRecordMod = 1.0
+        // === SENTIMENT → RECORDING QUALITY (v1.0.987) ===
+        // Fan buzz and excitement inspires the band to produce better work in the studio
+        let sentRecordMod = 1.0
         if (session.band_id) {
           const { data: bandData } = await supabase
             .from('bands')
-            .select('morale')
+            .select('morale, reputation_score, fan_sentiment_score')
             .eq('id', session.band_id)
             .single()
           const moraleScore = (bandData as any)?.morale ?? 50
           moraleMod = parseFloat((0.8 + (Math.max(0, Math.min(100, moraleScore)) / 100) * 0.35).toFixed(2))
+          
+          const repScore = (bandData as any)?.reputation_score ?? 0
+          const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200
+          repRecordMod = parseFloat((0.9 + repT * 0.2).toFixed(2)) // 0.9x–1.1x (subtle)
+          
+          const sentScore = (bandData as any)?.fan_sentiment_score ?? 0
+          const sentT = (Math.max(-100, Math.min(100, sentScore)) + 100) / 200
+          sentRecordMod = parseFloat((0.9 + sentT * 0.2).toFixed(2)) // 0.9x–1.1x (subtle)
+          
           console.log(`Band morale: ${moraleScore} → recording creativity modifier ${moraleMod}x`)
+          console.log(`Band reputation: ${repScore} → recording modifier ${repRecordMod}x, sentiment: ${sentScore} → ${sentRecordMod}x`)
         }
 
         // Base improvement scales with duration (1-12 per hour for wider range)
         const baseImprovement = Math.floor(durationHours * (1 + Math.random() * 11))
         
-        // Apply luck multiplier, studio bonus, and morale modifier
-        const qualityImprovement = Math.min(40, Math.floor(baseImprovement * sessionLuckMultiplier * moraleMod) + studioQualityBonus)
+        // Apply luck multiplier, studio bonus, morale, reputation, and sentiment modifiers
+        const qualityImprovement = Math.min(40, Math.floor(baseImprovement * sessionLuckMultiplier * moraleMod * repRecordMod * sentRecordMod) + studioQualityBonus)
         
         // Calculate new quality (capped at 100)
         const newQuality = Math.min(100, currentQuality + qualityImprovement)
