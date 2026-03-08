@@ -25,6 +25,7 @@ interface ModelingOffersPanelProps {
   userId: string;
   playerLooks: number;
   playerFame: number;
+  skillLevels?: Record<string, number>;
 }
 
 const gigTypeLabels: Record<string, string> = {
