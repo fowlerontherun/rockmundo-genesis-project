@@ -8,6 +8,7 @@ import {
   useBehaviorSettings, 
   type BehaviorSettings,
 } from "@/hooks/useBehaviorSettings";
+import { StageBehaviorSelector } from "./StageBehaviorSelector";
 import { 
   Plane, Hotel, PartyPopper, Users, Mic, Moon, UsersRound,
   Heart, TrendingUp, AlertTriangle, Shield, Flame
