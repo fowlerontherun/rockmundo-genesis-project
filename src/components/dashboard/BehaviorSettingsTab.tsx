@@ -9,6 +9,7 @@ import {
   type BehaviorSettings,
 } from "@/hooks/useBehaviorSettings";
 import { StageBehaviorSelector } from "./StageBehaviorSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plane, Hotel, PartyPopper, Users, Mic, Moon, UsersRound,
   Heart, TrendingUp, AlertTriangle, Shield, Flame

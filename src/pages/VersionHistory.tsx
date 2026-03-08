@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.911",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Stage Behavior and Lifestyle Risks are now on separate sub-tabs within the Lifestyle section for clearer navigation" },
+    ],
+  },
+  {
     version: "1.0.910",
     date: "2026-03-08",
     changes: [
