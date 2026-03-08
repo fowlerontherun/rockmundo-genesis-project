@@ -422,6 +422,15 @@ serve(async (req) => {
     const newDedicatedFans = (gig.bands.dedicated_fans || 0) + dedicatedFans;
     const newSuperfans = (gig.bands.superfans || 0) + superfans;
 
+    // === MORALE POST-GIG UPDATE (v1.0.958) ===
+    let moraleChange = 0;
+    if (avgRating >= 22) moraleChange = 8;      // Amazing show
+    else if (avgRating >= 18) moraleChange = 4;  // Great show
+    else if (avgRating >= 14) moraleChange = 1;  // Decent show
+    else if (avgRating < 8) moraleChange = -10;  // Terrible show
+    else if (avgRating < 12) moraleChange = -5;  // Bad show
+    const newMorale = Math.max(0, Math.min(100, bandMorale + moraleChange));
+
     const { error: bandError } = await supabaseClient
       .from('bands')
       .update({
@@ -432,9 +441,12 @@ serve(async (req) => {
         total_fans: newTotalFans,
         casual_fans: newCasualFans,
         dedicated_fans: newDedicatedFans,
-        superfans: newSuperfans
+        superfans: newSuperfans,
+        morale: newMorale,
       })
       .eq('id', gig.band_id);
+
+    console.log(`Morale update: ${bandMorale} → ${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange} from ${performanceGrade}-grade performance)`);
 
     if (bandError) throw bandError;
 
