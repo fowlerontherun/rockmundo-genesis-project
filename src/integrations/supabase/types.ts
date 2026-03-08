@@ -17442,6 +17442,74 @@ export type Database = {
           },
         ]
       }
+      player_producer_profiles: {
+        Row: {
+          arrangement_skill: number
+          bio: string | null
+          city_id: string | null
+          cost_per_hour: number
+          created_at: string
+          display_name: string
+          id: string
+          is_available: boolean
+          mixing_skill: number
+          quality_bonus: number
+          rating: number
+          specialty_genre: string
+          total_earnings: number
+          total_sessions: number
+          updated_at: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          arrangement_skill?: number
+          bio?: string | null
+          city_id?: string | null
+          cost_per_hour?: number
+          created_at?: string
+          display_name: string
+          id?: string
+          is_available?: boolean
+          mixing_skill?: number
+          quality_bonus?: number
+          rating?: number
+          specialty_genre?: string
+          total_earnings?: number
+          total_sessions?: number
+          updated_at?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          arrangement_skill?: number
+          bio?: string | null
+          city_id?: string | null
+          cost_per_hour?: number
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_available?: boolean
+          mixing_skill?: number
+          quality_bonus?: number
+          rating?: number
+          specialty_genre?: string
+          total_earnings?: number
+          total_sessions?: number
+          updated_at?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_producer_profiles_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_properties: {
         Row: {
           country: string
@@ -19086,6 +19154,51 @@ export type Database = {
           },
         ]
       }
+      producer_session_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          producer_profile_id: string
+          rating: number
+          reviewer_user_id: string
+          session_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          producer_profile_id: string
+          rating: number
+          reviewer_user_id: string
+          session_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          producer_profile_id?: string
+          rating?: number
+          reviewer_user_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producer_session_reviews_producer_profile_id_fkey"
+            columns: ["producer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "player_producer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producer_session_reviews_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_activity_statuses: {
         Row: {
           activity_type: string
@@ -20099,6 +20212,7 @@ export type Database = {
           created_at: string | null
           duration_hours: number
           id: string
+          player_producer_id: string | null
           producer_id: string | null
           quality_improvement: number | null
           recording_type: string
@@ -20119,6 +20233,7 @@ export type Database = {
           created_at?: string | null
           duration_hours?: number
           id?: string
+          player_producer_id?: string | null
           producer_id?: string | null
           quality_improvement?: number | null
           recording_type?: string
@@ -20139,6 +20254,7 @@ export type Database = {
           created_at?: string | null
           duration_hours?: number
           id?: string
+          player_producer_id?: string | null
           producer_id?: string | null
           quality_improvement?: number | null
           recording_type?: string
@@ -20165,6 +20281,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_player_producer_id_fkey"
+            columns: ["player_producer_id"]
+            isOneToOne: false
+            referencedRelation: "player_producer_profiles"
             referencedColumns: ["id"]
           },
           {

@@ -170,6 +170,7 @@ export const es: TranslationKeys = {
     playerSearch: "Buscar Jugadores",
     modeling: "Modelaje",
     competitiveCharts: "Charts Competitivos",
+    producerCareer: "Carrera de Productor",
     live: "En Vivo",
     events: "Eventos",
     career: "Carrera",

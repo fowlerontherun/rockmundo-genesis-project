@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building } from "lucide-react";
+import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones } from "lucide-react";
 
 export default function CareerHub() {
   return (
@@ -16,6 +16,7 @@ export default function CareerHub() {
         { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
         { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
         { icon: Building, labelKey: "nav.venues", path: "/venues" },
+        { icon: Headphones, labelKey: "nav.producerCareer", path: "/producer-career" },
       ]}
     />
   );

@@ -172,6 +172,7 @@ export const tr: TranslationKeys = {
     playerSearch: "Oyuncu Ara",
     modeling: "Modellik",
     competitiveCharts: "Rekabetçi Listeler",
+    producerCareer: "Prodüktör Kariyeri",
     live: "Canlı",
     events: "Etkinlikler",
     career: "Kariyer",

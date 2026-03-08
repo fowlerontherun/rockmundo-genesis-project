@@ -90,6 +90,7 @@ const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const TattooParlour = lazyWithRetry(() => import("./pages/TattooParlour"));
+const ProducerCareer = lazyWithRetry(() => import("./pages/ProducerCareer"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
 const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
@@ -440,6 +441,7 @@ function App() {
                     <Route path="hub/commerce" element={<CommerceHub />} />
                     <Route path="hub/media" element={<MediaHubPage />} />
                     <Route path="modeling" element={<Modeling />} />
+                    <Route path="producer-career" element={<ProducerCareer />} />
                     
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
