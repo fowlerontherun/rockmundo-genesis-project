@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull } from "lucide-react";
+import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull, UserPlus } from "lucide-react";
 
 export default function CharacterHub() {
   return (
