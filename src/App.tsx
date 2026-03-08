@@ -128,6 +128,8 @@ const AdminProductionNotes = lazyWithRetry(() => import("./pages/admin/Productio
 const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
 const NightClubDetail = lazyWithRetry(() => import("./pages/NightClubDetail"));
 const HallOfImmortals = lazyWithRetry(() => import("./pages/HallOfImmortals"));
+const BuyCharacterSlot = lazyWithRetry(() => import("./pages/BuyCharacterSlot"));
+const SlotPurchaseSuccess = lazyWithRetry(() => import("./pages/SlotPurchaseSuccess"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
