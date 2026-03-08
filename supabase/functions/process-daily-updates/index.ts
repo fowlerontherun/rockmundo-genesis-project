@@ -604,6 +604,10 @@ Deno.serve(async (req) => {
             }
 
             modelingCompleted++
+            // Inbox: Modeling payout
+            if (contract.user_id) {
+              await sendInbox(contract.user_id, 'financial', 'normal', '📸 Modeling Payout', `Your modeling contract has been completed! You earned $${contract.compensation || 0}${contract.fame_boost ? ` and +${contract.fame_boost} fame` : ''}.`, { contract_id: contract.id, compensation: contract.compensation, fame_boost: contract.fame_boost })
+            }
           } catch (cErr) {
             console.error(`Error completing modeling contract ${contract.id}:`, cErr)
             errorCount++
