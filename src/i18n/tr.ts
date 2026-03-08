@@ -79,6 +79,8 @@ export const tr: TranslationKeys = {
     tattoos: "Dövmeler",
     tattooParlour: "Dövme Salonu",
     legacy: "Miras",
+    buySlot: "Slot Satın Al",
+    hallOfImmortals: "Ölümsüzler Salonu",
     schedule: "Program",
     musicHub: "Müzik Merkezi",
     education: "Eğitim",
