@@ -494,7 +494,7 @@ function App() {
                     <Route path="admin/pr" element={<PublicRelationsAdmin />} />
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
-                    {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
+                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
                     {/* <Route path="admin/3d-gig-viewer" element={<Admin3DGigViewer />} /> */}
                     <Route path="admin/gear-items" element={<GearItemsAdmin />} />
                     <Route path="admin/page-graphics" element={<PageGraphicsAdmin />} />
