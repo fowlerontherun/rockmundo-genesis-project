@@ -281,13 +281,13 @@ serve(async (req) => {
       'S': 3.0, 'A': 2.0, 'B': 1.5, 'C': 1.0, 'D': 0.5, 'F': 0.2
     };
 
-    // Calculate new fans from this gig
+    // Calculate new fans from this gig (with clothing bonus)
     const gradeMultiplier = GRADE_MULTIPLIERS[performanceGrade] || 1.0;
     const ratingBonus = avgRating / 25; // 0-1 based on rating
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
     // Add ±20% random variance to fan conversion for more unpredictable outcomes
     const fanVariance = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance;
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains
