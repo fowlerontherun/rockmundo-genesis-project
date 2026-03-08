@@ -109,7 +109,7 @@ export async function handleClaimDailyXp(
   const lifetimeSxp = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
   const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
   const totalSxp = BASE_STIPEND_SXP + bonusSxp;
-  const totalAp = scaledBaseAp + bonusAp;
+  const totalAp = Math.min(DAILY_STIPEND_AP_CAP, scaledBaseAp + bonusAp);
 
   // Get current balances (use new dual currency columns)
   const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;

@@ -137,9 +137,9 @@ serve(async (req) => {
         continue;
       }
 
-      // Cap XP at daily limit
+      // Cap XP and AP at daily limits
       const cappedSxp = Math.min(DAILY_ACTIVITY_XP_CAP, summary.totalXp);
-      const cappedAp = summary.totalAp; // No cap on AP, it's derived from actual activities
+      const cappedAp = Math.min(DAILY_ACTIVITY_AP_CAP, summary.totalAp);
 
       // Get current wallet balances
       const { data: wallet } = await client
