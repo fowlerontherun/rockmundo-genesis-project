@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Star, AlertTriangle, Palette, ShieldAlert, Sparkles } from "lucide-react";
+import { Star, AlertTriangle, Palette, ShieldAlert, Sparkles, Type } from "lucide-react";
 import { TattooBodyPreview } from "@/components/tattoo/TattooBodyPreview";
 import { TattooDesignCard } from "@/components/tattoo/TattooDesignCard";
 import { TattooInfectionAlert } from "@/components/tattoo/TattooInfectionAlert";
