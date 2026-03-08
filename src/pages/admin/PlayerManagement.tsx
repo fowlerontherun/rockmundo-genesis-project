@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Users, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Gift } from "lucide-react";
 import { format } from "date-fns";
 
 export default function PlayerManagement() {
