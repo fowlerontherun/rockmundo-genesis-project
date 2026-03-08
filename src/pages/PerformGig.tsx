@@ -625,27 +625,11 @@ export default function PerformGig() {
       {/* Real-time Performance Viewer - shown when within 10 min of start, during gig, or up to 10 min after */}
       {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
         <div className="space-y-4">
-          {/* Viewer Mode Selector */}
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Watch Performance</h3>
-            <GigViewerModeSelector 
-              mode={viewerMode} 
-              onModeChange={setViewerMode}
-            />
-          </div>
-          
-          {/* Conditional Viewer based on mode */}
-          {viewerMode === '3d' ? (
-            <VideoGigViewer
-              gigId={gig.id}
-              onClose={() => setViewerMode('text')}
-            />
-          ) : (
-            <TextGigViewer
-              gigId={gig.id}
-              onComplete={handleGigComplete}
-            />
-          )}
+          <h3 className="text-lg font-semibold">Watch Performance</h3>
+          <TopDownGigViewer
+            gigId={gig.id}
+            onComplete={handleGigComplete}
+          />
         </div>
       )}
 
