@@ -82,6 +82,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Pre-fetch band morale for all active players (v1.0.959)
+    const playerUserIds = (activePlayers || []).map(p => p.user_id);
+    const playerMoraleMap = new Map<string, number>();
+    if (playerUserIds.length > 0) {
+      const { data: memberMorales } = await supabase
+        .from('band_members')
+        .select('user_id, band_id')
+        .in('user_id', playerUserIds)
+        .eq('is_touring_member', false);
+
+      if (memberMorales && memberMorales.length > 0) {
+        const bandIds = [...new Set(memberMorales.map(m => m.band_id))];
+        const { data: bandsM } = await supabase
+          .from('bands')
+          .select('id, morale')
+          .in('id', bandIds);
+
+        const bandMoraleMap = new Map<string, number>();
+        for (const b of bandsM || []) {
+          bandMoraleMap.set(b.id, (b as any).morale ?? 50);
+        }
+        for (const m of memberMorales) {
+          if (m.user_id) {
+            playerMoraleMap.set(m.user_id, bandMoraleMap.get(m.band_id) ?? 50);
+          }
+        }
+      }
+    }
+    console.log(`[${JOB_NAME}] Pre-fetched morale for ${playerMoraleMap.size} players`);
+
     let eventsTriggered = 0;
     let playersProcessed = 0;
 
@@ -143,8 +173,21 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Normal 1 in 15 chance
-      const roll = Math.floor(Math.random() * TRIGGER_CHANCE) + 1;
+      // Normal trigger chance — modified by band morale (v1.0.959)
+      // Low morale (<30) increases drama chance: trigger chance drops from 15 to as low as 6
+      // High morale (>75) decreases drama chance: trigger chance rises from 15 to 20
+      const playerMorale = playerMoraleMap.get(player.user_id) ?? 50;
+      let effectiveTriggerChance = TRIGGER_CHANCE;
+      if (playerMorale <= 30) {
+        // Scale 15 → 6 as morale goes from 30 → 0 (more events when miserable)
+        effectiveTriggerChance = Math.round(TRIGGER_CHANCE - ((30 - playerMorale) / 30) * 9);
+      } else if (playerMorale >= 75) {
+        // Scale 15 → 20 as morale goes from 75 → 100 (fewer events when euphoric)
+        effectiveTriggerChance = Math.round(TRIGGER_CHANCE + ((playerMorale - 75) / 25) * 5);
+      }
+      effectiveTriggerChance = Math.max(3, Math.min(25, effectiveTriggerChance));
+
+      const roll = Math.floor(Math.random() * effectiveTriggerChance) + 1;
       if (roll !== 1) {
         continue;
       }
@@ -239,7 +282,7 @@ Deno.serve(async (req) => {
           if (bandMember?.band_id) {
             const { data: band } = await supabase
               .from('bands')
-              .select('fan_sentiment_score, media_intensity, media_fatigue')
+              .select('fan_sentiment_score, media_intensity, media_fatigue, morale')
               .eq('id', bandMember.band_id)
               .single();
 
@@ -247,12 +290,17 @@ Deno.serve(async (req) => {
               const curSentiment = (band as any).fan_sentiment_score ?? 0;
               const curIntensity = (band as any).media_intensity ?? 0;
               const curFatigue = (band as any).media_fatigue ?? 0;
+              const curMorale = (band as any).morale ?? 50;
               const newSentiment = Math.max(-100, curSentiment - 20);
+              // v1.0.959: Scandals also hurt morale (-8 to -12 depending on severity)
+              const moralePenalty = selectedEvent.category === 'scandal' ? 12 : 8;
+              const newMorale = Math.max(0, curMorale - moralePenalty);
               // Scandals: big negative sentiment, big positive media (scandals generate buzz)
               await supabase.from('bands').update({
                 fan_sentiment_score: newSentiment,
                 media_intensity: Math.min(100, curIntensity + 40),
                 media_fatigue: Math.min(100, curFatigue + 20),
+                morale: newMorale,
               } as any).eq('id', bandMember.band_id);
 
               await supabase.from('band_sentiment_events').insert({
@@ -263,10 +311,10 @@ Deno.serve(async (req) => {
                 media_fatigue_change: 20,
                 sentiment_after: newSentiment,
                 source: 'trigger-random-events',
-                description: 'Scandal generated negative press but massive media buzz',
+                description: `Scandal generated negative press and massive media buzz. Band morale dropped by ${moralePenalty}.`,
               });
 
-              console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40 for band ${bandMember.band_id}`);
+              console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40, morale -${moralePenalty} for band ${bandMember.band_id}`);
             }
           }
         } catch (sentErr) {
