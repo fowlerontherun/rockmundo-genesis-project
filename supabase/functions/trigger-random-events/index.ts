@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
           if (bandMember?.band_id) {
             const { data: band } = await supabase
               .from('bands')
-              .select('fan_sentiment_score, media_intensity, media_fatigue')
+              .select('fan_sentiment_score, media_intensity, media_fatigue, morale')
               .eq('id', bandMember.band_id)
               .single();
 
@@ -290,12 +290,17 @@ Deno.serve(async (req) => {
               const curSentiment = (band as any).fan_sentiment_score ?? 0;
               const curIntensity = (band as any).media_intensity ?? 0;
               const curFatigue = (band as any).media_fatigue ?? 0;
+              const curMorale = (band as any).morale ?? 50;
               const newSentiment = Math.max(-100, curSentiment - 20);
+              // v1.0.959: Scandals also hurt morale (-8 to -12 depending on severity)
+              const moralePenalty = selectedEvent.category === 'scandal' ? 12 : 8;
+              const newMorale = Math.max(0, curMorale - moralePenalty);
               // Scandals: big negative sentiment, big positive media (scandals generate buzz)
               await supabase.from('bands').update({
                 fan_sentiment_score: newSentiment,
                 media_intensity: Math.min(100, curIntensity + 40),
                 media_fatigue: Math.min(100, curFatigue + 20),
+                morale: newMorale,
               } as any).eq('id', bandMember.band_id);
 
               await supabase.from('band_sentiment_events').insert({
@@ -306,10 +311,10 @@ Deno.serve(async (req) => {
                 media_fatigue_change: 20,
                 sentiment_after: newSentiment,
                 source: 'trigger-random-events',
-                description: 'Scandal generated negative press but massive media buzz',
+                description: `Scandal generated negative press and massive media buzz. Band morale dropped by ${moralePenalty}.`,
               });
 
-              console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40 for band ${bandMember.band_id}`);
+              console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40, morale -${moralePenalty} for band ${bandMember.band_id}`);
             }
           }
         } catch (sentErr) {

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.959",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Morale → Drama Trigger: Low morale (<30) increases random event chance from 1-in-15 to as high as 1-in-6, making miserable bands drama magnets" },
+      { type: 'feature', description: "High Morale Shield: Euphoric bands (>75 morale) have reduced random event chance (up to 1-in-20), protecting them from drama" },
+      { type: 'feature', description: "Scandal → Morale Impact: Scandals now reduce band morale by 12, controversies by 8, creating a self-reinforcing downward spiral" },
+      { type: 'improvement', description: "Pre-fetched band morale for all active players in trigger-random-events for efficient batch processing" },
+    ],
+  },
+  {
     version: "1.0.958",
     date: "2026-03-08",
     changes: [
