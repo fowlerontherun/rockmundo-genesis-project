@@ -40,6 +40,8 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
