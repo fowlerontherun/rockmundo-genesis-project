@@ -168,6 +168,28 @@ export const BandHealthDashboard = ({
             </p>
           </div>
         )}
+
+        {/* Active feedback triggers */}
+        {feedbackDeltas.triggers.length > 0 && (
+          <div className="mt-2 space-y-0.5">
+            <p className="text-[9px] font-medium text-muted-foreground">Active feedback loops:</p>
+            {feedbackDeltas.triggers.slice(0, 3).map((trigger, i) => (
+              <div key={i} className="flex items-start gap-1 text-[9px] text-muted-foreground/80">
+                {trigger.includes("⚠️") ? (
+                  <ArrowDownRight className="h-2.5 w-2.5 text-destructive mt-0.5 shrink-0" />
+                ) : trigger.includes("✨") ? (
+                  <ArrowUpRight className="h-2.5 w-2.5 text-emerald-400 mt-0.5 shrink-0" />
+                ) : (
+                  <Activity className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                )}
+                <span>{trigger}</span>
+              </div>
+            ))}
+            {feedbackDeltas.triggers.length > 3 && (
+              <p className="text-[9px] text-muted-foreground/60">+{feedbackDeltas.triggers.length - 3} more</p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

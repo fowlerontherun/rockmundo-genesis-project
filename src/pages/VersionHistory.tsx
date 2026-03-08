@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.955",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Cross-system feedback loops: The 4 health pillars (Sentiment, Media, Reputation, Morale) now influence each other daily — toxic rep erodes sentiment, fan devotion boosts morale, media spotlight amplifies reputation (positive or negative)" },
+      { type: 'feature', description: "Downward spiral detection: When 3+ systems are in crisis, decline accelerates across all metrics" },
+      { type: 'feature', description: "Virtuous cycle detection: When 3+ systems are thriving, all metrics get a small daily bonus" },
+      { type: 'improvement', description: "Band Health Dashboard now shows active feedback triggers explaining why metrics are shifting" },
+    ],
+  },
+  {
     version: "1.0.954",
     date: "2026-03-08",
     changes: [
