@@ -413,7 +413,8 @@ Deno.serve(async (req) => {
 
       const hoursBooked = (recentRehearsals || 0) * 2; // ~2 hours per rehearsal
       const sessionRevenue = hoursBooked * (studio.hourly_rate || 20);
-      const dailyRevenue = Math.round(sessionRevenue / 7 + BASE_ACTIVITY_REVENUE.rehearsal);
+      const ownerRepMod = ownerReputationMap.get(studio.company_id!) || 1.0;
+      const dailyRevenue = Math.round((sessionRevenue / 7 + BASE_ACTIVITY_REVENUE.rehearsal) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
