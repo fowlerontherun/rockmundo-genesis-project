@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.013",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Admin nav audit: added 7 missing pages to AdminNav (User Roles, Music Videos, Practice Tracks, Gig Viewer Demo, Random Events, Skin Collections, Stage Templates)" },
+      { type: 'fix', description: "Uncommented Stage Templates admin route" },
+      { type: 'improvement', description: "Removed 6 orphan admin pages with no routes (Contracts, Sponsorships, Mentorship, DikCok, CommunityFeed, SpriteManager)" },
+    ],
+  },
+  {
     version: "1.1.012",
     date: "2026-03-08",
     changes: [
