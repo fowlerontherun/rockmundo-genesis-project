@@ -143,6 +143,18 @@ serve(async (req) => {
           console.log(`[calculate-organic-followers] Bot ${botId} now follows account ${account.id} (fame: ${fame}, fans: ${fans})`);
         }
       }
+      // === ORGANIC FOLLOWER GROWTH → MORALE (v1.0.972) ===
+      // Gaining organic followers feels validating
+      if (botsToFollow.length >= 2 && account.owner_type === 'band' && account.owner_id) {
+        try {
+          const { data: bd } = await supabase.from('bands').select('morale').eq('id', account.owner_id).single();
+          if (bd) {
+            const moraleBoost = botsToFollow.length >= 3 ? 2 : 1;
+            await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', account.owner_id);
+            console.log(`[calculate-organic-followers] Band ${account.owner_id}: +${botsToFollow.length} followers → morale +${moraleBoost}`);
+          }
+        } catch (_e) { /* non-critical */ }
+      }
     }
 
     console.log(`[calculate-organic-followers] Completed. Added ${totalFollowersAdded} organic followers`);
