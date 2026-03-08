@@ -102,20 +102,32 @@ serve(async (req) => {
       );
     }
 
-    // Update band's fame and fans
-    const newFame = (activity.bands?.fame || 0) + fameGained;
-    const newFans = (activity.bands?.total_fans || 0) + fansGained;
-
-    const { error: updateBandError } = await supabaseClient
+    // Update band's fame, fans, and morale
+    const { data: currentBand } = await supabaseClient
       .from("bands")
-      .update({
-        fame: newFame,
-        total_fans: newFans,
-      })
-      .eq("id", activity.band_id);
+      .select("fame, total_fans, morale")
+      .eq("id", activity.band_id)
+      .single();
 
-    if (updateBandError) {
-      console.error("Failed to update band:", updateBandError);
+    if (currentBand) {
+      // === SELF-PROMOTION → MORALE (v1.0.979) ===
+      const curMorale = (currentBand as any).morale ?? 50;
+      const moraleBoost = fansGained >= 50 ? 3 : fansGained >= 20 ? 2 : 1;
+
+      const { error: updateBandError } = await supabaseClient
+        .from("bands")
+        .update({
+          fame: (currentBand.fame || 0) + fameGained,
+          total_fans: (currentBand.total_fans || 0) + fansGained,
+          morale: Math.min(100, curMorale + moraleBoost),
+        } as any)
+        .eq("id", activity.band_id);
+
+      if (updateBandError) {
+        console.error("Failed to update band:", updateBandError);
+      } else {
+        console.log(`Self-promotion morale: +${fansGained} fans → morale +${moraleBoost}`);
+      }
     }
 
     // Record fame event
@@ -141,6 +153,9 @@ serve(async (req) => {
         activity_type: activity.activity_type,
         cooldown_expires_at: cooldownExpires.toISOString(),
       }, { onConflict: "band_id,activity_type" });
+
+    const newFame = (currentBand?.fame || 0) + fameGained;
+    const newFans = (currentBand?.total_fans || 0) + fansGained;
 
     return new Response(
       JSON.stringify({
