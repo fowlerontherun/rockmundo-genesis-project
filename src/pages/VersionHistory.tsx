@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.975",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Media Submissions → Morale: Getting approved for newspaper (+3), magazine (+4), or podcast (+3) interviews now boosts band morale alongside reputation. Media validation lifts spirits" },
+      { type: 'feature', description: "Media Rejections → Morale: Getting rejected by media outlets now causes a small -1 morale penalty. Repeated rejections accumulate and can drag morale down" },
+      { type: 'feature', description: "Radio Submissions → Morale & Reputation: Getting a song accepted onto a radio station playlist now boosts morale +3 and reputation +2. Rejection causes -1 morale" },
+      { type: 'improvement', description: "Media submission approval blocks now fetch both reputation_score and morale in a single query for efficient combined updates. Radio submissions now participate in the full morale/reputation ecosystem" },
+    ],
+  },
+  {
     version: "1.0.974",
     date: "2026-03-08",
     changes: [

@@ -75,12 +75,17 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA APPROVAL → REPUTATION (v1.0.964) ===
+          // === MEDIA APPROVAL → REPUTATION & MORALE (v1.0.975) ===
           try {
-            const { data: bData } = await supabase.from('bands').select('reputation_score').eq('id', sub.band_id).single();
+            const { data: bData } = await supabase.from('bands').select('reputation_score, morale').eq('id', sub.band_id).single();
             if (bData) {
               const curRep = (bData as any).reputation_score ?? 0;
-              await supabase.from('bands').update({ reputation_score: Math.min(100, curRep + 3) } as any).eq('id', sub.band_id);
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({
+                reputation_score: Math.min(100, curRep + 3),
+                morale: Math.min(100, curMorale + 3),
+              } as any).eq('id', sub.band_id);
+              console.log(`[process-media-submissions] Newspaper approved → rep +3, morale +3 for band ${sub.band_id}`);
             }
           } catch (_e) { /* non-critical */ }
 
@@ -95,6 +100,15 @@ serve(async (req) => {
               rejection_reason: isEligible ? "Editorial decision" : "Fame requirement not met",
             })
             .eq("id", sub.id);
+
+          // === MEDIA REJECTION → MORALE HIT (v1.0.975) ===
+          try {
+            const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
+            if (bData) {
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+            }
+          } catch (_e) { /* non-critical */ }
 
           results.newspaper.rejected++;
           console.log(`[process-media-submissions] Rejected newspaper submission ${sub.id}`);
@@ -142,12 +156,17 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA APPROVAL → REPUTATION (v1.0.964) ===
+          // === MEDIA APPROVAL → REPUTATION & MORALE (v1.0.975) ===
           try {
-            const { data: bData } = await supabase.from('bands').select('reputation_score').eq('id', sub.band_id).single();
+            const { data: bData } = await supabase.from('bands').select('reputation_score, morale').eq('id', sub.band_id).single();
             if (bData) {
               const curRep = (bData as any).reputation_score ?? 0;
-              await supabase.from('bands').update({ reputation_score: Math.min(100, curRep + 4) } as any).eq('id', sub.band_id);
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({
+                reputation_score: Math.min(100, curRep + 4),
+                morale: Math.min(100, curMorale + 4),
+              } as any).eq('id', sub.band_id);
+              console.log(`[process-media-submissions] Magazine approved → rep +4, morale +4 for band ${sub.band_id}`);
             }
           } catch (_e) { /* non-critical */ }
 
@@ -162,6 +181,15 @@ serve(async (req) => {
               rejection_reason: isEligible ? "Not selected for this issue" : "Fame requirement not met",
             })
             .eq("id", sub.id);
+
+          // === MEDIA REJECTION → MORALE HIT (v1.0.975) ===
+          try {
+            const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
+            if (bData) {
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+            }
+          } catch (_e) { /* non-critical */ }
 
           results.magazine.rejected++;
           console.log(`[process-media-submissions] Rejected magazine submission ${sub.id}`);
@@ -209,12 +237,17 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
-          // === MEDIA APPROVAL → REPUTATION (v1.0.964) ===
+          // === MEDIA APPROVAL → REPUTATION & MORALE (v1.0.975) ===
           try {
-            const { data: bData } = await supabase.from('bands').select('reputation_score').eq('id', sub.band_id).single();
+            const { data: bData } = await supabase.from('bands').select('reputation_score, morale').eq('id', sub.band_id).single();
             if (bData) {
               const curRep = (bData as any).reputation_score ?? 0;
-              await supabase.from('bands').update({ reputation_score: Math.min(100, curRep + 3) } as any).eq('id', sub.band_id);
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({
+                reputation_score: Math.min(100, curRep + 3),
+                morale: Math.min(100, curMorale + 3),
+              } as any).eq('id', sub.band_id);
+              console.log(`[process-media-submissions] Podcast approved → rep +3, morale +3 for band ${sub.band_id}`);
             }
           } catch (_e) { /* non-critical */ }
 
@@ -229,6 +262,15 @@ serve(async (req) => {
               rejection_reason: isEligible ? "Schedule full" : "Fame requirement not met",
             })
             .eq("id", sub.id);
+
+          // === MEDIA REJECTION → MORALE HIT (v1.0.975) ===
+          try {
+            const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
+            if (bData) {
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+            }
+          } catch (_e) { /* non-critical */ }
 
           results.podcast.rejected++;
           console.log(`[process-media-submissions] Rejected podcast submission ${sub.id}`);
