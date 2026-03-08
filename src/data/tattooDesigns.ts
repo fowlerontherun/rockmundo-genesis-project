@@ -72,7 +72,7 @@ export interface PlayerTattoo {
 /**
  * Calculate quality score based on parlour tier with variance
  */
-export function calculateTattooQuality(parlourTier: number): number {
+export function calculateTattooQuality(parlourTier: number, artistQualityBonus: number = 0): number {
   const tierRanges: Record<number, [number, number]> = {
     1: [20, 50],
     2: [35, 65],
