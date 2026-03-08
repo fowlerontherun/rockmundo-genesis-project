@@ -491,6 +491,8 @@ Deno.serve(async (req) => {
                 .update({ last_charged_at: new Date().toISOString() })
                 .eq('id', rental.id)
               rentalsCharged++
+              // Inbox: Rent charged
+              await sendInbox(rental.user_id, 'financial', 'low', '🏠 Rent Charged', `Daily rent of $${dailyCharge} has been deducted from your account.`, { rental_id: rental.id, amount: dailyCharge })
             }
           } catch (rentalError) {
             console.error(`Error processing rental ${rental.id}:`, rentalError)
