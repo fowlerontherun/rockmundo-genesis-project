@@ -215,6 +215,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         />
       </div>
 
+      {/* Health Event Log */}
+      <BandHealthEventLog bandId={band.id} />
+
       {/* Sentiment Trend Chart + Event Log */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <SentimentTrendChart bandId={band.id} currentScore={(band as any).fan_sentiment_score ?? 0} />

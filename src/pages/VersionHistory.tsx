@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.995",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Health Event Log: New band_health_events table tracks every morale, reputation, and sentiment change with source, delta, and description. Players can now see exactly what's causing their stats to change" },
+      { type: 'feature', description: "BandHealthEventLog component: Compact scrollable timeline on Band Overview showing the latest 20 health stat changes, color-coded by positive/negative delta with stat icons" },
+      { type: 'feature', description: "Company Payroll → Health Event Logging: Payroll success (+1 morale) and failure (-3 morale) events are now recorded to the health event log" },
+      { type: 'feature', description: "Company Bankruptcy → Health Event Logging: Bankruptcy declarations (-15 morale, -10 reputation) and warnings (-5 morale) now log detailed events" },
+      { type: 'feature', description: "Gig Completion → Health Event Logging: Post-gig morale, reputation, and sentiment changes are now logged with performance grade and attendance context" },
+      { type: 'improvement', description: "Band Health Dashboard now has full event audit trail. Players can trace every stat fluctuation back to its source action" },
+    ],
+  },
+  {
     version: "1.0.994",
     date: "2026-03-08",
     changes: [
