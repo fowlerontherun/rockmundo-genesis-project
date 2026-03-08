@@ -183,16 +183,12 @@ const Housing = () => {
   const formatPrice = (amount: number) => `$${amount.toLocaleString()}`;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Home className="h-6 w-6 text-primary" />
-          Housing
-        </h1>
-        <p className="text-muted-foreground">
-          {activeCountry ? `Browse properties in ${activeCountry}` : "Select a country to view available properties"}
-        </p>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Housing"
+        subtitle={activeCountry ? `Browse properties in ${activeCountry}` : "Select a country to view available properties"}
+        icon={Home}
+      />
 
       {/* Country & City Filters */}
       <Card className="bg-muted/30">
