@@ -351,6 +351,15 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
         />
       )}
 
+      {/* Stage decor (trusses, banners, LED strips) */}
+      <StageDecor
+        theme={theme}
+        lightingColor={lightingColor}
+        songEnergy={songEnergy}
+        intensity={intensity}
+        bandName={bandName}
+      />
+
       {/* Stage equipment layer */}
       <StageEquipment theme={theme} songEnergy={songEnergy} />
 

@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.905",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Admin Gig Viewer Demo — new admin page at /admin/gig-viewer-demo allows testing all viewer features with configurable venue type, genre, crowd mood, energy, intensity, momentum, and special effects without needing a live gig" },
+      { type: 'feature', description: "Stage decor system — overhead truss rigs with par cans for larger venues, band name banners, side speaker stacks, amp/cabinet stacks behind band, stage floor tape marks, and cable run details" },
+      { type: 'feature', description: "Crowd details layer — security guards in yellow vests, photographers with camera flashes in pit, crowd-held signs (WE ❤️ U, MARRY ME, etc), beach balls for festivals, glow sticks for EDM, visible merch t-shirts, and detailed front row" },
+      { type: 'feature', description: "Stage front LED strip — animated multi-color LED strip along stage edge that pulses with song energy" },
+      { type: 'improvement', description: "Equipment scale now properly converts from theme string values (minimal/standard/large/massive) to numeric multipliers" },
+    ],
+  },
+  {
     version: "1.0.904",
     date: "2026-03-08",
     changes: [
