@@ -66,8 +66,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [reviewOutcomeId, setReviewOutcomeId] = useState<string | null>(null);
   const [showReviewChoice, setShowReviewChoice] = useState(false);
   const [pendingOutcome, setPendingOutcome] = useState<GigHistoryOutcome | null>(null);
-  const [reviewMode, setReviewMode] = useState<'3d' | 'text'>('text');
-  const [show3DViewer, setShow3DViewer] = useState(false);
+  const [showTopDownViewer, setShowTopDownViewer] = useState(false);
   const { data: selectedGearData } = useBandGearEffects(selectedOutcome?.gigs?.band_id ?? bandId, {
     enabled: showReport && Boolean(selectedOutcome?.gigs?.band_id ?? bandId),
   });
