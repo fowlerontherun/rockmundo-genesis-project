@@ -165,6 +165,14 @@ serve(async (req) => {
         bandsProcessed++;
         const fame = band.fame || 0;
         const fans = band.total_fans || 0;
+        const repScore = Math.max(-100, Math.min(100, band.reputation_score ?? 0));
+
+        // Reputation modifier: 0.8x (toxic) to 1.2x (iconic)
+        const repT = (repScore + 100) / 200;
+        const repMod = parseFloat((0.8 + repT * 0.4).toFixed(2));
+        const isToxic = repScore <= -60;
+
+        console.log(`[generate-pr-offers] Band ${band.id}: rep=${repScore}, repMod=${repMod}, toxic=${isToxic}`);
 
         // Check existing pending offers for this band
         const { count: pendingCount } = await supabaseClient
@@ -175,13 +183,19 @@ serve(async (req) => {
 
         if (pendingCount && pendingCount >= 5) continue; // Max 5 pending PR offers
 
-        // Determine how many offers to generate (1-3 based on fame)
-        const numOffers = fame > 10000 ? 3 : fame > 5000 ? 2 : 1;
+        // Determine how many offers to generate (1-3 based on fame, +1 for respected+ rep)
+        let numOffers = fame > 10000 ? 3 : fame > 5000 ? 2 : 1;
+        if (repScore >= 40) numOffers = Math.min(numOffers + 1, 4);
         
         // Randomly select media types for this band (weighted toward lower-fame outlets for new bands)
+        // Toxic bands are excluded from TV and film entirely
         const availableTypes = MEDIA_TYPES.filter(type => {
-          if (type === 'film') return fame >= 25000; // Film requires high fame
-          if (type === 'tv' && fame < 1000) return Math.random() < 0.3; // TV less likely for low fame
+          if (type === 'film') return fame >= 25000 && !isToxic;
+          if (type === 'tv') {
+            if (isToxic) return false;
+            if (fame < 1000) return Math.random() < 0.3;
+            return true;
+          }
           return true;
         });
 
