@@ -43,6 +43,7 @@ export const adminCategories: AdminCategory[] = [
     items: [
       { path: "/admin/ai-song-generation", label: "AI Song Generation", description: "Test AI audio generation" },
       { path: "/admin/songwriting", label: "Songwriting", description: "Songwriting configuration" },
+      { path: "/admin/music-videos", label: "Music Videos", description: "Music video management" },
       { path: "/admin/production-notes", label: "Production Notes", description: "Setlist elements" },
       { path: "/admin/song-gifts", label: "Song Gifts", description: "Gift songs to bands" },
       { path: "/admin/skill-definitions", label: "Skill Definitions", description: "Configure skills" },
@@ -51,6 +52,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/streaming-platforms", label: "Streaming Platforms", description: "Manage platforms" },
       { path: "/admin/radio-stations", label: "Radio Stations", description: "Radio network" },
       { path: "/admin/radio-content", label: "Radio Content", description: "Jingles & fake adverts" },
+      { path: "/admin/practice-tracks", label: "Practice Tracks", description: "Stage practice audio" },
     ],
   },
   {
