@@ -821,6 +821,7 @@ Deno.serve(async (req) => {
         .from('bands')
         .select('id, fan_sentiment_score')
 
+      const sentimentEventInserts: any[] = [];
       for (const b of bandsWithSentiment || []) {
         const score = (b as any).fan_sentiment_score ?? 0;
         if (Math.abs(score) <= 5) continue;
@@ -828,8 +829,19 @@ Deno.serve(async (req) => {
         const newScore = Math.max(-100, Math.min(100, parseFloat((score + drift).toFixed(1))));
         if (newScore !== score) {
           await supabase.from('bands').update({ fan_sentiment_score: newScore } as any).eq('id', b.id);
+          sentimentEventInserts.push({
+            band_id: b.id,
+            event_type: 'daily_drift',
+            sentiment_change: drift,
+            sentiment_after: newScore,
+            source: 'process-daily-updates',
+            description: `Sentiment drifted ${drift > 0 ? 'up' : 'down'} toward neutral`,
+          });
           bandSentimentDrifted++;
         }
+      }
+      if (sentimentEventInserts.length > 0) {
+        await supabase.from('band_sentiment_events').insert(sentimentEventInserts);
       }
       console.log(`Band sentiment drift: ${bandSentimentDrifted} bands adjusted toward neutral`);
     } catch (bsErr) {
