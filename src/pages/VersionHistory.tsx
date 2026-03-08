@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.969",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Brand Sponsorship → Morale: Accepting a brand sponsorship deal now boosts morale (+3 to +6 scaled by deal value). Landing a brand partnership feels like a career win" },
+      { type: 'feature', description: "Daily Morale Regression: Morale now passively drifts toward baseline (50) each day. High morale decays 8% per day, low morale recovers 5% per day — preventing permanently maxed or tanked morale" },
+      { type: 'feature', description: "Tour Travel → Morale: Arriving at a new city during a tour gives a +2 morale boost per band. The excitement of touring and seeing new places keeps spirits up" },
+      { type: 'improvement', description: "Daily updates now fetch and update morale alongside existing band stats. Tour travel tracks unique band IDs to apply morale boost once per arrival" },
+    ],
+  },
+  {
     version: "1.0.968",
     date: "2026-03-08",
     changes: [

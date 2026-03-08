@@ -67,6 +67,10 @@ Deno.serve(async (req) => {
     let travelCompleted = 0
     if (!inProgressError && inProgressTravels) {
       console.log(`[process-tour-travel] Found ${inProgressTravels.length} in-progress tour travels to complete`)
+
+      // === MORALE BOOST: Arriving at a new tour city is exciting (v1.0.969) ===
+      // Collect unique band_ids from completed travels to boost morale once per band
+      const completedTravelBandIds = new Set<string>();
       
       for (const travel of inProgressTravels) {
         try {
@@ -95,9 +99,26 @@ Deno.serve(async (req) => {
 
           travelCompleted++
           console.log(`[process-tour-travel] Completed tour travel ${travel.id} for user ${travel.user_id}`)
+          
+          // Track band for morale boost
+          try {
+            const { data: bm } = await supabase.from('band_members').select('band_id').eq('user_id', travel.user_id).eq('is_touring_member', false).limit(1).maybeSingle();
+            if (bm?.band_id) completedTravelBandIds.add(bm.band_id);
+          } catch (_) {}
         } catch (err) {
           console.error(`[process-tour-travel] Error completing travel ${travel.id}:`, err)
         }
+      }
+      
+      // Apply morale boost once per band for arriving at new tour city
+      for (const bandId of completedTravelBandIds) {
+        try {
+          const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
+          if (bd) {
+            await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + 2) }).eq('id', bandId);
+            console.log(`[process-tour-travel] Tour arrival → morale +2 for band ${bandId}`);
+          }
+        } catch (e) { console.log('[process-tour-travel] Morale error:', e); }
       }
     }
 

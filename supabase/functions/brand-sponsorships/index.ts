@@ -386,6 +386,16 @@ async function handleAcceptOffer(supabase: SupabaseClient, payload: OfferPayload
 
   await supabase.from("brand_offers").update({ status: "accepted" }).eq("id", offer.id);
 
+  // === MORALE BOOST: Landing a brand deal is exciting (v1.0.969) ===
+  try {
+    const { data: bd } = await supabase.from('bands').select('morale').eq('id', payload.bandId).single();
+    if (bd) {
+      const moraleBoost = offer.cash_offer >= 10000 ? 6 : offer.cash_offer >= 5000 ? 4 : 3;
+      await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) }).eq('id', payload.bandId);
+      console.log(`[brand-sponsorships] Sponsorship accepted → morale +${moraleBoost}`);
+    }
+  } catch (e) { console.log('[brand-sponsorships] Morale boost error:', e); }
+
   await supabase.from("brand_contract_history").insert({
     contract_id: contract.id,
     event_type: "activation",
