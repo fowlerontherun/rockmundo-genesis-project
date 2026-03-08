@@ -411,8 +411,14 @@ serve(async (req) => {
               territoryRegionalMult *= (1 / Math.sqrt(territory.cost_multiplier || 1));
             }
 
+            // === FAN SENTIMENT → DAILY SALES (v1.0.986) ===
+            // Positive fan sentiment drives more purchases; negative sentiment suppresses sales
+            const salesSentiment = release.band_id ? (bandSentimentSalesMap.get(release.band_id) ?? 0) : 0;
+            const salesSentT = (Math.max(-100, Math.min(100, salesSentiment)) + 100) / 200;
+            const salesSentMod = parseFloat((0.7 + salesSentT * 0.6).toFixed(2)); // 0.7x–1.3x
+
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * salesSentMod
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 
