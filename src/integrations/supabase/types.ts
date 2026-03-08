@@ -18183,6 +18183,77 @@ export type Database = {
           },
         ]
       }
+      player_teaching_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          session_duration_days: number
+          skill_slug: string
+          started_at: string | null
+          status: string
+          student_profile_id: string
+          student_xp_earned: number
+          teacher_profile_id: string
+          teacher_xp_earned: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          session_duration_days?: number
+          skill_slug: string
+          started_at?: string | null
+          status?: string
+          student_profile_id: string
+          student_xp_earned?: number
+          teacher_profile_id: string
+          teacher_xp_earned?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          session_duration_days?: number
+          skill_slug?: string
+          started_at?: string | null
+          status?: string
+          student_profile_id?: string
+          student_xp_earned?: number
+          teacher_profile_id?: string
+          teacher_xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_teaching_sessions_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_teaching_sessions_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_teaching_sessions_teacher_profile_id_fkey"
+            columns: ["teacher_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_teaching_sessions_teacher_profile_id_fkey"
+            columns: ["teacher_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_token_holdings: {
         Row: {
           average_buy_price: number | null
