@@ -271,6 +271,9 @@ const GENRE_VISUALS: Record<string, GenreVisualConfig> = {
   },
 };
 
+// Export for admin demo
+export { GENRE_VISUALS };
+
 const DEFAULT_VISUALS: GenreVisualConfig = {
   primaryHue: 220, secondaryHue: 270, saturation: 60,
   lightingStyle: 'sweep', crowdStyle: 'bounce', crowdIntensityMod: 1.0,

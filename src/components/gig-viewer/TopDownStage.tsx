@@ -7,6 +7,7 @@ import { StagePyrotechnics } from "./StagePyrotechnics";
 import { StageScreens } from "./StageScreens";
 import { SoundVisualization } from "./SoundVisualization";
 import { VenueAmbience } from "./VenueAmbience";
+import { StageDecor } from "./StageDecor";
 import { getStageTheme, type StageThemeConfig } from "./StageThemes";
 import type { GenreVisualConfig } from "./GenreVisuals";
 
@@ -350,6 +351,15 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
           }}
         />
       )}
+
+      {/* Stage decor (trusses, banners, LED strips) */}
+      <StageDecor
+        theme={theme}
+        lightingColor={lightingColor}
+        songEnergy={songEnergy}
+        intensity={intensity}
+        bandName={bandName}
+      />
 
       {/* Stage equipment layer */}
       <StageEquipment theme={theme} songEnergy={songEnergy} />

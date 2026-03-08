@@ -11,6 +11,7 @@ import { SongTransition } from "./SongTransition";
 import { AudienceInteractions } from "./AudienceInteractions";
 import { SeatingTiers } from "./SeatingTiers";
 import { PerformanceMilestones } from "./PerformanceMilestones";
+import { CrowdDetails } from "./CrowdDetails";
 import { getStageTheme } from "./StageThemes";
 import { getGenreVisuals, getGenreLightingColor } from "./GenreVisuals";
 import {
@@ -399,6 +400,15 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
           />
 
           <TopDownCrowd
+            attendancePercent={attendancePercent}
+            mood={crowdMood}
+            intensity={intensity}
+            genreVisuals={genreVisuals}
+            songEnergy={songEnergy}
+          />
+
+          {/* Crowd details (signs, security, photographers, etc) */}
+          <CrowdDetails
             attendancePercent={attendancePercent}
             mood={crowdMood}
             intensity={intensity}

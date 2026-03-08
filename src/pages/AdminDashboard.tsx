@@ -101,7 +101,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-6">
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/user-roles'}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -109,6 +109,15 @@ const AdminDashboard = () => {
                 User Roles
               </CardTitle>
               <CardDescription>Manage admin & moderator access</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/gig-viewer-demo'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutDashboard className="h-5 w-5 text-primary" />
+                Gig Viewer Demo
+              </CardTitle>
+              <CardDescription>Test top-down gig viewer</CardDescription>
             </CardHeader>
           </Card>
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/production-notes'}>
