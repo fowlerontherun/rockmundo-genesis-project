@@ -81,7 +81,7 @@ export function calculateTattooQuality(parlourTier: number, artistQualityBonus: 
     5: [85, 100],
   };
   const [min, max] = tierRanges[parlourTier] || [40, 70];
-  return Math.round(min + Math.random() * (max - min));
+  return Math.min(100, Math.round(min + Math.random() * (max - min)) + artistQualityBonus);
 }
 
 /**
