@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.932",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Genre Trends → Streaming: Daily streams now multiplied by genre trend score (0.5x–1.5x) — hot genres earn more, cold genres less" },
+      { type: 'feature', description: "Seasonal Streaming: Winter +25% streams (indoor listening), Summer -10% (outdoor season), Spring/Autumn moderate boosts" },
+      { type: 'feature', description: "City Economy → Gig Earnings: Ticket revenue and merch sales now scale with city economic phase (boom 1.35x, recession 0.8x, depression 0.6x)" },
+      { type: 'feature', description: "Fan Loyalty Decay (server): Daily processing now applies fan churn to inactive bands — 2%/day casual loss after 7-day grace period" },
+      { type: 'feature', description: "Reputation Drift (server): Daily processing drifts extreme reputation scores toward neutral (-0.5/day positive, +0.5/day negative)" },
+      { type: 'improvement', description: "Streaming includes band genre lookup for per-release trend multiplier application" },
+      { type: 'improvement', description: "Gig completion logs city economy phase and multiplier for debugging" },
+      { type: 'improvement', description: "Fan decay respects fame protection: 10k+ fame = 30% slower decay, 5k+ = 20%, 1k+ = 10%" },
+    ],
+  },
+  {
     version: "1.0.931",
     date: "2026-03-08",
     changes: [
