@@ -375,12 +375,20 @@ export const useUnderworldStore = () => {
       queryClient.invalidateQueries({ queryKey: ["underworld-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
-      toast({
-        title: "Purchase Complete",
-        description: result.storedInInventory 
-          ? `${product.name} has been added to your inventory!`
-          : `You acquired ${product.name}!`,
-      });
+      if (result.arrestResult?.arrested) {
+        toast({
+          title: "🚔 You've Been Arrested!",
+          description: `${result.arrestResult.description}. Bail: $${result.arrestResult.bailAmount}. Sentence: ${result.arrestResult.sentenceDays} days.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Purchase Complete",
+          description: result.storedInInventory 
+            ? `${product.name} has been added to your inventory!`
+            : `You acquired ${product.name}!`,
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
