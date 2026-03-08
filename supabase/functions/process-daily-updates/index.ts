@@ -1056,6 +1056,17 @@ Deno.serve(async (req) => {
             await supabase.from('bands').update({ morale: newMorale }).eq('id', b.id)
             salaryMoraleUpdated++
             console.log(`Band ${b.id}: can't afford salaries ($${totalDailySalary}/day, balance $${balance}), morale ${curMorale} → ${newMorale}`)
+
+            // Inbox: Salary crisis alert to band members
+            const { data: salaryMembers } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', b.id)
+              .not('user_id', 'is', null)
+            for (const m of salaryMembers || []) {
+              if (!m.user_id) continue
+              await sendInbox(m.user_id, 'financial', 'high', '💰 Salary Crisis!', `Your band can't afford member salaries ($${totalDailySalary}/day). Band morale dropped to ${newMorale}. Earn more or reduce costs!`, { band_id: b.id, daily_salary: totalDailySalary, balance, morale: newMorale }, 'navigate', { route: '/band' })
+            }
           }
         } else if (balance > totalDailySalary * 30) {
           // Healthy finances — small morale boost
