@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Filter, MapPin, Music, Building } from 'lucide-react';
+import { MUSIC_GENRES } from '@/data/genres';
 
 interface VenueFiltersProps {
   selectedCountries: string[];
@@ -47,11 +48,8 @@ export function VenueFilters({
     enabled: selectedCountries.length > 0,
   });
 
-  // Common music genres for venues
-  const genres = [
-    'Rock', 'Pop', 'Metal', 'Jazz', 'Blues', 'Country', 'Hip Hop', 
-    'Electronic', 'Indie', 'Punk', 'Folk', 'R&B', 'Classical'
-  ];
+  // Uses centralized genre list from skill tree
+  const genres = [...MUSIC_GENRES];
 
   const clearFilters = () => {
     onCountryFilterChange(null);

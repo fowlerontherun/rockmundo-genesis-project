@@ -5,6 +5,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { MUSIC_GENRES } from "@/data/genres";
 
 export interface GenreTrend {
   genre: string;
@@ -84,11 +85,7 @@ export function applyGenreTrend(baseValue: number, genre: string, gameDay: numbe
  * Get trends for all common genres on a given day.
  */
 export function getAllGenreTrends(gameDay: number): GenreTrend[] {
-  const genres = [
-    "Rock", "Pop", "Hip-Hop", "R&B", "Country", "Electronic", "Jazz",
-    "Metal", "Punk", "Indie", "Folk", "Blues", "Reggae", "Soul",
-    "Classical", "Latin", "K-Pop", "Afrobeats", "Disco", "Grunge",
-  ];
+  const genres = [...MUSIC_GENRES];
   return genres
     .map(g => getGenreTrend(g, gameDay))
     .sort((a, b) => b.trendScore - a.trendScore);
