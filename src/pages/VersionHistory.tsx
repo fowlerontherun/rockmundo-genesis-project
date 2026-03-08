@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.923",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Daily AP hard-capped at 50 total — stipend claim capped at 30 AP, activity bonus capped at 20 AP" },
+      { type: 'fix', description: "Streak milestone AP rewards reduced: 7d→+2, 14d→+3, 30d→+5, 100d→+8, 365d→+12 (was 10/20/40/100/200)" },
+      { type: 'fix', description: "Base daily stipend AP reduced from 3-10 to 2-8 with same decay curve" },
+      { type: 'fix', description: "Activity-derived AP now capped at 20/day (was uncapped)" },
+    ],
+  },
+  {
     version: "1.0.922",
     date: "2026-03-08",
     changes: [

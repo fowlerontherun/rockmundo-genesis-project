@@ -29,6 +29,7 @@ const ACTIVITY_AP_RATES: Record<string, number> = {
 
 const DEFAULT_AP_RATE = 0.50;
 const DAILY_ACTIVITY_XP_CAP = 250;
+const DAILY_ACTIVITY_AP_CAP = 20; // Hard cap on AP from activities (stipend can add up to 30 more → 50 max total)
 
 function getApRateForActivity(activityType: string): number {
   return ACTIVITY_AP_RATES[activityType] ?? DEFAULT_AP_RATE;
@@ -136,9 +137,9 @@ serve(async (req) => {
         continue;
       }
 
-      // Cap XP at daily limit
+      // Cap XP and AP at daily limits
       const cappedSxp = Math.min(DAILY_ACTIVITY_XP_CAP, summary.totalXp);
-      const cappedAp = summary.totalAp; // No cap on AP, it's derived from actual activities
+      const cappedAp = Math.min(DAILY_ACTIVITY_AP_CAP, summary.totalAp);
 
       // Get current wallet balances
       const { data: wallet } = await client
