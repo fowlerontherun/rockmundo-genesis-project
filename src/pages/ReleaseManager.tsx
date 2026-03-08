@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Plus } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/hooks/use-auth-context";
 import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
