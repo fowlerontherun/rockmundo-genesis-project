@@ -216,7 +216,7 @@ const MemberSprite = ({ member, config, idx, songEnergy, bobSpeed, bobAmount, sh
   );
 };
 
-export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, venueType, genreVisuals, crowdMood, showStats }: TopDownStageProps) => {
+export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, venueType, genreVisuals, crowdMood, showStats, isFinale }: TopDownStageProps) => {
   const theme = getStageTheme(venueType);
   const bobSpeed = songEnergy === 'high' ? 0.4 : songEnergy === 'medium' ? 0.6 : 0.9;
   const bobAmount = songEnergy === 'high' ? 4 : songEnergy === 'medium' ? 2.5 : 1;
