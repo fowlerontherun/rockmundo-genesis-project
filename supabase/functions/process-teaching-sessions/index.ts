@@ -130,11 +130,18 @@ Deno.serve(async (req) => {
             if (bd) {
               const curM = (bd as any).morale ?? 50;
               const curR = (bd as any).reputation_score ?? 0;
+              const newM = Math.min(100, curM + 3);
+              const newR = Math.min(100, curR + 4);
               await supabase.from('bands').update({
-                morale: Math.min(100, curM + 3),
-                reputation_score: Math.min(100, curR + 4), // mentoring boosts rep
+                morale: newM,
+                reputation_score: newR,
               } as any).eq('id', teacherBm.band_id);
               console.log(`Teaching session: teacher band ${teacherBm.band_id} → morale +3, rep +4`);
+              // Health event logs
+              try { await supabase.from('band_health_events').insert([
+                { band_id: teacherBm.band_id, event_type: 'morale', delta: 3, new_value: newM, source: 'teaching_session', description: `Mentored a student in ${session.skill_slug}` },
+                { band_id: teacherBm.band_id, event_type: 'reputation', delta: 4, new_value: newR, source: 'teaching_session', description: `Reputation boost from mentoring` },
+              ]); } catch (_) {}
             }
           }
           // Student gets morale boost (learning feels good)
@@ -148,8 +155,11 @@ Deno.serve(async (req) => {
           if (studentBm?.band_id && studentBm.band_id !== teacherBm?.band_id) {
             const { data: bd2 } = await supabase.from('bands').select('morale').eq('id', studentBm.band_id).single();
             if (bd2) {
-              await supabase.from('bands').update({ morale: Math.min(100, ((bd2 as any).morale ?? 50) + 2) } as any).eq('id', studentBm.band_id);
+              const studentNewM = Math.min(100, ((bd2 as any).morale ?? 50) + 2);
+              await supabase.from('bands').update({ morale: studentNewM } as any).eq('id', studentBm.band_id);
               console.log(`Teaching session: student band ${studentBm.band_id} → morale +2`);
+              // Health event log
+              try { await supabase.from('band_health_events').insert({ band_id: studentBm.band_id, event_type: 'morale', delta: 2, new_value: studentNewM, source: 'teaching_session', description: `Learned ${session.skill_slug} from a mentor` }); } catch (_) {}
             }
           }
         } catch (_e) { /* non-critical */ }

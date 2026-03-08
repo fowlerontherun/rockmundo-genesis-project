@@ -156,8 +156,11 @@ Deno.serve(async (req) => {
                 if (band) {
                   const curM = (band as any).morale ?? 50;
                   const moraleBoost = prize.cash >= 250000 ? 12 : prize.cash >= 10000 ? 8 : prize.cash >= 1000 ? 5 : 3;
-                  await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bm.band_id);
+                  const newMorale = Math.min(100, curM + moraleBoost);
+                  await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
                   console.log(`Lottery win morale: $${prize.cash} → morale +${moraleBoost} for band ${bm.band_id}`);
+                  // Health event log
+                  try { await supabase.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'lottery_win', description: `Lottery win: $${prize.cash.toLocaleString()} prize` }); } catch (_) {}
                 }
               }
             } catch (_e) { /* non-critical */ }

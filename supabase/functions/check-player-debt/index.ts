@@ -235,11 +235,18 @@ Deno.serve(async (req) => {
             if (bd) {
               const curMorale = (bd as any).morale ?? 50;
               const curRep = (bd as any).reputation_score ?? 0;
+              const newMorale = Math.max(0, curMorale - 15);
+              const newRep = Math.max(-100, curRep - 10);
               await supabase.from('bands').update({
-                morale: Math.max(0, curMorale - 15),
-                reputation_score: Math.max(-100, curRep - 10),
+                morale: newMorale,
+                reputation_score: newRep,
               }).eq('id', bm.band_id);
               console.log(`[check-player-debt] Imprisonment → morale -15, rep -10 for band ${bm.band_id}`);
+              // Health event logs
+              try { await supabase.from('band_health_events').insert([
+                { band_id: bm.band_id, event_type: 'morale', delta: -15, new_value: newMorale, source: 'player_debt', description: `Band member imprisoned for $${debtAmount.toLocaleString()} debt` },
+                { band_id: bm.band_id, event_type: 'reputation', delta: -10, new_value: newRep, source: 'player_debt', description: `Reputation hit from member imprisonment` },
+              ]); } catch (_) {}
             }
           }
         } catch (e) { console.log('[check-player-debt] Morale/rep update error:', e); }

@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.997",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Health Event Logging Batch 3: 8 more edge functions now log to band_health_events. Demo review (accepted/rejected), lottery wins, university attendance/graduation, book reading, prison release, prison songwriting, teaching sessions (teacher morale+rep & student morale), and debt imprisonment all record detailed health stat changes" },
+      { type: 'improvement', description: "19 of ~25 health-modifying edge functions now have full event audit trail coverage. Players can trace morale and reputation changes from nearly all game systems" },
+    ],
+  },
+  {
     version: "1.0.996",
     date: "2026-03-08",
     changes: [

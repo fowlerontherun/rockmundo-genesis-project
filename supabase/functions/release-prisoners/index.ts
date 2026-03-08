@@ -120,11 +120,20 @@ Deno.serve(async (req) => {
             const moraleBoost = prisoner.behavior_score >= 90 ? 10 : prisoner.behavior_score >= 70 ? 7 : prisoner.behavior_score >= 50 ? 4 : 2;
             // Slight rep recovery for completing sentence (paid their debt to society)
             const repBoost = prisoner.behavior_score >= 70 ? 3 : 1;
+            const newMorale = Math.min(100, curM + moraleBoost);
+            const newRep = Math.min(100, curR + repBoost);
             await supabase.from('bands').update({
-              morale: Math.min(100, curM + moraleBoost),
-              reputation_score: Math.min(100, curR + repBoost),
+              morale: newMorale,
+              reputation_score: newRep,
             } as any).eq('id', bm.band_id);
             console.log(`[release-prisoners] Release morale: behavior ${prisoner.behavior_score} → morale +${moraleBoost}, rep +${repBoost}`);
+            // Health event logs
+            try {
+              await supabase.from('band_health_events').insert([
+                { band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'prison_release', description: `Released from prison (behavior: ${behaviorRating})` },
+                { band_id: bm.band_id, event_type: 'reputation', delta: repBoost, new_value: newRep, source: 'prison_release', description: `Served sentence, debt to society paid` },
+              ]);
+            } catch (_) {}
           }
         }
       } catch (_e) { /* non-critical */ }

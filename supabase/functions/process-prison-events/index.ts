@@ -141,8 +141,11 @@ Deno.serve(async (req) => {
             const { data: bd } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
             if (bd) {
               const moraleBoost = Math.min(3, prisoner.songs_written); // +1 per song, max +3
-              await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', bm.band_id);
+              const newMorale = Math.min(100, ((bd as any).morale ?? 50) + moraleBoost);
+              await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
               console.log(`[process-prison-events] Prison songwriting morale: ${prisoner.songs_written} songs → +${moraleBoost}`);
+              // Health event log
+              try { await supabase.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'prison_songwriting', description: `Wrote ${prisoner.songs_written} song(s) in prison` }); } catch (_) {}
             }
           }
         } catch (_e) { /* non-critical */ }
