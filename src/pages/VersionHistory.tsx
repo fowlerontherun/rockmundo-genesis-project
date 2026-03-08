@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.897",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Label contracts now affect revenue — sales and streaming income is split between band and label based on contract royalty percentages" },
+      { type: 'feature', description: "Advance recoupment is now functional — label's royalty share goes toward recouping advances until fully paid back" },
+      { type: 'feature', description: "Release creation is now contract-aware — auto-detects active label contract, applies manufacturing coverage and marketing hype bonuses" },
+      { type: 'feature', description: "New RecoupmentTracker component shows advance repayment progress on both artist and label management views" },
+      { type: 'feature', description: "New LabelArtistRoster component for label owners showing signed artists with revenue, quota progress, and recoupment status" },
+      { type: 'feature', description: "Label contract banner in release creation dialog shows deal terms, manufacturing coverage, and hype bonuses" },
+      { type: 'improvement', description: "Release creation now auto-increments contract release counters (singles_completed, albums_completed, releases_completed)" },
+      { type: 'improvement', description: "Label financial transactions now recorded for all revenue splits and manufacturing cost coverage" },
+      { type: 'improvement', description: "Streaming revenue split now tracks per-release contract info and credits labels in batch" },
+      { type: 'fix', description: "Band earnings descriptions now reflect label split deductions instead of showing full revenue" },
+    ],
+  },
+  {
     version: "1.0.896",
     date: "2026-03-08",
     changes: [
