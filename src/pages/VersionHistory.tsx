@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.960",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Rider Fulfillment → Morale: After each gig, band's default rider is checked against venue tier. Fulfilled rider grants +5 morale, unmet rider costs -5 morale" },
+      { type: 'feature', description: "Salary Affordability → Morale: Daily check if band can afford member salaries. Broke bands lose -2 to -4 morale/day; financially healthy bands gain +1/day" },
+      { type: 'improvement', description: "Rider fulfillment uses venue capacity as proxy for tier (small <300, medium <1000, large <5000, arena 5000+) matched against rider tier" },
+      { type: 'improvement', description: "Salary morale check runs before morale drift in daily updates, so financial stress compounds before natural normalization" },
+    ],
+  },
+  {
     version: "1.0.959",
     date: "2026-03-08",
     changes: [

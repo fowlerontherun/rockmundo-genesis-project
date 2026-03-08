@@ -429,6 +429,39 @@ serve(async (req) => {
     else if (avgRating >= 14) moraleChange = 1;  // Decent show
     else if (avgRating < 8) moraleChange = -10;  // Terrible show
     else if (avgRating < 12) moraleChange = -5;  // Bad show
+
+    // === RIDER FULFILLMENT → MORALE (v1.0.960) ===
+    let riderMoraleChange = 0;
+    try {
+      const { data: defaultRider } = await supabaseClient
+        .from('band_riders')
+        .select('id, tier, total_cost_estimate')
+        .eq('band_id', gig.band_id)
+        .eq('is_default', true)
+        .maybeSingle();
+
+      if (defaultRider) {
+        const riderCost = defaultRider.total_cost_estimate || 0;
+        // Simple fulfillment check: can the gig's net revenue cover the rider cost?
+        // Higher-tier venues are more likely to fulfill rider requests
+        const venueCapacity = gig.venues?.capacity || 100;
+        const venueTierScore = venueCapacity >= 5000 ? 3 : venueCapacity >= 1000 ? 2 : venueCapacity >= 300 ? 1 : 0;
+        const riderTierScore = defaultRider.tier === 'platinum' ? 3 : defaultRider.tier === 'gold' ? 2 : defaultRider.tier === 'silver' ? 1 : 0;
+
+        const fulfilled = venueTierScore >= riderTierScore || netProfit > riderCost * 2;
+        if (fulfilled) {
+          riderMoraleChange = 5;
+          console.log(`Rider fulfilled (venue tier ${venueTierScore} >= rider tier ${riderTierScore}): morale +5`);
+        } else {
+          riderMoraleChange = -5;
+          console.log(`Rider NOT fulfilled (venue tier ${venueTierScore} < rider tier ${riderTierScore}): morale -5`);
+        }
+      }
+    } catch (riderErr) {
+      console.log('Rider fulfillment check skipped:', riderErr);
+    }
+
+    moraleChange += riderMoraleChange;
     const newMorale = Math.max(0, Math.min(100, bandMorale + moraleChange));
 
     const { error: bandError } = await supabaseClient
