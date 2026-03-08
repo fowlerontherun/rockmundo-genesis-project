@@ -13,6 +13,7 @@ export interface BehaviorSettings {
   media_behavior: "reclusive" | "professional" | "outspoken" | "controversial";
   afterparty_attendance: "never" | "sometimes" | "always";
   entourage_size: "solo" | "small" | "medium" | "large";
+  stage_behavior: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: Omit<BehaviorSettings, "id" | "user_id" | "created_at" |
   media_behavior: "professional",
   afterparty_attendance: "sometimes",
   entourage_size: "small",
+  stage_behavior: "standard",
 };
 
 // Risk score calculation weights
@@ -169,6 +171,21 @@ export function useBehaviorSettings() {
     enabled: !!user?.id,
   });
 
+  // Fetch unlocked advanced behaviors
+  const { data: unlockedBehaviors } = useQuery({
+    queryKey: ["unlocked-behaviors", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("player_unlocked_behaviors")
+        .select("behavior_key")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return (data || []).map((r: any) => r.behavior_key as string);
+    },
+    enabled: !!user?.id,
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<BehaviorSettings>) => {
       if (!user?.id || !settings?.id) throw new Error("No user or settings");
@@ -205,5 +222,6 @@ export function useBehaviorSettings() {
     riskScore,
     riskLevel,
     healthModifiers,
+    unlockedBehaviors: unlockedBehaviors || [],
   };
 }

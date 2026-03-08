@@ -54,13 +54,18 @@ export async function executeGigPerformance(data: GigExecutionData) {
   }
 
   // Fetch all necessary data in parallel
-  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes] = await Promise.all([
+  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes] = await Promise.all([
     supabase.from('band_stage_equipment').select('*').eq('band_id', bandId),
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
-    supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance, primary_genre').eq('id', bandId).single(),
+    supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance, primary_genre, leader_id').eq('id', bandId).single(),
     supabase.from('band_members').select('user_id, skill_contribution, instrument_role').eq('band_id', bandId).eq('is_touring_member', false),
-    supabase.from('player_merchandise').select('*').eq('band_id', bandId).gt('stock_quantity', 0)
+    supabase.from('player_merchandise').select('*').eq('band_id', bandId).gt('stock_quantity', 0),
+    // Fetch leader's stage behavior setting
+    supabase.from('bands').select('leader_id').eq('id', bandId).single().then(async (r) => {
+      if (!r.data?.leader_id) return { data: null };
+      return supabase.from('player_behavior_settings').select('stage_behavior').eq('user_id', r.data.leader_id).maybeSingle();
+    }),
   ]);
 
   const equipment = equipmentRes.data || [];
@@ -69,6 +74,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const band = bandRes.data;
   const members = membersRes.data || [];
   const merch = merchRes.data || [];
+  const stageBehavior: string = (behaviorRes as any)?.data?.stage_behavior || 'standard';
 
   if (!band) throw new Error('Band not found');
 
@@ -217,6 +223,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
       stageSkillAverage,
       improvisationLevel: 0,
       genreSkillMultiplier: songGenreMultiplier,
+      stageBehavior,
     };
 
     const result = calculateSongPerformance(factors);

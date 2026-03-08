@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.909",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Stage Behavior System — players can choose from 6 starter performance styles (Standard, Aggressive, Confident, Arrogant, Friendly, Nervous) each with unique pros/cons affecting gig scores, fame, chemistry, variance, crowd engagement, and momentum" },
+      { type: 'feature', description: "6 unlockable advanced behaviors (Legendary, Enigmatic, Chaotic, Virtuoso, Provocateur, Zen) earned through fame milestones, gig count, skill mastery, and player level" },
+      { type: 'improvement', description: "Stage behavior modifiers integrated into both client-side and edge function performance calculators — affects base score, variance, chemistry, crowd response thresholds, event chances, fame/fan multipliers, and opening song penalties" },
+      { type: 'feature', description: "New Stage Behavior selector UI in Lifestyle Settings with expandable pros/cons cards, quick modifier badges, and locked/unlocked states for advanced behaviors" },
+    ],
+  },
+  {
     version: "1.0.908",
     date: "2026-03-08",
     changes: [

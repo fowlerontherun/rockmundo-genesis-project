@@ -15418,6 +15418,7 @@ export type Database = {
           id: string
           media_behavior: string
           partying_intensity: string
+          stage_behavior: string
           travel_comfort: string
           updated_at: string
           user_id: string
@@ -15431,6 +15432,7 @@ export type Database = {
           id?: string
           media_behavior?: string
           partying_intensity?: string
+          stage_behavior?: string
           travel_comfort?: string
           updated_at?: string
           user_id: string
@@ -15444,6 +15446,7 @@ export type Database = {
           id?: string
           media_behavior?: string
           partying_intensity?: string
+          stage_behavior?: string
           travel_comfort?: string
           updated_at?: string
           user_id?: string
@@ -18128,6 +18131,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_unlocked_behaviors: {
+        Row: {
+          behavior_key: string
+          id: string
+          unlock_source: string | null
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          behavior_key: string
+          id?: string
+          unlock_source?: string | null
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          behavior_key?: string
+          id?: string
+          unlock_source?: string | null
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       player_wellness_conditions: {
         Row: {

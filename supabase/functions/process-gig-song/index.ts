@@ -141,6 +141,27 @@ function doesCategoryMatchRole(category: string, subcategory: string | null, rol
   return validCategories.some(vc => catLower.includes(vc) || subLower.includes(vc) || vc.includes(catLower));
 }
 
+// ── Stage Behavior Modifiers (mirrored from client stageBehaviors.ts) ──
+
+const BEHAVIOR_MODIFIERS: Record<string, { baseBonus: number; varianceMult: number; chemMult: number; crowdMult: number }> = {
+  standard:    { baseBonus: 0,   varianceMult: 0.9,  chemMult: 1.0,  crowdMult: 1.0  },
+  aggressive:  { baseBonus: 8,   varianceMult: 1.3,  chemMult: 0.9,  crowdMult: 1.25 },
+  confident:   { baseBonus: 5,   varianceMult: 1.0,  chemMult: 0.95, crowdMult: 1.0  },
+  arrogant:    { baseBonus: 3,   varianceMult: 1.0,  chemMult: 0.8,  crowdMult: 0.95 },
+  friendly:    { baseBonus: 0,   varianceMult: 0.85, chemMult: 1.2,  crowdMult: 1.1  },
+  nervous:     { baseBonus: -8,  varianceMult: 1.4,  chemMult: 1.0,  crowdMult: 0.9  },
+  legendary:   { baseBonus: 12,  varianceMult: 1.2,  chemMult: 0.85, crowdMult: 1.2  },
+  enigmatic:   { baseBonus: 0,   varianceMult: 0.7,  chemMult: 1.0,  crowdMult: 0.85 },
+  chaotic:     { baseBonus: 15,  varianceMult: 1.6,  chemMult: 0.75, crowdMult: 1.3  },
+  virtuoso:    { baseBonus: 10,  varianceMult: 0.75, chemMult: 1.15, crowdMult: 0.9  },
+  provocateur: { baseBonus: 0,   varianceMult: 1.25, chemMult: 0.7,  crowdMult: 1.25 },
+  zen:         { baseBonus: 0,   varianceMult: 0.6,  chemMult: 1.25, crowdMult: 0.85 },
+};
+
+function getBehaviorMods(key: string) {
+  return BEHAVIOR_MODIFIERS[key] || BEHAVIOR_MODIFIERS.standard;
+}
+
 // ── Interfaces ──
 
 interface PerformanceFactors {
@@ -152,6 +173,7 @@ interface PerformanceFactors {
   memberSkillAverage: number;
   stageSkillAverage: number;
   venueCapacityUsed: number;
+  stageBehavior?: string;
 }
 
 interface PerformanceItemFactors {
@@ -165,29 +187,22 @@ interface PerformanceItemFactors {
 // ── Performance calculators ──
 
 function calculateSongPerformance(factors: PerformanceFactors) {
-  // Normalize song quality from 0-1000 to 0-100 (matching client-side)
+  const bMods = getBehaviorMods(factors.stageBehavior || 'standard');
+
   const normalizedSongQuality = Math.min(100, (factors.songQuality / 1000) * 100);
-  // Normalize member skills from 0-150 to 0-100 (matching client-side)
   const normalizedMemberSkills = Math.min(100, (factors.memberSkillAverage / 150) * 100);
   const normalizedStageSkills = Math.min(100, Math.max(0, factors.stageSkillAverage || 0));
 
   const clamp = (v: number) => Math.min(100, Math.max(0, v || 0));
 
-  // Updated weights matching client-side
   const WEIGHTS = {
-    songQuality: 0.25,
-    rehearsal: 0.20,
-    chemistry: 0.15,
-    equipment: 0.12,
-    crew: 0.08,
-    memberSkills: 0.10,
-    stageSkills: 0.10
+    songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
+    equipment: 0.12, crew: 0.08, memberSkills: 0.10, stageSkills: 0.10
   };
 
-  // Calculate individual contributions (0-100 scale each)
   const songQualityContrib = normalizedSongQuality * WEIGHTS.songQuality;
   const rehearsalContrib = clamp(factors.rehearsalLevel) * WEIGHTS.rehearsal;
-  const chemistryContrib = clamp(factors.bandChemistry) * WEIGHTS.chemistry;
+  const chemistryContrib = clamp(factors.bandChemistry * bMods.chemMult) * WEIGHTS.chemistry;
   const equipmentContrib = clamp(factors.equipmentQuality) * WEIGHTS.equipment;
   const crewContrib = clamp(factors.crewSkillLevel) * WEIGHTS.crew;
   const memberSkillsContrib = normalizedMemberSkills * WEIGHTS.memberSkills;
@@ -195,9 +210,9 @@ function calculateSongPerformance(factors: PerformanceFactors) {
 
   const baseScore =
     songQualityContrib + rehearsalContrib + chemistryContrib +
-    equipmentContrib + crewContrib + memberSkillsContrib + stageSkillsContrib;
+    equipmentContrib + crewContrib + memberSkillsContrib + stageSkillsContrib +
+    bMods.baseBonus;
 
-  // Venue capacity multiplier (matching client-side)
   let capacityMultiplier = 1.0;
   const cap = factors.venueCapacityUsed;
   if (cap >= 95) capacityMultiplier = 1.15;
@@ -206,8 +221,7 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   else if (cap >= 40) capacityMultiplier = 0.95;
   else capacityMultiplier = 0.85;
 
-  // Variance ±15-20% (matching client-side range)
-  const variance = 0.85 + Math.random() * 0.30;
+  const variance = 0.85 + Math.random() * (0.30 * bMods.varianceMult);
 
   // Random event chance (matching client-side)
   let eventMultiplier = 1.0;
@@ -633,15 +647,24 @@ serve(async (req) => {
       rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
     });
 
+    // Fetch leader's stage behavior
+    const { data: bandLeader } = await supabaseClient.from('bands').select('leader_id').eq('id', bandId).single();
+    let stageBehavior = 'standard';
+    if (bandLeader?.leader_id) {
+      const { data: behaviorData } = await supabaseClient.from('player_behavior_settings').select('stage_behavior').eq('user_id', bandLeader.leader_id).maybeSingle();
+      if (behaviorData?.stage_behavior) stageBehavior = behaviorData.stage_behavior;
+    }
+
     const factors: PerformanceFactors = {
       songQuality: song.quality_score || 50,
-      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10, // 0-10 scale → 0-100
+      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10,
       bandChemistry: gig.bands.chemistry_level || 0,
       equipmentQuality,
       crewSkillLevel,
       memberSkillAverage: liveSkillAvg,
       stageSkillAverage: stageSkillAvg,
-      venueCapacityUsed
+      venueCapacityUsed,
+      stageBehavior,
     };
 
     const result = calculateSongPerformance(factors);
