@@ -354,7 +354,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
         audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
         promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
-        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
+        venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2)),
+        stage_behavior_used: stageBehavior,
       })
       .eq('id', existingOutcome.id)
       .select()
