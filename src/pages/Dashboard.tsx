@@ -394,65 +394,9 @@ const Dashboard = () => {
           <SkillsAttributesTab profile={profile} />
         </TabsContent>
 
-        {/* Friends Tab with Chat */}
-        <TabsContent value="friends" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-5 overflow-hidden">
-            <Card className="lg:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  {t('dashboard.friendsList', 'Friends List')}
-                </CardTitle>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/relationships">{t('common.viewAll', 'View All')}</Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {!friendships || friendships.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                    {t('dashboard.noFriendsYet', 'No friends yet. Start connecting with other players!')}
-                  </p> : <ScrollArea className="h-[500px]">
-                    <div className="space-y-2">
-                      {friendships.map((friendship: any) => {
-                        const friend = friendship.friendProfile;
-                        if (!friend) return null;
-                        
-                        return (
-                          <Link 
-                            to="/relationships" 
-                            key={friendship.id} 
-                            className="flex items-center gap-3 p-2 rounded-lg border hover:bg-accent/50 transition-colors"
-                          >
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={friend.avatar_url} />
-                              <AvatarFallback>
-                                {getInitials(friend.display_name || friend.username || "?")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {friend.display_name || friend.username}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Level {friend.level || 1} • Fame {friend.fame?.toLocaleString() || 0}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>}
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>{t('dashboard.chatChannels', 'Chat Channels')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChatChannelSelector isVip={vipStatus?.isVip || false} />
-              </CardContent>
-            </Card>
-          </div>
+        {/* Chat Tab */}
+        <TabsContent value="chat" className="space-y-4">
+          <ChatChannelSelector isVip={vipStatus?.isVip || false} />
         </TabsContent>
 
         {/* Schedule Tab */}
