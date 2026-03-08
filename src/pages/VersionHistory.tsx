@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.914",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Text Tattoo System — type custom text (band names, lyrics, quotes, dates) and choose from 8 font styles: Gothic, Elegant Script, Typewriter, Bold Caps, Minimal, Graffiti, Old English, and Brush Stroke" },
+      { type: 'feature', description: "Font style picker with live preview showing your text rendered in each font before committing" },
+      { type: 'feature', description: "Font-based pricing: each style has a unique price modifier (0.8x–1.5x), with Brush Stroke and Old English being premium options" },
+      { type: 'feature', description: "Text tattoos have genre affinities — Hip Hop +5%, Punk +3%, Rock +2% with penalties to Classical and Pop" },
+      { type: 'improvement', description: "Body map now shows 'Aa' marker for text tattoos instead of checkmark" },
+      { type: 'improvement', description: "My Tattoos section displays custom text with font styling for text-based tattoos" },
+    ],
+  },
+  {
     version: "1.0.913",
     date: "2026-03-08",
     changes: [

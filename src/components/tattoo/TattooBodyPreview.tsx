@@ -83,7 +83,7 @@ export const TattooBodyPreview = ({ tattoos, onSlotClick, selectedSlot }: Tattoo
               />
               {hasTattoo && (
                 <text x={pos.x + pos.w / 2} y={pos.y + pos.h / 2 + 3} textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">
-                  ✓
+                  {tattoos.find(t => t.body_slot === slot)?.custom_text ? 'Aa' : '✓'}
                 </text>
               )}
             </g>

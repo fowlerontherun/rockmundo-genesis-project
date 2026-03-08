@@ -306,10 +306,11 @@ export default function TattooParlour() {
       {playerTattoos && <TattooInfectionAlert tattoos={playerTattoos} onTreat={(id) => treatMutation.mutate(id)} />}
 
       <Tabs defaultValue="shop">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="shop">🏪 Shop</TabsTrigger>
-          <TabsTrigger value="my-tattoos">🎨 My Tattoos ({playerTattoos?.length || 0})</TabsTrigger>
-          <TabsTrigger value="custom">✨ Custom ({customRequests?.length || 0})</TabsTrigger>
+          <TabsTrigger value="text-tattoo">✍️ Text</TabsTrigger>
+          <TabsTrigger value="my-tattoos">🎨 My ({playerTattoos?.length || 0})</TabsTrigger>
+          <TabsTrigger value="custom">✨ Custom</TabsTrigger>
         </TabsList>
 
         <TabsContent value="shop" className="space-y-4">
