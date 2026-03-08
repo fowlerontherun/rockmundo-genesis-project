@@ -40,6 +40,7 @@ const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
   festival_performance: Guitar,
   release_manufacturing: Headphones,
   release_promo: Star,
+  teaching: GraduationCap,
   other: Clock,
 };
 
