@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.903",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Particle effects system — genre-driven sparks (orange/gold trails for rock/metal), confetti (colorful falling pieces for pop/latin), and smoke plumes (rising haze for hip-hop/trap) reactive to song energy" },
+      { type: 'feature', description: "Stage pyrotechnics — flame jets erupt during ecstatic high-energy moments, CO2 cannon bursts, firework starbursts for high scores, and massive confetti cannon + golden shower effect during gig finale" },
+      { type: 'feature', description: "Weather & atmosphere for outdoor venues — starfield with twinkling stars, moon, wind streaks for festivals, tree silhouettes, grass texture, distant city glow, and ambient haze layer" },
+      { type: 'feature', description: "Song transition overlays — dimming effect with animated title card showing song number and name, with special ENCORE and FINAL SONG banners when applicable" },
+      { type: 'feature', description: "Audience interaction effects — lighter/phone flashlight wave during ballads (with individual flame and screen glow), clapping hands, crowd chants ('ONE MORE SONG!'), singalong note bubbles, and raised arms during peak moments" },
+      { type: 'feature', description: "Encore detection — when performances exceed setlist length, triggers encore commentary and visual banners" },
+      { type: 'improvement', description: "Special moments pool expanded with pyro, drummer, and bassist-specific callouts (25% trigger rate, up from 20%)" },
+      { type: 'improvement', description: "Finale now triggers confetti cannon, golden glow, and delayed completion callback to let effects play out" },
+      { type: 'improvement', description: "Song transitions track position changes with visual title cards instead of abrupt switches" },
+    ],
+  },
+  {
     version: "1.0.902",
     date: "2026-03-08",
     changes: [

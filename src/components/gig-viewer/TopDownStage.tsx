@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { TopDownMemberPopover } from "./TopDownMemberPopover";
 import { StageEquipment } from "./StageEquipment";
 import { StageLighting } from "./StageLighting";
+import { StageParticles } from "./StageParticles";
+import { StagePyrotechnics } from "./StagePyrotechnics";
 import { getStageTheme, type StageThemeConfig } from "./StageThemes";
 import type { GenreVisualConfig } from "./GenreVisuals";
 
@@ -23,6 +25,7 @@ interface TopDownStageProps {
   genreVisuals?: GenreVisualConfig | null;
   crowdMood?: string;
   showStats?: boolean;
+  isFinale?: boolean;
 }
 
 // Instrument config with position + animations
@@ -213,7 +216,7 @@ const MemberSprite = ({ member, config, idx, songEnergy, bobSpeed, bobAmount, sh
   );
 };
 
-export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, venueType, genreVisuals, crowdMood, showStats }: TopDownStageProps) => {
+export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, venueType, genreVisuals, crowdMood, showStats, isFinale }: TopDownStageProps) => {
   const theme = getStageTheme(venueType);
   const bobSpeed = songEnergy === 'high' ? 0.4 : songEnergy === 'medium' ? 0.6 : 0.9;
   const bobAmount = songEnergy === 'high' ? 4 : songEnergy === 'medium' ? 2.5 : 1;
@@ -356,6 +359,23 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
           height: theme.stageEdgeHeight,
           background: theme.stageEdgeGradient,
         }}
+      />
+
+      {/* Particles layer */}
+      <StageParticles
+        genreVisuals={genreVisuals || null}
+        songEnergy={songEnergy}
+        intensity={intensity}
+        lightingColor={lightingColor}
+      />
+
+      {/* Pyrotechnics layer */}
+      <StagePyrotechnics
+        songEnergy={songEnergy}
+        crowdMood={crowdMood || 'engaged'}
+        isFinale={isFinale || false}
+        intensity={intensity}
+        lightingColor={lightingColor}
       />
 
       {/* Band members layer */}
