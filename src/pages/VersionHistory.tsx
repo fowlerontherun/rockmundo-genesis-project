@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.916",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Added Tattoos to the Character section in both sidebar and horizontal navigation with Palette icon" },
+      { type: 'improvement', description: "Added tattoo translations for all 7 languages (EN, ES, FR, DE, IT, PT, TR)" },
+    ],
+  },
+  {
     version: "1.0.915",
     date: "2026-03-08",
     changes: [
