@@ -188,6 +188,20 @@ serve(async (req) => {
           }
         }
 
+        // === RADIO ACCEPTANCE → MORALE & REPUTATION (v1.0.975) ===
+        try {
+          const { data: bData } = await supabaseClient.from('bands').select('morale, reputation_score').eq('id', submission.band_id).single();
+          if (bData) {
+            const curMorale = (bData as any).morale ?? 50;
+            const curRep = (bData as any).reputation_score ?? 0;
+            await supabaseClient.from('bands').update({
+              morale: Math.min(100, curMorale + 3),
+              reputation_score: Math.min(100, curRep + 2),
+            } as any).eq('id', submission.band_id);
+            console.log(`[process-radio-submissions] Radio accepted → morale +3, rep +2 for band ${submission.band_id}`);
+          }
+        } catch (_e) { /* non-critical */ }
+
         accepted++;
       } else {
         // Reject with reason
