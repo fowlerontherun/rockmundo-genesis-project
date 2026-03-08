@@ -830,10 +830,10 @@ const Merchandise = () => {
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Merchandise Operations</h1>
-        <p className="text-muted-foreground">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
+      <div className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Merchandise Operations</h1>
+        <p className="text-sm text-muted-foreground">
           Manage {bandName}&apos;s merch catalogue, monitor sell-through, and prep your next drop without leaving the control
           room.
         </p>

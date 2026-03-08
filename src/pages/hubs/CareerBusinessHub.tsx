@@ -6,20 +6,35 @@ export default function CareerBusinessHub() {
     <CategoryHub
       titleKey="nav.careerBusiness"
       description="Employment, finances, companies, labels, merchandise, and more."
-      tiles={[
-        { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
-        { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
-        { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies" },
-        { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
-        { icon: Disc, labelKey: "nav.recordLabels", path: "/labels" },
-        { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling" },
-        { icon: Scissors, labelKey: "nav.clothingDesigner", path: "/clothing-designer" },
-        { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
-        { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
-        { icon: Building, labelKey: "nav.venues", path: "/venues" },
-        { icon: Headphones, labelKey: "nav.producerCareer", path: "/producer-career" },
-        { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
-        { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
+      groups={[
+        {
+          label: "Career",
+          tiles: [
+            { icon: Briefcase, labelKey: "nav.employment", path: "/employment" },
+            { icon: DollarSign, labelKey: "nav.finances", path: "/finances" },
+            { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies" },
+            { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
+            { icon: Disc, labelKey: "nav.recordLabels", path: "/labels" },
+          ],
+        },
+        {
+          label: "Creative Industries",
+          tiles: [
+            { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling" },
+            { icon: Scissors, labelKey: "nav.clothingDesigner", path: "/clothing-designer" },
+            { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
+            { icon: Headphones, labelKey: "nav.producerCareer", path: "/producer-career" },
+          ],
+        },
+        {
+          label: "Business",
+          tiles: [
+            { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
+            { icon: Building, labelKey: "nav.venues", path: "/venues" },
+            { icon: Store, labelKey: "nav.inventory", path: "/inventory" },
+            { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise" },
+          ],
+        },
       ]}
     />
   );

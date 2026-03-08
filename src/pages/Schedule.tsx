@@ -20,11 +20,11 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <div className="container mx-auto p-3 md:p-4 space-y-3 md:space-y-4">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Schedule</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">Plan and manage your activities</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Schedule</h1>
+          <p className="text-sm text-muted-foreground">Plan and manage your activities</p>
         </div>
         
         <div className="flex gap-2 flex-wrap">

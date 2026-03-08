@@ -95,14 +95,14 @@ export default function RecordingStudio() {
   };
 
   return (
-    <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-3">
-            <Music className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-2">
+            <Music className="h-6 w-6 md:h-7 md:w-7 text-primary flex-shrink-0" />
             <span className="truncate">{t('recording.title')}</span>
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
+          <p className="text-sm text-muted-foreground mt-1">
             {t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
           </p>
         </div>

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.000",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Page Layout Standardization: Created shared PageLayout and PageHeader components enforcing consistent container width (max-w-6xl), padding (px-4 py-6), spacing (space-y-6), and typography (text-2xl md:text-3xl font-oswald) across all pages" },
+      { type: 'improvement', description: "Migrated 15 high-traffic pages to standardized layout: Dashboard, Songwriting, Recording Studio, Gig Booking, Employment, Finances, Travel, Relationships, Band Manager, Twaater, Streaming, Release Manager, Merchandise, Schedule, and Inbox" },
+      { type: 'improvement', description: "Hub pages now display grouped tile sections with labeled headers (e.g., 'Band Management', 'Live Performance', 'Events & Competitions') for better content organization and discoverability" },
+      { type: 'improvement', description: "CategoryHub component enhanced with grouped tiles support via new 'groups' prop alongside existing flat 'tiles' prop for backwards compatibility" },
+    ],
+  },
+  {
     version: "1.0.999",
     date: "2026-03-08",
     changes: [
