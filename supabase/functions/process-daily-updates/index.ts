@@ -568,7 +568,7 @@ Deno.serve(async (req) => {
       // Get all active bands with their fame/genre
       const { data: allBands } = await supabase
         .from('bands')
-        .select('id, name, fame, genre, total_fans, status')
+        .select('id, name, fame, genre, total_fans, status, reputation_score')
         .eq('status', 'active')
         .gt('fame', 50) // Minimum fame threshold to be scouted
 
