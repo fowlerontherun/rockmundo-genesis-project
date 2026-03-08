@@ -444,6 +444,20 @@ Deno.serve(async (req) => {
           }
         }
 
+        // === RECORDING SESSION → MORALE (v1.0.965) ===
+        // Great recording sessions boost band morale
+        if (session.band_id && qualityImprovement > 0) {
+          try {
+            const { data: bMorale } = await supabase.from('bands').select('morale').eq('id', session.band_id).single();
+            if (bMorale) {
+              const moraleBoost = qualityImprovement >= 25 ? 5 : qualityImprovement >= 15 ? 3 : 1;
+              const curM = (bMorale as any).morale ?? 50;
+              await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', session.band_id);
+              console.log(`Recording morale boost: quality +${qualityImprovement} → morale +${moraleBoost}`);
+            }
+          } catch (_e) { /* non-critical */ }
+        }
+
         completedCount++
         totalXpAwarded += xpEarned
         averageFinalQuality += newQuality

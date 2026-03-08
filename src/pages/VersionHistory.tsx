@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.965",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Music Video Release → Morale & Sentiment: Releasing a music video now boosts band morale (+3 to +5) and fan sentiment (+3 to +6) based on initial hype score. High-hype videos create bigger excitement" },
+      { type: 'feature', description: "Sponsorship Payments → Morale: Receiving weekly sponsorship payments boosts morale (+1 for small, +2 for $1k+, +3 for $5k+ payments). Getting paid by brands feels good" },
+      { type: 'feature', description: "Recording Sessions → Morale: Completing recording sessions with quality improvement boosts morale. Big quality jumps (25+) give +5, medium (15+) give +3, otherwise +1" },
+      { type: 'improvement', description: "Video production and sponsorship payment band queries now fetch morale/sentiment alongside existing fields for single-transaction updates" },
+    ],
+  },
+  {
     version: "1.0.964",
     date: "2026-03-08",
     changes: [
