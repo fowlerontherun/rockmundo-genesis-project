@@ -170,9 +170,6 @@ const StreamingPlatforms = () => {
           <StreamingMyReleasesTab userId={userId} />
         </TabsContent>
 
-        <TabsContent value="new-release">
-          <ReleaseSongTab userId={userId} />
-        </TabsContent>
 
         <TabsContent value="analytics">
           <AnalyticsTab userId={userId} />
