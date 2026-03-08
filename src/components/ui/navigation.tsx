@@ -193,9 +193,9 @@ const Navigation = () => {
 
   const mobileShortcuts = [
     { icon: Home, labelKey: "nav.home", path: "/dashboard" },
-    { icon: Music, labelKey: "nav.music", path: "/songwriting" },
-    { icon: Users, labelKey: "nav.band", path: "/band" },
-    { icon: Calendar, labelKey: "nav.schedule", path: "/gigs" },
+    { icon: Music, labelKey: "nav.music", path: "/hub/music" },
+    { icon: Users, labelKey: "nav.band", path: "/hub/band-live" },
+    { icon: Globe, labelKey: "nav.world", path: "/hub/world-social" },
   ];
 
   const handleLogout = async () => {
