@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.963",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Random Event Outcomes → Band Morale: Event choices now cascade into band morale. Net-positive outcomes boost morale (+1 to +6), negative outcomes hurt it (-2 to -8), creating real consequences for event decisions" },
+      { type: 'feature', description: "Random Event Health Damage → Reputation: Events that severely damage player health (≤-20) also hit public reputation by -8, while moderate damage (-10 to -20) costs -4 rep — scandals and arrests now visibly hurt your image" },
+      { type: 'feature', description: "Twaater Viral Posts → Morale & Reputation: Social media posts now boost band morale (+1 normal, +3 viral). Viral posts also grant +2 reputation, rewarding an active social media presence" },
+      { type: 'improvement', description: "Event outcome band lookups now include is_touring_member filter and use maybeSingle() to handle players without bands gracefully" },
+    ],
+  },
+  {
     version: "1.0.962",
     date: "2026-03-08",
     changes: [
