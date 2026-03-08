@@ -13,6 +13,7 @@ export interface BehaviorSettings {
   media_behavior: "reclusive" | "professional" | "outspoken" | "controversial";
   afterparty_attendance: "never" | "sometimes" | "always";
   entourage_size: "solo" | "small" | "medium" | "large";
+  stage_behavior: string;
   created_at: string;
   updated_at: string;
 }
