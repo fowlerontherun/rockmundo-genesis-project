@@ -244,7 +244,8 @@ Deno.serve(async (req) => {
       // Factory revenue = base manufacturing fee + per-order processing fee
       const ordersProcessed = Math.min(recentMerchOrders || 0, 50 * (factory.quality_tier || 1));
       const perOrderFee = 25 * tierMultiplier;
-      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.factory * tierMultiplier) + (ordersProcessed * perOrderFee / 7));
+      const ownerRepMod = ownerReputationMap.get(factory.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((BASE_ACTIVITY_REVENUE.factory * tierMultiplier) + (ordersProcessed * perOrderFee / 7)) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
