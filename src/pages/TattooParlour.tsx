@@ -266,7 +266,52 @@ export default function TattooParlour() {
     },
   });
 
-  // Treat infection
+  // Text tattoo mutation
+  const textTattooMutation = useMutation({
+    mutationFn: async (data: { text: string; fontStyle: string; bodySlot: BodySlot; price: number }) => {
+      if (!currentParlour || !user) throw new Error('Missing data');
+      if ((profile?.cash || 0) < data.price) throw new Error('Insufficient funds');
+
+      const artistBonus = selectedArtist?.quality_bonus || 0;
+      const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + artistBonus);
+      const isInfected = rollForInfection(currentParlour.infection_risk);
+
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('user_id', user.id);
+
+      const { error } = await supabase.from('player_tattoos').insert({
+        user_id: user.id,
+        tattoo_design_id: null,
+        parlour_id: currentParlour.id,
+        artist_id: selectedArtist?.id || null,
+        body_slot: data.bodySlot,
+        quality_score: qualityScore,
+        ink_color: '#1a1a2e',
+        price_paid: data.price,
+        is_infected: isInfected,
+        custom_text: data.text,
+        font_style: data.fontStyle,
+      });
+      if (error) throw error;
+
+      if (selectedArtist) {
+        await supabase.from('tattoo_artists').update({ total_tattoos_done: selectedArtist.total_tattoos_done + 1 }).eq('id', selectedArtist.id);
+      }
+
+      return { qualityScore, isInfected, price: data.price };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['player-tattoos'] });
+      queryClient.invalidateQueries({ queryKey: ['profile-city'] });
+      if (result.isInfected) {
+        toast.error(`Text tattoo applied but got INFECTED! Quality: ${result.qualityScore}/100`);
+      } else {
+        toast.success(`Text tattoo applied! Quality: ${result.qualityScore}/100. Paid $${result.price}`);
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+
   const treatMutation = useMutation({
     mutationFn: async (tattooId: string) => {
       if ((profile?.cash || 0) < 200) throw new Error('Need $200 for treatment');
