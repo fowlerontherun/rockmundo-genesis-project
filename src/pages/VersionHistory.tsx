@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.908",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Fixed fullscreen gig viewer in mobile review modal by forcing the dialog container to true viewport size (inset-0, w-screen, h-screen, no transform offsets)" },
+    ],
+  },
+  {
     version: "1.0.907",
     date: "2026-03-08",
     changes: [

@@ -393,7 +393,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         {/* Top-Down Pixel Art Stage Viewer */}
         {showTopDownViewer && reviewGigId && (
           <Dialog open={showTopDownViewer} onOpenChange={setShowTopDownViewer}>
-            <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+            <DialogContent className="!fixed !inset-0 !left-0 !top-0 !w-screen !h-screen !max-w-none !max-h-none !translate-x-0 !translate-y-0 !rounded-none !border-0 !p-0 !shadow-none overflow-hidden bg-transparent">
               <TopDownGigViewer gigId={reviewGigId} />
             </DialogContent>
           </Dialog>
