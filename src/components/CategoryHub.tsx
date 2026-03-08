@@ -35,8 +35,8 @@ const HubTileCard = ({ tile }: { tile: HubTile }) => {
   const { t } = useTranslation();
   const Icon = tile.icon;
 
-  // Derive a stable key from the path
-  const tileKey = tile.path.replace(/\//g, "-").replace(/^-/, "");
+  // Derive a stable key from the path, or use explicit override
+  const tileKey = tile.tileImageKey || tile.path.replace(/\//g, "-").replace(/^-/, "");
   const { data: imageUrl, isLoading } = useHubTileImage(
     tileKey,
     tile.imagePrompt || t(tile.labelKey)
