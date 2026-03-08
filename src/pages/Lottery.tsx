@@ -117,7 +117,6 @@ const Lottery = () => {
           </div>
         }
       />
-      </div>
 
       <Countdown />
 

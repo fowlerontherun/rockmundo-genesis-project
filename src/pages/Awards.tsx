@@ -423,7 +423,7 @@ export default function Awards() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }
 

@@ -2039,7 +2039,6 @@ const Songwriting = () => {
         projectTitle={scheduleProject?.title}
       />
     </PageLayout>
-    </div>
   );
 };
 
