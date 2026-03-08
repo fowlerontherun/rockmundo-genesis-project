@@ -532,6 +532,23 @@ Deno.serve(async (req) => {
           }
         }
         console.log(`Investments grown: ${investmentsGrown}`)
+
+        // Inbox: Investment growth summary (batch per user)
+        const { data: investmentsByUser } = await supabase
+          .from('player_investments')
+          .select('user_id, current_value, growth_rate')
+          .gt('growth_rate', 0)
+        const userInvGrowth = new Map<string, number>()
+        for (const inv of investmentsByUser || []) {
+          if (!inv.user_id) continue
+          const growth = Math.round(inv.current_value * (inv.growth_rate || 0))
+          userInvGrowth.set(inv.user_id, (userInvGrowth.get(inv.user_id) || 0) + growth)
+        }
+        for (const [userId, totalGrowth] of userInvGrowth) {
+          if (totalGrowth > 0) {
+            await sendInbox(userId, 'financial', 'low', '📈 Investment Growth', `Your investments grew by $${totalGrowth} overnight.`, { total_growth: totalGrowth }, 'navigate', { route: '/investments' })
+          }
+        }
       }
     } catch (invError) {
       console.error('Error in investment growth:', invError)
