@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.986",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Fan Sentiment → Merch Sales at Gigs: Merchandise purchase rate at gigs is now modified by fan_sentiment_score. Hostile fans (-100) reduce merch sales to 0.7x; fanatical fans (+100) boost to 1.3x. Fans who love you want to wear your shirt" },
+      { type: 'feature', description: "Fan Sentiment → Fan Conversion at Gigs: The rate at which gig attendees become new fans is now scaled by sentiment. Range: 0.6x (hostile) to 1.4x (fanatical). Word-of-mouth from happy fans converts more newcomers" },
+      { type: 'feature', description: "Fan Sentiment → Daily Physical/Digital Sales: Album and single sales (CD, vinyl, digital, cassette) are now modified by band fan sentiment. 0.7x–1.3x range. Disengaged fans stop buying; enthusiastic fans drive sales" },
+      { type: 'improvement', description: "Fan sentiment now used as INPUT modifier in 6+ systems: organic follower growth, streaming loyalty, gig offers, merch sales, fan conversion, and daily sales. Creates full feedback loop: treat fans well → better sales → more revenue → invest in fans" },
+    ],
+  },
+  {
     version: "1.0.985",
     date: "2026-03-08",
     changes: [
