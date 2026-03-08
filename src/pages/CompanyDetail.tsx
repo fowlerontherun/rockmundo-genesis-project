@@ -236,6 +236,10 @@ const CompanyDetailContent = () => {
           </TabsContent>
         )}
 
+        <TabsContent value="empire" className="space-y-4">
+          <EmpireDashboard companyId={company.id} companyBalance={company.balance} />
+        </TabsContent>
+
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
