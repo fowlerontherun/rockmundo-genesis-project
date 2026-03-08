@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     // Get all companies with negative balance
     const { data: companies } = await supabase
       .from('companies')
-      .select('*')
+      .select('*, owner_id')
       .lt('balance', 0)
       .eq('status', 'active');
 
@@ -104,6 +104,23 @@ Deno.serve(async (req) => {
         bankruptciesDeclared++;
         console.log(`[check-company-bankruptcy] BANKRUPTCY: ${company.name}`);
 
+        // Morale -15 and Reputation -10 for owner's band
+        if (company.owner_id) {
+          const { data: ownerMember } = await supabase
+            .from('band_members')
+            .select('band_id, bands!inner(morale, reputation_score)')
+            .eq('user_id', company.owner_id)
+            .eq('role', 'leader')
+            .maybeSingle();
+          if (ownerMember && (ownerMember as any).bands) {
+            const b = (ownerMember as any).bands;
+            const newMorale = Math.max(0, (b.morale ?? 50) - 15);
+            const newRep = Math.max(-100, (b.reputation_score ?? 0) - 10);
+            await supabase.from('bands').update({ morale: newMorale, reputation_score: newRep }).eq('id', (ownerMember as any).band_id);
+            console.log(`[check-company-bankruptcy] Owner band morale -15, reputation -10`);
+          }
+        }
+
       } else if (daysNegative >= 3) {
         // Issue warning at 3 days
         const { data: existingWarning } = await supabase
@@ -128,6 +145,21 @@ Deno.serve(async (req) => {
 
           warningsIssued++;
           console.log(`[check-company-bankruptcy] Warning issued: ${company.name}`);
+
+          // Morale -5 for owner's band on warning
+          if (company.owner_id) {
+            const { data: ownerMember } = await supabase
+              .from('band_members')
+              .select('band_id, bands!inner(morale)')
+              .eq('user_id', company.owner_id)
+              .eq('role', 'leader')
+              .maybeSingle();
+            if (ownerMember && (ownerMember as any).bands) {
+              const newMorale = Math.max(0, ((ownerMember as any).bands.morale ?? 50) - 5);
+              await supabase.from('bands').update({ morale: newMorale }).eq('id', (ownerMember as any).band_id);
+              console.log(`[check-company-bankruptcy] Owner band morale -5 (warning)`);
+            }
+          }
         }
 
       } else if (daysNegative >= 1) {

@@ -58,6 +58,27 @@ Deno.serve(async (req) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // ==========================================
+    // PRE-FETCH: Owner band reputation for revenue scaling
+    // ==========================================
+    const ownerReputationMap = new Map<string, number>();
+    for (const company of companies || []) {
+      if (!company.owner_id) continue;
+      const { data: memberRow } = await supabase
+        .from('band_members')
+        .select('band_id, bands!inner(reputation_score)')
+        .eq('user_id', company.owner_id)
+        .eq('role', 'leader')
+        .maybeSingle();
+      if (memberRow && (memberRow as any).bands) {
+        const repScore = (memberRow as any).bands.reputation_score ?? 0;
+        // 0.85x at -100 → 1.0x at 0 → 1.15x at +100
+        const repMod = parseFloat((0.85 + ((repScore + 100) / 200) * 0.3).toFixed(2));
+        ownerReputationMap.set(company.id, repMod);
+      }
+    }
+    console.log(`[process-company-operations] Loaded reputation modifiers for ${ownerReputationMap.size} company owners`);
+
+    // ==========================================
     // PRE-FETCH: Active synergies for discount application
     // ==========================================
     const { data: allSynergies } = await supabase
@@ -163,7 +184,8 @@ Deno.serve(async (req) => {
       // Revenue = base + per-gig service fee (security firms serve as event security providers)
       const gigsServed = Math.min(recentGigCount || 0, 10 * (firm.tier || 1)); // capacity based on tier
       const perGigFee = 150 * tierMultiplier;
-      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.security * tierMultiplier) + (gigsServed * perGigFee / 7));
+      const ownerRepMod = ownerReputationMap.get(firm.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((BASE_ACTIVITY_REVENUE.security * tierMultiplier) + (gigsServed * perGigFee / 7)) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
@@ -222,7 +244,8 @@ Deno.serve(async (req) => {
       // Factory revenue = base manufacturing fee + per-order processing fee
       const ordersProcessed = Math.min(recentMerchOrders || 0, 50 * (factory.quality_tier || 1));
       const perOrderFee = 25 * tierMultiplier;
-      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.factory * tierMultiplier) + (ordersProcessed * perOrderFee / 7));
+      const ownerRepMod = ownerReputationMap.get(factory.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((BASE_ACTIVITY_REVENUE.factory * tierMultiplier) + (ordersProcessed * perOrderFee / 7)) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
@@ -284,7 +307,8 @@ Deno.serve(async (req) => {
 
       const transportJobs = Math.min((recentTravels || 0) + (recentDistributions || 0), 20 * (lc.tier || 1));
       const perJobFee = 200 * tierMultiplier;
-      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.logistics * tierMultiplier) + (transportJobs * perJobFee / 7));
+      const ownerRepMod = ownerReputationMap.get(lc.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((BASE_ACTIVITY_REVENUE.logistics * tierMultiplier) + (transportJobs * perJobFee / 7)) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
@@ -348,7 +372,8 @@ Deno.serve(async (req) => {
       const totalAttendance = (recentVenueGigs || []).reduce((sum, g) => sum + (g.actual_attendance || 0), 0);
       const barRevenue = totalAttendance * 3; // ~$3 per attendee in bar sales
 
-      const dailyRevenue = Math.round((gigRevenue + barRevenue) / 7 + BASE_ACTIVITY_REVENUE.venue);
+      const ownerRepMod = ownerReputationMap.get(venue.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((gigRevenue + barRevenue) / 7 + BASE_ACTIVITY_REVENUE.venue) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
@@ -388,7 +413,8 @@ Deno.serve(async (req) => {
 
       const hoursBooked = (recentRehearsals || 0) * 2; // ~2 hours per rehearsal
       const sessionRevenue = hoursBooked * (studio.hourly_rate || 20);
-      const dailyRevenue = Math.round(sessionRevenue / 7 + BASE_ACTIVITY_REVENUE.rehearsal);
+      const ownerRepMod = ownerReputationMap.get(studio.company_id!) || 1.0;
+      const dailyRevenue = Math.round((sessionRevenue / 7 + BASE_ACTIVITY_REVENUE.rehearsal) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
@@ -429,7 +455,8 @@ Deno.serve(async (req) => {
       const hoursBooked = (recentSessions || 0) * 4; // ~4 hours per session
       const sessionRevenue = hoursBooked * (studio.hourly_rate || 50);
       const qualityBonus = Math.max(1, (studio.quality_rating || 50) / 50);
-      const dailyRevenue = Math.round((sessionRevenue * qualityBonus) / 7 + BASE_ACTIVITY_REVENUE.recording_studio);
+      const ownerRepMod = ownerReputationMap.get(studio.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((sessionRevenue * qualityBonus) / 7 + BASE_ACTIVITY_REVENUE.recording_studio) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')

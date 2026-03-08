@@ -26,14 +26,15 @@ Deno.serve(async (req) => {
     const { data: companiesWithSettings, error: settingsError } = await supabase
       .from('company_settings')
       .select(`
-        company_id,
-        auto_pay_salaries,
-        companies!inner(
-          id,
-          name,
-          balance,
-          status
-        )
+      company_id,
+      auto_pay_salaries,
+      companies!inner(
+        id,
+        name,
+        balance,
+        status,
+        owner_id
+      )
       `)
       .eq('auto_pay_salaries', true);
 
@@ -174,6 +175,24 @@ Deno.serve(async (req) => {
         processedCount++;
         totalPaid += totalSalary;
         console.log(`[process-company-payroll] Processed ${company.name}: $${totalSalary.toFixed(2)}`);
+
+        // Morale impact: +1 for paying staff on time, -3 if balance went negative
+        const ownerId = (setting as any).companies?.owner_id;
+        if (ownerId) {
+          const moraleChange = newBalance >= 0 ? 1 : -3;
+          const { data: ownerMember } = await supabase
+            .from('band_members')
+            .select('band_id, bands!inner(morale)')
+            .eq('user_id', ownerId)
+            .eq('role', 'leader')
+            .maybeSingle();
+          if (ownerMember && (ownerMember as any).bands) {
+            const currentMorale = (ownerMember as any).bands.morale ?? 50;
+            const newMorale = Math.max(0, Math.min(100, currentMorale + moraleChange));
+            await supabase.from('bands').update({ morale: newMorale }).eq('id', (ownerMember as any).band_id);
+            console.log(`[process-company-payroll] Morale ${moraleChange > 0 ? '+' : ''}${moraleChange} for owner band (balance: $${newBalance.toFixed(0)})`);
+          }
+        }
       }
     }
 
