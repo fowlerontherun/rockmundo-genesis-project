@@ -361,6 +361,23 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
         }}
       />
 
+      {/* Particles layer */}
+      <StageParticles
+        genreVisuals={genreVisuals || null}
+        songEnergy={songEnergy}
+        intensity={intensity}
+        lightingColor={lightingColor}
+      />
+
+      {/* Pyrotechnics layer */}
+      <StagePyrotechnics
+        songEnergy={songEnergy}
+        crowdMood={crowdMood || 'engaged'}
+        isFinale={isFinale || false}
+        intensity={intensity}
+        lightingColor={lightingColor}
+      />
+
       {/* Band members layer */}
       <div className="absolute inset-0 flex items-center justify-center z-[6]">
         <div className="relative" style={{ width: '85%', height: '70%' }}>
