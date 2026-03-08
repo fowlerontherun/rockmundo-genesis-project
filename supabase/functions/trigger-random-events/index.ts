@@ -223,6 +223,44 @@ Deno.serve(async (req) => {
 
       eventsTriggered++;
       console.log(`[${JOB_NAME}] Triggered event "${selectedEvent.title}" for player ${player.user_id}`);
+
+      // === SCANDAL SENTIMENT IMPACT (v1.0.946) ===
+      // Scandal/negative events hurt fan sentiment
+      if (selectedEvent.category === 'scandal' || selectedEvent.category === 'controversy') {
+        try {
+          const { data: bandMember } = await supabase
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', player.user_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+
+          if (bandMember?.band_id) {
+            const { data: band } = await supabase
+              .from('bands')
+              .select('fan_sentiment_score, media_intensity, media_fatigue')
+              .eq('id', bandMember.band_id)
+              .single();
+
+            if (band) {
+              const curSentiment = (band as any).fan_sentiment_score ?? 0;
+              const curIntensity = (band as any).media_intensity ?? 0;
+              const curFatigue = (band as any).media_fatigue ?? 0;
+              // Scandals: big negative sentiment, big positive media (scandals generate buzz)
+              await supabase.from('bands').update({
+                fan_sentiment_score: Math.max(-100, curSentiment - 20),
+                media_intensity: Math.min(100, curIntensity + 40),
+                media_fatigue: Math.min(100, curFatigue + 20),
+              } as any).eq('id', bandMember.band_id);
+
+              console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40 for band ${bandMember.band_id}`);
+            }
+          }
+        } catch (sentErr) {
+          console.error(`[${JOB_NAME}] Error applying scandal sentiment:`, sentErr);
+        }
+      }
     }
 
     console.log(`[${JOB_NAME}] Complete. Triggered ${eventsTriggered} events for ${playersProcessed} players`);
