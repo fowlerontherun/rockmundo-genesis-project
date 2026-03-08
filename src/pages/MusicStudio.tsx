@@ -11,6 +11,8 @@ import {
   ArrowRight,
   Sparkles
 } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const MusicStudio = () => {
   const musicFeatures = [
