@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.020",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Education: Mentors tab now visible on mobile — reduced tab padding and font size so all 5 tabs fit in the scrollable area" },
+    ],
+  },
+  {
     version: "1.1.019",
     date: "2026-03-08",
     changes: [
