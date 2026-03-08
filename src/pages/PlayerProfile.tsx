@@ -237,7 +237,7 @@ export default function PlayerProfile() {
                   {Object.entries(profile.attributes).map(([key, value]) => (
                     <div key={key} className="text-center p-2 rounded-lg bg-muted/50">
                       <p className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, " ")}</p>
-                      <p className="text-lg font-bold">{value as number}</p>
+                      <p className="text-lg font-bold">{String(value)}</p>
                     </div>
                   ))}
                 </div>
