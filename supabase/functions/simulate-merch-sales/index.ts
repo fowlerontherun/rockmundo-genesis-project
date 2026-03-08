@@ -77,21 +77,23 @@ Deno.serve(async (req) => {
 
     if (bandsError) throw bandsError;
 
-    // === FETCH BAND SENTIMENT FOR MERCH DEMAND (v1.0.947) ===
+    // === FETCH BAND SENTIMENT & REPUTATION FOR MERCH DEMAND (v1.0.947 / v1.0.988) ===
     const bandSentimentMap = new Map<string, number>();
+    const bandReputationMap = new Map<string, number>();
     try {
       const bandIds = (bandsWithMerch || []).map(b => b.id);
       if (bandIds.length > 0) {
         const { data: bandExtras } = await supabase
           .from('bands')
-          .select('id, fan_sentiment_score')
+          .select('id, fan_sentiment_score, reputation_score')
           .in('id', bandIds);
         for (const b of bandExtras || []) {
           bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+          bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
         }
       }
     } catch (sentErr) {
-      console.error(`[${JOB_NAME}] Error fetching sentiment:`, sentErr);
+      console.error(`[${JOB_NAME}] Error fetching sentiment/reputation:`, sentErr);
     }
 
     console.log(`[${JOB_NAME}] Found ${bandsWithMerch?.length || 0} bands with fans`);
