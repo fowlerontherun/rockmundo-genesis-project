@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         // Pay to band balance
         const { data: band, error: bandError } = await supabase
           .from('bands')
-          .select('band_balance')
+          .select('band_balance, morale')
           .eq('id', payment.band_id)
           .single()
 
@@ -85,9 +85,17 @@ Deno.serve(async (req) => {
 
         const newBalance = (band.band_balance || 0) + payment.amount
 
+        // === SPONSORSHIP PAYMENT → MORALE (v1.0.965) ===
+        // Getting paid by sponsors gives a small morale boost
+        const curMorale = (band as any).morale ?? 50;
+        const moraleBoost = payment.amount >= 5000 ? 3 : payment.amount >= 1000 ? 2 : 1;
+
         const { error: updateBandError } = await supabase
           .from('bands')
-          .update({ band_balance: newBalance })
+          .update({
+            band_balance: newBalance,
+            morale: Math.min(100, curMorale + moraleBoost),
+          } as any)
           .eq('id', payment.band_id)
 
         if (updateBandError) {
