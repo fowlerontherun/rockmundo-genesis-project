@@ -209,7 +209,9 @@ Deno.serve(async (req) => {
 
     for (const factory of factories || []) {
       const tierMultiplier = 1 + ((factory.quality_tier || 1) - 1) * 0.3;
-      const dailyCost = (factory.monthly_overhead || 5000) / 30;
+      const baseFactoryCost = (factory.monthly_overhead || 5000) / 30;
+      const factorySynergyDiscount = synergyDiscountMap.get(factory.company_id!) || 0;
+      const dailyCost = Math.round(baseFactoryCost * (1 - factorySynergyDiscount / 100));
 
       // Count recent merch orders as manufacturing activity
       const { count: recentMerchOrders } = await supabase
