@@ -105,13 +105,13 @@ export async function grantAchievementRewards(
   }
 
   // Log activity
-  await supabase.from("activity_feed").insert({
+  await supabase.from("activity_feed").insert([{
     user_id: userId,
     activity_type: "achievement_reward",
     message: `Achievement unlocked! Earned $${reward.cash.toLocaleString()}, ${reward.xp} XP, and ${reward.fame} fame.`,
     earnings: reward.cash,
-    metadata: { achievement_id: achievementId, reward },
-  });
+    metadata: { achievement_id: achievementId, reward } as any,
+  }]);
 
   return reward;
 }
