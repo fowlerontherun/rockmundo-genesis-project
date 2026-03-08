@@ -16,6 +16,7 @@ export default function CareerHub() {
         { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
         { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
         { icon: Building, labelKey: "nav.venues", path: "/venues" },
+        { icon: Headphones, labelKey: "nav.producerCareer", path: "/producer-career" },
       ]}
     />
   );
