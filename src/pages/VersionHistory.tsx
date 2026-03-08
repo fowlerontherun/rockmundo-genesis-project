@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.991",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Jam Sessions → Reputation & Sentiment: High-synergy jams (≥80) now boost band reputation +2 and fan sentiment +3. Decent jams (≥60) boost +1/+1. Jamming is now a community/creative event that builds public goodwill" },
+      { type: 'feature', description: "Brand Sponsorships → Reputation Gating: Toxic bands (reputation ≤ -60) are now excluded from established and titan tier brand offers. Clean up your image to attract premium sponsors" },
+      { type: 'feature', description: "Brand Sponsorships → Reputation Cash Scaling: All sponsorship cash offers are now scaled by reputation (0.8x toxic → 1.2x iconic). Better public image = better deals" },
+      { type: 'feature', description: "Brand Sponsorships → Sentiment Volume Bonus: Bands with fan sentiment ≥ 30 receive +1 additional sponsorship offer slot per cycle. Brands want engaged fanbases for their campaigns" },
+      { type: 'improvement', description: "Teaching sessions already integrate reputation (+4) and morale (+3/+2) from v1.0.972. All three health stats now cross-pollinate across jam sessions, brand sponsorships, and teaching in addition to all previously connected systems" },
+    ],
+  },
+  {
     version: "1.0.990",
     date: "2026-03-08",
     changes: [

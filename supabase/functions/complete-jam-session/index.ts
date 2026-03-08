@@ -385,10 +385,9 @@ Deno.serve(async (req) => {
       console.log(`Participant ${participantId}: +${totalXpPerPlayer} XP, +${skillXpGained} skill XP to ${instrumentSkillSlug}`);
     }
 
-    // === JAM SESSION → BAND MORALE (v1.0.964) ===
-    // Good jam sessions boost band morale based on synergy and mood
+    // === JAM SESSION → BAND MORALE, REPUTATION & SENTIMENT (v1.0.991) ===
+    // Good jam sessions boost band morale, reputation, and fan sentiment based on synergy
     try {
-      // Get band for any participant
       const firstParticipantId = participantIds[0];
       if (firstParticipantId) {
         const { data: bandMember } = await supabase
@@ -402,23 +401,32 @@ Deno.serve(async (req) => {
         if (bandMember?.band_id) {
           const { data: band } = await supabase
             .from('bands')
-            .select('morale')
+            .select('morale, reputation_score, fan_sentiment_score')
             .eq('id', bandMember.band_id)
             .single();
 
           if (band) {
-            // Synergy 80+ = great jam (+4), 60+ = good (+2), below = okay (+1)
+            // Synergy 80+ = great jam, 60+ = good, below = okay
             const moraleBoost = synergyScore >= 80 ? 4 : synergyScore >= 60 ? 2 : 1;
+            const repBoost = synergyScore >= 80 ? 2 : synergyScore >= 60 ? 1 : 0;
+            const sentBoost = synergyScore >= 80 ? 3 : synergyScore >= 60 ? 1 : 0;
+
             const curMorale = (band as any).morale ?? 50;
+            const curRep = (band as any).reputation_score ?? 0;
+            const curSent = (band as any).fan_sentiment_score ?? 0;
+
             await supabase.from('bands').update({
               morale: Math.min(100, curMorale + moraleBoost),
+              reputation_score: Math.min(100, curRep + repBoost),
+              fan_sentiment_score: Math.min(100, curSent + sentBoost),
             } as any).eq('id', bandMember.band_id);
-            console.log(`Jam session morale boost: synergy ${synergyScore} → morale +${moraleBoost}`);
+
+            console.log(`Jam session health boost: synergy ${synergyScore} → morale +${moraleBoost}, rep +${repBoost}, sentiment +${sentBoost}`);
           }
         }
       }
     } catch (moraleErr) {
-      console.error('Error updating jam session morale:', moraleErr);
+      console.error('Error updating jam session health stats:', moraleErr);
     }
 
     // Update session status
