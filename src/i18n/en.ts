@@ -79,6 +79,7 @@ export const en = {
     schedule: "Schedule",
     musicHub: "Music Hub",
     education: "Education",
+    teaching: "Teaching",
     skills: "Skills",
     perform: "Perform",
     gigs: "Gigs",
