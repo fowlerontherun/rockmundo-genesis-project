@@ -504,7 +504,7 @@ export const useCountryCharts = (
 };
 
 // Helper function to transform and deduplicate entries (for daily view)
-function transformAndDeduplicateEntries(data: any[], chartType: ChartType, releaseCategory: ReleaseCategory): ChartEntry[] {
+function transformAndDeduplicateEntries(data: any[], chartType: ChartType, releaseCategory: ReleaseCategory, isDailyEstimate: boolean = false): ChartEntry[] {
   const isAlbumCategory = releaseCategory === "album" || releaseCategory === "ep";
   
   // Deduplicate by appropriate key - use release_id for albums, song_id for singles
@@ -549,6 +549,10 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
     const weeklyPlays = entry.weekly_plays || 0;
     const combinedScore = entry.combined_score || 0;
     const weeksOnChart = entry.weeks_on_chart || 1;
+
+    // FIX: For daily view, estimate daily values from 7-day rolling totals
+    const displayWeeklyPlays = isDailyEstimate ? Math.round(weeklyPlays / 7) : weeklyPlays;
+    const displayCombinedScore = isDailyEstimate ? Math.round(combinedScore / 7) : combinedScore;
     
     return {
       id: entry.id,
@@ -558,10 +562,10 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
       artist: artistName,
       genre: entry.genre || entry.songs?.genre || "Unknown",
       country: entry.country || "Global",
-      plays_count: playsCount,
-      weekly_plays: weeklyPlays,
-      combined_score: combinedScore,
-      total_sales: playsCount,
+      plays_count: isDailyEstimate ? Math.round(playsCount / 7) : playsCount,
+      weekly_plays: displayWeeklyPlays,
+      combined_score: displayCombinedScore,
+      total_sales: isDailyEstimate ? Math.round(playsCount / 7) : playsCount,
       trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
       trend_change: entry.trend_change || 0,
       weeks_on_chart: weeksOnChart,
