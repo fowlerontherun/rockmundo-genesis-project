@@ -85,6 +85,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/festivals", label: "Festivals", description: "Festival system" },
       { path: "/admin/eurovision", label: "Eurovision", description: "Eurovision management" },
       { path: "/admin/awards", label: "Awards", description: "Award shows" },
+      { path: "/admin/random-events", label: "Random Events", description: "In-game random events" },
     ],
   },
   {
