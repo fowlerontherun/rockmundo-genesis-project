@@ -23,7 +23,7 @@ export async function checkAndGrantBehaviorUnlocks(userId: string): Promise<Beha
 
     // Fetch player stats needed for unlock checks
     const [profileRes, bandRes, gigCountRes] = await Promise.all([
-      supabase.from('profiles').select('fame, player_level').eq('user_id', userId).single(),
+      supabase.from('profiles').select('id, fame, level').eq('user_id', userId).single(),
       supabase.from('band_members').select('band_id').eq('user_id', userId).eq('is_touring_member', false).limit(1).single(),
       // Count completed gigs across all bands the player is in
       supabase.from('band_members').select('band_id').eq('user_id', userId).eq('is_touring_member', false),
