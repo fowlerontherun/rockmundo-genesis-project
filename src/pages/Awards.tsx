@@ -103,16 +103,13 @@ export default function Awards() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <PageLayout>
       {/* Header */}
-      <header className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Trophy className="h-8 w-8 text-amber-500" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Music Awards</h1>
-            <p className="text-muted-foreground">Compete for glory at the world's biggest music ceremonies</p>
-          </div>
-        </div>
+      <PageHeader
+        title="Music Awards"
+        subtitle="Compete for glory at the world's biggest music ceremonies"
+        icon={Trophy}
+      />
 
         {/* Player wins summary */}
         {wins.length > 0 && (
