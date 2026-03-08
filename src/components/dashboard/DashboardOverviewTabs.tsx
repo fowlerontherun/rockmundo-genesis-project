@@ -90,7 +90,14 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
     attributeStars: null,
   });
 
-  // Fetch all cities
+  // Sync computed level back to profiles table so other pages see it
+  useEffect(() => {
+    if (playerLevelData.level > 1 && profile?.id && playerLevelData.level !== profile?.level) {
+      const client: any = supabase;
+      client.from("profiles").update({ level: playerLevelData.level }).eq("id", profile.id);
+    }
+  }, [playerLevelData.level, profile?.id, profile?.level]);
+
   const { data: allCities } = useQuery({
     queryKey: ["dashboard-all-cities"],
     queryFn: async () => {
