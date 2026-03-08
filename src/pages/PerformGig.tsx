@@ -7,14 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { TextGigViewer } from '@/components/gig/TextGigViewer';
-import { GigViewerModeSelector } from '@/components/gig/GigViewerModeSelector';
+import { TopDownGigViewer } from '@/components/gig-viewer/TopDownGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
 import { GigSetlistDisplay } from '@/components/gig/GigSetlistDisplay';
 import { TicketPriceAdjuster } from '@/components/gig/TicketPriceAdjuster';
-import { VideoGigViewer } from '@/components/gig-viewer/VideoGigViewer';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
