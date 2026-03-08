@@ -1,8 +1,8 @@
 /**
- * Fan Sentiment System (v1.0.936)
+ * Fan Sentiment System (v1.0.953)
  * Tracks how fans feel about the band beyond raw numbers.
  * Sentiment shifts based on releases, gigs, social media, scandals, etc.
- * Affects merch sales, ticket demand, and streaming loyalty.
+ * Affects merch sales, ticket demand, streaming loyalty, radio, video, and followers.
  */
 
 export interface FanSentiment {
@@ -11,6 +11,9 @@ export interface FanSentiment {
   merchDemandMod: number;  // 0.5 – 1.5
   ticketDemandMod: number; // 0.6 – 1.4
   streamLoyaltyMod: number; // 0.7 – 1.3
+  radioEngagementMod: number; // 0.7 – 1.3
+  videoViewsMod: number;   // 0.6 – 1.4
+  followerGrowthMod: number; // 0.6 – 1.4
   viralChance: number;      // 0 – 0.15 (chance of organic viral moment)
 }
 
@@ -37,6 +40,9 @@ export function getFanSentiment(score: number): FanSentiment {
     merchDemandMod: parseFloat((0.5 + t * 1.0).toFixed(2)),
     ticketDemandMod: parseFloat((0.6 + t * 0.8).toFixed(2)),
     streamLoyaltyMod: parseFloat((0.7 + t * 0.6).toFixed(2)),
+    radioEngagementMod: parseFloat((0.7 + t * 0.6).toFixed(2)),
+    videoViewsMod: parseFloat((0.6 + t * 0.8).toFixed(2)),
+    followerGrowthMod: parseFloat((0.6 + t * 0.8).toFixed(2)),
     viralChance: parseFloat((Math.max(0, t - 0.5) * 0.3).toFixed(3)),
   };
 }

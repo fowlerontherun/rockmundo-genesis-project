@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Heart, TrendingUp, ShoppingBag, Ticket, Music, Sparkles } from "lucide-react";
+import { Heart, ShoppingBag, Ticket, Music, Sparkles, Radio, Video, Users } from "lucide-react";
 import { getFanSentiment, type FanSentiment } from "@/utils/fanSentiment";
 
 interface FanSentimentWidgetProps {
@@ -72,7 +72,7 @@ export const FanSentimentWidget = ({ score, compact = false }: FanSentimentWidge
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-[10px]">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
           <div className="flex items-center gap-1">
             <ShoppingBag className="h-3 w-3 text-primary" />
             <span className="text-muted-foreground">Merch:</span>
@@ -89,8 +89,23 @@ export const FanSentimentWidget = ({ score, compact = false }: FanSentimentWidge
             <span className="font-mono">{sentiment.streamLoyaltyMod}x</span>
           </div>
           <div className="flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-emerald-400" />
-            <span className="text-muted-foreground">Viral:</span>
+            <Radio className="h-3 w-3 text-emerald-400" />
+            <span className="text-muted-foreground">Radio:</span>
+            <span className="font-mono">{sentiment.radioEngagementMod}x</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Video className="h-3 w-3 text-blue-400" />
+            <span className="text-muted-foreground">Video:</span>
+            <span className="font-mono">{sentiment.videoViewsMod}x</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Users className="h-3 w-3 text-violet-400" />
+            <span className="text-muted-foreground">Followers:</span>
+            <span className="font-mono">{sentiment.followerGrowthMod}x</span>
+          </div>
+          <div className="flex items-center gap-1 col-span-2">
+            <Sparkles className="h-3 w-3 text-yellow-400" />
+            <span className="text-muted-foreground">Viral chance:</span>
             <span className="font-mono">{(sentiment.viralChance * 100).toFixed(1)}%</span>
           </div>
         </div>
