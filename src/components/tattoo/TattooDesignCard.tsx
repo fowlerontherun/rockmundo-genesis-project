@@ -52,6 +52,12 @@ export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelec
           <span className="text-sm font-bold text-primary">${price}</span>
         </div>
 
+        {isSpecialty && (
+          <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary w-fit">
+            ⭐ Artist Specialty +5
+          </Badge>
+        )}
+
         {/* Genre effects */}
         <div className="flex flex-wrap gap-1">
           {effects.map(([genre, value]) => (

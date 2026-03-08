@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.913",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Tattoo Artist Reputation System — each parlour now has named artists with fame levels (1-100), specialties, quality bonuses, and price premiums" },
+      { type: 'feature', description: "Artist fame tiers: Apprentice (1-20), Journeyman (21-45), Skilled (46-70), Master (71-90), Legendary (91-100) — higher tiers give better quality and accept custom commissions" },
+      { type: 'feature', description: "Custom tattoo design commissions — book famous artists (fame 46+) for bespoke designs with description input, body slot selection, and instant completion with +10% quality boost" },
+      { type: 'feature', description: "Artist specialty matching — selecting an artist whose specialty matches the tattoo category gives +5 bonus quality, shown with 'Artist Specialty' badge on design cards" },
+      { type: 'improvement', description: "Parlour shop flow now includes artist selection step with fame bars, quality/price indicators, and 'Book Custom' buttons" },
+      { type: 'improvement', description: "New 'Custom Designs' tab in Tattoo Parlour showing commission history with status, description, and quality results" },
+    ],
+  },
+  {
     version: "1.0.912",
     date: "2026-03-08",
     changes: [
