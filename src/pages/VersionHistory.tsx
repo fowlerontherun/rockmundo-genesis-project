@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.015",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Dashboard Profile tab reorganised: hero card with vitals, location banner, stats grid, VIP, identity/reputation, then activity" },
+    ],
+  },
+  {
     version: "1.1.014",
     date: "2026-03-08",
     changes: [
