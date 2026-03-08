@@ -93,6 +93,7 @@ interface Props {
   chemistryChange?: number;
   merchItemsSold?: number;
   ticketPrice?: number;
+  stageBehaviorUsed?: string | null;
 }
 
 export const GigOutcomeReport = ({
