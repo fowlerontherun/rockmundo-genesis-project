@@ -151,6 +151,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/labels", label: "Labels", description: "Record labels" },
       { path: "/admin/producers", label: "Producers", description: "Music producers" },
       { path: "/admin/release-config", label: "Release Config", description: "Release settings" },
+      { path: "/admin/skin-collections", label: "Skin Collections", description: "Avatar skin collections" },
     ],
   },
   {
