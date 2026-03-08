@@ -126,6 +126,26 @@ Deno.serve(async (req) => {
           .from("player_imprisonments")
           .update({ behavior_score: newBehavior })
           .eq("id", prisoner.id);
+
+        // === SONGWRITING IN PRISON → MORALE (v1.0.973) ===
+        // Writing songs while imprisoned is a creative outlet that slightly boosts morale
+        try {
+          const { data: bm } = await supabase
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', prisoner.user_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+          if (bm?.band_id) {
+            const { data: bd } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
+            if (bd) {
+              const moraleBoost = Math.min(3, prisoner.songs_written); // +1 per song, max +3
+              await supabase.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', bm.band_id);
+              console.log(`[process-prison-events] Prison songwriting morale: ${prisoner.songs_written} songs → +${moraleBoost}`);
+            }
+          }
+        } catch (_e) { /* non-critical */ }
       }
 
       // Daily behavior bonus for staying out of trouble (+2/day)

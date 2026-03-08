@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.973",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Pay Bail → Morale & Reputation: Getting bailed out boosts morale (+5 self-bail, +8 if a friend pays). Friend bail also gives +3 reputation (community support). Self-bail gives +1 rep" },
+      { type: 'feature', description: "Prison Songwriting → Morale: Writing songs while imprisoned is a creative outlet. Each song written gives +1 morale (max +3/day). Channeling adversity into music keeps spirits alive" },
+      { type: 'improvement', description: "Pay-bail now looks up band membership to apply morale/rep effects. Prison events process songwriting morale within the behavior bonus loop for efficiency" },
+    ],
+  },
+  {
     version: "1.0.972",
     date: "2026-03-08",
     changes: [
