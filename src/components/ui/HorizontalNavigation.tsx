@@ -404,9 +404,9 @@ const HorizontalNavigation = () => {
         <div className="flex justify-around items-center py-1.5 px-1">
           {[
             { icon: Home, labelKey: "nav.home", path: "/dashboard" },
-            { icon: Music, labelKey: "nav.music", path: "/songwriting" },
-            { icon: Users, labelKey: "nav.band", path: "/band" },
-            { icon: Calendar, labelKey: "nav.schedule", path: "/gigs" },
+            { icon: Music, labelKey: "nav.music", path: "/hub/music" },
+            { icon: Users, labelKey: "nav.band", path: "/hub/band-live" },
+            { icon: Globe, labelKey: "nav.world", path: "/hub/world-social" },
           ].map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
