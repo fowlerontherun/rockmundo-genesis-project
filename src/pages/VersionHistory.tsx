@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.907",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Fixed gig viewer rendering as a thin line — added relative positioning to inner zoom container so absolute-positioned stage/crowd sections display at full height" },
+    ],
+  },
+  {
     version: "1.0.906",
     date: "2026-03-08",
     changes: [
