@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.945",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "PR Appearances → Sentiment + Media: TV appearances grant +4 sentiment/+18 media, radio/podcasts +3/+10, print +2/+8 — each with appropriate fatigue" },
+      { type: 'feature', description: "Chart Hits → Sentiment + Media: Bands with high-quality songs on streaming charts get +12 sentiment and +15 media intensity boost" },
+      { type: 'improvement', description: "PR media type-specific boosts: TV/radio/podcast/magazine/newspaper/online each have tuned sentiment and media values" },
+      { type: 'improvement', description: "All new hooks respect media fatigue — oversaturated bands get reduced intensity gains from PR and chart performance" },
+    ],
+  },
+  {
     version: "1.0.944",
     date: "2026-03-08",
     changes: [

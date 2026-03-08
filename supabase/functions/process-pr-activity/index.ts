@@ -280,6 +280,43 @@ serve(async (req) => {
         console.error('Failed to create media appearance:', appearanceError);
       }
 
+      // === FAN SENTIMENT + MEDIA BOOST (v1.0.945) ===
+      // PR appearances boost fan engagement and media attention
+      try {
+        const mediaTypeToEvent: Record<string, { sentiment: number; intensity: number; fatigue: number }> = {
+          tv: { sentiment: 4, intensity: 18, fatigue: 12 },
+          radio: { sentiment: 3, intensity: 10, fatigue: 8 },
+          podcast: { sentiment: 3, intensity: 10, fatigue: 8 },
+          magazine: { sentiment: 2, intensity: 8, fatigue: 6 },
+          newspaper: { sentiment: 2, intensity: 8, fatigue: 6 },
+          online: { sentiment: 2, intensity: 6, fatigue: 4 },
+        };
+        const boosts = mediaTypeToEvent[offer.media_type] ?? { sentiment: 2, intensity: 6, fatigue: 4 };
+
+        const { data: bandData } = await supabaseClient
+          .from('bands')
+          .select('fan_sentiment_score, media_intensity, media_fatigue')
+          .eq('id', bandId)
+          .single();
+
+        if (bandData) {
+          const curSentiment = (bandData as any).fan_sentiment_score ?? 0;
+          const curIntensity = (bandData as any).media_intensity ?? 0;
+          const curFatigue = (bandData as any).media_fatigue ?? 0;
+          const fatigueReduction = curFatigue > 60 ? 0.5 : curFatigue > 30 ? 0.75 : 1.0;
+
+          await supabaseClient.from('bands').update({
+            fan_sentiment_score: Math.min(100, curSentiment + boosts.sentiment),
+            media_intensity: Math.min(100, curIntensity + Math.round(boosts.intensity * fatigueReduction)),
+            media_fatigue: Math.min(100, curFatigue + boosts.fatigue),
+          } as any).eq('id', bandId);
+
+          console.log(`[process-pr-activity] Band ${bandId}: sentiment +${boosts.sentiment}, media +${boosts.intensity} (${offer.media_type})`);
+        }
+      } catch (sentErr) {
+        console.error('[process-pr-activity] Error applying sentiment/media boost:', sentErr);
+      }
+
       // Mark offer as completed
       await supabaseClient
         .from('pr_media_offers')
