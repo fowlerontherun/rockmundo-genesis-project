@@ -121,8 +121,14 @@ Deno.serve(async (req) => {
       const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0 to 1
       const merchDemandMod = parseFloat((0.5 + sentimentT * 1.0).toFixed(2)); // 0.5x to 1.5x
 
+      // === REPUTATION → ONLINE MERCH SALES (v1.0.988) ===
+      // Reputable bands have stronger brand appeal; toxic bands struggle to move product online
+      const repScore = bandReputationMap.get(band.id) ?? 0;
+      const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
+      const merchRepMod = parseFloat((0.8 + repT * 0.4).toFixed(2)); // 0.8x–1.2x
+
       const dailySalesTarget = Math.max(1, Math.floor(
-        (band.total_fans || 0) * baseSalesChance * fameMultiplier * merchDemandMod
+        (band.total_fans || 0) * baseSalesChance * fameMultiplier * merchDemandMod * merchRepMod
       ));
 
       // Random variation: 50% to 150% of target

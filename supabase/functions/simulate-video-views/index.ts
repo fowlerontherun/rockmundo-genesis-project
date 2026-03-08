@@ -109,8 +109,14 @@ serve(async (req) => {
       const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200;
       const videoViewsMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2)); // 0.6x to 1.4x
 
+      // === REPUTATION → VIDEO VIEWS (v1.0.988) ===
+      // Respected/iconic artists get more clicks; toxic artists get fewer organic views
+      const vidRepScore = song?.band_id ? (bandReputationMap.get(song.band_id) ?? 0) : 0;
+      const vidRepT = (Math.max(-100, Math.min(100, vidRepScore)) + 100) / 200;
+      const videoRepMod = parseFloat((0.8 + vidRepT * 0.4).toFixed(2)); // 0.8x–1.2x
+
       // Apply multipliers
-      baseViews *= qualityMult * songQuality * decayFactor * videoViewsMod;
+      baseViews *= qualityMult * songQuality * decayFactor * videoViewsMod * videoRepMod;
       
       // Random viral chance (1% chance of 5-10x views, boosted by positive sentiment)
       const viralChance = 0.01 + (sentimentT > 0.7 ? (sentimentT - 0.7) * 0.03 : 0); // up to 1.9%
