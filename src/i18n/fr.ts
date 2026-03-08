@@ -73,6 +73,8 @@ export const fr = {
     advisor: "Conseiller",
     character: "Personnage",
     gear: "Équipement",
+    tattoos: "Tatouages",
+    tattooParlour: "Salon de Tatouage",
     legacy: "Héritage",
     schedule: "Agenda",
     musicHub: "Hub Musical",

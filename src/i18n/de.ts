@@ -73,6 +73,8 @@ export const de = {
     advisor: "Berater",
     character: "Charakter",
     gear: "Ausrüstung",
+    tattoos: "Tattoos",
+    tattooParlour: "Tattoo-Studio",
     legacy: "Vermächtnis",
     schedule: "Terminplan",
     musicHub: "Musik Hub",
