@@ -59,7 +59,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   }
 
   // Fetch all necessary data in parallel
-  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes] = await Promise.all([
+  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes, recentGigsRes, venueInfoRes] = await Promise.all([
     supabase.from('band_stage_equipment').select('*').eq('band_id', bandId),
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
@@ -71,6 +71,10 @@ export async function executeGigPerformance(data: GigExecutionData) {
       if (!r.data?.leader_id) return { data: null };
       return supabase.from('player_behavior_settings').select('stage_behavior').eq('user_id', r.data.leader_id).maybeSingle();
     }),
+    // Fetch recent gigs for tour fatigue calculation
+    supabase.from('gigs').select('scheduled_date').eq('band_id', bandId).eq('status', 'completed').order('scheduled_date', { ascending: false }).limit(10),
+    // Fetch venue info for weather impact (outdoor check)
+    supabase.from('gigs').select('venue_id, venues!gigs_venue_id_fkey(venue_type, city_id, cities!venues_city_id_fkey(name))').eq('id', gigId).single(),
   ]);
 
   const equipment = equipmentRes.data || [];
