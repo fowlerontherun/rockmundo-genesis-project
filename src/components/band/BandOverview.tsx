@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Settings2, MapPin } from 'lucide-react';
 import { FanSentimentWidget } from '@/components/world/FanSentimentWidget';
 import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
+import { SentimentEventLog } from '@/components/band/SentimentEventLog';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -203,6 +204,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
           fatigue={(band as any).media_fatigue ?? 0}
         />
       </div>
+
+      {/* Sentiment Event History */}
+      <SentimentEventLog bandId={band.id} />
 
       {/* Main Overview Tabs */}
       <BandOverviewTabs

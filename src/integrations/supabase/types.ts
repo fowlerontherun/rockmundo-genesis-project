@@ -2137,6 +2137,56 @@ export type Database = {
           },
         ]
       }
+      band_sentiment_events: {
+        Row: {
+          band_id: string
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          media_fatigue_change: number | null
+          media_intensity_change: number | null
+          metadata: Json | null
+          sentiment_after: number | null
+          sentiment_change: number
+          source: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          media_fatigue_change?: number | null
+          media_intensity_change?: number | null
+          metadata?: Json | null
+          sentiment_after?: number | null
+          sentiment_change?: number
+          source?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          media_fatigue_change?: number | null
+          media_intensity_change?: number | null
+          metadata?: Json | null
+          sentiment_after?: number | null
+          sentiment_change?: number
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_sentiment_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_song_familiarity: {
         Row: {
           band_id: string

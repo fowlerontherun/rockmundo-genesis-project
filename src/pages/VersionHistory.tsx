@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.948",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Sentiment Event History: New band_sentiment_events table tracks every sentiment/media change with event type, source, and timestamp" },
+      { type: 'feature', description: "Sentiment Event Log UI: Band overview now shows a scrollable timeline of recent sentiment events with icons, change values, and relative timestamps" },
+      { type: 'improvement', description: "RLS policies on sentiment events — players can only view events for their own bands" },
+      { type: 'improvement', description: "Event log displays sentiment change, media intensity change, and time-ago for each event with color-coded indicators" },
+    ],
+  },
+  {
     version: "1.0.947",
     date: "2026-03-08",
     changes: [
