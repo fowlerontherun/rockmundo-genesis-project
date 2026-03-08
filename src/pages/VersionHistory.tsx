@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.994",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Company Taxes → Reputation Tax Discount: Reputable company owners receive up to 10% tax reduction (1.0x toxic → 0.9x iconic). Better public image means better tax treatment" },
+      { type: 'feature', description: "Company Taxes → Morale Impact: Auto-paying taxes now applies -2 morale to the owner's band. Taxes are stressful even when you can afford them" },
+      { type: 'feature', description: "Venue Bookings → Reputation Revenue Scaling: All venue revenue (ticket cuts, bar sales, merch cuts, booking fees) is now scaled by the owner's band reputation (0.9x toxic → 1.1x iconic). Reputable venue owners attract premium pricing" },
+      { type: 'feature', description: "Studio Bookings → Reputation Revenue Scaling: Recording session and rehearsal room revenue is now scaled by studio owner reputation (0.9x toxic → 1.1x iconic). Reputable studios attract higher-paying clients" },
+      { type: 'feature', description: "Venue & Studio Bookings → Morale Boost: Successfully processing revenue from venue gigs, bookings, recording sessions, and rehearsals now awards +1 morale to the owner's band" },
+      { type: 'improvement', description: "All company financial systems (taxes, venue bookings, studio bookings) now integrate with band health stats. Reputation influences revenue and tax rates; business activity feeds back into morale" },
+    ],
+  },
+  {
     version: "1.0.993",
     date: "2026-03-08",
     changes: [
