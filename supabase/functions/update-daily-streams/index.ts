@@ -232,15 +232,17 @@ Deno.serve(async (req) => {
     const SEASONAL_STREAM_MOD: Record<string, number> = { spring: 1.05, summer: 0.9, autumn: 1.1, winter: 1.25 };
     const seasonalStreamMod = SEASONAL_STREAM_MOD[season] || 1.0;
 
-    // Pre-fetch band genres for trend lookup
+    // Pre-fetch band genres and sentiment for trend/loyalty lookup
     let bandGenreMap = new Map<string, string>();
+    let bandSentimentMap = new Map<string, number>();
     if (bandIds.length > 0) {
-      const { data: bandGenres } = await supabase
+      const { data: bandExtras } = await supabase
         .from('bands')
-        .select('id, genre')
+        .select('id, genre, fan_sentiment_score')
         .in('id', bandIds);
-      for (const b of bandGenres || []) {
+      for (const b of bandExtras || []) {
         if (b.genre) bandGenreMap.set(b.id, b.genre);
+        bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
       }
     }
 
