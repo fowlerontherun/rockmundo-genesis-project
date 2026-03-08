@@ -217,11 +217,25 @@ serve(async (req) => {
     if (contractIds.length > 0) {
       const { data: contracts } = await supabaseClient
         .from("artist_label_contracts")
-        .select("id, label_id, advance_amount, recouped_amount, royalty_artist_pct, royalty_label_pct, marketing_support, status")
+        .select("id, label_id, advance_amount, recouped_amount, royalty_artist_pct, royalty_label_pct, marketing_support, status, deal_type_id, end_date")
         .in("id", contractIds)
         .eq("status", "active");
       
+      // Pre-fetch deal type names
+      const dealTypeIds = [...new Set((contracts || []).map(c => c.deal_type_id).filter(Boolean))];
+      const dealTypeNameMap = new Map<string, string>();
+      if (dealTypeIds.length > 0) {
+        const { data: dealTypes } = await supabaseClient
+          .from("label_deal_types")
+          .select("id, name")
+          .in("id", dealTypeIds);
+        for (const dt of dealTypes || []) {
+          dealTypeNameMap.set(dt.id, dt.name);
+        }
+      }
+      
       for (const c of contracts || []) {
+        const dealTypeName = dealTypeNameMap.get(c.deal_type_id) || "Standard Deal";
         contractMap.set(c.id, {
           id: c.id,
           label_id: c.label_id,
@@ -230,6 +244,8 @@ serve(async (req) => {
           royalty_artist_pct: c.royalty_artist_pct,
           royalty_label_pct: c.royalty_label_pct ?? (100 - c.royalty_artist_pct),
           marketing_support: c.marketing_support ?? 0,
+          deal_type_name: dealTypeName,
+          end_date: c.end_date,
         });
       }
       console.log(`Loaded ${contractMap.size} active label contracts for revenue splitting`);
