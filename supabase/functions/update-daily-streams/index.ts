@@ -31,6 +31,9 @@ Deno.serve(async (req) => {
   let errorCount = 0;
   const errorSamples: string[] = [];
 
+  // Accumulate label revenue for batch crediting
+  const labelRevenueAccumulator = new Map<string, { labelRevenue: number; recoupmentApplied: number; contractId: string }>();
+
   try {
     console.log('Starting daily streams and sales update...');
 
@@ -74,7 +77,6 @@ Deno.serve(async (req) => {
     console.log(`Stream market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
     const AGE_GROUPS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
-    // Deterministic age group weights (realistic distribution)
     const AGE_WEIGHTS = [
       { group: '13-17', weight: 0.12 },
       { group: '18-24', weight: 0.30 },
@@ -94,6 +96,41 @@ Deno.serve(async (req) => {
         .in('release_id', releaseIds)
         .eq('is_active', true);
       allTerritories = territories || [];
+    }
+
+    // Pre-fetch label contract info for releases
+    let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number }>();
+    if (releaseIds.length > 0) {
+      const { data: releasesWithContracts } = await supabase
+        .from('releases')
+        .select('id, label_contract_id, label_revenue_share_pct')
+        .in('id', releaseIds)
+        .not('label_contract_id', 'is', null);
+
+      const contractIds = [...new Set((releasesWithContracts || []).map(r => r.label_contract_id).filter(Boolean))];
+      if (contractIds.length > 0) {
+        const { data: contracts } = await supabase
+          .from('artist_label_contracts')
+          .select('id, label_id, royalty_label_pct, royalty_artist_pct, advance_amount, recouped_amount, status')
+          .in('id', contractIds)
+          .eq('status', 'active');
+
+        const contractLookup = new Map((contracts || []).map(c => [c.id, c]));
+
+        for (const rel of releasesWithContracts || []) {
+          const c = contractLookup.get(rel.label_contract_id);
+          if (c) {
+            releaseContractMap.set(rel.id, {
+              contractId: c.id,
+              labelId: c.label_id,
+              labelCutPct: (rel.label_revenue_share_pct ?? c.royalty_label_pct ?? (100 - c.royalty_artist_pct)) / 100,
+              advanceAmount: c.advance_amount ?? 0,
+              recoupedAmount: c.recouped_amount ?? 0,
+            });
+          }
+        }
+        console.log(`Loaded ${releaseContractMap.size} release-contract mappings for streaming splits`);
+      }
     }
 
     // Pre-fetch all release hype scores for streaming releases
@@ -184,11 +221,9 @@ Deno.serve(async (req) => {
         const hasTerritories = releaseTerritories.length > 0;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
 
-        // Territory bonus
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
         const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus);
-        // Revenue in whole dollars (integer-safe)
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
         // Build deterministic region breakdown based on territories/fans
@@ -201,7 +236,6 @@ Deno.serve(async (req) => {
           });
           const totalWeight = weightedCountries.reduce((s, c) => s + c.weight, 0);
           
-          // Distribute streams across all territories proportionally
           for (const wc of weightedCountries) {
             const fraction = wc.weight / totalWeight;
             const regionStreams = Math.max(1, Math.round(dailyStreams * fraction));
@@ -231,18 +265,16 @@ Deno.serve(async (req) => {
           throw updateError;
         }
 
-        // Insert analytics rows per region (deterministic breakdown instead of single random)
-        // Use upsert to be idempotent if run multiple times per day
+        // Insert analytics rows per region
         for (const rb of regionBreakdown) {
           const listenerRatio = 0.4 + Math.random() * 0.4;
           const uniqueListeners = Math.max(1, Math.floor(rb.streams * listenerRatio));
           const skipRate = Number((10 + Math.random() * 25).toFixed(1));
           const completionRate = Number((55 + Math.random() * 35).toFixed(1));
           
-          // Pick age group deterministically weighted
           const ageRoll = Math.random();
           let cumWeight = 0;
-          let ageGroup = AGE_GROUPS[1]; // default 18-24
+          let ageGroup = AGE_GROUPS[1];
           for (const aw of AGE_WEIGHTS) {
             cumWeight += aw.weight;
             if (ageRoll <= cumWeight) {
@@ -255,7 +287,7 @@ Deno.serve(async (req) => {
             song_release_id: release.id,
             analytics_date: analyticsDate,
             daily_streams: rb.streams,
-            daily_revenue: rb.revenue, // Integer dollars
+            daily_revenue: rb.revenue,
             platform_id: release.platform_id,
             unique_listeners: uniqueListeners,
             skip_rate: skipRate,
@@ -265,7 +297,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Update song fame based on streams (1 fame per 1000 streams)
+        // Update song fame based on streams
         if (release.song_id) {
           const fameGain = Math.floor(dailyStreams / 1000);
           if (fameGain > 0) {
@@ -283,8 +315,42 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Pay band daily streaming revenue (integer dollars)
-        if (bandId && dailyRevenueDollars > 0) {
+        // ── Label Revenue Split for Streaming ──
+        const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;
+
+        if (contractInfo && bandId && dailyRevenueDollars > 0) {
+          const labelShareDollars = Math.round(dailyRevenueDollars * contractInfo.labelCutPct);
+          const bandShareDollars = dailyRevenueDollars - labelShareDollars;
+
+          // Recoupment tracking
+          const advanceRemaining = Math.max(0, contractInfo.advanceAmount - contractInfo.recoupedAmount);
+          const recoupmentFromThis = Math.min(labelShareDollars, advanceRemaining);
+          contractInfo.recoupedAmount += recoupmentFromThis;
+
+          // Accumulate label revenue
+          const labelKey = `${contractInfo.labelId}:${contractInfo.contractId}`;
+          const existing = labelRevenueAccumulator.get(labelKey) || { labelRevenue: 0, recoupmentApplied: 0, contractId: contractInfo.contractId };
+          existing.labelRevenue += labelShareDollars;
+          existing.recoupmentApplied += recoupmentFromThis;
+          labelRevenueAccumulator.set(labelKey, existing);
+
+          // Pay band their reduced share
+          if (bandShareDollars > 0) {
+            await supabase.from('band_earnings').insert({
+              band_id: bandId,
+              amount: bandShareDollars,
+              source: 'streaming',
+              description: `Daily streaming revenue (after ${Math.round(contractInfo.labelCutPct * 100)}% label share)`,
+              metadata: { 
+                song_release_id: release.id, 
+                streams: dailyStreams,
+                platform_id: release.platform_id,
+                label_share: labelShareDollars,
+              },
+            });
+          }
+        } else if (bandId && dailyRevenueDollars > 0) {
+          // No label contract — 100% to band
           await supabase.from('band_earnings').insert({
             band_id: bandId,
             amount: dailyRevenueDollars,
@@ -359,8 +425,64 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Batch credit labels with accumulated streaming revenue ──
+    let labelsCredited = 0;
+    for (const [labelKey, labelRevenue] of labelRevenueAccumulator.entries()) {
+      if (labelRevenue.labelRevenue <= 0) continue;
+      try {
+        const [labelId] = labelKey.split(":");
+        const labelAmount = Math.round(labelRevenue.labelRevenue);
+        const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
+
+        // Credit label balance
+        const { data: currentLabel } = await supabase
+          .from("labels")
+          .select("balance")
+          .eq("id", labelId)
+          .single();
+
+        if (currentLabel) {
+          await supabase
+            .from("labels")
+            .update({ balance: (currentLabel.balance || 0) + labelAmount })
+            .eq("id", labelId);
+        }
+
+        // Record label financial transaction
+        await supabase.from("label_financial_transactions").insert({
+          label_id: labelId,
+          transaction_type: "revenue",
+          amount: labelAmount,
+          description: `Daily streaming royalty share${recoupAmount > 0 ? ` (includes $${recoupAmount} advance recoupment)` : ''}`,
+          related_contract_id: labelRevenue.contractId,
+        });
+
+        // Update contract recouped_amount
+        if (recoupAmount > 0) {
+          const { data: currentContract } = await supabase
+            .from("artist_label_contracts")
+            .select("recouped_amount")
+            .eq("id", labelRevenue.contractId)
+            .single();
+
+          if (currentContract) {
+            await supabase
+              .from("artist_label_contracts")
+              .update({ recouped_amount: (currentContract.recouped_amount || 0) + recoupAmount })
+              .eq("id", labelRevenue.contractId);
+          }
+        }
+
+        labelsCredited++;
+        console.log(`Credited label ${labelId}: $${labelAmount} streaming (recouped: $${recoupAmount})`);
+      } catch (labelError) {
+        console.error(`Error crediting label ${labelKey}:`, labelError);
+        errorCount++;
+      }
+    }
+    console.log(`Credited ${labelsCredited} labels with streaming royalty revenue`);
+
     const totalProcessed = streamUpdates + salesUpdates;
-    // Mark run as failed if error ratio is very high
     const isEffectivelyFailed = totalProcessed > 0 && errorCount > totalProcessed * 0.5;
     
     console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales (${errorCount} errors)`);
@@ -378,6 +500,7 @@ Deno.serve(async (req) => {
         errorCount,
         errorSamples,
         effectivelyFailed: isEffectivelyFailed,
+        labelsCredited,
       },
     });
 
@@ -388,6 +511,7 @@ Deno.serve(async (req) => {
         salesUpdates,
         errors: errorCount,
         errorSamples,
+        labelsCredited,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

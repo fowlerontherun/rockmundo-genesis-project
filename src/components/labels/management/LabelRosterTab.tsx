@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Users, UserMinus, Music, Disc3, Album, DollarSign, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ScoutOfferDialog } from "./ScoutOfferDialog";
+import { RecoupmentTracker } from "../RecoupmentTracker";
 
 interface LabelRosterTabProps {
   labelId: string;
@@ -157,16 +158,24 @@ export function LabelRosterTab({ labelId, rosterCapacity, labelReputation = 0 }:
                     </div>
                   </div>
 
+                  {/* Recoupment Tracker */}
+                  {(contract.advance_amount ?? 0) > 0 && (
+                    <div className="mt-3">
+                      <RecoupmentTracker
+                        advanceAmount={contract.advance_amount ?? 0}
+                        recoupedAmount={contract.recouped_amount ?? 0}
+                        royaltyArtistPct={contract.royalty_artist_pct}
+                        royaltyLabelPct={contract.royalty_label_pct ?? (100 - contract.royalty_artist_pct)}
+                        compact
+                      />
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 mt-3">
                     <Badge variant="outline">{releasesCount} releases</Badge>
                     <Badge variant="secondary">
                       Advance: ${(contract.advance_amount ?? 0).toLocaleString()}
                     </Badge>
-                    {contract.advance_amount && contract.recouped_amount !== null && (
-                      <Badge variant={contract.recouped_amount >= contract.advance_amount ? "default" : "secondary"}>
-                        {contract.recouped_amount >= contract.advance_amount ? "Recouped" : `${Math.round((contract.recouped_amount / contract.advance_amount) * 100)}% recouped`}
-                      </Badge>
-                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -76,6 +76,9 @@ serve(async (req) => {
   // Accumulate per-band revenue to credit once at the end
   const bandRevenueAccumulator = new Map<string, { netRevenue: number; grossRevenue: number; units: number; taxRate: number; formats: string[] }>();
 
+  // Accumulate per-label revenue for label splits
+  const labelRevenueAccumulator = new Map<string, { labelRevenue: number; recoupmentApplied: number; contractId: string }>();
+
   try {
     runId = await startJobRun({
       jobName: "generate-daily-sales",
@@ -138,11 +141,11 @@ serve(async (req) => {
     const christmasBoostBase = salesConfig.christmas_sales_boost ?? 1.5;
     if (currentGameMonth === 12) {
       if (currentGameDay === 25) {
-        christmasMultiplier = christmasBoostBase + 1.0; // 2.5x default
+        christmasMultiplier = christmasBoostBase + 1.0;
       } else if (currentGameDay >= 20) {
-        christmasMultiplier = christmasBoostBase + 0.5; // 2.0x default
+        christmasMultiplier = christmasBoostBase + 0.5;
       } else {
-        christmasMultiplier = christmasBoostBase; // 1.5x default
+        christmasMultiplier = christmasBoostBase;
       }
     }
     console.log(`Game date: Month ${currentGameMonth}, Day ${currentGameDay}, Year ${currentGameYear} | Christmas multiplier: ${christmasMultiplier}x`);
@@ -157,6 +160,8 @@ serve(async (req) => {
         hype_score,
         manufacturing_complete_at,
         home_country,
+        label_contract_id,
+        label_revenue_share_pct,
         bands(id, fame, popularity, chemistry_level, home_city_id),
         release_formats(id, format_type, retail_price, quantity),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
@@ -190,7 +195,6 @@ serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("status", "active");
     
-    // Market scarcity bonus: fewer bands = more sales per release
     const marketMultiplier = Math.max(1, Math.min(marketScarcityMaxMultiplier, 100 / Math.max(activeBandCount || 100, marketScarcityMinBands)));
     console.log(`Market multiplier: ${marketMultiplier.toFixed(2)} (${activeBandCount} active bands)`);
 
@@ -204,6 +208,31 @@ serve(async (req) => {
         .in("release_id", releaseIds)
         .eq("is_active", true);
       allTerritories = territories || [];
+    }
+
+    // Pre-fetch all active label contracts for revenue splitting
+    const contractIds = [...new Set((releases || []).map(r => (r as any).label_contract_id).filter(Boolean))];
+    const contractMap = new Map<string, { id: string; label_id: string; advance_amount: number; recouped_amount: number; royalty_artist_pct: number; royalty_label_pct: number; marketing_support: number }>();
+    
+    if (contractIds.length > 0) {
+      const { data: contracts } = await supabaseClient
+        .from("artist_label_contracts")
+        .select("id, label_id, advance_amount, recouped_amount, royalty_artist_pct, royalty_label_pct, marketing_support, status")
+        .in("id", contractIds)
+        .eq("status", "active");
+      
+      for (const c of contracts || []) {
+        contractMap.set(c.id, {
+          id: c.id,
+          label_id: c.label_id,
+          advance_amount: c.advance_amount ?? 0,
+          recouped_amount: c.recouped_amount ?? 0,
+          royalty_artist_pct: c.royalty_artist_pct,
+          royalty_label_pct: c.royalty_label_pct ?? (100 - c.royalty_artist_pct),
+          marketing_support: c.marketing_support ?? 0,
+        });
+      }
+      console.log(`Loaded ${contractMap.size} active label contracts for revenue splitting`);
     }
 
     // Region adjacency for spillover
@@ -264,7 +293,6 @@ serve(async (req) => {
         // If no territories, use legacy global logic
         let regionalMultiplier = 1.0;
         if (!hasTerritories) {
-          // Legacy: use first country fan entry like before
           const firstEntry = countryFansMap.values().next().value;
           if (firstEntry) {
             regionalMultiplier = calculateRegionalSalesMultiplier(firstEntry.fame, firstEntry.has_performed, globalFame);
@@ -277,25 +305,30 @@ serve(async (req) => {
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
-        // Squared-log fame scaling: fame 100→3x, 1K→5.5x, 10K→9x, 100K→13.5x, 1M→19x, 15M→27x
+        // Squared-log fame scaling
         const logFame = Math.log10(Math.max(artistFame, 1));
         const fameMultiplier = 1 + Math.pow(logFame, 2) * 0.5;
-        // Squared-log popularity scaling
         const logPop = Math.log10(Math.max(artistPopularity, 1));
         const popularityMultiplier = 1 + Math.pow(logPop, 2) * 0.3;
-        const qualityMultiplier = 0.5 + (avgQuality / 100) * 1.0; // 0.5x at 0 quality, 1.5x at 100
-        // Fan base multiplier: more fans = more buyers (sqrt scaling to prevent runaway)
+        const qualityMultiplier = 0.5 + (avgQuality / 100) * 1.0;
         const totalFans = countryFansMap.size > 0 
           ? Array.from(countryFansMap.values()).reduce((sum, cf) => sum + (cf.total_fans || 0), 0)
           : 0;
         const fansMultiplier = totalFans > 0 ? 1 + Math.sqrt(totalFans) * 0.005 : 1.0;
 
+        // ── Label contract lookup for this release ──
+        const releaseContractId = (release as any).label_contract_id;
+        const releaseSharePct = (release as any).label_revenue_share_pct;
+        const contract = releaseContractId ? contractMap.get(releaseContractId) : null;
+        // Effective label cut percentage (from release override or contract)
+        const labelCutPct = contract
+          ? (releaseSharePct ?? contract.royalty_label_pct) / 100
+          : 0;
+
         for (const format of release.release_formats || []) {
-          // Skip formats with no retail price set
           const retailPrice = format.retail_price || 0;
           if (retailPrice <= 0) continue;
           
-          // For physical formats, skip if no stock. For digital/streaming, always allow sales
           const isDigital = format.format_type === "digital" || format.format_type === "streaming";
           if (!isDigital && (!format.quantity || format.quantity <= 0)) continue;
 
@@ -306,7 +339,6 @@ serve(async (req) => {
               baseSales = digitalMin + Math.floor(Math.random() * (digitalMax - digitalMin));
               break;
             case "streaming":
-              // Streaming doesn't generate direct sales, skip
               continue;
             case "cd":
               baseSales = cdMin + Math.floor(Math.random() * (cdMax - cdMin));
@@ -319,14 +351,11 @@ serve(async (req) => {
               break;
           }
 
-          // Hype multiplier: 0 hype = 1.0x, 500 hype = 2.0x, 1000 hype = 3.0x
           const hypeScore = (release as any).hype_score || 0;
           const hypeMultiplier = 1 + (hypeScore / 500);
           const releasedDate = (release as any).manufacturing_complete_at || release.created_at;
           const realDaysSinceRelease = releasedDate ? (Date.now() - new Date(releasedDate).getTime()) / (1000 * 60 * 60 * 24) : 999;
-          // Convert to game days (game runs at 3x speed: 10 real days = 30 game days)
           const gameDaysSinceRelease = realDaysSinceRelease * 3;
-          // Graduated age decay based on GAME days: new releases sell more, old releases taper off
           const ageDecay = gameDaysSinceRelease <= 7 ? 1.5
             : gameDaysSinceRelease <= 14 ? 1.2
             : gameDaysSinceRelease <= 30 ? 1.0
@@ -336,43 +365,39 @@ serve(async (req) => {
             : gameDaysSinceRelease <= 360 ? 0.2
             : 0.1;
 
-          // Territory-aware sales: generate per-country if territories exist
+          // Label marketing support bonus: adds hype-like multiplier
+          const labelMarketingBonus = contract ? 1 + (contract.marketing_support / 10000) : 1.0;
+
           const territoriesToProcess = hasTerritories 
             ? releaseTerritories 
-            : [{ country: null, distance_tier: 'domestic', cost_multiplier: 1.0 }]; // Legacy single entry
+            : [{ country: null, distance_tier: 'domestic', cost_multiplier: 1.0 }];
 
           for (const territory of territoriesToProcess) {
-            // Calculate per-territory regional multiplier
             let territoryRegionalMult = regionalMultiplier;
             if (hasTerritories && territory.country) {
               const countryData = countryFansMap.get(territory.country);
               const countryFame = countryData?.fame || 0;
               const hasPerformed = countryData?.has_performed || false;
               territoryRegionalMult = calculateRegionalSalesMultiplier(countryFame, hasPerformed, globalFame);
-              // Scale down sales for more expensive territories (harder markets)
               territoryRegionalMult *= (1 / Math.sqrt(territory.cost_multiplier || 1));
             }
 
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier
-              / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1) // Split sales across territories
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus
+              / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 
-            // For digital, no stock limit. For physical, cap at available stock
             const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
 
             if (actualSales > 0) {
-              // retail_price is stored in CENTS — convert to dollars for revenue calc
               const retailPriceDollars = retailPrice / 100;
               const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
               
-              // Calculate tax and distribution deductions
               const distributionRate = getDistributionRate(format.format_type);
               const salesTaxAmount = Math.round(grossRevenue * salesTaxRate * 100) / 100;
               const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
               const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
               
-              // Store in cents in release_sales
               const unitPriceCents = retailPrice;
               const totalAmountCents = Math.round(grossRevenue * 100);
               const salesTaxCents = Math.round(salesTaxAmount * 100);
@@ -395,7 +420,6 @@ serve(async (req) => {
                 country: territory.country || null,
               });
 
-              // Only decrement stock for physical formats
               if (!isDigital) {
                 await supabaseClient
                   .from("release_formats")
@@ -403,13 +427,11 @@ serve(async (req) => {
                   .eq("id", format.id);
               }
 
-              // Update release revenue with GROSS (in dollars for display)
               await supabaseClient.rpc("increment_release_revenue", {
                 release_id: release.id,
                 amount: grossRevenue,
               });
 
-              // Update per-format and total unit counters on release
               const formatColumn = format.format_type === "digital" ? "digital_sales" 
                 : format.format_type === "cd" ? "cd_sales"
                 : format.format_type === "vinyl" ? "vinyl_sales"
@@ -431,17 +453,61 @@ serve(async (req) => {
                 }
               }
 
-              // Accumulate NET revenue per band for batch crediting at end
-              if (release.band_id) {
-                const existing = bandRevenueAccumulator.get(release.band_id) || { netRevenue: 0, grossRevenue: 0, units: 0, taxRate: salesTaxRate, formats: [] };
-                existing.netRevenue += netRevenue;
-                existing.grossRevenue += grossRevenue;
-                existing.units += actualSales;
-                if (!existing.formats.includes(format.format_type)) {
-                  existing.formats.push(format.format_type);
+              // ── Label Revenue Split ──
+              // If release has an active contract, split net revenue
+              if (contract && labelCutPct > 0 && release.band_id) {
+                const labelShareDollars = netRevenue * labelCutPct;
+                const bandShareDollars = netRevenue * (1 - labelCutPct);
+
+                // Check if advance still needs recoupment
+                const currentRecouped = contract.recouped_amount;
+                const advanceRemaining = Math.max(0, contract.advance_amount - currentRecouped);
+                
+                let recoupmentFromThisSale = 0;
+                let labelFinalShare = labelShareDollars;
+                let bandFinalShare = bandShareDollars;
+
+                if (advanceRemaining > 0) {
+                  // During recoupment: label takes their full share as recoupment
+                  recoupmentFromThisSale = Math.min(labelShareDollars, advanceRemaining);
+                  // Label keeps their share (it goes to recoup the advance)
+                  labelFinalShare = labelShareDollars;
+                  bandFinalShare = bandShareDollars;
                 }
-                bandRevenueAccumulator.set(release.band_id, existing);
+
+                // Accumulate label revenue
+                const labelKey = `${contract.label_id}:${contract.id}`;
+                const existing = labelRevenueAccumulator.get(labelKey) || { labelRevenue: 0, recoupmentApplied: 0, contractId: contract.id };
+                existing.labelRevenue += labelFinalShare;
+                existing.recoupmentApplied += recoupmentFromThisSale;
+                labelRevenueAccumulator.set(labelKey, existing);
+
+                // Update in-memory recouped amount so subsequent iterations are correct
+                contract.recouped_amount += recoupmentFromThisSale;
+
+                // Accumulate band's share (reduced by label cut)
+                const bandExisting = bandRevenueAccumulator.get(release.band_id) || { netRevenue: 0, grossRevenue: 0, units: 0, taxRate: salesTaxRate, formats: [] };
+                bandExisting.netRevenue += bandFinalShare;
+                bandExisting.grossRevenue += grossRevenue;
+                bandExisting.units += actualSales;
+                if (!bandExisting.formats.includes(format.format_type)) {
+                  bandExisting.formats.push(format.format_type);
+                }
+                bandRevenueAccumulator.set(release.band_id, bandExisting);
+              } else {
+                // No label contract — 100% to band
+                if (release.band_id) {
+                  const existing = bandRevenueAccumulator.get(release.band_id) || { netRevenue: 0, grossRevenue: 0, units: 0, taxRate: salesTaxRate, formats: [] };
+                  existing.netRevenue += netRevenue;
+                  existing.grossRevenue += grossRevenue;
+                  existing.units += actualSales;
+                  if (!existing.formats.includes(format.format_type)) {
+                    existing.formats.push(format.format_type);
+                  }
+                  bandRevenueAccumulator.set(release.band_id, existing);
+                }
               }
+
               const famePerSale = isDigital ? 0.1 : 0.2;
               for (const rs of release.release_songs || []) {
                 if (rs.song_id) {
@@ -505,17 +571,15 @@ serve(async (req) => {
       if (revenue.netRevenue <= 0) continue;
 
       try {
-        // Round to whole number — band_earnings.amount is integer (dollars)
         const netAmount = Math.round(revenue.netRevenue);
 
-        // Insert aggregated band_earnings entry
         const { error: earningsError } = await supabaseClient
           .from("band_earnings")
           .insert({
             band_id: bandId,
             amount: netAmount,
             source: "release_sales",
-            description: `Daily sales revenue: ${revenue.units} units across ${revenue.formats.join(", ")} (net after tax & distribution)`,
+            description: `Daily sales revenue: ${revenue.units} units across ${revenue.formats.join(", ")} (net after tax, distribution & label split)`,
             metadata: {
               gross_revenue: Math.round(revenue.grossRevenue * 100) / 100,
               net_revenue: netAmount,
@@ -530,7 +594,6 @@ serve(async (req) => {
           continue;
         }
 
-        // Atomically increment band_balance using read-then-write with error checking
         const { data: currentBand, error: fetchError } = await supabaseClient
           .from("bands")
           .select("band_balance")
@@ -564,6 +627,64 @@ serve(async (req) => {
     }
     console.log(`Credited ${bandsCredited}/${bandRevenueAccumulator.size} bands with sales revenue`);
 
+    // ── Batch credit all labels with accumulated revenue + update recoupment ──
+    let labelsCredited = 0;
+    for (const [labelKey, labelRevenue] of labelRevenueAccumulator.entries()) {
+      if (labelRevenue.labelRevenue <= 0) continue;
+
+      try {
+        const [labelId] = labelKey.split(":");
+        const labelAmount = Math.round(labelRevenue.labelRevenue);
+        const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
+
+        // Credit label balance
+        const { data: currentLabel } = await supabaseClient
+          .from("labels")
+          .select("balance")
+          .eq("id", labelId)
+          .single();
+
+        if (currentLabel) {
+          await supabaseClient
+            .from("labels")
+            .update({ balance: (currentLabel.balance || 0) + labelAmount })
+            .eq("id", labelId);
+        }
+
+        // Record label financial transaction
+        await supabaseClient.from("label_financial_transactions").insert({
+          label_id: labelId,
+          transaction_type: "revenue",
+          amount: labelAmount,
+          description: `Daily sales royalty share${recoupAmount > 0 ? ` (includes $${recoupAmount} advance recoupment)` : ''}`,
+          related_contract_id: labelRevenue.contractId,
+        });
+
+        // Update contract recouped_amount in database
+        if (recoupAmount > 0) {
+          const { data: currentContract } = await supabaseClient
+            .from("artist_label_contracts")
+            .select("recouped_amount")
+            .eq("id", labelRevenue.contractId)
+            .single();
+
+          if (currentContract) {
+            await supabaseClient
+              .from("artist_label_contracts")
+              .update({ recouped_amount: (currentContract.recouped_amount || 0) + recoupAmount })
+              .eq("id", labelRevenue.contractId);
+          }
+        }
+
+        labelsCredited++;
+        console.log(`Credited label ${labelId}: $${labelAmount} (recouped: $${recoupAmount})`);
+      } catch (labelError) {
+        console.error(`Error crediting label ${labelKey}:`, labelError);
+        errorCount++;
+      }
+    }
+    console.log(`Credited ${labelsCredited} labels with royalty revenue`);
+
     await completeJobRun({
       jobName: "generate-daily-sales",
       runId,
@@ -575,6 +696,8 @@ serve(async (req) => {
         releasesProcessed,
         totalSales,
         errorCount,
+        bandsCredited,
+        labelsCredited,
       },
     });
 
@@ -584,6 +707,8 @@ serve(async (req) => {
         totalSales,
         releasesProcessed,
         errors: errorCount,
+        bandsCredited,
+        labelsCredited,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
