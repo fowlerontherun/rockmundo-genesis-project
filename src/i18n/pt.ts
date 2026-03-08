@@ -79,6 +79,7 @@ export const pt = {
     schedule: "Agenda",
     musicHub: "Hub Musical",
     education: "Educação",
+    teaching: "Ensino",
     skills: "Habilidades",
     perform: "Performar",
     gigs: "Shows",
