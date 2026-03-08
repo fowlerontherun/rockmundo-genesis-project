@@ -1,6 +1,7 @@
 
 import { useState } from "react";
-import { Disc3, GlassWater, Mic2, Sparkles, Users, Loader2, Trophy, Clock, DollarSign, Star, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Disc3, GlassWater, Mic2, Sparkles, Users, Loader2, Trophy, Clock, DollarSign, Star, Zap, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
