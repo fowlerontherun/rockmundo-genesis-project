@@ -127,6 +127,37 @@ serve(async (req) => {
     const avgChemistry = performances.reduce((sum, p) => sum + (p.chemistry_contrib || 0), 0) / performances.length;
     const avgMemberSkill = performances.reduce((sum, p) => sum + (p.member_skill_contrib || 0), 0) / performances.length;
 
+    // === CLOTHING GIG BONUS — Genre-matched clothing buffs ===
+    let clothingFanBonus = 1;
+    let clothingMerchBonus = 1;
+    try {
+      const bandGenre = gig.bands?.genre || '';
+      if (bandGenre) {
+        // Get equipped clothing with genre_style for all band members
+        const { data: equippedClothing } = await supabaseClient
+          .from('player_equipped_clothing')
+          .select('genre_style')
+          .in('user_id', (members => members?.map((m: any) => m.user_id) || [])(
+            (await supabaseClient.from('band_members').select('user_id').eq('band_id', gig.band_id).eq('is_touring_member', false)).data
+          ))
+          .not('genre_style', 'is', null);
+
+        if (equippedClothing && equippedClothing.length > 0) {
+          const normalise = (g: string) => g.toLowerCase().replace(/[\s&-]+/g, '_');
+          const normalGig = normalise(bandGenre);
+          const matchedItems = equippedClothing.filter((c: any) => normalise(c.genre_style) === normalGig).length;
+
+          if (matchedItems > 0) {
+            clothingFanBonus = 1 + Math.min(matchedItems, 3) * 0.05;
+            clothingMerchBonus = 1 + Math.min(matchedItems, 3) * 0.03;
+            console.log(`Clothing bonus: ${matchedItems} genre-matched items → fan ${clothingFanBonus}x, merch ${clothingMerchBonus}x`);
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Clothing bonus check skipped (table may not exist):', e);
+    }
+
     // === MERCHANDISE SALES FROM ACTUAL INVENTORY ===
     const { data: merchInventory } = await supabaseClient
       .from('player_merchandise')
