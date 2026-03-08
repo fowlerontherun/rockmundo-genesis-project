@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.025",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Character Slot Purchase: Fixed CORS headers on create-slot-checkout and fulfill-slot-purchase edge functions — purchases no longer fail with preflight errors" },
+      { type: 'feature', description: "Inbox: Rent charged notification (financial, low priority) sent daily when rent is collected" },
+      { type: 'feature', description: "Inbox: Rent defaulted/eviction alert (financial, urgent) when player can't afford rent" },
+      { type: 'feature', description: "Inbox: Modeling contract payout notification (financial, normal) when contract completes" },
+      { type: 'feature', description: "Inbox: NPC label offer notification (record_label, high) when a label scouts your band" },
+      { type: 'feature', description: "Inbox: Equipment critical condition alert (system, high) when any item drops below 20%" },
+      { type: 'feature', description: "Inbox: Significant fan loss warning (social, normal) when band loses 50+ fans from decay" },
+      { type: 'feature', description: "Inbox: Band salary crisis alert (financial, high) when band can't afford member salaries" },
+      { type: 'feature', description: "Inbox: Investment growth summary (financial, low) daily digest of portfolio growth" },
+      { type: 'feature', description: "Inbox: Daily fame & fans summary (system, low) per-player digest of overnight gains" },
+    ],
+  },
+  {
     version: "1.1.024",
     date: "2026-03-08",
     changes: [

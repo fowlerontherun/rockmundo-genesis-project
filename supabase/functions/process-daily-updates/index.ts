@@ -31,6 +31,26 @@ Deno.serve(async (req) => {
   let processedBands = 0
   let playerSyncs = 0
   let errorCount = 0
+  let inboxSent = 0
+
+  // Helper to send inbox notification (fire-and-forget, never throws)
+  const sendInbox = async (userId: string, category: string, priority: string, title: string, message: string, metadata: Record<string, unknown> = {}, actionType?: string, actionData?: Record<string, unknown>) => {
+    try {
+      await supabase.from('player_inbox').insert({
+        user_id: userId,
+        category,
+        priority,
+        title,
+        message,
+        metadata,
+        action_type: actionType || null,
+        action_data: actionData || null,
+      })
+      inboxSent++
+    } catch (e) {
+      console.error('[Inbox] Failed to send:', e)
+    }
+  }
 
   try {
     console.log(`=== Daily Updates Started at ${new Date().toISOString()} ===`)
@@ -258,6 +278,16 @@ Deno.serve(async (req) => {
           })
 
         processedBands++
+
+        // Inbox: Daily fame/fans summary to band members
+        if (members && members.length > 0) {
+          const playerFameGain = Math.floor(totalFameGain * playerFameShare)
+          const playerFansGain2 = Math.floor(totalFansGain * playerFansShare)
+          for (const member of members) {
+            if (!member.user_id) continue
+            await sendInbox(member.user_id, 'system', 'low', '🌟 Daily Update', `Overnight: your band gained +${totalFameGain} fame and +${totalFansGain} fans. Your share: +${playerFameGain} fame, +${playerFansGain2} fans.`, { band_id: band.id, band_fame_gain: totalFameGain, band_fans_gain: totalFansGain, player_fame_gain: playerFameGain, player_fans_gain: playerFansGain2 })
+          }
+        }
       } catch (error) {
         console.error(`Error processing band ${band.id}:`, error)
         errorCount++
@@ -458,6 +488,8 @@ Deno.serve(async (req) => {
                 .eq('id', rental.id)
               rentalsDefaulted++
               console.log(`Rental ${rental.id} defaulted - player cannot afford rent`)
+              // Inbox: Eviction alert
+              await sendInbox(rental.user_id, 'financial', 'urgent', '🏠 Eviction Notice!', `You couldn't afford your daily rent of $${dailyCharge}. Your rental has been terminated.`, { rental_id: rental.id, daily_charge: dailyCharge }, 'navigate', { route: '/housing' })
             } else {
               await supabase
                 .from('profiles')
@@ -469,6 +501,8 @@ Deno.serve(async (req) => {
                 .update({ last_charged_at: new Date().toISOString() })
                 .eq('id', rental.id)
               rentalsCharged++
+              // Inbox: Rent charged
+              await sendInbox(rental.user_id, 'financial', 'low', '🏠 Rent Charged', `Daily rent of $${dailyCharge} has been deducted from your account.`, { rental_id: rental.id, amount: dailyCharge })
             }
           } catch (rentalError) {
             console.error(`Error processing rental ${rental.id}:`, rentalError)
@@ -508,6 +542,23 @@ Deno.serve(async (req) => {
           }
         }
         console.log(`Investments grown: ${investmentsGrown}`)
+
+        // Inbox: Investment growth summary (batch per user)
+        const { data: investmentsByUser } = await supabase
+          .from('player_investments')
+          .select('user_id, current_value, growth_rate')
+          .gt('growth_rate', 0)
+        const userInvGrowth = new Map<string, number>()
+        for (const inv of investmentsByUser || []) {
+          if (!inv.user_id) continue
+          const growth = Math.round(inv.current_value * (inv.growth_rate || 0))
+          userInvGrowth.set(inv.user_id, (userInvGrowth.get(inv.user_id) || 0) + growth)
+        }
+        for (const [userId, totalGrowth] of userInvGrowth) {
+          if (totalGrowth > 0) {
+            await sendInbox(userId, 'financial', 'low', '📈 Investment Growth', `Your investments grew by $${totalGrowth} overnight.`, { total_growth: totalGrowth }, 'navigate', { route: '/investments' })
+          }
+        }
       }
     } catch (invError) {
       console.error('Error in investment growth:', invError)
@@ -563,6 +614,10 @@ Deno.serve(async (req) => {
             }
 
             modelingCompleted++
+            // Inbox: Modeling payout
+            if (contract.user_id) {
+              await sendInbox(contract.user_id, 'financial', 'normal', '📸 Modeling Payout', `Your modeling contract has been completed! You earned $${contract.compensation || 0}${contract.fame_boost ? ` and +${contract.fame_boost} fame` : ''}.`, { contract_id: contract.id, compensation: contract.compensation, fame_boost: contract.fame_boost })
+            }
           } catch (cErr) {
             console.error(`Error completing modeling contract ${contract.id}:`, cErr)
             errorCount++
@@ -727,6 +782,17 @@ Deno.serve(async (req) => {
             existingPairs.add(`${band.id}:${chosenLabel.id}`)
             npcOffersGenerated++
             console.log(`NPC offer: ${chosenLabel.name} → ${band.name} ($${advance} advance, ${artistRoyalty}% royalty)`)
+
+            // Inbox: Notify band members about label offer
+            const { data: bandMembers } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', band.id)
+              .not('user_id', 'is', null)
+            for (const m of bandMembers || []) {
+              if (!m.user_id) continue
+              await sendInbox(m.user_id, 'record_label', 'high', '🏷️ Record Label Offer!', `${chosenLabel.name} is offering your band a deal: $${advance} advance, ${artistRoyalty}% royalty.`, { label_id: chosenLabel.id, label_name: chosenLabel.name, band_id: band.id, advance, royalty: artistRoyalty }, 'navigate', { route: '/band', tab: 'contracts' })
+            }
           }
         }
       }
@@ -799,6 +865,19 @@ Deno.serve(async (req) => {
 
           fanDecayBands++;
           totalFansLost += casualLost;
+
+          // Inbox: Significant fan loss (>50 fans)
+          if (churn >= 50) {
+            const { data: decayMembers } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', band.id)
+              .not('user_id', 'is', null)
+            for (const m of decayMembers || []) {
+              if (!m.user_id) continue
+              await sendInbox(m.user_id, 'social', 'normal', '📉 Fan Decline', `Your band lost ${churn} fans due to inactivity. Play gigs or release music to keep fans engaged!`, { band_id: band.id, fans_lost: churn, days_inactive: daysSinceActivity }, 'navigate', { route: '/band' })
+            }
+          }
         } catch (decayErr) {
           console.error(`Fan decay error for band ${band.id}:`, decayErr);
         }
@@ -912,6 +991,15 @@ Deno.serve(async (req) => {
         if (newCondition !== currentCondition) {
           await supabase.from('player_equipment').update({ condition: newCondition }).eq('id', item.id);
           equipmentDegraded++;
+
+          // Inbox: Equipment critical condition alert
+          if (newCondition < 20 && currentCondition >= 20) {
+            // Need to find the owner of this equipment
+            const { data: eqItem } = await supabase.from('player_equipment').select('user_id, name').eq('id', item.id).single()
+            if (eqItem?.user_id) {
+              await sendInbox(eqItem.user_id, 'system', 'high', '⚠️ Equipment Failing!', `Your ${eqItem.name || 'equipment'} is in critical condition (${Math.round(newCondition)}%). Get it repaired before it breaks!`, { equipment_id: item.id, condition: newCondition }, 'navigate', { route: '/equipment' })
+            }
+          }
         }
       }
       console.log(`Idle equipment degradation: ${equipmentDegraded} items lost minor condition`);
@@ -978,6 +1066,17 @@ Deno.serve(async (req) => {
             await supabase.from('bands').update({ morale: newMorale }).eq('id', b.id)
             salaryMoraleUpdated++
             console.log(`Band ${b.id}: can't afford salaries ($${totalDailySalary}/day, balance $${balance}), morale ${curMorale} → ${newMorale}`)
+
+            // Inbox: Salary crisis alert to band members
+            const { data: salaryMembers } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', b.id)
+              .not('user_id', 'is', null)
+            for (const m of salaryMembers || []) {
+              if (!m.user_id) continue
+              await sendInbox(m.user_id, 'financial', 'high', '💰 Salary Crisis!', `Your band can't afford member salaries ($${totalDailySalary}/day). Band morale dropped to ${newMorale}. Earn more or reduce costs!`, { band_id: b.id, daily_salary: totalDailySalary, balance, morale: newMorale }, 'navigate', { route: '/band' })
+            }
           }
         } else if (balance > totalDailySalary * 30) {
           // Healthy finances — small morale boost
@@ -1163,7 +1262,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Band Sentiment Drift: ${bandSentimentDrifted}, Equipment Degraded: ${equipmentDegraded}, Feedback Loops: ${feedbackApplied}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Band Sentiment Drift: ${bandSentimentDrifted}, Equipment Degraded: ${equipmentDegraded}, Feedback Loops: ${feedbackApplied}, Inbox Sent: ${inboxSent}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
