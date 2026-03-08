@@ -441,6 +441,7 @@ function App() {
                     <Route path="hub/commerce" element={<CommerceHub />} />
                     <Route path="hub/media" element={<MediaHubPage />} />
                     <Route path="modeling" element={<Modeling />} />
+                    <Route path="producer-career" element={<ProducerCareer />} />
                     
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />

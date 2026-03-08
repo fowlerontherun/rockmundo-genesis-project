@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.918",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Player Producer Career — players with Record Production skills can register as producers, set hourly rates, and earn XP + cash when hired for recording sessions" },
+      { type: 'feature', description: "Producer career page with dashboard (sessions, earnings, XP, rating), profile settings, skill impact display, and session history" },
+      { type: 'feature', description: "Producer selector in recording wizard now has NPC/Player/All toggle filter — player producers must be in the same city as the studio" },
+      { type: 'feature', description: "Player Producer Cards show player name, level, session count, and average rating with a 🎮 Player Producer badge" },
+      { type: 'feature', description: "Producer session reviews — clients can rate player producers 1-5 stars after completed sessions, with auto-averaging" },
+      { type: 'improvement', description: "Quality bonus calculated from Record Production, Mixing, DAW, Composing, and Music Theory skills (capped at 25%, below legendary NPC's 30%)" },
+      { type: 'improvement', description: "Producing XP rewards: base 50/hr + quality bonuses (up to +100 XP for 900+ quality) + 20% genre match bonus" },
+    ],
+  },
+  {
     version: "1.0.917",
     date: "2026-03-08",
     changes: [
