@@ -923,8 +923,105 @@ Deno.serve(async (req) => {
       console.error('Error in media cycle decay:', mediaErr);
     }
 
+    // === CROSS-SYSTEM FEEDBACK LOOPS (v1.0.955) ===
+    // The 4 health pillars influence each other daily
+    console.log('=== Processing Cross-System Feedback Loops ===')
+    let feedbackApplied = 0
+    try {
+      const { data: bandsHealth } = await supabase
+        .from('bands')
+        .select('id, fan_sentiment_score, media_intensity, media_fatigue, reputation_score, morale')
+
+      const feedbackEventInserts: any[] = [];
+      for (const b of bandsHealth || []) {
+        const sentimentScore = (b as any).fan_sentiment_score ?? 0;
+        const mediaIntensity = (b as any).media_intensity ?? 0;
+        const mediaFatigue = (b as any).media_fatigue ?? 0;
+        const reputationScore = (b as any).reputation_score ?? 0;
+        const moraleScore = (b as any).morale ?? 50;
+
+        // Calculate feedback deltas inline (mirrors src/utils/healthSystemFeedback.ts)
+        let sentimentDelta = 0;
+        let reputationDelta = 0;
+        let moraleDelta = 0;
+        let mediaFatigueDelta = 0;
+        const triggers: string[] = [];
+
+        // Reputation → Sentiment
+        if (reputationScore <= -40) { sentimentDelta -= 1.5; triggers.push('Toxic reputation eroding fan sentiment'); }
+        else if (reputationScore <= -20) { sentimentDelta -= 0.5; triggers.push('Controversial reputation hurting sentiment'); }
+        if (reputationScore >= 60) { sentimentDelta += 1; triggers.push('Strong reputation boosting fan sentiment'); }
+
+        // Sentiment → Reputation
+        if (sentimentScore >= 70) { reputationDelta += 0.5; triggers.push('Devoted fanbase improving public image'); }
+        if (sentimentScore <= -50) { reputationDelta -= 1; triggers.push('Hostile fans damaging public perception'); }
+
+        // Media → Reputation
+        if (mediaFatigue >= 70) { reputationDelta -= 1; triggers.push('Media oversaturation causing reputation fatigue'); }
+        if (mediaIntensity >= 60 && reputationScore >= 30) { reputationDelta += 0.5; sentimentDelta += 0.5; triggers.push('Positive media amplifying good reputation'); }
+        if (mediaIntensity >= 60 && reputationScore <= -20) { reputationDelta -= 1; sentimentDelta -= 1; triggers.push('Media spotlight amplifying negative reputation'); }
+
+        // Morale → Sentiment
+        if (moraleScore <= 25) { sentimentDelta -= 1; triggers.push('Low morale causing poor performances'); }
+        if (moraleScore >= 85) { sentimentDelta += 0.5; triggers.push('High morale boosting show quality'); }
+
+        // Sentiment → Morale
+        if (sentimentScore >= 60) { moraleDelta += 1; triggers.push('Fan devotion boosting band morale'); }
+        if (sentimentScore <= -40) { moraleDelta -= 1.5; triggers.push('Fan hostility demoralizing the band'); }
+
+        // Media → Morale
+        if (mediaIntensity >= 70 && moraleScore <= 35) { moraleDelta -= 1; mediaFatigueDelta += 1; triggers.push('Media pressure stressing low-morale band'); }
+        if (mediaIntensity >= 30 && mediaIntensity < 70 && moraleScore >= 60) { moraleDelta += 0.5; triggers.push('Growing media buzz exciting the band'); }
+
+        // Downward spiral
+        const badCount = [sentimentScore <= -30, reputationScore <= -30, moraleScore <= 25, mediaFatigue >= 70].filter(Boolean).length;
+        if (badCount >= 3) { sentimentDelta -= 0.5; reputationDelta -= 0.5; moraleDelta -= 0.5; triggers.push('Downward spiral: multiple systems in crisis'); }
+
+        // Virtuous cycle
+        const goodCount = [sentimentScore >= 50, reputationScore >= 40, moraleScore >= 70, mediaIntensity >= 30 && mediaFatigue <= 40].filter(Boolean).length;
+        if (goodCount >= 3) { sentimentDelta += 0.5; reputationDelta += 0.5; moraleDelta += 0.5; triggers.push('Virtuous cycle: multiple systems thriving'); }
+
+        // Skip if no changes
+        if (sentimentDelta === 0 && reputationDelta === 0 && moraleDelta === 0 && mediaFatigueDelta === 0) continue;
+
+        const newSentiment = Math.max(-100, Math.min(100, parseFloat((sentimentScore + sentimentDelta).toFixed(1))));
+        const newReputation = Math.max(-100, Math.min(100, parseFloat((reputationScore + reputationDelta).toFixed(1))));
+        const newMorale = Math.max(0, Math.min(100, parseFloat((moraleScore + moraleDelta).toFixed(1))));
+        const newMediaFatigue = Math.max(0, Math.min(100, parseFloat((mediaFatigue + mediaFatigueDelta).toFixed(1))));
+
+        const updatePayload: any = {};
+        if (newSentiment !== sentimentScore) updatePayload.fan_sentiment_score = newSentiment;
+        if (newReputation !== reputationScore) updatePayload.reputation_score = newReputation;
+        if (newMorale !== moraleScore) updatePayload.morale = newMorale;
+        if (newMediaFatigue !== mediaFatigue) updatePayload.media_fatigue = newMediaFatigue;
+
+        if (Object.keys(updatePayload).length > 0) {
+          await supabase.from('bands').update(updatePayload).eq('id', b.id);
+          feedbackApplied++;
+
+          // Log feedback events
+          if (triggers.length > 0) {
+            feedbackEventInserts.push({
+              band_id: b.id,
+              event_type: 'feedback_loop',
+              sentiment_change: sentimentDelta,
+              sentiment_after: newSentiment,
+              source: 'cross-system-feedback',
+              description: triggers.join('; '),
+            });
+          }
+        }
+      }
+      if (feedbackEventInserts.length > 0) {
+        await supabase.from('band_sentiment_events').insert(feedbackEventInserts);
+      }
+      console.log(`Cross-system feedback: ${feedbackApplied} bands had health metrics adjusted`);
+    } catch (feedbackErr) {
+      console.error('Error in cross-system feedback:', feedbackErr);
+    }
+
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Band Sentiment Drift: ${bandSentimentDrifted}, Equipment Degraded: ${equipmentDegraded}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Band Sentiment Drift: ${bandSentimentDrifted}, Equipment Degraded: ${equipmentDegraded}, Feedback Loops: ${feedbackApplied}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
