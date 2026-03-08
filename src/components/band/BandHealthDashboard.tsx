@@ -119,6 +119,15 @@ export const BandHealthDashboard = ({
   const overallScore = Math.round(metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length);
   const overallStatus = overallScore >= 75 ? "excellent" : overallScore >= 55 ? "good" : overallScore >= 35 ? "neutral" : overallScore >= 20 ? "warning" : "critical";
 
+  // Cross-system feedback
+  const feedbackDeltas = calculateFeedbackDeltas({
+    sentimentScore,
+    mediaIntensity,
+    mediaFatigue,
+    reputationScore,
+    moraleScore,
+  });
+
   return (
     <Card className="border-border/50 bg-card/80">
       <CardHeader className="pb-2 pt-3 px-3">
