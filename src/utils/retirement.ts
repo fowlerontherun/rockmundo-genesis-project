@@ -35,7 +35,7 @@ export function calculateInheritance(
 
   const inheritedSkills: Record<string, number> = {};
   for (const [skillId, value] of Object.entries(skills)) {
-    inheritedSkills[skillId] = Math.floor(value * 0.2);
+    inheritedSkills[skillId] = Math.floor(value * 0.1);
   }
 
   return {
