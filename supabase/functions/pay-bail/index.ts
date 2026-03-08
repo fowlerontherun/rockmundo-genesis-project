@@ -151,6 +151,34 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === PAY BAIL → MORALE & REPUTATION (v1.0.973) ===
+    // Getting bailed out is a relief; someone else paying shows loyalty/friendship
+    try {
+      const { data: bm } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', imprisonment.user_id)
+        .eq('is_touring_member', false)
+        .limit(1)
+        .maybeSingle();
+      if (bm?.band_id) {
+        const { data: bd } = await supabase.from('bands').select('morale, reputation_score').eq('id', bm.band_id).single();
+        if (bd) {
+          const curM = (bd as any).morale ?? 50;
+          const curR = (bd as any).reputation_score ?? 0;
+          // Self-bail = moderate relief; friend bail = big morale boost
+          const moraleBoost = isSelfBail ? 5 : 8;
+          // Being bailed out by someone else shows community support → small rep boost
+          const repBoost = isSelfBail ? 1 : 3;
+          await supabase.from('bands').update({
+            morale: Math.min(100, curM + moraleBoost),
+            reputation_score: Math.min(100, curR + repBoost),
+          } as any).eq('id', bm.band_id);
+          console.log(`[pay-bail] Bail morale: ${isSelfBail ? 'self' : 'friend'} → morale +${moraleBoost}, rep +${repBoost}`);
+        }
+      }
+    } catch (_e) { /* non-critical */ }
+
     console.log(`[pay-bail] Successfully bailed out ${imprisonment.user_id} for $${bailAmount}`);
 
     return new Response(
