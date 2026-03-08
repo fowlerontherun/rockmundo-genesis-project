@@ -324,7 +324,7 @@ serve(async (req) => {
     const famePenalty = Math.max(0.3, 1 - ((gig.bands.fame || 0) / 10000)); // Higher fame = harder to impress
     // Add ±20% random variance to fan conversion for more unpredictable outcomes
     const fanVariance = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus;
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus * moraleMod;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains
