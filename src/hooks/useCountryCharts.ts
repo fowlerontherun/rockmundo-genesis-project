@@ -573,13 +573,14 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
     };
   });
 
-  // Re-rank entries by appropriate score
+  // FIX: Sort by weekly_plays for streaming (not plays_count which is all-time)
   return realEntries
     .sort((a, b) => {
       if (chartType === "combined") {
         return b.combined_score - a.combined_score;
       }
-      return b.plays_count - a.plays_count;
+      // Use weekly_plays for period-accurate sorting
+      return b.weekly_plays - a.weekly_plays;
     })
     .slice(0, 50)
     .map((entry, index) => ({

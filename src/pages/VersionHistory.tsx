@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.896",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Fixed streaming revenue writes causing ~98% failure rate — decimal-to-integer overflow resolved with Math.round" },
+      { type: 'fix', description: "Fixed country charts collapsing all regions into 'all' — country now included in dedupe key" },
+      { type: 'fix', description: "Fixed chart category contamination — EP/Album/Single filters now use strict scoped chart types instead of merging with base type" },
+      { type: 'fix', description: "Fixed song-level sales inflation — release sales now divided across tracks instead of attributed in full to every track" },
+      { type: 'fix', description: "Fixed daily chart sorting using all-time plays_count instead of period-specific weekly_plays" },
+      { type: 'fix', description: "Fixed combined album/EP charts using streams-only — now includes sales units in combined score" },
+      { type: 'improvement', description: "Streaming analytics now capture deterministic per-region breakdowns instead of single random bucket" },
+      { type: 'improvement', description: "Increased chart query limit from 1000 to 5000 to prevent monthly/yearly data truncation" },
+      { type: 'improvement', description: "High error-ratio cron runs now flagged as effectively failed with error samples in result summary" },
+    ],
+  },
+  {
     version: "1.0.895",
     date: "2026-03-08",
     changes: [
