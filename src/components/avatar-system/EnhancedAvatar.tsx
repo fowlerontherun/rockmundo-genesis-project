@@ -63,7 +63,7 @@ export const EnhancedAvatar = ({ config, animate = true }: EnhancedAvatarProps) 
   // Tattoos and scars
   const tattooStyle = config.tattoo_style;
   const scarStyle = config.scar_style;
-
+  const playerTattoos = (config as any).tattoos as Array<{ body_slot: string; ink_color: string; quality_score: number }> | undefined;
   // Subtle breathing animation
   useFrame(({ clock }) => {
     if (animate && groupRef.current) {
