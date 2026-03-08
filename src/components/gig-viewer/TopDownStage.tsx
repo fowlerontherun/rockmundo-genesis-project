@@ -29,6 +29,8 @@ interface TopDownStageProps {
   crowdMood?: string;
   showStats?: boolean;
   isFinale?: boolean;
+  songTitle?: string;
+  bandName?: string;
 }
 
 // Instrument config with position + animations
