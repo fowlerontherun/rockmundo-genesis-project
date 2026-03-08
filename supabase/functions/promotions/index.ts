@@ -115,6 +115,33 @@ serve(async (req) => {
     });
   }
 
+  // Fetch band health stats for promotion effectiveness modifiers
+  let repMod = 1.0;
+  let sentMod = 1.0;
+  const { data: memberRow } = await supabaseClient
+    .from("band_members")
+    .select("band_id")
+    .eq("user_id", user.id)
+    .eq("role", "leader")
+    .maybeSingle();
+
+  if (memberRow?.band_id) {
+    const { data: bandStats } = await supabaseClient
+      .from("bands")
+      .select("reputation_score, fan_sentiment_score")
+      .eq("id", memberRow.band_id)
+      .single();
+
+    if (bandStats) {
+      const repScore = bandStats.reputation_score ?? 0;
+      const sentScore = bandStats.fan_sentiment_score ?? 0;
+      // 0.8x (toxic) → 1.2x (iconic)
+      repMod = parseFloat((0.8 + ((repScore + 100) / 200) * 0.4).toFixed(2));
+      sentMod = parseFloat((0.8 + ((sentScore + 100) / 200) * 0.4).toFixed(2));
+    }
+  }
+  console.log(`[promotions] Health stat modifiers: repMod=${repMod}, sentMod=${sentMod}`);
+
   let resolvedPlatformId: string | null = platformId ?? null;
   let resolvedPlatformName: string | null = platformName ?? null;
   let revenuePerPlay = 0.003;
