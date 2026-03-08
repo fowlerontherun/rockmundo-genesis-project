@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.992",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Promotions → Reputation + Sentiment Scaling: Paid song promotion effectiveness (streams, listeners, revenue) is now scaled by both reputation (0.8x–1.2x) and fan sentiment (0.8x–1.2x). Reputable bands with engaged fanbases see significantly higher ROI on ad spend" },
+      { type: 'feature', description: "Scheduled PR → Reputation Modifier: PR activity outcomes now pass a reputation modifier (0.8x–1.2x) to the processing pipeline. Toxic bands get diminished returns from PR efforts as media is less receptive" },
+      { type: 'feature', description: "Logistics Contracts → Morale Boost: Successfully completing a logistics contract now awards +2 morale to the company owner's band. Business success lifts team spirits" },
+      { type: 'improvement', description: "Health stats now cross-pollinate into promotions, scheduled PR, and logistics contracts. All three core stats (Morale, Reputation, Sentiment) now influence virtually every revenue and growth system in the simulation" },
+    ],
+  },
+  {
     version: "1.0.991",
     date: "2026-03-08",
     changes: [

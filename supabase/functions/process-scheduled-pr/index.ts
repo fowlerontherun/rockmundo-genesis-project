@@ -30,8 +30,30 @@ serve(async (req) => {
 
     let completed = 0;
     for (const offer of dueOffers || []) {
+      // Fetch band reputation to scale PR outcomes
+      const { data: offerData } = await supabaseClient
+        .from('pr_media_offers')
+        .select('band_id')
+        .eq('id', offer.id)
+        .single();
+
+      let reputationMod = 1.0;
+      if (offerData?.band_id) {
+        const { data: bandStats } = await supabaseClient
+          .from('bands')
+          .select('reputation_score')
+          .eq('id', offerData.band_id)
+          .single();
+
+        if (bandStats) {
+          const repScore = bandStats.reputation_score ?? 0;
+          // 0.8x (toxic) → 1.2x (iconic)
+          reputationMod = parseFloat((0.8 + ((repScore + 100) / 200) * 0.4).toFixed(2));
+        }
+      }
+
       const { error } = await supabaseClient.functions.invoke('process-pr-activity', {
-        body: { offerId: offer.id, action: 'complete' },
+        body: { offerId: offer.id, action: 'complete', reputationMod },
       });
       if (!error) completed++;
     }
