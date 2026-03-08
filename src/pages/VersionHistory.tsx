@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.984",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Reputation → Media Approval Rates: Newspaper, magazine, and podcast submission approval rates are now modified by band reputation. Toxic bands (-100 rep) see approval halved; iconic bands (+100 rep) get near-guaranteed approval. Formula: baseRate × (0.5 + repT) where repT is 0→1" },
+      { type: 'feature', description: "Reputation → Radio Acceptance: Radio station playlist acceptance now factors in band reputation. Good rep (40+) adds +10% acceptance chance, bad rep (-40) subtracts -15%. Radio gatekeepers care about your public image" },
+      { type: 'improvement', description: "Reputation now used as INPUT modifier in 6 systems: gig offers, sponsorship offers, talent scouting, media submissions, radio submissions. Creates meaningful gameplay loop: build reputation → unlock better opportunities" },
+    ],
+  },
+  {
     version: "1.0.983",
     date: "2026-03-08",
     changes: [

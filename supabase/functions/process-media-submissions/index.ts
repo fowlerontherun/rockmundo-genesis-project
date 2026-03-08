@@ -40,7 +40,7 @@ serve(async (req) => {
       .from("newspaper_submissions")
       .select(`
         id, band_id, status, newspaper_id,
-        bands!inner(fame),
+        bands!inner(fame, reputation_score),
         newspapers!inner(min_fame_required, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max)
       `)
       .eq("status", "pending")
@@ -55,8 +55,12 @@ serve(async (req) => {
         const minFame = (sub.newspapers as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        // 70% approval rate for eligible submissions
-        const approved = isEligible && Math.random() < 0.7;
+        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
+        const bandRep = (sub.bands as any)?.reputation_score ?? 0;
+        const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200; // 0 to 1
+        const baseApproval = 0.7;
+        const repModifiedApproval = baseApproval * (0.5 + repT); // 0.35x toxic → 1.05x iconic
+        const approved = isEligible && Math.random() < repModifiedApproval;
 
         if (approved) {
           const newspaper = sub.newspapers as any;
@@ -122,7 +126,7 @@ serve(async (req) => {
       .from("magazine_submissions")
       .select(`
         id, band_id, status, magazine_id,
-        bands!inner(fame),
+        bands!inner(fame, reputation_score),
         magazines!inner(min_fame_required, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max)
       `)
       .eq("status", "pending")
@@ -137,7 +141,11 @@ serve(async (req) => {
         const minFame = (sub.magazines as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        const approved = isEligible && Math.random() < 0.65;
+        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
+        const bandRep = (sub.bands as any)?.reputation_score ?? 0;
+        const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200;
+        const repModifiedApproval = 0.65 * (0.5 + repT);
+        const approved = isEligible && Math.random() < repModifiedApproval;
 
         if (approved) {
           const magazine = sub.magazines as any;
@@ -203,7 +211,7 @@ serve(async (req) => {
       .from("podcast_submissions")
       .select(`
         id, band_id, status, podcast_id,
-        bands!inner(fame),
+        bands!inner(fame, reputation_score),
         podcasts!inner(min_fame_required, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max)
       `)
       .eq("status", "pending")
@@ -218,7 +226,11 @@ serve(async (req) => {
         const minFame = (sub.podcasts as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        const approved = isEligible && Math.random() < 0.75;
+        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
+        const bandRep = (sub.bands as any)?.reputation_score ?? 0;
+        const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200;
+        const repModifiedApproval = 0.75 * (0.5 + repT);
+        const approved = isEligible && Math.random() < repModifiedApproval;
 
         if (approved) {
           const podcast = sub.podcasts as any;

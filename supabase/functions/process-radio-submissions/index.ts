@@ -138,6 +138,19 @@ serve(async (req) => {
         acceptProbability += 0.1; // +10% for established presence
       }
 
+      // === REPUTATION → RADIO ACCEPTANCE MODIFIER (v1.0.984) ===
+      // Good reputation makes radio stations more willing to play your music
+      if (submission.band_id) {
+        try {
+          const { data: bandData } = await supabaseClient.from('bands').select('reputation_score').eq('id', submission.band_id).single();
+          const bandRep = (bandData as any)?.reputation_score ?? 0;
+          if (bandRep >= 40) acceptProbability += 0.1;       // Beloved bands +10%
+          else if (bandRep >= 20) acceptProbability += 0.05;  // Good rep +5%
+          else if (bandRep <= -40) acceptProbability -= 0.15; // Toxic bands -15%
+          else if (bandRep <= -20) acceptProbability -= 0.08; // Bad rep -8%
+        } catch (_e) { /* non-critical */ }
+      }
+
       const isAccepted = Math.random() < acceptProbability;
 
       if (isAccepted) {
