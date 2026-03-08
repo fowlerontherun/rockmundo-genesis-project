@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Activity, Heart, Megaphone, Shield, Smile } from "lucide-react";
+import { Activity, Heart, Megaphone, Shield, Smile, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { getFanSentiment } from "@/utils/fanSentiment";
 import { getMediaCycleState } from "@/utils/mediaCycle";
 import { getReputationState } from "@/utils/publicImageReputation";
 import { getMoraleState } from "@/utils/bandMorale";
+import { calculateFeedbackDeltas } from "@/utils/healthSystemFeedback";
 
 interface BandHealthDashboardProps {
   sentimentScore: number;
