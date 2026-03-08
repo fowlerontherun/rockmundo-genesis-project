@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.915",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Seeded 46 tattoo parlours across 30 cities worldwide with quality tiers 1-5, ranging from elite studios (Sunset Strip, Shibuya Irezumi Masters) to sketchy basement shops (Tepito Ink Den, Hackney Back Alley Ink)" },
+      { type: 'feature', description: "Seeded 60+ named tattoo artists with unique bios, nicknames, specialties, fame levels (5-96), and quality bonuses — scaled to parlour tier" },
+      { type: 'improvement', description: "Tier 5 parlours feature Legendary artists (fame 70-96) who accept custom commissions; Tier 1 parlours have Apprentice artists with minimal bonuses" },
+    ],
+  },
+  {
     version: "1.0.914",
     date: "2026-03-08",
     changes: [
