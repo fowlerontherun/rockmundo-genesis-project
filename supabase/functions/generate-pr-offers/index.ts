@@ -100,7 +100,7 @@ serve(async (req) => {
     // No minimum fame requirement - local media outlets exist for 0 fame bands
     let bandsQuery = supabaseClient
       .from('bands')
-      .select('id, leader_id, fame, total_fans')
+      .select('id, leader_id, fame, total_fans, reputation_score')
       .eq('status', 'active');
 
     if (payload?.bandId) {
