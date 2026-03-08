@@ -278,6 +278,16 @@ Deno.serve(async (req) => {
           })
 
         processedBands++
+
+        // Inbox: Daily fame/fans summary to band members
+        if (members && members.length > 0) {
+          const playerFameGain = Math.floor(totalFameGain * playerFameShare)
+          const playerFansGain2 = Math.floor(totalFansGain * playerFansShare)
+          for (const member of members) {
+            if (!member.user_id) continue
+            await sendInbox(member.user_id, 'system', 'low', '🌟 Daily Update', `Overnight: your band gained +${totalFameGain} fame and +${totalFansGain} fans. Your share: +${playerFameGain} fame, +${playerFansGain2} fans.`, { band_id: band.id, band_fame_gain: totalFameGain, band_fans_gain: totalFansGain, player_fame_gain: playerFameGain, player_fans_gain: playerFansGain2 })
+          }
+        }
       } catch (error) {
         console.error(`Error processing band ${band.id}:`, error)
         errorCount++
