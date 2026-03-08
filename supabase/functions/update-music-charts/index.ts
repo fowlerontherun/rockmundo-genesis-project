@@ -512,12 +512,16 @@ serve(async (req) => {
         const leadSong = sortedSongs[0]?.song;
         const leadSongId = leadSong?.id || null;
 
-        for (const releaseSong of release.release_songs) {
+      // FIX: Divide sales across tracks for song-level attribution
+      const trackCount = Math.max(1, release.release_songs.length);
+      const perTrackSales = sale.quantity_sold / trackCount;
+      
+      for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
           if (!song) continue;
 
           const currentSales = songSales.get(song.id) || 0;
-          songSales.set(song.id, currentSales + sale.quantity_sold);
+          songSales.set(song.id, currentSales + perTrackSales);
 
           // Per-country sales tracking
           const saleCountry = (sale as any).country;
