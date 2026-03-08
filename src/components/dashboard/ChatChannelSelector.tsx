@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { MessageSquare, HelpCircle, Sparkles, MapPin, Crown } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { MessageSquare, HelpCircle, Sparkles, MapPin, Crown, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RealtimeChatPanel } from "@/components/chat/RealtimeChatPanel";
 import { cn } from "@/lib/utils";
