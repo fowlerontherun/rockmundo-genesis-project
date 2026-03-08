@@ -25,7 +25,7 @@ export interface InheritanceResult {
 /**
  * Calculate what the new character inherits
  * - 50% of cash
- * - 20% of all skill levels
+ * - 10% of all skill levels
  */
 export function calculateInheritance(
   currentCash: number,
