@@ -171,6 +171,8 @@ export const es: TranslationKeys = {
     modeling: "Modelaje",
     competitiveCharts: "Charts Competitivos",
     producerCareer: "Carrera de Productor",
+    clothingDesigner: "Diseñador de Moda",
+    clothingShop: "Tienda de Ropa",
     live: "En Vivo",
     events: "Eventos",
     career: "Carrera",

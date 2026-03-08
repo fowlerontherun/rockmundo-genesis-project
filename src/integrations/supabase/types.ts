@@ -15796,6 +15796,171 @@ export type Database = {
           },
         ]
       }
+      player_clothing_brands: {
+        Row: {
+          brand_description: string | null
+          brand_name: string
+          city_id: string | null
+          created_at: string
+          genre_focus: string
+          id: string
+          is_open: boolean
+          logo_url: string | null
+          quality_rating: number
+          reputation: number
+          style_rating: number
+          total_revenue: number
+          total_sales: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_description?: string | null
+          brand_name: string
+          city_id?: string | null
+          created_at?: string
+          genre_focus?: string
+          id?: string
+          is_open?: boolean
+          logo_url?: string | null
+          quality_rating?: number
+          reputation?: number
+          style_rating?: number
+          total_revenue?: number
+          total_sales?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_description?: string | null
+          brand_name?: string
+          city_id?: string | null
+          created_at?: string
+          genre_focus?: string
+          id?: string
+          is_open?: boolean
+          logo_url?: string | null
+          quality_rating?: number
+          reputation?: number
+          style_rating?: number
+          total_revenue?: number
+          total_sales?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_clothing_brands_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_clothing_items: {
+        Row: {
+          brand_id: string
+          category: string
+          created_at: string
+          creator_user_id: string
+          description: string | null
+          genre_style: string
+          id: string
+          is_listed: boolean
+          metadata: Json | null
+          name: string
+          production_cost: number
+          quality_score: number
+          rarity: string
+          sale_price: number
+          stock_quantity: number
+          style_score: number
+          total_sold: number
+        }
+        Insert: {
+          brand_id: string
+          category: string
+          created_at?: string
+          creator_user_id: string
+          description?: string | null
+          genre_style?: string
+          id?: string
+          is_listed?: boolean
+          metadata?: Json | null
+          name: string
+          production_cost?: number
+          quality_score?: number
+          rarity?: string
+          sale_price?: number
+          stock_quantity?: number
+          style_score?: number
+          total_sold?: number
+        }
+        Update: {
+          brand_id?: string
+          category?: string
+          created_at?: string
+          creator_user_id?: string
+          description?: string | null
+          genre_style?: string
+          id?: string
+          is_listed?: boolean
+          metadata?: Json | null
+          name?: string
+          production_cost?: number
+          quality_score?: number
+          rarity?: string
+          sale_price?: number
+          stock_quantity?: number
+          style_score?: number
+          total_sold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_clothing_items_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "player_clothing_brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_clothing_purchases: {
+        Row: {
+          buyer_user_id: string
+          id: string
+          item_id: string
+          price_paid: number
+          purchased_at: string
+          seller_user_id: string
+        }
+        Insert: {
+          buyer_user_id: string
+          id?: string
+          item_id: string
+          price_paid: number
+          purchased_at?: string
+          seller_user_id: string
+        }
+        Update: {
+          buyer_user_id?: string
+          id?: string
+          item_id?: string
+          price_paid?: number
+          purchased_at?: string
+          seller_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_clothing_purchases_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "player_clothing_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_criminal_record: {
         Row: {
           behavior_rating: string

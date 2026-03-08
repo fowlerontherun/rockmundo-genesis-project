@@ -175,6 +175,8 @@ export const en = {
     modeling: "Modeling",
     competitiveCharts: "Competitive Charts",
     producerCareer: "Producer Career",
+    clothingDesigner: "Fashion Designer",
+    clothingShop: "Clothing Shop",
   },
 
   // Journal Page
