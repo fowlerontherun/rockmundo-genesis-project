@@ -39,7 +39,7 @@ export function rollForAddiction(settings: Partial<BehaviorSettings>): { trigger
   const chance = calculateAddictionTriggerChance(settings);
   const triggered = Math.random() < chance;
   // Weighted random type selection
-  const types: AddictionType[] = ["alcohol", "alcohol", "substances", "partying", "gambling"];
+  const types: AddictionType[] = ["alcohol", "alcohol", "substances", "partying", "gambling", "shopping"];
   const type = types[Math.floor(Math.random() * types.length)];
   return { triggered, type };
 }
