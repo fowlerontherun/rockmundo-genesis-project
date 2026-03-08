@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.962",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Chart Hits → Band Health: Songs in the Top 10 combined chart now boost morale, reputation, and fan sentiment. #1 = massive boost (+15/+10/+12), Top 5 = strong (+8/+5/+8), Top 10 = moderate (+4/+3/+5)" },
+      { type: 'feature', description: "Major Event Performance → Band Health: Completing major events (festivals, award shows) now updates morale, reputation, and sentiment based on performance rating. Great performances (85+) give big boosts; poor ones (<55) cause penalties" },
+      { type: 'improvement', description: "Chart boost logic runs after all chart entries are calculated, using the combined chart's Top 10 to identify benefiting bands in a single batch query" },
+      { type: 'improvement', description: "Major event band update now fetches morale/reputation/sentiment alongside existing stats in one query for efficient single-transaction updates" },
+    ],
+  },
+  {
     version: "1.0.961",
     date: "2026-03-08",
     changes: [
