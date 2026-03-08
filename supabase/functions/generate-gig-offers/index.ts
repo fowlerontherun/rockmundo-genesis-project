@@ -45,7 +45,7 @@ serve(async (req) => {
     // Generate offers for all active bands with sufficient fame
     const { data: bands } = await supabaseClient
       .from('bands')
-      .select('id, fame, genre')
+      .select('id, fame, genre, fan_sentiment_score, media_intensity')
       .gte('fame', 100)
       .limit(50);
 
