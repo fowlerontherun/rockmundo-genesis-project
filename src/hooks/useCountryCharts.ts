@@ -236,7 +236,8 @@ export const useCountryCharts = (
           return [];
         }
 
-        return transformAndDeduplicateEntries(data || [], chartType, releaseCategory);
+        // FIX: For daily view, estimate daily values from the 7-day rolling weekly_plays
+        return transformAndDeduplicateEntries(data || [], chartType, releaseCategory, true);
       }
 
       // For weekly/monthly/yearly, aggregate across multiple dates
@@ -360,6 +361,8 @@ export const useCountryCharts = (
         latestTrendChange: number;
         maxWeeksOnChart: number;
         seenDates: Set<string>;
+        peakWeeklyPlays: number;
+        peakCombinedScore: number;
       }>();
 
       // Determine how to aggregate based on the time range:
@@ -403,6 +406,9 @@ export const useCountryCharts = (
               existing.totalWeeklyPlays += estimatedDailyPlays;
               existing.totalCombinedScore += estimatedDailyCombined;
             }
+            // Also track peak weekly value as a floor
+            existing.peakWeeklyPlays = Math.max(existing.peakWeeklyPlays || 0, weeklyPlays);
+            existing.peakCombinedScore = Math.max(existing.peakCombinedScore || 0, combinedScore);
           } else {
             // For weekly: use peak value (rolling window already covers the period)
             existing.totalWeeklyPlays = Math.max(existing.totalWeeklyPlays, weeklyPlays);
@@ -428,15 +434,19 @@ export const useCountryCharts = (
             latestTrendChange: entry.trend_change || 0,
             maxWeeksOnChart: entry.weeks_on_chart || 1,
             seenDates: initialSeenDates,
+            peakWeeklyPlays: weeklyPlays,
+            peakCombinedScore: combinedScore,
           });
         }
       }
 
-      // Round accumulated values for display
+      // Round accumulated values for display and ensure floor of weekly peak
       if (shouldSumAcrossDays) {
         for (const agg of aggregatedMap.values()) {
-          agg.totalWeeklyPlays = Math.round(agg.totalWeeklyPlays);
-          agg.totalCombinedScore = Math.round(agg.totalCombinedScore);
+          // FIX: Ensure monthly/yearly totals are at least the weekly peak
+          // This prevents the case where weekly > monthly due to estimation
+          agg.totalWeeklyPlays = Math.round(Math.max(agg.totalWeeklyPlays, agg.peakWeeklyPlays || 0));
+          agg.totalCombinedScore = Math.round(Math.max(agg.totalCombinedScore, agg.peakCombinedScore || 0));
           agg.totalPlays = agg.totalWeeklyPlays;
         }
       }
@@ -503,7 +513,7 @@ export const useCountryCharts = (
 };
 
 // Helper function to transform and deduplicate entries (for daily view)
-function transformAndDeduplicateEntries(data: any[], chartType: ChartType, releaseCategory: ReleaseCategory): ChartEntry[] {
+function transformAndDeduplicateEntries(data: any[], chartType: ChartType, releaseCategory: ReleaseCategory, isDailyEstimate: boolean = false): ChartEntry[] {
   const isAlbumCategory = releaseCategory === "album" || releaseCategory === "ep";
   
   // Deduplicate by appropriate key - use release_id for albums, song_id for singles
@@ -548,6 +558,10 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
     const weeklyPlays = entry.weekly_plays || 0;
     const combinedScore = entry.combined_score || 0;
     const weeksOnChart = entry.weeks_on_chart || 1;
+
+    // FIX: For daily view, estimate daily values from 7-day rolling totals
+    const displayWeeklyPlays = isDailyEstimate ? Math.round(weeklyPlays / 7) : weeklyPlays;
+    const displayCombinedScore = isDailyEstimate ? Math.round(combinedScore / 7) : combinedScore;
     
     return {
       id: entry.id,
@@ -557,10 +571,10 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
       artist: artistName,
       genre: entry.genre || entry.songs?.genre || "Unknown",
       country: entry.country || "Global",
-      plays_count: playsCount,
-      weekly_plays: weeklyPlays,
-      combined_score: combinedScore,
-      total_sales: playsCount,
+      plays_count: isDailyEstimate ? Math.round(playsCount / 7) : playsCount,
+      weekly_plays: displayWeeklyPlays,
+      combined_score: displayCombinedScore,
+      total_sales: isDailyEstimate ? Math.round(playsCount / 7) : playsCount,
       trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
       trend_change: entry.trend_change || 0,
       weeks_on_chart: weeksOnChart,

@@ -156,7 +156,8 @@ serve(async (req) => {
           bands(name, artist_name),
           release_songs:release_songs!release_songs_release_id_fkey(
             song_id,
-            track_number
+            track_number,
+            is_b_side
           )
         ),
         songs(
@@ -178,9 +179,17 @@ serve(async (req) => {
     }
 
     // Filter to only include songs with status = 'recorded'
-    const streamingData = (streamingDataRaw || []).filter(
-      entry => entry.songs?.status === "recorded"
-    );
+    // Also exclude b-sides from charting
+    const streamingData = (streamingDataRaw || []).filter(entry => {
+      if (entry.songs?.status !== "recorded") return false;
+      
+      // Check if this song is a b-side on its release
+      const releaseSongs = (entry as any).release?.release_songs || [];
+      const thisSongEntry = releaseSongs.find((rs: any) => rs.song_id === entry.song_id);
+      if (thisSongEntry?.is_b_side) return false;
+      
+      return true;
+    });
 
     console.log(`Fetched ${streamingData?.length || 0} streaming entries`);
 
@@ -459,7 +468,9 @@ serve(async (req) => {
                   user_id,
                   band_id,
                   status
-                )
+                ),
+                is_b_side,
+                track_number
               )
             )
           )
@@ -512,13 +523,17 @@ serve(async (req) => {
         const leadSong = sortedSongs[0]?.song;
         const leadSongId = leadSong?.id || null;
 
-      // FIX: Divide sales across tracks for song-level attribution
-      const trackCount = Math.max(1, release.release_songs.length);
+      // FIX: Divide sales across NON-b-side tracks for song-level attribution
+      const nonBSideTracks = release.release_songs.filter((rs: any) => !rs.is_b_side);
+      const trackCount = Math.max(1, nonBSideTracks.length || release.release_songs.length);
       const perTrackSales = sale.quantity_sold / trackCount;
       
       for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
           if (!song) continue;
+          
+          // FIX: Skip b-sides from singles charts - they should not chart individually
+          if ((releaseSong as any).is_b_side) continue;
 
           const currentSales = songSales.get(song.id) || 0;
           songSales.set(song.id, currentSales + perTrackSales);
