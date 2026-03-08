@@ -62,25 +62,13 @@ export default function InboxPage() {
   const hasUnread = (unreadCount || 0) > 0;
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <InboxIcon className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">Inbox</h1>
-            {hasUnread && (
-              <p className="text-sm text-muted-foreground">
-                {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {hasUnread && (
+    <PageLayout className="max-w-3xl">
+      <PageHeader
+        title="Inbox"
+        subtitle={hasUnread ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : undefined}
+        icon={InboxIcon}
+        actions={
+          hasUnread ? (
             <Button
               variant="outline"
               size="sm"
@@ -90,9 +78,9 @@ export default function InboxPage() {
               <CheckCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Mark all read</span>
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       {/* Filters */}
       <InboxFilters
