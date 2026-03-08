@@ -1,6 +1,6 @@
 // Role-Playing API Functions
 
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/lib/supabase-types";
 import type {
   CharacterOrigin,

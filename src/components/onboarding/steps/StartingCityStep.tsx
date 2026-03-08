@@ -1,6 +1,6 @@
 import { MapPin, Loader2, Music, Users, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import type { OnboardingData } from "../OnboardingWizard";
 

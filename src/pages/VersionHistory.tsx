@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.936",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Eliminated duplicate GoTrueClient warning — consolidated all Supabase imports to single client instance" },
+      { type: 'feature', description: "Equipment Degradation System: Gear wears down per gig (drums 2.5/gig, keyboards 0.8/gig) affecting performance quality and breakdown risk" },
+      { type: 'feature', description: "Fan Sentiment System: Tracks how fans *feel* beyond numbers (-100 to 100) — affects merch demand, ticket demand, streaming loyalty, and viral chances" },
+      { type: 'feature', description: "Media Cycle System: Media attention follows hype → peak → decline → dormant phases with fatigue mechanics (oversaturation reduces coverage effectiveness)" },
+      { type: 'improvement', description: "Equipment repair costs scale with condition gap (up to 40% of original price for full restoration)" },
+      { type: 'improvement', description: "Media fatigue reduces intensity gains — spamming releases gives diminishing returns on coverage" },
+      { type: 'improvement', description: "Fan sentiment drifts toward neutral daily; extreme goodwill/hostility requires maintenance" },
+    ],
+  },
+  {
     version: "1.0.935",
     date: "2026-03-08",
     changes: [
