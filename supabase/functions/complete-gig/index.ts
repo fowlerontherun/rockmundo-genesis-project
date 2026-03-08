@@ -528,15 +528,67 @@ serve(async (req) => {
       console.log('gig_fan_conversions table may not exist, skipping');
     }
 
+    // ── 360 Deal: Label takes a cut of touring/gig revenue ──
+    let labelGigCut = 0;
+    let bandGigEarnings = netProfit;
+    
+    try {
+      // Check if band has an active 360 deal
+      const { data: activeContract360 } = await supabaseClient
+        .from('artist_label_contracts')
+        .select('id, label_id, royalty_label_pct, deal_type_id, label_deal_types:deal_type_id(name)')
+        .eq('band_id', gig.band_id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+      
+      if (activeContract360 && netProfit > 0) {
+        const dealTypeName = (activeContract360 as any).label_deal_types?.name || '';
+        if (dealTypeName === '360 Deal') {
+          // 360 deals take label's royalty % from touring revenue too
+          const labelPct = (activeContract360.royalty_label_pct || 20) / 100;
+          labelGigCut = Math.round(netProfit * labelPct);
+          bandGigEarnings = netProfit - labelGigCut;
+          
+          // Credit label
+          const { data: label } = await supabaseClient
+            .from('labels')
+            .select('balance')
+            .eq('id', activeContract360.label_id)
+            .single();
+          
+          if (label) {
+            await supabaseClient
+              .from('labels')
+              .update({ balance: (label.balance || 0) + labelGigCut })
+              .eq('id', activeContract360.label_id);
+          }
+          
+          await supabaseClient.from('label_financial_transactions').insert({
+            label_id: activeContract360.label_id,
+            transaction_type: 'revenue',
+            amount: labelGigCut,
+            description: `360 Deal touring cut from gig (${(labelPct * 100).toFixed(0)}%)`,
+            related_contract_id: activeContract360.id,
+            related_band_id: gig.band_id,
+          });
+          
+          console.log(`360 Deal: label takes $${labelGigCut} from gig (${(labelPct * 100).toFixed(0)}%)`);
+        }
+      }
+    } catch (e) {
+      console.log('Error checking 360 deal for gig:', e);
+    }
+
     // Add earnings record
     const { error: earningsError } = await supabaseClient
       .from('band_earnings')
       .insert({
         band_id: gig.band_id,
         source: 'gig_performance',
-        amount: netProfit,
-        description: `Gig performance earnings`,
-        metadata: { gig_id: gigId, outcome_id: outcome.id }
+        amount: bandGigEarnings,
+        description: `Gig performance earnings${labelGigCut > 0 ? ` (360 deal: $${labelGigCut} to label)` : ''}`,
+        metadata: { gig_id: gigId, outcome_id: outcome.id, label_cut: labelGigCut }
       });
 
     if (earningsError) console.error('Error adding earnings:', earningsError);
