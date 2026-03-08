@@ -1274,9 +1274,8 @@ const Songwriting = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <PageLayout>
+   return (
+    <PageLayout>
         <PageHeader
           title={t('songwriting.title')}
           subtitle={t('songwriting.subtitle')}
