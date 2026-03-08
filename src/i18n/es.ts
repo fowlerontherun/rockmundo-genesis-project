@@ -80,6 +80,7 @@ export const es: TranslationKeys = {
     schedule: "Horario",
     musicHub: "Centro Musical",
     education: "Educación",
+    teaching: "Enseñanza",
     skills: "Habilidades",
     perform: "Actuar",
     gigs: "Conciertos",
