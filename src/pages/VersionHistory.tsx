@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.898",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Subsidiary revenue is now activity-based — Security firms earn from gig events, Factories from merch orders, Logistics from tour/distribution, Venues from actual gig attendance" },
+      { type: 'feature', description: "Recording studios and rehearsal rooms now earn revenue from actual session/rehearsal bookings rather than random daily income" },
+      { type: 'feature', description: "New Deal Type system — 360 Deal, Standard, Distribution, Production, and Licensing deals each have unique effects on revenue streams, cost coverage, and artist freedom" },
+      { type: 'feature', description: "New Label P&L Statement showing categorized revenue (royalties, sales, streaming) vs expenses (advances, manufacturing, marketing, overhead)" },
+      { type: 'feature', description: "Label Finance tab redesigned with tabbed P&L Overview and Transaction History views" },
+      { type: 'improvement', description: "Deal type badges now shown on artist contract cards with tooltip showing full deal terms" },
+      { type: 'improvement', description: "Company transaction descriptions now show actual activity counts (e.g., '5 events serviced this week')" },
+      { type: 'improvement', description: "Subsidiary revenue scales with tier/quality upgrades and actual game world activity volume" },
+      { type: 'fix', description: "Removed random revenue generation from all subsidiary types — all income now tied to real game activity" },
+    ],
+  },
+  {
     version: "1.0.897",
     date: "2026-03-08",
     changes: [
