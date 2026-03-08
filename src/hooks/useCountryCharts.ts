@@ -361,6 +361,8 @@ export const useCountryCharts = (
         latestTrendChange: number;
         maxWeeksOnChart: number;
         seenDates: Set<string>;
+        peakWeeklyPlays: number;
+        peakCombinedScore: number;
       }>();
 
       // Determine how to aggregate based on the time range:
