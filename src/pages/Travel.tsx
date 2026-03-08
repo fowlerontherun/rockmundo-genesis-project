@@ -165,12 +165,12 @@ const Travel = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
+      <PageLayout>
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3"></div>
           <div className="h-48 bg-muted rounded"></div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
