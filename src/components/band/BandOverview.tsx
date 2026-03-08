@@ -195,6 +195,15 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         </Card>
       )}
 
+      {/* Fan Sentiment & Media Cycle */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FanSentimentWidget score={(band as any).fan_sentiment_score ?? 0} />
+        <MediaCycleWidget
+          intensity={(band as any).media_intensity ?? 0}
+          fatigue={(band as any).media_fatigue ?? 0}
+        />
+      </div>
+
       {/* Main Overview Tabs */}
       <BandOverviewTabs
         band={band}

@@ -596,6 +596,11 @@ const MyGear: React.FC = () => {
                       <div>
                         <p className="text-sm font-semibold">{gear.name}</p>
                         <p className="text-xs text-muted-foreground">{formatSectionList(gear.sections)}</p>
+                        {gear.source === "inventory" && (
+                          <EquipmentConditionBadge condition={
+                            inventory.find(i => i.id === gear.id)?.condition ?? 100
+                          } />
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant="outline" className={getQualityBadgeClass(gear)}>
