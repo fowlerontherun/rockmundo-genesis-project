@@ -261,8 +261,9 @@ export default function WellnessPage() {
       )}
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="conditions">Conditions</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="hospital">Hospital</TabsTrigger>
           <TabsTrigger value="addictions">Addictions</TabsTrigger>
