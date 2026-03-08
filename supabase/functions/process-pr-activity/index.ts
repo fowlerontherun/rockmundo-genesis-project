@@ -315,13 +315,24 @@ serve(async (req) => {
 
           const newSentiment = Math.min(100, curSentiment + boosts.sentiment);
           const newIntensity = Math.min(100, curIntensity + Math.round(boosts.intensity * fatigueReduction));
+          const newRep = Math.min(100, curRep + repBoost);
+          const newMorale = Math.min(100, curMorale + moraleBoost);
           await supabaseClient.from('bands').update({
             fan_sentiment_score: newSentiment,
             media_intensity: newIntensity,
             media_fatigue: Math.min(100, curFatigue + boosts.fatigue),
-            reputation_score: Math.min(100, curRep + repBoost),
-            morale: Math.min(100, curMorale + moraleBoost),
+            reputation_score: newRep,
+            morale: newMorale,
           } as any).eq('id', bandId);
+
+          // Health event logs (v1.0.998)
+          try {
+            await supabaseClient.from('band_health_events').insert([
+              { band_id: bandId, event_type: 'sentiment', delta: boosts.sentiment, new_value: newSentiment, source: 'pr_activity', description: `${offer.media_type.toUpperCase()} appearance on ${outletName}` },
+              { band_id: bandId, event_type: 'reputation', delta: repBoost, new_value: newRep, source: 'pr_activity', description: `${offer.media_type.toUpperCase()} PR boosted reputation` },
+              { band_id: bandId, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'pr_activity', description: `${offer.media_type.toUpperCase()} appearance morale boost` },
+            ]);
+          } catch (_) {}
 
           await supabaseClient.from('band_sentiment_events').insert({
             band_id: bandId,

@@ -183,6 +183,8 @@ Deno.serve(async (req) => {
               const newMorale = Math.max(0, (band.morale ?? 50) - 2);
               await supabase.from('bands').update({ morale: newMorale }).eq('id', bandId);
               console.log(`[process-company-taxes] Applied -2 morale to band ${bandId} (tax stress)`);
+              // Health event log (v1.0.998)
+              try { await supabase.from('band_health_events').insert({ band_id: bandId, event_type: 'morale', delta: -2, new_value: newMorale, source: 'company_taxes', description: `Monthly tax payment: $${taxAmount.toLocaleString()}` }); } catch (_) {}
             }
           }
         }

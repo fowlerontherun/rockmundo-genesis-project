@@ -156,8 +156,11 @@ serve(async (req) => {
                 const { data: bd } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
                 if (bd) {
                   const moralePenalty = severity >= 50 ? -6 : severity >= 30 ? -3 : -1;
-                  await supabase.from('bands').update({ morale: Math.max(0, ((bd as any).morale ?? 50) + moralePenalty) } as any).eq('id', bm.band_id);
+                  const newMorale = Math.max(0, ((bd as any).morale ?? 50) + moralePenalty);
+                  await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
                   console.log(`[complete-travel] Travel hazard morale penalty: severity ${severity} → morale ${moralePenalty}`);
+                  // Health event log (v1.0.998)
+                  try { await supabase.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moralePenalty, new_value: newMorale, source: 'travel_hazard', description: `Travel hazard: ${conditionDef.name.replace(/_/g, ' ')} (severity ${severity})` }); } catch (_) {}
                 }
               }
             } catch (_e) { /* non-critical */ }
