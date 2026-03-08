@@ -114,6 +114,46 @@ Deno.serve(async (req) => {
           }
         }
 
+        // === TEACHING SESSION → MORALE & REPUTATION (v1.0.972) ===
+        // Teaching others is a generous act that boosts reputation; both parties feel good
+        try {
+          // Teacher gets reputation boost (mentoring)
+          const { data: teacherBm } = await supabase
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', session.teacher_profile_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+          if (teacherBm?.band_id) {
+            const { data: bd } = await supabase.from('bands').select('morale, reputation_score').eq('id', teacherBm.band_id).single();
+            if (bd) {
+              const curM = (bd as any).morale ?? 50;
+              const curR = (bd as any).reputation_score ?? 0;
+              await supabase.from('bands').update({
+                morale: Math.min(100, curM + 3),
+                reputation_score: Math.min(100, curR + 4), // mentoring boosts rep
+              } as any).eq('id', teacherBm.band_id);
+              console.log(`Teaching session: teacher band ${teacherBm.band_id} → morale +3, rep +4`);
+            }
+          }
+          // Student gets morale boost (learning feels good)
+          const { data: studentBm } = await supabase
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', session.student_profile_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+          if (studentBm?.band_id && studentBm.band_id !== teacherBm?.band_id) {
+            const { data: bd2 } = await supabase.from('bands').select('morale').eq('id', studentBm.band_id).single();
+            if (bd2) {
+              await supabase.from('bands').update({ morale: Math.min(100, ((bd2 as any).morale ?? 50) + 2) } as any).eq('id', studentBm.band_id);
+              console.log(`Teaching session: student band ${studentBm.band_id} → morale +2`);
+            }
+          }
+        } catch (_e) { /* non-critical */ }
+
         // Log activity for both players
         const activityMessage = `Teaching session completed: ${session.skill_slug} (${session.session_duration_days} days)`;
 

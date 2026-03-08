@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.972",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Teaching Sessions → Morale & Reputation: Completing a teaching session boosts the teacher's band reputation by +4 (mentoring is respected) and morale by +3. Students get +2 morale from learning" },
+      { type: 'feature', description: "Prison Release → Morale & Reputation: Getting released from prison gives a morale boost scaled by behavior score (exemplary +10, good +7, average +4, poor +2). Good behavior also recovers +3 reputation" },
+      { type: 'feature', description: "Organic Follower Growth → Morale: Gaining 2+ organic social media followers in a cycle gives +1-2 morale. Watching your fanbase grow naturally is validating" },
+      { type: 'improvement', description: "Teaching sessions now look up band membership for both teacher and student separately. Release-prisoners fetches morale alongside reputation for combined update" },
+    ],
+  },
     version: "1.0.971",
     date: "2026-03-08",
     changes: [
