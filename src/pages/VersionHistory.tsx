@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.970",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Imprisonment → Morale & Reputation: A band member getting imprisoned tanks morale by -15 and reputation by -10. Having a member in jail is devastating for the band's image and spirit" },
+      { type: 'feature', description: "Morale → Gig Offers: Band morale now affects gig offer payouts via a 0.8x-1.2x modifier. Demoralized bands get worse deals; energized bands command premium payouts" },
+      { type: 'feature', description: "Daily Reputation Regression: Reputation now passively drifts toward 0 each day. Positive rep decays 3% daily, negative rep recovers 2% daily — scandals linger longer than good deeds" },
+      { type: 'improvement', description: "Gig offer generation now fetches morale alongside existing band fields. Daily updates now process both morale and reputation regression in the same transaction" },
+    ],
+  },
+  {
     version: "1.0.969",
     date: "2026-03-08",
     changes: [
