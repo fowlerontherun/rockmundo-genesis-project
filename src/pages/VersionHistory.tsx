@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.966",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Open Mic → Morale: Performing at open mics affects band morale based on rating. Great performances (85+) give +4, good (70+) give +2, decent (50+) give +1, poor performances cost -2" },
+      { type: 'feature', description: "Self-Promotion → Morale: Completing self-promotion activities boosts morale (+1 to +3 based on fans gained). Hustling and growing the fanbase feels productive" },
+      { type: 'feature', description: "Travel Hazards → Morale: Travel injuries and sickness now reduce band morale. Severe conditions (50+ severity) cost -6, moderate (30+) cost -3, mild cost -1" },
+      { type: 'improvement', description: "Open mic and self-promotion band updates now fetch morale alongside existing stats for single-transaction updates" },
+    ],
+  },
+  {
     version: "1.0.965",
     date: "2026-03-08",
     changes: [

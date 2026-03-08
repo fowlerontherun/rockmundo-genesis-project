@@ -148,6 +148,19 @@ serve(async (req) => {
             });
 
             console.log(`[complete-travel] Travel hazard triggered for user ${travel.user_id}: ${conditionDef.name} (severity ${severity})`);
+
+            // === TRAVEL HAZARD → MORALE (v1.0.966) ===
+            try {
+              const { data: bm } = await supabase.from('band_members').select('band_id').eq('user_id', travel.user_id).eq('is_touring_member', false).limit(1).maybeSingle();
+              if (bm?.band_id) {
+                const { data: bd } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
+                if (bd) {
+                  const moralePenalty = severity >= 50 ? -6 : severity >= 30 ? -3 : -1;
+                  await supabase.from('bands').update({ morale: Math.max(0, ((bd as any).morale ?? 50) + moralePenalty) } as any).eq('id', bm.band_id);
+                  console.log(`[complete-travel] Travel hazard morale penalty: severity ${severity} → morale ${moralePenalty}`);
+                }
+              }
+            } catch (_e) { /* non-critical */ }
           }
         }
 

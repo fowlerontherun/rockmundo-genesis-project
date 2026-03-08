@@ -98,17 +98,27 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Update band's fame and fans
-        const newFame = (activity.bands?.fame || 0) + fameGained;
-        const newFans = (activity.bands?.total_fans || 0) + fansGained;
-
-        await supabase
+        // Update band's fame, fans, and morale
+        const { data: currentBand } = await supabase
           .from("bands")
-          .update({
-            fame: newFame,
-            total_fans: newFans,
-          })
-          .eq("id", activity.band_id);
+          .select("fame, total_fans, morale")
+          .eq("id", activity.band_id)
+          .single();
+
+        if (currentBand) {
+          // === SELF-PROMOTION → MORALE (v1.0.966) ===
+          const curMorale = (currentBand as any).morale ?? 50;
+          const moraleBoost = fansGained >= 50 ? 3 : fansGained >= 20 ? 2 : 1;
+
+          await supabase
+            .from("bands")
+            .update({
+              fame: (currentBand.fame || 0) + fameGained,
+              total_fans: (currentBand.total_fans || 0) + fansGained,
+              morale: Math.min(100, curMorale + moraleBoost),
+            } as any)
+            .eq("id", activity.band_id);
+        }
 
         // Record fame event
         await supabase.from("band_fame_events").insert({
