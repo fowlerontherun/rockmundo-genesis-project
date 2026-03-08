@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.003",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Added back-to-hub navigation on every sub-page via PageHeader backTo prop. All pages now link back to their parent hub: Music, Band & Live, World & Social, Career & Business, Character, or Dashboard" },
+    ],
+  },
+  {
     version: "1.1.002",
     date: "2026-03-08",
     changes: [

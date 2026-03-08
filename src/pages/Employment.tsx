@@ -449,6 +449,8 @@ export default function Employment() {
         <PageHeader
           title="Employment"
           subtitle={currentCityName ? `Find jobs to earn money while pursuing your music career • Currently in: ${currentCityName}` : "Find jobs to earn money while pursuing your music career"}
+          backTo="/hub/career-business"
+          backLabel="Back to Career & Business"
           icon={Briefcase}
         />
 

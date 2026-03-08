@@ -179,6 +179,8 @@ const Travel = () => {
       <PageHeader
         title={t('travel.title')}
         subtitle={t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
+        backTo="/hub/world-social"
+        backLabel="Back to World & Social"
         icon={Globe}
       />
 

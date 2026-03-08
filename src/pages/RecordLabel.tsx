@@ -197,6 +197,8 @@ const RecordLabel = () => {
       <PageHeader
         title="Record Label Hub"
         subtitle={`Scout label partners, manage release campaigns, and monitor royalties. Launching a label requires at least $${formattedMinimumBalance}. Current balance: $${formattedPersonalBalance}.`}
+        backTo="/hub/career-business"
+        backLabel="Back to Career & Business"
       />
 
       {/* Deal Types Explained */}

@@ -225,6 +225,11 @@ export default function BandManager() {
 
   return (
     <PageLayout>
+      <PageHeader
+        title=""
+        backTo="/hub/band-live"
+        backLabel="Back to Band & Live"
+      />
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           {/* Band Info with Logo */}

@@ -109,6 +109,8 @@ export default function Awards() {
         title="Music Awards"
         subtitle="Compete for glory at the world's biggest music ceremonies"
         icon={Trophy}
+        backTo="/hub/band-live"
+        backLabel="Back to Band & Live"
       />
 
         {/* Player wins summary */}

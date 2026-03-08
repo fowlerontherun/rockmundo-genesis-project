@@ -26,6 +26,8 @@ const Schedule = () => {
       <PageHeader
         title="Schedule"
         subtitle="Plan and manage your activities"
+        backTo="/dashboard"
+        backLabel="Back to Dashboard"
         icon={Calendar}
         actions={
           <div className="flex gap-2 flex-wrap">

@@ -59,6 +59,8 @@ export default function HallOfFame() {
       <PageHeader
         title="Hall of Fame"
         subtitle="Legendary musicians who've left their mark on Rockmundo"
+        backTo="/hub/character"
+        backLabel="Back to Character"
         icon={Trophy}
       />
 

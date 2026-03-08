@@ -105,6 +105,8 @@ const Lottery = () => {
       <PageHeader
         title="Weekly Lottery"
         subtitle="Pick 7 numbers + 1 bonus for a chance to win big!"
+        backTo="/hub/world-social"
+        backLabel="Back to World & Social"
         icon={Ticket}
         actions={
           <div className="flex flex-col items-end gap-1">

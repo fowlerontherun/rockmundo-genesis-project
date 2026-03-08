@@ -836,6 +836,8 @@ const Merchandise = () => {
       <PageHeader
         title="Merchandise Operations"
         subtitle={`Manage ${bandName}'s merch catalogue, monitor sell-through, and prep your next drop without leaving the control room.`}
+        backTo="/hub/career-business"
+        backLabel="Back to Career & Business"
         icon={Shirt}
       />
 

@@ -284,6 +284,8 @@ export default function RelationshipsPage() {
       <PageHeader
         title="Social & Relationships"
         subtitle="Manage your connections, track chemistry, and navigate the drama of the music world."
+        backTo="/hub/world-social"
+        backLabel="Back to World & Social"
         icon={Heart}
         actions={
           <div className="flex items-center gap-2">
