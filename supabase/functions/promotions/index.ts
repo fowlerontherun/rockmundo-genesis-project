@@ -184,9 +184,11 @@ serve(async (req) => {
   const newPlacements = resolvedAction === "playlist_submission"
     ? 1
     : Math.max(1, Math.round(playlistsTargeted * 0.35));
-  const streamIncrease = resolvedAction === "playlist_submission"
+  const baseStreamIncrease = resolvedAction === "playlist_submission"
     ? 6000 + Math.round(numericBudget * 8)
     : Math.max(4000, Math.round(newPlacements * 7000 + numericBudget * 4));
+  // Apply reputation + sentiment modifiers to promotion effectiveness
+  const streamIncrease = Math.round(baseStreamIncrease * repMod * sentMod);
   const listenersDelta = Math.max(250, Math.round(streamIncrease * 0.35));
   const revenueDelta = Math.max(25, Math.round(streamIncrease * revenuePerPlay));
 

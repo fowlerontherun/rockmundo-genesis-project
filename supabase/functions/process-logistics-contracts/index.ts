@@ -108,6 +108,31 @@ Deno.serve(async (req) => {
         console.log(`[process-logistics-contracts] Completed contract ${contract.id}: $${contractValue.toFixed(2)}`);
       }
 
+      // Award +2 morale to the company owner's band on contract completion
+      const { data: ownerMember } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', logisticsCompany.company_id)
+        .eq('role', 'leader')
+        .maybeSingle();
+
+      if (ownerMember?.band_id) {
+        const { data: ownerBand } = await supabase
+          .from('bands')
+          .select('morale')
+          .eq('id', ownerMember.band_id)
+          .single();
+
+        if (ownerBand) {
+          const newMorale = Math.min(100, (ownerBand.morale ?? 50) + 2);
+          await supabase
+            .from('bands')
+            .update({ morale: newMorale })
+            .eq('id', ownerMember.band_id);
+          console.log(`[process-logistics-contracts] Morale +2 for band ${ownerMember.band_id} (now ${newMorale})`);
+        }
+      }
+
       completedContracts++;
       processedCount++;
     }
