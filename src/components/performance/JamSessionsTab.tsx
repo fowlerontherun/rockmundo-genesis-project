@@ -286,6 +286,23 @@ export function JamSessionsTab() {
 
   const isJoining = (sessionId: string) => joiningSessionId === sessionId;
 
+  // If actively jamming, show the gameplay component
+  const activeSession = activeJamSessionId ? jamSessions.find(s => s.id === activeJamSessionId) : null;
+  if (activeSession && user) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <JamSessionGameplay
+          sessionId={activeSession.id}
+          sessionName={activeSession.name}
+          genre={activeSession.genre || "Rock"}
+          userId={user.id}
+          bandId={undefined}
+          onComplete={() => setActiveJamSessionId(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <Card className="lg:col-span-1 self-start">
