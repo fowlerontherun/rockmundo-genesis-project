@@ -1628,6 +1628,47 @@ export type Database = {
           },
         ]
       }
+      band_health_events: {
+        Row: {
+          band_id: string
+          created_at: string
+          delta: number
+          description: string | null
+          event_type: string
+          id: string
+          new_value: number
+          source: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          delta: number
+          description?: string | null
+          event_type: string
+          id?: string
+          new_value: number
+          source: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          delta?: number
+          description?: string | null
+          event_type?: string
+          id?: string
+          new_value?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_health_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_history: {
         Row: {
           band_id: string
