@@ -171,6 +171,21 @@ export function useBehaviorSettings() {
     enabled: !!user?.id,
   });
 
+  // Fetch unlocked advanced behaviors
+  const { data: unlockedBehaviors } = useQuery({
+    queryKey: ["unlocked-behaviors", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("player_unlocked_behaviors")
+        .select("behavior_key")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return (data || []).map((r: any) => r.behavior_key as string);
+    },
+    enabled: !!user?.id,
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<BehaviorSettings>) => {
       if (!user?.id || !settings?.id) throw new Error("No user or settings");
@@ -207,5 +222,6 @@ export function useBehaviorSettings() {
     riskScore,
     riskLevel,
     healthModifiers,
+    unlockedBehaviors: unlockedBehaviors || [],
   };
 }
