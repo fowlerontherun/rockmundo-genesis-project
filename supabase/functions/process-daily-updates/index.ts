@@ -692,6 +692,103 @@ Deno.serve(async (req) => {
       console.error('Error in NPC label scouting:', scoutError)
     }
 
+    // === FAN LOYALTY DECAY (v1.0.932) ===
+    console.log('=== Processing Fan Loyalty Decay ===')
+    let fanDecayBands = 0
+    let totalFansLost = 0
+    try {
+      const GRACE_PERIOD_DAYS = 7;
+      const CASUAL_DAILY_DECAY = 0.02;
+      const DEDICATED_DAILY_DOWNGRADE = 0.005;
+      const SUPERFAN_DAILY_DOWNGRADE = 0.002;
+
+      for (const band of bands || []) {
+        try {
+          // Get most recent activity date
+          const activityChecks = await Promise.all([
+            supabase.from('gigs').select('performance_date').eq('band_id', band.id)
+              .eq('status', 'completed').order('performance_date', { ascending: false }).limit(1),
+            supabase.from('song_releases').select('created_at').eq('band_id', band.id)
+              .order('created_at', { ascending: false }).limit(1),
+          ]);
+
+          const dates = activityChecks
+            .map(c => c.data?.[0])
+            .filter(Boolean)
+            .map(d => new Date((d as any).performance_date || (d as any).created_at).getTime())
+            .filter(t => t > 0);
+
+          const mostRecent = dates.length > 0 ? Math.max(...dates) : Date.now() - 30 * 24 * 60 * 60 * 1000;
+          const daysSinceActivity = Math.floor((Date.now() - mostRecent) / (1000 * 60 * 60 * 24));
+
+          if (daysSinceActivity <= GRACE_PERIOD_DAYS) continue;
+
+          const activeDays = daysSinceActivity - GRACE_PERIOD_DAYS;
+          const fameProtection = (band.fame || 0) >= 10000 ? 0.3 : (band.fame || 0) >= 5000 ? 0.2 : (band.fame || 0) >= 1000 ? 0.1 : 0;
+          const decayMult = 1 - fameProtection;
+
+          // Fetch current fan tiers
+          const { data: freshBand } = await supabase
+            .from('bands')
+            .select('casual_fans, dedicated_fans, superfans, total_fans')
+            .eq('id', band.id)
+            .single();
+
+          if (!freshBand) continue;
+
+          const casualLost = Math.floor((freshBand.casual_fans || 0) * (1 - Math.pow(1 - CASUAL_DAILY_DECAY * decayMult, activeDays)));
+          const dedicatedDown = Math.floor((freshBand.dedicated_fans || 0) * (1 - Math.pow(1 - DEDICATED_DAILY_DOWNGRADE * decayMult, activeDays)));
+          const superfanDown = Math.floor((freshBand.superfans || 0) * (1 - Math.pow(1 - SUPERFAN_DAILY_DOWNGRADE * decayMult, activeDays)));
+
+          const churn = casualLost + dedicatedDown + superfanDown;
+          if (churn === 0) continue;
+
+          const newCasual = Math.max(0, (freshBand.casual_fans || 0) - casualLost + dedicatedDown);
+          const newDedicated = Math.max(0, (freshBand.dedicated_fans || 0) - dedicatedDown + superfanDown);
+          const newSuperfans = Math.max(0, (freshBand.superfans || 0) - superfanDown);
+
+          await supabase.from('bands').update({
+            casual_fans: newCasual,
+            dedicated_fans: newDedicated,
+            superfans: newSuperfans,
+            total_fans: newCasual + newDedicated + newSuperfans,
+          }).eq('id', band.id);
+
+          fanDecayBands++;
+          totalFansLost += casualLost;
+        } catch (decayErr) {
+          console.error(`Fan decay error for band ${band.id}:`, decayErr);
+        }
+      }
+      console.log(`Fan decay: ${fanDecayBands} inactive bands, ${totalFansLost} casual fans lost`);
+    } catch (fanDecayError) {
+      console.error('Error in fan loyalty decay:', fanDecayError);
+    }
+
+    // === REPUTATION DRIFT (v1.0.932) ===
+    console.log('=== Processing Reputation Drift ===')
+    let reputationDrifted = 0
+    try {
+      const { data: profilesWithRep } = await supabase
+        .from('profiles')
+        .select('id, reputation_score')
+        .not('reputation_score', 'is', null)
+
+      for (const p of profilesWithRep || []) {
+        const score = p.reputation_score || 0;
+        if (Math.abs(score) <= 10) continue;
+        const drift = score > 0 ? -0.5 : 0.5;
+        const newScore = Math.max(-100, Math.min(100, parseFloat((score + drift).toFixed(1))));
+        if (newScore !== score) {
+          await supabase.from('profiles').update({ reputation_score: newScore } as any).eq('id', p.id);
+          reputationDrifted++;
+        }
+      }
+      console.log(`Reputation drift: ${reputationDrifted} profiles adjusted toward neutral`);
+    } catch (repErr) {
+      console.error('Error in reputation drift:', repErr);
+    }
+
     console.log(`=== Daily Updates Complete ===`)
     console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Errors: ${errorCount}`)
 

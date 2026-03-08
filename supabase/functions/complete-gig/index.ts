@@ -244,8 +244,39 @@ serve(async (req) => {
     const equipmentCost = Math.floor(avgEquipment * 2); // Wear and tear
     const totalCosts = crewCost + equipmentCost + merchCost;
 
-    // Calculate total revenue and profit
-    const totalRevenue = outcome.ticket_revenue + merchRevenue;
+    // === CITY ECONOMY MODIFIER (v1.0.932) ===
+    // Apply dynamic city economic conditions to earnings
+    let economyMultiplier = 1.0;
+    let economyPhase = 'stable';
+    try {
+      const cityName = gig.venues?.cities?.name || '';
+      if (cityName) {
+        const GAME_EPOCH_MS = new Date("2026-01-01T00:00:00Z").getTime();
+        const gameDay = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / (1000 * 60 * 60 * 24)));
+        function cityHash(s: string): number {
+          let h = 0;
+          for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+          return Math.abs(h);
+        }
+        const seed = cityHash(cityName);
+        const period = 120 + (seed % 120);
+        const phase = (seed % 360) * (Math.PI / 180);
+        const wave = Math.sin((2 * Math.PI * gameDay) / period + phase);
+        if (wave > 0.6) { economyMultiplier = 1.35; economyPhase = 'boom'; }
+        else if (wave > 0.2) { economyMultiplier = 1.15; economyPhase = 'growth'; }
+        else if (wave > -0.2) { economyMultiplier = 1.0; economyPhase = 'stable'; }
+        else if (wave > -0.6) { economyMultiplier = 0.8; economyPhase = 'recession'; }
+        else { economyMultiplier = 0.6; economyPhase = 'depression'; }
+        console.log(`City economy: ${cityName} is in ${economyPhase} (${economyMultiplier}x earnings)`);
+      }
+    } catch (e) {
+      console.log('City economy calc skipped:', e);
+    }
+
+    // Calculate total revenue and profit (with city economy applied)
+    const adjustedTicketRevenue = Math.round(outcome.ticket_revenue * economyMultiplier);
+    const adjustedMerchRevenue = Math.round(merchRevenue * economyMultiplier);
+    const totalRevenue = adjustedTicketRevenue + adjustedMerchRevenue;
     const netProfit = totalRevenue - totalCosts;
 
     // Calculate fame gained - balanced formula with variance

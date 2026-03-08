@@ -206,12 +206,56 @@ Deno.serve(async (req) => {
 
     const analyticsDate = new Date().toISOString().split('T')[0];
 
+    // === GENRE TREND & SEASONAL MODIFIERS (v1.0.932) ===
+    // Deterministic genre trend using sine waves (mirrors client genreTrends.ts)
+    const GAME_EPOCH_MS = new Date("2026-01-01T00:00:00Z").getTime();
+    const gameDaysElapsed = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / (1000 * 60 * 60 * 24)));
+    function genreHash(s: string): number {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    }
+    function getGenreTrendScore(genre: string): number {
+      const seed = genreHash(genre);
+      const period = 60 + (seed % 60);
+      const phase = (seed % 360) * (Math.PI / 180);
+      const wave = Math.sin((2 * Math.PI * gameDaysElapsed) / period + phase);
+      const drift = Math.sin((2 * Math.PI * gameDaysElapsed) / 300 + phase * 0.5) * 0.1;
+      return Math.max(0.5, Math.min(1.5, 1.0 + wave * 0.35 + drift));
+    }
+
+    // Seasonal streaming modifier
+    const monthIndex = new Date().getMonth(); // 0-11
+    const season = monthIndex >= 2 && monthIndex <= 4 ? 'spring'
+      : monthIndex >= 5 && monthIndex <= 7 ? 'summer'
+      : monthIndex >= 8 && monthIndex <= 10 ? 'autumn' : 'winter';
+    const SEASONAL_STREAM_MOD: Record<string, number> = { spring: 1.05, summer: 0.9, autumn: 1.1, winter: 1.25 };
+    const seasonalStreamMod = SEASONAL_STREAM_MOD[season] || 1.0;
+
+    // Pre-fetch band genres for trend lookup
+    let bandGenreMap = new Map<string, string>();
+    if (bandIds.length > 0) {
+      const { data: bandGenres } = await supabase
+        .from('bands')
+        .select('id, genre')
+        .in('id', bandIds);
+      for (const b of bandGenres || []) {
+        if (b.genre) bandGenreMap.set(b.id, b.genre);
+      }
+    }
+
+    console.log(`Genre trend & seasonal modifiers active: season=${season} (${seasonalStreamMod}x), gameDay=${gameDaysElapsed}`);
+
     for (const release of streamingReleases || []) {
       try {
         const bandId = release.band_id || (release.songs as any)?.band_id;
         const bandStats = bandId ? bandFameMap.get(bandId) : undefined;
         const bandFame = bandStats?.fame || 0;
         const bandTotalFans = bandStats?.totalFans || 0;
+
+        // Genre trend multiplier
+        const bandGenre = bandId ? (bandGenreMap.get(bandId) || '') : '';
+        const genreTrendMult = bandGenre ? getGenreTrendScore(bandGenre) : 1.0;
 
         // Fame-scaled base streams
         const fameScale = 1 + Math.pow(bandFame / 100, 1.4);
@@ -239,7 +283,8 @@ Deno.serve(async (req) => {
 
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus);
+        // Apply genre trend + seasonal modifier to daily streams
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
         // Build deterministic region breakdown based on territories/fans
