@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { toast } from "sonner";
 
+import staycationImg from "@/assets/holidays/staycation.jpg";
+import beachResortImg from "@/assets/holidays/beach-resort.jpg";
+import mountainCabinImg from "@/assets/holidays/mountain-cabin.jpg";
+import tropicalIslandImg from "@/assets/holidays/tropical-island.jpg";
+import countrysideImg from "@/assets/holidays/countryside.jpg";
+import spaResortImg from "@/assets/holidays/spa-resort.jpg";
+import skiChaletImg from "@/assets/holidays/ski-chalet.jpg";
+import mediterraneanImg from "@/assets/holidays/mediterranean.jpg";
+import japaneseOnsenImg from "@/assets/holidays/japanese-onsen.jpg";
+import safariLodgeImg from "@/assets/holidays/safari-lodge.jpg";
+import yachtCruiseImg from "@/assets/holidays/yacht-cruise.jpg";
+import desertGlampingImg from "@/assets/holidays/desert-glamping.jpg";
+
 export interface HolidayDestination {
   name: string;
   durations: number[];
@@ -10,15 +23,183 @@ export interface HolidayDestination {
   healthPerDay: number;
   description: string;
   emoji: string;
+  image: string;
+  location: string;
+  highlights: string[];
+  stressReduction: number; // 1-5 rating
+  creativityBoost: number; // percentage XP bonus to songwriting during holiday
+  tier: "budget" | "standard" | "premium" | "luxury" | "ultra";
 }
 
 export const HOLIDAY_DESTINATIONS: HolidayDestination[] = [
-  { name: "Local Staycation", durations: [3, 5], costPerDay: 50, healthPerDay: 15, description: "Rest at home", emoji: "🏠" },
-  { name: "Beach Resort", durations: [5, 7], costPerDay: 200, healthPerDay: 20, description: "Sun and relaxation", emoji: "🏖️" },
-  { name: "Mountain Cabin", durations: [3, 7], costPerDay: 120, healthPerDay: 18, description: "Fresh air and peace", emoji: "🏔️" },
-  { name: "Tropical Island", durations: [7, 14], costPerDay: 400, healthPerDay: 25, description: "Ultimate getaway", emoji: "🌴" },
-  { name: "Countryside Retreat", durations: [3, 5], costPerDay: 100, healthPerDay: 17, description: "Quiet countryside", emoji: "🌻" },
-  { name: "Spa Resort", durations: [5, 7], costPerDay: 300, healthPerDay: 22, description: "Luxury pampering", emoji: "🧖" },
+  {
+    name: "Local Staycation",
+    durations: [3, 5, 7],
+    costPerDay: 150,
+    healthPerDay: 12,
+    description: "Unplug at home with comfort food, Netflix, and zero obligations. Sometimes the best escape is staying put.",
+    emoji: "🏠",
+    image: staycationImg,
+    location: "Your city",
+    highlights: ["No travel stress", "Home cooking", "Catch up on sleep", "Local spa day"],
+    stressReduction: 2,
+    creativityBoost: 5,
+    tier: "budget",
+  },
+  {
+    name: "Countryside Retreat",
+    durations: [3, 5, 7],
+    costPerDay: 280,
+    healthPerDay: 16,
+    description: "Rolling hills, stone cottages, and crackling fireplaces. Reconnect with nature on long walks through wildflower meadows.",
+    emoji: "🌻",
+    image: countrysideImg,
+    location: "English Cotswolds",
+    highlights: ["Farm-to-table dining", "Nature walks", "Horseback riding", "Stargazing"],
+    stressReduction: 3,
+    creativityBoost: 15,
+    tier: "standard",
+  },
+  {
+    name: "Mountain Cabin",
+    durations: [5, 7, 10],
+    costPerDay: 350,
+    healthPerDay: 18,
+    description: "A secluded log cabin surrounded by snow-capped peaks and pine forests. Hot chocolate by the fireplace, hiking trails at your door.",
+    emoji: "🏔️",
+    image: mountainCabinImg,
+    location: "Canadian Rockies",
+    highlights: ["Log fire evenings", "Mountain hiking", "Wildlife spotting", "Hot springs nearby"],
+    stressReduction: 4,
+    creativityBoost: 20,
+    tier: "standard",
+  },
+  {
+    name: "Beach Resort",
+    durations: [5, 7, 14],
+    costPerDay: 500,
+    healthPerDay: 20,
+    description: "White sand beaches, turquoise water, and cocktails delivered to your sun lounger. All-inclusive paradise with water sports galore.",
+    emoji: "🏖️",
+    image: beachResortImg,
+    location: "Maldives",
+    highlights: ["All-inclusive dining", "Snorkeling & diving", "Beach yoga", "Sunset catamaran cruise"],
+    stressReduction: 4,
+    creativityBoost: 10,
+    tier: "premium",
+  },
+  {
+    name: "Spa Resort",
+    durations: [5, 7, 10],
+    costPerDay: 750,
+    healthPerDay: 25,
+    description: "World-class wellness resort with marble hot tubs, aromatherapy, deep-tissue massages, and personalised health programs.",
+    emoji: "🧖",
+    image: spaResortImg,
+    location: "Bali, Indonesia",
+    highlights: ["Daily massages", "Detox juice programs", "Meditation classes", "Thermal pools"],
+    stressReduction: 5,
+    creativityBoost: 12,
+    tier: "premium",
+  },
+  {
+    name: "Alpine Ski Chalet",
+    durations: [5, 7, 10],
+    costPerDay: 800,
+    healthPerDay: 19,
+    description: "A luxury chalet in the Swiss Alps with panoramic mountain views, private hot tub on the deck, and world-class skiing.",
+    emoji: "⛷️",
+    image: skiChaletImg,
+    location: "Zermatt, Switzerland",
+    highlights: ["Private ski instructor", "Hot tub with views", "Fondue evenings", "Helicopter tour"],
+    stressReduction: 4,
+    creativityBoost: 18,
+    tier: "premium",
+  },
+  {
+    name: "Mediterranean Villa",
+    durations: [7, 10, 14],
+    costPerDay: 900,
+    healthPerDay: 22,
+    description: "Terracotta walls draped in bougainvillea, infinity pool overlooking the Amalfi Coast, and the finest Italian cuisine.",
+    emoji: "🏛️",
+    image: mediterraneanImg,
+    location: "Amalfi Coast, Italy",
+    highlights: ["Private chef", "Infinity pool", "Wine tasting tours", "Boat trips to Capri"],
+    stressReduction: 5,
+    creativityBoost: 25,
+    tier: "luxury",
+  },
+  {
+    name: "Japanese Onsen Retreat",
+    durations: [7, 10, 14],
+    costPerDay: 1000,
+    healthPerDay: 28,
+    description: "Traditional ryokan with natural hot spring baths, zen gardens, and kaiseki cuisine. Deep spiritual restoration.",
+    emoji: "♨️",
+    image: japaneseOnsenImg,
+    location: "Hakone, Japan",
+    highlights: ["Natural hot springs", "Kaiseki cuisine", "Zen meditation", "Cherry blossom gardens"],
+    stressReduction: 5,
+    creativityBoost: 30,
+    tier: "luxury",
+  },
+  {
+    name: "Tropical Island",
+    durations: [7, 14, 21],
+    costPerDay: 1200,
+    healthPerDay: 28,
+    description: "Your own overwater bungalow on a private island. Crystal lagoons, personal butler, and absolute seclusion.",
+    emoji: "🌴",
+    image: tropicalIslandImg,
+    location: "Bora Bora, French Polynesia",
+    highlights: ["Overwater bungalow", "Personal butler", "Private beach", "Glass-bottom boat"],
+    stressReduction: 5,
+    creativityBoost: 20,
+    tier: "luxury",
+  },
+  {
+    name: "Safari Lodge",
+    durations: [7, 10, 14],
+    costPerDay: 1500,
+    healthPerDay: 22,
+    description: "Wake up to elephants at your doorstep. Luxury tented camp on the Serengeti with sunrise game drives and sundowner cocktails.",
+    emoji: "🦁",
+    image: safariLodgeImg,
+    location: "Serengeti, Tanzania",
+    highlights: ["Daily game drives", "Sundowner cocktails", "Bush dining", "Hot air balloon safari"],
+    stressReduction: 4,
+    creativityBoost: 35,
+    tier: "luxury",
+  },
+  {
+    name: "Desert Glamping",
+    durations: [5, 7, 10],
+    costPerDay: 1800,
+    healthPerDay: 20,
+    description: "Moroccan luxury tents under a canopy of stars in the Sahara. Camel treks, campfire feasts, and absolute silence.",
+    emoji: "🏜️",
+    image: desertGlampingImg,
+    location: "Sahara Desert, Morocco",
+    highlights: ["Camel trekking", "Stargazing sessions", "Sand dune sunrise", "Traditional Berber feast"],
+    stressReduction: 4,
+    creativityBoost: 40,
+    tier: "ultra",
+  },
+  {
+    name: "Private Yacht Cruise",
+    durations: [7, 14, 21],
+    costPerDay: 2500,
+    healthPerDay: 24,
+    description: "A 120ft superyacht cruising the Greek islands. Private crew, Michelin-star chef, helipad, and island-hopping at your whim.",
+    emoji: "🛥️",
+    image: yachtCruiseImg,
+    location: "Greek Islands",
+    highlights: ["Full crew & chef", "Island hopping", "Water toys & jet skis", "On-deck jacuzzi"],
+    stressReduction: 5,
+    creativityBoost: 25,
+    tier: "ultra",
+  },
 ];
 
 export interface PlayerHoliday {
@@ -91,7 +272,7 @@ export function useHolidays() {
         .single();
 
       if ((profile?.cash ?? 0) < totalCost) {
-        throw new Error(`Not enough cash. Need $${totalCost}`);
+        throw new Error(`Not enough cash. Need $${totalCost.toLocaleString()}`);
       }
 
       const startDate = new Date();
@@ -145,7 +326,7 @@ export function useHolidays() {
       queryClient.invalidateQueries({ queryKey: ["active-holiday"] });
       queryClient.invalidateQueries({ queryKey: ["holiday-cooldown"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast.success(`Booked ${durationDays}-day holiday to ${destination}! Cost: $${totalCost}`);
+      toast.success(`Booked ${durationDays}-day holiday to ${destination}! Cost: $${totalCost.toLocaleString()}`);
     },
     onError: (err) => toast.error(err.message),
   });
