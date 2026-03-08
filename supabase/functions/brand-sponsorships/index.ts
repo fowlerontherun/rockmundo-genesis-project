@@ -121,7 +121,7 @@ async function handleGenerateOffers(
     const minFame = payload.minFame ?? 250;
     const { data: bands, error: bandsError } = await supabase
       .from("bands")
-      .select("id, fame")
+      .select("id, fame, reputation_score, fan_sentiment_score")
       .gte("fame", minFame)
       .limit(75);
 
