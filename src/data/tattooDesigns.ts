@@ -66,6 +66,8 @@ export interface PlayerTattoo {
   infection_cleared_at: string | null;
   price_paid: number;
   artist_id?: string | null;
+  custom_text?: string | null;
+  font_style?: string | null;
   // Joined
   design?: TattooDesign;
 }

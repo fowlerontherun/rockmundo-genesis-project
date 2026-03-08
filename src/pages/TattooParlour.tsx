@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Star, AlertTriangle, Palette, ShieldAlert, Sparkles } from "lucide-react";
+import { Star, AlertTriangle, Palette, ShieldAlert, Sparkles, Type } from "lucide-react";
 import { TattooBodyPreview } from "@/components/tattoo/TattooBodyPreview";
 import { TattooDesignCard } from "@/components/tattoo/TattooDesignCard";
 import { TattooInfectionAlert } from "@/components/tattoo/TattooInfectionAlert";
 import { TattooArtistCard, type TattooArtist } from "@/components/tattoo/TattooArtistCard";
 import { CustomTattooDialog } from "@/components/tattoo/CustomTattooDialog";
+import { TextTattooCreator } from "@/components/tattoo/TextTattooCreator";
+import { getFontCss } from "@/data/tattooFonts";
 import {
   BODY_SLOTS,
   TATTOO_CATEGORIES,
@@ -264,7 +266,52 @@ export default function TattooParlour() {
     },
   });
 
-  // Treat infection
+  // Text tattoo mutation
+  const textTattooMutation = useMutation({
+    mutationFn: async (data: { text: string; fontStyle: string; bodySlot: BodySlot; price: number }) => {
+      if (!currentParlour || !user) throw new Error('Missing data');
+      if ((profile?.cash || 0) < data.price) throw new Error('Insufficient funds');
+
+      const artistBonus = selectedArtist?.quality_bonus || 0;
+      const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + artistBonus);
+      const isInfected = rollForInfection(currentParlour.infection_risk);
+
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('user_id', user.id);
+
+      const { error } = await supabase.from('player_tattoos').insert({
+        user_id: user.id,
+        tattoo_design_id: null,
+        parlour_id: currentParlour.id,
+        artist_id: selectedArtist?.id || null,
+        body_slot: data.bodySlot,
+        quality_score: qualityScore,
+        ink_color: '#1a1a2e',
+        price_paid: data.price,
+        is_infected: isInfected,
+        custom_text: data.text,
+        font_style: data.fontStyle,
+      });
+      if (error) throw error;
+
+      if (selectedArtist) {
+        await supabase.from('tattoo_artists').update({ total_tattoos_done: selectedArtist.total_tattoos_done + 1 }).eq('id', selectedArtist.id);
+      }
+
+      return { qualityScore, isInfected, price: data.price };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['player-tattoos'] });
+      queryClient.invalidateQueries({ queryKey: ['profile-city'] });
+      if (result.isInfected) {
+        toast.error(`Text tattoo applied but got INFECTED! Quality: ${result.qualityScore}/100`);
+      } else {
+        toast.success(`Text tattoo applied! Quality: ${result.qualityScore}/100. Paid $${result.price}`);
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+
   const treatMutation = useMutation({
     mutationFn: async (tattooId: string) => {
       if ((profile?.cash || 0) < 200) throw new Error('Need $200 for treatment');
@@ -304,10 +351,11 @@ export default function TattooParlour() {
       {playerTattoos && <TattooInfectionAlert tattoos={playerTattoos} onTreat={(id) => treatMutation.mutate(id)} />}
 
       <Tabs defaultValue="shop">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="shop">🏪 Shop</TabsTrigger>
-          <TabsTrigger value="my-tattoos">🎨 My Tattoos ({playerTattoos?.length || 0})</TabsTrigger>
-          <TabsTrigger value="custom">✨ Custom ({customRequests?.length || 0})</TabsTrigger>
+          <TabsTrigger value="text-tattoo">✍️ Text</TabsTrigger>
+          <TabsTrigger value="my-tattoos">🎨 My ({playerTattoos?.length || 0})</TabsTrigger>
+          <TabsTrigger value="custom">✨ Custom</TabsTrigger>
         </TabsList>
 
         <TabsContent value="shop" className="space-y-4">
@@ -498,6 +546,27 @@ export default function TattooParlour() {
           )}
         </TabsContent>
 
+        <TabsContent value="text-tattoo" className="space-y-4">
+          {!currentParlour ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                <Type className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                Select a parlour first from the Shop tab to create text tattoos.
+              </CardContent>
+            </Card>
+          ) : (
+            <TextTattooCreator
+              parlourPriceMultiplier={currentParlour.price_multiplier}
+              artistPricePremium={selectedArtist?.price_premium || 1.0}
+              artistName={selectedArtist?.name}
+              occupiedSlots={occupiedSlots}
+              onPurchase={(data) => textTattooMutation.mutate(data)}
+              isPending={textTattooMutation.isPending}
+              playerCash={profile?.cash || 0}
+            />
+          )}
+        </TabsContent>
+
         <TabsContent value="my-tattoos" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card>
@@ -522,12 +591,18 @@ export default function TattooParlour() {
                     <Card key={t.id} className={t.is_infected ? 'border-destructive/50' : ''}>
                       <CardContent className="p-4 space-y-2">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-sm">{t.design?.name || 'Custom Tattoo'}</h4>
+                          <h4 className="font-semibold text-sm">{t.custom_text ? `"${t.custom_text}"` : t.design?.name || 'Custom Tattoo'}</h4>
                           <div className="flex gap-1">
-                            {!t.design && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">Custom</Badge>}
+                            {t.custom_text && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">✍️ Text</Badge>}
+                            {!t.design && !t.custom_text && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">Custom</Badge>}
                             {t.is_infected && <Badge variant="destructive" className="text-[10px]">🦠 Infected</Badge>}
                           </div>
                         </div>
+                        {t.custom_text && t.font_style && (
+                          <div className="bg-muted/50 rounded p-2 text-center">
+                            <span className="text-sm text-foreground" style={getFontCss(t.font_style)}>{t.custom_text}</span>
+                          </div>
+                        )}
                         {(t as any).artist && (
                           <p className="text-[10px] text-muted-foreground">
                             by <span className="text-foreground">{(t as any).artist.name}</span>

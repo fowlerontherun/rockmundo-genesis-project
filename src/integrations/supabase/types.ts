@@ -17882,6 +17882,8 @@ export type Database = {
           applied_at: string
           artist_id: string | null
           body_slot: string
+          custom_text: string | null
+          font_style: string | null
           id: string
           infection_cleared_at: string | null
           ink_color: string
@@ -17896,6 +17898,8 @@ export type Database = {
           applied_at?: string
           artist_id?: string | null
           body_slot: string
+          custom_text?: string | null
+          font_style?: string | null
           id?: string
           infection_cleared_at?: string | null
           ink_color?: string
@@ -17910,6 +17914,8 @@ export type Database = {
           applied_at?: string
           artist_id?: string | null
           body_slot?: string
+          custom_text?: string | null
+          font_style?: string | null
           id?: string
           infection_cleared_at?: string | null
           ink_color?: string
