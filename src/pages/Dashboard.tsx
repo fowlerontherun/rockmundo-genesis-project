@@ -280,9 +280,9 @@ const Dashboard = () => {
               <Zap className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('nav.skills')}</span>
             </TabsTrigger>
-            <TabsTrigger value="friends" className="flex-shrink-0">
+            <TabsTrigger value="chat" className="flex-shrink-0">
               <Users className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t('social.friends', 'Friends')}</span>
+              <span className="hidden sm:inline">Chat</span>
             </TabsTrigger>
             <TabsTrigger value="schedule" className="flex-shrink-0">
               <Calendar className="h-4 w-4 sm:mr-2" />
