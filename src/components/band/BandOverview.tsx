@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Settings2, MapPin } from 'lucide-react';
 import { FanSentimentWidget } from '@/components/world/FanSentimentWidget';
 import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
+import { SentimentEventLog } from '@/components/band/SentimentEventLog';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
