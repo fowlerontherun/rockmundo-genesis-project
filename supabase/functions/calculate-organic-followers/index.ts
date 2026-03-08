@@ -66,11 +66,11 @@ serve(async (req) => {
 
     const { data: bands } = await supabase
       .from("bands")
-      .select("id, fame, total_fans")
+      .select("id, fame, total_fans, fan_sentiment_score")
       .in("id", bandOwnerIds.length > 0 ? bandOwnerIds : ['none']);
 
     const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
-    const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0 }]));
+    const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0, sentiment: (b as any).fan_sentiment_score ?? 0 }]));
 
     let totalFollowersAdded = 0;
 
@@ -78,6 +78,7 @@ serve(async (req) => {
       // Calculate target followers based on fame and fans
       let fame = 0;
       let fans = 0;
+      let sentimentMod = 1.0;
 
       if (account.owner_type === 'persona' && account.owner_id) {
         fame = fameByOwnerId.get(account.owner_id) || 0;
@@ -85,10 +86,13 @@ serve(async (req) => {
         const bandData = bandDataById.get(account.owner_id);
         fame = bandData?.fame || 0;
         fans = bandData?.fans || 0;
+        // Sentiment affects organic follower growth (v1.0.952): 0.6x hostile → 1.4x fanatical
+        const sentimentT = (Math.max(-100, Math.min(100, bandData?.sentiment ?? 0)) + 100) / 200;
+        sentimentMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2));
       }
 
-      // Target followers formula: fame / 15 + fans / 8 (more generous)
-      const targetFollowers = Math.max(2, Math.floor(fame / 15 + fans / 8));
+      // Target followers formula: fame / 15 + fans / 8, scaled by sentiment
+      const targetFollowers = Math.max(2, Math.floor((fame / 15 + fans / 8) * sentimentMod));
 
       // Get current bot followers
       const { data: currentFollows, error: followsError } = await supabase
