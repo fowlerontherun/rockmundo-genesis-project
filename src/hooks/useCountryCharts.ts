@@ -259,7 +259,7 @@ export const useCountryCharts = (
         .in("chart_type", chartTypeFilter)
         .gte("chart_date", startDateStr)
         .lte("chart_date", endDateStr)
-        .limit(1000); // Get more entries to aggregate
+        .limit(5000); // FIX: Increased from 1000 to prevent truncation for monthly/yearly
 
       // Handle country filter
       if (country !== "Global") {
