@@ -1206,6 +1206,71 @@ serve(async (req) => {
       console.log("Updated weeks_on_chart for entries");
     }
 
+    // =========================================================================
+    // STEP 11: Chart Performance → Morale / Reputation / Sentiment (v1.0.962)
+    // Bands with songs in the Top 10 of the combined chart get boosts.
+    // Top 1 = huge boost, Top 5 = strong boost, Top 10 = moderate boost.
+    // =========================================================================
+    const combinedTop10 = chartEntries
+      .filter((e: any) => e.chart_type === "combined" && e.country === "all" && e.rank <= 10)
+      .sort((a: any, b: any) => a.rank - b.rank);
+
+    if (combinedTop10.length > 0) {
+      // Collect unique song IDs to look up band IDs
+      const top10SongIds = [...new Set(combinedTop10.map((e: any) => e.song_id))];
+      const { data: top10Songs } = await supabaseClient
+        .from("songs")
+        .select("id, band_id")
+        .in("id", top10SongIds);
+
+      const songBandMap = new Map<string, string>();
+      for (const s of top10Songs || []) {
+        if (s.band_id) songBandMap.set(s.id, s.band_id);
+      }
+
+      // Calculate per-band best rank
+      const bandBestRank = new Map<string, number>();
+      for (const entry of combinedTop10) {
+        const bandId = songBandMap.get(entry.song_id);
+        if (!bandId) continue;
+        const current = bandBestRank.get(bandId) ?? 999;
+        if (entry.rank < current) bandBestRank.set(bandId, entry.rank);
+      }
+
+      if (bandBestRank.size > 0) {
+        const bandIds = [...bandBestRank.keys()];
+        const { data: bandsData } = await supabaseClient
+          .from("bands")
+          .select("id, morale, reputation_score, fan_sentiment_score")
+          .in("id", bandIds);
+
+        for (const band of bandsData || []) {
+          const bestRank = bandBestRank.get(band.id)!;
+          let moraleBoost = 0, repBoost = 0, sentBoost = 0;
+
+          if (bestRank === 1) {
+            moraleBoost = 15; repBoost = 10; sentBoost = 12;
+          } else if (bestRank <= 5) {
+            moraleBoost = 8; repBoost = 5; sentBoost = 8;
+          } else {
+            moraleBoost = 4; repBoost = 3; sentBoost = 5;
+          }
+
+          const curMorale = (band as any).morale ?? 50;
+          const curRep = (band as any).reputation_score ?? 0;
+          const curSent = (band as any).fan_sentiment_score ?? 0;
+
+          await supabaseClient.from("bands").update({
+            morale: Math.min(100, curMorale + moraleBoost),
+            reputation_score: Math.min(100, curRep + repBoost),
+            fan_sentiment_score: Math.min(100, curSent + sentBoost),
+          } as any).eq("id", band.id);
+
+          console.log(`Chart boost for band ${band.id}: rank #${bestRank} → morale +${moraleBoost}, rep +${repBoost}, sentiment +${sentBoost}`);
+        }
+      }
+    }
+
     await completeJobRun({
       runId,
       supabaseClient,

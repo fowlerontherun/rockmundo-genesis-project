@@ -94,11 +94,27 @@ serve(async (req) => {
     if (performance.band_id) {
       const { data: band } = await supabase
         .from('bands')
-        .select('fame, total_fans, casual_fans, band_balance')
+        .select('fame, total_fans, casual_fans, band_balance, morale, reputation_score, fan_sentiment_score')
         .eq('id', performance.band_id)
         .single();
 
       if (band) {
+        // === MAJOR EVENT → MORALE / REPUTATION / SENTIMENT (v1.0.962) ===
+        let moraleBoost = 0, repBoost = 0, sentBoost = 0;
+        if (overallRating >= 85) {
+          moraleBoost = 12; repBoost = 8; sentBoost = 10;
+        } else if (overallRating >= 70) {
+          moraleBoost = 6; repBoost = 4; sentBoost = 5;
+        } else if (overallRating >= 55) {
+          moraleBoost = 3; repBoost = 2; sentBoost = 2;
+        } else {
+          moraleBoost = -5; repBoost = -3; sentBoost = -5;
+        }
+
+        const curMorale = (band as any).morale ?? 50;
+        const curRep = (band as any).reputation_score ?? 0;
+        const curSent = (band as any).fan_sentiment_score ?? 0;
+
         await supabase
           .from('bands')
           .update({
@@ -106,8 +122,13 @@ serve(async (req) => {
             total_fans: (band.total_fans || 0) + fansGained,
             casual_fans: (band.casual_fans || 0) + fansGained,
             band_balance: (band.band_balance || 0) + cashEarned,
-          })
+            morale: Math.max(0, Math.min(100, curMorale + moraleBoost)),
+            reputation_score: Math.max(-100, Math.min(100, curRep + repBoost)),
+            fan_sentiment_score: Math.max(-100, Math.min(100, curSent + sentBoost)),
+          } as any)
           .eq('id', performance.band_id);
+
+        console.log(`Major event band health: rating ${overallRating} → morale ${moraleBoost > 0 ? '+' : ''}${moraleBoost}, rep ${repBoost > 0 ? '+' : ''}${repBoost}, sent ${sentBoost > 0 ? '+' : ''}${sentBoost}`);
       }
 
       // Record earnings
