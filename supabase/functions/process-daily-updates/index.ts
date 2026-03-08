@@ -31,6 +31,26 @@ Deno.serve(async (req) => {
   let processedBands = 0
   let playerSyncs = 0
   let errorCount = 0
+  let inboxSent = 0
+
+  // Helper to send inbox notification (fire-and-forget, never throws)
+  const sendInbox = async (userId: string, category: string, priority: string, title: string, message: string, metadata: Record<string, unknown> = {}, actionType?: string, actionData?: Record<string, unknown>) => {
+    try {
+      await supabase.from('player_inbox').insert({
+        user_id: userId,
+        category,
+        priority,
+        title,
+        message,
+        metadata,
+        action_type: actionType || null,
+        action_data: actionData || null,
+      })
+      inboxSent++
+    } catch (e) {
+      console.error('[Inbox] Failed to send:', e)
+    }
+  }
 
   try {
     console.log(`=== Daily Updates Started at ${new Date().toISOString()} ===`)
