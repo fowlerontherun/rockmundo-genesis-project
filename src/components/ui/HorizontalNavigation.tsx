@@ -23,7 +23,7 @@ import {
   Play, Menu, Globe, Mic, GraduationCap, DollarSign, Plane, ListMusic,
   Megaphone, Store, Guitar, Award, Briefcase, Newspaper, Radio, History,
   Video, Disc, Target, Sparkles, Twitter, UserPlus, HandHeart, Handshake,
-  Building, Star, BookOpen, Wrench, Bus, Tv, Film, Inbox, Gamepad2,
+  Building, Star, BookOpen, Wrench, Bus, Tv, Film, Inbox, Gamepad2, Palette,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -78,6 +78,7 @@ const HorizontalNavigation = () => {
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
+        { icon: Palette, labelKey: "nav.tattoos", path: "/tattoo-parlour" },
         { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
         { icon: History, labelKey: "nav.statistics", path: "/statistics" },
         { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy" },

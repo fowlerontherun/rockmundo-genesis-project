@@ -73,6 +73,8 @@ export const en = {
     dashboard: "Dashboard",
     advisor: "Advisor",
     gear: "Gear",
+    tattoos: "Tattoos",
+    tattooParlour: "Tattoo Parlour",
     legacy: "Legacy",
     schedule: "Schedule",
     musicHub: "Music Hub",

@@ -74,6 +74,8 @@ export const es: TranslationKeys = {
     advisor: "Asesor",
     character: "Personaje",
     gear: "Equipo",
+    tattoos: "Tatuajes",
+    tattooParlour: "Salón de Tatuajes",
     legacy: "Legado",
     schedule: "Horario",
     musicHub: "Centro Musical",

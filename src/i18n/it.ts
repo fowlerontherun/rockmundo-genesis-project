@@ -73,6 +73,8 @@ export const it = {
     advisor: "Consulente",
     character: "Personaggio",
     gear: "Attrezzatura",
+    tattoos: "Tatuaggi",
+    tattooParlour: "Salone di Tatuaggi",
     legacy: "Eredità",
     schedule: "Calendario",
     musicHub: "Hub Musicale",

@@ -72,6 +72,7 @@ import {
   Inbox,
   Ticket,
   Gamepad2,
+  Palette,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -154,6 +155,7 @@ const Navigation = () => {
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
+        { icon: Palette, labelKey: "nav.tattoos", path: "/tattoo-parlour" },
         { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
         { icon: History, labelKey: "nav.statistics", path: "/statistics" },
         { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy" },
