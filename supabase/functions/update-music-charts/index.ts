@@ -156,7 +156,8 @@ serve(async (req) => {
           bands(name, artist_name),
           release_songs:release_songs!release_songs_release_id_fkey(
             song_id,
-            track_number
+            track_number,
+            is_b_side
           )
         ),
         songs(
