@@ -17,6 +17,7 @@ import { CompanySettingsDialog } from "@/components/company/CompanySettingsDialo
 import { TransferLabelDialog } from "@/components/company/TransferLabelDialog";
 import { CompanyFinanceDialog } from "@/components/company/CompanyFinanceDialog";
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
+import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
