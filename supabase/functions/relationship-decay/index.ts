@@ -119,6 +119,31 @@ Deno.serve(async (req) => {
       if (events.length > 0) {
         await supabase.from("relationship_events").insert(events);
         eventsCreated += events.length;
+
+        // === RELATIONSHIP DECAY → MORALE (v1.0.971) ===
+        // When trust or loyalty decay below critical thresholds, band morale drops
+        for (const evt of events) {
+          if (evt.event_key === 'trust_low_decay' || evt.event_key === 'loyalty_fading') {
+            try {
+              const { data: bm } = await supabase
+                .from('band_members')
+                .select('band_id')
+                .eq('user_id', rel.user_id)
+                .eq('is_touring_member', false)
+                .limit(1)
+                .maybeSingle();
+              if (bm?.band_id) {
+                const { data: band } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
+                if (band) {
+                  const curM = (band as any).morale ?? 50;
+                  const penalty = evt.event_key === 'trust_low_decay' ? -4 : -3;
+                  await supabase.from('bands').update({ morale: Math.max(0, curM + penalty) } as any).eq('id', bm.band_id);
+                  console.log(`Relationship decay morale: ${evt.event_key} → morale ${penalty} for band ${bm.band_id}`);
+                }
+              }
+            } catch (_e) { /* non-critical */ }
+          }
+        }
       }
 
       processed++;

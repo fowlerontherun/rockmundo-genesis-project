@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       if (prize.cash > 0 || prize.xp > 0 || prize.fame > 0) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("cash, xp, fame")
+          .select("cash, xp, fame, user_id")
           .eq("id", ticket.profile_id)
           .single();
 
@@ -139,6 +139,29 @@ Deno.serve(async (req) => {
             .from("lottery_tickets")
             .update({ claimed: true })
             .eq("id", ticket.id);
+
+          // === LOTTERY WIN → MORALE (v1.0.971) ===
+          // Winning the lottery boosts band morale based on prize tier
+          if (prize.cash >= 500 && (profile as any).user_id) {
+            try {
+              const { data: bm } = await supabase
+                .from('band_members')
+                .select('band_id')
+                .eq('user_id', (profile as any).user_id)
+                .eq('is_touring_member', false)
+                .limit(1)
+                .maybeSingle();
+              if (bm?.band_id) {
+                const { data: band } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
+                if (band) {
+                  const curM = (band as any).morale ?? 50;
+                  const moraleBoost = prize.cash >= 250000 ? 12 : prize.cash >= 10000 ? 8 : prize.cash >= 1000 ? 5 : 3;
+                  await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bm.band_id);
+                  console.log(`Lottery win morale: $${prize.cash} → morale +${moraleBoost} for band ${bm.band_id}`);
+                }
+              }
+            } catch (_e) { /* non-critical */ }
+          }
         }
 
         totalPrizesPaid += prize.cash;

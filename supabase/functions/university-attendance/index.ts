@@ -424,6 +424,30 @@ serve(async (req) => {
         }
       }
 
+      // === UNIVERSITY ATTENDANCE → MORALE (v1.0.971) ===
+      // Learning new skills and attending class boosts band morale slightly
+      // Course completion gives a bigger boost
+      if (profile?.user_id) {
+        try {
+          const { data: bm } = await supabaseClient
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', profile.user_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+          if (bm?.band_id) {
+            const { data: band } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
+            if (band) {
+              const curM = (band as any).morale ?? 50;
+              const moraleBoost = isCompleted ? 5 : 1; // +5 for graduating, +1 per class
+              await supabaseClient.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bm.band_id);
+              if (isCompleted) console.log(`University graduation morale boost: +${moraleBoost} for band ${bm.band_id}`);
+            }
+          }
+        } catch (_e) { /* non-critical */ }
+      }
+
       processedCount++;
       const remoteInfo = isRemote ? ` [REMOTE${connectionFailed ? ' - CONNECTION FAILED' : ''}]` : '';
       console.log(
