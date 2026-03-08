@@ -104,6 +104,23 @@ Deno.serve(async (req) => {
         bankruptciesDeclared++;
         console.log(`[check-company-bankruptcy] BANKRUPTCY: ${company.name}`);
 
+        // Morale -15 and Reputation -10 for owner's band
+        if (company.owner_id) {
+          const { data: ownerMember } = await supabase
+            .from('band_members')
+            .select('band_id, bands!inner(morale, reputation_score)')
+            .eq('user_id', company.owner_id)
+            .eq('role', 'leader')
+            .maybeSingle();
+          if (ownerMember && (ownerMember as any).bands) {
+            const b = (ownerMember as any).bands;
+            const newMorale = Math.max(0, (b.morale ?? 50) - 15);
+            const newRep = Math.max(-100, (b.reputation_score ?? 0) - 10);
+            await supabase.from('bands').update({ morale: newMorale, reputation_score: newRep }).eq('id', (ownerMember as any).band_id);
+            console.log(`[check-company-bankruptcy] Owner band morale -15, reputation -10`);
+          }
+        }
+
       } else if (daysNegative >= 3) {
         // Issue warning at 3 days
         const { data: existingWarning } = await supabase
