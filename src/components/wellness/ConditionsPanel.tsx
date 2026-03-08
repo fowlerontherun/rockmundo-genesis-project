@@ -31,8 +31,10 @@ const TREATMENT_LABELS: Record<string, string> = {
 export function ConditionsPanel() {
   const { conditions, aggregatedEffects, treatCondition, isTreating, checkRecovery } = useConditions();
 
-  // Auto-check recovery on render
-  checkRecovery();
+  // Auto-check recovery on mount
+  useEffect(() => {
+    checkRecovery();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (conditions.length === 0) {
     return (
