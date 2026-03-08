@@ -217,9 +217,16 @@ export default function Busking() {
   const [isStartingSession, setIsStartingSession] = React.useState(false);
   const [lastResult, setLastResult] = React.useState<BuskingResult | null>(null);
 
+  // Auto-select first location when city changes
+  React.useEffect(() => {
+    if (buskingLocations.length > 0 && !buskingLocations.find(l => l.id === selectedLocationId)) {
+      setSelectedLocationId(buskingLocations[0].id);
+    }
+  }, [buskingLocations, selectedLocationId]);
+
   const activeLocation = React.useMemo(() => {
     return buskingLocations.find((location) => location.id === selectedLocationId) ?? buskingLocations[0];
-  }, [selectedLocationId]);
+  }, [selectedLocationId, buskingLocations]);
 
   const activeReward = activeLocation.rewards[selectedLength];
 
