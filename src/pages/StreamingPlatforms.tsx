@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useGameData } from "@/hooks/useGameData";
 import { StreamingMyReleasesTab } from "@/components/streaming/StreamingMyReleasesTab";
-import { ReleaseSongTab } from "@/components/streaming/ReleaseSongTab";
+
 import { AnalyticsTab } from "@/components/streaming/AnalyticsTab";
 import { DetailedAnalyticsTab } from "@/components/streaming/DetailedAnalyticsTab";
 import { PlaylistsTab } from "@/components/streaming/PlaylistsTab";
