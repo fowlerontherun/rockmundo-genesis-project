@@ -122,10 +122,16 @@ serve(async (req) => {
       const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0 to 1
       const radioEngagementMod = parseFloat((0.7 + sentimentT * 0.6).toFixed(2)); // 0.7x to 1.3x
 
-      // Calculate hype and streams boost with vote multiplier and sentiment
+      // === REPUTATION → RADIO LISTENER ENGAGEMENT (v1.0.989) ===
+      // Reputable bands get more radio attention; toxic bands are deprioritized
+      const repScore = song.band_id ? (bandReputationMap.get(song.band_id) ?? 0) : 0;
+      const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
+      const radioRepMod = parseFloat((0.8 + repT * 0.4).toFixed(2)); // 0.8x toxic → 1.2x iconic
+
+      // Calculate hype and streams boost with vote multiplier, sentiment, and reputation
       const qualityMult = (song.quality_score || 50) / 100;
-      const hypeGained = Math.round(listeners * 0.05 * qualityMult * voteMultiplier * radioEngagementMod);
-      const streamsBoost = Math.round(listeners * 0.1 * radioEngagementMod);
+      const hypeGained = Math.round(listeners * 0.05 * qualityMult * voteMultiplier * radioEngagementMod * radioRepMod);
+      const streamsBoost = Math.round(listeners * 0.1 * radioEngagementMod * radioRepMod);
 
       // Create play record
       const { error: playError } = await supabaseClient

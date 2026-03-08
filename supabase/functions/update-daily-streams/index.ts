@@ -268,6 +268,12 @@ Deno.serve(async (req) => {
         const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0-1
         const streamLoyaltyMod = parseFloat((0.7 + sentimentT * 0.6).toFixed(2)); // 0.7–1.3
 
+        // === REPUTATION → STREAMING ALGORITHM FAVOR (v1.0.989) ===
+        // Streaming platforms subtly favor reputable artists in recommendations
+        const repScore = bandId ? (bandReputationMap.get(bandId) ?? 0) : 0;
+        const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
+        const streamRepMod = parseFloat((0.9 + repT * 0.2).toFixed(2)); // 0.9x toxic → 1.1x iconic
+
         // Fame-scaled base streams
         const fameScale = 1 + Math.pow(bandFame / 100, 1.4);
         const fanBoost = 1 + (bandTotalFans / 500);
@@ -294,8 +300,8 @@ Deno.serve(async (req) => {
 
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        // Apply genre trend + seasonal + sentiment modifier to daily streams
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod);
+        // Apply genre trend + seasonal + sentiment + reputation modifier to daily streams
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
         // Build deterministic region breakdown based on territories/fans
