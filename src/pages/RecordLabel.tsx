@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Scale, Crown, Lock, FileText } from "lucide-react";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge as BadgeUI } from "@/components/ui/badge";
 import { LabelDirectory } from "@/components/labels/LabelDirectory";
 import { MyContractsTab } from "@/components/labels/MyContractsTab";
