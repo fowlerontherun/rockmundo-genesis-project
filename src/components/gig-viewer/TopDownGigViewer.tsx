@@ -406,6 +406,15 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
             genreVisuals={genreVisuals}
             songEnergy={songEnergy}
           />
+
+          {/* Crowd details (signs, security, photographers, etc) */}
+          <CrowdDetails
+            attendancePercent={attendancePercent}
+            mood={crowdMood}
+            intensity={intensity}
+            genreVisuals={genreVisuals}
+            songEnergy={songEnergy}
+          />
         </div>
       </div>
 
