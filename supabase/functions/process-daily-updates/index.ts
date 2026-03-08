@@ -1040,6 +1040,31 @@ Deno.serve(async (req) => {
       console.error('Error in band reputation drift:', repErr);
     }
 
+    // === FAN SENTIMENT DRIFT (v1.0.987) ===
+    // Sentiment drifts toward 0 (neutral) — fans forget over time without reinforcement
+    console.log('=== Processing Fan Sentiment Drift ===')
+    let sentimentDrifted = 0
+    try {
+      const { data: bandsWithSent } = await supabase
+        .from('bands')
+        .select('id, fan_sentiment_score')
+
+      for (const b of bandsWithSent || []) {
+        const score = (b as any).fan_sentiment_score ?? 0;
+        if (Math.abs(score) <= 5) continue;
+        // Positive sentiment decays faster than negative recovers (happy fans are fickle; angry fans hold grudges)
+        const drift = score > 0 ? -0.8 : 0.4;
+        const newScore = Math.max(-100, Math.min(100, parseFloat((score + drift).toFixed(1))));
+        if (newScore !== score) {
+          await supabase.from('bands').update({ fan_sentiment_score: newScore } as any).eq('id', b.id);
+          sentimentDrifted++;
+        }
+      }
+      console.log(`Fan sentiment drift: ${sentimentDrifted} bands drifted toward neutral`);
+    } catch (sentErr) {
+      console.error('Error in fan sentiment drift:', sentErr);
+    }
+
     // === CROSS-SYSTEM FEEDBACK LOOPS (v1.0.955) ===
     // The 4 health pillars influence each other daily
     console.log('=== Processing Cross-System Feedback Loops ===')

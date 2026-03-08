@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.987",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Fan Sentiment Daily Drift: fan_sentiment_score now passively drifts toward 0 (neutral) each day. Positive sentiment decays at -0.8/day (happy fans are fickle), negative recovers at +0.4/day (angry fans hold grudges). Bands must actively maintain fan engagement" },
+      { type: 'feature', description: "Reputation → Recording Quality: Band reputation now subtly modifies recording session quality improvements. 0.9x (toxic) to 1.1x (iconic). Prestigious bands attract better energy and collaborator focus in the studio" },
+      { type: 'feature', description: "Fan Sentiment → Recording Quality: Fan buzz inspires better studio work. Sentiment modifier of 0.9x–1.1x applied to recording quality gains. Bands riding a wave of fan love produce more inspired recordings" },
+      { type: 'improvement', description: "All 3 core stats (Morale, Reputation, Sentiment) now have daily drift/regression AND serve as recording quality inputs alongside morale. Single DB query fetches all 3 stats for recording sessions. Fan sentiment decay creates urgency to stay visible" },
+    ],
+  },
+  {
     version: "1.0.986",
     date: "2026-03-08",
     changes: [
