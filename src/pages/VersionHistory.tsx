@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.976",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Work Shifts → Morale: Completing job shifts now affects band morale. Humiliating jobs (high fame penalty) cause -3 morale, mildly degrading jobs -1. Good earnings ($500+) give +2, decent pay ($100+) gives +1" },
+      { type: 'feature', description: "Social Bot Engagement → Morale: When bots generate significant social media buzz (likes, replies, follows), bands receive a morale boost. 20+ engagements = +3, 10+ = +2, 5+ = +1" },
+      { type: 'improvement', description: "Shift-clock-out now looks up band membership to apply morale shifts based on fame impact and earnings. Bot engagement aggregates total interactions across all band accounts before applying morale" },
+    ],
+  },
+  {
     version: "1.0.975",
     date: "2026-03-08",
     changes: [
