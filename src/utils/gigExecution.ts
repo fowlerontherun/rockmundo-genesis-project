@@ -334,9 +334,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const totalRevenue = bandTicketShare + merchSales.totalRevenue;
   const netProfit = totalRevenue - crewCosts - equipmentWearCost;
 
-  // Calculate fame gained (with behavior modifier)
+  // Calculate fame gained (with behavior modifier + media cycle coverage)
   const behaviorMods = getBehaviorModifiers(stageBehavior);
-  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier * behaviorMods.fameMultiplier);
+  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier * behaviorMods.fameMultiplier * mediaCycle.coverageMultiplier);
 
   // Calculate chemistry impact
   let chemistryImpact = 0;
