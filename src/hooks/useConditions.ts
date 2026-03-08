@@ -35,7 +35,7 @@ export function useConditions() {
     queryKey: ["player-conditions", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_conditions")
         .select("*")
         .eq("user_id", user.id)
@@ -89,7 +89,7 @@ export function useConditions() {
       const recoveryAt = new Date();
       recoveryAt.setHours(recoveryAt.getHours() + recoveryHours);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("player_conditions")
         .update({
           status: "treating",
@@ -121,7 +121,7 @@ export function useConditions() {
       );
 
       for (const condition of treatingConditions) {
-        await supabase
+        await (supabase as any)
           .from("player_conditions")
           .update({ status: "recovered", recovered_at: now })
           .eq("id", condition.id);
