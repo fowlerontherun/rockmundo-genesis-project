@@ -179,9 +179,17 @@ serve(async (req) => {
     }
 
     // Filter to only include songs with status = 'recorded'
-    const streamingData = (streamingDataRaw || []).filter(
-      entry => entry.songs?.status === "recorded"
-    );
+    // Also exclude b-sides from charting
+    const streamingData = (streamingDataRaw || []).filter(entry => {
+      if (entry.songs?.status !== "recorded") return false;
+      
+      // Check if this song is a b-side on its release
+      const releaseSongs = (entry as any).release?.release_songs || [];
+      const thisSongEntry = releaseSongs.find((rs: any) => rs.song_id === entry.song_id);
+      if (thisSongEntry?.is_b_side) return false;
+      
+      return true;
+    });
 
     console.log(`Fetched ${streamingData?.length || 0} streaming entries`);
 
