@@ -981,6 +981,15 @@ Deno.serve(async (req) => {
         if (newCondition !== currentCondition) {
           await supabase.from('player_equipment').update({ condition: newCondition }).eq('id', item.id);
           equipmentDegraded++;
+
+          // Inbox: Equipment critical condition alert
+          if (newCondition < 20 && currentCondition >= 20) {
+            // Need to find the owner of this equipment
+            const { data: eqItem } = await supabase.from('player_equipment').select('user_id, name').eq('id', item.id).single()
+            if (eqItem?.user_id) {
+              await sendInbox(eqItem.user_id, 'system', 'high', '⚠️ Equipment Failing!', `Your ${eqItem.name || 'equipment'} is in critical condition (${Math.round(newCondition)}%). Get it repaired before it breaks!`, { equipment_id: item.id, condition: newCondition }, 'navigate', { route: '/equipment' })
+            }
+          }
         }
       }
       console.log(`Idle equipment degradation: ${equipmentDegraded} items lost minor condition`);
