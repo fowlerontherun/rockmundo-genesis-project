@@ -9,6 +9,8 @@ import { ViewerControls } from "./ViewerControls";
 import { WeatherAtmosphere } from "./WeatherAtmosphere";
 import { SongTransition } from "./SongTransition";
 import { AudienceInteractions } from "./AudienceInteractions";
+import { SeatingTiers } from "./SeatingTiers";
+import { PerformanceMilestones } from "./PerformanceMilestones";
 import { getStageTheme } from "./StageThemes";
 import { getGenreVisuals, getGenreLightingColor } from "./GenreVisuals";
 import {
