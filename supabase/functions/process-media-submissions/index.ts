@@ -85,11 +85,16 @@ serve(async (req) => {
             if (bData) {
               const curRep = (bData as any).reputation_score ?? 0;
               const curMorale = (bData as any).morale ?? 50;
-              await supabase.from('bands').update({
-                reputation_score: Math.min(100, curRep + 3),
-                morale: Math.min(100, curMorale + 3),
-              } as any).eq('id', sub.band_id);
+              const newRep = Math.min(100, curRep + 3);
+              const newMorale = Math.min(100, curMorale + 3);
+              await supabase.from('bands').update({ reputation_score: newRep, morale: newMorale } as any).eq('id', sub.band_id);
               console.log(`[process-media-submissions] Newspaper approved → rep +3, morale +3 for band ${sub.band_id}`);
+              try {
+                await supabase.from('band_health_events').insert([
+                  { band_id: sub.band_id, event_type: 'morale', delta: 3, new_value: newMorale, source: 'media_approved', description: 'Newspaper feature approved' },
+                  { band_id: sub.band_id, event_type: 'reputation', delta: 3, new_value: newRep, source: 'media_approved', description: 'Newspaper feature approved' },
+                ]);
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
 
