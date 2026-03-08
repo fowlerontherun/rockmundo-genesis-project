@@ -252,6 +252,12 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
       {/* Stage floor with theme */}
       <div className="absolute inset-0" style={{ background: theme.floorGradient }} />
 
+      {/* Venue ambience decorations */}
+      <VenueAmbience theme={theme} lightingColor={lightingColor} songEnergy={songEnergy} />
+
+      {/* LED screens / backdrop visuals */}
+      <StageScreens theme={theme} lightingColor={lightingColor} songEnergy={songEnergy} songTitle={songTitle} bandName={bandName} crowdMood={crowdMood} />
+
       {/* Floor pattern */}
       {theme.floorPattern && (
         <div
