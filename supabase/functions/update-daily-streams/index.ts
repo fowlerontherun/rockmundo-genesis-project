@@ -237,14 +237,16 @@ Deno.serve(async (req) => {
     // Pre-fetch band genres and sentiment for trend/loyalty lookup
     let bandGenreMap = new Map<string, string>();
     let bandSentimentMap = new Map<string, number>();
+    let bandReputationMap = new Map<string, number>();
     if (bandIds.length > 0) {
       const { data: bandExtras } = await supabase
         .from('bands')
-        .select('id, genre, fan_sentiment_score')
+        .select('id, genre, fan_sentiment_score, reputation_score')
         .in('id', bandIds);
       for (const b of bandExtras || []) {
         if (b.genre) bandGenreMap.set(b.id, b.genre);
         bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+        bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
       }
     }
 
