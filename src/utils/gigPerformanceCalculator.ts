@@ -1,3 +1,5 @@
+import { applyBehaviorToPerformance } from "./stageBehaviors";
+
 export interface PerformanceFactors {
   songQuality: number;        // 0-1000 from song quality system
   rehearsalLevel: number;     // 0-100
@@ -13,6 +15,7 @@ export interface PerformanceFactors {
   stageSkillAverage?: number; // 0-100 from showmanship, crowd, tech skills
   improvisationLevel?: number; // 0-20 from improv skill level
   genreSkillMultiplier?: number; // 1.0-1.20 bonus from genre skill tree training
+  stageBehavior?: string;      // Stage behavior key (e.g. 'aggressive', 'confident')
 }
 
 export interface SongPerformanceResult {
