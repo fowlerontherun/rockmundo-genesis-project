@@ -82,6 +82,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Pre-fetch band morale for all active players (v1.0.959)
+    const playerUserIds = (activePlayers || []).map(p => p.user_id);
+    const playerMoraleMap = new Map<string, number>();
+    if (playerUserIds.length > 0) {
+      const { data: memberMorales } = await supabase
+        .from('band_members')
+        .select('user_id, band_id')
+        .in('user_id', playerUserIds)
+        .eq('is_touring_member', false);
+
+      if (memberMorales && memberMorales.length > 0) {
+        const bandIds = [...new Set(memberMorales.map(m => m.band_id))];
+        const { data: bandsM } = await supabase
+          .from('bands')
+          .select('id, morale')
+          .in('id', bandIds);
+
+        const bandMoraleMap = new Map<string, number>();
+        for (const b of bandsM || []) {
+          bandMoraleMap.set(b.id, (b as any).morale ?? 50);
+        }
+        for (const m of memberMorales) {
+          if (m.user_id) {
+            playerMoraleMap.set(m.user_id, bandMoraleMap.get(m.band_id) ?? 50);
+          }
+        }
+      }
+    }
+    console.log(`[${JOB_NAME}] Pre-fetched morale for ${playerMoraleMap.size} players`);
+
     let eventsTriggered = 0;
     let playersProcessed = 0;
 
