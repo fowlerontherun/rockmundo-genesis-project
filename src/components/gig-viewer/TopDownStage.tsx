@@ -363,6 +363,9 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
         intensity={intensity}
       />
 
+      {/* Sound visualization waves from speakers */}
+      <SoundVisualization theme={theme} songEnergy={songEnergy} lightingColor={lightingColor} intensity={intensity} />
+
       {/* Stage edge */}
       <div
         className="absolute bottom-0 left-0 right-0"
