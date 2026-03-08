@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.928",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Narrative Events: Created story_states and story_choices database tables — narrative branching now persists player progress" },
+      { type: 'feature', description: "Talent Discovery: Created casting_calls, casting_call_roles, casting_submissions, and casting_reviews tables with RLS policies" },
+      { type: 'feature', description: "Jam Sessions: Added interactive jam gameplay — 5 timed rounds of musical decisions that award XP and band chemistry" },
+      { type: 'feature', description: "DikCok: Implemented virality algorithm — trending now ranks by view velocity, engagement rate, band fame, and time decay" },
+      { type: 'improvement', description: "DikCok: Videos now decay from trending over ~18hr half-life; challenge videos get 1.3x boost; category multipliers affect ranking" },
+      { type: 'improvement', description: "Jam Sessions: Groove meter tracks collaborative decisions; high groove awards chemistry bonuses to bands" },
+      { type: 'fix', description: "Confirmed Sponsorship offer generation and Festival performance pipelines are fully wired (Items 16 & 17 verified)" },
+    ],
+  },
+  {
     version: "1.0.927",
     date: "2026-03-08",
     changes: [
