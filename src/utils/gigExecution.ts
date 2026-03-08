@@ -719,6 +719,59 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error updating song fame/popularity:', songFameError);
   }
 
+  // === POST-GIG: Equipment Degradation ===
+  try {
+    if (equippedGearItems.length > 0) {
+      for (const gear of equippedGearItems) {
+        const currentCondition = (gear as any).condition ?? 100;
+        const category = gear.category || 'default';
+        const { newCondition, degradationAmount } = degradeEquipment(currentCondition, category);
+        if (degradationAmount > 0) {
+          await supabase
+            .from('player_equipment')
+            .update({ condition: newCondition } as any)
+            .eq('id', gear.id);
+        }
+      }
+      console.log(`[GigExecution] Degraded ${equippedGearItems.length} equipped items`);
+    }
+  } catch (degradeError) {
+    console.error('Error degrading equipment:', degradeError);
+  }
+
+  // === POST-GIG: Media Intensity Boost ===
+  try {
+    const mediaBoost = Math.round(5 + (overallRating / 25) * 10); // 5-15 based on rating
+    const { newIntensity, newFatigue } = applyMediaEvent(mediaIntensity, mediaFatigue, 'gig');
+    await supabase
+      .from('bands')
+      .update({
+        media_intensity: newIntensity,
+        media_fatigue: newFatigue,
+      } as any)
+      .eq('id', bandId);
+    console.log(`[GigExecution] Media: intensity ${mediaIntensity}→${newIntensity}, fatigue ${mediaFatigue}→${newFatigue}`);
+  } catch (mediaError) {
+    console.error('Error updating media cycle:', mediaError);
+  }
+
+  // === POST-GIG: Fan Sentiment Shift ===
+  try {
+    const sentimentEvent = overallRating >= 18 ? 'amazing_gig' : overallRating < 10 ? 'bad_gig' : null;
+    if (sentimentEvent) {
+      const { SENTIMENT_EVENTS } = await import('./fanSentiment');
+      const change = SENTIMENT_EVENTS[sentimentEvent] ?? 0;
+      const newSentiment = Math.max(-100, Math.min(100, fanSentimentScore + change));
+      await supabase
+        .from('bands')
+        .update({ fan_sentiment_score: newSentiment } as any)
+        .eq('id', bandId);
+      console.log(`[GigExecution] Fan sentiment: ${fanSentimentScore}→${newSentiment} (${sentimentEvent})`);
+    }
+  } catch (sentimentError) {
+    console.error('Error updating fan sentiment:', sentimentError);
+  }
+
   return {
     outcome,
     songPerformances,
@@ -738,5 +791,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     chemistryChange: chemistryImpact,
     mentorDiscovery,
     stageBehavior,
+    fanSentiment: sentiment,
+    mediaCycle,
   };
 }
