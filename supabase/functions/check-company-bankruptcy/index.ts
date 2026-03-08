@@ -162,8 +162,13 @@ Deno.serve(async (req) => {
               .maybeSingle();
             if (ownerMember && (ownerMember as any).bands) {
               const newMorale = Math.max(0, ((ownerMember as any).bands.morale ?? 50) - 5);
-              await supabase.from('bands').update({ morale: newMorale }).eq('id', (ownerMember as any).band_id);
+              const bId = (ownerMember as any).band_id;
+              await supabase.from('bands').update({ morale: newMorale }).eq('id', bId);
               console.log(`[check-company-bankruptcy] Owner band morale -5 (warning)`);
+              await supabase.from('band_health_events').insert({
+                band_id: bId, event_type: 'morale', delta: -5, new_value: newMorale,
+                source: 'bankruptcy_warning', description: `${company.name} bankruptcy warning (${daysNegative} days negative)`,
+              });
             }
           }
         }

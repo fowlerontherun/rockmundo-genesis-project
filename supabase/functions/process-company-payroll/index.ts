@@ -191,6 +191,15 @@ Deno.serve(async (req) => {
             const newMorale = Math.max(0, Math.min(100, currentMorale + moraleChange));
             await supabase.from('bands').update({ morale: newMorale }).eq('id', (ownerMember as any).band_id);
             console.log(`[process-company-payroll] Morale ${moraleChange > 0 ? '+' : ''}${moraleChange} for owner band (balance: $${newBalance.toFixed(0)})`);
+            // Log health event
+            await supabase.from('band_health_events').insert({
+              band_id: (ownerMember as any).band_id,
+              event_type: 'morale',
+              delta: moraleChange,
+              new_value: newMorale,
+              source: 'company_payroll',
+              description: moraleChange > 0 ? `Payroll paid on time for ${company.name}` : `Payroll caused negative balance at ${company.name} (-$${Math.abs(newBalance).toFixed(0)})`,
+            });
           }
         }
       }

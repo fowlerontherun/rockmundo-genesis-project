@@ -523,6 +523,16 @@ serve(async (req) => {
 
     console.log(`Post-gig: morale ${bandMorale}→${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange}), rep ${bandRep}→${newRep} (${repChange > 0 ? '+' : ''}${repChange}), sent ${bandSent}→${newSent} (${sentChange > 0 ? '+' : ''}${sentChange}) [${performanceGrade}-grade, ${outcome.actual_attendance} attendance]`);
 
+    // Log health events for all 3 stats
+    const healthEvents: any[] = [];
+    const gigDesc = `${performanceGrade}-grade gig (${outcome.actual_attendance} attendance)`;
+    if (moraleChange !== 0) healthEvents.push({ band_id: gig.band_id, event_type: 'morale', delta: moraleChange, new_value: newMorale, source: 'gig_completion', description: gigDesc });
+    if (repChange !== 0) healthEvents.push({ band_id: gig.band_id, event_type: 'reputation', delta: repChange, new_value: newRep, source: 'gig_completion', description: gigDesc });
+    if (sentChange !== 0) healthEvents.push({ band_id: gig.band_id, event_type: 'sentiment', delta: sentChange, new_value: newSent, source: 'gig_completion', description: gigDesc });
+    if (healthEvents.length > 0) {
+      await supabaseClient.from('band_health_events').insert(healthEvents);
+    }
+
     if (bandError) throw bandError;
 
     // Add regional fame for the gig's country and city
