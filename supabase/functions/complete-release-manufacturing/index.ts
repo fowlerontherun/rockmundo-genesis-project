@@ -79,12 +79,26 @@ serve(async (req) => {
             const currentIntensity = (band as any).media_intensity ?? 0;
             const currentFatigue = (band as any).media_fatigue ?? 0;
             const fatigueReduction = currentFatigue > 60 ? 0.5 : currentFatigue > 30 ? 0.75 : 1.0;
+            const newSentiment = Math.min(100, currentSentiment + sentimentBoost);
+            const actualMediaBoost = Math.round(mediaBoost * fatigueReduction);
+            const fatigueGain = release.release_type === 'album' ? 15 : 8;
 
             await supabaseClient.from('bands').update({
-              fan_sentiment_score: Math.min(100, currentSentiment + sentimentBoost),
-              media_intensity: Math.min(100, currentIntensity + Math.round(mediaBoost * fatigueReduction)),
-              media_fatigue: Math.min(100, currentFatigue + (release.release_type === 'album' ? 15 : 8)),
+              fan_sentiment_score: newSentiment,
+              media_intensity: Math.min(100, currentIntensity + actualMediaBoost),
+              media_fatigue: Math.min(100, currentFatigue + fatigueGain),
             } as any).eq('id', release.band_id);
+
+            await supabaseClient.from('band_sentiment_events').insert({
+              band_id: release.band_id,
+              event_type: release.release_type === 'album' ? 'album_release' : 'single_release',
+              sentiment_change: sentimentBoost,
+              media_intensity_change: actualMediaBoost,
+              media_fatigue_change: fatigueGain,
+              sentiment_after: newSentiment,
+              source: 'complete-release-manufacturing',
+              description: `${release.release_type === 'album' ? 'Album' : 'Single'} release excited fans and attracted media attention`,
+            });
 
             console.log(`[complete-release-manufacturing] Band ${release.band_id}: sentiment +${sentimentBoost}, media +${mediaBoost} (${release.release_type})`);
           }

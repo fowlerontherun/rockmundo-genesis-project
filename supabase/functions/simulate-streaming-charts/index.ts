@@ -207,12 +207,22 @@ serve(async (req) => {
         if (band) {
           const curSentiment = (band as any).fan_sentiment_score ?? 0;
           const curIntensity = (band as any).media_intensity ?? 0;
-          const curFatigue = (band as any).media_fatigue ?? 0;
+          const newSentiment = Math.min(100, curSentiment + 12);
 
           await supabase.from('bands').update({
-            fan_sentiment_score: Math.min(100, curSentiment + 12),
+            fan_sentiment_score: newSentiment,
             media_intensity: Math.min(100, curIntensity + 15),
           } as any).eq('id', bId);
+
+          await supabase.from('band_sentiment_events').insert({
+            band_id: bId,
+            event_type: 'chart_hit',
+            sentiment_change: 12,
+            media_intensity_change: 15,
+            sentiment_after: newSentiment,
+            source: 'simulate-streaming-charts',
+            description: 'Chart performance boosted fan excitement and media coverage',
+          });
         }
       }
 

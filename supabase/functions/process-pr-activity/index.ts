@@ -305,11 +305,24 @@ serve(async (req) => {
           const curFatigue = (bandData as any).media_fatigue ?? 0;
           const fatigueReduction = curFatigue > 60 ? 0.5 : curFatigue > 30 ? 0.75 : 1.0;
 
+          const newSentiment = Math.min(100, curSentiment + boosts.sentiment);
+          const newIntensity = Math.min(100, curIntensity + Math.round(boosts.intensity * fatigueReduction));
           await supabaseClient.from('bands').update({
-            fan_sentiment_score: Math.min(100, curSentiment + boosts.sentiment),
-            media_intensity: Math.min(100, curIntensity + Math.round(boosts.intensity * fatigueReduction)),
+            fan_sentiment_score: newSentiment,
+            media_intensity: newIntensity,
             media_fatigue: Math.min(100, curFatigue + boosts.fatigue),
           } as any).eq('id', bandId);
+
+          await supabaseClient.from('band_sentiment_events').insert({
+            band_id: bandId,
+            event_type: 'pr_appearance',
+            sentiment_change: boosts.sentiment,
+            media_intensity_change: Math.round(boosts.intensity * fatigueReduction),
+            media_fatigue_change: boosts.fatigue,
+            sentiment_after: newSentiment,
+            source: 'process-pr-activity',
+            description: `${offer.media_type.toUpperCase()} appearance boosted reputation`,
+          });
 
           console.log(`[process-pr-activity] Band ${bandId}: sentiment +${boosts.sentiment}, media +${boosts.intensity} (${offer.media_type})`);
         }
