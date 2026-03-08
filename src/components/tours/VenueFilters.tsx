@@ -47,11 +47,8 @@ export function VenueFilters({
     enabled: selectedCountries.length > 0,
   });
 
-  // Common music genres for venues
-  const genres = [
-    'Rock', 'Pop', 'Metal', 'Jazz', 'Blues', 'Country', 'Hip Hop', 
-    'Electronic', 'Indie', 'Punk', 'Folk', 'R&B', 'Classical'
-  ];
+  // Uses centralized genre list from skill tree
+  const genres = [...MUSIC_GENRES];
 
   const clearFilters = () => {
     onCountryFilterChange(null);

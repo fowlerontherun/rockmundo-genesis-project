@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { MUSIC_GENRES } from "@/data/genres";
 import type { OnboardingData } from "../OnboardingWizard";
 
 interface MusicIdentityStepProps {
@@ -11,11 +12,7 @@ interface MusicIdentityStepProps {
   updateData: (updates: Partial<OnboardingData>) => void;
 }
 
-const GENRE_SUGGESTIONS = [
-  "Rock", "Punk", "Metal", "Indie", "Alternative",
-  "Pop", "R&B", "Hip-Hop", "Electronic", "Folk",
-  "Jazz", "Blues", "Country", "Classical", "Experimental"
-];
+const GENRE_SUGGESTIONS = [...MUSIC_GENRES];
 
 const INSTRUMENT_ICONS: Record<string, React.ReactNode> = {
   vocals: <Mic2 className="h-4 w-4" />,

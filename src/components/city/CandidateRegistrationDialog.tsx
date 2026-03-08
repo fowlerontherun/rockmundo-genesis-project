@@ -35,10 +35,7 @@ interface CandidateRegistrationDialogProps {
   cityName: string;
 }
 
-const MUSIC_GENRES = [
-  "Rock", "Pop", "Hip-Hop", "Electronic", "Jazz", "Classical", 
-  "Country", "R&B", "Metal", "Indie", "Folk", "Reggae", "Blues"
-];
+// Uses centralized genre list — do not hardcode here
 
 export function CandidateRegistrationDialog({
   open,
