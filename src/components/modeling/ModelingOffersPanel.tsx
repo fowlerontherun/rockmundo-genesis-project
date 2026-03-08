@@ -55,7 +55,7 @@ const TIME_SLOTS = [
   { value: "20:00", label: "08:00 PM" },
 ];
 
-export const ModelingOffersPanel = ({ userId, playerLooks, playerFame }: ModelingOffersPanelProps) => {
+export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLevels = {} }: ModelingOffersPanelProps) => {
   const queryClient = useQueryClient();
   const [bookingOffer, setBookingOffer] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
