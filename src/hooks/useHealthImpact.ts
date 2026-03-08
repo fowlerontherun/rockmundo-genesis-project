@@ -1,6 +1,21 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getHealthStatus } from "@/utils/healthSystem";
 import { autoHospitalize } from "@/hooks/useHospitalization";
+import { aggregateConditionEffects, type ConditionEffects } from "@/utils/conditionSystem";
+
+/**
+ * Fetch active conditions for a user and return aggregated effects
+ */
+async function getActiveConditionEffects(userId: string): Promise<ConditionEffects> {
+  const { data } = await (supabase as any)
+    .from("player_conditions")
+    .select("condition_name, severity, effects")
+    .eq("user_id", userId)
+    .in("status", ["active", "treating"]);
+
+  if (!data || data.length === 0) return {};
+  return aggregateConditionEffects(data);
+}
 
 /**
  * Check if user has enough health/energy for an activity
@@ -34,24 +49,45 @@ export async function checkHealthForActivity(
     };
   }
 
-  // Energy check
-  if (energy < energyCost) {
+  // Check blocking conditions
+  const conditionEffects = await getActiveConditionEffects(userId);
+
+  if (conditionEffects.blocks_gigs && ["gig", "busking", "recording"].includes(activityType)) {
+    return { canPerform: false, message: "A condition is blocking you from performing. Check your Wellness page.", healthPenalty: 0 };
+  }
+  if (conditionEffects.blocks_singing && activityType === "singing") {
+    return { canPerform: false, message: "Vocal strain is preventing you from singing. Seek treatment!", healthPenalty: 0 };
+  }
+  if (conditionEffects.blocks_guitar_gigs && activityType === "guitar") {
+    return { canPerform: false, message: "Your wrist/hand injury prevents you from playing guitar.", healthPenalty: 0 };
+  }
+  if (conditionEffects.blocks_travel && activityType === "travel") {
+    return { canPerform: false, message: "You're too ill to travel. Get treatment first!", healthPenalty: 0 };
+  }
+
+  // Energy check (factor in energy cap from conditions)
+  const effectiveEnergyCap = conditionEffects.energy_cap ?? 100;
+  const effectiveEnergy = Math.min(energy, effectiveEnergyCap);
+  if (effectiveEnergy < energyCost) {
     return {
       canPerform: false,
-      message: `Not enough energy (need ${energyCost}, have ${energy})`,
+      message: `Not enough energy (need ${energyCost}, have ${effectiveEnergy}${effectiveEnergyCap < 100 ? ` — capped at ${effectiveEnergyCap}% by condition` : ""})`,
       healthPenalty: 0,
     };
   }
 
-  // Calculate performance penalty
+  // Calculate performance penalty from health + conditions
   let healthPenalty = 0;
   if (health <= 30) {
-    healthPenalty = 50; // 50% penalty
+    healthPenalty = 50;
   } else if (health <= 50) {
-    healthPenalty = 25; // 25% penalty
+    healthPenalty = 25;
   } else if (health <= 70) {
-    healthPenalty = 10; // 10% penalty
+    healthPenalty = 10;
   }
+
+  // Add condition XP penalty
+  healthPenalty = Math.min(75, healthPenalty + (conditionEffects.xp_penalty || 0));
 
   return { canPerform: true, message: null, healthPenalty };
 }

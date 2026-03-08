@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.917",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Player Conditions System — unified tracking for injuries (sprained wrist, vocal strain, concussion), sicknesses (flu, food poisoning, tropical fever), and mental health (depression, anxiety, burnout, insomnia)" },
+      { type: 'feature', description: "Travel Hazards — travel now carries risk of injury/sickness based on transport mode (Bus 4%, Plane 1.5%, Private Jet 0.5%), distance, and lifestyle behavior settings" },
+      { type: 'feature', description: "Expanded Mental Health — depression boosts songwriting quality (+10%) but reduces XP; anxiety penalizes gig scores; burnout blocks all gigs; insomnia reduces rest effectiveness by 50%" },
+      { type: 'feature', description: "New Conditions tab on Wellness page with severity bars, treatment options (Hospital, Therapy, Medication, Rest), and estimated recovery timers" },
+      { type: 'feature', description: "13 travel hazard & mental health random events seeded — Food Poisoning Abroad, Bus Accident, Touring Burnout, Performance Anxiety, Insomnia Hits, and more" },
+      { type: 'improvement', description: "Hospital now accepts check-in for injuries/sickness (not just health < 30) with condition-linked admission records" },
+      { type: 'improvement', description: "Health activity checks now factor in blocking conditions (vocal strain blocks singing, sprained wrist blocks guitar, etc.)" },
+      { type: 'improvement', description: "Added 'shopping' addiction type triggered by excessive gear purchases; active addictions now increase mental health condition risk" },
+      { type: 'improvement', description: "Complete-travel edge function now rolls for travel hazards on arrival, creating conditions and inbox notifications" },
+    ],
+  },
+  {
     version: "1.0.916",
     date: "2026-03-08",
     changes: [

@@ -109,7 +109,14 @@ export function getAddictionTypeLabel(type: AddictionType): string {
     case "substances": return "Substances";
     case "gambling": return "Gambling";
     case "partying": return "Partying";
+    case "shopping": return "Shopping";
   }
+}
+
+/** Active addictions increase mental health condition risk */
+export function getAddictionMentalHealthRisk(activeAddictionCount: number): number {
+  if (activeAddictionCount === 0) return 0;
+  return Math.min(0.15, activeAddictionCount * 0.05); // 5% per active addiction, max 15%
 }
 
 export function getDaysCleanMilestone(days: number): { label: string; reward: number } | null {

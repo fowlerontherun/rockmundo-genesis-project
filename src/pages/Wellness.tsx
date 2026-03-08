@@ -342,6 +342,11 @@ export default function WellnessPage() {
           </Card>
         </TabsContent>
 
+        {/* === CONDITIONS TAB === */}
+        <TabsContent value="conditions" className="space-y-4">
+          <ConditionsPanel />
+        </TabsContent>
+
         {/* === ACTIVITIES TAB (merged Physical + Mental + Lifestyle) === */}
         <TabsContent value="activities" className="space-y-4">
           <Card>

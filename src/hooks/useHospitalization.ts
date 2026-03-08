@@ -76,7 +76,7 @@ export function useHospitalization() {
 
   // Check in to hospital
   const checkInMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (params?: { conditionId?: string; reason?: string }) => {
       if (!user?.id || !nearestHospital) throw new Error("No hospital available");
 
       const { data: profile } = await supabase
@@ -88,10 +88,15 @@ export function useHospitalization() {
       if (!profile) throw new Error("Profile not found");
 
       const health = profile.health ?? 100;
-      if (health > 30) throw new Error("Health must be below 30 to check in");
+      const reason = params?.reason || "health_collapse";
 
-      // Calculate stay duration: 1-3 days based on how low health is
-      const stayDays = health <= 10 ? 3 : health <= 20 ? 2 : 1;
+      // Allow check-in for conditions (injury/sickness) even if health > 30
+      if (reason === "health_collapse" && health > 30) {
+        throw new Error("Health must be below 30 to check in for health collapse");
+      }
+
+      // Calculate stay duration: 1-3 days based on how low health is or condition severity
+      const stayDays = params?.conditionId ? 2 : (health <= 10 ? 3 : health <= 20 ? 2 : 1);
       const dischargeAt = new Date();
       dischargeAt.setDate(dischargeAt.getDate() + stayDays);
 
@@ -102,7 +107,7 @@ export function useHospitalization() {
       }
 
       // Create hospitalization record
-      const { error: hospError } = await supabase
+      const { error: hospError } = await (supabase as any)
         .from("player_hospitalizations")
         .insert({
           user_id: user.id,
@@ -112,6 +117,8 @@ export function useHospitalization() {
           status: "admitted",
           total_cost: totalCost,
           health_on_admission: health,
+          reason,
+          condition_id: params?.conditionId || null,
         });
 
       if (hospError) throw hospError;
