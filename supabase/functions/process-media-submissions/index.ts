@@ -211,7 +211,7 @@ serve(async (req) => {
       .from("podcast_submissions")
       .select(`
         id, band_id, status, podcast_id,
-        bands!inner(fame),
+        bands!inner(fame, reputation_score),
         podcasts!inner(min_fame_required, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max)
       `)
       .eq("status", "pending")
