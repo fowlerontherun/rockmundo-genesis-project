@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MUSIC_GENRES } from "@/data/genres";
 import {
   Dialog,
   DialogContent,

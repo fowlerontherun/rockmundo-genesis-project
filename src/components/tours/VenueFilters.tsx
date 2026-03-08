@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Filter, MapPin, Music, Building } from 'lucide-react';
+import { MUSIC_GENRES } from '@/data/genres';
 
 interface VenueFiltersProps {
   selectedCountries: string[];

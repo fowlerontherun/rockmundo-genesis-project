@@ -5,6 +5,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { MUSIC_GENRES } from "@/data/genres";
 
 export interface GenreTrend {
   genre: string;
