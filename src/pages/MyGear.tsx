@@ -1,6 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench } from "lucide-react";
 import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
+import { calculateRepairCost } from "@/utils/equipmentDegradation";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
