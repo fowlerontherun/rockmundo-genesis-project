@@ -461,15 +461,21 @@ Deno.serve(async (req) => {
         }
 
         // === RECORDING SESSION → MORALE (v1.0.965) ===
-        // Great recording sessions boost band morale
         if (session.band_id && qualityImprovement > 0) {
           try {
             const { data: bMorale } = await supabase.from('bands').select('morale').eq('id', session.band_id).single();
             if (bMorale) {
               const moraleBoost = qualityImprovement >= 25 ? 5 : qualityImprovement >= 15 ? 3 : 1;
               const curM = (bMorale as any).morale ?? 50;
-              await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', session.band_id);
+              const newMorale = Math.min(100, curM + moraleBoost);
+              await supabase.from('bands').update({ morale: newMorale } as any).eq('id', session.band_id);
               console.log(`Recording morale boost: quality +${qualityImprovement} → morale +${moraleBoost}`);
+              // === HEALTH EVENT LOG (v1.0.996) ===
+              try {
+                await supabase.from('band_health_events').insert({
+                  band_id: session.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'recording_session', description: `Recording session: quality +${qualityImprovement} (${sessionLuckLabel})`,
+                });
+              } catch (_logErr) { /* non-critical */ }
             }
           } catch (_e) { /* non-critical */ }
         }

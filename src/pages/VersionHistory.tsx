@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.996",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Health Event Logging Batch 2: 8 more edge functions now log to band_health_events. Organic followers, streaming revenue, radio acceptance/rejection, work shifts, recording sessions, media submissions (newspaper/magazine/podcast), studio bookings, and venue bookings all record detailed health stat changes" },
+      { type: 'improvement', description: "11 of ~27 health-modifying edge functions now have full event audit trail coverage. Players can trace morale changes from streaming revenue, radio rejections, work shifts, recording sessions, media approvals, and business revenue" },
+    ],
+  },
+  {
     version: "1.0.995",
     date: "2026-03-08",
     changes: [

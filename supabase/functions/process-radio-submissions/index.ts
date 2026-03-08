@@ -207,11 +207,20 @@ serve(async (req) => {
           if (bData) {
             const curMorale = (bData as any).morale ?? 50;
             const curRep = (bData as any).reputation_score ?? 0;
+            const newMorale = Math.min(100, curMorale + 3);
+            const newRep = Math.min(100, curRep + 2);
             await supabaseClient.from('bands').update({
-              morale: Math.min(100, curMorale + 3),
-              reputation_score: Math.min(100, curRep + 2),
+              morale: newMorale,
+              reputation_score: newRep,
             } as any).eq('id', submission.band_id);
             console.log(`[process-radio-submissions] Radio accepted → morale +3, rep +2 for band ${submission.band_id}`);
+            // === HEALTH EVENT LOG (v1.0.996) ===
+            try {
+              await supabaseClient.from('band_health_events').insert([
+                { band_id: submission.band_id, event_type: 'morale', delta: 3, new_value: newMorale, source: 'radio_accepted', description: `Song accepted by ${station.name}` },
+                { band_id: submission.band_id, event_type: 'reputation', delta: 2, new_value: newRep, source: 'radio_accepted', description: `Radio airplay on ${station.name}` },
+              ]);
+            } catch (_logErr) { /* non-critical */ }
           }
         } catch (_e) { /* non-critical */ }
 
@@ -239,7 +248,14 @@ serve(async (req) => {
           const { data: bData } = await supabaseClient.from('bands').select('morale').eq('id', submission.band_id).single();
           if (bData) {
             const curMorale = (bData as any).morale ?? 50;
-            await supabaseClient.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', submission.band_id);
+            const newMorale = Math.max(0, curMorale - 1);
+            await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', submission.band_id);
+            // === HEALTH EVENT LOG (v1.0.996) ===
+            try {
+              await supabaseClient.from('band_health_events').insert({
+                band_id: submission.band_id, event_type: 'morale', delta: -1, new_value: newMorale, source: 'radio_rejection', description: `Radio submission rejected: ${reason}`,
+              });
+            } catch (_logErr) { /* non-critical */ }
           }
         } catch (_e) { /* non-critical */ }
 

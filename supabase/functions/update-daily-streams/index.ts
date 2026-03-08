@@ -472,8 +472,20 @@ Deno.serve(async (req) => {
         if (bd) {
           const curM = (bd as any).morale ?? 50;
           const moraleBoost = totalRevenue >= 500 ? 4 : totalRevenue >= 100 ? 3 : totalRevenue >= 20 ? 2 : 1;
-          await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bandId);
+          const newMorale = Math.min(100, curM + moraleBoost);
+          await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bandId);
           console.log(`Streaming revenue morale: band ${bandId} earned $${totalRevenue} → morale +${moraleBoost}`);
+          // === HEALTH EVENT LOG (v1.0.996) ===
+          try {
+            await supabase.from('band_health_events').insert({
+              band_id: bandId,
+              event_type: 'morale',
+              delta: moraleBoost,
+              new_value: newMorale,
+              source: 'streaming_revenue',
+              description: `Daily streaming revenue: $${Math.round(totalRevenue)}`,
+            });
+          } catch (_logErr) { /* non-critical */ }
         }
       } catch (_e) { /* non-critical */ }
     }
