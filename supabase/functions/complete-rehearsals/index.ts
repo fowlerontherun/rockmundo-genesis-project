@@ -250,20 +250,27 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Update band chemistry
+        // Update band chemistry and morale
         if (chemistryGain > 0) {
           const { data: band } = await supabase
             .from('bands')
-            .select('chemistry_level')
+            .select('chemistry_level, morale')
             .eq('id', rehearsal.band_id)
             .single()
           
           if (band) {
             const newChemistry = Math.min(100, (band.chemistry_level || 0) + chemistryGain)
+            // v1.0.961: Rehearsals boost morale (+2 per session, more for longer sessions)
+            const curMorale = (band as any).morale ?? 50
+            const moraleBoost = Math.min(4, Math.floor(durationHours) + 1) // +2 for 1hr, +3 for 2hr, +4 for 3hr+
+            const newMorale = Math.min(100, curMorale + moraleBoost)
+            
             await supabase
               .from('bands')
-              .update({ chemistry_level: newChemistry })
+              .update({ chemistry_level: newChemistry, morale: newMorale } as any)
               .eq('id', rehearsal.band_id)
+            
+            console.log(`Rehearsal morale: ${curMorale} → ${newMorale} (+${moraleBoost}) for band ${rehearsal.band_id}`)
           }
         }
 

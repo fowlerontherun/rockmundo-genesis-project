@@ -70,7 +70,7 @@ serve(async (req) => {
 
           const { data: band } = await supabaseClient
             .from('bands')
-            .select('fan_sentiment_score, media_intensity, media_fatigue')
+            .select('fan_sentiment_score, media_intensity, media_fatigue, reputation_score, morale')
             .eq('id', release.band_id)
             .single();
 
@@ -78,15 +78,25 @@ serve(async (req) => {
             const currentSentiment = (band as any).fan_sentiment_score ?? 0;
             const currentIntensity = (band as any).media_intensity ?? 0;
             const currentFatigue = (band as any).media_fatigue ?? 0;
+            const currentRep = (band as any).reputation_score ?? 0;
+            const currentMorale = (band as any).morale ?? 50;
             const fatigueReduction = currentFatigue > 60 ? 0.5 : currentFatigue > 30 ? 0.75 : 1.0;
             const newSentiment = Math.min(100, currentSentiment + sentimentBoost);
             const actualMediaBoost = Math.round(mediaBoost * fatigueReduction);
             const fatigueGain = release.release_type === 'album' ? 15 : 8;
 
+            // v1.0.961: Releases boost reputation and morale
+            const repBoost = release.release_type === 'album' ? 5 : 2; // Albums improve public image more
+            const moraleBoost = release.release_type === 'album' ? 6 : 3; // Band excited about their release
+            const newRep = Math.min(100, currentRep + repBoost);
+            const newMorale = Math.min(100, currentMorale + moraleBoost);
+
             await supabaseClient.from('bands').update({
               fan_sentiment_score: newSentiment,
               media_intensity: Math.min(100, currentIntensity + actualMediaBoost),
               media_fatigue: Math.min(100, currentFatigue + fatigueGain),
+              reputation_score: newRep,
+              morale: newMorale,
             } as any).eq('id', release.band_id);
 
             await supabaseClient.from('band_sentiment_events').insert({
