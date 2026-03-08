@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.930",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Genre Trend System: Genres now rise and fall in popularity on ~90-day cycles, affecting streams, fan conversion, and chart weight" },
+      { type: 'feature', description: "Music Video Impact Pipeline: Completed videos now cascade fame, streaming boosts (+5-30%), chart points, and hype to the parent song" },
+      { type: 'feature', description: "Cross-Band Collaborations: Bands with member friendships can create featured songs with shared fame, fan crossover (5-15%), and chart bonuses" },
+      { type: 'feature', description: "Fan Loyalty Decay: Inactive bands lose casual fans (2%/day), dedicated fans downgrade (0.5%/day) after 7-day grace period; fame slows decay" },
+      { type: 'feature', description: "Dynamic City Economy: Cities cycle through boom/growth/stable/recession/depression phases affecting gig earnings (0.6x-1.35x) and merch sales" },
+      { type: 'improvement', description: "Genre trends are deterministic per genre+day — same player sees same trends, enabling shared meta-strategy" },
+      { type: 'improvement', description: "City economies include tourism attendance bonuses during boom periods (+25% crowd)" },
+      { type: 'improvement', description: "Collaboration eligibility requires cross-band friendships — encourages social gameplay" },
+    ],
+  },
+  {
     version: "1.0.929",
     date: "2026-03-08",
     changes: [
