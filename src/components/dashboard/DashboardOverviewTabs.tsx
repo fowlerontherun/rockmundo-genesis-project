@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -66,7 +66,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
       if (!profile?.id) return null;
       const client: any = supabase;
       const { data } = await client
-        .from("player_skill_progress")
+        .from("skill_progress")
         .select("skill_slug, current_level")
         .eq("profile_id", profile.id);
       if (!data) return null;
@@ -90,7 +90,14 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
     attributeStars: null,
   });
 
-  // Fetch all cities
+  // Sync computed level back to profiles table so other pages see it
+  useEffect(() => {
+    if (playerLevelData.level > 1 && profile?.id && playerLevelData.level !== profile?.level) {
+      const client: any = supabase;
+      client.from("profiles").update({ level: playerLevelData.level }).eq("id", profile.id);
+    }
+  }, [playerLevelData.level, profile?.id, profile?.level]);
+
   const { data: allCities } = useQuery({
     queryKey: ["dashboard-all-cities"],
     queryFn: async () => {
