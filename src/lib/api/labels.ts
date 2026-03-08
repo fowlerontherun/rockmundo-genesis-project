@@ -211,7 +211,7 @@ export const fetchLabelRevenueDashboard = async (
     contractNameMap.set(contract.id, name);
   });
 
-  let releases: ReleaseRecord[] = [];
+  let releases: Record<string, any>[] = [];
   if (contractIdSet.length > 0) {
     const { data: releaseRows, error: releaseError } = await supabase
       .from("label_releases")
@@ -222,7 +222,7 @@ export const fetchLabelRevenueDashboard = async (
       throw releaseError;
     }
 
-    releases = (releaseRows ?? []) as ReleaseRecord[];
+    releases = (releaseRows ?? []) as unknown as Record<string, any>[];
   }
 
   const releaseReports = releases.map((release) =>
