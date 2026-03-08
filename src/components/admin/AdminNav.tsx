@@ -64,6 +64,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/bands", label: "Band Administration", description: "Band mechanics" },
       { path: "/admin/fame-fans-gifting", label: "Fame & Fans Gifting", description: "Gift fame and fans" },
       { path: "/admin/gigs", label: "Gigs", description: "Gig system configuration" },
+      { path: "/admin/gig-viewer-demo", label: "Gig Viewer Demo", description: "3D gig preview" },
       { path: "/admin/venues", label: "Venues", description: "Venue management" },
       { path: "/admin/rehearsal-rooms", label: "Rehearsal Rooms", description: "Practice spaces" },
       { path: "/admin/stage-equipment", label: "Stage Equipment", description: "Equipment catalog" },
