@@ -547,6 +547,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         overallRating,
         performanceGrade: gradeData.grade,
         bandFame: band.fame || 0,
+        behaviorFanMultiplier: behaviorMods.fanConversionMultiplier,
       });
     }
   } catch (fanError) {
