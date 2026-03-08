@@ -2455,6 +2455,7 @@ export type Database = {
           drama_cooldown_until: string | null
           fame: number | null
           fame_multiplier: number | null
+          fan_sentiment_score: number | null
           genre: string | null
           genre_last_changed_at: string | null
           global_fame: number | null
@@ -2474,6 +2475,8 @@ export type Database = {
           leadership_votes_history: Json | null
           logo_url: string | null
           max_members: number | null
+          media_fatigue: number | null
+          media_intensity: number | null
           name: string
           next_leadership_vote: string | null
           performance_count: number | null
@@ -2507,6 +2510,7 @@ export type Database = {
           drama_cooldown_until?: string | null
           fame?: number | null
           fame_multiplier?: number | null
+          fan_sentiment_score?: number | null
           genre?: string | null
           genre_last_changed_at?: string | null
           global_fame?: number | null
@@ -2526,6 +2530,8 @@ export type Database = {
           leadership_votes_history?: Json | null
           logo_url?: string | null
           max_members?: number | null
+          media_fatigue?: number | null
+          media_intensity?: number | null
           name: string
           next_leadership_vote?: string | null
           performance_count?: number | null
@@ -2559,6 +2565,7 @@ export type Database = {
           drama_cooldown_until?: string | null
           fame?: number | null
           fame_multiplier?: number | null
+          fan_sentiment_score?: number | null
           genre?: string | null
           genre_last_changed_at?: string | null
           global_fame?: number | null
@@ -2578,6 +2585,8 @@ export type Database = {
           leadership_votes_history?: Json | null
           logo_url?: string | null
           max_members?: number | null
+          media_fatigue?: number | null
+          media_intensity?: number | null
           name?: string
           next_leadership_vote?: string | null
           performance_count?: number | null
