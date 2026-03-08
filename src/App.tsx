@@ -540,7 +540,7 @@ function App() {
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     <Route path="admin/stream-multiplier" element={<StreamMultiplier />} />
-                    {/* <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} /> */}
+                    <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
