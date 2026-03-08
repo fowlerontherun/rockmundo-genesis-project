@@ -7,6 +7,7 @@ interface TattooDesignCardProps {
   parlourPriceMultiplier?: number;
   onSelect?: (design: TattooDesign) => void;
   selected?: boolean;
+  artistSpecialty?: string;
 }
 
 export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelect, selected }: TattooDesignCardProps) => {
