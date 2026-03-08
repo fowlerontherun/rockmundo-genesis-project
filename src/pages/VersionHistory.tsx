@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.954",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Band Health Dashboard: New consolidated card showing all 4 health metrics (Sentiment, Media Cycle, Public Image, Morale) with color-coded status bars and overall health percentage" },
+      { type: 'feature', description: "Critical alerts: Dashboard highlights metrics in critical state with a warning banner" },
+      { type: 'improvement', description: "Band overview now uses a 3-column layout on desktop: Health Dashboard + Sentiment + Media Cycle side by side" },
+    ],
+  },
+  {
     version: "1.0.953",
     date: "2026-03-08",
     changes: [
