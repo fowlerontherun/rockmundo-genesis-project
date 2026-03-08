@@ -1276,18 +1276,14 @@ const Songwriting = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-        <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-2">
-              <Music className="h-6 w-6 md:h-7 md:w-7 text-primary" />
-              {t('songwriting.title')}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('songwriting.subtitle')}
-            </p>
-          </div>
-          <div className="flex gap-2">
+      <PageLayout>
+        <PageHeader
+          title={t('songwriting.title')}
+          subtitle={t('songwriting.subtitle')}
+          icon={Music}
+          backTo="/hub/music"
+          backLabel="Back to Music Hub"
+          actions={
             <Button
               onClick={() => checkAutoCompletions(true)}
               variant="outline"
@@ -1297,8 +1293,8 @@ const Songwriting = () => {
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {isRefreshing ? t('common.loading') : t('songwriting.refreshSessions')}
             </Button>
-          </div>
-        </div>
+          }
+        />
         
         {/* Session Info Banner */}
         <Card className="bg-primary/5 border-primary/20">
