@@ -469,11 +469,28 @@ serve(async (req) => {
                 }
               }
 
-              // ── Label Revenue Split ──
-              // If release has an active contract, split net revenue
-              if (contract && labelCutPct > 0 && release.band_id) {
-                const labelShareDollars = netRevenue * labelCutPct;
-                const bandShareDollars = netRevenue * (1 - labelCutPct);
+              // ── Label Revenue Split (Deal-Type Aware) ──
+              // Distribution Deal: only takes cut on physical/digital sales (not streaming, which is handled in update-daily-streams)
+              // Licensing Deal: check if contract has expired — if so, skip label cut
+              // Production Deal: label takes recording revenue cut (sales are recording revenue)
+              // Standard Deal: normal recording sales split
+              // 360 Deal: takes cut of everything (gig/merch handled separately in complete-gig/simulate-merch-sales)
+              const dealType = contract?.deal_type_name || "Standard Deal";
+              
+              // Licensing Deal: if contract end date has passed, no label cut
+              const isLicensingExpired = dealType === "Licensing Deal" && contract && new Date(contract.end_date) < new Date();
+              
+              // All deal types get a cut of sales revenue (it's recording/distribution revenue)
+              // Distribution Deal gets a smaller effective cut (only distribution margin)
+              let effectiveLabelCutPct = labelCutPct;
+              if (dealType === "Distribution Deal") {
+                // Distribution deals only take the distribution margin, not full royalty
+                effectiveLabelCutPct = Math.min(labelCutPct, 0.20); // cap at 20%
+              }
+              
+              if (contract && effectiveLabelCutPct > 0 && release.band_id && !isLicensingExpired) {
+                const labelShareDollars = netRevenue * effectiveLabelCutPct;
+                const bandShareDollars = netRevenue * (1 - effectiveLabelCutPct);
 
                 // Check if advance still needs recoupment
                 const currentRecouped = contract.recouped_amount;
