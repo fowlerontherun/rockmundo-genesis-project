@@ -372,7 +372,8 @@ Deno.serve(async (req) => {
       const totalAttendance = (recentVenueGigs || []).reduce((sum, g) => sum + (g.actual_attendance || 0), 0);
       const barRevenue = totalAttendance * 3; // ~$3 per attendee in bar sales
 
-      const dailyRevenue = Math.round((gigRevenue + barRevenue) / 7 + BASE_ACTIVITY_REVENUE.venue);
+      const ownerRepMod = ownerReputationMap.get(venue.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((gigRevenue + barRevenue) / 7 + BASE_ACTIVITY_REVENUE.venue) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
