@@ -687,7 +687,7 @@ const parseNightClubDjSlotConfig = (
   };
 };
 
-const normalizeNightClubRecord = (item: Record<string, unknown>): CityNightClub => {
+export const normalizeNightClubRecord = (item: Record<string, unknown>): CityNightClub => {
   const qualityValue = toNumber(item.quality_level ?? item.quality ?? item.level, 1);
   const boundedQuality = Number.isNaN(qualityValue) ? 1 : Math.min(5, Math.max(1, Math.round(qualityValue)));
   const capacityValue = toNumber(item.capacity, Number.NaN);

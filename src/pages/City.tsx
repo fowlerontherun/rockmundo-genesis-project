@@ -405,7 +405,11 @@ export default function City() {
           }
 
           if (nightClubsResult.status === "fulfilled" && nightClubsResult.value.data) {
-            setNightClubs(nightClubsResult.value.data as any);
+            setNightClubs(
+              nightClubsResult.value.data.map((row) =>
+                normalizeNightClubRecord(row as unknown as Record<string, unknown>)
+              )
+            );
           }
 
           if (rehearsalRoomsResult.status === "fulfilled" && rehearsalRoomsResult.value.data) {
