@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: Omit<BehaviorSettings, "id" | "user_id" | "created_at" |
   media_behavior: "professional",
   afterparty_attendance: "sometimes",
   entourage_size: "small",
+  stage_behavior: "standard",
 };
 
 // Risk score calculation weights
