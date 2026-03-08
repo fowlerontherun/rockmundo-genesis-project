@@ -159,169 +159,183 @@ export function BehaviorSettingsTab() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stage Behavior Selector - top of page */}
-      <StageBehaviorSelector
-        currentBehavior={settings.stage_behavior || 'standard'}
-        unlockedBehaviors={unlockedBehaviors}
-        onSelect={(key) => updateSettings({ stage_behavior: key })}
-        isUpdating={isUpdating}
-      />
+    <Tabs defaultValue="stage-behavior" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="stage-behavior" className="flex items-center gap-2">
+          <Flame className="h-4 w-4" />
+          Stage Behavior
+        </TabsTrigger>
+        <TabsTrigger value="lifestyle-risks" className="flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          Lifestyle Risks
+        </TabsTrigger>
+      </TabsList>
 
-      {/* Risk Overview Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-orange-500" />
-            Lifestyle Risk Profile
-          </CardTitle>
-          <CardDescription>
-            Your current touring lifestyle settings and their impact
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Risk Score */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Risk Score</span>
-                <span className={cn("font-bold", riskLevel.color)}>{riskScore}/100</span>
-              </div>
-              <Progress value={riskScore} className="h-3" />
-              <p className={cn("text-sm font-medium", riskLevel.color)}>
-                {riskLevel.label}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {riskLevel.description}
-              </p>
-            </div>
+      <TabsContent value="stage-behavior" className="space-y-6">
+        <StageBehaviorSelector
+          currentBehavior={settings.stage_behavior || 'standard'}
+          unlockedBehaviors={unlockedBehaviors}
+          onSelect={(key) => updateSettings({ stage_behavior: key })}
+          isUpdating={isUpdating}
+        />
+      </TabsContent>
 
-            {/* Health Impact */}
-            <div className="space-y-3 p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Heart className="h-4 w-4 text-red-500" />
-                Health Recovery
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "text-lg font-bold",
-                  healthModifiers.recoveryModifier > 0 ? "text-green-500" : 
-                  healthModifiers.recoveryModifier < 0 ? "text-red-500" : ""
-                )}>
-                  {healthModifiers.recoveryModifier > 0 ? "+" : ""}{healthModifiers.recoveryModifier}%
-                </span>
-                <span className="text-xs text-muted-foreground">recovery rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "text-lg font-bold",
-                  healthModifiers.restEffectiveness > 0 ? "text-green-500" : 
-                  healthModifiers.restEffectiveness < 0 ? "text-red-500" : ""
-                )}>
-                  {healthModifiers.restEffectiveness > 0 ? "+" : ""}{healthModifiers.restEffectiveness}%
-                </span>
-                <span className="text-xs text-muted-foreground">rest effectiveness</span>
-              </div>
-            </div>
-
-            {/* Event Likelihood */}
-            <div className="space-y-3 p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Event Likelihood
-              </div>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>Wild party events</span>
-                  <span className={riskScore > 50 ? "text-orange-500" : "text-muted-foreground"}>
-                    {riskScore > 50 ? "High" : riskScore > 25 ? "Medium" : "Low"}
-                  </span>
+      <TabsContent value="lifestyle-risks" className="space-y-6">
+        {/* Risk Overview Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-500" />
+              Lifestyle Risk Profile
+            </CardTitle>
+            <CardDescription>
+              Your current touring lifestyle settings and their impact
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Risk Score */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Risk Score</span>
+                  <span className={cn("font-bold", riskLevel.color)}>{riskScore}/100</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Fan encounters</span>
-                  <span className={settings.fan_interaction === "wild" ? "text-orange-500" : "text-muted-foreground"}>
-                    {settings.fan_interaction === "wild" ? "High" : settings.fan_interaction === "friendly" ? "Medium" : "Low"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Media incidents</span>
-                  <span className={settings.media_behavior === "controversial" ? "text-red-500" : "text-muted-foreground"}>
-                    {settings.media_behavior === "controversial" ? "Very High" : settings.media_behavior === "outspoken" ? "Medium" : "Low"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {riskScore > 60 && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-destructive">High Risk Lifestyle</p>
+                <Progress value={riskScore} className="h-3" />
+                <p className={cn("text-sm font-medium", riskLevel.color)}>
+                  {riskLevel.label}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Your current settings will lead to more health drain and dramatic events. 
-                  Consider moderating some behaviors for sustainability.
+                  {riskLevel.description}
                 </p>
               </div>
-            </div>
-          )}
 
-          {riskScore < 20 && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-              <Shield className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-green-600">Safe Lifestyle</p>
-                <p className="text-xs text-muted-foreground">
-                  You're playing it safe. Great for health, but you might miss some legendary opportunities.
-                </p>
+              {/* Health Impact */}
+              <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  Health Recovery
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-lg font-bold",
+                    healthModifiers.recoveryModifier > 0 ? "text-green-500" : 
+                    healthModifiers.recoveryModifier < 0 ? "text-red-500" : ""
+                  )}>
+                    {healthModifiers.recoveryModifier > 0 ? "+" : ""}{healthModifiers.recoveryModifier}%
+                  </span>
+                  <span className="text-xs text-muted-foreground">recovery rate</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-lg font-bold",
+                    healthModifiers.restEffectiveness > 0 ? "text-green-500" : 
+                    healthModifiers.restEffectiveness < 0 ? "text-red-500" : ""
+                  )}>
+                    {healthModifiers.restEffectiveness > 0 ? "+" : ""}{healthModifiers.restEffectiveness}%
+                  </span>
+                  <span className="text-xs text-muted-foreground">rest effectiveness</span>
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Settings Categories */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {SETTING_CATEGORIES.map((category) => (
-          <Card key={category.key}>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                {category.icon}
-                {category.title}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {category.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup
-                value={settings[category.key] as string}
-                onValueChange={(value) => updateSettings({ [category.key]: value })}
-                disabled={isUpdating}
-                className="space-y-2"
-              >
-                {category.options.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={`${category.key}-${option.value}`} />
-                    <Label 
-                      htmlFor={`${category.key}-${option.value}`} 
-                      className="flex flex-1 items-center justify-between cursor-pointer"
-                    >
-                      <div>
-                        <span className="font-medium">{option.label}</span>
-                        <p className="text-xs text-muted-foreground">{option.description}</p>
-                      </div>
-                      <Badge variant={getRiskBadgeVariant(option.riskLevel)} className="ml-2 text-xs">
-                        {option.riskLevel}
-                      </Badge>
-                    </Label>
+              {/* Event Likelihood */}
+              <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Event Likelihood
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span>Wild party events</span>
+                    <span className={riskScore > 50 ? "text-orange-500" : "text-muted-foreground"}>
+                      {riskScore > 50 ? "High" : riskScore > 25 ? "Medium" : "Low"}
+                    </span>
                   </div>
-                ))}
-              </RadioGroup>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+                  <div className="flex justify-between">
+                    <span>Fan encounters</span>
+                    <span className={settings.fan_interaction === "wild" ? "text-orange-500" : "text-muted-foreground"}>
+                      {settings.fan_interaction === "wild" ? "High" : settings.fan_interaction === "friendly" ? "Medium" : "Low"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Media incidents</span>
+                    <span className={settings.media_behavior === "controversial" ? "text-red-500" : "text-muted-foreground"}>
+                      {settings.media_behavior === "controversial" ? "Very High" : settings.media_behavior === "outspoken" ? "Medium" : "Low"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {riskScore > 60 && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-destructive">High Risk Lifestyle</p>
+                  <p className="text-xs text-muted-foreground">
+                    Your current settings will lead to more health drain and dramatic events. 
+                    Consider moderating some behaviors for sustainability.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {riskScore < 20 && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <Shield className="h-5 w-5 text-green-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-green-600">Safe Lifestyle</p>
+                  <p className="text-xs text-muted-foreground">
+                    You're playing it safe. Great for health, but you might miss some legendary opportunities.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Settings Categories */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {SETTING_CATEGORIES.map((category) => (
+            <Card key={category.key}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  {category.icon}
+                  {category.title}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {category.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={settings[category.key] as string}
+                  onValueChange={(value) => updateSettings({ [category.key]: value })}
+                  disabled={isUpdating}
+                  className="space-y-2"
+                >
+                  {category.options.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={`${category.key}-${option.value}`} />
+                      <Label 
+                        htmlFor={`${category.key}-${option.value}`} 
+                        className="flex flex-1 items-center justify-between cursor-pointer"
+                      >
+                        <div>
+                          <span className="font-medium">{option.label}</span>
+                          <p className="text-xs text-muted-foreground">{option.description}</p>
+                        </div>
+                        <Badge variant={getRiskBadgeVariant(option.riskLevel)} className="ml-2 text-xs">
+                          {option.riskLevel}
+                        </Badge>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }
