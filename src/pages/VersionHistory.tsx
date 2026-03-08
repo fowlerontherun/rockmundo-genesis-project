@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.014",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Charts: Daily view now shows estimated daily values (weekly/7) instead of duplicating weekly totals" },
+      { type: 'fix', description: "Charts: Monthly/yearly totals now guaranteed to be at least the weekly peak, preventing weekly > monthly anomaly" },
+      { type: 'fix', description: "Charts: B-sides from singles are now excluded from all chart types (streaming, sales, combined)" },
+      { type: 'improvement', description: "Edge function update-music-charts: Added is_b_side filtering to prevent b-sides from charting" },
+    ],
+  },
+  {
     version: "1.1.013",
     date: "2026-03-08",
     changes: [
