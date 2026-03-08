@@ -184,9 +184,10 @@ const CompanyDetailContent = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue={isHolding ? "structure" : "overview"} className="space-y-4">
+      <Tabs defaultValue={isHolding ? "structure" : "empire"} className="space-y-4">
         <TabsList>
           {isHolding && <TabsTrigger value="structure">Structure</TabsTrigger>}
+          <TabsTrigger value="empire">Empire</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>
