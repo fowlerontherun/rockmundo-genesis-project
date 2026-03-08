@@ -8,6 +8,7 @@ export interface FanConversionInput {
   overallRating: number;
   performanceGrade: string;
   bandFame: number;
+  behaviorFanMultiplier?: number;
 }
 
 export interface FanConversionResult {
