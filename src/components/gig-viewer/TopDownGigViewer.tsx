@@ -372,11 +372,21 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
             crowdMood={crowdMood}
             showStats={showStats}
             isFinale={isFinale}
+            songTitle={currentSong?.songs?.title}
+            bandName={bandName}
           />
         </div>
 
         {/* Crowd area — bottom 45% */}
         <div className="absolute bottom-0 left-0 right-0" style={{ height: '45%' }}>
+          {/* Seating tiers for large venues */}
+          <SeatingTiers
+            venueType={venueType}
+            attendancePercent={attendancePercent}
+            mood={crowdMood}
+            intensity={intensity}
+          />
+
           {/* Venue features layer */}
           <VenueFeatures theme={stageTheme} intensity={intensity} />
 
