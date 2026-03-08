@@ -14,6 +14,7 @@ import { SubmitDemoDialog } from "./SubmitDemoDialog";
 import { DemoSubmissionsPanel } from "./DemoSubmissionsPanel";
 import { ContractOfferCard } from "./ContractOfferCard";
 import { TerminateContractDialog } from "./TerminateContractDialog";
+import { DealTypeInfoCard } from "./DealTypeEffects";
 import { differenceInMonths, differenceInDays, format } from "date-fns";
 
 interface MyContractsTabProps {
