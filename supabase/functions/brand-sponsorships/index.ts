@@ -215,7 +215,7 @@ async function handleGenerateOffers(
 
           if (exclusivityConflict) continue;
 
-          const cashOffer = computeCashOffer(partner, band.fame ?? 0);
+          const cashOffer = Math.round(computeCashOffer(partner, band.fame ?? 0) * repMod);
           const expiresAt = new Date(now.getTime() + (cooldownDays + 3) * 24 * 60 * 60 * 1000);
           const slotType = chooseSlot(partner);
           const exclusivity = partner.exclusivity_categories?.[0] ?? null;
