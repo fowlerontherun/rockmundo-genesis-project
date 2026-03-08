@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.023",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Holidays: Expanded from 6 to 12 destinations with stunning AI-generated photos, location details, highlights, stress/creativity ratings, and tiered pricing (Budget → Ultra Luxury)" },
+      { type: 'improvement', description: "Holidays: All prices significantly increased — Staycation $150/day, Beach Resort $500/day, Tropical Island $1,200/day, Private Yacht $2,500/day" },
+      { type: 'feature', description: "Holidays: 6 new destinations — Alpine Ski Chalet, Mediterranean Villa, Japanese Onsen, Safari Lodge, Desert Glamping, Private Yacht Cruise" },
+      { type: 'feature', description: "Holidays: Each destination now shows location, 4 highlight badges, stress reduction rating, and creativity XP boost percentage" },
+    ],
+  },
+  {
     version: "1.1.022",
     date: "2026-03-08",
     changes: [

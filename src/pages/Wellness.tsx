@@ -607,35 +607,48 @@ export default function WellnessPage() {
         {/* === HOLIDAYS TAB === */}
         <TabsContent value="holidays" className="space-y-4">
           {activeHoliday ? (
-            <Card className="border-primary/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Palmtree className="h-5 w-5" /> On Holiday!</CardTitle>
-                <CardDescription>You're on a {activeHoliday.destination}. Songwriting is still available.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Destination</p>
-                    <p className="font-medium">{activeHoliday.destination}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Days Remaining</p>
-                    <p className="font-bold text-lg">{daysRemaining}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Health Boost</p>
-                    <p className="font-medium text-green-500">+{activeHoliday.health_boost_per_day}/day</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ends</p>
-                    <p className="font-medium">{format(new Date(activeHoliday.ends_at), "MMM d, HH:mm")}</p>
-                  </div>
-                </div>
-                <Button variant="destructive" size="sm" onClick={() => cancelHoliday()} disabled={isCancelling}>
-                  {isCancelling ? "Cancelling..." : "Return Early (no refund)"}
-                </Button>
-              </CardContent>
-            </Card>
+            (() => {
+              const activeDest = HOLIDAY_DESTINATIONS.find(d => d.name === activeHoliday.destination);
+              return (
+                <Card className="border-primary/50 overflow-hidden">
+                  {activeDest?.image && (
+                    <div className="relative h-48 overflow-hidden">
+                      <img src={activeDest.image} alt={activeHoliday.destination} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                      <div className="absolute bottom-3 left-4 right-4">
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                          <Palmtree className="h-5 w-5" /> On Holiday!
+                        </h3>
+                        <p className="text-sm text-white/80">{activeHoliday.destination} — Songwriting still available</p>
+                      </div>
+                    </div>
+                  )}
+                  <CardContent className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Destination</p>
+                        <p className="font-medium">{activeHoliday.destination}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Days Remaining</p>
+                        <p className="font-bold text-lg">{daysRemaining}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Health Boost</p>
+                        <p className="font-medium text-green-500">+{activeHoliday.health_boost_per_day}/day</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Ends</p>
+                        <p className="font-medium">{format(new Date(activeHoliday.ends_at), "MMM d, HH:mm")}</p>
+                      </div>
+                    </div>
+                    <Button variant="destructive" size="sm" onClick={() => cancelHoliday()} disabled={isCancelling}>
+                      {isCancelling ? "Cancelling..." : "Return Early (no refund)"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()
           ) : (
             <>
               {!canBookHoliday && (
@@ -644,42 +657,101 @@ export default function WellnessPage() {
                   <AlertDescription>Holiday cooldown active. You can book another holiday after 14 days.</AlertDescription>
                 </Alert>
               )}
-              <div className="grid gap-4 md:grid-cols-2">
-                {HOLIDAY_DESTINATIONS.map((dest) => (
-                  <Card key={dest.name}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="text-xl">{dest.emoji}</span>
-                        {dest.name}
-                      </CardTitle>
-                      <CardDescription>{dest.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Cost per day</span>
-                        <span className="font-bold">${dest.costPerDay}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Health boost</span>
-                        <span className="font-bold text-green-500">+{dest.healthPerDay}/day</span>
-                      </div>
-                      <div className="flex gap-2">
-                        {dest.durations.map((d) => (
-                          <Button
-                            key={d}
-                            size="sm"
-                            variant="outline"
-                            disabled={isBooking || !canBookHoliday || (profile?.cash ?? 0) < dest.costPerDay * d}
-                            onClick={() => bookHoliday({ destination: dest, durationDays: d })}
-                          >
-                            {d} days (${dest.costPerDay * d})
-                          </Button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+
+              {/* Tier sections */}
+              {(["budget", "standard", "premium", "luxury", "ultra"] as const).map((tier) => {
+                const tierDests = HOLIDAY_DESTINATIONS.filter(d => d.tier === tier);
+                if (tierDests.length === 0) return null;
+                const tierLabels: Record<string, { label: string; color: string }> = {
+                  budget: { label: "💰 Budget", color: "text-muted-foreground" },
+                  standard: { label: "⭐ Standard", color: "text-blue-400" },
+                  premium: { label: "💎 Premium", color: "text-purple-400" },
+                  luxury: { label: "👑 Luxury", color: "text-yellow-400" },
+                  ultra: { label: "🔥 Ultra Luxury", color: "text-orange-400" },
+                };
+                const { label: tierLabel, color: tierColor } = tierLabels[tier];
+                return (
+                  <div key={tier} className="space-y-3">
+                    <h3 className={`text-sm font-bold uppercase tracking-wider ${tierColor}`}>{tierLabel}</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {tierDests.map((dest) => (
+                        <Card key={dest.name} className="overflow-hidden group hover:border-primary/50 transition-colors">
+                          {/* Image header */}
+                          <div className="relative h-36 overflow-hidden">
+                            <img
+                              src={dest.image}
+                              alt={dest.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+                            <div className="absolute top-2 right-2">
+                              <Badge variant="secondary" className="text-[10px] bg-background/80 backdrop-blur-sm">
+                                📍 {dest.location}
+                              </Badge>
+                            </div>
+                            <div className="absolute bottom-2 left-3">
+                              <h4 className="text-base font-bold text-white flex items-center gap-1.5">
+                                <span>{dest.emoji}</span> {dest.name}
+                              </h4>
+                            </div>
+                          </div>
+                          <CardContent className="p-3 space-y-2.5">
+                            <p className="text-xs text-muted-foreground leading-relaxed">{dest.description}</p>
+
+                            {/* Highlights */}
+                            <div className="flex flex-wrap gap-1">
+                              {dest.highlights.map((h) => (
+                                <Badge key={h} variant="outline" className="text-[10px] py-0 px-1.5">{h}</Badge>
+                              ))}
+                            </div>
+
+                            {/* Stats row */}
+                            <div className="grid grid-cols-3 gap-2 text-[11px]">
+                              <div>
+                                <p className="text-muted-foreground">Health</p>
+                                <p className="font-bold text-green-500">+{dest.healthPerDay}/day</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Stress Relief</p>
+                                <p className="font-bold">{"⭐".repeat(dest.stressReduction)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Creativity</p>
+                                <p className="font-bold text-blue-400">+{dest.creativityBoost}% XP</p>
+                              </div>
+                            </div>
+
+                            {/* Price & booking */}
+                            <div className="pt-1 border-t border-border/50 space-y-1.5">
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-bold text-foreground">${dest.costPerDay.toLocaleString()}</span>/day
+                              </p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {dest.durations.map((d) => {
+                                  const total = dest.costPerDay * d;
+                                  const canAfford = (profile?.cash ?? 0) >= total;
+                                  return (
+                                    <Button
+                                      key={d}
+                                      size="sm"
+                                      variant={canAfford && canBookHoliday ? "default" : "outline"}
+                                      className="text-[11px] h-7 px-2"
+                                      disabled={isBooking || !canBookHoliday || !canAfford}
+                                      onClick={() => bookHoliday({ destination: dest, durationDays: d })}
+                                    >
+                                      {d}d — ${total.toLocaleString()}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </>
           )}
         </TabsContent>
