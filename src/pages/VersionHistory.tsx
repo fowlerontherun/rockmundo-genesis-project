@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.938",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Equipment Condition Widget: Visual gear health display with condition bar, performance modifier, breakdown chance, and repair cost estimate" },
+      { type: 'feature', description: "Fan Sentiment Widget: Shows fan mood (Hostile→Fanatical) with merch/ticket/stream demand multipliers and viral chance indicator" },
+      { type: 'feature', description: "Media Cycle Widget: Displays media phase (Dormant→Oversaturated), intensity/fatigue bars, coverage multiplier, and phase shift countdown" },
+      { type: 'feature', description: "Compact mode for all three widgets — badges and inline progress bars for space-constrained layouts" },
+      { type: 'improvement', description: "All widgets use design system tokens and consistent 10px data-dense styling matching existing world widgets" },
+    ],
+  },
+  {
     version: "1.0.937",
     date: "2026-03-08",
     changes: [
