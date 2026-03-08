@@ -1028,7 +1028,7 @@ Deno.serve(async (req) => {
       runId,
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
-      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs + rentalsCharged + npcOffersGenerated,
+      processedCount: processedProfiles + processedBands + ticketSalesUpdated + prOffersGenerated + playerSyncs + rentalsCharged + npcOffersGenerated + feedbackApplied,
       errorCount,
       resultSummary: {
         profiles_processed: processedProfiles,
