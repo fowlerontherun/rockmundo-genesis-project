@@ -817,9 +817,18 @@ serve(async (req) => {
     for (const [releaseId, albumData] of albumStreamingAggregated) {
       const streamUnits = Math.floor(albumData.weeklyStreams / STREAM_TO_UNIT_RATIO);
       
-      // For now, album combined score is based on aggregated streams
-      // Sales are already per-song, so we'd need to aggregate those too
-      const combinedScore = streamUnits;
+      // FIX: Include album-level sales in combined score
+      // Sum all song-level sales for this release's songs
+      let albumSalesUnits = 0;
+      for (const entry of streamingData || []) {
+        if (entry.release_id === releaseId) {
+          const songSalesData = weeklySalesMap.get(entry.song_id);
+          if (songSalesData) {
+            albumSalesUnits += songSalesData.digital + songSalesData.cd + songSalesData.vinyl + songSalesData.cassette;
+          }
+        }
+      }
+      const combinedScore = streamUnits + albumSalesUnits;
 
       if (combinedScore > 0) {
         albumCombinedScores.set(releaseId, {
