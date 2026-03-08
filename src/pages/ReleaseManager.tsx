@@ -49,28 +49,19 @@ export default function ReleaseManager() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/hub/music")}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t('releases.backToMusicHub')}
-        </Button>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t('releases.newRelease')}
-        </Button>
-      </div>
-
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald">{t('releases.title')}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t('releases.description')}
-        </p>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title={t('releases.title')}
+        subtitle={t('releases.description')}
+        backTo="/hub/music"
+        backLabel={t('releases.backToMusicHub')}
+        actions={
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t('releases.newRelease')}
+          </Button>
+        }
+      />
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
