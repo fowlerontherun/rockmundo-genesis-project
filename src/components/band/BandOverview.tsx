@@ -10,6 +10,7 @@ import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
 import { SentimentEventLog } from '@/components/band/SentimentEventLog';
 import { SentimentTrendChart } from '@/components/band/SentimentTrendChart';
 import { BandHealthDashboard } from '@/components/band/BandHealthDashboard';
+import { BandHealthEventLog } from '@/components/band/BandHealthEventLog';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -213,6 +214,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
           fatigue={(band as any).media_fatigue ?? 0}
         />
       </div>
+
+      {/* Health Event Log */}
+      <BandHealthEventLog bandId={band.id} />
 
       {/* Sentiment Trend Chart + Event Log */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

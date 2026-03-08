@@ -116,8 +116,14 @@ Deno.serve(async (req) => {
             const b = (ownerMember as any).bands;
             const newMorale = Math.max(0, (b.morale ?? 50) - 15);
             const newRep = Math.max(-100, (b.reputation_score ?? 0) - 10);
-            await supabase.from('bands').update({ morale: newMorale, reputation_score: newRep }).eq('id', (ownerMember as any).band_id);
+            const bId = (ownerMember as any).band_id;
+            await supabase.from('bands').update({ morale: newMorale, reputation_score: newRep }).eq('id', bId);
             console.log(`[check-company-bankruptcy] Owner band morale -15, reputation -10`);
+            // Log health events
+            await supabase.from('band_health_events').insert([
+              { band_id: bId, event_type: 'morale', delta: -15, new_value: newMorale, source: 'bankruptcy', description: `${company.name} declared bankrupt` },
+              { band_id: bId, event_type: 'reputation', delta: -10, new_value: newRep, source: 'bankruptcy', description: `${company.name} declared bankrupt — public image damaged` },
+            ]);
           }
         }
 
@@ -156,8 +162,13 @@ Deno.serve(async (req) => {
               .maybeSingle();
             if (ownerMember && (ownerMember as any).bands) {
               const newMorale = Math.max(0, ((ownerMember as any).bands.morale ?? 50) - 5);
-              await supabase.from('bands').update({ morale: newMorale }).eq('id', (ownerMember as any).band_id);
+              const bId = (ownerMember as any).band_id;
+              await supabase.from('bands').update({ morale: newMorale }).eq('id', bId);
               console.log(`[check-company-bankruptcy] Owner band morale -5 (warning)`);
+              await supabase.from('band_health_events').insert({
+                band_id: bId, event_type: 'morale', delta: -5, new_value: newMorale,
+                source: 'bankruptcy_warning', description: `${company.name} bankruptcy warning (${daysNegative} days negative)`,
+              });
             }
           }
         }
