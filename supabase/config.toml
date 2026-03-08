@@ -242,3 +242,6 @@ verify_jwt = false
 
 [functions.stage-practice-music]
 verify_jwt = false
+
+[functions.process-teaching-sessions]
+verify_jwt = false
