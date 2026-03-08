@@ -188,6 +188,19 @@ serve(async (req) => {
       throw journalError;
     }
 
+    // === MORALE BOOST: Achieving milestones is motivating (v1.0.968) ===
+    if (band_id) {
+      try {
+        const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', band_id).single();
+        if (bd) {
+          const isBigMilestone = ['first_number_one', 'fans_100k', 'fans_1m', 'fame_100k', 'earned_1m', 'chart_top_1'].includes(milestone_type);
+          const moraleBoost = isBigMilestone ? 8 : 4;
+          await supabaseClient.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) }).eq('id', band_id);
+          console.log(`[log-career-milestone] Milestone ${milestone_type} → morale +${moraleBoost}`);
+        }
+      } catch (e) { console.log('[log-career-milestone] Morale boost error:', e); }
+    }
+
     console.log(`[log-career-milestone] Successfully logged milestone: ${milestone_type}`);
 
     return new Response(

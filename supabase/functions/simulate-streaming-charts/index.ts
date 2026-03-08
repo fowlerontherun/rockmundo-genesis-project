@@ -200,7 +200,7 @@ serve(async (req) => {
       for (const bId of top10BandIds) {
         const { data: band } = await supabase
           .from('bands')
-          .select('fan_sentiment_score, media_intensity, media_fatigue')
+          .select('fan_sentiment_score, media_intensity, media_fatigue, morale, reputation_score')
           .eq('id', bId)
           .single();
 
