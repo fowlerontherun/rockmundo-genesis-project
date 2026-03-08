@@ -638,11 +638,33 @@ const MyGear: React.FC = () => {
                       <div>
                         <p className="text-sm font-semibold">{gear.name}</p>
                         <p className="text-xs text-muted-foreground">{formatSectionList(gear.sections)}</p>
-                        {gear.source === "inventory" && (
-                          <EquipmentConditionBadge condition={
-                            inventory.find(i => i.id === gear.id)?.condition ?? 100
-                          } />
-                        )}
+                        {gear.source === "inventory" && (() => {
+                          const invItem = inventory.find(i => i.id === gear.id);
+                          const cond = invItem?.condition ?? 100;
+                          const needsRepair = cond < 85;
+                          const repairCost = needsRepair && gear.price ? calculateRepairCost(cond, gear.price, 100).cost : 0;
+                          return (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <EquipmentConditionBadge condition={cond} />
+                              {needsRepair && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-5 px-1.5 text-[10px] gap-1"
+                                  disabled={repairingId === gear.id}
+                                  onClick={() => handleRepair(gear.id, cond, gear.price ?? 0)}
+                                >
+                                  {repairingId === gear.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Wrench className="h-3 w-3" />
+                                  )}
+                                  Repair ${repairCost.toLocaleString()}
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant="outline" className={getQualityBadgeClass(gear)}>

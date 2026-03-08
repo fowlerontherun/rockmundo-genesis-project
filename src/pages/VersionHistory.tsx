@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.943",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Equipment Repair: Gear below 85% condition now shows a Repair button with cost estimate — restores to pristine and deducts from player balance" },
+      { type: 'feature', description: "Release → Sentiment Hook: Album releases grant +10 fan sentiment and +30 media intensity; singles grant +5 sentiment and +15 media intensity" },
+      { type: 'feature', description: "Release → Media Fatigue: Releasing music now increases media fatigue (+15 albums, +8 singles) — frequent releases give diminishing media returns" },
+      { type: 'improvement', description: "Repair costs scale with condition gap (up to 40% of original price for full restoration)" },
+    ],
+  },
+  {
     version: "1.0.942",
     date: "2026-03-08",
     changes: [

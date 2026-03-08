@@ -52,6 +52,48 @@ serve(async (req) => {
     
     console.log(`[complete-release-manufacturing] Completed ${completedCount} releases in ${duration}ms`);
 
+    // === FAN SENTIMENT BOOST (v1.0.943) ===
+    // Apply positive sentiment to bands for each completed release
+    if (completedCount > 0 && manufacturingReleases) {
+      try {
+        // Get the band_ids from the completed releases
+        const { data: completedReleases } = await supabaseClient
+          .from("releases")
+          .select("id, band_id, release_type")
+          .eq("release_status", "released")
+          .in("id", manufacturingReleases.map(r => r.id));
+
+        for (const release of completedReleases || []) {
+          if (!release.band_id) continue;
+          const sentimentBoost = release.release_type === 'album' ? 10 : 5; // album_release: +10, single_release: +5
+          const mediaBoost = release.release_type === 'album' ? 30 : 15;
+
+          const { data: band } = await supabaseClient
+            .from('bands')
+            .select('fan_sentiment_score, media_intensity, media_fatigue')
+            .eq('id', release.band_id)
+            .single();
+
+          if (band) {
+            const currentSentiment = (band as any).fan_sentiment_score ?? 0;
+            const currentIntensity = (band as any).media_intensity ?? 0;
+            const currentFatigue = (band as any).media_fatigue ?? 0;
+            const fatigueReduction = currentFatigue > 60 ? 0.5 : currentFatigue > 30 ? 0.75 : 1.0;
+
+            await supabaseClient.from('bands').update({
+              fan_sentiment_score: Math.min(100, currentSentiment + sentimentBoost),
+              media_intensity: Math.min(100, currentIntensity + Math.round(mediaBoost * fatigueReduction)),
+              media_fatigue: Math.min(100, currentFatigue + (release.release_type === 'album' ? 15 : 8)),
+            } as any).eq('id', release.band_id);
+
+            console.log(`[complete-release-manufacturing] Band ${release.band_id}: sentiment +${sentimentBoost}, media +${mediaBoost} (${release.release_type})`);
+          }
+        }
+      } catch (sentErr) {
+        console.error('[complete-release-manufacturing] Error applying sentiment/media boosts:', sentErr);
+      }
+    }
+
     // Trigger auto-distribute-streaming to handle streaming platform distribution
     if (completedCount > 0) {
       try {
