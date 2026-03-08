@@ -39,7 +39,7 @@ export function SupportArtistPicker({
         .select('id, name, fame, total_fans, genre')
         .neq('id', headlinerBandId)
         .lt('fame', headlinerFame)
-        .gte('fame', Math.max(100, headlinerFame * 0.1)) // At least 10% of headliner fame
+        .gte('fame', Math.max(100, headlinerFame * 0.1))
         .order('fame', { ascending: false })
         .limit(50);
       
@@ -54,7 +54,6 @@ export function SupportArtistPicker({
     queryFn: async (): Promise<string[]> => {
       if (!tourDates.length) return [];
 
-      // Check each tour date for scheduling conflicts
       const allConflictProfileIds: string[] = [];
       for (const date of tourDates.slice(0, 30)) {
         const { data: conflicts } = await supabase
@@ -94,7 +93,7 @@ export function SupportArtistPicker({
   const availableBands = filteredBands.filter(band => !unavailableBandIds.includes(band.id));
   const busyBands = filteredBands.filter(band => unavailableBandIds.includes(band.id));
 
-  const handleSelectBand = (band: typeof bands[0]) => {
+  const handleSelectBand = (band: (typeof bands)[0]) => {
     const split = calculateSupportArtistSplit(headlinerFame, band.fame);
     onChange(band.id, band.name, split.supportPercent / 100);
   };
@@ -185,9 +184,8 @@ export function SupportArtistPicker({
           </div>
         ) : (
           <div className="p-2 space-y-2">
-            {filteredBands.map(band => {
+            {availableBands.map(band => {
               const split = calculateSupportArtistSplit(headlinerFame, band.fame);
-              
               return (
                 <div
                   key={band.id}
@@ -206,14 +204,45 @@ export function SupportArtistPicker({
                           {band.fame?.toLocaleString() || 0}
                         </span>
                         {band.genre && (
-                          <Badge variant="outline" className="text-xs">
-                            {band.genre}
-                          </Badge>
+                          <Badge variant="outline" className="text-xs">{band.genre}</Badge>
                         )}
+                        <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                          <Check className="h-3 w-3 mr-1" />Available
+                        </Badge>
                       </div>
                     </div>
                   </div>
                   <Badge variant="secondary" className="text-xs">
+                    {split.supportPercent}% share
+                  </Badge>
+                </div>
+              );
+            })}
+            {busyBands.map(band => {
+              const split = calculateSupportArtistSplit(headlinerFame, band.fame);
+              return (
+                <div
+                  key={band.id}
+                  className="flex items-center justify-between p-3 rounded-lg border opacity-50 cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                      <Music className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{band.name}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Star className="h-3 w-3" />
+                          {band.fame?.toLocaleString() || 0}
+                        </span>
+                        <Badge variant="destructive" className="text-xs">
+                          <AlertCircle className="h-3 w-3 mr-1" />Busy
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
                     {split.supportPercent}% share
                   </Badge>
                 </div>
