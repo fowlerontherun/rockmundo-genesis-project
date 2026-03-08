@@ -20,6 +20,14 @@ const variantStyles: Record<string, string> = {
   default: 'text-white/80',
 };
 
+const typeIcons: Record<string, string> = {
+  arrival: '🎭',
+  song_start: '🎸',
+  crowd_reaction: '👥',
+  special_moment: '⭐',
+  finale: '🎆',
+};
+
 export const TopDownCommentary = ({ entries }: TopDownCommentaryProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +47,7 @@ export const TopDownCommentary = ({ entries }: TopDownCommentaryProps) => {
                 key={entry.id}
                 className={`text-[11px] leading-tight ${variantStyles[entry.variant || 'default']}`}
               >
+                <span className="mr-1">{typeIcons[entry.type] || '📢'}</span>
                 {entry.message}
               </p>
             ))}
