@@ -92,6 +92,7 @@ const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquip
 const TattooParlour = lazyWithRetry(() => import("./pages/TattooParlour"));
 const ProducerCareer = lazyWithRetry(() => import("./pages/ProducerCareer"));
 const ClothingDesigner = lazyWithRetry(() => import("./pages/ClothingDesigner"));
+const Teaching = lazyWithRetry(() => import("./pages/Teaching"));
 const ClothingShop = lazyWithRetry(() => import("./pages/ClothingShop"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
