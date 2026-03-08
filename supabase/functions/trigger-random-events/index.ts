@@ -173,8 +173,21 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Normal 1 in 15 chance
-      const roll = Math.floor(Math.random() * TRIGGER_CHANCE) + 1;
+      // Normal trigger chance — modified by band morale (v1.0.959)
+      // Low morale (<30) increases drama chance: trigger chance drops from 15 to as low as 6
+      // High morale (>75) decreases drama chance: trigger chance rises from 15 to 20
+      const playerMorale = playerMoraleMap.get(player.user_id) ?? 50;
+      let effectiveTriggerChance = TRIGGER_CHANCE;
+      if (playerMorale <= 30) {
+        // Scale 15 → 6 as morale goes from 30 → 0 (more events when miserable)
+        effectiveTriggerChance = Math.round(TRIGGER_CHANCE - ((30 - playerMorale) / 30) * 9);
+      } else if (playerMorale >= 75) {
+        // Scale 15 → 20 as morale goes from 75 → 100 (fewer events when euphoric)
+        effectiveTriggerChance = Math.round(TRIGGER_CHANCE + ((playerMorale - 75) / 25) * 5);
+      }
+      effectiveTriggerChance = Math.max(3, Math.min(25, effectiveTriggerChance));
+
+      const roll = Math.floor(Math.random() * effectiveTriggerChance) + 1;
       if (roll !== 1) {
         continue;
       }
