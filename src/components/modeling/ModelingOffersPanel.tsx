@@ -116,7 +116,7 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
   useEffect(() => {
     if (isLoading) return;
     if ((pendingOffers?.length ?? 0) === 0 && isOfferCooldownExpired()) {
-      generateModelingOffersForUser(userId, playerLooks, playerFame).then((count) => {
+      generateModelingOffersForUser(userId, playerLooks, playerFame, skillLevels).then((count) => {
         if (count > 0) {
           queryClient.invalidateQueries({ queryKey: ["modeling-offers-pending"] });
           toast.info(`${count} new modeling offer${count > 1 ? "s" : ""} arrived!`);
