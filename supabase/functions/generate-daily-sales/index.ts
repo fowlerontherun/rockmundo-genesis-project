@@ -212,7 +212,7 @@ serve(async (req) => {
 
     // Pre-fetch all active label contracts for revenue splitting
     const contractIds = [...new Set((releases || []).map(r => (r as any).label_contract_id).filter(Boolean))];
-    const contractMap = new Map<string, { id: string; label_id: string; advance_amount: number; recouped_amount: number; royalty_artist_pct: number; royalty_label_pct: number; marketing_support: number }>();
+    const contractMap = new Map<string, { id: string; label_id: string; advance_amount: number; recouped_amount: number; royalty_artist_pct: number; royalty_label_pct: number; marketing_support: number; deal_type_name: string; end_date: string }>();
     
     if (contractIds.length > 0) {
       const { data: contracts } = await supabaseClient
