@@ -431,14 +431,18 @@ function App() {
                     {/* Category hub pages */}
                     <Route path="hub/character" element={<CharacterHub />} />
                     <Route path="hub/music" element={<MusicHubPage />} />
-                    <Route path="hub/band" element={<BandHub />} />
-                    <Route path="hub/live" element={<LiveHub />} />
-                    <Route path="hub/events" element={<EventsHub />} />
-                    <Route path="hub/world" element={<WorldHub />} />
-                    <Route path="hub/social" element={<SocialHub />} />
-                    <Route path="hub/career" element={<CareerHub />} />
-                    <Route path="hub/commerce" element={<CommerceHub />} />
-                    <Route path="hub/media" element={<MediaHubPage />} />
+                    <Route path="hub/band-live" element={<BandLiveHub />} />
+                    <Route path="hub/world-social" element={<WorldSocialHub />} />
+                    <Route path="hub/career-business" element={<CareerBusinessHub />} />
+                    {/* Old hub redirects */}
+                    <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
+                    <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
+                    <Route path="hub/events" element={<Navigate to="/hub/band-live" replace />} />
+                    <Route path="hub/world" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/social" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/media" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/career" element={<Navigate to="/hub/career-business" replace />} />
+                    <Route path="hub/commerce" element={<Navigate to="/hub/career-business" replace />} />
                     <Route path="modeling" element={<Modeling />} />
                     <Route path="producer-career" element={<ProducerCareer />} />
                     <Route path="clothing-designer" element={<ClothingDesigner />} />
