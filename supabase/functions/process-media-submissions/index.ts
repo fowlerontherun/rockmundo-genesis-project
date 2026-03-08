@@ -55,8 +55,12 @@ serve(async (req) => {
         const minFame = (sub.newspapers as any)?.min_fame_required ?? 0;
         const isEligible = bandFame >= minFame;
 
-        // 70% approval rate for eligible submissions
-        const approved = isEligible && Math.random() < 0.7;
+        // === REPUTATION → MEDIA APPROVAL MODIFIER (v1.0.984) ===
+        const bandRep = (sub.bands as any)?.reputation_score ?? 0;
+        const repT = (Math.max(-100, Math.min(100, bandRep)) + 100) / 200; // 0 to 1
+        const baseApproval = 0.7;
+        const repModifiedApproval = baseApproval * (0.5 + repT); // 0.35x toxic → 1.05x iconic
+        const approved = isEligible && Math.random() < repModifiedApproval;
 
         if (approved) {
           const newspaper = sub.newspapers as any;
