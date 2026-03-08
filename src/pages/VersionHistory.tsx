@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.978",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Daily Streaming Revenue → Morale: Accumulated streaming income now boosts band morale daily. $500+/day = +4, $100+ = +3, $20+ = +2, any revenue = +1. Seeing royalties roll in keeps spirits high" },
+      { type: 'improvement', description: "update-daily-streams now accumulates per-band streaming revenue across all song releases, then applies a single morale boost per band after the streaming loop for efficiency" },
+    ],
+  },
+  {
     version: "1.0.977",
     date: "2026-03-08",
     changes: [

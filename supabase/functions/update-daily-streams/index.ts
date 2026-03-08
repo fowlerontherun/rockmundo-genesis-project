@@ -29,6 +29,8 @@ Deno.serve(async (req) => {
   let streamUpdates = 0;
   let salesUpdates = 0;
   let errorCount = 0;
+  // Accumulate per-band streaming revenue for morale boosts (v1.0.978)
+  const bandStreamingRevenueAccumulator = new Map<string, number>();
   const errorSamples: string[] = [];
 
   // Accumulate label revenue for batch crediting
@@ -423,6 +425,8 @@ Deno.serve(async (req) => {
                 label_share: labelShareDollars,
               },
             });
+            // Track for morale (v1.0.978)
+            bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + bandShareDollars);
           }
         } else if (bandId && dailyRevenueDollars > 0) {
           // No label contract — 100% to band
@@ -437,6 +441,8 @@ Deno.serve(async (req) => {
               platform_id: release.platform_id 
             },
           });
+          // Track for morale (v1.0.978)
+          bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + dailyRevenueDollars);
         }
 
         streamUpdates++;
@@ -449,7 +455,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: physicalReleases, error: physicalError } = await supabase
+    // === DAILY STREAMING REVENUE → MORALE (v1.0.978) ===
+    // Aggregate streaming income per band and apply morale boosts
+    for (const [bandId, totalRevenue] of bandStreamingRevenueAccumulator.entries()) {
+      if (totalRevenue <= 0) continue;
+      try {
+        const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
+        if (bd) {
+          const curM = (bd as any).morale ?? 50;
+          const moraleBoost = totalRevenue >= 500 ? 4 : totalRevenue >= 100 ? 3 : totalRevenue >= 20 ? 2 : 1;
+          await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bandId);
+          console.log(`Streaming revenue morale: band ${bandId} earned $${totalRevenue} → morale +${moraleBoost}`);
+        }
+      } catch (_e) { /* non-critical */ }
+    }
+
+
       .from('release_formats')
       .select('id, release_id, format_type')
       .in('format_type', ['digital', 'cd', 'vinyl'])
