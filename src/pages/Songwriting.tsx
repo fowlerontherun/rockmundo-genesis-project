@@ -72,6 +72,8 @@ import {
   UserPlus,
 } from "lucide-react";
 import logger from "@/lib/logger";
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 interface Song {
   id: string;
