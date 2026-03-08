@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users } from 'lucide-react';
+import { PageLayout } from "@/components/ui/PageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
