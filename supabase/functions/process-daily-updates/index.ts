@@ -813,6 +813,57 @@ Deno.serve(async (req) => {
       console.error('Error in fan sentiment drift:', sentErr);
     }
 
+    // === BAND SENTIMENT DRIFT (v1.0.942) ===
+    console.log('=== Processing Band Sentiment Drift ===')
+    let bandSentimentDrifted = 0
+    try {
+      const { data: bandsWithSentiment } = await supabase
+        .from('bands')
+        .select('id, fan_sentiment_score')
+
+      for (const b of bandsWithSentiment || []) {
+        const score = (b as any).fan_sentiment_score ?? 0;
+        if (Math.abs(score) <= 5) continue;
+        const drift = score > 0 ? -0.5 : 0.5;
+        const newScore = Math.max(-100, Math.min(100, parseFloat((score + drift).toFixed(1))));
+        if (newScore !== score) {
+          await supabase.from('bands').update({ fan_sentiment_score: newScore } as any).eq('id', b.id);
+          bandSentimentDrifted++;
+        }
+      }
+      console.log(`Band sentiment drift: ${bandSentimentDrifted} bands adjusted toward neutral`);
+    } catch (bsErr) {
+      console.error('Error in band sentiment drift:', bsErr);
+    }
+
+    // === IDLE EQUIPMENT DEGRADATION (v1.0.942) ===
+    // Equipment slowly loses condition even when not used (storage wear, humidity, etc.)
+    console.log('=== Processing Idle Equipment Degradation ===')
+    let equipmentDegraded = 0
+    try {
+      const { data: allEquipment } = await supabase
+        .from('player_equipment')
+        .select('id, condition')
+        .gt('condition', 0)
+
+      for (const item of allEquipment || []) {
+        const currentCondition = typeof item.condition === 'number' ? item.condition : 100;
+        if (currentCondition <= 0) continue;
+
+        // Idle degradation: -0.2 to -0.5 per day (much slower than gig wear)
+        const idleWear = parseFloat((0.2 + Math.random() * 0.3).toFixed(2));
+        const newCondition = Math.max(0, parseFloat((currentCondition - idleWear).toFixed(1)));
+
+        if (newCondition !== currentCondition) {
+          await supabase.from('player_equipment').update({ condition: newCondition }).eq('id', item.id);
+          equipmentDegraded++;
+        }
+      }
+      console.log(`Idle equipment degradation: ${equipmentDegraded} items lost minor condition`);
+    } catch (eqErr) {
+      console.error('Error in idle equipment degradation:', eqErr);
+    }
+
     // === MEDIA CYCLE DECAY (v1.0.937) ===
     console.log('=== Processing Media Cycle Decay ===')
     let mediaDecayed = 0
