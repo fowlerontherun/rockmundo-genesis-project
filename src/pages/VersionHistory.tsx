@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.012",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Updated Buy Character Slot tile image to show people holding hands" },
+    ],
+  },
+  {
     version: "1.1.011",
     date: "2026-03-08",
     changes: [
