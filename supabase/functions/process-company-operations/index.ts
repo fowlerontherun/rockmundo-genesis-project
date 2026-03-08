@@ -7,29 +7,25 @@ const corsHeaders = {
 
 // Tax rates by company type — corporate income tax
 const CORPORATE_TAX_RATES: Record<string, number> = {
-  holding: 0.25,     // 25% — holding companies taxed higher
-  label: 0.22,       // 22% — entertainment industry rate
-  security: 0.20,    // 20% — service industry
-  factory: 0.18,     // 18% — manufacturing benefits
-  logistics: 0.20,   // 20% — transport industry
-  venue: 0.22,       // 22% — entertainment venues
-  rehearsal: 0.15,   // 15% — small business rate
-  recording_studio: 0.18, // 18% — creative industry incentive
+  holding: 0.25,
+  label: 0.22,
+  security: 0.20,
+  factory: 0.18,
+  logistics: 0.20,
+  venue: 0.22,
+  rehearsal: 0.15,
+  recording_studio: 0.18,
 };
 
-// Simulated daily revenue ranges by subsidiary type
-const DAILY_REVENUE_RANGES: Record<string, { min: number; max: number }> = {
-  security: { min: 200, max: 800 },
-  factory: { min: 500, max: 2000 },
-  logistics: { min: 300, max: 1200 },
-  venue: { min: 400, max: 3000 },
-  rehearsal: { min: 100, max: 600 },
-  recording_studio: { min: 300, max: 1500 },
+// Base daily activity revenue caps - actual revenue is derived from game activity
+const BASE_ACTIVITY_REVENUE: Record<string, number> = {
+  security: 100,   // Base from reputation alone
+  factory: 150,
+  logistics: 100,
+  venue: 200,
+  rehearsal: 50,
+  recording_studio: 100,
 };
-
-function randomBetween(min: number, max: number): number {
-  return Math.round(min + Math.random() * (max - min));
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -43,7 +39,6 @@ Deno.serve(async (req) => {
   console.log('[process-company-operations] Starting operations processing...');
 
   try {
-    // Get all active companies
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
       .select('*')
@@ -58,6 +53,10 @@ Deno.serve(async (req) => {
     let totalRevenue = 0;
     let totalTaxes = 0;
 
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
     // ==========================================
     // PHASE 1: Operating Costs (daily from weekly)
     // ==========================================
@@ -69,21 +68,16 @@ Deno.serve(async (req) => {
         
         await supabase
           .from('companies')
-          .update({ 
-            balance: newBalance,
-            updated_at: new Date().toISOString()
-          })
+          .update({ balance: newBalance, updated_at: now.toISOString() })
           .eq('id', company.id);
 
-        await supabase
-          .from('company_transactions')
-          .insert({
-            company_id: company.id,
-            transaction_type: 'expense',
-            amount: -dailyOperatingCost,
-            description: 'Daily operating costs (rent, utilities, insurance)',
-            category: 'operations'
-          });
+        await supabase.from('company_transactions').insert({
+          company_id: company.id,
+          transaction_type: 'expense',
+          amount: -dailyOperatingCost,
+          description: 'Daily operating costs (rent, utilities, insurance)',
+          category: 'operations'
+        });
 
         processedCount++;
         totalCosts += dailyOperatingCost;
@@ -99,7 +93,6 @@ Deno.serve(async (req) => {
       .eq('status', 'active');
 
     for (const employee of employees || []) {
-      // Daily salary = monthly / 30
       const dailySalary = (employee.salary || 0) / 30;
       if (dailySalary <= 0) continue;
 
@@ -111,42 +104,47 @@ Deno.serve(async (req) => {
 
       if (!company || company.status !== 'active') continue;
 
-      const newBalance = (company.balance || 0) - dailySalary;
-
-      await supabase
-        .from('companies')
-        .update({ balance: newBalance })
+      await supabase.from('companies')
+        .update({ balance: (company.balance || 0) - dailySalary })
         .eq('id', employee.company_id);
 
-      await supabase
-        .from('company_transactions')
-        .insert({
-          company_id: employee.company_id,
-          transaction_type: 'salary',
-          amount: -dailySalary,
-          description: `Employee salary: ${employee.role}`,
-          category: 'payroll'
-        });
+      await supabase.from('company_transactions').insert({
+        company_id: employee.company_id,
+        transaction_type: 'salary',
+        amount: -dailySalary,
+        description: `Employee salary: ${employee.role}`,
+        category: 'payroll'
+      });
 
       totalCosts += dailySalary;
     }
 
     // ==========================================
-    // PHASE 3: Revenue Generation from Subsidiaries
+    // PHASE 3: Activity-Based Revenue from Subsidiaries
     // ==========================================
-    // Security Firms revenue (from gig bookings)
+
+    // --- SECURITY FIRMS: Revenue from recent gigs in their city/region ---
     const { data: securityFirms } = await supabase
       .from('security_firms')
-      .select('id, name, company_id, tier, operating_costs')
+      .select('id, name, company_id, tier, operating_costs, city_id')
       .not('company_id', 'is', null);
 
     for (const firm of securityFirms || []) {
-      const range = DAILY_REVENUE_RANGES.security;
-      const tierMultiplier = 1 + ((firm.tier || 1) - 1) * 0.3;
-      const dailyRevenue = randomBetween(range.min, range.max) * tierMultiplier;
+      const tierMultiplier = 1 + ((firm.tier || 1) - 1) * 0.4;
       const dailyCost = (firm.operating_costs || 100) / 7;
 
-      // Apply revenue
+      // Count recent gigs in any city — security firms provide event security services
+      const { count: recentGigCount } = await supabase
+        .from('gigs')
+        .select('*', { count: 'exact', head: true })
+        .gte('performance_date', sevenDaysAgo)
+        .in('status', ['completed', 'performing']);
+
+      // Revenue = base + per-gig service fee (security firms serve as event security providers)
+      const gigsServed = Math.min(recentGigCount || 0, 10 * (firm.tier || 1)); // capacity based on tier
+      const perGigFee = 150 * tierMultiplier;
+      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.security * tierMultiplier) + (gigsServed * perGigFee / 7));
+
       const { data: company } = await supabase
         .from('companies')
         .select('balance')
@@ -156,24 +154,21 @@ Deno.serve(async (req) => {
       if (!company) continue;
 
       const netChange = dailyRevenue - dailyCost;
-      await supabase
-        .from('companies')
+      await supabase.from('companies')
         .update({ balance: (company.balance || 0) + netChange })
         .eq('id', firm.company_id);
 
-      // Revenue transaction
       if (dailyRevenue > 0) {
         await supabase.from('company_transactions').insert({
           company_id: firm.company_id,
           transaction_type: 'income',
           amount: dailyRevenue,
-          description: `Security Firm "${firm.name}" service revenue`,
+          description: `Security Firm "${firm.name}" — ${gigsServed} events serviced this week`,
           category: 'subsidiary_revenue'
         });
         totalRevenue += dailyRevenue;
       }
 
-      // Expense transaction
       if (dailyCost > 0) {
         await supabase.from('company_transactions').insert({
           company_id: firm.company_id,
@@ -186,17 +181,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Merch Factories revenue
+    // --- MERCH FACTORIES: Revenue from recent merch orders ---
     const { data: factories } = await supabase
       .from('merch_factories')
       .select('id, name, company_id, quality_tier, monthly_overhead')
       .not('company_id', 'is', null);
 
     for (const factory of factories || []) {
-      const range = DAILY_REVENUE_RANGES.factory;
-      const tierMultiplier = 1 + ((factory.quality_tier || 1) - 1) * 0.25;
-      const dailyRevenue = randomBetween(range.min, range.max) * tierMultiplier;
+      const tierMultiplier = 1 + ((factory.quality_tier || 1) - 1) * 0.3;
       const dailyCost = (factory.monthly_overhead || 5000) / 30;
+
+      // Count recent merch orders as manufacturing activity
+      const { count: recentMerchOrders } = await supabase
+        .from('merch_orders')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo);
+
+      // Factory revenue = base manufacturing fee + per-order processing fee
+      const ordersProcessed = Math.min(recentMerchOrders || 0, 50 * (factory.quality_tier || 1));
+      const perOrderFee = 25 * tierMultiplier;
+      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.factory * tierMultiplier) + (ordersProcessed * perOrderFee / 7));
 
       const { data: company } = await supabase
         .from('companies')
@@ -216,7 +220,7 @@ Deno.serve(async (req) => {
           company_id: factory.company_id,
           transaction_type: 'income',
           amount: dailyRevenue,
-          description: `Factory "${factory.name}" manufacturing revenue`,
+          description: `Factory "${factory.name}" — ${ordersProcessed} merch orders manufactured this week`,
           category: 'subsidiary_revenue'
         });
         totalRevenue += dailyRevenue;
@@ -234,17 +238,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Logistics Companies revenue
+    // --- LOGISTICS: Revenue from recent tours/travel ---
     const { data: logisticsCompanies } = await supabase
       .from('logistics_companies')
       .select('id, name, company_id, tier, weekly_operating_costs')
       .not('company_id', 'is', null);
 
     for (const lc of logisticsCompanies || []) {
-      const range = DAILY_REVENUE_RANGES.logistics;
-      const tierMultiplier = 1 + ((lc.tier || 1) - 1) * 0.3;
-      const dailyRevenue = randomBetween(range.min, range.max) * tierMultiplier;
+      const tierMultiplier = 1 + ((lc.tier || 1) - 1) * 0.35;
       const dailyCost = (lc.weekly_operating_costs || 500) / 7;
+
+      // Count recent band travel activities
+      const { count: recentTravels } = await supabase
+        .from('band_travel')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo);
+
+      // Also count recent release distribution territories
+      const { count: recentDistributions } = await supabase
+        .from('release_territories')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo);
+
+      const transportJobs = Math.min((recentTravels || 0) + (recentDistributions || 0), 20 * (lc.tier || 1));
+      const perJobFee = 200 * tierMultiplier;
+      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.logistics * tierMultiplier) + (transportJobs * perJobFee / 7));
 
       const { data: company } = await supabase
         .from('companies')
@@ -264,7 +282,7 @@ Deno.serve(async (req) => {
           company_id: lc.company_id,
           transaction_type: 'income',
           amount: dailyRevenue,
-          description: `Logistics "${lc.name}" transport revenue`,
+          description: `Logistics "${lc.name}" — ${transportJobs} transport/distribution jobs this week`,
           category: 'subsidiary_revenue'
         });
         totalRevenue += dailyRevenue;
@@ -282,16 +300,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Venues revenue (ticket cuts, bar sales, private events)
+    // --- VENUES: Revenue from actual gig bookings ---
     const { data: venues } = await supabase
       .from('venues')
       .select('id, name, company_id, capacity, venue_cut')
       .not('company_id', 'is', null);
 
     for (const venue of venues || []) {
-      const range = DAILY_REVENUE_RANGES.venue;
-      const capacityMultiplier = Math.min(3, (venue.capacity || 200) / 200);
-      const dailyRevenue = randomBetween(range.min, range.max) * capacityMultiplier;
+      // Count actual gigs at this venue in the last 7 days
+      const { data: recentVenueGigs } = await supabase
+        .from('gigs')
+        .select('ticket_price, actual_attendance')
+        .eq('venue_id', venue.id)
+        .eq('status', 'completed')
+        .gte('performance_date', sevenDaysAgo);
+
+      // Calculate actual venue revenue from gigs
+      let gigRevenue = 0;
+      for (const gig of recentVenueGigs || []) {
+        const ticketRevenue = (gig.ticket_price || 10) * (gig.actual_attendance || 0);
+        gigRevenue += ticketRevenue * ((venue.venue_cut || 20) / 100);
+      }
+
+      // Add bar/concession revenue (proportional to attendance)
+      const totalAttendance = (recentVenueGigs || []).reduce((sum, g) => sum + (g.actual_attendance || 0), 0);
+      const barRevenue = totalAttendance * 3; // ~$3 per attendee in bar sales
+
+      const dailyRevenue = Math.round((gigRevenue + barRevenue) / 7 + BASE_ACTIVITY_REVENUE.venue);
 
       const { data: company } = await supabase
         .from('companies')
@@ -309,22 +344,29 @@ Deno.serve(async (req) => {
         company_id: venue.company_id,
         transaction_type: 'income',
         amount: dailyRevenue,
-        description: `Venue "${venue.name}" ticket & bar revenue`,
+        description: `Venue "${venue.name}" — ${recentVenueGigs?.length || 0} gigs, ${totalAttendance} attendees this week`,
         category: 'subsidiary_revenue'
       });
       totalRevenue += dailyRevenue;
     }
 
-    // Rehearsal Studios revenue
+    // --- REHEARSAL STUDIOS: Revenue from actual rehearsal bookings ---
     const { data: rehearsalStudios } = await supabase
       .from('rehearsal_rooms')
       .select('id, name, company_id, hourly_rate')
       .not('company_id', 'is', null);
 
     for (const studio of rehearsalStudios || []) {
-      const range = DAILY_REVENUE_RANGES.rehearsal;
-      const rateMultiplier = Math.max(1, (studio.hourly_rate || 20) / 20);
-      const dailyRevenue = randomBetween(range.min, range.max) * rateMultiplier;
+      // Count recent rehearsal completions
+      const { count: recentRehearsals } = await supabase
+        .from('band_rehearsals')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', studio.id)
+        .gte('created_at', sevenDaysAgo);
+
+      const hoursBooked = (recentRehearsals || 0) * 2; // ~2 hours per rehearsal
+      const sessionRevenue = hoursBooked * (studio.hourly_rate || 20);
+      const dailyRevenue = Math.round(sessionRevenue / 7 + BASE_ACTIVITY_REVENUE.rehearsal);
 
       const { data: company } = await supabase
         .from('companies')
@@ -342,22 +384,30 @@ Deno.serve(async (req) => {
         company_id: studio.company_id,
         transaction_type: 'income',
         amount: dailyRevenue,
-        description: `Rehearsal "${studio.name}" booking revenue`,
+        description: `Rehearsal "${studio.name}" — ${recentRehearsals || 0} sessions this week`,
         category: 'subsidiary_revenue'
       });
       totalRevenue += dailyRevenue;
     }
 
-    // Recording Studios revenue
+    // --- RECORDING STUDIOS: Revenue from actual recording sessions ---
     const { data: recordingStudios } = await supabase
       .from('city_studios')
       .select('id, name, company_id, hourly_rate, quality_rating')
       .not('company_id', 'is', null);
 
     for (const studio of recordingStudios || []) {
-      const range = DAILY_REVENUE_RANGES.recording_studio;
-      const qualityMultiplier = Math.max(1, (studio.quality_rating || 50) / 50);
-      const dailyRevenue = randomBetween(range.min, range.max) * qualityMultiplier;
+      // Count recent recording sessions at this studio
+      const { count: recentSessions } = await supabase
+        .from('recording_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('studio_id', studio.id)
+        .gte('created_at', sevenDaysAgo);
+
+      const hoursBooked = (recentSessions || 0) * 4; // ~4 hours per session
+      const sessionRevenue = hoursBooked * (studio.hourly_rate || 50);
+      const qualityBonus = Math.max(1, (studio.quality_rating || 50) / 50);
+      const dailyRevenue = Math.round((sessionRevenue * qualityBonus) / 7 + BASE_ACTIVITY_REVENUE.recording_studio);
 
       const { data: company } = await supabase
         .from('companies')
@@ -375,7 +425,7 @@ Deno.serve(async (req) => {
         company_id: studio.company_id,
         transaction_type: 'income',
         amount: dailyRevenue,
-        description: `Recording Studio "${studio.name}" session revenue`,
+        description: `Recording Studio "${studio.name}" — ${recentSessions || 0} sessions this week`,
         category: 'subsidiary_revenue'
       });
       totalRevenue += dailyRevenue;
@@ -392,10 +442,9 @@ Deno.serve(async (req) => {
       
       const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const taxPeriod = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-      const dueDate = new Date(today.getFullYear(), today.getMonth(), 15); // Due 15th
+      const dueDate = new Date(today.getFullYear(), today.getMonth(), 15);
 
       for (const company of companies || []) {
-        // Check if tax already generated for this period
         const { data: existingTax } = await supabase
           .from('company_tax_records')
           .select('id')
@@ -405,7 +454,6 @@ Deno.serve(async (req) => {
 
         if (existingTax) continue;
 
-        // Calculate last month's revenue and expenses from transactions
         const monthStart = lastMonth.toISOString();
         const monthEnd = new Date(today.getFullYear(), today.getMonth(), 0).toISOString();
 
@@ -457,7 +505,7 @@ Deno.serve(async (req) => {
         .lt('due_date', today.toISOString());
 
       for (const tax of overdueTaxes || []) {
-        const penalty = Math.round(Number(tax.tax_amount) * 0.05 * 100) / 100; // 5% late fee
+        const penalty = Math.round(Number(tax.tax_amount) * 0.05 * 100) / 100;
         await supabase
           .from('company_tax_records')
           .update({ 
@@ -496,7 +544,6 @@ Deno.serve(async (req) => {
 
         if (!company || Number(company.balance) < totalDue) continue;
 
-        // Pay the tax
         await supabase.from('companies')
           .update({ balance: Number(company.balance) - totalDue })
           .eq('id', tax.company_id);
@@ -518,7 +565,6 @@ Deno.serve(async (req) => {
     // ==========================================
     // PHASE 6: Bankruptcy Check
     // ==========================================
-    // Refresh company balances after all operations
     const { data: updatedCompanies } = await supabase
       .from('companies')
       .select('id, balance, negative_balance_since, is_bankrupt')
@@ -537,7 +583,6 @@ Deno.serve(async (req) => {
           .eq('id', company.id);
       }
 
-      // Check for bankruptcy (negative for 7+ days)
       if (company.negative_balance_since && !company.is_bankrupt) {
         const daysSinceNegative = Math.floor(
           (Date.now() - new Date(company.negative_balance_since).getTime()) / (1000 * 60 * 60 * 24)
