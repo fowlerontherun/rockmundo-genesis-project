@@ -184,7 +184,8 @@ Deno.serve(async (req) => {
       // Revenue = base + per-gig service fee (security firms serve as event security providers)
       const gigsServed = Math.min(recentGigCount || 0, 10 * (firm.tier || 1)); // capacity based on tier
       const perGigFee = 150 * tierMultiplier;
-      const dailyRevenue = Math.round((BASE_ACTIVITY_REVENUE.security * tierMultiplier) + (gigsServed * perGigFee / 7));
+      const ownerRepMod = ownerReputationMap.get(firm.company_id!) || 1.0;
+      const dailyRevenue = Math.round(((BASE_ACTIVITY_REVENUE.security * tierMultiplier) + (gigsServed * perGigFee / 7)) * ownerRepMod);
 
       const { data: company } = await supabase
         .from('companies')
