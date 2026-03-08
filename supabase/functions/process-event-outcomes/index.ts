@@ -115,28 +115,59 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Handle fans effect on band if any
-      if (effects.fans && effects.fans !== 0) {
-        const { data: bandMember } = await supabase
-          .from("band_members")
-          .select("band_id")
-          .eq("user_id", playerEvent.user_id)
-          .limit(1)
+      // Handle fans effect on band if any + MORALE/REPUTATION from event outcomes (v1.0.963)
+      const { data: bandMember } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("user_id", playerEvent.user_id)
+        .eq("is_touring_member", false)
+        .limit(1)
+        .maybeSingle();
+
+      if (bandMember?.band_id) {
+        const { data: currentBand } = await supabase
+          .from("bands")
+          .select("total_fans, morale, reputation_score")
+          .eq("id", bandMember.band_id)
           .single();
 
-        if (bandMember) {
-          // Direct update for fans - RPC might not exist
-          const { data: currentBand } = await supabase
-            .from("bands")
-            .select("total_fans")
-            .eq("id", bandMember.band_id)
-            .single();
-          
-          if (currentBand) {
-            await supabase
-              .from("bands")
-              .update({ total_fans: Math.max(0, (currentBand.total_fans || 0) + effects.fans) })
-              .eq("id", bandMember.band_id);
+        if (currentBand) {
+          const bandUpdate: Record<string, any> = {};
+
+          // Fan effect
+          if (effects.fans && effects.fans !== 0) {
+            bandUpdate.total_fans = Math.max(0, (currentBand.total_fans || 0) + effects.fans);
+          }
+
+          // === MORALE FROM EVENT OUTCOMES (v1.0.963) ===
+          // Net positive effects boost morale; net negative effects hurt it
+          const netEffect = (effects.cash ?? 0) + (effects.fans ?? 0) * 10 + (effects.fame ?? 0) * 5 + (effects.health ?? 0) * 2;
+          let moraleShift = 0;
+          if (netEffect > 200) moraleShift = 6;
+          else if (netEffect > 50) moraleShift = 3;
+          else if (netEffect > 0) moraleShift = 1;
+          else if (netEffect < -200) moraleShift = -8;
+          else if (netEffect < -50) moraleShift = -4;
+          else if (netEffect < 0) moraleShift = -2;
+
+          // === REPUTATION FROM HEALTH-DAMAGING EVENTS (v1.0.963) ===
+          // Events that hurt health significantly damage public reputation (scandals, arrests, etc.)
+          let repShift = 0;
+          if ((effects.health ?? 0) <= -20) repShift = -8;
+          else if ((effects.health ?? 0) <= -10) repShift = -4;
+          else if ((effects.fame ?? 0) > 50) repShift = 3;
+
+          const curMorale = (currentBand as any).morale ?? 50;
+          const curRep = (currentBand as any).reputation_score ?? 0;
+
+          if (moraleShift !== 0) bandUpdate.morale = Math.max(0, Math.min(100, curMorale + moraleShift));
+          if (repShift !== 0) bandUpdate.reputation_score = Math.max(-100, Math.min(100, curRep + repShift));
+
+          if (Object.keys(bandUpdate).length > 0) {
+            await supabase.from("bands").update(bandUpdate as any).eq("id", bandMember.band_id);
+            if (moraleShift !== 0 || repShift !== 0) {
+              console.log(`[${JOB_NAME}] Band ${bandMember.band_id} health update: morale ${moraleShift > 0 ? '+' : ''}${moraleShift}, rep ${repShift > 0 ? '+' : ''}${repShift}`);
+            }
           }
         }
       }

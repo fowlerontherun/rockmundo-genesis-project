@@ -164,17 +164,28 @@ serve(async (req) => {
         if (bandMember?.band_id) {
           const { data: band } = await supabase
             .from('bands')
-            .select('fan_sentiment_score, media_intensity')
+            .select('fan_sentiment_score, media_intensity, morale, reputation_score')
             .eq('id', bandMember.band_id)
             .single();
 
           if (band) {
             const curSentiment = (band as any).fan_sentiment_score ?? 0;
             const curIntensity = (band as any).media_intensity ?? 0;
+            const curMorale = (band as any).morale ?? 50;
+            const curRep = (band as any).reputation_score ?? 0;
             const newSentiment = Math.min(100, curSentiment + 3);
+
+            // === TWAATER → MORALE & REPUTATION (v1.0.963) ===
+            // Viral posts (high engagement outcome) give small morale/rep boost
+            const isViral = selectedOutcome.code?.includes('viral') || (effects.follower_pct ?? 0) >= 5;
+            const moraleBoost = isViral ? 3 : 1;
+            const repBoost = isViral ? 2 : 0;
+
             await supabase.from('bands').update({
               fan_sentiment_score: newSentiment,
               media_intensity: Math.min(100, curIntensity + 3),
+              morale: Math.min(100, curMorale + moraleBoost),
+              reputation_score: Math.min(100, curRep + repBoost),
             } as any).eq('id', bandMember.band_id);
 
             await supabase.from('band_sentiment_events').insert({
@@ -184,7 +195,7 @@ serve(async (req) => {
               media_intensity_change: 3,
               sentiment_after: newSentiment,
               source: 'twaater-outcome-engine',
-              description: 'Social media post boosted fan engagement',
+              description: isViral ? 'Viral social media post! Morale and reputation boosted' : 'Social media post boosted fan engagement',
             });
           }
         }
