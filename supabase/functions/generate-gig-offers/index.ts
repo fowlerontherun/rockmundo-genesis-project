@@ -45,7 +45,7 @@ serve(async (req) => {
     // Generate offers for all active bands with sufficient fame
     const { data: bands } = await supabaseClient
       .from('bands')
-      .select('id, fame, genre, fan_sentiment_score, media_intensity, reputation_score')
+      .select('id, fame, genre, fan_sentiment_score, media_intensity, reputation_score, morale')
       .gte('fame', 100)
       .limit(50);
 
@@ -121,7 +121,12 @@ serve(async (req) => {
           // Toxic reputation reduces offer chance (skip ~30% of offers for very bad rep)
           if (repScore <= -40 && Math.random() < 0.3) continue;
 
-          const basePayout = Math.floor(500 * (1 + band.fame / 10000) * (venue.economy_factor || 1) * mediaCoverageMod * repPayoutMod);
+          // === MORALE MODIFIER: Low morale bands perform worse → lower payouts (v1.0.970) ===
+          const bandMorale = (band as any).morale ?? 50;
+          const moraleT = Math.max(0, Math.min(100, bandMorale)) / 100; // 0 to 1
+          const moraleMod = parseFloat((0.8 + moraleT * 0.4).toFixed(2)); // 0.8x demoralized → 1.2x energized
+
+          const basePayout = Math.floor(500 * (1 + band.fame / 10000) * (venue.economy_factor || 1) * mediaCoverageMod * repPayoutMod * moraleMod);
           const ticketPrice = Math.round(({ opening: 15, support: 20, headline: 30 }[slotType] || 20) * ticketDemandMod);
 
           const expiresAt = new Date();

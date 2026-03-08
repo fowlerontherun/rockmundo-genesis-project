@@ -227,6 +227,23 @@ Deno.serve(async (req) => {
           }
         });
 
+        // === MORALE & REPUTATION HIT: Band member imprisoned (v1.0.970) ===
+        try {
+          const { data: bm } = await supabase.from('band_members').select('band_id').eq('user_id', debtor.user_id).eq('is_touring_member', false).limit(1).maybeSingle();
+          if (bm?.band_id) {
+            const { data: bd } = await supabase.from('bands').select('morale, reputation_score').eq('id', bm.band_id).single();
+            if (bd) {
+              const curMorale = (bd as any).morale ?? 50;
+              const curRep = (bd as any).reputation_score ?? 0;
+              await supabase.from('bands').update({
+                morale: Math.max(0, curMorale - 15),
+                reputation_score: Math.max(-100, curRep - 10),
+              }).eq('id', bm.band_id);
+              console.log(`[check-player-debt] Imprisonment → morale -15, rep -10 for band ${bm.band_id}`);
+            }
+          }
+        } catch (e) { console.log('[check-player-debt] Morale/rep update error:', e); }
+
         playersImprisoned++;
         console.log(`[check-player-debt] Imprisoned ${debtor.display_name || debtor.username} for ${sentenceDays} days (debt: $${debtAmount})`);
       }

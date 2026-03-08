@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     // Process bands - award daily fame and fans with configurable rates
     const { data: bands, error: bandsError } = await supabase
       .from('bands')
-      .select('id, fame, weekly_fans, total_fans, popularity, cohesion_score, days_together, chemistry_level, performance_count, created_at, status, morale')
+      .select('id, fame, weekly_fans, total_fans, popularity, cohesion_score, days_together, chemistry_level, performance_count, created_at, status, morale, reputation_score')
 
     if (bandsError) throw bandsError
 
@@ -170,6 +170,15 @@ Deno.serve(async (req) => {
           newMorale = curMorale + Math.ceil((50 - curMorale) * 0.05); // 5% recovery toward 50
         }
 
+        // === REPUTATION PASSIVE REGRESSION toward 0 (v1.0.970) ===
+        const curRep = (band as any).reputation_score ?? 0;
+        let newRep = curRep;
+        if (curRep > 5) {
+          newRep = curRep - Math.ceil(curRep * 0.03); // 3% decay toward 0
+        } else if (curRep < -5) {
+          newRep = curRep + Math.ceil(Math.abs(curRep) * 0.02); // 2% recovery toward 0 (scandals linger longer)
+        }
+
         await supabase
           .from('bands')
           .update({
@@ -180,6 +189,7 @@ Deno.serve(async (req) => {
             cohesion_score: newCohesionScore,
             popularity: newPopularity,
             morale: newMorale,
+            reputation_score: newRep,
           })
           .eq('id', band.id)
 
