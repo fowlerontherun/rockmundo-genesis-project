@@ -46,16 +46,7 @@ export default function PerformGig() {
   const [finalizing, setFinalizing] = useState(false);
   const [timeUntilReport, setTimeUntilReport] = useState<string | null>(null);
   const [bandSetlists, setBandSetlists] = useState<any[]>([]);
-  const [viewerMode, setViewerMode] = useState<'3d' | 'text'>(() => {
-    // Load preference from localStorage
-    const saved = localStorage.getItem('gigViewerMode');
-    return (saved === '3d' || saved === 'text') ? saved : 'text';
-  });
-
-  // Save viewer mode preference
-  useEffect(() => {
-    localStorage.setItem('gigViewerMode', viewerMode);
-  }, [viewerMode]);
+  // Viewer mode removed — single top-down viewer
 
   const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
     enabled: !!gig?.band_id,
