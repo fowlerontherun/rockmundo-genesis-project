@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.906",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Gig viewer now launches in full-screen mode (fixed overlay covering entire viewport) for an immersive concert experience" },
+    ],
+  },
+  {
     version: "1.0.905",
     date: "2026-03-08",
     changes: [
