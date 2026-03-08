@@ -34,6 +34,9 @@ import { checkAndGrantBehaviorUnlocks } from "./behaviorUnlockChecker";
 import { calculateConsecutiveGigs, getFatigueState, type FatigueState } from "./tourFatigue";
 import { getWeatherGigImpact, type WeatherGigImpact } from "./weatherGigImpact";
 import type { WeatherCondition } from "./weatherSystem";
+import { getFanSentiment } from "./fanSentiment";
+import { getMediaCycleState, applyMediaEvent } from "./mediaCycle";
+import { degradeEquipment } from "./equipmentDegradation";
 
 interface GigExecutionData {
   gigId: string;
