@@ -43,21 +43,30 @@ const WEIGHTS = {
 };
 
 export function calculateSongPerformance(factors: PerformanceFactors): SongPerformanceResult {
+  // Get stage behavior modifiers
+  const behavior = applyBehaviorToPerformance(
+    factors.stageBehavior || 'standard',
+    factors.momentum || 0
+  );
+
   // Normalize all factors to 0-100 scale
   const normalizedSongQuality = Math.min(100, (factors.songQuality / 1000) * 100);
   const normalizedMemberSkills = Math.min(100, (factors.memberSkillAverage / 150) * 100);
   const normalizedStageSkills = Math.min(100, factors.stageSkillAverage ?? 50);
   
+  // Apply chemistry behavior modifier
+  const effectiveChemistry = factors.bandChemistry * behavior.chemistryMultiplier;
+  
   // Calculate individual contributions
   const songQualityContrib = normalizedSongQuality * WEIGHTS.songQuality;
   const rehearsalContrib = factors.rehearsalLevel * WEIGHTS.rehearsal;
-  const chemistryContrib = factors.bandChemistry * WEIGHTS.chemistry;
+  const chemistryContrib = Math.min(100, effectiveChemistry) * WEIGHTS.chemistry;
   const equipmentContrib = factors.equipmentQuality * WEIGHTS.equipment;
   const crewContrib = factors.crewSkillLevel * WEIGHTS.crew;
   const memberSkillsContrib = normalizedMemberSkills * WEIGHTS.memberSkills;
   const stageSkillsContrib = normalizedStageSkills * WEIGHTS.stageSkills;
   
-  // Calculate weighted average (0-100 scale)
+  // Calculate weighted average (0-100 scale) + behavior base score bonus
   const baseScore = 
     songQualityContrib +
     rehearsalContrib +
@@ -65,7 +74,8 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
     equipmentContrib +
     crewContrib +
     memberSkillsContrib +
-    stageSkillsContrib;
+    stageSkillsContrib +
+    behavior.baseScoreBonus;
   
   // Venue capacity bonus/penalty
   let capacityMultiplier = 1.0;
@@ -81,42 +91,49 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
     capacityMultiplier = 0.85; // empty venue = bad energy
   }
   
-  // INCREASED variance (±15-20%) for more variable results
+  // VARIANCE — modified by behavior
   const reliabilityBonus = Math.max(0, Math.min(0.05, factors.gearReliabilityBonus ?? 0));
   const varianceFloor = 0.85 + (reliabilityBonus * 2); // 0.85 to 0.95 base
   const varianceRange = Math.max(0.10, 0.30 - reliabilityBonus * 3); // 0.10 to 0.30 range
-  const variance = varianceFloor + Math.random() * varianceRange;
+  const adjustedVarianceRange = varianceRange * behavior.varianceMultiplier;
+  const variance = varianceFloor + Math.random() * adjustedVarianceRange;
   
-  // Momentum bonus/penalty from previous songs (-3 to +3 scale)
+  // Momentum bonus/penalty — modified by behavior
   const momentum = factors.momentum || 0;
-  const momentumMultiplier = 1 + (momentum * 0.04); // ±12% at max momentum
+  const momentumMultiplier = 1 + (momentum * 0.04 * behavior.momentumMultiplier);
   
-  // Setlist position effects - opening songs harder, closing songs easier
+  // Setlist position effects — opening penalty modified by behavior
   const position = factors.songPosition || 1;
   let positionMultiplier = 1.0;
   if (position === 1) {
-    positionMultiplier = 0.95; // Opening jitters
+    const openingPenalty = 0.05 * behavior.openingPenaltyMultiplier;
+    positionMultiplier = 1.0 - openingPenalty;
   } else if (position >= 8) {
     positionMultiplier = 1.05; // Crowd is warmed up
   }
   
-  // Random event chance — improvisation skill reduces bad rolls, increases good ones
+  // Random event chance — modified by behavior + improvisation
   const improvLevel = factors.improvisationLevel ?? 0;
-  const improvShift = improvLevel * 0.002; // 0 to 0.04 shift toward positive events
+  const improvShift = improvLevel * 0.002;
   let eventMultiplier = 1.0;
   const eventRoll = Math.random();
-  if (eventRoll < 0.08 + improvShift) {
+  const positiveThreshold = 0.08 + improvShift + behavior.positiveEventBonus;
+  const negativeStart = positiveThreshold;
+  const negativeThreshold = negativeStart + Math.max(0, 0.06 - improvShift + behavior.negativeEventBonus);
+  const minorPositiveThreshold = negativeThreshold + 0.06 + improvShift;
+  
+  if (eventRoll < positiveThreshold) {
     eventMultiplier = 1.15 + Math.random() * 0.10;
-  } else if (eventRoll < 0.14 - improvShift) {
+  } else if (eventRoll < negativeThreshold) {
     eventMultiplier = 0.80 + Math.random() * 0.10;
-  } else if (eventRoll < 0.20 + improvShift) {
+  } else if (eventRoll < minorPositiveThreshold) {
     eventMultiplier = 1.08 + Math.random() * 0.07;
   }
   
   // Apply production notes bonus
   const productionMultiplier = 1 + (factors.productionNotesBonus || 0);
   
-  // Apply genre skill bonus (players trained in this genre perform better)
+  // Apply genre skill bonus
   const genreMultiplier = factors.genreSkillMultiplier ?? 1.0;
   
   // Convert to 25-star scale with all multipliers
@@ -124,15 +141,17 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
   const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier * qualityDifficulty * momentumMultiplier * positionMultiplier * eventMultiplier * genreMultiplier;
   const clampedScore = Math.max(0, Math.min(25, finalScore));
   
-  // Determine crowd response based on score
+  // Determine crowd response — behavior's crowd engagement modifies thresholds
+  const crowdMod = behavior.crowdEngagementMultiplier;
   let crowdResponse: SongPerformanceResult['crowdResponse'];
-  if (clampedScore >= 22) {
+  // Higher crowd engagement = lower thresholds needed for better responses
+  if (clampedScore >= 22 / crowdMod) {
     crowdResponse = 'ecstatic';
-  } else if (clampedScore >= 18) {
+  } else if (clampedScore >= 18 / crowdMod) {
     crowdResponse = 'enthusiastic';
-  } else if (clampedScore >= 14) {
+  } else if (clampedScore >= 14 / crowdMod) {
     crowdResponse = 'engaged';
-  } else if (clampedScore >= 10) {
+  } else if (clampedScore >= 10 / crowdMod) {
     crowdResponse = 'mixed';
   } else {
     crowdResponse = 'disappointed';
