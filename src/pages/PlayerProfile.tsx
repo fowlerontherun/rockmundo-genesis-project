@@ -51,7 +51,7 @@ export default function PlayerProfile() {
           .eq("user_id", profileData.user_id),
         supabase
           .from("player_attributes")
-          .select("charisma, stage_presence, creativity, discipline, resilience, luck, streetwise, networking")
+          .select("charisma, stage_presence, creative_insight, crowd_engagement, musical_ability, musicality, physical_endurance, looks, mental_focus, rhythm_sense, social_reach, technical_mastery, vocal_talent")
           .eq("profile_id", profileData.id)
           .maybeSingle(),
       ]);

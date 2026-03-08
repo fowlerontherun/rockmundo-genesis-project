@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.018",
+    date: "2026-03-08",
+    changes: [
+      { type: 'fix', description: "Player Profile: Fixed attributes query using wrong column names (creativity/discipline/etc → creative_insight/musical_ability/etc)" },
+      { type: 'fix', description: "Player Profile: Added RLS policies so authenticated users can view other players' skill_progress and player_attributes" },
+    ],
+  },
+  {
     version: "1.1.017",
     date: "2026-03-08",
     changes: [
