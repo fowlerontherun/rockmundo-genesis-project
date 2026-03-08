@@ -173,13 +173,13 @@ const Travel = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Globe className="h-8 w-8 text-primary" />
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
+      <header className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-oswald flex items-center gap-2">
+          <Globe className="h-6 w-6 md:h-7 md:w-7 text-primary" />
           {t('travel.title')}
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
         </p>
       </header>
