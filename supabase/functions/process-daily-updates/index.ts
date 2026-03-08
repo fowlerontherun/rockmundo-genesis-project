@@ -315,6 +315,11 @@ Deno.serve(async (req) => {
             // Calculate daily sales
             const advanceBookingBonus = Math.min(0.3, (daysBooked / 14) * 0.3)
             const priceSensitivity = Math.max(0.5, 1 - ((gig.ticket_price || 20) / 100) * 0.3)
+
+            // Sentiment ticket demand modifier (v1.0.952): 0.6x hostile → 1.4x fanatical
+            const ticketSentiment = ticketSentimentMap.get(gig.band_id) ?? 0;
+            const ticketSentimentT = (Math.max(-100, Math.min(100, ticketSentiment)) + 100) / 200;
+            const ticketDemandMod = parseFloat((0.6 + ticketSentimentT * 0.8).toFixed(2));
             
             let baseDailyRate: number
             if (drawPower >= 1.0) baseDailyRate = 0.25 + (drawPower - 1) * 0.5
@@ -322,7 +327,7 @@ Deno.serve(async (req) => {
             else if (drawPower >= 0.4) baseDailyRate = 0.05 + (drawPower - 0.4) * 0.2
             else baseDailyRate = 0.02 + drawPower * 0.08
             
-            const dailySaleRate = baseDailyRate * priceSensitivity * (1 + advanceBookingBonus)
+            const dailySaleRate = baseDailyRate * priceSensitivity * (1 + advanceBookingBonus) * ticketDemandMod
             let ticketsToday = Math.round(venueCapacity * dailySaleRate)
             
             // Urgency bonus as gig approaches
