@@ -29,6 +29,7 @@ interface Channel {
 export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
   const [selectedChannel, setSelectedChannel] = useState<string>("general");
   const [cities, setCities] = useState<City[]>([]);
+  const [filter, setFilter] = useState("");
 
   useEffect(() => {
     const loadCities = async () => {
