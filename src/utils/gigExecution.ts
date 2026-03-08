@@ -223,6 +223,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
       stageSkillAverage,
       improvisationLevel: 0,
       genreSkillMultiplier: songGenreMultiplier,
+      stageBehavior,
     };
 
     const result = calculateSongPerformance(factors);
