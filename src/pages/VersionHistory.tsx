@@ -23,6 +23,7 @@ const versionHistory: VersionEntry[] = [
       { type: 'fix', description: "Activity-derived AP now capped at 20/day (was uncapped)" },
     ],
   },
+  {
     version: "1.0.922",
     date: "2026-03-08",
     changes: [
