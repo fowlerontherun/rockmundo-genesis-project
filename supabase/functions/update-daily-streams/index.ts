@@ -331,10 +331,17 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── Label Revenue Split for Streaming ──
+        // ── Label Revenue Split for Streaming (Deal-Type Aware) ──
         const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;
 
-        if (contractInfo && bandId && dailyRevenueDollars > 0) {
+        // Distribution Deal: does NOT take a cut of streaming (only physical/digital sales)
+        // Licensing Deal: if contract expired, skip label cut
+        const isDealExcluded = contractInfo && (
+          contractInfo.dealTypeName === "Distribution Deal" ||
+          (contractInfo.dealTypeName === "Licensing Deal" && new Date(contractInfo.endDate) < new Date())
+        );
+
+        if (contractInfo && !isDealExcluded && bandId && dailyRevenueDollars > 0) {
           const labelShareDollars = Math.round(dailyRevenueDollars * contractInfo.labelCutPct);
           const bandShareDollars = dailyRevenueDollars - labelShareDollars;
 
