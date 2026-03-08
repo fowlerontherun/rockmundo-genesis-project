@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.981",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Gig Performance → Reputation: Completing gigs now affects band reputation_score. Amazing shows (22+ rating) give +5 rep, great (18+) +3, decent (14+) +1. Bad shows (<12) cause -3, terrible (<8) -6. Large attendance (1000+/5000+) amplifies the effect by 1.2x/1.5x" },
+      { type: 'improvement', description: "complete-gig now writes reputation_score alongside morale in the same band update transaction. Public perception is now shaped by live performance quality and audience size" },
+    ],
+  },
+  {
     version: "1.0.980",
     date: "2026-03-08",
     changes: [
