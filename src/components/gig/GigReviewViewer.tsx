@@ -12,7 +12,7 @@ import {
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCrowdSounds } from "@/hooks/useCrowdSounds";
+// Crowd sounds removed — stubbed out
 
 interface GigReviewViewerProps {
   gigId: string;
@@ -118,15 +118,13 @@ export const GigReviewViewer = ({
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip || false;
   
-  // Crowd sounds hook
-  const { 
-    isLoaded: crowdSoundsLoaded, 
-    setVolume: setCrowdVolume, 
-    setMuted: setCrowdMuted,
-    playEntrance, 
-    playApplause, 
-    playCrowdReaction 
-  } = useCrowdSounds();
+  // Crowd sounds removed — stubs
+  const crowdSoundsLoaded = false;
+  const setCrowdVolume = (_v: number) => {};
+  const setCrowdMuted = (_m: boolean) => {};
+  const playEntrance = () => {};
+  const playApplause = () => {};
+  const playCrowdReaction = (_r: string) => {};
   
   const [performances, setPerformances] = useState<SongPerformance[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1); // -1 = arrival, 0+ = song index

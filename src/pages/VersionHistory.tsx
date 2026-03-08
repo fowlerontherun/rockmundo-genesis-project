@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.895",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Replaced all video/3D/text gig viewers with a new top-down 2D pixel-art stage viewer — band member sprites, animated crowd dots, live HUD, and scrolling commentary overlay" },
+      { type: 'feature', description: "Clickable band member sprites show real-time performance scores and skill contributions via popover" },
+      { type: 'feature', description: "Crowd dots animate based on mood — jumping, moshing, and wave effects for ecstatic/enthusiastic responses" },
+      { type: 'feature', description: "Song-by-song visual progression with dynamic lighting colors and stage energy levels" },
+      { type: 'improvement', description: "Removed 10 obsolete files (VideoGigViewer, TextGigViewer, POV clips, crowd sound mixer, etc.) for cleaner codebase" },
+    ],
+  },
+
+  {
     version: "1.0.894",
     date: "2026-03-07",
     changes: [
