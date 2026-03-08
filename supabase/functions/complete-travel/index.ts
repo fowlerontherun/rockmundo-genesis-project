@@ -6,6 +6,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Travel hazard rates by transport mode
+const TRANSPORT_HAZARD_RATES: Record<string, number> = {
+  bus: 0.04,
+  train: 0.02,
+  plane: 0.015,
+  ship: 0.03,
+  private_jet: 0.005,
+};
+
+const TRAVEL_CONDITIONS = [
+  { name: "food_poisoning", type: "sickness", severity: 55 },
+  { name: "sprained_ankle", type: "injury", severity: 45 },
+  { name: "back_strain", type: "injury", severity: 50 },
+  { name: "severe_jetlag", type: "sickness", severity: 35 },
+  { name: "flu", type: "sickness", severity: 40 },
+  { name: "stomach_bug", type: "sickness", severity: 30 },
+  { name: "anxiety", type: "mental_health", severity: 45 },
+  { name: "burnout", type: "mental_health", severity: 55 },
+  { name: "depression", type: "mental_health", severity: 40 },
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,6 +48,8 @@ serve(async (req) => {
         to_city_id,
         from_city_id,
         arrival_time,
+        transport_mode,
+        distance_km,
         to_city:to_city_id(name),
         from_city:from_city_id(name)
       `)
@@ -84,6 +107,49 @@ serve(async (req) => {
             travel_id: travel.id,
           },
         });
+
+        // === TRAVEL HAZARD ROLL ===
+        const transportMode = (travel as any).transport_mode || "plane";
+        const distanceKm = (travel as any).distance_km || 1000;
+        let hazardChance = TRANSPORT_HAZARD_RATES[transportMode] || 0.02;
+        if (distanceKm > 5000) hazardChance += 0.02;
+        else if (distanceKm > 2000) hazardChance += 0.01;
+
+        const hazardRoll = Math.random();
+        if (hazardRoll < hazardChance) {
+          // Trigger a travel hazard condition
+          const conditionDef = TRAVEL_CONDITIONS[Math.floor(Math.random() * TRAVEL_CONDITIONS.length)];
+          const severityVariance = 0.8 + Math.random() * 0.4;
+          const severity = Math.max(10, Math.min(100, Math.round(conditionDef.severity * severityVariance)));
+
+          const { error: conditionError } = await supabase
+            .from("player_conditions")
+            .insert({
+              user_id: travel.user_id,
+              condition_type: conditionDef.type,
+              condition_name: conditionDef.name,
+              severity,
+              status: "active",
+              cause: "travel",
+              effects: {},
+            });
+
+          if (!conditionError) {
+            // Send inbox notification
+            const conditionLabel = conditionDef.name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+            await supabase.from("player_inbox").insert({
+              user_id: travel.user_id,
+              category: "wellness",
+              title: `Travel Incident: ${conditionLabel}`,
+              message: `You developed ${conditionLabel} during your journey to ${toCityName}. Check the Wellness page for treatment options.`,
+              metadata: { condition_name: conditionDef.name, condition_type: conditionDef.type, severity },
+              action_type: "navigate",
+              action_data: { route: "/wellness", tab: "conditions" },
+            });
+
+            console.log(`[complete-travel] Travel hazard triggered for user ${travel.user_id}: ${conditionDef.name} (severity ${severity})`);
+          }
+        }
 
         results.push({
           travel_id: travel.id,

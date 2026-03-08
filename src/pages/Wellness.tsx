@@ -6,6 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useConditions } from "@/hooks/useConditions";
+import { ConditionsPanel } from "@/components/wellness/ConditionsPanel";
 import {
   Heart,
   Activity,
@@ -259,8 +261,9 @@ export default function WellnessPage() {
       )}
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="conditions">Conditions</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="hospital">Hospital</TabsTrigger>
           <TabsTrigger value="addictions">Addictions</TabsTrigger>
@@ -337,6 +340,11 @@ export default function WellnessPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* === CONDITIONS TAB === */}
+        <TabsContent value="conditions" className="space-y-4">
+          <ConditionsPanel />
         </TabsContent>
 
         {/* === ACTIVITIES TAB (merged Physical + Mental + Lifestyle) === */}
@@ -472,7 +480,7 @@ export default function WellnessPage() {
                     </div>
                     <Progress value={nearestHospital.effectiveness_rating} className="h-2" />
                     <Button
-                      onClick={() => checkIn()}
+                      onClick={() => checkIn({})}
                       disabled={isCheckingIn || health > 30}
                       className="w-full"
                       variant={health <= 30 ? "destructive" : "outline"}

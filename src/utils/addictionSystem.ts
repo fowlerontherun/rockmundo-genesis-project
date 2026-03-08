@@ -1,6 +1,6 @@
 import type { BehaviorSettings } from "@/hooks/useBehaviorSettings";
 
-export type AddictionType = "alcohol" | "substances" | "gambling" | "partying";
+export type AddictionType = "alcohol" | "substances" | "gambling" | "partying" | "shopping";
 export type AddictionStatus = "active" | "recovering" | "recovered" | "relapsed";
 export type RecoveryProgram = "therapy" | "rehab" | "cold_turkey";
 
@@ -39,7 +39,7 @@ export function rollForAddiction(settings: Partial<BehaviorSettings>): { trigger
   const chance = calculateAddictionTriggerChance(settings);
   const triggered = Math.random() < chance;
   // Weighted random type selection
-  const types: AddictionType[] = ["alcohol", "alcohol", "substances", "partying", "gambling"];
+  const types: AddictionType[] = ["alcohol", "alcohol", "substances", "partying", "gambling", "shopping"];
   const type = types[Math.floor(Math.random() * types.length)];
   return { triggered, type };
 }
@@ -109,7 +109,14 @@ export function getAddictionTypeLabel(type: AddictionType): string {
     case "substances": return "Substances";
     case "gambling": return "Gambling";
     case "partying": return "Partying";
+    case "shopping": return "Shopping";
   }
+}
+
+/** Active addictions increase mental health condition risk */
+export function getAddictionMentalHealthRisk(activeAddictionCount: number): number {
+  if (activeAddictionCount === 0) return 0;
+  return Math.min(0.15, activeAddictionCount * 0.05); // 5% per active addiction, max 15%
 }
 
 export function getDaysCleanMilestone(days: number): { label: string; reward: number } | null {
