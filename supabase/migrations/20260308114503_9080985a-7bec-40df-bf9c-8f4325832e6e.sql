@@ -1,0 +1,1 @@
+ALTER TABLE public.gig_outcomes ADD COLUMN IF NOT EXISTS stage_behavior_used TEXT;
