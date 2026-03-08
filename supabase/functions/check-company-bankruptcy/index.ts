@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     // Get all companies with negative balance
     const { data: companies } = await supabase
       .from('companies')
-      .select('*')
+      .select('*, owner_id')
       .lt('balance', 0)
       .eq('status', 'active');
 

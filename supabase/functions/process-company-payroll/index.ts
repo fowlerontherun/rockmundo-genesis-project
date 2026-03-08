@@ -26,14 +26,15 @@ Deno.serve(async (req) => {
     const { data: companiesWithSettings, error: settingsError } = await supabase
       .from('company_settings')
       .select(`
-        company_id,
-        auto_pay_salaries,
-        companies!inner(
-          id,
-          name,
-          balance,
-          status
-        )
+      company_id,
+      auto_pay_salaries,
+      companies!inner(
+        id,
+        name,
+        balance,
+        status,
+        owner_id
+      )
       `)
       .eq('auto_pay_salaries', true);
 

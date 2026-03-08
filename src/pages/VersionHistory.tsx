@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.993",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Company Operations → Reputation Revenue Scaling: All subsidiary activity-based revenue (security, factory, logistics, venue, rehearsal, recording) is now scaled by the owner's band reputation (0.85x toxic → 1.15x iconic). Reputable owners attract more business" },
+      { type: 'feature', description: "Company Payroll → Morale Impact: Successfully paying all staff awards +1 morale to the owner's band. If payroll causes negative balance, -3 morale penalty is applied instead" },
+      { type: 'feature', description: "Company Bankruptcy → Morale + Reputation Crash: Declaring bankruptcy applies -15 morale and -10 reputation to the owner's band. Bankruptcy warnings (3+ days negative) apply -5 morale" },
+      { type: 'improvement', description: "All company management systems (operations, payroll, bankruptcy) now integrate with band health stats. Business performance and financial responsibility directly affect morale and reputation" },
+    ],
+  },
+  {
     version: "1.0.992",
     date: "2026-03-08",
     changes: [
