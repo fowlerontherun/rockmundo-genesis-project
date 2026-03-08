@@ -263,6 +263,15 @@ serve(async (req) => {
             })
             .eq("id", sub.id);
 
+          // === MEDIA REJECTION → MORALE HIT (v1.0.975) ===
+          try {
+            const { data: bData } = await supabase.from('bands').select('morale').eq('id', sub.band_id).single();
+            if (bData) {
+              const curMorale = (bData as any).morale ?? 50;
+              await supabase.from('bands').update({ morale: Math.max(0, curMorale - 1) } as any).eq('id', sub.band_id);
+            }
+          } catch (_e) { /* non-critical */ }
+
           results.podcast.rejected++;
           console.log(`[process-media-submissions] Rejected podcast submission ${sub.id}`);
         }
