@@ -9,6 +9,7 @@ import { FanSentimentWidget } from '@/components/world/FanSentimentWidget';
 import { MediaCycleWidget } from '@/components/world/MediaCycleWidget';
 import { SentimentEventLog } from '@/components/band/SentimentEventLog';
 import { SentimentTrendChart } from '@/components/band/SentimentTrendChart';
+import { BandHealthDashboard } from '@/components/band/BandHealthDashboard';
 import { calculateBandSkillRating } from '@/utils/bandSkillCalculator';
 import { BandProfileEdit } from '@/components/band/BandProfileEdit';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
