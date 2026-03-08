@@ -923,6 +923,52 @@ Deno.serve(async (req) => {
       console.error('Error in media cycle decay:', mediaErr);
     }
 
+    // === BAND MORALE DRIFT (v1.0.956) ===
+    console.log('=== Processing Band Morale Drift ===')
+    let moraleDrifted = 0
+    try {
+      const { data: bandsWithMorale } = await supabase
+        .from('bands')
+        .select('id, morale')
+
+      for (const b of bandsWithMorale || []) {
+        const score = (b as any).morale ?? 50;
+        if (Math.abs(score - 50) <= 2) continue;
+        const drift = score > 50 ? -1 : 1;
+        const newScore = Math.max(0, Math.min(100, score + drift));
+        if (newScore !== score) {
+          await supabase.from('bands').update({ morale: newScore }).eq('id', b.id);
+          moraleDrifted++;
+        }
+      }
+      console.log(`Band morale drift: ${moraleDrifted} bands drifted toward baseline`);
+    } catch (moraleErr) {
+      console.error('Error in band morale drift:', moraleErr);
+    }
+
+    // === BAND REPUTATION DRIFT (v1.0.956) ===
+    console.log('=== Processing Band Reputation Drift ===')
+    let bandRepDrifted = 0
+    try {
+      const { data: bandsWithRep } = await supabase
+        .from('bands')
+        .select('id, reputation_score')
+
+      for (const b of bandsWithRep || []) {
+        const score = (b as any).reputation_score ?? 0;
+        if (Math.abs(score) <= 10) continue;
+        const drift = score > 0 ? -0.5 : 0.5;
+        const newScore = Math.max(-100, Math.min(100, parseFloat((score + drift).toFixed(1))));
+        if (newScore !== score) {
+          await supabase.from('bands').update({ reputation_score: newScore }).eq('id', b.id);
+          bandRepDrifted++;
+        }
+      }
+      console.log(`Band reputation drift: ${bandRepDrifted} bands drifted toward neutral`);
+    } catch (repErr) {
+      console.error('Error in band reputation drift:', repErr);
+    }
+
     // === CROSS-SYSTEM FEEDBACK LOOPS (v1.0.955) ===
     // The 4 health pillars influence each other daily
     console.log('=== Processing Cross-System Feedback Loops ===')
