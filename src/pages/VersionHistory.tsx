@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.935",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Gig Pipeline Integration: Weather now directly affects attendance (outdoor storms -60%, indoor rain +8%) and merch sales in real gig execution" },
+      { type: 'feature', description: "Tour Fatigue in Gig Pipeline: Consecutive gigs apply fatigue modifier (1.05x fresh → 0.6x burnout) to every song performance score" },
+      { type: 'feature', description: "Tour Fatigue Widget: Visual energy bar with fatigue level, injury risk, morale hit, and rest recommendations" },
+      { type: 'feature', description: "Rivalry Widget: RivalryBadge and RivalryCard components showing rivalry intensity, fan/media/chart boosts, and drama risk" },
+      { type: 'improvement', description: "Gig execution now fetches recent gig dates and venue type in parallel with existing queries (no extra latency)" },
+      { type: 'improvement', description: "Deterministic weather selection per city per day ensures consistent gig weather across sessions" },
+    ],
+  },
+  {
     version: "1.0.934",
     date: "2026-03-08",
     changes: [
