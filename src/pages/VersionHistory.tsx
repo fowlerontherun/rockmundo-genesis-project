@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.988",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Reputation → Online Merch Sales: Band reputation now modifies daily online merch demand (0.8x toxic → 1.2x iconic). Reputable bands have stronger brand appeal that drives online purchases" },
+      { type: 'feature', description: "Reputation → Video Views: Music video daily view counts are now scaled by reputation (0.8x–1.2x). Respected artists get more organic clicks; toxic artists are algorithmically deprioritized" },
+      { type: 'feature', description: "Fan Sentiment → Sponsorship Attractiveness: Brands now consider fan engagement when evaluating sponsorship deals. Sentiment modifier (0.7x–1.3x) affects match score. Engaged fanbases deliver better campaign ROI" },
+      { type: 'improvement', description: "All 3 health stats now cross-pollinate across merch, video, and sponsorship systems. Single DB query fetches both sentiment + reputation for merch/video functions. Sponsorship matching now uses reputation × sentiment for a more nuanced brand-fit score" },
+    ],
+  },
+  {
     version: "1.0.987",
     date: "2026-03-08",
     changes: [
