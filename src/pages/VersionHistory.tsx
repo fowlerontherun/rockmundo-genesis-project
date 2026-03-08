@@ -12,6 +12,7 @@ interface VersionEntry {
   }[];
 }
 
+const versionHistory: VersionEntry[] = [
   {
     version: "1.0.895",
     date: "2026-03-08",
