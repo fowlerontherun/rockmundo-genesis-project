@@ -535,6 +535,7 @@ function App() {
                     <Route path="world-map" element={<WorldMap />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
+                    <Route path="tattoo-parlour" element={<TattooParlour />} />
                     <Route path="gear-shop" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
