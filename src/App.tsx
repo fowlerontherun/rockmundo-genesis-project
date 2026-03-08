@@ -175,6 +175,7 @@ const BandRankings = lazyWithRetry(() => import("./pages/BandRankings"));
 const StagePractice = lazyWithRetry(() => import("./pages/StagePractice"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
+const GigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDemo"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
 const TwaaterAdmin = lazyWithRetry(() => import("./pages/admin/TwaaterAdmin"));
 const LabelsAdmin = lazyWithRetry(() => import("./pages/admin/LabelsAdmin"));
