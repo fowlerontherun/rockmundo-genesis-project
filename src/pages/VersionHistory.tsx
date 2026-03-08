@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.980",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Morale Integration Audit Complete: 42+ edge functions now participate in the morale ecosystem. Positive events (gigs, sales, streaming, releases, awards, PR, social media, education) boost morale; negative events (debt, prison, scandals, injuries, rejections) decrease it. Daily drift ensures morale regresses toward baseline 50" },
+      { type: 'improvement', description: "Morale now affects: gig payouts (generate-gig-offers), recording creativity (complete-recording-sessions), fame/fan conversion at gigs (complete-gig), random event frequency (trigger-random-events). Low morale increases drama probability; high morale improves all performance metrics" },
+    ],
+  },
+  {
     version: "1.0.979",
     date: "2026-03-08",
     changes: [
