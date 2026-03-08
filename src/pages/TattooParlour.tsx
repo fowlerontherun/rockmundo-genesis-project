@@ -589,12 +589,18 @@ export default function TattooParlour() {
                     <Card key={t.id} className={t.is_infected ? 'border-destructive/50' : ''}>
                       <CardContent className="p-4 space-y-2">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-sm">{t.design?.name || 'Custom Tattoo'}</h4>
+                          <h4 className="font-semibold text-sm">{t.custom_text ? `"${t.custom_text}"` : t.design?.name || 'Custom Tattoo'}</h4>
                           <div className="flex gap-1">
-                            {!t.design && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">Custom</Badge>}
+                            {t.custom_text && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">✍️ Text</Badge>}
+                            {!t.design && !t.custom_text && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">Custom</Badge>}
                             {t.is_infected && <Badge variant="destructive" className="text-[10px]">🦠 Infected</Badge>}
                           </div>
                         </div>
+                        {t.custom_text && t.font_style && (
+                          <div className="bg-muted/50 rounded p-2 text-center">
+                            <span className="text-sm text-foreground" style={getFontCss(t.font_style)}>{t.custom_text}</span>
+                          </div>
+                        )}
                         {(t as any).artist && (
                           <p className="text-[10px] text-muted-foreground">
                             by <span className="text-foreground">{(t as any).artist.name}</span>
