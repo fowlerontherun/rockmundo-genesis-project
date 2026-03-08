@@ -19,7 +19,7 @@ import { calculateClothingScores, GENRE_STYLES } from "@/utils/clothingQuality";
 import { ClothingDesignForm } from "@/components/clothing/ClothingDesignForm";
 import { ClothingItemCard } from "@/components/clothing/ClothingItemCard";
 
-const ClothingDesigner = () => {
+const ClothingDesignerInner = () => {
   const { brand, items, loading, createBrand, createItem } = useClothingBrand();
   const { progress } = useSkillSystem();
   const scores = calculateClothingScores(progress);
