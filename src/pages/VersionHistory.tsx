@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.951",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Radio Sentiment Integration: Radio plays now boost fan sentiment for bands with significant listener reach (1k+ listeners)" },
+      { type: 'feature', description: "Video Sentiment Integration: Music video views now affect sentiment — viral videos give +5 sentiment boost with increased viral chance for popular bands" },
+      { type: 'improvement', description: "Sentiment-based engagement modifiers: Radio listener engagement scaled 0.7x–1.3x and video views scaled 0.6x–1.4x based on fan sentiment" },
+      { type: 'improvement', description: "All radio and video sentiment events batch-logged to band_sentiment_events for timeline visibility" },
+    ],
+  },
+  {
     version: "1.0.950",
     date: "2026-03-08",
     changes: [
