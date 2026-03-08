@@ -168,4 +168,10 @@ const ClothingDesignerInner = () => {
   );
 };
 
+const ClothingDesigner = () => (
+  <SkillSystemProvider>
+    <ClothingDesignerInner />
+  </SkillSystemProvider>
+);
+
 export default ClothingDesigner;
