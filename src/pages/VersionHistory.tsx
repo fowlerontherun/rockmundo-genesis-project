@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.929",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Housing Buffs: Properties and rentals now affect energy recovery, health regen, and songwriting creativity based on tier" },
+      { type: 'feature', description: "Wellness Habits: Completing habits now boosts health and energy stats (fitness +3 HP/+3 EN, mental +2 HP/+4 EN, etc.)" },
+      { type: 'feature', description: "Crime Pipeline: Underworld drug purchases now roll for arrest — chance affected by city drug policy and player fame" },
+      { type: 'feature', description: "Tattoo Buffs: Tattoos now provide fame bonuses (+2/tattoo), performance multiplier (+1% per 3), and sleeve completion bonuses" },
+      { type: 'feature', description: "Mayor Law Effects: City laws now mechanically affect income tax, sales tax, travel fees, genre restrictions, and busking fees" },
+      { type: 'feature', description: "Clothing Gig Bonus: Genre-matched clothing worn at gigs now boosts fan conversion (+5%/item) and merch sales (+3%/item)" },
+      { type: 'improvement', description: "Song quality verified cascading through write → record → mix → master → release pipeline via recording sessions" },
+      { type: 'improvement', description: "Homeless players get debuffs: -25% energy recovery, -2 health/day, -10 creativity" },
+      { type: 'improvement', description: "Arrest results show bail amount, sentence length, and fame impact in toast notification" },
+    ],
+  },
+  {
     version: "1.0.928",
     date: "2026-03-08",
     changes: [
