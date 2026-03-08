@@ -13,8 +13,9 @@ import { FormatSelectionStep } from "./FormatSelectionStep";
 import { TerritorySelectionStep, TerritorySelection } from "./TerritorySelectionStep";
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Building2, BadgeCheck } from "lucide-react";
 import { addDays, isBefore } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface CreateReleaseDialogProps {
   open: boolean;
@@ -74,6 +75,57 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     enabled: !!userBand?.home_city_id,
   });
 
+  // ── Fetch active label contract for this band/artist ──
+  const { data: activeContract } = useQuery({
+    queryKey: ["active-label-contract", userBand?.id, userId],
+    queryFn: async () => {
+      const filters: string[] = [];
+      
+      if (userBand?.id) {
+        filters.push(`band_id.eq.${userBand.id}`);
+      }
+      
+      // Get profile ID for solo artist check
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      
+      if (profile?.id) {
+        filters.push(`artist_profile_id.eq.${profile.id}`);
+      }
+
+      if (filters.length === 0) return null;
+
+      const { data, error } = await supabase
+        .from("artist_label_contracts")
+        .select(`
+          id,
+          label_id,
+          royalty_artist_pct,
+          royalty_label_pct,
+          advance_amount,
+          recouped_amount,
+          manufacturing_covered,
+          marketing_support,
+          labels(id, name, reputation_score)
+        `)
+        .eq("status", "active")
+        .or(filters.join(","))
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching active contract:", error);
+        return null;
+      }
+      return data;
+    },
+    enabled: open,
+  });
+
   // Auto-select home country as territory when bandHomeInfo loads
   useEffect(() => {
     if (bandHomeInfo && selectedTerritories.length === 0) {
@@ -129,6 +181,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
   const territoryCost = selectedTerritories.reduce((sum, t) => sum + t.distributionCost, 0);
 
+  const labelCoversManufacturing = activeContract?.manufacturing_covered === true;
+  const labelName = (activeContract?.labels as any)?.name;
+  const labelCutPct = activeContract ? (activeContract.royalty_label_pct ?? (100 - activeContract.royalty_artist_pct)) : 0;
+
   const createRelease = useMutation({
     mutationFn: async () => {
       // Calculate total cost including territory distribution
@@ -143,20 +199,50 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       const manufacturingCompleteAt = new Date();
       manufacturingCompleteAt.setDate(manufacturingCompleteAt.getDate() + manufacturingDays);
 
-      // Check band balance if band release
-      if (userBand) {
+      // Determine who pays manufacturing
+      const bandPays = labelCoversManufacturing ? territoryCost : totalCost; // Label covers format costs but not territory distribution
+      const labelPays = labelCoversManufacturing ? formatCost : 0;
+
+      // If label covers manufacturing, deduct from label balance
+      if (labelPays > 0 && activeContract) {
+        const { data: label } = await supabase
+          .from("labels")
+          .select("balance")
+          .eq("id", activeContract.label_id)
+          .single();
+
+        if (!label || (label.balance || 0) < labelPays) {
+          throw new Error(`Label doesn't have enough funds to cover manufacturing ($${(labelPays / 100).toFixed(2)})`);
+        }
+
+        await supabase
+          .from("labels")
+          .update({ balance: (label.balance || 0) - labelPays })
+          .eq("id", activeContract.label_id);
+
+        // Record label transaction
+        await supabase.from("label_financial_transactions").insert({
+          label_id: activeContract.label_id,
+          transaction_type: "expense",
+          amount: labelPays,
+          description: `Manufacturing costs for "${title}" (contract benefit)`,
+          related_contract_id: activeContract.id,
+        });
+      }
+
+      // Check and deduct from band balance
+      if (userBand && bandPays > 0) {
         const { data: band } = await supabase
           .from("bands")
           .select("band_balance")
           .eq("id", userBand.id)
           .single();
 
-        if (!band || (band.band_balance || 0) < totalCost) {
+        if (!band || (band.band_balance || 0) < bandPays) {
           throw new Error("Insufficient band balance for this release");
         }
 
-        // Deduct from band balance
-        const newBalance = (band.band_balance || 0) - totalCost;
+        const newBalance = (band.band_balance || 0) - bandPays;
         await supabase
           .from("bands")
           .update({ band_balance: newBalance })
@@ -165,15 +251,20 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         // Record expense
         await supabase.from("band_earnings").insert({
           band_id: userBand.id,
-          amount: -totalCost,
+          amount: -bandPays,
           source: "release",
-          description: `Release manufacturing: ${title} (includes $${(territoryCost / 100).toFixed(2)} distribution to ${selectedTerritories.length} territories)`,
+          description: `Release manufacturing: ${title}${labelCoversManufacturing ? ' (label covered format costs)' : ''} (includes $${(territoryCost / 100).toFixed(2)} distribution to ${selectedTerritories.length} territories)`,
           earned_by_user_id: userId,
-          metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type), territories: selectedTerritories.length }
+          metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type), territories: selectedTerritories.length, label_covered: labelPays }
         });
       }
 
-      // Create release with manufacturing timeline and streaming platforms
+      // Calculate initial hype from label marketing support
+      const marketingHypeBonus = activeContract?.marketing_support
+        ? Math.min(200, Math.floor((activeContract.marketing_support as number) / 50))
+        : 0;
+
+      // Create release with label contract info
       const { data: release, error: releaseError } = await supabase
         .from("releases")
         .insert({
@@ -183,7 +274,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           title,
           artist_name: artistName,
           release_status: "manufacturing",
-          total_cost: totalCost,
+          total_cost: bandPays + labelPays,
           manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
           scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null,
           streaming_platforms: selectedStreamingPlatforms.length > 0 ? selectedStreamingPlatforms : null,
@@ -192,6 +283,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           revenue_share_percentage: revenueShareEnabled ? 10 : null,
           manufacturing_discount_percentage: revenueShareEnabled ? 50 : null,
           home_country: bandHomeInfo?.country || null,
+          // ── Label contract fields ──
+          label_contract_id: activeContract?.id || null,
+          label_revenue_share_pct: activeContract ? labelCutPct : null,
+          hype_score: marketingHypeBonus > 0 ? marketingHypeBonus : undefined,
         })
         .select()
         .single();
@@ -254,14 +349,39 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
       if (formatsError) throw formatsError;
 
+      // Increment contract release count
+      if (activeContract) {
+        const isAlbum = releaseType === "album" || releaseType === "greatest_hits";
+        const updateField = isAlbum ? "albums_completed" : "singles_completed";
+        const fallbackField = "releases_completed";
+
+        // Also increment releases_completed as a general counter
+        const { data: currentContract } = await supabase
+          .from("artist_label_contracts")
+          .select(`${updateField}, releases_completed`)
+          .eq("id", activeContract.id)
+          .single();
+
+        if (currentContract) {
+          const updateObj: Record<string, number> = {
+            [updateField]: ((currentContract as any)[updateField] || 0) + 1,
+            releases_completed: (currentContract.releases_completed || 0) + 1,
+          };
+          await supabase
+            .from("artist_label_contracts")
+            .update(updateObj)
+            .eq("id", activeContract.id);
+        }
+      }
+
       // Log release creation activity
       logGameActivity({
         userId,
         bandId: userBand?.id,
         activityType: 'release_created',
         activityCategory: 'release',
-        description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}" - Manufacturing in progress (${selectedTerritories.length} territories)`,
-        amount: -totalCost,
+        description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}"${activeContract ? ` under ${labelName}` : ''} - Manufacturing in progress (${selectedTerritories.length} territories)`,
+        amount: -bandPays,
         metadata: {
           releaseId: release.id,
           releaseType,
@@ -273,7 +393,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           streamingPlatforms: selectedStreamingPlatforms,
           territories: selectedTerritories.map(t => t.country),
           territoryCost,
-          revenueShareEnabled
+          revenueShareEnabled,
+          labelContractId: activeContract?.id,
+          labelCoveredCost: labelPays,
+          marketingHypeBonus,
         }
       });
 
@@ -285,6 +408,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         queryClient.invalidateQueries({ queryKey: ["band", userBand.id] });
         queryClient.invalidateQueries({ queryKey: ["band-earnings"] });
       }
+      if (activeContract) {
+        queryClient.invalidateQueries({ queryKey: ["label-contracts"] });
+        queryClient.invalidateQueries({ queryKey: ["my-labels"] });
+      }
       
       const manufacturingDays = Math.ceil(
         (new Date(release.manufacturing_complete_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
@@ -292,9 +419,11 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       
       toast({ 
         title: "Release Created!", 
-        description: `Manufacturing will complete in ${manufacturingDays} days. Distributing to ${selectedTerritories.length} territories. ${
+        description: `Manufacturing will complete in ${manufacturingDays} days. Distributing to ${selectedTerritories.length} territories.${
+          activeContract ? ` Released under ${labelName}.` : ''
+        }${
           release.scheduled_release_date 
-            ? `Release scheduled for ${new Date(release.scheduled_release_date).toLocaleDateString()}.` 
+            ? ` Release scheduled for ${new Date(release.scheduled_release_date).toLocaleDateString()}.` 
             : ''
         }`
       });
@@ -351,6 +480,34 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         <DialogHeader>
           <DialogTitle>Create New Release - Step {step} of 5</DialogTitle>
         </DialogHeader>
+
+        {/* Label Contract Banner */}
+        {activeContract && (
+          <Alert className="border-primary/30 bg-primary/5">
+            <Building2 className="h-4 w-4 text-primary" />
+            <AlertDescription className="flex items-center justify-between">
+              <div>
+                <span className="font-medium">Releasing under {labelName}</span>
+                <span className="text-muted-foreground ml-2">
+                  — {activeContract.royalty_artist_pct}% artist / {labelCutPct}% label royalty split
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {labelCoversManufacturing && (
+                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                    <BadgeCheck className="h-3 w-3 mr-1" />
+                    Label Pays Manufacturing
+                  </Badge>
+                )}
+                {(activeContract.marketing_support as number) > 0 && (
+                  <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
+                    +{Math.min(200, Math.floor((activeContract.marketing_support as number) / 50))} Hype Bonus
+                  </Badge>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {step === 1 && (
           <div className="space-y-4">
@@ -435,6 +592,17 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   Warning: Your release may be delayed because manufacturing won't complete until the scheduled date.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Cost summary with label benefits */}
+            {labelCoversManufacturing && (
+              <Alert className="border-emerald-500/30 bg-emerald-500/5">
+                <BadgeCheck className="h-4 w-4 text-emerald-500" />
+                <AlertDescription>
+                  <strong>{labelName}</strong> is covering manufacturing costs (${(selectedFormats.reduce((sum: number, f: any) => sum + f.manufacturing_cost, 0) / 100).toFixed(2)}).
+                  You only pay distribution costs (${(territoryCost / 100).toFixed(2)}).
                 </AlertDescription>
               </Alert>
             )}
