@@ -928,6 +928,52 @@ Deno.serve(async (req) => {
       console.error('Error in media cycle decay:', mediaErr);
     }
 
+    // === BAND SALARY → MORALE CHECK (v1.0.960) ===
+    console.log('=== Processing Band Salary Morale ===')
+    let salaryMoraleUpdated = 0
+    try {
+      const { data: bandsWithMembers } = await supabase
+        .from('bands')
+        .select('id, band_balance, morale')
+
+      for (const b of bandsWithMembers || []) {
+        const { data: paidMembers } = await supabase
+          .from('band_members')
+          .select('salary')
+          .eq('band_id', b.id)
+          .eq('is_touring_member', false)
+          .gt('salary', 0)
+
+        if (!paidMembers || paidMembers.length === 0) continue
+
+        const totalDailySalary = paidMembers.reduce((sum, m) => sum + Math.round((m.salary || 0) / 7), 0)
+        const balance = (b as any).band_balance ?? 0
+        const curMorale = (b as any).morale ?? 50
+
+        if (balance < totalDailySalary) {
+          // Can't afford salaries — morale drops
+          const penalty = balance < 0 ? -4 : -2
+          const newMorale = Math.max(0, curMorale + penalty)
+          if (newMorale !== curMorale) {
+            await supabase.from('bands').update({ morale: newMorale }).eq('id', b.id)
+            salaryMoraleUpdated++
+            console.log(`Band ${b.id}: can't afford salaries ($${totalDailySalary}/day, balance $${balance}), morale ${curMorale} → ${newMorale}`)
+          }
+        } else if (balance > totalDailySalary * 30) {
+          // Healthy finances — small morale boost
+          const boost = 1
+          const newMorale = Math.min(100, curMorale + boost)
+          if (newMorale !== curMorale) {
+            await supabase.from('bands').update({ morale: newMorale }).eq('id', b.id)
+            salaryMoraleUpdated++
+          }
+        }
+      }
+      console.log(`Salary morale: ${salaryMoraleUpdated} bands affected`)
+    } catch (salaryErr) {
+      console.error('Error in salary morale check:', salaryErr)
+    }
+
     // === BAND MORALE DRIFT (v1.0.956) ===
     console.log('=== Processing Band Morale Drift ===')
     let moraleDrifted = 0
