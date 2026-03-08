@@ -248,6 +248,7 @@ const Navigation = () => {
         { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships" },
         { icon: Disc, labelKey: "nav.recordLabels", path: "/labels" },
         { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling" },
+        { icon: Scissors, labelKey: "nav.clothingDesigner", path: "/clothing-designer" },
         { icon: Megaphone, labelKey: "nav.pr", path: "/pr" },
         { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard" },
         { icon: Building, labelKey: "nav.venues", path: "/venues" },
