@@ -646,6 +646,19 @@ export async function executeGigPerformance(data: GigExecutionData) {
     console.error('Error checking mentor discovery:', discoveryError);
   }
 
+  // Check for behavior unlocks after gig
+  try {
+    const leaderId = band.leader_id;
+    if (leaderId) {
+      const unlockResult = await checkAndGrantBehaviorUnlocks(leaderId);
+      if (unlockResult.newlyUnlocked.length > 0) {
+        console.log(`[GigExecution] New behaviors unlocked: ${unlockResult.newlyUnlocked.map(b => b.name).join(', ')}`);
+      }
+    }
+  } catch (unlockError) {
+    console.error('Error checking behavior unlocks:', unlockError);
+  }
+
   // Update song fame, popularity, gig counts, and roll for fan favourites
   try {
     await updateSongsAfterGig(
