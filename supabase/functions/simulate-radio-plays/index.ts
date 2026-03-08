@@ -77,10 +77,11 @@ serve(async (req) => {
       try {
         const { data: bandExtras } = await supabaseClient
           .from('bands')
-          .select('id, fan_sentiment_score')
+          .select('id, fan_sentiment_score, reputation_score')
           .in('id', Array.from(bandIds));
         for (const b of bandExtras || []) {
           bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+          bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
         }
       } catch (e) {
         console.error("Error fetching band sentiment for radio:", e);
