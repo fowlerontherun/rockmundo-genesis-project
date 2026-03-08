@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.921",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Player Clothing Brand system — create your own fashion brand with name, genre focus, and track reputation, revenue, and total sales" },
+      { type: 'feature', description: "Clothing Designer page — design and list clothing items with quality and style scores calculated from Fashion & Clothing Design skills" },
+      { type: 'feature', description: "Clothing Shop marketplace — browse, filter, and purchase player-designed clothing by category, genre, and search" },
+      { type: 'feature', description: "6 clothing categories (tops, bottoms, outerwear, shoes, accessories, hats) with 10 genre styles matching in-game music genres" },
+      { type: 'feature', description: "Quality/Style scoring system — quality from Construction + Textile + Pattern skills, style from Aesthetics + Genre + Fundamentals skills" },
+      { type: 'feature', description: "Rarity system derived from quality: Common (0-30), Uncommon (31-50), Rare (51-70), Epic (71-85), Legendary (86-100)" },
+      { type: 'improvement', description: "Database tables: player_clothing_brands, player_clothing_items, player_clothing_purchases with full RLS policies" },
+      { type: 'improvement', description: "Fashion Designer tile added to Career Hub navigation alongside Modeling" },
+    ],
+  },
+  {
     version: "1.0.920",
     date: "2026-03-08",
     changes: [
