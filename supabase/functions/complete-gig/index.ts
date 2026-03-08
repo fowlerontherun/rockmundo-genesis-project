@@ -464,6 +464,20 @@ serve(async (req) => {
     moraleChange += riderMoraleChange;
     const newMorale = Math.max(0, Math.min(100, bandMorale + moraleChange));
 
+    // === GIG PERFORMANCE → REPUTATION (v1.0.981) ===
+    // Great gigs build public image; terrible gigs damage it
+    let repChange = 0;
+    if (avgRating >= 22) repChange = 5;        // Amazing show → strong rep boost
+    else if (avgRating >= 18) repChange = 3;    // Great show
+    else if (avgRating >= 14) repChange = 1;    // Decent show
+    else if (avgRating < 8) repChange = -6;     // Terrible show → rep damage
+    else if (avgRating < 12) repChange = -3;    // Bad show
+    // Large attendance amplifies reputation effect
+    if (outcome.actual_attendance >= 5000) repChange = Math.round(repChange * 1.5);
+    else if (outcome.actual_attendance >= 1000) repChange = Math.round(repChange * 1.2);
+    const bandRep = (gig.bands as any)?.reputation_score ?? 0;
+    const newRep = Math.max(-100, Math.min(100, bandRep + repChange));
+
     const { error: bandError } = await supabaseClient
       .from('bands')
       .update({
@@ -476,7 +490,8 @@ serve(async (req) => {
         dedicated_fans: newDedicatedFans,
         superfans: newSuperfans,
         morale: newMorale,
-      })
+        reputation_score: newRep,
+      } as any)
       .eq('id', gig.band_id);
 
     console.log(`Morale update: ${bandMorale} → ${newMorale} (${moraleChange > 0 ? '+' : ''}${moraleChange} from ${performanceGrade}-grade performance)`);
