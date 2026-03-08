@@ -182,10 +182,17 @@ export default function Busking() {
     refreshActivityStatus,
     startActivity,
     user,
+    currentCity,
   } = useGameData();
   const { toast } = useToast();
 
-  const [selectedLocationId, setSelectedLocationId] = React.useState(buskingLocations[0]?.id ?? '');
+  // City-aware busking locations
+  const buskingLocations = React.useMemo(
+    () => getBuskingLocationsForCity(currentCity?.name ?? null),
+    [currentCity?.name],
+  );
+
+  const [selectedLocationId, setSelectedLocationId] = React.useState('');
   const [showHistory, setShowHistory] = React.useState(false);
   
   const { data: buskingHistory } = useQuery({
