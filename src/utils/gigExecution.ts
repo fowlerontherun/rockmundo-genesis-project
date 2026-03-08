@@ -316,8 +316,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
   );
 
   const merchSales = {
-    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier),
-    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier))
+    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier * sentiment.merchDemandMod),
+    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier * weatherImpact.merchMultiplier * sentiment.merchDemandMod))
   };
 
   // Calculate costs
