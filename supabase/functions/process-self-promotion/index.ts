@@ -154,6 +154,9 @@ serve(async (req) => {
         cooldown_expires_at: cooldownExpires.toISOString(),
       }, { onConflict: "band_id,activity_type" });
 
+    const newFame = (currentBand?.fame || 0) + fameGained;
+    const newFans = (currentBand?.total_fans || 0) + fansGained;
+
     return new Response(
       JSON.stringify({
         success: true,
