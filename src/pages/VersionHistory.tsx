@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.904",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "LED screen backdrops — arena/stadium venues now display animated equalizer bars, scrolling band name, and song title on LED backdrop with pixel grid and scan line effects. Stadium gets side info screens with scrolling text. Concert hall gets a smaller overhead screen." },
+      { type: 'feature', description: "Sound visualization — animated sound wave rings emanate from speaker stacks, scaling with venue size and song energy. Bass vibration floor glow effect during high-energy moments. Monitor feedback glow at stage front." },
+      { type: 'feature', description: "Venue ambience decorations — EXIT signs for indoor venues, neon 'OPEN MIC' sign for bars, band posters for rock clubs, string lights for indie venues, chandelier lights for concert halls, firework launcher racks for stadiums, festival flags, and arena spotlight rigs" },
+      { type: 'feature', description: "Tiered seating sections — arena/stadium/concert hall venues now have side seating tiers with individual seated attendees that react to mood. Stadium adds rear upper-tier seating. Fill rate scales with attendance percentage." },
+      { type: 'feature', description: "Performance milestones — visual celebration overlays trigger at score thresholds (OUTSTANDING at 18+ avg, LEGENDARY at 22+), maximum momentum (MAXIMUM HYPE!), and ecstatic crowd (CROWD GOES WILD!) with sparkle burst animations" },
+      { type: 'improvement', description: "Stage now receives song title and band name props for screen display integration" },
+      { type: 'improvement', description: "Average score tracking added for milestone threshold calculations" },
+    ],
+  },
+  {
     version: "1.0.903",
     date: "2026-03-08",
     changes: [

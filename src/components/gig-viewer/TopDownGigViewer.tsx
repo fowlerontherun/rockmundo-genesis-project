@@ -9,6 +9,8 @@ import { ViewerControls } from "./ViewerControls";
 import { WeatherAtmosphere } from "./WeatherAtmosphere";
 import { SongTransition } from "./SongTransition";
 import { AudienceInteractions } from "./AudienceInteractions";
+import { SeatingTiers } from "./SeatingTiers";
+import { PerformanceMilestones } from "./PerformanceMilestones";
 import { getStageTheme } from "./StageThemes";
 import { getGenreVisuals, getGenreLightingColor } from "./GenreVisuals";
 import {
@@ -314,6 +316,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
   const attendancePercent = Math.round((attendance / capacity) * 100);
   const isLive = gig?.status === 'in_progress';
   const venueType = (gig?.venues as any)?.venue_type || null;
+  const bandName = (gig?.bands as any)?.name || '';
 
   // Genre visuals
   const currentGenre = currentSong?.songs?.genre || null;
@@ -339,6 +342,13 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     });
   }, [setlistSongs, performances]);
 
+  // Average score for milestones
+  const averageScore = useMemo(() => {
+    const played = songScores.filter(s => s.played && s.score > 0);
+    if (played.length === 0) return 0;
+    return played.reduce((sum, s) => sum + s.score, 0) / played.length;
+  }, [songScores]);
+
   // Camera zoom styles
   const zoomStyle = cameraZoom === 'stage'
     ? { transform: 'scale(1.5) translateY(15%)', transformOrigin: 'top center' }
@@ -362,11 +372,21 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
             crowdMood={crowdMood}
             showStats={showStats}
             isFinale={isFinale}
+            songTitle={currentSong?.songs?.title}
+            bandName={bandName}
           />
         </div>
 
         {/* Crowd area — bottom 45% */}
         <div className="absolute bottom-0 left-0 right-0" style={{ height: '45%' }}>
+          {/* Seating tiers for large venues */}
+          <SeatingTiers
+            venueType={venueType}
+            attendancePercent={attendancePercent}
+            mood={crowdMood}
+            intensity={intensity}
+          />
+
           {/* Venue features layer */}
           <VenueFeatures theme={stageTheme} intensity={intensity} />
 
@@ -395,6 +415,14 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
         songIndex={transitionSongIndex}
         isEncore={isEncore}
         isFinale={isFinale && transitionSongIndex >= setlistSongs.length - 1}
+      />
+
+      {/* Performance milestones */}
+      <PerformanceMilestones
+        averageScore={averageScore}
+        songsPlayed={performances.length}
+        crowdMood={crowdMood}
+        momentum={momentum}
       />
 
       {/* HUD overlay */}

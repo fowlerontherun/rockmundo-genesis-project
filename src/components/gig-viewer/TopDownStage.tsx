@@ -4,6 +4,9 @@ import { StageEquipment } from "./StageEquipment";
 import { StageLighting } from "./StageLighting";
 import { StageParticles } from "./StageParticles";
 import { StagePyrotechnics } from "./StagePyrotechnics";
+import { StageScreens } from "./StageScreens";
+import { SoundVisualization } from "./SoundVisualization";
+import { VenueAmbience } from "./VenueAmbience";
 import { getStageTheme, type StageThemeConfig } from "./StageThemes";
 import type { GenreVisualConfig } from "./GenreVisuals";
 
@@ -26,6 +29,8 @@ interface TopDownStageProps {
   crowdMood?: string;
   showStats?: boolean;
   isFinale?: boolean;
+  songTitle?: string;
+  bandName?: string;
 }
 
 // Instrument config with position + animations
@@ -216,7 +221,7 @@ const MemberSprite = ({ member, config, idx, songEnergy, bobSpeed, bobAmount, sh
   );
 };
 
-export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, venueType, genreVisuals, crowdMood, showStats, isFinale }: TopDownStageProps) => {
+export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, venueType, genreVisuals, crowdMood, showStats, isFinale, songTitle, bandName }: TopDownStageProps) => {
   const theme = getStageTheme(venueType);
   const bobSpeed = songEnergy === 'high' ? 0.4 : songEnergy === 'medium' ? 0.6 : 0.9;
   const bobAmount = songEnergy === 'high' ? 4 : songEnergy === 'medium' ? 2.5 : 1;
@@ -246,6 +251,12 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
     <div className="relative w-full h-full overflow-hidden">
       {/* Stage floor with theme */}
       <div className="absolute inset-0" style={{ background: theme.floorGradient }} />
+
+      {/* Venue ambience decorations */}
+      <VenueAmbience theme={theme} lightingColor={lightingColor} songEnergy={songEnergy} />
+
+      {/* LED screens / backdrop visuals */}
+      <StageScreens theme={theme} lightingColor={lightingColor} songEnergy={songEnergy} songTitle={songTitle} bandName={bandName} crowdMood={crowdMood} />
 
       {/* Floor pattern */}
       {theme.floorPattern && (
@@ -351,6 +362,9 @@ export const TopDownStage = ({ members, intensity, songEnergy, lightingColor, ve
         crowdMood={crowdMood || 'engaged'}
         intensity={intensity}
       />
+
+      {/* Sound visualization waves from speakers */}
+      <SoundVisualization theme={theme} songEnergy={songEnergy} lightingColor={lightingColor} intensity={intensity} />
 
       {/* Stage edge */}
       <div
