@@ -126,6 +126,7 @@ const AdminStudios = lazyWithRetry(() => import("./pages/admin/Studios"));
 const AdminCityStudios = lazyWithRetry(() => import("./pages/admin/CityStudios"));
 const AdminProductionNotes = lazyWithRetry(() => import("./pages/admin/ProductionNotes"));
 const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
+const NightClubDetail = lazyWithRetry(() => import("./pages/NightClubDetail"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
@@ -540,6 +541,7 @@ function App() {
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
+                    <Route path="nightclub/:clubId" element={<NightClubDetail />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
                     <Route path="tattoo-parlour" element={<TattooParlour />} />

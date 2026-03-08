@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.004",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Night Clubs system overhaul: dedicated /nightclub/:clubId detail page with DJ slot, guest actions, drink menu, NPC profiles, and quest board" },
+      { type: 'feature', description: "NPC dialogue & quest system UI: branching dialogue panel, quest progress tracking, reward claiming — powered by nightclub_quests and player_nightclub_quest_progress tables" },
+      { type: 'feature', description: "Interactive drink menu: buy drinks for cash, gain energy boost. Guest action cards with individual energy costs" },
+      { type: 'fix', description: "Fixed nightclub data normalization on City page — raw DB rows now properly mapped through normalizeNightClubRecord (camelCase props)" },
+      { type: 'improvement', description: "City nightclub cards now link to dedicated club pages via 'Enter Club' button. DJ slot and guest visit buttons retained" },
+      { type: 'feature', description: "Seeded quest chains for 10+ major world cities: Berlin, New York, Ibiza, Tokyo, Lagos, São Paulo, Sydney, Amsterdam, Seoul, and Bangkok" },
+    ],
+  },
+  {
     version: "1.1.003",
     date: "2026-03-08",
     changes: [
