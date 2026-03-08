@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Activity, Heart, Megaphone, Shield, Smile } from "lucide-react";
+import { Activity, Heart, Megaphone, Shield, Smile, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { getFanSentiment } from "@/utils/fanSentiment";
 import { getMediaCycleState } from "@/utils/mediaCycle";
 import { getReputationState } from "@/utils/publicImageReputation";
 import { getMoraleState } from "@/utils/bandMorale";
+import { calculateFeedbackDeltas } from "@/utils/healthSystemFeedback";
 
 interface BandHealthDashboardProps {
   sentimentScore: number;
@@ -118,6 +119,15 @@ export const BandHealthDashboard = ({
   const overallScore = Math.round(metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length);
   const overallStatus = overallScore >= 75 ? "excellent" : overallScore >= 55 ? "good" : overallScore >= 35 ? "neutral" : overallScore >= 20 ? "warning" : "critical";
 
+  // Cross-system feedback
+  const feedbackDeltas = calculateFeedbackDeltas({
+    sentimentScore,
+    mediaIntensity,
+    mediaFatigue,
+    reputationScore,
+    moraleScore,
+  });
+
   return (
     <Card className="border-border/50 bg-card/80">
       <CardHeader className="pb-2 pt-3 px-3">
@@ -156,6 +166,28 @@ export const BandHealthDashboard = ({
             <p className="text-[9px] text-destructive font-medium">
               ⚠️ Critical: {metrics.filter(m => m.status === "critical").map(m => m.label).join(", ")} need attention
             </p>
+          </div>
+        )}
+
+        {/* Active feedback triggers */}
+        {feedbackDeltas.triggers.length > 0 && (
+          <div className="mt-2 space-y-0.5">
+            <p className="text-[9px] font-medium text-muted-foreground">Active feedback loops:</p>
+            {feedbackDeltas.triggers.slice(0, 3).map((trigger, i) => (
+              <div key={i} className="flex items-start gap-1 text-[9px] text-muted-foreground/80">
+                {trigger.includes("⚠️") ? (
+                  <ArrowDownRight className="h-2.5 w-2.5 text-destructive mt-0.5 shrink-0" />
+                ) : trigger.includes("✨") ? (
+                  <ArrowUpRight className="h-2.5 w-2.5 text-emerald-400 mt-0.5 shrink-0" />
+                ) : (
+                  <Activity className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                )}
+                <span>{trigger}</span>
+              </div>
+            ))}
+            {feedbackDeltas.triggers.length > 3 && (
+              <p className="text-[9px] text-muted-foreground/60">+{feedbackDeltas.triggers.length - 3} more</p>
+            )}
           </div>
         )}
       </CardContent>
