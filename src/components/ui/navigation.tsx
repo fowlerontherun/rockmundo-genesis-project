@@ -73,6 +73,7 @@ import {
   Ticket,
   Gamepad2,
   Palette,
+  Scissors,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 

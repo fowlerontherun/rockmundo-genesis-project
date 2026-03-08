@@ -173,6 +173,8 @@ export const tr: TranslationKeys = {
     modeling: "Modellik",
     competitiveCharts: "Rekabetçi Listeler",
     producerCareer: "Prodüktör Kariyeri",
+    clothingDesigner: "Moda Tasarımcısı",
+    clothingShop: "Giyim Mağazası",
     live: "Canlı",
     events: "Etkinlikler",
     career: "Kariyer",
