@@ -1262,7 +1262,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`=== Daily Updates Complete ===`)
-    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Band Sentiment Drift: ${bandSentimentDrifted}, Equipment Degraded: ${equipmentDegraded}, Feedback Loops: ${feedbackApplied}, Errors: ${errorCount}`)
+    console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Band Sentiment Drift: ${bandSentimentDrifted}, Equipment Degraded: ${equipmentDegraded}, Feedback Loops: ${feedbackApplied}, Inbox Sent: ${inboxSent}, Errors: ${errorCount}`)
 
     await completeJobRun({
       jobName: 'process-daily-updates',
