@@ -72,6 +72,7 @@ import {
   Inbox,
   Ticket,
   Gamepad2,
+  Palette,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
