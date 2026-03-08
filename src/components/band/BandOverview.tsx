@@ -205,6 +205,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         />
       </div>
 
+      {/* Sentiment Event History */}
+      <SentimentEventLog bandId={band.id} />
+
       {/* Main Overview Tabs */}
       <BandOverviewTabs
         band={band}
