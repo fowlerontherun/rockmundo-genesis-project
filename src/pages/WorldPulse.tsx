@@ -160,6 +160,7 @@ const WorldPulse = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="charts" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
