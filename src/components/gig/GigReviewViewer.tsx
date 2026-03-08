@@ -12,7 +12,7 @@ import {
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCrowdSounds } from "@/hooks/useCrowdSounds";
+// Crowd sounds removed — stubbed out
 
 interface GigReviewViewerProps {
   gigId: string;
