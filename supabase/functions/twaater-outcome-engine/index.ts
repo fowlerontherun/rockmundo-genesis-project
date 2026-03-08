@@ -148,6 +148,40 @@ serve(async (req) => {
       if (accountError) throw accountError;
     }
 
+    // === SOCIAL MEDIA SENTIMENT BOOST (v1.0.946) ===
+    // Each twaat gives a small sentiment boost to the user's band
+    try {
+      const userId = twaat.user_id || twaat.account?.user_id;
+      if (userId) {
+        const { data: bandMember } = await supabase
+          .from('band_members')
+          .select('band_id')
+          .eq('user_id', userId)
+          .eq('is_touring_member', false)
+          .limit(1)
+          .maybeSingle();
+
+        if (bandMember?.band_id) {
+          const { data: band } = await supabase
+            .from('bands')
+            .select('fan_sentiment_score, media_intensity')
+            .eq('id', bandMember.band_id)
+            .single();
+
+          if (band) {
+            const curSentiment = (band as any).fan_sentiment_score ?? 0;
+            const curIntensity = (band as any).media_intensity ?? 0;
+            await supabase.from('bands').update({
+              fan_sentiment_score: Math.min(100, curSentiment + 3),
+              media_intensity: Math.min(100, curIntensity + 3),
+            } as any).eq('id', bandMember.band_id);
+          }
+        }
+      }
+    } catch (sentErr) {
+      console.error('[twaater-outcome-engine] Sentiment update error:', sentErr);
+    }
+
     console.log(`Outcome applied: ${selectedOutcome.code} for twaat ${twaat_id}`);
 
     return new Response(

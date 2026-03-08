@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.946",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Twaater Posts → Sentiment + Media: Each social media post grants +3 fan sentiment and +3 media intensity to the poster's band" },
+      { type: 'feature', description: "Scandal Events → Sentiment Crash: Random scandal/controversy events now inflict -20 fan sentiment while boosting media intensity +40 (scandals generate buzz)" },
+      { type: 'improvement', description: "Twaater outcome engine now resolves user → band membership to apply sentiment to the correct band" },
+      { type: 'improvement', description: "Scandal media fatigue +20 ensures the negative coverage saturates outlets, limiting follow-up coverage effectiveness" },
+    ],
+  },
+  {
     version: "1.0.945",
     date: "2026-03-08",
     changes: [
