@@ -649,13 +649,18 @@ serve(async (req) => {
       rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
     });
 
-    // Fetch leader's stage behavior
-    const { data: bandLeader } = await supabaseClient.from('bands').select('leader_id').eq('id', bandId).single();
+    // Fetch leader's stage behavior + band morale for performance modifier
+    const { data: bandData } = await supabaseClient.from('bands').select('leader_id, morale').eq('id', bandId).single();
     let stageBehavior = 'standard';
-    if (bandLeader?.leader_id) {
-      const { data: behaviorData } = await supabaseClient.from('player_behavior_settings').select('stage_behavior').eq('user_id', bandLeader.leader_id).maybeSingle();
+    if (bandData?.leader_id) {
+      const { data: behaviorData } = await supabaseClient.from('player_behavior_settings').select('stage_behavior').eq('user_id', bandData.leader_id).maybeSingle();
       if (behaviorData?.stage_behavior) stageBehavior = behaviorData.stage_behavior;
     }
+
+    // Morale modifier: 0.85x at 0 morale → 1.0x at 50 → 1.15x at 100
+    const bandMorale = Math.max(0, Math.min(100, bandData?.morale ?? 50));
+    const moraleMod = parseFloat((0.85 + (bandMorale / 100) * 0.30).toFixed(3));
+    console.log(`[process-gig-song] Morale modifier: morale=${bandMorale}, mod=${moraleMod}`);
 
     const factors: PerformanceFactors = {
       songQuality: song.quality_score || 50,
