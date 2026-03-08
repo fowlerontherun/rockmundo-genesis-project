@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
