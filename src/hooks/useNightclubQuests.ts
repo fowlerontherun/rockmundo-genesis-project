@@ -98,7 +98,7 @@ export function useNightclubQuests(clubId: string | undefined) {
         .eq("profile_id", profile.id)
         .in("quest_id", questIds);
       if (error) throw error;
-      return (data ?? []) as QuestProgress[];
+      return (data ?? []) as unknown as QuestProgress[];
     },
     enabled: !!user?.id && !!clubId && !!quests?.length,
   });
