@@ -417,6 +417,14 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
         isFinale={isFinale && transitionSongIndex >= setlistSongs.length - 1}
       />
 
+      {/* Performance milestones */}
+      <PerformanceMilestones
+        averageScore={averageScore}
+        songsPlayed={performances.length}
+        crowdMood={crowdMood}
+        momentum={momentum}
+      />
+
       {/* HUD overlay */}
       <TopDownHUD
         songTitle={currentSong?.songs?.title || 'Waiting...'}
