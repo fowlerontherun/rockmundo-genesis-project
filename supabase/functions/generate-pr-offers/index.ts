@@ -32,6 +32,7 @@ interface Band {
   leader_id: string;
   fame: number;
   total_fans: number;
+  reputation_score?: number;
 }
 
 // Added 'website' to media types
