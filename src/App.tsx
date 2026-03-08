@@ -127,6 +127,7 @@ const AdminCityStudios = lazyWithRetry(() => import("./pages/admin/CityStudios")
 const AdminProductionNotes = lazyWithRetry(() => import("./pages/admin/ProductionNotes"));
 const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
 const NightClubDetail = lazyWithRetry(() => import("./pages/NightClubDetail"));
+const HallOfImmortals = lazyWithRetry(() => import("./pages/HallOfImmortals"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
@@ -548,6 +549,7 @@ function App() {
                     <Route path="gear-shop" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
+                    <Route path="hall-of-immortals" element={<HallOfImmortals />} />
                     <Route path="my-character" element={<MyCharacterEdit />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="*" element={<NotFound />} />

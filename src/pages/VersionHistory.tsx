@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.005",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Multi-character slots: players can own multiple characters. Free players get 1 slot (up to 2), VIP players get 2 slots (up to 5). Extra slots purchasable for £5 each" },
+      { type: 'feature', description: "Character permadeath: characters lose 5 health per day of inactivity. If hospitalised and player doesn't login for 10 days, the character dies" },
+      { type: 'feature', description: "Hall of Immortals: memorial page for dead characters showing full bio, career stats, skills, and cause of death" },
+      { type: 'feature', description: "Legacy inheritance: when a character dies, players can create a child character inheriting 10% of skills and 50% of cash, or start completely fresh" },
+      { type: 'feature', description: "Character switcher: dropdown in navigation to switch between active characters. Shows slot usage and 'New Character' option when slots available" },
+      { type: 'feature', description: "Daily health decay edge function (check-character-health-decay) — processes inactive profiles, drains health, and triggers permadeath when conditions are met" },
+      { type: 'improvement', description: "Retirement inheritance reduced from 20% to 10% of skill levels to match permadeath legacy system" },
+      { type: 'feature', description: "Login health check: active profile's last_login_at updated on each session, death screen shown if character died while offline" },
+    ],
+  },
+  {
     version: "1.1.004",
     date: "2026-03-08",
     changes: [

@@ -25,7 +25,7 @@ export interface InheritanceResult {
 /**
  * Calculate what the new character inherits
  * - 50% of cash
- * - 20% of all skill levels
+ * - 10% of all skill levels
  */
 export function calculateInheritance(
   currentCash: number,
@@ -35,7 +35,7 @@ export function calculateInheritance(
 
   const inheritedSkills: Record<string, number> = {};
   for (const [skillId, value] of Object.entries(skills)) {
-    inheritedSkills[skillId] = Math.floor(value * 0.2);
+    inheritedSkills[skillId] = Math.floor(value * 0.1);
   }
 
   return {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
@@ -164,6 +165,7 @@ const Navigation = () => {
           <img src={logo} alt="RockMundo" className="h-7 w-auto object-contain" />
           
           <div className="flex items-center gap-0.5">
+            <CharacterSwitcher />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
@@ -191,6 +193,7 @@ const Navigation = () => {
           </div>
           
           <div className="flex items-center gap-1">
+            <CharacterSwitcher />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />

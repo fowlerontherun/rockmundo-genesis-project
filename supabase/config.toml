@@ -248,3 +248,6 @@ verify_jwt = false
 
 [functions.generate-hub-image]
 verify_jwt = false
+
+[functions.check-character-health-decay]
+verify_jwt = false

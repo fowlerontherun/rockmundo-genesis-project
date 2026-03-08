@@ -3108,6 +3108,33 @@ export type Database = {
         }
         Relationships: []
       }
+      character_slots: {
+        Row: {
+          created_at: string | null
+          extra_slots_purchased: number
+          id: string
+          max_slots: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          extra_slots_purchased?: number
+          id?: string
+          max_slots?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          extra_slots_purchased?: number
+          id?: string
+          max_slots?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       character_sprite_assets: {
         Row: {
           anchor_x: number | null
@@ -9763,6 +9790,81 @@ export type Database = {
           total_songs?: number | null
           user_id?: string | null
           years_active?: number
+        }
+        Relationships: []
+      }
+      hall_of_immortals: {
+        Row: {
+          age_at_death: number | null
+          avatar_url: string | null
+          band_history: Json | null
+          bio: string | null
+          cause_of_death: string
+          character_name: string
+          created_at: string | null
+          died_at: string
+          final_attributes: Json | null
+          final_skills: Json | null
+          generation_number: number | null
+          id: string
+          notable_achievements: Json | null
+          peak_chart_position: number | null
+          profile_id: string
+          total_albums: number | null
+          total_cash_at_death: number | null
+          total_fame: number | null
+          total_gigs: number | null
+          total_songs: number | null
+          user_id: string
+          years_active: number | null
+        }
+        Insert: {
+          age_at_death?: number | null
+          avatar_url?: string | null
+          band_history?: Json | null
+          bio?: string | null
+          cause_of_death?: string
+          character_name: string
+          created_at?: string | null
+          died_at?: string
+          final_attributes?: Json | null
+          final_skills?: Json | null
+          generation_number?: number | null
+          id?: string
+          notable_achievements?: Json | null
+          peak_chart_position?: number | null
+          profile_id: string
+          total_albums?: number | null
+          total_cash_at_death?: number | null
+          total_fame?: number | null
+          total_gigs?: number | null
+          total_songs?: number | null
+          user_id: string
+          years_active?: number | null
+        }
+        Update: {
+          age_at_death?: number | null
+          avatar_url?: string | null
+          band_history?: Json | null
+          bio?: string | null
+          cause_of_death?: string
+          character_name?: string
+          created_at?: string | null
+          died_at?: string
+          final_attributes?: Json | null
+          final_skills?: Json | null
+          generation_number?: number | null
+          id?: string
+          notable_achievements?: Json | null
+          peak_chart_position?: number | null
+          profile_id?: string
+          total_albums?: number | null
+          total_cash_at_death?: number | null
+          total_fame?: number | null
+          total_gigs?: number | null
+          total_songs?: number | null
+          user_id?: string
+          years_active?: number | null
         }
         Relationships: []
       }
@@ -19862,7 +19964,9 @@ export type Database = {
           created_at: string | null
           current_activity: string | null
           current_city_id: string | null
+          death_cause: string | null
           debt_started_at: string | null
+          died_at: string | null
           display_name: string | null
           energy: number
           experience: number | null
@@ -19870,21 +19974,26 @@ export type Database = {
           fame: number
           fans: number | null
           gender: string | null
+          generation_number: number | null
           has_active_lawyer: boolean | null
           health: number
           id: string
+          is_active: boolean | null
           is_imprisoned: boolean
           is_traveling: boolean | null
           is_vip: boolean | null
           is_wanted: boolean
           last_health_update: string | null
+          last_login_at: string | null
           last_retirement_prompt_age: number | null
           last_weekly_bonus_at: string | null
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
           level: number
+          parent_profile_id: string | null
           rest_required_until: string | null
           rpm_avatar_url: string | null
+          slot_number: number | null
           terms_accepted_at: string | null
           terms_version: string | null
           total_hours_played: number | null
@@ -19908,7 +20017,9 @@ export type Database = {
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
+          death_cause?: string | null
           debt_started_at?: string | null
+          died_at?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -19916,21 +20027,26 @@ export type Database = {
           fame?: number
           fans?: number | null
           gender?: string | null
+          generation_number?: number | null
           has_active_lawyer?: boolean | null
           health?: number
           id?: string
+          is_active?: boolean | null
           is_imprisoned?: boolean
           is_traveling?: boolean | null
           is_vip?: boolean | null
           is_wanted?: boolean
           last_health_update?: string | null
+          last_login_at?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
           level?: number
+          parent_profile_id?: string | null
           rest_required_until?: string | null
           rpm_avatar_url?: string | null
+          slot_number?: number | null
           terms_accepted_at?: string | null
           terms_version?: string | null
           total_hours_played?: number | null
@@ -19954,7 +20070,9 @@ export type Database = {
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
+          death_cause?: string | null
           debt_started_at?: string | null
+          died_at?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -19962,21 +20080,26 @@ export type Database = {
           fame?: number
           fans?: number | null
           gender?: string | null
+          generation_number?: number | null
           has_active_lawyer?: boolean | null
           health?: number
           id?: string
+          is_active?: boolean | null
           is_imprisoned?: boolean
           is_traveling?: boolean | null
           is_vip?: boolean | null
           is_wanted?: boolean
           last_health_update?: string | null
+          last_login_at?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
           level?: number
+          parent_profile_id?: string | null
           rest_required_until?: string | null
           rpm_avatar_url?: string | null
+          slot_number?: number | null
           terms_accepted_at?: string | null
           terms_version?: string | null
           total_hours_played?: number | null
