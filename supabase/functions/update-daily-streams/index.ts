@@ -455,7 +455,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: physicalReleases, error: physicalError } = await supabase
+    // === DAILY STREAMING REVENUE → MORALE (v1.0.978) ===
+    // Aggregate streaming income per band and apply morale boosts
+    for (const [bandId, totalRevenue] of bandStreamingRevenueAccumulator.entries()) {
+      if (totalRevenue <= 0) continue;
+      try {
+        const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
+        if (bd) {
+          const curM = (bd as any).morale ?? 50;
+          const moraleBoost = totalRevenue >= 500 ? 4 : totalRevenue >= 100 ? 3 : totalRevenue >= 20 ? 2 : 1;
+          await supabase.from('bands').update({ morale: Math.min(100, curM + moraleBoost) } as any).eq('id', bandId);
+          console.log(`Streaming revenue morale: band ${bandId} earned $${totalRevenue} → morale +${moraleBoost}`);
+        }
+      } catch (_e) { /* non-critical */ }
+    }
+
+
       .from('release_formats')
       .select('id, release_id, format_type')
       .in('format_type', ['digital', 'cd', 'vinyl'])
