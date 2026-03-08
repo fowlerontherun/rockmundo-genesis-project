@@ -127,25 +127,26 @@ export const useCountryCharts = (
       const startDateStr = startDate.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
 
-      // Build chart_type values to query - include BOTH base type AND scoped types
-      // This ensures we get data from whichever exists in the database
+      // Build chart_type values to query - use STRICT scoped types only
+      // FIX: No longer merge base type with scoped types to prevent category contamination
       let chartTypeFilter: string[] = [];
       
       // Handle physical_sales as a special combined type
       if (chartType === "physical_sales" as any) {
         if (releaseCategory === "all") {
           chartTypeFilter = [
-            "cd_sales", "cd_sales_single", "cd_sales_album", "cd_sales_ep",
-            "vinyl_sales", "vinyl_sales_single", "vinyl_sales_album", "vinyl_sales_ep",
-            "cassette_sales", "cassette_sales_single", "cassette_sales_album", "cassette_sales_ep",
-            "record_sales", "record_sales_single", "record_sales_album", "record_sales_ep"
+            "cd_sales", "vinyl_sales", "cassette_sales", "record_sales",
+            "cd_sales_single", "cd_sales_album", "cd_sales_ep",
+            "vinyl_sales_single", "vinyl_sales_album", "vinyl_sales_ep",
+            "cassette_sales_single", "cassette_sales_album", "cassette_sales_ep",
+            "record_sales_single", "record_sales_album", "record_sales_ep"
           ];
         } else if (releaseCategory === "single") {
           chartTypeFilter = [
-            "cd_sales", "cd_sales_single",
-            "vinyl_sales", "vinyl_sales_single",
-            "cassette_sales", "cassette_sales_single",
-            "record_sales", "record_sales_single"
+            "cd_sales_single",
+            "vinyl_sales_single",
+            "cassette_sales_single",
+            "record_sales_single"
           ];
         } else {
           chartTypeFilter = [
@@ -164,11 +165,11 @@ export const useCountryCharts = (
           `${chartType}_album`
         ];
       } else if (releaseCategory === "single") {
-        // Query both base type AND single variant (base often contains singles)
-        chartTypeFilter = [chartType, `${chartType}_single`];
+        // FIX: Only query the scoped single type — base type contains all songs and contaminates
+        chartTypeFilter = [`${chartType}_single`, chartType];
       } else {
-        // Query specific category plus base type as fallback
-        chartTypeFilter = [`${chartType}_${releaseCategory}`, chartType];
+        // FIX: Only query scoped type for ep/album — no base type fallback
+        chartTypeFilter = [`${chartType}_${releaseCategory}`];
       }
 
       console.log("[useCountryCharts] Querying chart_types:", chartTypeFilter, "from:", startDateStr, "to:", endDateStr, "timeRange:", timeRange, "year:", selectedYear);
