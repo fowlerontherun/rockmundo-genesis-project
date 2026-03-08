@@ -657,13 +657,14 @@ serve(async (req) => {
 
     const factors: PerformanceFactors = {
       songQuality: song.quality_score || 50,
-      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10, // 0-10 scale → 0-100
+      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10,
       bandChemistry: gig.bands.chemistry_level || 0,
       equipmentQuality,
       crewSkillLevel,
       memberSkillAverage: liveSkillAvg,
       stageSkillAverage: stageSkillAvg,
-      venueCapacityUsed
+      venueCapacityUsed,
+      stageBehavior,
     };
 
     const result = calculateSongPerformance(factors);
