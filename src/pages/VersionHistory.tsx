@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.941",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Database Migration: Added fan_sentiment_score, media_intensity, media_fatigue columns to bands table; condition column to player_equipment_inventory" },
+      { type: 'feature', description: "Fan Sentiment → Streaming: Daily stream calculations now multiplied by stream loyalty modifier (0.7x hostile → 1.3x fanatical fans)" },
+      { type: 'improvement', description: "All simulation systems now have real database backing — values persist across sessions and are updated by gigs, daily processing, and streaming" },
+      { type: 'improvement', description: "Band Overview widgets now read live data from the new DB columns instead of defaulting to zero" },
+    ],
+  },
+  {
     version: "1.0.940",
     date: "2026-03-08",
     changes: [
