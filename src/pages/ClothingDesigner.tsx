@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,7 @@ import { calculateClothingScores, GENRE_STYLES } from "@/utils/clothingQuality";
 import { ClothingDesignForm } from "@/components/clothing/ClothingDesignForm";
 import { ClothingItemCard } from "@/components/clothing/ClothingItemCard";
 
-const ClothingDesigner = () => {
+const ClothingDesignerInner = () => {
   const { brand, items, loading, createBrand, createItem } = useClothingBrand();
   const { progress } = useSkillSystem();
   const scores = calculateClothingScores(progress);
@@ -166,5 +167,11 @@ const ClothingDesigner = () => {
     </div>
   );
 };
+
+const ClothingDesigner = () => (
+  <SkillSystemProvider>
+    <ClothingDesignerInner />
+  </SkillSystemProvider>
+);
 
 export default ClothingDesigner;

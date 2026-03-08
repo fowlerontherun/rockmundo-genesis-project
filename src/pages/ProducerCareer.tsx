@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,7 @@ function getSkillLevel(progress: any[] | undefined, slug: string): number {
   return entry?.current_level ?? 0;
 }
 
-export default function ProducerCareer() {
+function ProducerCareerInner() {
   const { t } = useTranslation();
   const { data: profile, isLoading: profileLoading } = useProducerProfile();
   const createProfile = useCreateProducerProfile();
@@ -313,5 +314,13 @@ export default function ProducerCareer() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function ProducerCareer() {
+  return (
+    <SkillSystemProvider>
+      <ProducerCareerInner />
+    </SkillSystemProvider>
   );
 }
