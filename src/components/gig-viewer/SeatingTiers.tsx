@@ -10,12 +10,11 @@ interface SeatingTiersProps {
 
 export const SeatingTiers = ({ venueType, attendancePercent, mood, intensity }: SeatingTiersProps) => {
   const hasSeating = venueType === 'arena' || venueType === 'stadium' || venueType === 'concert_hall';
-  if (!hasSeating) return null;
-
   const tierCount = venueType === 'stadium' ? 3 : venueType === 'arena' ? 2 : 1;
 
   // Generate seated attendees per tier
   const tiers = useMemo(() => {
+    if (!hasSeating) return [];
     return Array.from({ length: tierCount }).map((tier, tierIdx) => {
       const fillRate = Math.max(0.3, (attendancePercent / 100) - (tierIdx * 0.15));
       const seatsPerRow = venueType === 'stadium' ? 20 : venueType === 'arena' ? 16 : 12;
