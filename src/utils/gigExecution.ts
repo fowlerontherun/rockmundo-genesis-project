@@ -181,7 +181,27 @@ export async function executeGigPerformance(data: GigExecutionData) {
   // Calculate chemistry effects for this performance
   const chemistryEffects = calculateChemistryEffects(bandChemistry);
 
-  // Calculate actual attendance (with variance adjusted by gear reliability and hype)
+  // === TOUR FATIGUE ===
+  const recentGigDates = (recentGigsRes.data || [])
+    .map((g: any) => new Date(g.scheduled_date))
+    .filter((d: Date) => !isNaN(d.getTime()));
+  const consecutiveGigs = calculateConsecutiveGigs(recentGigDates);
+  const fatigueState = getFatigueState(consecutiveGigs);
+  console.log(`[GigExecution] Tour fatigue: ${fatigueState.fatigueLevel} (${consecutiveGigs} consecutive gigs, perf ${fatigueState.performanceModifier}x)`);
+
+  // === WEATHER IMPACT ===
+  const venueInfo = venueInfoRes.data;
+  const isOutdoorVenue = (venueInfo?.venues as any)?.venue_type === 'outdoor' || (venueInfo?.venues as any)?.venue_type === 'festival';
+  // Deterministic weather from city seed (simplified — use sunny as fallback)
+  const weatherConditions: WeatherCondition[] = ["sunny", "cloudy", "rainy", "stormy", "snowy"];
+  const cityName = (venueInfo?.venues as any)?.cities?.name || "Unknown";
+  const daySeed = Math.floor(Date.now() / 86400000);
+  const weatherIdx = (cityName.length * 7 + daySeed) % weatherConditions.length;
+  const currentWeather = weatherConditions[weatherIdx];
+  const weatherImpact = getWeatherGigImpact(currentWeather, isOutdoorVenue);
+  console.log(`[GigExecution] Weather: ${currentWeather} at ${cityName} (${isOutdoorVenue ? 'outdoor' : 'indoor'}) → attendance ${weatherImpact.attendanceMultiplier}x, merch ${weatherImpact.merchMultiplier}x`);
+
+  // Calculate actual attendance (with variance adjusted by gear reliability, weather, and fatigue)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
   const riskVarianceExpansion = gearEffects.breakdownRiskPercent / 150;
   const attendanceVarianceRange = 0.3 + riskVarianceExpansion - gearEffects.reliabilityStability * 1.2;
@@ -190,7 +210,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const stabilityBias = gearEffects.reliabilityStability - gearEffects.breakdownRiskPercent / 200;
   const attendanceFromVariance = Math.max(0, 1 + varianceSwing + stabilityBias);
   const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
-  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier;
+  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier;
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
