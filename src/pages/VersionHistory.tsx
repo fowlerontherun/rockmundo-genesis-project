@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.958",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Morale → Gig Performance: Fame gained and fan conversion now scaled by band morale (0.7x miserable → 1.2x euphoric)" },
+      { type: 'feature', description: "Morale → Recording Quality: Studio session quality improvement scaled by morale creativity modifier (0.8x → 1.15x)" },
+      { type: 'feature', description: "Post-Gig Morale Update: Amazing shows boost morale +8, terrible shows drop it -10, creating a natural feedback loop" },
+      { type: 'improvement', description: "Gig completion now reads and updates band morale in the same transaction for consistency" },
+    ],
+  },
+  {
     version: "1.0.957",
     date: "2026-03-08",
     changes: [
