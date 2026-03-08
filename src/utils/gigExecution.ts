@@ -29,6 +29,8 @@ import { checkVenueGigDiscovery, type MentorDiscoveryResult } from "./mentorDisc
 import { calculateBandSkillAverage } from "./skillGearPerformance";
 import { calculateBandGenreBonus } from "./genreSkillBonus";
 import { getEncoreFameBonus, updateSongsAfterGig } from "./songFamePopularity";
+import { getBehaviorModifiers } from "./stageBehaviors";
+import { checkAndGrantBehaviorUnlocks } from "./behaviorUnlockChecker";
 
 interface GigExecutionData {
   gigId: string;
