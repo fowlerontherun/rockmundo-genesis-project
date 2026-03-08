@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.949",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Sentiment Event Logging: All 8 sentiment sources now log events to band_sentiment_events — PR, Twaater, scandals, charts, releases, music videos, gig results, and cancellations" },
+      { type: 'feature', description: "Each logged event records sentiment change, media intensity change, fatigue change, resulting score, source function, and human-readable description" },
+      { type: 'improvement', description: "Gig execution and cancellation hooks now insert sentiment events client-side for immediate timeline visibility" },
+      { type: 'improvement', description: "Edge functions (6 total) updated to insert into band_sentiment_events after every sentiment/media modification" },
+    ],
+  },
+  {
     version: "1.0.948",
     date: "2026-03-08",
     changes: [

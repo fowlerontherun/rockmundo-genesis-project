@@ -148,9 +148,21 @@ export function useGigCancellation() {
           .single();
 
         const currentScore = (bandSentiment as any)?.fan_sentiment_score ?? 0;
+        const newScore = Math.max(-100, currentScore + sentimentPenalty);
         await supabase.from('bands').update({
-          fan_sentiment_score: Math.max(-100, currentScore + sentimentPenalty),
+          fan_sentiment_score: newScore,
         } as any).eq('id', details.bandId);
+
+        await (supabase as any).from('band_sentiment_events').insert({
+          band_id: details.bandId,
+          event_type: 'gig_cancellation',
+          sentiment_change: sentimentPenalty,
+          sentiment_after: newScore,
+          source: 'gig-cancellation',
+          description: `Show cancelled ${details.daysUntilGig} days before — fans are ${details.daysUntilGig < 3 ? 'furious' : 'disappointed'}`,
+          metadata: { gig_id: details.gigId, days_until_gig: details.daysUntilGig },
+        });
+
         console.log(`[GigCancellation] Sentiment ${sentimentPenalty} for band ${details.bandId}`);
       } catch (sentErr) {
         console.error('[GigCancellation] Failed to update sentiment:', sentErr);

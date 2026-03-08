@@ -766,6 +766,17 @@ export async function executeGigPerformance(data: GigExecutionData) {
         .from('bands')
         .update({ fan_sentiment_score: newSentiment } as any)
         .eq('id', bandId);
+
+      await (supabase as any).from('band_sentiment_events').insert({
+        band_id: bandId,
+        event_type: sentimentEvent,
+        sentiment_change: change,
+        sentiment_after: newSentiment,
+        source: 'gig-execution',
+        description: sentimentEvent === 'amazing_gig' ? 'Amazing gig performance thrilled the crowd!' : 'Poor gig performance disappointed fans',
+        metadata: { gig_id: gigId, overall_rating: overallRating },
+      });
+
       console.log(`[GigExecution] Fan sentiment: ${fanSentimentScore}→${newSentiment} (${sentimentEvent})`);
     }
   } catch (sentimentError) {

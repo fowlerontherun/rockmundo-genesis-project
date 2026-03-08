@@ -198,12 +198,25 @@ serve(async (req) => {
             const currentIntensity = (band as any).media_intensity ?? 0;
             const currentFatigue = (band as any).media_fatigue ?? 0;
             const fatigueReduction = currentFatigue > 60 ? 0.5 : currentFatigue > 30 ? 0.75 : 1.0;
+            const newSentiment = Math.min(100, currentSentiment + 6);
+            const actualMediaBoost = Math.round(12 * fatigueReduction);
 
             await supabaseClient.from("bands").update({
-              fan_sentiment_score: Math.min(100, currentSentiment + 6),
-              media_intensity: Math.min(100, currentIntensity + Math.round(12 * fatigueReduction)),
+              fan_sentiment_score: newSentiment,
+              media_intensity: Math.min(100, currentIntensity + actualMediaBoost),
               media_fatigue: Math.min(100, currentFatigue + 6),
             } as any).eq("id", song.band_id);
+
+            await supabaseClient.from("band_sentiment_events").insert({
+              band_id: song.band_id,
+              event_type: "music_video_release",
+              sentiment_change: 6,
+              media_intensity_change: actualMediaBoost,
+              media_fatigue_change: 6,
+              sentiment_after: newSentiment,
+              source: "music-video-callback",
+              description: "Music video release delighted fans and gained media coverage",
+            });
 
             console.log(`[music-video-callback] Sentiment +6, media +12 for band ${song.band_id}`);
           }

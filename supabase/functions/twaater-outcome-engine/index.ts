@@ -171,10 +171,21 @@ serve(async (req) => {
           if (band) {
             const curSentiment = (band as any).fan_sentiment_score ?? 0;
             const curIntensity = (band as any).media_intensity ?? 0;
+            const newSentiment = Math.min(100, curSentiment + 3);
             await supabase.from('bands').update({
-              fan_sentiment_score: Math.min(100, curSentiment + 3),
+              fan_sentiment_score: newSentiment,
               media_intensity: Math.min(100, curIntensity + 3),
             } as any).eq('id', bandMember.band_id);
+
+            await supabase.from('band_sentiment_events').insert({
+              band_id: bandMember.band_id,
+              event_type: 'twaater_post',
+              sentiment_change: 3,
+              media_intensity_change: 3,
+              sentiment_after: newSentiment,
+              source: 'twaater-outcome-engine',
+              description: 'Social media post boosted fan engagement',
+            });
           }
         }
       }

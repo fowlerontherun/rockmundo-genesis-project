@@ -247,12 +247,24 @@ Deno.serve(async (req) => {
               const curSentiment = (band as any).fan_sentiment_score ?? 0;
               const curIntensity = (band as any).media_intensity ?? 0;
               const curFatigue = (band as any).media_fatigue ?? 0;
+              const newSentiment = Math.max(-100, curSentiment - 20);
               // Scandals: big negative sentiment, big positive media (scandals generate buzz)
               await supabase.from('bands').update({
-                fan_sentiment_score: Math.max(-100, curSentiment - 20),
+                fan_sentiment_score: newSentiment,
                 media_intensity: Math.min(100, curIntensity + 40),
                 media_fatigue: Math.min(100, curFatigue + 20),
               } as any).eq('id', bandMember.band_id);
+
+              await supabase.from('band_sentiment_events').insert({
+                band_id: bandMember.band_id,
+                event_type: 'scandal',
+                sentiment_change: -20,
+                media_intensity_change: 40,
+                media_fatigue_change: 20,
+                sentiment_after: newSentiment,
+                source: 'trigger-random-events',
+                description: 'Scandal generated negative press but massive media buzz',
+              });
 
               console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40 for band ${bandMember.band_id}`);
             }
