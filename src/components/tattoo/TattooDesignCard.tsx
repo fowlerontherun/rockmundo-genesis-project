@@ -7,9 +7,11 @@ interface TattooDesignCardProps {
   parlourPriceMultiplier?: number;
   onSelect?: (design: TattooDesign) => void;
   selected?: boolean;
+  artistSpecialty?: string;
 }
 
-export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelect, selected }: TattooDesignCardProps) => {
+export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelect, selected, artistSpecialty }: TattooDesignCardProps) => {
+  const isSpecialty = artistSpecialty && design.category === artistSpecialty;
   const price = Math.round(design.base_price * parlourPriceMultiplier);
   const slotLabel = BODY_SLOTS[design.body_slot]?.label || design.body_slot;
   
@@ -49,6 +51,12 @@ export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelec
           <Badge variant="outline" className="text-xs">{slotLabel}</Badge>
           <span className="text-sm font-bold text-primary">${price}</span>
         </div>
+
+        {isSpecialty && (
+          <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary w-fit">
+            ⭐ Artist Specialty +5
+          </Badge>
+        )}
 
         {/* Genre effects */}
         <div className="flex flex-wrap gap-1">

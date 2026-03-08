@@ -65,6 +65,7 @@ export interface PlayerTattoo {
   is_infected: boolean;
   infection_cleared_at: string | null;
   price_paid: number;
+  artist_id?: string | null;
   // Joined
   design?: TattooDesign;
 }
@@ -72,7 +73,7 @@ export interface PlayerTattoo {
 /**
  * Calculate quality score based on parlour tier with variance
  */
-export function calculateTattooQuality(parlourTier: number): number {
+export function calculateTattooQuality(parlourTier: number, artistQualityBonus: number = 0): number {
   const tierRanges: Record<number, [number, number]> = {
     1: [20, 50],
     2: [35, 65],
@@ -81,7 +82,7 @@ export function calculateTattooQuality(parlourTier: number): number {
     5: [85, 100],
   };
   const [min, max] = tierRanges[parlourTier] || [40, 70];
-  return Math.round(min + Math.random() * (max - min));
+  return Math.min(100, Math.round(min + Math.random() * (max - min)) + artistQualityBonus);
 }
 
 /**
