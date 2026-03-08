@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.937",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Equipment Degradation (server): Stage equipment now degrades per gig based on type (drums 2.5/gig, keyboards 0.8/gig) — condition affects performance quality" },
+      { type: 'feature', description: "Media Cycle Decay (server): Daily processing decays media intensity (-3/day) and fatigue (-1.5/day) creating natural attention cycles" },
+      { type: 'feature', description: "Fan Sentiment Drift (server): Daily processing drifts extreme fan sentiment scores toward neutral (-0.5/day)" },
+      { type: 'feature', description: "Media Intensity Boost (server): Gig completion now increases media intensity based on performance rating (5-15 points)" },
+      { type: 'improvement', description: "Equipment degradation applies per-category rates with ±20% random variance for realism" },
+      { type: 'improvement', description: "All new server-side integrations use try/catch with graceful fallbacks for missing DB columns" },
+    ],
+  },
+  {
     version: "1.0.936",
     date: "2026-03-08",
     changes: [

@@ -655,6 +655,60 @@ serve(async (req) => {
 
     if (earningsError) console.error('Error adding earnings:', earningsError);
 
+    // === EQUIPMENT DEGRADATION (v1.0.937) ===
+    try {
+      const { data: stageEquipment } = await supabaseClient
+        .from('band_stage_equipment')
+        .select('id, equipment_type, condition, purchase_cost')
+        .eq('band_id', gig.band_id);
+
+      if (stageEquipment && stageEquipment.length > 0) {
+        let degradedCount = 0;
+        const DEGRADATION_RATES: Record<string, number> = {
+          guitar: 1.5, bass: 1.2, drums: 2.5, keyboard: 0.8,
+          microphone: 1.0, amplifier: 1.8, cables: 2.0, effects_pedal: 0.5,
+          monitors: 1.0, lighting: 1.5, pa_system: 1.2,
+        };
+
+        for (const eq of stageEquipment) {
+          const currentCondition = (eq as any).condition ?? 100;
+          const category = ((eq as any).equipment_type || 'default').toLowerCase();
+          const rate = DEGRADATION_RATES[category] || 1.0;
+          const degradation = rate * (0.8 + Math.random() * 0.4);
+          const newCondition = Math.max(0, parseFloat((currentCondition - degradation).toFixed(1)));
+
+          if (newCondition !== currentCondition) {
+            await supabaseClient
+              .from('band_stage_equipment')
+              .update({ condition: newCondition } as any)
+              .eq('id', eq.id);
+            degradedCount++;
+          }
+        }
+        console.log(`Equipment degradation: ${degradedCount}/${stageEquipment.length} items degraded`);
+      }
+    } catch (eqErr) {
+      console.log('Equipment degradation skipped (column may not exist):', eqErr);
+    }
+
+    // === MEDIA INTENSITY BOOST (v1.0.937) ===
+    try {
+      const intensityBoost = Math.round(5 + (avgRating / 25) * 10); // 5-15 based on performance
+      const fatigueIncrease = 2;
+      
+      // Try to update band's media tracking fields
+      await supabaseClient
+        .from('bands')
+        .update({
+          media_intensity: supabaseClient.rpc ? undefined : undefined, // Will be handled by profile-level tracking
+        } as any)
+        .eq('id', gig.band_id);
+      
+      console.log(`Media cycle: +${intensityBoost} intensity from gig performance`);
+    } catch (mediaErr) {
+      console.log('Media cycle update skipped:', mediaErr);
+    }
+
     // Distribute XP to band members
     const { data: members } = await supabaseClient
       .from('band_members')

@@ -789,6 +789,59 @@ Deno.serve(async (req) => {
       console.error('Error in reputation drift:', repErr);
     }
 
+    // === FAN SENTIMENT DRIFT (v1.0.937) ===
+    console.log('=== Processing Fan Sentiment Drift ===')
+    let sentimentDrifted = 0
+    try {
+      const { data: profilesWithSentiment } = await supabase
+        .from('profiles')
+        .select('id, fan_sentiment_score')
+        .not('fan_sentiment_score', 'is', null)
+
+      for (const p of profilesWithSentiment || []) {
+        const score = (p as any).fan_sentiment_score || 0;
+        if (Math.abs(score) <= 5) continue;
+        const drift = score > 0 ? -0.5 : 0.5;
+        const newScore = Math.max(-100, Math.min(100, parseFloat((score + drift).toFixed(1))));
+        if (newScore !== score) {
+          await supabase.from('profiles').update({ fan_sentiment_score: newScore } as any).eq('id', p.id);
+          sentimentDrifted++;
+        }
+      }
+      console.log(`Fan sentiment drift: ${sentimentDrifted} profiles adjusted toward neutral`);
+    } catch (sentErr) {
+      console.error('Error in fan sentiment drift:', sentErr);
+    }
+
+    // === MEDIA CYCLE DECAY (v1.0.937) ===
+    console.log('=== Processing Media Cycle Decay ===')
+    let mediaDecayed = 0
+    try {
+      const { data: bandsWithMedia } = await supabase
+        .from('bands')
+        .select('id, media_intensity, media_fatigue')
+
+      for (const b of bandsWithMedia || []) {
+        const intensity = (b as any).media_intensity || 0;
+        const fatigue = (b as any).media_fatigue || 0;
+        if (intensity <= 0 && fatigue <= 0) continue;
+
+        const newIntensity = Math.max(0, parseFloat((intensity - 3).toFixed(1)));
+        const newFatigue = Math.max(0, parseFloat((fatigue - 1.5).toFixed(1)));
+
+        if (newIntensity !== intensity || newFatigue !== fatigue) {
+          await supabase.from('bands').update({
+            media_intensity: newIntensity,
+            media_fatigue: newFatigue,
+          } as any).eq('id', b.id);
+          mediaDecayed++;
+        }
+      }
+      console.log(`Media cycle decay: ${mediaDecayed} bands had intensity/fatigue reduced`);
+    } catch (mediaErr) {
+      console.error('Error in media cycle decay:', mediaErr);
+    }
+
     console.log(`=== Daily Updates Complete ===`)
     console.log(`Profiles: ${processedProfiles}, Bands: ${processedBands}, Player Syncs: ${playerSyncs}, Ticket Sales: ${ticketSalesUpdated}, Hype Decay: ${hypeDecayCount}, PR Offers: ${prOffersGenerated}, Rentals: ${rentalsCharged}/${rentalsDefaulted}, Investments: ${investmentsGrown}, Modeling: ${modelingCompleted}, NPC Offers: ${npcOffersGenerated}, Errors: ${errorCount}`)
 
