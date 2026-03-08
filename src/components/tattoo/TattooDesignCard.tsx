@@ -10,7 +10,8 @@ interface TattooDesignCardProps {
   artistSpecialty?: string;
 }
 
-export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelect, selected }: TattooDesignCardProps) => {
+export const TattooDesignCard = ({ design, parlourPriceMultiplier = 1.0, onSelect, selected, artistSpecialty }: TattooDesignCardProps) => {
+  const isSpecialty = artistSpecialty && design.category === artistSpecialty;
   const price = Math.round(design.base_price * parlourPriceMultiplier);
   const slotLabel = BODY_SLOTS[design.body_slot]?.label || design.body_slot;
   
