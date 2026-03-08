@@ -79,6 +79,7 @@ export const fr = {
     schedule: "Agenda",
     musicHub: "Hub Musical",
     education: "Éducation",
+    teaching: "Enseignement",
     skills: "Compétences",
     perform: "Performer",
     gigs: "Concerts",

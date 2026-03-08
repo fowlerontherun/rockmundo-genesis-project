@@ -92,6 +92,7 @@ const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquip
 const TattooParlour = lazyWithRetry(() => import("./pages/TattooParlour"));
 const ProducerCareer = lazyWithRetry(() => import("./pages/ProducerCareer"));
 const ClothingDesigner = lazyWithRetry(() => import("./pages/ClothingDesigner"));
+const Teaching = lazyWithRetry(() => import("./pages/Teaching"));
 const ClothingShop = lazyWithRetry(() => import("./pages/ClothingShop"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
@@ -389,6 +390,7 @@ function App() {
                     <Route path="sponsorships" element={<Sponsorships />} />
                     <Route path="gear" element={<Gear />} />
                     <Route path="education" element={<Education />} />
+                    <Route path="teaching" element={<Teaching />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="stage-practice" element={<StagePractice />} />
                     <Route path="song-market" element={<SongMarket />} />

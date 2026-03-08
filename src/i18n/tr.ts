@@ -82,6 +82,7 @@ export const tr: TranslationKeys = {
     schedule: "Program",
     musicHub: "Müzik Merkezi",
     education: "Eğitim",
+    teaching: "Öğretmenlik",
     skills: "Yetenekler",
     perform: "Performans",
     gigs: "Konserler",

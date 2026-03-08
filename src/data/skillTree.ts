@@ -3707,6 +3707,41 @@ const clothingDesignConfigs: TieredSkillConfig[] = [
 ];
 
 // ============================================================================
+// TEACHING SKILL TREE
+// ============================================================================
+const teachingConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "teaching",
+    category: "Teaching",
+    track: "Teaching",
+    icon: "book-open",
+    tiers: {
+      Basic: {
+        name: "Basic Teaching",
+        description: "Teach skills you have at level 5+ to friends. Students earn 50-80 XP/day.",
+        slug: "teaching_basic_teaching",
+        xp: 6,
+        duration: 30,
+      },
+      Professional: {
+        name: "Professional Teaching",
+        description: "Teach skills at level 3+. Students earn 70-100 XP/day with improved methods.",
+        slug: "teaching_professional_teaching",
+        xp: 10,
+        duration: 45,
+      },
+      Mastery: {
+        name: "Mastery Teaching",
+        description: "Teach any skill at level 1+. Students earn 90-120 XP/day. Unlocks group teaching (2 students).",
+        slug: "teaching_mastery_teaching",
+        xp: 14,
+        duration: 60,
+      },
+    },
+  },
+];
+
+// ============================================================================
 // BUILD AND EXPORT
 // ============================================================================
 const { definitions, relationships } = buildSkillTree([
@@ -3731,6 +3766,7 @@ const { definitions, relationships } = buildSkillTree([
   ...modelingConfigs,
   ...fashionDesignConfigs,
   ...clothingDesignConfigs,
+  ...teachingConfigs,
 ]);
 
 export const SKILL_TREE_DEFINITIONS: SkillDefinitionRecord[] = definitions;
