@@ -44,47 +44,71 @@ type BuskingResult = {
   performanceDescriptor: string;
 };
 
-const buskingLocations: BuskingLocation[] = [
-  {
-    id: 'market-square',
-    name: 'Market Square',
-    neighborhood: 'Old Town',
-    description: 'Bustling stalls and coffee carts keep lunchtime crowds lingering.',
-    vibe: 'Midday bustle',
-    tip: 'Great spot for upbeat covers that catch shoppers on the move.',
-    rewards: {
-      30: { experience: 45, cash: 32 },
-      60: { experience: 90, cash: 74 },
-      120: { experience: 180, cash: 150 },
+// City-themed busking locations — selected based on player's current city
+const CITY_BUSKING_LOCATIONS: Record<string, BuskingLocation[]> = {
+  default: [
+    {
+      id: 'market-square',
+      name: 'Market Square',
+      neighborhood: 'Old Town',
+      description: 'Bustling stalls and coffee carts keep lunchtime crowds lingering.',
+      vibe: 'Midday bustle',
+      tip: 'Great spot for upbeat covers that catch shoppers on the move.',
+      rewards: { 30: { experience: 45, cash: 32 }, 60: { experience: 90, cash: 74 }, 120: { experience: 180, cash: 150 } },
     },
-  },
-  {
-    id: 'river-promenade',
-    name: 'River Promenade',
-    neighborhood: 'Harborfront',
-    description: 'Evening strollers and bus tours bring a steady flow of tipsy tippers.',
-    vibe: 'Sunset rush',
-    tip: 'Lean into soulful ballads as the lights bounce off the water.',
-    rewards: {
-      30: { experience: 55, cash: 40 },
-      60: { experience: 110, cash: 92 },
-      120: { experience: 210, cash: 175 },
+    {
+      id: 'river-promenade',
+      name: 'River Promenade',
+      neighborhood: 'Harborfront',
+      description: 'Evening strollers and bus tours bring a steady flow of tipsy tippers.',
+      vibe: 'Sunset rush',
+      tip: 'Lean into soulful ballads as the lights bounce off the water.',
+      rewards: { 30: { experience: 55, cash: 40 }, 60: { experience: 110, cash: 92 }, 120: { experience: 210, cash: 175 } },
     },
-  },
-  {
-    id: 'night-market',
-    name: 'Neon Night Market',
-    neighborhood: 'Arts District',
-    description: 'Street food, neon booths, and late-night creatives pack the walkways.',
-    vibe: 'After-dark energy',
-    tip: 'Long-form jams thrive as the crowd settles in for the night.',
-    rewards: {
-      30: { experience: 70, cash: 52 },
-      60: { experience: 135, cash: 108 },
-      120: { experience: 260, cash: 210 },
+    {
+      id: 'night-market',
+      name: 'Neon Night Market',
+      neighborhood: 'Arts District',
+      description: 'Street food, neon booths, and late-night creatives pack the walkways.',
+      vibe: 'After-dark energy',
+      tip: 'Long-form jams thrive as the crowd settles in for the night.',
+      rewards: { 30: { experience: 70, cash: 52 }, 60: { experience: 135, cash: 108 }, 120: { experience: 260, cash: 210 } },
     },
-  },
-];
+  ],
+  London: [
+    { id: 'camden-market', name: 'Camden Market', neighborhood: 'Camden Town', description: 'Punk history meets tourist crowds at London\'s iconic alternative market.', vibe: 'Alternative buzz', tip: 'Punk, indie, and folk play well here. Channel the spirit of The Clash.', rewards: { 30: { experience: 55, cash: 45 }, 60: { experience: 110, cash: 95 }, 120: { experience: 220, cash: 190 } } },
+    { id: 'south-bank', name: 'South Bank', neighborhood: 'Lambeth', description: 'The Thames-side cultural strip draws theatregoers and international visitors.', vibe: 'Cultural mile', tip: 'Classical and jazz resonate well against the river backdrop.', rewards: { 30: { experience: 60, cash: 50 }, 60: { experience: 120, cash: 105 }, 120: { experience: 240, cash: 210 } } },
+    { id: 'covent-garden', name: 'Covent Garden Piazza', neighborhood: 'West End', description: 'London\'s premier busking spot — you need to be good to hold this crowd.', vibe: 'World stage', tip: 'Showmanship matters here. Big performances draw big tips.', rewards: { 30: { experience: 75, cash: 60 }, 60: { experience: 150, cash: 125 }, 120: { experience: 300, cash: 250 } } },
+  ],
+  'New York': [
+    { id: 'washington-sq', name: 'Washington Square Park', neighborhood: 'Greenwich Village', description: 'Dylan played here. So can you. The fountain crowd is always listening.', vibe: 'Folk legend', tip: 'Singer-songwriter sets feel right at home in the Village.', rewards: { 30: { experience: 60, cash: 48 }, 60: { experience: 120, cash: 100 }, 120: { experience: 240, cash: 200 } } },
+    { id: 'times-square-subway', name: 'Times Square Subway', neighborhood: 'Midtown', description: 'Underground platform stages draw millions of daily commuters.', vibe: 'Rush hour', tip: 'Keep it energetic — you have 30 seconds to grab attention.', rewards: { 30: { experience: 50, cash: 55 }, 60: { experience: 105, cash: 115 }, 120: { experience: 210, cash: 230 } } },
+    { id: 'central-park', name: 'Central Park Bethesda', neighborhood: 'Upper West Side', description: 'The angel fountain plaza is a natural amphitheater for weekend crowds.', vibe: 'Park serenity', tip: 'Acoustic sets and gentle vocals carry beautifully here.', rewards: { 30: { experience: 65, cash: 52 }, 60: { experience: 130, cash: 108 }, 120: { experience: 260, cash: 215 } } },
+  ],
+  Tokyo: [
+    { id: 'shibuya-crossing', name: 'Shibuya Crossing', neighborhood: 'Shibuya', description: 'The world\'s busiest intersection — if you can hold a crowd here, you\'ve made it.', vibe: 'Neon chaos', tip: 'Visual performance matters as much as the music.', rewards: { 30: { experience: 70, cash: 55 }, 60: { experience: 140, cash: 115 }, 120: { experience: 280, cash: 230 } } },
+    { id: 'yoyogi-park', name: 'Yoyogi Park', neighborhood: 'Harajuku', description: 'Weekend performers, cosplayers, and rockabilly dancers share the space.', vibe: 'Subculture hub', tip: 'Genre creativity is celebrated. The weirder, the better.', rewards: { 30: { experience: 60, cash: 45 }, 60: { experience: 120, cash: 95 }, 120: { experience: 240, cash: 190 } } },
+    { id: 'ueno-park', name: 'Ueno Park', neighborhood: 'Taito', description: 'Cherry blossoms and museum crowds create a contemplative busking spot.', vibe: 'Cultural calm', tip: 'Acoustic and classical pieces resonate with the park atmosphere.', rewards: { 30: { experience: 50, cash: 40 }, 60: { experience: 100, cash: 85 }, 120: { experience: 200, cash: 170 } } },
+  ],
+  Paris: [
+    { id: 'montmartre-steps', name: 'Montmartre Steps', neighborhood: 'Montmartre', description: 'Artists, tourists and lovers gather on the steps of Sacré-Cœur.', vibe: 'Romantic bohemia', tip: 'French chanson and accordion-driven sets are crowd favorites.', rewards: { 30: { experience: 60, cash: 50 }, 60: { experience: 120, cash: 105 }, 120: { experience: 240, cash: 210 } } },
+    { id: 'pont-des-arts', name: 'Pont des Arts', neighborhood: 'Seine', description: 'The famous love-lock bridge draws couples and picnickers year-round.', vibe: 'Seine serenade', tip: 'Romantic ballads and jazz standards earn the best tips.', rewards: { 30: { experience: 55, cash: 48 }, 60: { experience: 110, cash: 100 }, 120: { experience: 220, cash: 200 } } },
+    { id: 'metro-chatelet', name: 'Métro Châtelet', neighborhood: 'Les Halles', description: 'Paris\' busiest metro hub. Licensed buskers get prime underground spots.', vibe: 'Underground pulse', tip: 'Upbeat world music and pop covers move through the tunnels.', rewards: { 30: { experience: 50, cash: 55 }, 60: { experience: 100, cash: 115 }, 120: { experience: 200, cash: 230 } } },
+  ],
+  Berlin: [
+    { id: 'mauerpark', name: 'Mauerpark', neighborhood: 'Prenzlauer Berg', description: 'Sunday flea market and the famous karaoke amphitheater.', vibe: 'Sunday circus', tip: 'Eclectic sets thrive — punk, techno-acoustic, experimental.', rewards: { 30: { experience: 65, cash: 45 }, 60: { experience: 130, cash: 95 }, 120: { experience: 260, cash: 190 } } },
+    { id: 'alexanderplatz', name: 'Alexanderplatz', neighborhood: 'Mitte', description: 'The TV Tower plaza pulls crowds from every direction.', vibe: 'Urban crossroads', tip: 'High energy draws the commuter crowd between trains.', rewards: { 30: { experience: 55, cash: 50 }, 60: { experience: 110, cash: 105 }, 120: { experience: 220, cash: 210 } } },
+    { id: 'warschauer', name: 'Warschauer Straße', neighborhood: 'Friedrichshain', description: 'Club-goers spilling out at dawn make for an adventurous audience.', vibe: 'After-party dawn', tip: 'Electronic-influenced acoustic sets hit differently at 6am.', rewards: { 30: { experience: 70, cash: 55 }, 60: { experience: 140, cash: 115 }, 120: { experience: 280, cash: 230 } } },
+  ],
+};
+
+const getBuskingLocationsForCity = (cityName: string | null): BuskingLocation[] => {
+  if (cityName && CITY_BUSKING_LOCATIONS[cityName]) {
+    return CITY_BUSKING_LOCATIONS[cityName];
+  }
+  // Fallback to default if city not mapped
+  return CITY_BUSKING_LOCATIONS.default;
+};
 
 const sessionOptions: { value: SessionLength; label: string; description: string }[] = [
   { value: 30, label: '30 minutes', description: 'Quick warm-up set.' },
