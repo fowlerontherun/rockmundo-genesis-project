@@ -68,14 +68,14 @@ export async function grantAchievementRewards(
   if (reward.cash > 0) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("wallet_balance")
+      .select("cash")
       .eq("id", userId)
       .single();
 
     if (profile) {
       await supabase
         .from("profiles")
-        .update({ wallet_balance: (profile.wallet_balance || 0) + reward.cash })
+        .update({ cash: (profile.cash || 0) + reward.cash })
         .eq("id", userId);
     }
   }
