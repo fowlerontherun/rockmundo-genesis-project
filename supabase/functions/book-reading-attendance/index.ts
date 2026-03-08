@@ -226,6 +226,28 @@ async function processAttendance(supabaseClient: any) {
         completed: isComplete,
       });
 
+      // === BOOK READING → MORALE (v1.0.974) ===
+      // Completing a book gives a morale boost; daily reading gives tiny boost
+      if (session.user_id) {
+        try {
+          const { data: bm } = await supabaseClient
+            .from('band_members')
+            .select('band_id')
+            .eq('user_id', session.user_id)
+            .eq('is_touring_member', false)
+            .limit(1)
+            .maybeSingle();
+          if (bm?.band_id) {
+            const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
+            if (bd) {
+              const moraleBoost = isComplete ? 4 : 1; // +4 for finishing book, +1 per reading day
+              await supabaseClient.from('bands').update({ morale: Math.min(100, ((bd as any).morale ?? 50) + moraleBoost) } as any).eq('id', bm.band_id);
+              if (isComplete) console.log(`Book completed morale boost: +${moraleBoost} for band ${bm.band_id}`);
+            }
+          }
+        } catch (_e) { /* non-critical */ }
+      }
+
       processedCount += 1;
       console.log(`Processed session ${session.id}: ${dailyXp} XP, day ${newDaysRead}/${totalDays}`);
     } catch (error: any) {
