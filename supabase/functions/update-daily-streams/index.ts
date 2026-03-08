@@ -29,6 +29,8 @@ Deno.serve(async (req) => {
   let streamUpdates = 0;
   let salesUpdates = 0;
   let errorCount = 0;
+  // Accumulate per-band streaming revenue for morale boosts (v1.0.978)
+  const bandStreamingRevenueAccumulator = new Map<string, number>();
   const errorSamples: string[] = [];
 
   // Accumulate label revenue for batch crediting
