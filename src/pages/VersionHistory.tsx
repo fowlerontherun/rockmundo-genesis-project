@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.957",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Reputation → Gig Offers: Toxic bands (-40 rep) have 30% of offers rejected; payout scaled 0.7x (toxic) to 1.3x (iconic)" },
+      { type: 'feature', description: "Reputation → Sponsorships: Match score now includes reputation modifier (0.3x toxic → 1.5x iconic), making toxic bands nearly unsponsorable" },
+      { type: 'feature', description: "Reputation → Label Scouting: NPC label scout chance scaled by reputation — toxic bands get 80% fewer scouts, beloved bands get 30% more" },
+      { type: 'improvement', description: "Gig offers, sponsorship offers, and NPC scouting now all fetch band reputation_score for decision-making" },
+    ],
+  },
+  {
     version: "1.0.956",
     date: "2026-03-08",
     changes: [

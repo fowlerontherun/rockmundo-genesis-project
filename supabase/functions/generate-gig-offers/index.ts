@@ -45,7 +45,7 @@ serve(async (req) => {
     // Generate offers for all active bands with sufficient fame
     const { data: bands } = await supabaseClient
       .from('bands')
-      .select('id, fame, genre, fan_sentiment_score, media_intensity')
+      .select('id, fame, genre, fan_sentiment_score, media_intensity, reputation_score')
       .gte('fame', 100)
       .limit(50);
 
@@ -113,7 +113,15 @@ serve(async (req) => {
           const ticketDemandMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2)); // 0.6 to 1.4
           const mediaCoverageMod = parseFloat((0.8 + (Math.min(100, mediaIntensity) / 100) * 0.4).toFixed(2)); // 0.8 to 1.2
 
-          const basePayout = Math.floor(500 * (1 + band.fame / 10000) * (venue.economy_factor || 1) * mediaCoverageMod);
+          // === REPUTATION GIG OFFER MODIFIER (v1.0.957) ===
+          // Toxic bands get fewer/worse offers; beloved bands get premium payouts
+          const repScore = (band as any).reputation_score ?? 0;
+          const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200; // 0 to 1
+          const repPayoutMod = parseFloat((0.7 + repT * 0.6).toFixed(2)); // 0.7x toxic → 1.3x iconic
+          // Toxic reputation reduces offer chance (skip ~30% of offers for very bad rep)
+          if (repScore <= -40 && Math.random() < 0.3) continue;
+
+          const basePayout = Math.floor(500 * (1 + band.fame / 10000) * (venue.economy_factor || 1) * mediaCoverageMod * repPayoutMod);
           const ticketPrice = Math.round(({ opening: 15, support: 20, headline: 30 }[slotType] || 20) * ticketDemandMod);
 
           const expiresAt = new Date();

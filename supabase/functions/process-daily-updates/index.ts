@@ -568,7 +568,7 @@ Deno.serve(async (req) => {
       // Get all active bands with their fame/genre
       const { data: allBands } = await supabase
         .from('bands')
-        .select('id, name, fame, genre, total_fans, status')
+        .select('id, name, fame, genre, total_fans, status, reputation_score')
         .eq('status', 'active')
         .gt('fame', 50) // Minimum fame threshold to be scouted
 
@@ -599,6 +599,11 @@ Deno.serve(async (req) => {
           else if (band.fame >= 1000) scoutChance = 0.03      // 3% for emerging
           else if (band.fame >= 100) scoutChance = 0.01       // 1% for newcomers
           else scoutChance = 0.005                             // 0.5% for unknowns
+
+          // Reputation modifier (v1.0.957): good rep boosts scouting, toxic rep kills it
+          const bandRepScore = (band as any).reputation_score ?? 0;
+          const repScoutMod = bandRepScore <= -40 ? 0.2 : bandRepScore <= -20 ? 0.6 : bandRepScore >= 40 ? 1.3 : bandRepScore >= 20 ? 1.1 : 1.0;
+          scoutChance *= repScoutMod;
 
           if (Math.random() > scoutChance) continue
 

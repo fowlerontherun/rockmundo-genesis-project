@@ -108,7 +108,7 @@ serve(async (req) => {
 
     const { data: entities, error: entityError } = await supabaseClient
       .from("sponsorship_entities")
-      .select("id, band_id, brand_flags, fame_momentum, event_attendance_score, chart_momentum, max_deals, active_deals, last_offer_at, bands(fame, name)")
+      .select("id, band_id, brand_flags, fame_momentum, event_attendance_score, chart_momentum, max_deals, active_deals, last_offer_at, bands(fame, name, reputation_score)")
       .limit(100);
 
     if (entityError) throw entityError;
@@ -259,7 +259,12 @@ function calculateMatchScore(entity: SponsorshipEntity, brand: SponsorshipBrand)
   const brandWeight = normalizeBrandWeight(brand.size, brand.wealth_score);
   const momentum = calculateMomentum(entity);
 
-  return brandWeight * (1 + fame / 5000) * (1 + momentum / 100);
+  // Reputation modifier (v1.0.957): toxic bands get far fewer sponsorships
+  const repScore = (entity.bands as any)?.reputation_score ?? 0;
+  const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200; // 0 to 1
+  const repMod = 0.3 + repT * 1.2; // 0.3x toxic → 1.5x iconic
+
+  return brandWeight * (1 + fame / 5000) * (1 + momentum / 100) * repMod;
 }
 
 function normalizeBrandWeight(size: string, wealthScore: number): number {
