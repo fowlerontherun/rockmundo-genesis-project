@@ -102,7 +102,7 @@ serve(async (req) => {
       // Use raw update instead since rpc might not exist
       const { data: band } = await supabase
         .from('bands')
-        .select('fame, total_fans, casual_fans, morale')
+        .select('fame, total_fans, casual_fans, morale, reputation_score')
         .eq('id', performance.band_id)
         .single();
 
@@ -111,6 +111,10 @@ serve(async (req) => {
         const curMorale = (band as any).morale ?? 50;
         const moraleBoost = overallRating >= 85 ? 4 : overallRating >= 70 ? 2 : overallRating >= 50 ? 1 : -2;
 
+        // === OPEN MIC → REPUTATION (v1.0.982) ===
+        const curRep = (band as any).reputation_score ?? 0;
+        const repChange = overallRating >= 85 ? 3 : overallRating >= 70 ? 1 : overallRating < 40 ? -2 : 0;
+
         await supabase
           .from('bands')
           .update({
@@ -118,10 +122,11 @@ serve(async (req) => {
             total_fans: (band.total_fans || 0) + fansGained,
             casual_fans: (band.casual_fans || 0) + fansGained,
             morale: Math.max(0, Math.min(100, curMorale + moraleBoost)),
+            reputation_score: Math.max(-100, Math.min(100, curRep + repChange)),
           } as any)
           .eq('id', performance.band_id);
 
-        console.log(`Open mic morale: rating ${overallRating} → morale ${moraleBoost > 0 ? '+' : ''}${moraleBoost}`);
+        console.log(`Open mic: rating ${overallRating} → morale ${moraleBoost > 0 ? '+' : ''}${moraleBoost}, rep ${repChange > 0 ? '+' : ''}${repChange}`);
       }
 
       // Update city fans if venue has city

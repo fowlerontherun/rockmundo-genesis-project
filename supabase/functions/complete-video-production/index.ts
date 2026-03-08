@@ -104,7 +104,7 @@ serve(async (req) => {
         if (song?.band_id) {
           const { data: band } = await supabaseClient
             .from("bands")
-            .select("fame, morale, fan_sentiment_score")
+            .select("fame, morale, fan_sentiment_score, reputation_score")
             .eq("id", song.band_id)
             .single();
 
@@ -115,16 +115,21 @@ serve(async (req) => {
             const moraleBoost = initialHype >= 60 ? 5 : 3;
             const sentBoost = initialHype >= 60 ? 6 : 3;
 
+            // === VIDEO RELEASE → REPUTATION (v1.0.982) ===
+            const curRep = (band as any).reputation_score ?? 0;
+            const repBoost = initialHype >= 60 ? 3 : 1; // High-quality videos build public image
+
             await supabaseClient
               .from("bands")
               .update({
                 fame: (band.fame || 0) + Math.round(initialHype * 2),
                 morale: Math.min(100, curMorale + moraleBoost),
                 fan_sentiment_score: Math.min(100, curSent + sentBoost),
+                reputation_score: Math.min(100, curRep + repBoost),
               } as any)
               .eq("id", song.band_id);
 
-            console.log(`Video release band health: hype ${initialHype} → morale +${moraleBoost}, sentiment +${sentBoost}`);
+            console.log(`Video release: hype ${initialHype} → morale +${moraleBoost}, sentiment +${sentBoost}, rep +${repBoost}`);
           }
         }
 

@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
           if (bandMember?.band_id) {
             const { data: band } = await supabase
               .from('bands')
-              .select('fan_sentiment_score, media_intensity, media_fatigue, morale')
+              .select('fan_sentiment_score, media_intensity, media_fatigue, morale, reputation_score')
               .eq('id', bandMember.band_id)
               .single();
 
@@ -291,16 +291,21 @@ Deno.serve(async (req) => {
               const curIntensity = (band as any).media_intensity ?? 0;
               const curFatigue = (band as any).media_fatigue ?? 0;
               const curMorale = (band as any).morale ?? 50;
+              const curRep = (band as any).reputation_score ?? 0;
               const newSentiment = Math.max(-100, curSentiment - 20);
               // v1.0.959: Scandals also hurt morale (-8 to -12 depending on severity)
               const moralePenalty = selectedEvent.category === 'scandal' ? 12 : 8;
               const newMorale = Math.max(0, curMorale - moralePenalty);
+              // === SCANDAL → REPUTATION (v1.0.982) ===
+              const repPenalty = selectedEvent.category === 'scandal' ? -10 : -5;
+              const newRep = Math.max(-100, curRep + repPenalty);
               // Scandals: big negative sentiment, big positive media (scandals generate buzz)
               await supabase.from('bands').update({
                 fan_sentiment_score: newSentiment,
                 media_intensity: Math.min(100, curIntensity + 40),
                 media_fatigue: Math.min(100, curFatigue + 20),
                 morale: newMorale,
+                reputation_score: newRep,
               } as any).eq('id', bandMember.band_id);
 
               await supabase.from('band_sentiment_events').insert({
@@ -311,10 +316,10 @@ Deno.serve(async (req) => {
                 media_fatigue_change: 20,
                 sentiment_after: newSentiment,
                 source: 'trigger-random-events',
-                description: `Scandal generated negative press and massive media buzz. Band morale dropped by ${moralePenalty}.`,
+                description: `Scandal: sentiment -20, media +40, morale -${moralePenalty}, rep ${repPenalty}.`,
               });
 
-              console.log(`[${JOB_NAME}] Scandal sentiment -20, media +40, morale -${moralePenalty} for band ${bandMember.band_id}`);
+              console.log(`[${JOB_NAME}] Scandal: sentiment -20, media +40, morale -${moralePenalty}, rep ${repPenalty} for band ${bandMember.band_id}`);
             }
           }
         } catch (sentErr) {
