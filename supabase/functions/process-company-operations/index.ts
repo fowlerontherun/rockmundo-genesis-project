@@ -58,6 +58,27 @@ Deno.serve(async (req) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // ==========================================
+    // PRE-FETCH: Owner band reputation for revenue scaling
+    // ==========================================
+    const ownerReputationMap = new Map<string, number>();
+    for (const company of companies || []) {
+      if (!company.owner_id) continue;
+      const { data: memberRow } = await supabase
+        .from('band_members')
+        .select('band_id, bands!inner(reputation_score)')
+        .eq('user_id', company.owner_id)
+        .eq('role', 'leader')
+        .maybeSingle();
+      if (memberRow && (memberRow as any).bands) {
+        const repScore = (memberRow as any).bands.reputation_score ?? 0;
+        // 0.85x at -100 → 1.0x at 0 → 1.15x at +100
+        const repMod = parseFloat((0.85 + ((repScore + 100) / 200) * 0.3).toFixed(2));
+        ownerReputationMap.set(company.id, repMod);
+      }
+    }
+    console.log(`[process-company-operations] Loaded reputation modifiers for ${ownerReputationMap.size} company owners`);
+
+    // ==========================================
     // PRE-FETCH: Active synergies for discount application
     // ==========================================
     const { data: allSynergies } = await supabase
