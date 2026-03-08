@@ -23,6 +23,7 @@ import type { FanConversionResult } from "@/utils/fanConversionCalculator";
 import type { GigMoment } from "@/utils/momentHighlightsGenerator";
 import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculator";
 import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
+import { getBehavior } from "@/utils/stageBehaviors";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
