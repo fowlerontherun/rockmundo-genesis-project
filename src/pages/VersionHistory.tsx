@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.009",
+    date: "2026-03-08",
+    changes: [
+      { type: 'improvement', description: "Generated 70 static tile images for all hub pages — replaced broken edge function with local static files for instant loading" },
+    ],
+  },
+  {
     version: "1.1.008",
     date: "2026-03-08",
     changes: [
