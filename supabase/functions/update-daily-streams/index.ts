@@ -237,14 +237,16 @@ Deno.serve(async (req) => {
     // Pre-fetch band genres and sentiment for trend/loyalty lookup
     let bandGenreMap = new Map<string, string>();
     let bandSentimentMap = new Map<string, number>();
+    let bandReputationMap = new Map<string, number>();
     if (bandIds.length > 0) {
       const { data: bandExtras } = await supabase
         .from('bands')
-        .select('id, genre, fan_sentiment_score')
+        .select('id, genre, fan_sentiment_score, reputation_score')
         .in('id', bandIds);
       for (const b of bandExtras || []) {
         if (b.genre) bandGenreMap.set(b.id, b.genre);
         bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+        bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
       }
     }
 
@@ -265,6 +267,12 @@ Deno.serve(async (req) => {
         const sentimentScore = bandId ? (bandSentimentMap.get(bandId) ?? 0) : 0;
         const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0-1
         const streamLoyaltyMod = parseFloat((0.7 + sentimentT * 0.6).toFixed(2)); // 0.7–1.3
+
+        // === REPUTATION → STREAMING ALGORITHM FAVOR (v1.0.989) ===
+        // Streaming platforms subtly favor reputable artists in recommendations
+        const repScore = bandId ? (bandReputationMap.get(bandId) ?? 0) : 0;
+        const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
+        const streamRepMod = parseFloat((0.9 + repT * 0.2).toFixed(2)); // 0.9x toxic → 1.1x iconic
 
         // Fame-scaled base streams
         const fameScale = 1 + Math.pow(bandFame / 100, 1.4);
@@ -292,8 +300,8 @@ Deno.serve(async (req) => {
 
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        // Apply genre trend + seasonal + sentiment modifier to daily streams
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod);
+        // Apply genre trend + seasonal + sentiment + reputation modifier to daily streams
+        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
         // Build deterministic region breakdown based on territories/fans

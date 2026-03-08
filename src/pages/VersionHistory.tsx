@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.989",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Reputation → Radio Listener Engagement: Band reputation now modifies radio play hype and stream boosts (0.8x toxic → 1.2x iconic). Reputable bands get more listener attention when their songs air" },
+      { type: 'feature', description: "Reputation → Organic Follower Growth: Social media organic follower acquisition is now scaled by reputation (0.8x–1.2x). Respected bands attract more organic follows; toxic bands are avoided" },
+      { type: 'feature', description: "Reputation → Streaming Algorithm Favor: Daily streaming counts now include a reputation modifier (0.9x–1.1x). Streaming platforms subtly favor reputable artists in recommendation algorithms" },
+      { type: 'improvement', description: "Reputation now serves as input modifier in 9+ systems: gig offers, media approval, radio acceptance, recording quality, merch sales, video views, sponsorships, radio engagement, organic followers, and streaming. Single DB queries fetch reputation alongside sentiment for all batch operations" },
+    ],
+  },
+  {
     version: "1.0.988",
     date: "2026-03-08",
     changes: [

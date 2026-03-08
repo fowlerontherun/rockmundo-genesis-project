@@ -66,11 +66,11 @@ serve(async (req) => {
 
     const { data: bands } = await supabase
       .from("bands")
-      .select("id, fame, total_fans, fan_sentiment_score")
+      .select("id, fame, total_fans, fan_sentiment_score, reputation_score")
       .in("id", bandOwnerIds.length > 0 ? bandOwnerIds : ['none']);
 
     const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
-    const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0, sentiment: (b as any).fan_sentiment_score ?? 0 }]));
+    const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0, sentiment: (b as any).fan_sentiment_score ?? 0, reputation: (b as any).reputation_score ?? 0 }]));
 
     let totalFollowersAdded = 0;
 
@@ -89,9 +89,14 @@ serve(async (req) => {
         // Sentiment affects organic follower growth (v1.0.952): 0.6x hostile → 1.4x fanatical
         const sentimentT = (Math.max(-100, Math.min(100, bandData?.sentiment ?? 0)) + 100) / 200;
         sentimentMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2));
+        // === REPUTATION → ORGANIC FOLLOWER GROWTH (v1.0.989) ===
+        // Reputable bands attract more organic social followers
+        const repT = (Math.max(-100, Math.min(100, bandData?.reputation ?? 0)) + 100) / 200;
+        const reputationMod = parseFloat((0.8 + repT * 0.4).toFixed(2)); // 0.8x toxic → 1.2x iconic
+        sentimentMod *= reputationMod;
       }
 
-      // Target followers formula: fame / 15 + fans / 8, scaled by sentiment
+      // Target followers formula: fame / 15 + fans / 8, scaled by sentiment & reputation
       const targetFollowers = Math.max(2, Math.floor((fame / 15 + fans / 8) * sentimentMod));
 
       // Get current bot followers
