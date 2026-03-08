@@ -63,7 +63,7 @@ export const EnhancedAvatar = ({ config, animate = true }: EnhancedAvatarProps) 
   // Tattoos and scars
   const tattooStyle = config.tattoo_style;
   const scarStyle = config.scar_style;
-
+  const playerTattoos = (config as any).tattoos as Array<{ body_slot: string; ink_color: string; quality_score: number }> | undefined;
   // Subtle breathing animation
   useFrame(({ clock }) => {
     if (animate && groupRef.current) {
@@ -75,13 +75,109 @@ export const EnhancedAvatar = ({ config, animate = true }: EnhancedAvatarProps) 
   });
 
   const renderTattoo = () => {
+    // If we have real player tattoos from DB, render those
+    if (playerTattoos && playerTattoos.length > 0) {
+      return (
+        <group>
+          {playerTattoos.map((tattoo, idx) => {
+            const color = tattoo.ink_color || '#1a3a4a';
+            const opacity = 0.5 + (tattoo.quality_score / 100) * 0.4;
+            const slot = tattoo.body_slot;
+            
+            // Left arm slots
+            if (slot === 'left_upper_arm' || slot === 'left_shoulder') {
+              return (
+                <group key={idx} position={[-0.22 * shoulderWidth, 1.05 * height, 0]}>
+                  {[0, 0.04, 0.08].map((y, i) => (
+                    <mesh key={i} position={[0, y, 0]} rotation={[0, 0, 0.3 + i * 0.15]}>
+                      <torusGeometry args={[0.05 + i * 0.003, 0.007, 8, 16, Math.PI * 0.85]} />
+                      <meshStandardMaterial color={color} transparent opacity={opacity} />
+                    </mesh>
+                  ))}
+                </group>
+              );
+            }
+            if (slot === 'left_forearm' || slot === 'left_wrist' || slot === 'left_inner_arm') {
+              return (
+                <group key={idx} position={[-0.28 * armLength, 0.85 * height, 0]}>
+                  {[0, 0.035, 0.07].map((y, i) => (
+                    <mesh key={i} position={[0, y, 0]} rotation={[0, 0, 0.2 + i * 0.12]}>
+                      <torusGeometry args={[0.04 + i * 0.002, 0.006, 8, 14, Math.PI * 0.8]} />
+                      <meshStandardMaterial color={color} transparent opacity={opacity} />
+                    </mesh>
+                  ))}
+                </group>
+              );
+            }
+            // Right arm slots
+            if (slot === 'right_upper_arm' || slot === 'right_shoulder') {
+              return (
+                <group key={idx} position={[0.22 * shoulderWidth, 1.05 * height, 0]}>
+                  {[0, 0.04, 0.08].map((y, i) => (
+                    <mesh key={i} position={[0, y, 0]} rotation={[0, 0, -0.3 - i * 0.15]}>
+                      <torusGeometry args={[0.05 + i * 0.003, 0.007, 8, 16, Math.PI * 0.85]} />
+                      <meshStandardMaterial color={color} transparent opacity={opacity} />
+                    </mesh>
+                  ))}
+                </group>
+              );
+            }
+            if (slot === 'right_forearm' || slot === 'right_wrist' || slot === 'right_inner_arm') {
+              return (
+                <group key={idx} position={[0.28 * armLength, 0.85 * height, 0]}>
+                  {[0, 0.035, 0.07].map((y, i) => (
+                    <mesh key={i} position={[0, y, 0]} rotation={[0, 0, -0.2 - i * 0.12]}>
+                      <torusGeometry args={[0.04 + i * 0.002, 0.006, 8, 14, Math.PI * 0.8]} />
+                      <meshStandardMaterial color={color} transparent opacity={opacity} />
+                    </mesh>
+                  ))}
+                </group>
+              );
+            }
+            // Neck
+            if (slot === 'neck') {
+              return (
+                <mesh key={idx} position={[0, 1.34 * torsoLength * height, 0.06]}>
+                  <boxGeometry args={[0.08, 0.04, 0.01]} />
+                  <meshStandardMaterial color={color} transparent opacity={opacity} />
+                </mesh>
+              );
+            }
+            // Chest
+            if (slot === 'chest') {
+              return (
+                <group key={idx} position={[0, 1.15 * torsoLength * height, 0.12]}>
+                  <mesh>
+                    <boxGeometry args={[0.14, 0.1, 0.005]} />
+                    <meshStandardMaterial color={color} transparent opacity={opacity * 0.8} />
+                  </mesh>
+                </group>
+              );
+            }
+            // Back
+            if (slot === 'back') {
+              return (
+                <group key={idx} position={[0, 1.1 * torsoLength * height, -0.12]}>
+                  <mesh>
+                    <boxGeometry args={[0.16, 0.14, 0.005]} />
+                    <meshStandardMaterial color={color} transparent opacity={opacity * 0.7} />
+                  </mesh>
+                </group>
+              );
+            }
+            return null;
+          })}
+        </group>
+      );
+    }
+
+    // Fallback to legacy tattoo_style
     if (!tattooStyle || tattooStyle === 'No Tattoo') return null;
     const tattooColor = '#1a3a4a';
     switch (tattooStyle) {
       case 'Sleeve Tattoo':
         return (
           <group position={[-0.28 * armLength, 0.95 * height, 0]}>
-            {/* Tattoo pattern - tribal style */}
             {[0, 0.05, 0.1].map((y, i) => (
               <mesh key={i} position={[0, y, 0]} rotation={[0, 0, 0.3 + i * 0.1]}>
                 <torusGeometry args={[0.045 + i * 0.002, 0.006, 6, 12, Math.PI * 0.8]} />
@@ -101,7 +197,6 @@ export const EnhancedAvatar = ({ config, animate = true }: EnhancedAvatarProps) 
         return null;
     }
   };
-
   const renderScar = () => {
     if (!scarStyle || scarStyle === 'No Scar') return null;
     const scarColor = '#d4a5a5';

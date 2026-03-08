@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.912",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Tattoo Parlour System — visit city parlours (1-5 star quality tiers) to get tattoos on 13 body slots including full sleeve building (5 slots per arm)" },
+      { type: 'feature', description: "Tattoos provide genre-based performance modifiers — skull/tribal boost Rock/Metal (+5-9%), penalize Pop/Classical (-3-9%); musical notes boost all genres; quality scales the effect" },
+      { type: 'feature', description: "Infection risk system — cheap parlours have up to 30% infection chance; infections drain -5 health/day and -3% performance until treated ($200) or 7-day natural heal" },
+      { type: 'feature', description: "Interactive SVG body map showing tattoo placement, quality color-coding, and sleeve completion progress (Left/Right arm: X/5)" },
+      { type: 'feature', description: "3D avatar tattoo rendering — player tattoos from database render as per-slot mesh patterns on the avatar body with quality-based opacity" },
+      { type: 'improvement', description: "Tattoo Parlour added to Character Hub navigation" },
+    ],
+  },
+  {
     version: "1.0.911",
     date: "2026-03-08",
     changes: [

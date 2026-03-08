@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen } from "lucide-react";
+import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette } from "lucide-react";
 
 export default function CharacterHub() {
   return (
@@ -11,6 +11,7 @@ export default function CharacterHub() {
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear" },
         { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness" },
+        { icon: Palette, labelKey: "nav.tattooParlour", path: "/tattoo-parlour" },
         { icon: History, labelKey: "nav.statistics", path: "/statistics" },
         { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy" },
       ]}
