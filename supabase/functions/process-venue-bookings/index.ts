@@ -143,14 +143,15 @@ Deno.serve(async (req) => {
 
         // Award +1 morale for successful venue revenue
         if (bandId) {
-          const { data: band } = await supabase
-            .from('bands')
-            .select('morale')
-            .eq('id', bandId)
-            .single();
+          const { data: band } = await supabase.from('bands').select('morale').eq('id', bandId).single();
           if (band) {
             const newMorale = Math.min(100, (band.morale ?? 50) + 1);
             await supabase.from('bands').update({ morale: newMorale }).eq('id', bandId);
+            try {
+              await supabase.from('band_health_events').insert({
+                band_id: bandId, event_type: 'morale', delta: 1, new_value: newMorale, source: 'venue_booking', description: `Venue gig revenue: $${totalVenueRevenue}`,
+              });
+            } catch (_logErr) { /* non-critical */ }
           }
         }
 
