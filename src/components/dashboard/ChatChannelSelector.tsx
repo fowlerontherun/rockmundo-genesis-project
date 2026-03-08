@@ -65,15 +65,31 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
 
   const allChannels = [...baseChannels, ...cityChannels];
 
+  const lowerFilter = filter.toLowerCase();
+  const filteredBase = useMemo(() => baseChannels.filter(c => c.label.toLowerCase().includes(lowerFilter)), [baseChannels, lowerFilter]);
+  const filteredCities = useMemo(() => cityChannels.filter(c => c.label.toLowerCase().includes(lowerFilter)), [cityChannels, lowerFilter]);
+
   return (
     <div className="w-full min-w-0 max-w-full overflow-hidden flex flex-col sm:flex-row gap-4 h-[calc(100vh-20rem)] min-h-[300px] max-h-[600px]">
       {/* Channel list - horizontal scroll on mobile, vertical sidebar on desktop */}
-      <ScrollArea className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card">
-        <div className="w-max min-w-full p-2 flex sm:flex-col sm:space-y-1 gap-1 sm:gap-0">
-          <div className="hidden sm:block px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
-            Main Channels
+      <div className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card flex flex-col overflow-hidden">
+        <div className="p-2 border-b">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              placeholder="Search channels..."
+              className="h-8 pl-7 text-xs"
+            />
           </div>
-          {baseChannels.map(channel => {
+        </div>
+        <ScrollArea className="flex-1">
+        <div className="w-max min-w-full p-2 flex sm:flex-col sm:space-y-1 gap-1 sm:gap-0">
+          {filteredBase.length > 0 && <div className="hidden sm:block px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
+            Main Channels
+          </div>}
+          {filteredBase.map(channel => {
             const Icon = channel.icon;
             return (
               <Button
