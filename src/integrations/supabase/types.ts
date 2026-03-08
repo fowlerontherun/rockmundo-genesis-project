@@ -2709,6 +2709,39 @@ export type Database = {
           },
         ]
       }
+      casino_transactions: {
+        Row: {
+          bet_amount: number
+          created_at: string
+          game_type: string
+          id: string
+          metadata: Json | null
+          net_result: number
+          payout: number
+          profile_id: string
+        }
+        Insert: {
+          bet_amount: number
+          created_at?: string
+          game_type: string
+          id?: string
+          metadata?: Json | null
+          net_result?: number
+          payout?: number
+          profile_id: string
+        }
+        Update: {
+          bet_amount?: number
+          created_at?: string
+          game_type?: string
+          id?: string
+          metadata?: Json | null
+          net_result?: number
+          payout?: number
+          profile_id?: string
+        }
+        Relationships: []
+      }
       casting_call_roles: {
         Row: {
           age_range: string | null
