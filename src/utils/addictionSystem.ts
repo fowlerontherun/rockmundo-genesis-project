@@ -1,6 +1,6 @@
 import type { BehaviorSettings } from "@/hooks/useBehaviorSettings";
 
-export type AddictionType = "alcohol" | "substances" | "gambling" | "partying";
+export type AddictionType = "alcohol" | "substances" | "gambling" | "partying" | "shopping";
 export type AddictionStatus = "active" | "recovering" | "recovered" | "relapsed";
 export type RecoveryProgram = "therapy" | "rehab" | "cold_turkey";
 
