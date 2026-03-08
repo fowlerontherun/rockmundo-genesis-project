@@ -1356,12 +1356,6 @@ export const pt: TranslationKeys = {
     preparing: "Preparando operações da gravadora...",
   },
 
-  // Education
-  education: {
-    title: "Construa sua inteligência criativa",
-    subtitle: "Mergulhe em recursos curados, redes de mentores e experiências de aprendizado colaborativo que mantêm sua arte crescendo a cada sessão.",
-  },
-
   // Character
   character: {
     title: "Meu Personagem",
