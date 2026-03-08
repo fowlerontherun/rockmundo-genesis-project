@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.0.931",
+    date: "2026-03-08",
+    changes: [
+      { type: 'feature', description: "Public Image System: Reputation score (-100 to 100) with 6 tiers from Toxic to Iconic — gates sponsorships, media access, and label deals" },
+      { type: 'feature', description: "Mentorship Progression: Experienced players mentor newer ones — mentor earns fame/XP, mentee gets up to 1.5x XP and +25% skill growth" },
+      { type: 'feature', description: "Band Morale Mechanics: 0-100 morale score affected by events, pay, drama — low morale reduces performance (0.7x), increases drama/leave risk" },
+      { type: 'feature', description: "Seasonal Gameplay Modifiers: Seasons boost genre popularity (e.g., Reggae +30% summer), outdoor gig attendance, streaming, and merch demand" },
+      { type: 'feature', description: "Achievement Rewards: Achievements now grant tangible rewards — Common ($100/50XP) to Legendary ($50k/10kXP/1k fame) with category bonuses" },
+      { type: 'improvement', description: "Reputation drifts daily toward neutral — scandals fade but so does goodwill without maintenance" },
+      { type: 'improvement', description: "Band morale uses weighted average — lowest member drags the band down (30% weight)" },
+      { type: 'improvement', description: "Mentorship requires level 15+ and at least one Professional-tier skill to qualify as mentor" },
+    ],
+  },
+  {
     version: "1.0.930",
     date: "2026-03-08",
     changes: [
