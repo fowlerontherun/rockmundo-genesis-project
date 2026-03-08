@@ -10,6 +10,14 @@ interface StageDecorProps {
   bandName?: string;
 }
 
+// Map equipment scale to numeric values
+const EQUIPMENT_SCALE_MAP: Record<string, number> = {
+  minimal: 0.4,
+  standard: 0.7,
+  large: 1.0,
+  massive: 1.5,
+};
+
 /**
  * StageDecor - Additional decorative elements for the stage
  * Includes banners, logos, backdrop details, and stage edge lighting
@@ -21,7 +29,7 @@ export const StageDecor = ({
   intensity,
   bandName 
 }: StageDecorProps) => {
-  const equipmentScale = theme.equipmentScale;
+  const equipmentScale = EQUIPMENT_SCALE_MAP[theme.equipmentScale] || 0.7;
 
   // Truss system for large venues
   const trussBars = useMemo(() => {
@@ -54,7 +62,7 @@ export const StageDecor = ({
       {trussBars.map(truss => (
         <div
           key={truss.id}
-          className="absolute left-[10%] right-[10%] h-1"
+          className="absolute left-[10%] right-[10%] h-1 bg-muted"
           style={{
             top: `${truss.top}%`,
             background: 'linear-gradient(90deg, transparent 0%, hsl(var(--muted)) 10%, hsl(var(--muted)) 90%, transparent 100%)',
@@ -98,9 +106,8 @@ export const StageDecor = ({
         <div className="absolute top-[15%] left-1/2 -translate-x-1/2">
           {/* Band logo/name backdrop */}
           <div 
-            className="px-6 py-2 rounded border border-border/50 backdrop-blur-sm"
+            className="px-6 py-2 rounded border border-border/50 backdrop-blur-sm bg-background/20"
             style={{
-              background: `linear-gradient(180deg, hsla(${theme.ambientGlow}, 0.2) 0%, transparent 100%)`,
               fontSize: equipmentScale >= 1 ? '1rem' : '0.75rem',
             }}
           >
@@ -125,13 +132,13 @@ export const StageDecor = ({
             {Array.from({ length: Math.ceil(equipmentScale * 2) }).map((_, i) => (
               <div
                 key={`left-${i}`}
-                className="w-6 h-4 bg-zinc-900 border border-zinc-700 rounded-sm"
+                className="w-6 h-4 bg-card border border-border rounded-sm"
                 style={{ transform: `scale(${1 - i * 0.05})` }}
               >
                 <div className="w-full h-full grid grid-cols-3 gap-px p-px opacity-60">
-                  <div className="bg-zinc-800 rounded-full" />
-                  <div className="bg-zinc-800 rounded-full" />
-                  <div className="bg-zinc-800 rounded-full" />
+                  <div className="bg-muted rounded-full" />
+                  <div className="bg-muted rounded-full" />
+                  <div className="bg-muted rounded-full" />
                 </div>
               </div>
             ))}
@@ -142,13 +149,13 @@ export const StageDecor = ({
             {Array.from({ length: Math.ceil(equipmentScale * 2) }).map((_, i) => (
               <div
                 key={`right-${i}`}
-                className="w-6 h-4 bg-zinc-900 border border-zinc-700 rounded-sm"
+                className="w-6 h-4 bg-card border border-border rounded-sm"
                 style={{ transform: `scale(${1 - i * 0.05})` }}
               >
                 <div className="w-full h-full grid grid-cols-3 gap-px p-px opacity-60">
-                  <div className="bg-zinc-800 rounded-full" />
-                  <div className="bg-zinc-800 rounded-full" />
-                  <div className="bg-zinc-800 rounded-full" />
+                  <div className="bg-muted rounded-full" />
+                  <div className="bg-muted rounded-full" />
+                  <div className="bg-muted rounded-full" />
                 </div>
               </div>
             ))}
@@ -178,21 +185,13 @@ export const StageDecor = ({
       </div>
 
       {/* Side curtain shadows for indoor venues */}
-      {theme.curtainStyle && (
+      {theme.curtainStyle !== 'open' && theme.curtainStyle !== 'none' && (
         <>
           <div 
-            className="absolute top-0 left-0 bottom-0 w-[8%] pointer-events-none"
-            style={{
-              background: `linear-gradient(90deg, ${theme.curtainStyle} 0%, transparent 100%)`,
-              opacity: 0.4,
-            }}
+            className="absolute top-0 left-0 bottom-0 w-[8%] pointer-events-none bg-gradient-to-r from-background/40 to-transparent"
           />
           <div 
-            className="absolute top-0 right-0 bottom-0 w-[8%] pointer-events-none"
-            style={{
-              background: `linear-gradient(-90deg, ${theme.curtainStyle} 0%, transparent 100%)`,
-              opacity: 0.4,
-            }}
+            className="absolute top-0 right-0 bottom-0 w-[8%] pointer-events-none bg-gradient-to-l from-background/40 to-transparent"
           />
         </>
       )}
@@ -203,19 +202,19 @@ export const StageDecor = ({
           {Array.from({ length: Math.ceil(equipmentScale * 2) }).map((_, i) => (
             <div 
               key={`cab-${i}`}
-              className="w-8 h-6 bg-zinc-900 border border-zinc-700 rounded-sm relative"
+              className="w-8 h-6 bg-card border border-border rounded-sm relative"
             >
               {/* Marshall-style grille */}
-              <div className="absolute inset-1 bg-zinc-800 rounded-sm" 
+              <div className="absolute inset-1 bg-muted rounded-sm" 
                 style={{
                   backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 3px)'
                 }}
               />
               {/* Top head unit */}
-              <div className="absolute -top-2 left-0.5 right-0.5 h-2 bg-zinc-900 border border-zinc-700 rounded-t-sm">
+              <div className="absolute -top-2 left-0.5 right-0.5 h-2 bg-card border border-border rounded-t-sm">
                 <div className="absolute top-0.5 left-1 right-1 flex gap-0.5">
                   {[1,2,3,4].map(k => (
-                    <div key={k} className="w-1 h-1 rounded-full bg-zinc-600" />
+                    <div key={k} className="w-1 h-1 rounded-full bg-muted" />
                   ))}
                 </div>
               </div>
@@ -229,7 +228,7 @@ export const StageDecor = ({
         {Array.from({ length: 5 }).map((_, i) => (
           <div 
             key={`tape-${i}`}
-            className="w-4 h-4 border-2 border-dashed border-yellow-500/50 rounded-full"
+            className="w-4 h-4 border-2 border-dashed border-warning/50 rounded-full"
           />
         ))}
       </div>
@@ -241,14 +240,14 @@ export const StageDecor = ({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="text-zinc-600"
+          className="text-muted-foreground"
         />
         <path
           d="M 15% 85% Q 40% 75% 60% 80% T 85% 88%"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
-          className="text-zinc-700"
+          className="text-muted"
         />
       </svg>
     </div>
