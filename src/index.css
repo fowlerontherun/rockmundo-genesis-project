@@ -341,6 +341,15 @@
   }
 }
 
+/* Hide scrollbar for tabs and other horizontal scroll containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Safe area for devices with notches/home indicators */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
