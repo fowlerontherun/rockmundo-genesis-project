@@ -1,15 +1,27 @@
 
 
-## Fix: Tutorial World Map Link Goes to 404
+## Fix: Tabs Overflowing / Not Showing on All Pages (v1.1.026)
 
-### Problem
-The tutorial step `visit_world_map` directs players to `/world-map`, but that route is commented out in `App.tsx` (line 532), causing a 404.
+### Root Cause
+
+The base `TabsList` component uses `inline-flex` with no overflow handling. When pages have 4-5+ tabs (Finances, Band Management, Media, etc.), they overflow their container on smaller screens — tabs get clipped, hidden, or overlap.
 
 ### Solution
-Uncomment the `/world-map` route in `App.tsx` to re-enable the WorldMap page. The component (`WorldMap.tsx`) and its lazy import already exist and are functional.
 
-### Files to modify
-- **`src/App.tsx`** — Uncomment line 532: `<Route path="world-map" element={<WorldMap />} />`
-- **`src/components/VersionHeader.tsx`** — Bump to v1.0.890
-- **`src/pages/VersionHistory.tsx`** — Add changelog entry
+**Fix the `TabsList` component globally** so all 169 files using tabs benefit automatically — no per-page changes needed.
+
+Changes to `src/components/ui/tabs.tsx`:
+- Add `overflow-x-auto` to allow horizontal scrolling when tabs exceed container width
+- Add `scrollbar-hide` (or thin scrollbar) for a clean look
+- Add `w-full flex-nowrap` to prevent wrapping and ensure all tabs stay in one row
+- Keep `inline-flex` but ensure the list stretches properly
+
+This single-file fix resolves every page simultaneously (Finances, Band Management, Media Campaigns, Festivals, Admin panels, etc.).
+
+### Files to Change
+
+1. **`src/components/ui/tabs.tsx`** — Add overflow scroll + no-wrap to `TabsList` base styles
+2. **`src/index.css`** (or global CSS) — Add `.scrollbar-hide` utility if not already present
+3. **`src/components/VersionHeader.tsx`** — Bump to v1.1.026
+4. **`src/pages/VersionHistory.tsx`** — Add changelog entry
 
