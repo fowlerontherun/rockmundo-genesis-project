@@ -98,7 +98,10 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
     if (chartType === "combined") {
       return entry.weekly_plays; // Period streams
     }
-    // Show period total, not all-time
+    // For sales charts, show all-time cumulative sales
+    if (["digital_sales", "cd_sales", "vinyl_sales", "cassette_sales", "record_sales", "physical_sales"].includes(chartType)) {
+      return entry.plays_count; // All-time cumulative from DB
+    }
     return entry.weekly_plays;
   };
 
