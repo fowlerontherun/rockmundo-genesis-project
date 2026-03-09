@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.026",
+    date: "2026-03-09",
+    changes: [
+      { type: 'fix', description: "Tabs: Fixed global tab overflow — all TabsList components now scroll horizontally on smaller screens instead of clipping or overlapping" },
+    ],
+  },
+  {
     version: "1.1.025",
     date: "2026-03-08",
     changes: [
