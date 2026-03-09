@@ -379,7 +379,8 @@ export const useCountryCharts = (
         if (releaseCategory === "ep") {
           return entry.entry_type === "album";
         }
-        return true;
+        // For singles/default view, exclude album entries so only standalone singles appear
+        return entry.entry_type !== "album";
       });
 
       console.log("[useCountryCharts] After filtering by category:", filteredData.length, "mode:", shouldSumAcrossDays ? "sum-daily" : "peak-weekly");
