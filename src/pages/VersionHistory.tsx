@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.027",
+    date: "2026-03-09",
+    changes: [
+      { type: 'fix', description: "Charts: Album tracks no longer appear on singles/default charts — only standalone singles are shown" },
+    ],
+  },
+  {
     version: "1.1.026",
     date: "2026-03-09",
     changes: [
