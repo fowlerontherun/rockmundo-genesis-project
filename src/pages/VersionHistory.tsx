@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.028",
+    date: "2026-03-09",
+    changes: [
+      { type: 'fix', description: "Charts: Sales charts now show correct all-time cumulative sales in the Total column instead of repeating weekly figures" },
+      { type: 'fix', description: "Charts: All-time cumulative plays_count preserved through aggregation instead of being overwritten by weekly totals" },
+    ],
+  },
+  {
     version: "1.1.027",
     date: "2026-03-09",
     changes: [

@@ -69,12 +69,12 @@ export const getMetricLabels = (chartType: ChartType, timeRange: ChartTimeRange 
     case "radio_airplay":
       return { weekly: "Listeners", total: `${timeLabel} Plays` };
     case "digital_sales":
-      return { weekly: timeLabel, total: `${timeLabel} Sales` };
+      return { weekly: timeLabel, total: "All-Time Sales" };
     case "cd_sales":
     case "vinyl_sales":
     case "cassette_sales":
     case "record_sales":
-      return { weekly: timeLabel, total: `${timeLabel} Sales` };
+      return { weekly: timeLabel, total: "All-Time Sales" };
     default:
       return { weekly: timeLabel, total: timeLabel };
   }
@@ -476,7 +476,7 @@ export const useCountryCharts = (
           artist: artistName,
           genre: entry.genre || entry.songs?.genre || "Unknown",
           country: entry.country || "Global",
-          plays_count: agg.totalPlays,
+          plays_count: agg.entry.plays_count || agg.totalPlays,
           weekly_plays: agg.totalWeeklyPlays,
           combined_score: agg.totalCombinedScore,
           total_sales: agg.totalPlays,
