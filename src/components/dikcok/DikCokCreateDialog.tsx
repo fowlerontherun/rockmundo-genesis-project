@@ -5,24 +5,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, Sparkles, Image } from "lucide-react";
+import { Video, Sparkles, Image, Disc } from "lucide-react";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
 import { Badge } from "@/components/ui/badge";
+import { ReleaseSelector } from "@/components/releases/ReleaseSelector";
 
 interface DikCokCreateDialogProps {
   bandId: string;
   userId: string;
   bandName: string;
   bandGenre?: string;
+  preselectedReleaseId?: string;
 }
 
-export const DikCokCreateDialog = ({ bandId, userId, bandName, bandGenre }: DikCokCreateDialogProps) => {
+export const DikCokCreateDialog = ({ bandId, userId, bandName, bandGenre, preselectedReleaseId }: DikCokCreateDialogProps) => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [videoTypeId, setVideoTypeId] = useState("");
   const [trendingTag, setTrendingTag] = useState("");
+  const [releaseId, setReleaseId] = useState(preselectedReleaseId || "");
 
   const { videoTypes } = useDikCokVideoTypes();
   const { createVideo, isCreating } = useDikCokVideos(bandId);
