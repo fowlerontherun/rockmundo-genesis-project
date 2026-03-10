@@ -6060,6 +6060,7 @@ export type Database = {
           fan_gain: number | null
           hype_gained: number | null
           id: string
+          release_id: string | null
           thumbnail_url: string | null
           title: string
           track_id: string | null
@@ -6078,6 +6079,7 @@ export type Database = {
           fan_gain?: number | null
           hype_gained?: number | null
           id?: string
+          release_id?: string | null
           thumbnail_url?: string | null
           title: string
           track_id?: string | null
@@ -6096,6 +6098,7 @@ export type Database = {
           fan_gain?: number | null
           hype_gained?: number | null
           id?: string
+          release_id?: string | null
           thumbnail_url?: string | null
           title?: string
           track_id?: string | null
@@ -6110,6 +6113,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_videos_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "dikcok_videos_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
           {
@@ -12566,6 +12583,7 @@ export type Database = {
           fan_boost: number | null
           feature_type: string | null
           id: string
+          linked_release_id: string | null
           magazine_id: string
           proposed_date: string | null
           rejection_reason: string | null
@@ -12583,6 +12601,7 @@ export type Database = {
           fan_boost?: number | null
           feature_type?: string | null
           id?: string
+          linked_release_id?: string | null
           magazine_id: string
           proposed_date?: string | null
           rejection_reason?: string | null
@@ -12600,6 +12619,7 @@ export type Database = {
           fan_boost?: number | null
           feature_type?: string | null
           id?: string
+          linked_release_id?: string | null
           magazine_id?: string
           proposed_date?: string | null
           rejection_reason?: string | null
@@ -12614,6 +12634,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "magazine_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "magazine_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
           {
@@ -14645,6 +14679,7 @@ export type Database = {
           fan_boost: number | null
           id: string
           interview_type: string | null
+          linked_release_id: string | null
           newspaper_id: string
           proposed_date: string | null
           rejection_reason: string | null
@@ -14662,6 +14697,7 @@ export type Database = {
           fan_boost?: number | null
           id?: string
           interview_type?: string | null
+          linked_release_id?: string | null
           newspaper_id: string
           proposed_date?: string | null
           rejection_reason?: string | null
@@ -14679,6 +14715,7 @@ export type Database = {
           fan_boost?: number | null
           id?: string
           interview_type?: string | null
+          linked_release_id?: string | null
           newspaper_id?: string
           proposed_date?: string | null
           rejection_reason?: string | null
@@ -14693,6 +14730,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newspaper_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "newspaper_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
           {
@@ -19288,6 +19339,7 @@ export type Database = {
           fame_boost: number | null
           fan_boost: number | null
           id: string
+          linked_release_id: string | null
           podcast_id: string
           proposed_date: string | null
           rejection_reason: string | null
@@ -19305,6 +19357,7 @@ export type Database = {
           fame_boost?: number | null
           fan_boost?: number | null
           id?: string
+          linked_release_id?: string | null
           podcast_id: string
           proposed_date?: string | null
           rejection_reason?: string | null
@@ -19322,6 +19375,7 @@ export type Database = {
           fame_boost?: number | null
           fan_boost?: number | null
           id?: string
+          linked_release_id?: string | null
           podcast_id?: string
           proposed_date?: string | null
           rejection_reason?: string | null
@@ -19336,6 +19390,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "podcast_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "podcast_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
           {
@@ -28394,6 +28462,7 @@ export type Database = {
           fame_gained: number | null
           fans_gained: number | null
           id: string
+          linked_release_id: string | null
           pitch_message: string | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -28409,6 +28478,7 @@ export type Database = {
           fame_gained?: number | null
           fans_gained?: number | null
           id?: string
+          linked_release_id?: string | null
           pitch_message?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -28424,6 +28494,7 @@ export type Database = {
           fame_gained?: number | null
           fans_gained?: number | null
           id?: string
+          linked_release_id?: string | null
           pitch_message?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -28438,6 +28509,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "website_submissions_linked_release_id_fkey"
+            columns: ["linked_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
           {
