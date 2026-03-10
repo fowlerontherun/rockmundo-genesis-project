@@ -295,6 +295,71 @@ export default function ReleaseDetail() {
         </TabsContent>
 
         <TabsContent value="promotion" className="space-y-4">
+          {/* Hype Score Banner */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3 mb-3">
+                <Flame className="h-5 w-5 text-orange-500" />
+                <h3 className="font-semibold text-lg">Release Hype</h3>
+                <Badge variant="outline" className="ml-auto text-sm">
+                  {(release as any).hype_score ?? 0} / 1000
+                </Badge>
+              </div>
+              <HypeMeter hypeScore={(release as any).hype_score ?? 0} />
+              <p className="text-xs text-muted-foreground mt-2">
+                Boost hype by posting on Twaater, creating DikCok videos, and submitting to media outlets.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Quick Promotion Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Quick Promotion Channels</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  onClick={() => navigate(`/twaater?link_type=${release.release_type === 'single' ? 'single' : 'album'}&link_id=${id}`)}
+                >
+                  <MessageSquare className="h-5 w-5 text-blue-500" />
+                  <span className="text-sm font-medium">Post on Twaater</span>
+                  <span className="text-xs text-muted-foreground">+5-15 hype per post</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  onClick={() => navigate(`/dikcok?release_id=${id}`)}
+                >
+                  <Clapperboard className="h-5 w-5 text-pink-500" />
+                  <span className="text-sm font-medium">Create DikCok Video</span>
+                  <span className="text-xs text-muted-foreground">+10-25 hype per video</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  onClick={() => navigate("/media")}
+                >
+                  <Newspaper className="h-5 w-5 text-amber-500" />
+                  <span className="text-sm font-medium">Submit to Media</span>
+                  <span className="text-xs text-muted-foreground">+8-20 hype per feature</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  onClick={() => navigate("/radio")}
+                >
+                  <Radio className="h-5 w-5 text-green-500" />
+                  <span className="text-sm font-medium">Radio Push</span>
+                  <span className="text-xs text-muted-foreground">Boost radio plays</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Existing Promo Tour + Campaigns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {userData && id && (
               <PromoTourCard

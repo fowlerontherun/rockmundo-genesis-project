@@ -97,6 +97,26 @@ export const useDikCokVideos = (bandId?: string) => {
 
       if (error) throw error;
 
+      // If linked to a release, boost its hype_score
+      if (insertData.release_id) {
+        try {
+          const { data: rel } = await supabase
+            .from("releases")
+            .select("hype_score")
+            .eq("id", insertData.release_id)
+            .single();
+          if (rel) {
+            const hypeBoost = Math.floor(10 + Math.random() * 16); // +10 to +25
+            await supabase
+              .from("releases")
+              .update({ hype_score: ((rel as any).hype_score || 0) + hypeBoost } as any)
+              .eq("id", insertData.release_id);
+          }
+        } catch (e) {
+          console.warn("DikCok release hype boost failed:", e);
+        }
+      }
+
       // Fire-and-forget thumbnail generation
       supabase.functions.invoke("generate-dikcok-thumbnail", {
         body: {

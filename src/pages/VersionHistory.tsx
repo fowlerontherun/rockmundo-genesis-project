@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.029",
+    date: "2026-03-10",
+    changes: [
+      { type: 'feature', description: "Promotion Hub: Release Detail now shows hype meter and quick-action buttons for Twaater, DikCok, Media, and Radio promotion" },
+      { type: 'feature', description: "Twaater: Release-linked twaats now boost the release's hype_score (+5-15 scaled by engagement)" },
+      { type: 'feature', description: "DikCok: Videos can now be linked to a release via selector — creates +10-25 hype boost on creation" },
+      { type: 'feature', description: "PR/Media: All media submission types (newspaper, magazine, podcast, website) now support linking to a release for +8-20 hype boost" },
+    ],
+  },
+  {
     version: "1.1.028",
     date: "2026-03-09",
     changes: [

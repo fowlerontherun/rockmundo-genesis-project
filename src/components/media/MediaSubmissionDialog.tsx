@@ -226,6 +226,21 @@ export function MediaSubmissionDialog({
             </div>
           </div>
 
+          {/* Link to Release */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-1">
+              <Disc className="h-3 w-3" />
+              Promote a Release (optional)
+            </label>
+            <p className="text-xs text-muted-foreground">Linking a release boosts its hype score!</p>
+            <ReleaseSelector
+              bandId={bandId}
+              value={linkedReleaseId}
+              onValueChange={setLinkedReleaseId}
+              placeholder="Select a release to promote..."
+            />
+          </div>
+
           {/* Type Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Select Type</label>

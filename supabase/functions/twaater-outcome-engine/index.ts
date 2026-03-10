@@ -204,6 +204,35 @@ serve(async (req) => {
       console.error('[twaater-outcome-engine] Sentiment update error:', sentErr);
     }
 
+    // === RELEASE HYPE BOOST (v1.1.029) ===
+    // When a twaat is linked to a release (album/single), boost that release's hype_score
+    try {
+      if (twaat.linked_type && ['album', 'single'].includes(twaat.linked_type) && twaat.linked_id) {
+        const isViralOutcome = selectedOutcome.code?.includes('viral') || (effects.follower_pct ?? 0) >= 5;
+        const baseHypeBoost = isViralOutcome ? 12 : 5;
+        const engagementScale = Math.min(1 + (finalMetrics.likes + finalMetrics.retwaats * 2) / 50, 3);
+        const hypeBoost = Math.floor(baseHypeBoost * engagementScale);
+
+        const { data: release } = await supabase
+          .from('releases')
+          .select('hype_score')
+          .eq('id', twaat.linked_id)
+          .single();
+
+        if (release) {
+          const currentHype = (release as any).hype_score ?? 0;
+          await supabase
+            .from('releases')
+            .update({ hype_score: currentHype + hypeBoost } as any)
+            .eq('id', twaat.linked_id);
+
+          console.log(`[twaater-outcome-engine] Release hype boosted: +${hypeBoost} for release ${twaat.linked_id}`);
+        }
+      }
+    } catch (hypeErr) {
+      console.error('[twaater-outcome-engine] Release hype boost error:', hypeErr);
+    }
+
     console.log(`Outcome applied: ${selectedOutcome.code} for twaat ${twaat_id}`);
 
     return new Response(

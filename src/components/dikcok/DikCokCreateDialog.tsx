@@ -137,6 +137,20 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName, bandGenre, presel
             />
           </div>
 
+          <div>
+            <Label className="flex items-center gap-1">
+              <Disc className="h-3 w-3" />
+              Link to Release (optional)
+            </Label>
+            <p className="text-xs text-muted-foreground mb-1">Linking boosts release hype!</p>
+            <ReleaseSelector
+              bandId={bandId}
+              value={releaseId}
+              onValueChange={setReleaseId}
+              placeholder="Select a release to promote..."
+            />
+          </div>
+
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <Image className="h-3 w-3" />
             An AI-generated thumbnail will be created automatically based on your video title and genre.
