@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.030",
+    date: "2026-03-10",
+    changes: [
+      { type: 'fix', description: "Achievements: Fixed Dashboard achievements tab not showing unlocked achievements (was querying wrong column player_id instead of user_id)" },
+      { type: 'feature', description: "Achievements: Added 26 new achievements across social (Twaater, DikCok, PR), performance (gigs, touring, festivals, awards), creative (releases, hype, sales), and financial (earnings, contracts) categories" },
+      { type: 'improvement', description: "Achievements: Expanded requirement descriptions to display all new achievement types clearly" },
+    ],
+  },
+  {
     version: "1.1.029",
     date: "2026-03-10",
     changes: [
