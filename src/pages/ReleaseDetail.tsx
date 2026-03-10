@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromotionalCampaignCard } from "@/components/releases/PromotionalCampaignCard";
 import { PromoTourCard } from "@/components/releases/PromoTourCard";
 import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
+import { HypeMeter } from "@/components/releases/HypeMeter";
 
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
