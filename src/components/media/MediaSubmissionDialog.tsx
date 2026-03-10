@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Newspaper, BookOpen, Podcast, Globe, Star, Users, DollarSign, TrendingUp, Send, Loader2 } from "lucide-react";
+import { Newspaper, BookOpen, Podcast, Globe, Star, Users, DollarSign, TrendingUp, Send, Loader2, Disc } from "lucide-react";
+import { ReleaseSelector } from "@/components/releases/ReleaseSelector";
 
 export type MediaType = "newspaper" | "magazine" | "podcast" | "website";
 
