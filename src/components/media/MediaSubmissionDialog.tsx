@@ -135,7 +135,26 @@ export function MediaSubmissionDialog({
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // If linked to a release, boost its hype_score
+      if (linkedReleaseId) {
+        try {
+          const { data: rel } = await supabase
+            .from("releases")
+            .select("hype_score")
+            .eq("id", linkedReleaseId)
+            .single();
+          if (rel) {
+            const hypeBoost = Math.floor(8 + Math.random() * 13); // +8 to +20
+            await supabase
+              .from("releases")
+              .update({ hype_score: ((rel as any).hype_score || 0) + hypeBoost } as any)
+              .eq("id", linkedReleaseId);
+          }
+        } catch (e) {
+          console.warn("Media submission release hype boost failed:", e);
+        }
+      }
       toast.success("Submission sent!", {
         description: `Your request has been sent to ${mediaItem.name}`,
       });
