@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Newspaper, BookOpen, Podcast, Globe, Star, Users, DollarSign, TrendingUp, Send, Loader2 } from "lucide-react";
+import { Newspaper, BookOpen, Podcast, Globe, Star, Users, DollarSign, TrendingUp, Send, Loader2, Disc } from "lucide-react";
+import { ReleaseSelector } from "@/components/releases/ReleaseSelector";
 
 export type MediaType = "newspaper" | "magazine" | "podcast" | "website";
 
@@ -107,6 +108,7 @@ export function MediaSubmissionDialog({
   const config = mediaConfig[mediaType];
   const Icon = config.icon;
   const [selectedType, setSelectedType] = useState(config.types[0].value);
+  const [linkedReleaseId, setLinkedReleaseId] = useState("");
 
   const isEligible = !mediaItem.min_fame_required || bandFame >= mediaItem.min_fame_required;
 
@@ -119,6 +121,7 @@ export function MediaSubmissionDialog({
         [config.idField]: mediaItem.id,
         [config.typeField]: selectedType,
         status: "pending",
+        ...(linkedReleaseId ? { linked_release_id: linkedReleaseId } : {}),
       };
 
       const { error } = await supabase
@@ -132,7 +135,26 @@ export function MediaSubmissionDialog({
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // If linked to a release, boost its hype_score
+      if (linkedReleaseId) {
+        try {
+          const { data: rel } = await supabase
+            .from("releases")
+            .select("hype_score")
+            .eq("id", linkedReleaseId)
+            .single();
+          if (rel) {
+            const hypeBoost = Math.floor(8 + Math.random() * 13); // +8 to +20
+            await supabase
+              .from("releases")
+              .update({ hype_score: ((rel as any).hype_score || 0) + hypeBoost } as any)
+              .eq("id", linkedReleaseId);
+          }
+        } catch (e) {
+          console.warn("Media submission release hype boost failed:", e);
+        }
+      }
       toast.success("Submission sent!", {
         description: `Your request has been sent to ${mediaItem.name}`,
       });
@@ -202,6 +224,21 @@ export function MediaSubmissionDialog({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Link to Release */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-1">
+              <Disc className="h-3 w-3" />
+              Promote a Release (optional)
+            </label>
+            <p className="text-xs text-muted-foreground">Linking a release boosts its hype score!</p>
+            <ReleaseSelector
+              bandId={bandId}
+              value={linkedReleaseId}
+              onValueChange={setLinkedReleaseId}
+              placeholder="Select a release to promote..."
+            />
           </div>
 
           {/* Type Selection */}
