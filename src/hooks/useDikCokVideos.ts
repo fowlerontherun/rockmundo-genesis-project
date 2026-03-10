@@ -77,6 +77,7 @@ export const useDikCokVideos = (bandId?: string) => {
       creator_user_id: string;
       video_type_id: string;
       track_id?: string;
+      release_id?: string;
       title: string;
       description?: string;
       trending_tag?: string;
