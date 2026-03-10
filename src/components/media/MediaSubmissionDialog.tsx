@@ -108,6 +108,7 @@ export function MediaSubmissionDialog({
   const config = mediaConfig[mediaType];
   const Icon = config.icon;
   const [selectedType, setSelectedType] = useState(config.types[0].value);
+  const [linkedReleaseId, setLinkedReleaseId] = useState("");
 
   const isEligible = !mediaItem.min_fame_required || bandFame >= mediaItem.min_fame_required;
 
@@ -120,6 +121,7 @@ export function MediaSubmissionDialog({
         [config.idField]: mediaItem.id,
         [config.typeField]: selectedType,
         status: "pending",
+        ...(linkedReleaseId ? { linked_release_id: linkedReleaseId } : {}),
       };
 
       const { error } = await supabase
