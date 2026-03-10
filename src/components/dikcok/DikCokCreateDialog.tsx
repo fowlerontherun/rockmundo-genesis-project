@@ -42,6 +42,7 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName, bandGenre, presel
       title,
       description,
       trending_tag: trendingTag || undefined,
+      release_id: releaseId || undefined,
       bandName,
       bandGenre,
       videoTypeName: selectedType?.name,
@@ -52,6 +53,7 @@ export const DikCokCreateDialog = ({ bandId, userId, bandName, bandGenre, presel
     setDescription("");
     setVideoTypeId("");
     setTrendingTag("");
+    setReleaseId("");
   };
 
   return (
