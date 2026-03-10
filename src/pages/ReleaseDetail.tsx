@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Music2, Radio, Video, TrendingUp, DollarSign, Megaphone } from "lucide-react";
+import { ArrowLeft, Music2, Radio, Video, TrendingUp, DollarSign, Megaphone, MessageSquare, Clapperboard, Newspaper, Flame } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromotionalCampaignCard } from "@/components/releases/PromotionalCampaignCard";
 import { PromoTourCard } from "@/components/releases/PromoTourCard";
