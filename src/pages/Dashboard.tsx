@@ -29,7 +29,8 @@ import { VipStatusCard } from "@/components/VipStatusCard";
 import { BehaviorSettingsTab } from "@/components/dashboard/BehaviorSettingsTab";
 import { CharacterIdentityCard } from "@/components/character";
 import { ReputationCard } from "@/components/reputation";
-
+import { usePlayerSurvey } from "@/hooks/usePlayerSurvey";
+import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
 
 // Advisor imports
 import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
@@ -68,6 +69,8 @@ const Dashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
+  const [surveyDismissed, setSurveyDismissed] = useState(false);
+  const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
   // Advisor state
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
@@ -253,6 +256,13 @@ const Dashboard = () => {
     });
   };
   return <PageLayout>
+      <PlayerSurveyModal
+        open={shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0}
+        onClose={() => setSurveyDismissed(true)}
+        questions={surveyQuestions}
+        onSubmit={submitSurvey}
+        isSubmitting={isSurveySubmitting}
+      />
       <PageHeader
         title={t('dashboard.title')}
         subtitle={`${t('dashboard.welcome')}, ${(profile as any)?.display_name || (profile as any)?.username || "Player"}`}

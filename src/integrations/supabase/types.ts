@@ -18622,6 +18622,139 @@ export type Database = {
         }
         Relationships: []
       }
+      player_survey_completions: {
+        Row: {
+          attribute_points_awarded: number
+          completed_at: string
+          id: string
+          profile_id: string | null
+          survey_round: string
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          attribute_points_awarded?: number
+          completed_at?: string
+          id?: string
+          profile_id?: string | null
+          survey_round: string
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          attribute_points_awarded?: number
+          completed_at?: string
+          id?: string
+          profile_id?: string | null
+          survey_round?: string
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_survey_completions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_survey_completions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_survey_questions: {
+        Row: {
+          category: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          options: Json | null
+          question_text: string
+          question_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          options?: Json | null
+          question_text: string
+          question_type: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          options?: Json | null
+          question_text?: string
+          question_type?: string
+        }
+        Relationships: []
+      }
+      player_survey_responses: {
+        Row: {
+          answer_numeric: number | null
+          answer_value: string | null
+          created_at: string
+          id: string
+          profile_id: string | null
+          question_id: string
+          survey_round: string
+          user_id: string
+        }
+        Insert: {
+          answer_numeric?: number | null
+          answer_value?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          question_id: string
+          survey_round: string
+          user_id: string
+        }
+        Update: {
+          answer_numeric?: number | null
+          answer_value?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          question_id?: string
+          survey_round?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_survey_responses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_survey_responses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_survey_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "player_survey_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_tattoos: {
         Row: {
           applied_at: string

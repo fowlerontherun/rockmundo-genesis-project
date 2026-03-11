@@ -145,6 +145,7 @@ const SecurityFirmsAdmin = lazyWithRetry(() => import("./pages/admin/SecurityFir
 const MerchFactoriesAdmin = lazyWithRetry(() => import("./pages/admin/MerchFactoriesAdmin"));
 const LogisticsCompaniesAdmin = lazyWithRetry(() => import("./pages/admin/LogisticsCompaniesAdmin"));
 const AdminReleasePump = lazyWithRetry(() => import("./pages/admin/ReleasePump"));
+const PlayerSurveyAdmin = lazyWithRetry(() => import("./pages/admin/PlayerSurveyAdmin"));
 
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
@@ -481,6 +482,7 @@ function App() {
                     <Route path="admin/night-clubs" element={<AdminNightClubs />} />
                     <Route path="admin/game-calendar" element={<AdminGameCalendar />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
+                    <Route path="admin/player-survey" element={<PlayerSurveyAdmin />} />
                     <Route path="admin/jobs" element={<AdminJobs />} />
                     <Route path="admin/venues" element={<AdminVenues />} />
                     <Route path="admin/rehearsal-rooms" element={<AdminRehearsalRooms />} />
