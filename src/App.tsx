@@ -145,6 +145,7 @@ const SecurityFirmsAdmin = lazyWithRetry(() => import("./pages/admin/SecurityFir
 const MerchFactoriesAdmin = lazyWithRetry(() => import("./pages/admin/MerchFactoriesAdmin"));
 const LogisticsCompaniesAdmin = lazyWithRetry(() => import("./pages/admin/LogisticsCompaniesAdmin"));
 const AdminReleasePump = lazyWithRetry(() => import("./pages/admin/ReleasePump"));
+const PlayerSurveyAdmin = lazyWithRetry(() => import("./pages/admin/PlayerSurveyAdmin"));
 
 const AdminGameCalendar = lazyWithRetry(() => import("./pages/admin/GameCalendar"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
