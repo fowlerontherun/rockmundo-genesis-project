@@ -29,7 +29,8 @@ import { VipStatusCard } from "@/components/VipStatusCard";
 import { BehaviorSettingsTab } from "@/components/dashboard/BehaviorSettingsTab";
 import { CharacterIdentityCard } from "@/components/character";
 import { ReputationCard } from "@/components/reputation";
-
+import { usePlayerSurvey } from "@/hooks/usePlayerSurvey";
+import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
 
 // Advisor imports
 import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
