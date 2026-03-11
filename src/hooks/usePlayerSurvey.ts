@@ -120,28 +120,25 @@ export function usePlayerSurvey() {
         console.warn("XP award failed (may have already been awarded):", e);
       }
 
-      // Award attribute points via wallet update
-      const { error: walletError } = await supabase.rpc("increment_wallet_field" as any, {
-        p_user_id: user.id,
-        p_field: "attribute_points_balance",
-        p_amount: 25,
-      });
-      // Fallback: direct read + update
-      if (walletError) {
-        const { data: wallet } = await supabase
+      // Award attribute points via direct read + update
+      try {
+        const walletQuery = await supabase
           .from("player_xp_wallet")
           .select("attribute_points_balance, attribute_points_lifetime")
           .eq("user_id", user.id)
           .maybeSingle();
+        const wallet = walletQuery.data;
         if (wallet) {
           await supabase
             .from("player_xp_wallet")
             .update({
-              attribute_points_balance: (wallet.attribute_points_balance || 0) + 25,
-              attribute_points_lifetime: (wallet.attribute_points_lifetime || 0) + 25,
+              attribute_points_balance: ((wallet as any).attribute_points_balance || 0) + 25,
+              attribute_points_lifetime: ((wallet as any).attribute_points_lifetime || 0) + 25,
             })
             .eq("user_id", user.id);
         }
+      } catch (e) {
+        console.warn("Attribute points award failed:", e);
       }
 
       // Record completion
