@@ -493,7 +493,7 @@ Deno.serve(async (req) => {
       } catch (_e) { /* non-critical */ }
     }
 
-
+    const { data: physicalReleases, error: physicalError } = await supabase
       .from('release_formats')
       .select('id, release_id, format_type')
       .in('format_type', ['digital', 'cd', 'vinyl'])
