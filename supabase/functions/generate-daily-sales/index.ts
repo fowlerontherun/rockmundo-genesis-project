@@ -334,16 +334,18 @@ serve(async (req) => {
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
-        // Squared-log fame scaling
+        // Squared-log fame scaling (v1.1.031 — capped to prevent runaway values)
+        // Cap fame/pop multipliers to prevent extreme compounding at high fame (25M+)
         const logFame = Math.log10(Math.max(artistFame, 1));
-        const fameMultiplier = 1 + Math.pow(logFame, 2) * 0.5;
+        const fameMultiplier = 1 + Math.min(Math.pow(logFame, 2) * 0.5, 30);
         const logPop = Math.log10(Math.max(artistPopularity, 1));
-        const popularityMultiplier = 1 + Math.pow(logPop, 2) * 0.3;
+        const popularityMultiplier = 1 + Math.min(Math.pow(logPop, 2) * 0.3, 20);
         const qualityMultiplier = 0.5 + (avgQuality / 100) * 1.0;
         const totalFans = countryFansMap.size > 0 
           ? Array.from(countryFansMap.values()).reduce((sum, cf) => sum + (cf.total_fans || 0), 0)
           : 0;
-        const fansMultiplier = totalFans > 0 ? 1 + Math.sqrt(totalFans) * 0.005 : 1.0;
+        // Old: sqrt(500K)*0.005 = 3.5x. New: log10-based with cap — 1K→4x, 100K→6x, 1M→7x
+        const fansMultiplier = totalFans > 0 ? 1 + Math.min(Math.log10(totalFans) * 1.5, 10) : 1.0;
 
         // ── Label contract lookup for this release ──
         const releaseContractId = (release as any).label_contract_id;

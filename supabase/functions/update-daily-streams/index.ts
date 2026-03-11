@@ -274,9 +274,12 @@ Deno.serve(async (req) => {
         const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
         const streamRepMod = parseFloat((0.9 + repT * 0.2).toFixed(2)); // 0.9x toxic → 1.1x iconic
 
-        // Fame-scaled base streams
-        const fameScale = 1 + Math.pow(bandFame / 100, 1.4);
-        const fanBoost = 1 + (bandTotalFans / 500);
+        // Fame-scaled base streams (v1.1.031 — logarithmic scaling to prevent runaway values)
+        // Old formula used power scaling which exploded at high fame (25M fame → 36M multiplier)
+        // New: log10-based with caps — fame 100→7x, 1K→10x, 100K→16x, 1M→19x, 25M→23x
+        const fameScale = 1 + Math.min(Math.log10(Math.max(bandFame, 1)) * 3, 25);
+        // Old: linear (500K fans → 1001x). New: log10-based — 1K→7x, 100K→11x, 500K→12x
+        const fanBoost = 1 + Math.min(Math.log10(Math.max(bandTotalFans, 1)) * 2, 15);
         const combinedFameMultiplier = Math.sqrt(fameScale * fanBoost);
         
         const baseStreams = Math.floor((Math.random() * 200 + 50) * combinedFameMultiplier);
@@ -490,7 +493,7 @@ Deno.serve(async (req) => {
       } catch (_e) { /* non-critical */ }
     }
 
-
+    const { data: physicalReleases, error: physicalError } = await supabase
       .from('release_formats')
       .select('id, release_id, format_type')
       .in('format_type', ['digital', 'cd', 'vinyl'])

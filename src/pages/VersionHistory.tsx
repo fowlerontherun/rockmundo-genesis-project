@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.031",
+    date: "2026-03-11",
+    changes: [
+      { type: 'fix', description: "Streaming: Replaced explosive power/linear fame+fan scaling with logarithmic capped formulas — fame 25M no longer produces 36M multiplier (now caps at ~25x)" },
+      { type: 'fix', description: "Streaming: Fan boost changed from linear (500K fans = 1001x) to log10-based with cap (500K fans = ~12x)" },
+      { type: 'fix', description: "Sales: Capped fame multiplier at 31x and popularity at 21x to prevent runaway revenue at extreme fame levels" },
+      { type: 'fix', description: "Sales: Fan sales multiplier changed from sqrt-linear to log10-based with 11x cap" },
+    ],
+  },
+  {
     version: "1.1.030",
     date: "2026-03-10",
     changes: [
