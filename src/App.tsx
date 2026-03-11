@@ -482,6 +482,7 @@ function App() {
                     <Route path="admin/night-clubs" element={<AdminNightClubs />} />
                     <Route path="admin/game-calendar" element={<AdminGameCalendar />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
+                    <Route path="admin/player-survey" element={<PlayerSurveyAdmin />} />
                     <Route path="admin/jobs" element={<AdminJobs />} />
                     <Route path="admin/venues" element={<AdminVenues />} />
                     <Route path="admin/rehearsal-rooms" element={<AdminRehearsalRooms />} />

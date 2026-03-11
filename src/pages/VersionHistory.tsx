@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.032",
+    date: "2026-03-11",
+    changes: [
+      { type: 'feature', description: "Player Survey System: Admin-toggleable in-game survey with 32 questions across 8 categories (Gameplay, Music, Social, Economy, UI, Content, Performance, Progression)" },
+      { type: 'feature', description: "Players are presented with 10 random questions on login when survey is enabled — completing rewards 250 XP + 25 Attribute Points" },
+      { type: 'feature', description: "Admin dashboard (/admin/player-survey) with settings toggle, question list, rating bar charts, multiple choice pie charts, yes/no breakdowns, and free text response viewer" },
+      { type: 'feature', description: "Survey round system prevents duplicate completions and tracks rewards per round" },
+    ],
+  },
+  {
     version: "1.1.031",
     date: "2026-03-11",
     changes: [

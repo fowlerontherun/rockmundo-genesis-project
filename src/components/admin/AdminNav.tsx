@@ -33,6 +33,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/achievements", label: "Achievements", description: "Configure achievement system" },
       { path: "/admin/analytics", label: "Analytics", description: "View player statistics" },
       { path: "/admin/mentors", label: "Mentors", description: "Manage mentorship program" },
+      { path: "/admin/player-survey", label: "Player Survey", description: "Feedback surveys & results" },
     ],
   },
   {

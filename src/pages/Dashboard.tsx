@@ -256,6 +256,13 @@ const Dashboard = () => {
     });
   };
   return <PageLayout>
+      <PlayerSurveyModal
+        open={shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0}
+        onClose={() => setSurveyDismissed(true)}
+        questions={surveyQuestions}
+        onSubmit={submitSurvey}
+        isSubmitting={isSurveySubmitting}
+      />
       <PageHeader
         title={t('dashboard.title')}
         subtitle={`${t('dashboard.welcome')}, ${(profile as any)?.display_name || (profile as any)?.username || "Player"}`}
