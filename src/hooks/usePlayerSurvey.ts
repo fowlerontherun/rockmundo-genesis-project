@@ -122,12 +122,12 @@ export function usePlayerSurvey() {
 
       // Award attribute points via direct read + update
       try {
-        const walletQuery = await supabase
+        const walletQuery = await (supabase
           .from("player_xp_wallet")
           .select("attribute_points_balance, attribute_points_lifetime")
           .eq("user_id", user.id)
-          .maybeSingle();
-        const wallet = walletQuery.data;
+          .maybeSingle() as any);
+        const wallet = walletQuery.data as any;
         if (wallet) {
           await supabase
             .from("player_xp_wallet")
