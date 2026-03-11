@@ -126,15 +126,8 @@ export function usePlayerSurvey() {
         p_field: "attribute_points_balance",
         p_amount: 25,
       });
-      // If RPC doesn't exist, try direct update
+      // Fallback: direct read + update
       if (walletError) {
-        await supabase
-          .from("player_xp_wallet")
-          .update({
-            attribute_points_balance: supabase.rpc("" as any) // fallback below
-          })
-          .eq("user_id", user.id);
-        // Direct SQL fallback - just update with raw increment
         const { data: wallet } = await supabase
           .from("player_xp_wallet")
           .select("attribute_points_balance, attribute_points_lifetime")

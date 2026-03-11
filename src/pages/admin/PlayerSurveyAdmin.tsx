@@ -182,7 +182,7 @@ export default function PlayerSurveyAdmin() {
 
   return (
     <PageLayout>
-      <PageHeader title="Player Survey" description="Manage player feedback surveys and view results" />
+      <PageHeader title="Player Survey" subtitle="Manage player feedback surveys and view results" />
 
       <Tabs defaultValue="settings" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 h-auto">
