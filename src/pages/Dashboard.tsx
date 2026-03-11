@@ -69,6 +69,8 @@ const Dashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
+  const [surveyDismissed, setSurveyDismissed] = useState(false);
+  const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
   // Advisor state
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
