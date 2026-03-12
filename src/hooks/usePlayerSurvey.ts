@@ -59,8 +59,10 @@ export function usePlayerSurvey() {
     },
   });
 
-  // Should show survey?
+  // Should show survey? Only after both queries have resolved
   const shouldShowSurvey = !!(
+    configLoaded &&
+    completionChecked &&
     surveyConfig?.enabled &&
     user &&
     hasCompleted === false
