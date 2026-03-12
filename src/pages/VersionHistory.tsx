@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.034",
+    date: "2026-03-12",
+    changes: [
+      { type: 'fix', description: "Companies: Fixed hiring staff, buying equipment, and upgrading subsidiary businesses (rehearsal studios, venues, recording studios, etc.) — company ID lookup now uses dual-match pattern" },
+      { type: 'fix', description: "Companies: Fixed rehearsal studio management page passing URL company_id instead of actual room ID to staff/equipment/upgrade managers" },
+      { type: 'improvement', description: "Staff salary is now auto-calculated based on skill level and role — higher skill = higher pay, no manual salary slider needed" },
+    ],
+  },
+  {
     version: "1.1.033",
     date: "2026-03-12",
     changes: [

@@ -142,15 +142,9 @@ export function RecordingStudioStaffManager({ studioId }: RecordingStudioStaffMa
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Weekly Salary: ${newStaff.salary}</Label>
-                  <Slider
-                    value={[newStaff.salary]}
-                    onValueChange={([v]) => setNewStaff({ ...newStaff, salary: v })}
-                    min={300}
-                    max={3000}
-                    step={100}
-                  />
+                <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Weekly Salary (auto):</span>
+                  <span className="font-bold">${autoSalary}/week</span>
                 </div>
 
                 <Button 
@@ -159,7 +153,7 @@ export function RecordingStudioStaffManager({ studioId }: RecordingStudioStaffMa
                   disabled={!newStaff.name || hireStaff.isPending}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Hire for ${newStaff.salary}/week
+                  Hire for ${autoSalary}/week
                 </Button>
               </div>
             </DialogContent>
