@@ -24,16 +24,27 @@ export function RecordingStudioStaffManager({ studioId }: RecordingStudioStaffMa
     role: 'assistant_engineer' as const,
     skill_level: 50,
     specialty: 'all_genres' as string | null,
-    salary: 800,
   });
+
+  // Auto-calculate salary based on skill level and role
+  const getAutoSalary = (role: string, skillLevel: number) => {
+    const baseByRole: Record<string, number> = {
+      chief_engineer: 1200, assistant_engineer: 800, producer: 1000, studio_manager: 900, maintenance_tech: 600, runner: 400,
+    };
+    const base = baseByRole[role] || 700;
+    return Math.round(base * (0.5 + (skillLevel / 100) * 1.5));
+  };
+
+  const autoSalary = getAutoSalary(newStaff.role, newStaff.skill_level);
 
   const handleHire = async () => {
     await hireStaff.mutateAsync({
       studio_id: studioId,
       ...newStaff,
+      salary: autoSalary,
     });
     setIsDialogOpen(false);
-    setNewStaff({ name: '', role: 'assistant_engineer', skill_level: 50, specialty: 'all_genres', salary: 800 });
+    setNewStaff({ name: '', role: 'assistant_engineer', skill_level: 50, specialty: 'all_genres' });
   };
 
   const getRoleIcon = (role: string) => {
