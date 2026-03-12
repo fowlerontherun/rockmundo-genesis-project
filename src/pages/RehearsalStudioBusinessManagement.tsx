@@ -116,15 +116,15 @@ export default function RehearsalStudioBusinessManagement() {
           </TabsList>
           
           <TabsContent value="staff">
-            {studioId && <RehearsalStudioStaffManager roomId={studioId} />}
+            {studio?.id && <RehearsalStudioStaffManager roomId={studio.id} />}
           </TabsContent>
           
           <TabsContent value="equipment">
-            {studioId && <RehearsalStudioEquipmentManager roomId={studioId} />}
+            {studio?.id && <RehearsalStudioEquipmentManager roomId={studio.id} />}
           </TabsContent>
           
           <TabsContent value="upgrades">
-            {studioId && <RehearsalStudioUpgradesManager roomId={studioId} />}
+            {studio?.id && <RehearsalStudioUpgradesManager roomId={studio.id} />}
           </TabsContent>
           
           <TabsContent value="finances">

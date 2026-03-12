@@ -56,8 +56,9 @@ export async function getCompanyIdFromSecurityFirm(firmId: string): Promise<stri
   const { data, error } = await supabase
     .from("security_firms")
     .select("company_id")
-    .eq("id", firmId)
-    .single();
+    .or(`id.eq.${firmId},company_id.eq.${firmId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) throw new Error("Security firm not found");
   return data.company_id;
 }
@@ -67,8 +68,9 @@ export async function getCompanyIdFromMerchFactory(factoryId: string): Promise<s
   const { data, error } = await supabase
     .from("merch_factories")
     .select("company_id")
-    .eq("id", factoryId)
-    .single();
+    .or(`id.eq.${factoryId},company_id.eq.${factoryId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) throw new Error("Merch factory not found");
   return data.company_id;
 }
@@ -78,30 +80,35 @@ export async function getCompanyIdFromLogistics(logisticsId: string): Promise<st
   const { data, error } = await supabase
     .from("logistics_companies")
     .select("company_id")
-    .eq("id", logisticsId)
-    .single();
+    .or(`id.eq.${logisticsId},company_id.eq.${logisticsId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) throw new Error("Logistics company not found");
   return data.company_id;
 }
 
 /** Look up company_id from a venues row */
 export async function getCompanyIdFromVenue(venueId: string): Promise<string> {
+  // Try by id first, then by company_id (dual lookup)
   const { data, error } = await supabase
     .from("venues")
     .select("company_id")
-    .eq("id", venueId)
-    .single();
+    .or(`id.eq.${venueId},company_id.eq.${venueId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Venue company not found");
   return data.company_id;
 }
 
 /** Look up company_id from a rehearsal_rooms row */
 export async function getCompanyIdFromRehearsalRoom(roomId: string): Promise<string> {
+  // Try by id first, then by company_id (dual lookup)
   const { data, error } = await supabase
     .from("rehearsal_rooms")
     .select("company_id")
-    .eq("id", roomId)
-    .single();
+    .or(`id.eq.${roomId},company_id.eq.${roomId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Rehearsal room company not found");
   return data.company_id;
 }
@@ -111,8 +118,9 @@ export async function getCompanyIdFromRecordingStudio(studioId: string): Promise
   const { data, error } = await supabase
     .from("city_studios")
     .select("company_id")
-    .eq("id", studioId)
-    .single();
+    .or(`id.eq.${studioId},company_id.eq.${studioId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Recording studio company not found");
   return data.company_id;
 }
@@ -122,8 +130,9 @@ export async function getCompanyIdFromLabel(labelId: string): Promise<string> {
   const { data, error } = await supabase
     .from("labels")
     .select("company_id")
-    .eq("id", labelId)
-    .single();
+    .or(`id.eq.${labelId},company_id.eq.${labelId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Label company not found");
   return data.company_id;
 }
