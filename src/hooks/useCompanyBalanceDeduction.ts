@@ -56,8 +56,9 @@ export async function getCompanyIdFromSecurityFirm(firmId: string): Promise<stri
   const { data, error } = await supabase
     .from("security_firms")
     .select("company_id")
-    .eq("id", firmId)
-    .single();
+    .or(`id.eq.${firmId},company_id.eq.${firmId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) throw new Error("Security firm not found");
   return data.company_id;
 }
