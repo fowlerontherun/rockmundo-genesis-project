@@ -99,11 +99,13 @@ export async function getCompanyIdFromVenue(venueId: string): Promise<string> {
 
 /** Look up company_id from a rehearsal_rooms row */
 export async function getCompanyIdFromRehearsalRoom(roomId: string): Promise<string> {
+  // Try by id first, then by company_id (dual lookup)
   const { data, error } = await supabase
     .from("rehearsal_rooms")
     .select("company_id")
-    .eq("id", roomId)
-    .single();
+    .or(`id.eq.${roomId},company_id.eq.${roomId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Rehearsal room company not found");
   return data.company_id;
 }
