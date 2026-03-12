@@ -80,8 +80,9 @@ export async function getCompanyIdFromLogistics(logisticsId: string): Promise<st
   const { data, error } = await supabase
     .from("logistics_companies")
     .select("company_id")
-    .eq("id", logisticsId)
-    .single();
+    .or(`id.eq.${logisticsId},company_id.eq.${logisticsId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) throw new Error("Logistics company not found");
   return data.company_id;
 }
