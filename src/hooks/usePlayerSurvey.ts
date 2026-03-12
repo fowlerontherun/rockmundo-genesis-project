@@ -26,8 +26,9 @@ export function usePlayerSurvey() {
   const queryClient = useQueryClient();
 
   // Fetch survey config
-  const { data: surveyConfig } = useQuery<SurveyConfig | null>({
+  const { data: surveyConfig, isSuccess: configLoaded } = useQuery<SurveyConfig | null>({
     queryKey: ["survey-config"],
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("game_config")
