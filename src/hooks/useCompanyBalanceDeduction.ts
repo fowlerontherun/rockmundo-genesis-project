@@ -86,11 +86,13 @@ export async function getCompanyIdFromLogistics(logisticsId: string): Promise<st
 
 /** Look up company_id from a venues row */
 export async function getCompanyIdFromVenue(venueId: string): Promise<string> {
+  // Try by id first, then by company_id (dual lookup)
   const { data, error } = await supabase
     .from("venues")
     .select("company_id")
-    .eq("id", venueId)
-    .single();
+    .or(`id.eq.${venueId},company_id.eq.${venueId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Venue company not found");
   return data.company_id;
 }
