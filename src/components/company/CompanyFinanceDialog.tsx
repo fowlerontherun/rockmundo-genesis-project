@@ -47,6 +47,9 @@ const MINIMUM_BALANCE = 10_000;
 export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyName }: CompanyFinanceDialogProps) {
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [targetCompanyId, setTargetCompanyId] = useState("");
+  const { user } = useAuth();
 
   const { data: companyData, isLoading: loadingCompany } = useCompanyBalance(companyId);
   const { data: profileData } = useUserCashBalance();
