@@ -57,6 +57,26 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
   
   const depositMutation = useDepositToCompany();
   const withdrawMutation = useWithdrawFromCompany();
+  const transferMutation = useTransferBetweenCompanies();
+
+  // Fetch all companies owned by the user (for transfer tab)
+  const { data: ownedCompanies = [] } = useQuery({
+    queryKey: ["owned-companies-for-transfer", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, balance, company_type")
+        .eq("owner_id", user.id)
+        .eq("status", "active")
+        .neq("id", companyId);
+      return data || [];
+    },
+    enabled: !!user?.id && open,
+  });
+
+  const selectedTarget = ownedCompanies.find(c => c.id === targetCompanyId);
+  const maxTransfer = Math.max(0, balance - 10_000);
 
   const balance = Number(companyData?.balance ?? 0);
   const personalBalance = Number(profileData?.cash ?? 0);
