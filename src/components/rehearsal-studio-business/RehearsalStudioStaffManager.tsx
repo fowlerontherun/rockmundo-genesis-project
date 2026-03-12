@@ -23,16 +23,27 @@ export function RehearsalStudioStaffManager({ roomId }: RehearsalStudioStaffMana
     name: '',
     role: 'technician' as const,
     skill_level: 50,
-    salary: 500,
   });
+
+  // Auto-calculate salary based on skill level and role
+  const getAutoSalary = (role: string, skillLevel: number) => {
+    const baseByRole: Record<string, number> = {
+      manager: 800, technician: 600, receptionist: 400, security: 500, maintenance: 450,
+    };
+    const base = baseByRole[role] || 500;
+    return Math.round(base * (0.5 + (skillLevel / 100) * 1.5));
+  };
+
+  const autoSalary = getAutoSalary(newStaff.role, newStaff.skill_level);
 
   const handleHire = async () => {
     await hireStaff.mutateAsync({
       room_id: roomId,
       ...newStaff,
+      salary: autoSalary,
     });
     setIsDialogOpen(false);
-    setNewStaff({ name: '', role: 'technician', skill_level: 50, salary: 500 });
+    setNewStaff({ name: '', role: 'technician', skill_level: 50 });
   };
 
   const getRoleIcon = (role: string) => {
