@@ -75,11 +75,10 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
     enabled: !!user?.id && open,
   });
 
-  const selectedTarget = ownedCompanies.find(c => c.id === targetCompanyId);
-  const maxTransfer = Math.max(0, balance - 10_000);
-
   const balance = Number(companyData?.balance ?? 0);
   const personalBalance = Number(profileData?.cash ?? 0);
+  const selectedTarget = ownedCompanies.find(c => c.id === targetCompanyId);
+  const maxTransfer = Math.max(0, balance - 10_000);
   const isNegative = balance < 0;
   const isBankrupt = companyData?.is_bankrupt ?? false;
   const weeklyCosts = Number(companyData?.weekly_operating_costs ?? 0);
