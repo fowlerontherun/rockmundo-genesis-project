@@ -68,8 +68,9 @@ export async function getCompanyIdFromMerchFactory(factoryId: string): Promise<s
   const { data, error } = await supabase
     .from("merch_factories")
     .select("company_id")
-    .eq("id", factoryId)
-    .single();
+    .or(`id.eq.${factoryId},company_id.eq.${factoryId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) throw new Error("Merch factory not found");
   return data.company_id;
 }
