@@ -14,6 +14,7 @@ import {
   TrendingDown, 
   ArrowUpCircle, 
   ArrowDownCircle, 
+  ArrowLeftRight,
   AlertTriangle,
   Clock,
   CheckCircle,
@@ -27,7 +28,12 @@ import {
   useUserCashBalance,
   useDepositToCompany,
   useWithdrawFromCompany,
+  useTransferBetweenCompanies,
 } from "@/hooks/useCompanyFinance";
+import { useAuth } from "@/hooks/use-auth-context";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface CompanyFinanceDialogProps {
   open: boolean;
@@ -41,6 +47,9 @@ const MINIMUM_BALANCE = 10_000;
 export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyName }: CompanyFinanceDialogProps) {
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [targetCompanyId, setTargetCompanyId] = useState("");
+  const { user } = useAuth();
 
   const { data: companyData, isLoading: loadingCompany } = useCompanyBalance(companyId);
   const { data: profileData } = useUserCashBalance();
@@ -48,9 +57,28 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
   
   const depositMutation = useDepositToCompany();
   const withdrawMutation = useWithdrawFromCompany();
+  const transferMutation = useTransferBetweenCompanies();
+
+  // Fetch all companies owned by the user (for transfer tab)
+  const { data: ownedCompanies = [] } = useQuery({
+    queryKey: ["owned-companies-for-transfer", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, balance, company_type")
+        .eq("owner_id", user.id)
+        .eq("status", "active")
+        .neq("id", companyId);
+      return data || [];
+    },
+    enabled: !!user?.id && open,
+  });
 
   const balance = Number(companyData?.balance ?? 0);
   const personalBalance = Number(profileData?.cash ?? 0);
+  const selectedTarget = ownedCompanies.find(c => c.id === targetCompanyId);
+  const maxTransfer = Math.max(0, balance - 10_000);
   const isNegative = balance < 0;
   const isBankrupt = companyData?.is_bankrupt ?? false;
   const weeklyCosts = Number(companyData?.weekly_operating_costs ?? 0);
@@ -141,10 +169,11 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
           </div>
         ) : (
           <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="deposit">Deposit</TabsTrigger>
               <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+              <TabsTrigger value="transfer">Transfer</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
@@ -368,6 +397,119 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                     )}
                     Withdraw {withdrawAmount ? formatCurrency(Number(withdrawAmount)) : ""}
                   </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="transfer" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArrowLeftRight className="h-5 w-5" />
+                    Transfer Between Companies
+                  </CardTitle>
+                  <CardDescription>
+                    Move funds between your companies
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <span className="text-sm">Available to transfer:</span>
+                    <span className="font-medium">{formatCurrency(maxTransfer)}</span>
+                  </div>
+
+                  {ownedCompanies.length === 0 ? (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        You don't have any other companies to transfer funds to.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Transfer To</Label>
+                        <Select value={targetCompanyId} onValueChange={setTargetCompanyId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select destination company..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ownedCompanies.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name} ({formatCurrency(Number(c.balance))})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="transfer">Amount</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="transfer"
+                            type="number"
+                            placeholder="Enter amount..."
+                            value={transferAmount}
+                            onChange={(e) => setTransferAmount(e.target.value)}
+                            min={0}
+                            max={maxTransfer}
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => setTransferAmount(String(maxTransfer))}
+                            disabled={maxTransfer <= 0}
+                          >
+                            Max
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        {[10000, 50000, 100000].map((amount) => (
+                          <Button
+                            key={amount}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTransferAmount(String(Math.min(amount, maxTransfer)))}
+                            disabled={maxTransfer < amount}
+                          >
+                            {formatCurrency(amount)}
+                          </Button>
+                        ))}
+                      </div>
+
+                      <Button
+                        className="w-full"
+                        onClick={async () => {
+                          const amt = Number(transferAmount);
+                          if (!amt || amt <= 0 || !targetCompanyId) return;
+                          await transferMutation.mutateAsync({
+                            fromCompanyId: companyId,
+                            toCompanyId: targetCompanyId,
+                            amount: amt,
+                            fromName: companyName,
+                            toName: selectedTarget?.name || "Company",
+                          });
+                          setTransferAmount("");
+                          setTargetCompanyId("");
+                        }}
+                        disabled={
+                          transferMutation.isPending ||
+                          !transferAmount ||
+                          Number(transferAmount) <= 0 ||
+                          Number(transferAmount) > maxTransfer ||
+                          !targetCompanyId
+                        }
+                      >
+                        {transferMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <ArrowLeftRight className="h-4 w-4 mr-2" />
+                        )}
+                        Transfer {transferAmount ? formatCurrency(Number(transferAmount)) : ""}
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

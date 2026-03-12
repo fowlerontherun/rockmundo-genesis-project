@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.033",
+    date: "2026-03-12",
+    changes: [
+      { type: 'fix', description: "Companies: Fixed database CHECK constraint for company_type — venues and recording studios can now be created without errors" },
+      { type: 'feature', description: "Companies: Added inter-company fund transfer tab in Finance dialog — move money between holding companies and subsidiaries" },
+      { type: 'fix', description: "Player Survey: Fixed survey not appearing for players when enabled — resolved query caching and loading state detection issues" },
+    ],
+  },
+  {
     version: "1.1.032",
     date: "2026-03-11",
     changes: [

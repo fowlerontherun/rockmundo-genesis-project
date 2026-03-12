@@ -26,8 +26,9 @@ export function usePlayerSurvey() {
   const queryClient = useQueryClient();
 
   // Fetch survey config
-  const { data: surveyConfig } = useQuery<SurveyConfig | null>({
+  const { data: surveyConfig, isSuccess: configLoaded } = useQuery<SurveyConfig | null>({
     queryKey: ["survey-config"],
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("game_config")
@@ -43,9 +44,10 @@ export function usePlayerSurvey() {
   });
 
   // Check if player already completed current round
-  const { data: hasCompleted } = useQuery({
+  const { data: hasCompleted, isSuccess: completionChecked } = useQuery({
     queryKey: ["survey-completion", user?.id, surveyConfig?.round],
-    enabled: !!user && !!surveyConfig?.round,
+    enabled: !!user && !!surveyConfig?.enabled && !!surveyConfig?.round,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("player_survey_completions")
@@ -57,8 +59,10 @@ export function usePlayerSurvey() {
     },
   });
 
-  // Should show survey?
+  // Should show survey? Only after both queries have resolved
   const shouldShowSurvey = !!(
+    configLoaded &&
+    completionChecked &&
     surveyConfig?.enabled &&
     user &&
     hasCompleted === false

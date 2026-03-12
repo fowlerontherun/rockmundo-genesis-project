@@ -314,6 +314,90 @@ export const useWithdrawFromCompany = () => {
   });
 };
 
+export const useTransferBetweenCompanies = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const MINIMUM_BALANCE = 10_000;
+
+  return useMutation({
+    mutationFn: async ({ fromCompanyId, toCompanyId, amount, fromName, toName }: { 
+      fromCompanyId: string; toCompanyId: string; amount: number; fromName: string; toName: string 
+    }) => {
+      // Fetch source balance
+      const { data: fromCompany, error: fromErr } = await supabase
+        .from("companies")
+        .select("balance")
+        .eq("id", fromCompanyId)
+        .single();
+      if (fromErr) throw fromErr;
+
+      const newBalance = Number(fromCompany.balance) - amount;
+      if (newBalance < MINIMUM_BALANCE) {
+        throw new Error(`Minimum balance of $${MINIMUM_BALANCE.toLocaleString()} must remain in source company`);
+      }
+
+      // Deduct from source
+      const { error: updateFromErr } = await supabase
+        .from("companies")
+        .update({ balance: newBalance })
+        .eq("id", fromCompanyId);
+      if (updateFromErr) throw updateFromErr;
+
+      // Add to destination
+      const { data: toCompany, error: toErr } = await supabase
+        .from("companies")
+        .select("balance")
+        .eq("id", toCompanyId)
+        .single();
+      if (toErr) throw toErr;
+
+      const { error: updateToErr } = await supabase
+        .from("companies")
+        .update({ balance: Number(toCompany.balance) + amount, negative_balance_since: null })
+        .eq("id", toCompanyId);
+      if (updateToErr) throw updateToErr;
+
+      // Record transactions on both sides
+      await supabase.from("company_transactions").insert([
+        {
+          company_id: fromCompanyId,
+          transaction_type: "transfer_out",
+          amount: -amount,
+          description: `Transfer to ${toName}`,
+          category: "operations",
+        },
+        {
+          company_id: toCompanyId,
+          transaction_type: "transfer_in",
+          amount: amount,
+          description: `Transfer from ${fromName}`,
+          category: "operations",
+        },
+      ]);
+
+      return { success: true };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["company-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["company-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["company-income-expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company-financial-summary"] });
+      toast({
+        title: "Transfer Successful",
+        description: `$${variables.amount.toLocaleString()} transferred from ${variables.fromName} to ${variables.toName}.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Transfer Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 export const usePayCompanyTax = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
