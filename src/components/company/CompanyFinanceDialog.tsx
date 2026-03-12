@@ -170,10 +170,11 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
           </div>
         ) : (
           <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="deposit">Deposit</TabsTrigger>
               <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+              <TabsTrigger value="transfer">Transfer</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
