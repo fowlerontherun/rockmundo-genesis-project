@@ -115,8 +115,9 @@ export async function getCompanyIdFromRecordingStudio(studioId: string): Promise
   const { data, error } = await supabase
     .from("city_studios")
     .select("company_id")
-    .eq("id", studioId)
-    .single();
+    .or(`id.eq.${studioId},company_id.eq.${studioId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Recording studio company not found");
   return data.company_id;
 }
