@@ -130,8 +130,9 @@ export async function getCompanyIdFromLabel(labelId: string): Promise<string> {
   const { data, error } = await supabase
     .from("labels")
     .select("company_id")
-    .eq("id", labelId)
-    .single();
+    .or(`id.eq.${labelId},company_id.eq.${labelId}`)
+    .limit(1)
+    .maybeSingle();
   if (error || !data?.company_id) throw new Error("Label company not found");
   return data.company_id;
 }
