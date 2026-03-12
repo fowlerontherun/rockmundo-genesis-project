@@ -14,6 +14,7 @@ import {
   TrendingDown, 
   ArrowUpCircle, 
   ArrowDownCircle, 
+  ArrowLeftRight,
   AlertTriangle,
   Clock,
   CheckCircle,
