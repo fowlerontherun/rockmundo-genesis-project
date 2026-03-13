@@ -23,6 +23,7 @@ interface CollaboratorInviteDialogProps {
 interface PotentialCollaborator {
   id: string;
   username: string;
+  display_name?: string | null;
   avatar_url: string | null;
   isBandMember: boolean;
 }
@@ -97,6 +98,7 @@ export const CollaboratorInviteDialog = ({
             profiles:user_id (
               id,
               username,
+              display_name,
               avatar_url
             )
           `)
@@ -109,6 +111,7 @@ export const CollaboratorInviteDialog = ({
             results.push({
               id: member.profiles.id,
               username: member.profiles.username || "Unknown",
+              display_name: member.profiles.display_name || null,
               avatar_url: member.profiles.avatar_url,
               isBandMember: true,
             });
@@ -132,7 +135,7 @@ export const CollaboratorInviteDialog = ({
       if (friendProfileIds.length > 0) {
         const { data: friendProfiles } = await supabase
           .from("profiles")
-          .select("id, username, avatar_url")
+          .select("id, username, display_name, avatar_url")
           .in("id", friendProfileIds);
 
         friendProfiles?.forEach((profile) => {
@@ -141,6 +144,7 @@ export const CollaboratorInviteDialog = ({
             results.push({
               id: profile.id,
               username: profile.username || "Unknown",
+              display_name: profile.display_name || null,
               avatar_url: profile.avatar_url,
               isBandMember: false,
             });
@@ -156,9 +160,10 @@ export const CollaboratorInviteDialog = ({
     }
   };
 
-  const filteredCollaborators = potentialCollaborators.filter(
-    (c) => c.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCollaborators = potentialCollaborators.filter((c) => {
+    const query = searchQuery.toLowerCase();
+    return c.username.toLowerCase().includes(query) || (c.display_name || "").toLowerCase().includes(query);
+  });
 
   // Sort: band members first
   const sortedCollaborators = [...filteredCollaborators].sort((a, b) => {
@@ -237,7 +242,10 @@ export const CollaboratorInviteDialog = ({
                   <AvatarFallback>{collaborator.username[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="font-medium">{collaborator.username}</div>
+                  <div className="font-medium">{collaborator.display_name || collaborator.username}</div>
+                  {collaborator.display_name && (
+                    <div className="text-xs text-muted-foreground">@{collaborator.username}</div>
+                  )}
                   {collaborator.isBandMember && (
                     <Badge variant="secondary" className="text-xs">
                       <Users className="h-3 w-3 mr-1" />
@@ -266,7 +274,10 @@ export const CollaboratorInviteDialog = ({
           <AvatarFallback>{selectedCollaborator?.username[0]?.toUpperCase()}</AvatarFallback>
         </Avatar>
         <div>
-          <div className="font-medium">{selectedCollaborator?.username}</div>
+          <div className="font-medium">{selectedCollaborator?.display_name || selectedCollaborator?.username}</div>
+          {selectedCollaborator?.display_name && (
+            <div className="text-xs text-muted-foreground">@{selectedCollaborator.username}</div>
+          )}
           {selectedCollaborator?.isBandMember && (
             <Badge variant="secondary" className="text-xs">Band Member</Badge>
           )}
