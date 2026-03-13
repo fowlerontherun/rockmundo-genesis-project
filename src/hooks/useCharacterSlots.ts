@@ -87,22 +87,35 @@ export function useCharacterSlots() {
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Deactivate all profiles for this user
-      await supabase
-        .from("profiles")
-        .update({ is_active: false })
-        .eq("user_id", user.id);
-
-      // Activate the selected one
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_active: true })
-        .eq("id", profileId)
-        .eq("user_id", user.id);
+      const { error } = await supabase.rpc("switch_active_character", {
+        p_profile_id: profileId,
+      });
 
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["game-data"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+
+  const createCharacter = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.rpc("create_character_profile");
+      if (error) throw error;
+
+      const createdProfileId = Array.isArray(data) && data.length > 0 ? data[0]?.id : null;
+      if (!createdProfileId) {
+        throw new Error("Failed to create character profile");
+      }
+
+      return createdProfileId as string;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -115,5 +128,6 @@ export function useCharacterSlots() {
     characters: charactersQuery.data ?? [],
     charactersLoading: charactersQuery.isLoading,
     switchCharacter,
+    createCharacter,
   };
 }
