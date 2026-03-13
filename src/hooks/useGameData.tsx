@@ -1019,19 +1019,52 @@ const useProvideGameData = (): UseGameDataReturn => {
     setError(null);
 
     try {
-      const { data, error: profileError } = await supabase
+      const { data: activeProfileData, error: activeProfileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: true })
-        .limit(1)
+        .eq("is_active", true)
+        .is("died_at", null)
         .maybeSingle();
 
-      if (profileError) {
-        throw profileError;
+      if (activeProfileError) {
+        throw activeProfileError;
       }
 
-      const nextProfile = (data as PlayerProfile | null) ?? null;
+      let nextProfile = (activeProfileData as PlayerProfile | null) ?? null;
+
+      if (!nextProfile) {
+        const { data: fallbackProfileData, error: fallbackProfileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .is("died_at", null)
+          .order("slot_number", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (fallbackProfileError) {
+          throw fallbackProfileError;
+        }
+
+        nextProfile = (fallbackProfileData as PlayerProfile | null) ?? null;
+
+        if (nextProfile && !nextProfile.is_active) {
+          const { error: switchError } = await supabase.rpc("switch_active_character", {
+            p_profile_id: nextProfile.id,
+          });
+
+          if (switchError) {
+            throw switchError;
+          }
+
+          nextProfile = {
+            ...nextProfile,
+            is_active: true,
+          };
+        }
+      }
+
       setProfile(nextProfile);
 
       await loadProfileDetails(nextProfile);

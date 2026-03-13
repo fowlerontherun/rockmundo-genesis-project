@@ -131,6 +131,7 @@ const HallOfImmortals = lazyWithRetry(() => import("./pages/HallOfImmortals"));
 const BuyCharacterSlot = lazyWithRetry(() => import("./pages/BuyCharacterSlot"));
 const Characters = lazyWithRetry(() => import("./pages/Characters"));
 const SlotPurchaseSuccess = lazyWithRetry(() => import("./pages/SlotPurchaseSuccess"));
+const CreateCharacter = lazyWithRetry(() => import("./pages/CreateCharacter"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
@@ -322,6 +323,7 @@ function App() {
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />
                     <Route path="characters" element={<Characters />} />
+                    <Route path="characters/new" element={<CreateCharacter />} />
                     <Route path="slot-purchase-success" element={<SlotPurchaseSuccess />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />

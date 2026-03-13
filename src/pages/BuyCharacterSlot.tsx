@@ -115,7 +115,7 @@ export default function BuyCharacterSlot() {
                 </div>
 
                 {slots?.canCreateNew && (
-                  <Button className="w-full" onClick={() => navigate("/onboarding")}> 
+                  <Button className="w-full" onClick={() => navigate("/characters/new")}> 
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Character
                   </Button>

@@ -101,7 +101,7 @@ export function CharacterSwitcher() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => navigate("/onboarding")}
+              onClick={() => navigate("/characters/new")}
               className="gap-2 cursor-pointer text-primary"
             >
               <Plus className="h-4 w-4" />

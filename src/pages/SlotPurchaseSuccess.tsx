@@ -57,7 +57,7 @@ export default function SlotPurchaseSuccess() {
                 <h2 className="text-xl font-bold">Slot Unlocked!</h2>
                 <p className="text-muted-foreground">Your new character slot is ready. You can now create another character.</p>
                 <div className="flex gap-2 justify-center pt-2">
-                  <Button onClick={() => navigate("/onboarding")}>Create Character</Button>
+                  <Button onClick={() => navigate("/characters/new")}>Create Character</Button>
                   <Button variant="outline" onClick={() => navigate("/dashboard")}>Dashboard</Button>
                 </div>
               </>
