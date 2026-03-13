@@ -80,7 +80,7 @@ export default function PlayerManagement() {
         .maybeSingle();
 
       const currentExtra = existing?.extra_slots_purchased ?? 0;
-      const currentMax = existing?.max_slots ?? 1;
+      const currentMax = Math.min(2 + currentExtra, 5);
 
       if (currentMax >= 5) {
         throw new Error("Player already has the maximum 5 character slots");
@@ -102,7 +102,7 @@ export default function PlayerManagement() {
           .insert({
             user_id: userId,
             extra_slots_purchased: 1,
-            max_slots: 2,
+            max_slots: 3,
           });
         if (error) throw error;
       }

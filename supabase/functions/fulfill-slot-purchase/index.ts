@@ -72,7 +72,7 @@ serve(async (req) => {
       .maybeSingle();
 
     const currentExtra = existing?.extra_slots_purchased ?? 0;
-    const currentMax = existing?.max_slots ?? 1;
+    const currentMax = Math.min(2 + currentExtra, 5);
 
     if (currentMax >= 5) {
       return new Response(JSON.stringify({ success: false, error: "Already at maximum slots (5)" }), {
@@ -98,7 +98,7 @@ serve(async (req) => {
         .insert({
           user_id: user.id,
           extra_slots_purchased: 1,
-          max_slots: 2,
+          max_slots: 3,
         });
 
       if (error) throw error;

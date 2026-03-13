@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Users, Plus, Crown, ShieldCheck, Loader2 } from "lucide-react";
+import { Users, Plus, ShieldCheck, Loader2 } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,19 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
-import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function BuyCharacterSlot() {
   const { slots, slotsLoading, characters } = useCharacterSlots();
-  const { data: vipStatus } = useVipStatus();
   const [purchasing, setPurchasing] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const maxPossible = vipStatus?.isVip ? 5 : 2;
-  const currentMax = slots?.maxSlots ?? 1;
+  const maxPossible = 5;
+  const currentMax = slots?.maxSlots ?? 2;
   const canBuyMore = currentMax < maxPossible;
 
   const handlePurchase = async () => {
@@ -112,26 +108,13 @@ export default function BuyCharacterSlot() {
               </div>
             </div>
 
-            {!vipStatus?.isVip && (
-              <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                <Crown className="h-3.5 w-3.5 inline mr-1 text-yellow-500" />
-                Free players can have up to 2 slots. <strong>VIP members</strong> can expand up to 5.
-              </div>
-            )}
+            <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+              All players start with <strong>2 character slots</strong> and can purchase more up to 5 total.
+            </div>
 
-            {vipStatus?.isVip && currentMax >= 5 && (
+            {!canBuyMore && currentMax >= 5 && (
               <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
                 You've reached the maximum of 5 character slots!
-              </div>
-            )}
-
-            {!canBuyMore && !vipStatus?.isVip && currentMax >= 2 && (
-              <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                <Crown className="h-3.5 w-3.5 inline mr-1 text-yellow-500" />
-                Upgrade to <strong>VIP</strong> to unlock up to 5 slots.
-                <Button variant="link" size="sm" className="p-0 h-auto ml-1" onClick={() => navigate("/vip-subscribe")}>
-                  Learn more
-                </Button>
               </div>
             )}
 
