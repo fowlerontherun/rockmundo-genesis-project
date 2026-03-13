@@ -73,6 +73,7 @@ export const fr: TranslationKeys = {
     dashboard: "Tableau de bord",
     advisor: "Conseiller",
     character: "Personnage",
+    characters: "Personnages",
     gear: "Équipement",
     tattoos: "Tatouages",
     tattooParlour: "Salon de Tatouage",

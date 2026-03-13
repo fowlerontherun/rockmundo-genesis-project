@@ -109,6 +109,7 @@ export const en = {
     logout: "Logout",
     home: "Home",
     character: "Character",
+    characters: "Characters",
     music: "Music",
     performance: "Performance",
     live: "Live",
