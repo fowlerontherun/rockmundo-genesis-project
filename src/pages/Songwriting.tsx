@@ -35,6 +35,7 @@ import { AddToRepertoireDialog } from "@/components/band/AddToRepertoireDialog";
 import { SongwritingInstrumentSelector } from "@/components/songwriting/SongwritingInstrumentSelector";
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
 import { SongwritingScheduleDialog } from "@/components/songwriting/SongwritingScheduleDialog";
+import { CollaboratorInviteDialog } from "@/components/songwriting/CollaboratorInviteDialog";
 import {
   Dialog,
   DialogContent,
@@ -461,6 +462,10 @@ const Songwriting = () => {
   // Schedule dialog state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleProject, setScheduleProject] = useState<SongwritingProject | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
+  const createFormRef = useRef<HTMLFormElement | null>(null);
+  const [inviteAfterCreateRequested, setInviteAfterCreateRequested] = useState(false);
   
   // Check if player can start songwriting
   const canWrite = useMemo(() => {
@@ -967,6 +972,8 @@ const Songwriting = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    const inviteAfterCreate = inviteAfterCreateRequested;
+
     const trimmedTitle = formState.title.trim();
     const validationErrors: Record<string, string> = {};
 
@@ -1035,8 +1042,10 @@ const Songwriting = () => {
           lyrics: payload.initial_lyrics ?? null,
           creative_brief: payload.creative_brief,
         });
+        setIsDialogOpen(false);
+        resetForm();
       } else {
-        await createProject.mutateAsync({
+        const createdProject = await createProject.mutateAsync({
           title: payload.title,
           theme_id: payload.theme_id || null,
           chord_progression_id: payload.chord_progression_id || null,
@@ -1044,11 +1053,18 @@ const Songwriting = () => {
           creative_brief: payload.creative_brief,
           instruments: formState.instruments,
         });
+        setIsDialogOpen(false);
+        resetForm();
+
+        if (inviteAfterCreate && createdProject?.id) {
+          setInviteProjectId(createdProject.id);
+          setInviteDialogOpen(true);
+        }
       }
 
-      setIsDialogOpen(false);
-      resetForm();
+      setInviteAfterCreateRequested(false);
     } catch (error) {
+      setInviteAfterCreateRequested(false);
       logger.error("Failed to save songwriting project", {
         projectId: selectedProject?.id,
         error: error instanceof Error ? error.message : String(error),
@@ -1334,7 +1350,7 @@ const Songwriting = () => {
             {!selectedProject && (
               <MusicOwnershipReminder />
             )}
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} ref={createFormRef}>
               <Tabs defaultValue="basics" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-6">
                   <TabsTrigger value="basics" className="flex items-center gap-2">
@@ -1719,6 +1735,19 @@ const Songwriting = () => {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
+                {!selectedProject && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={createProject.isPending}
+                    onClick={() => {
+                      setInviteAfterCreateRequested(true);
+                      createFormRef.current?.requestSubmit();
+                    }}
+                  >
+                    Create & Invite Collaborators
+                  </Button>
+                )}
                 <Button type="submit" disabled={createProject.isPending || updateProject.isPending}>
                   {selectedProject ? "Update Project" : "Create Project"}
                 </Button>
@@ -1923,6 +1952,20 @@ const Songwriting = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {inviteProjectId && (
+        <CollaboratorInviteDialog
+          open={inviteDialogOpen}
+          onOpenChange={(open) => {
+            setInviteDialogOpen(open);
+            if (!open) {
+              setInviteProjectId(null);
+            }
+          }}
+          projectId={inviteProjectId}
+          userBandId={primaryBand?.band_id}
+        />
+      )}
 
       {/* Song Completion Dialog */}
       <SongCompletionDialog

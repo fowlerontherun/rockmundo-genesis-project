@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { InboxMessage as InboxMessageType, InboxCategory } from "@/hooks/useInbox";
+import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
 
 interface InboxMessageProps {
   message: InboxMessageType;
@@ -42,6 +43,7 @@ const categoryConfig: Record<InboxCategory, { icon: typeof Dice5; colorClass: st
 
 export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: InboxMessageProps) {
   const navigate = useNavigate();
+  const { respondToInvitation } = useCollaborationInvites();
   const config = categoryConfig[message.category];
   const Icon = config.icon;
 
@@ -57,6 +59,24 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
     if (message.action_type === 'navigate' && message.action_data?.route) {
       navigate(message.action_data.route as string);
     }
+  };
+
+  const collaborationId =
+    message.action_type === "collaboration_invite" && typeof message.action_data?.collaborationId === "string"
+      ? (message.action_data.collaborationId as string)
+      : null;
+
+  const handleInviteResponse = (accept: boolean) => {
+    if (!collaborationId) return;
+    respondToInvitation.mutate(
+      { collaborationId, accept },
+      {
+        onSuccess: () => {
+          onMarkAsRead(message.id);
+          onArchive(message.id);
+        },
+      },
+    );
   };
 
   const timeAgo = formatDistanceToNow(new Date(message.created_at), { addSuffix: true });
@@ -126,6 +146,35 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
                   View Details
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
+              )}
+
+              {message.action_type === "collaboration_invite" && collaborationId && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleInviteResponse(false);
+                    }}
+                    disabled={respondToInvitation.isPending}
+                  >
+                    Decline
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleInviteResponse(true);
+                    }}
+                    disabled={respondToInvitation.isPending}
+                  >
+                    Accept
+                  </Button>
+                </>
               )}
 
               <div className="flex items-center gap-1 ml-auto">
