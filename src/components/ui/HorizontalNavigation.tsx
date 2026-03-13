@@ -13,7 +13,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
-import { RMRadioPlayer } from "@/components/radio/RMRadioPlayer";
+import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import { VersionHeader } from "@/components/VersionHeader";
 import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -38,7 +38,6 @@ const HorizontalNavigation = () => {
   const { data: unreadInboxCount } = useUnreadInboxCount();
   const { isAdmin } = useUserRole();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [radioOpen, setRadioOpen] = useState(false);
 
   const hubLinks: HubLink[] = [
     { icon: Home, labelKey: "nav.home", path: "/dashboard" },
@@ -85,6 +84,7 @@ const HorizontalNavigation = () => {
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
+            <RMRadioButton />
             <ThemeSwitcher />
             <LanguageSwitcher />
             <HowToPlayDialog />
@@ -166,6 +166,7 @@ const HorizontalNavigation = () => {
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
+            <RMRadioButton />
           </div>
         </div>
       </div>
@@ -205,7 +206,6 @@ const HorizontalNavigation = () => {
           </Button>
         </div>
       </div>
-      <RMRadioPlayer open={radioOpen} onOpenChange={setRadioOpen} />
     </>
   );
 };
