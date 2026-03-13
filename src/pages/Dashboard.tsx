@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +12,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Users, Calendar, Bot, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
+import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
@@ -32,25 +32,7 @@ import { ReputationCard } from "@/components/reputation";
 import { usePlayerSurvey } from "@/hooks/usePlayerSurvey";
 import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
 
-// Advisor imports
-import { Link, useNavigate as useRouterNavigate } from "react-router-dom";
-import { generateAdvisorInsights, type AdvisorInsights, type AdvisorSuggestion } from "@/lib/services/advisor";
-import { streamAdvisorChat } from "@/lib/api/advisor-chat";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { Loader2, RefreshCw, Send } from "lucide-react";
-type ChatRole = "advisor" | "user";
-type ChatKind = "general" | "insights";
-interface AdvisorChatMessage {
-  id: string;
-  role: ChatRole;
-  kind: ChatKind;
-  content: string;
-  suggestions?: AdvisorSuggestion[];
-  timestamp: Date;
-}
+import { Link } from "react-router-dom";
 const Dashboard = () => {
   const {
     user
@@ -61,9 +43,6 @@ const Dashboard = () => {
     attributes,
     currentCity
   } = useGameData();
-  const {
-    toast
-  } = useToast();
   const { t } = useTranslation();
   const { data: vipStatus } = useVipStatus();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -72,14 +51,6 @@ const Dashboard = () => {
   const [surveyDismissed, setSurveyDismissed] = useState(false);
   const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
-  // Advisor state
-  const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [advisorError, setAdvisorError] = useState<string | null>(null);
-  const [insights, setInsights] = useState<AdvisorInsights | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [insightsLoaded, setInsightsLoaded] = useState(false);
   const weekStart = startOfWeek(currentDate, {
     weekStartsOn: 1
   });
@@ -152,109 +123,6 @@ const Dashboard = () => {
     return progressInLevel / xpNeededForLevel * 100;
   };
 
-  // Advisor functions
-  const greeting = profile ? `Hey ${(profile as any).stage_name || (profile as any).display_name || (profile as any).username || "there"}! I'm tracking your career pulse. Ready for a data-powered game plan?` : "";
-  const loadInsights = async () => {
-    if (!user) return;
-    setLoading(true);
-    setAdvisorError(null);
-    try {
-      const result = await generateAdvisorInsights(user.id);
-      setInsights(result);
-      setInsightsLoaded(true);
-      setMessages(previous => {
-        const retainedMessages = previous.filter(message => message.kind !== "insights");
-        const advisoryCopy = result.suggestions.length > 0 ? "Here's what I'm seeing in your numbers right now." : "No red alerts in the data—stay consistent and check back after your next update.";
-        return [...retainedMessages, {
-          id: `advisor-insights-${Date.now()}`,
-          role: "advisor",
-          kind: "insights",
-          content: advisoryCopy,
-          suggestions: result.suggestions,
-          timestamp: new Date()
-        }];
-      });
-    } catch (insightError) {
-      console.error(insightError);
-      setAdvisorError(insightError instanceof Error ? insightError.message : "Unable to load advisor insights right now.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-load insights when advisor tab is first visited
-  useEffect(() => {
-    if (activeTab === "advisor" && !insightsLoaded && user && !loading) {
-      loadInsights();
-    }
-  }, [activeTab, insightsLoaded, user, loading]);
-  const handleAdvisorSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!inputValue.trim() || isStreaming) return;
-    const userMessage: AdvisorChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      kind: "general",
-      content: inputValue.trim(),
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
-    setIsStreaming(true);
-    const session = await supabase.auth.getSession();
-    if (!session.data.session?.access_token) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to chat with the advisor.",
-        variant: "destructive"
-      });
-      setIsStreaming(false);
-      return;
-    }
-    let assistantContent = "";
-    const updateAssistant = (chunk: string) => {
-      assistantContent += chunk;
-      setMessages(prev => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "advisor") {
-          return prev.map((m, i) => i === prev.length - 1 ? {
-            ...m,
-            content: assistantContent
-          } : m);
-        }
-        return [...prev, {
-          id: `advisor-${Date.now()}`,
-          role: "advisor",
-          kind: "general",
-          content: assistantContent,
-          timestamp: new Date()
-        }];
-      });
-    };
-    const conversationHistory = messages.filter(m => m.kind === "general").map(m => ({
-      role: m.role === "advisor" ? "assistant" as const : "user" as const,
-      content: m.content
-    }));
-    await streamAdvisorChat({
-      messages: [...conversationHistory, {
-        role: "user",
-        content: userMessage.content
-      }],
-      insights,
-      summary: insights?.summary,
-      apiKey: session.data.session.access_token,
-      onDelta: updateAssistant,
-      onDone: () => setIsStreaming(false),
-      onError: err => {
-        toast({
-          title: "Advisor unavailable",
-          description: err,
-          variant: "destructive"
-        });
-        setIsStreaming(false);
-      }
-    });
-  };
   return <PageLayout>
       <PlayerSurveyModal
         open={shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0}
@@ -273,7 +141,7 @@ const Dashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-8 gap-1">
+          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-7 gap-1">
             <TabsTrigger value="profile" className="flex-shrink-0">
               <User className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('common.profile')}</span>
@@ -297,10 +165,6 @@ const Dashboard = () => {
             <TabsTrigger value="schedule" className="flex-shrink-0">
               <Calendar className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('nav.schedule')}</span>
-            </TabsTrigger>
-            <TabsTrigger value="advisor" className="flex-shrink-0">
-              <Bot className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t('nav.advisor')}</span>
             </TabsTrigger>
             <TabsTrigger value="achievements" className="flex-shrink-0">
               <Trophy className="h-4 w-4 sm:mr-2" />
@@ -477,89 +341,6 @@ const Dashboard = () => {
                       <DaySchedule date={day} userId={user?.id} />
                     </TabsContent>)}
                 </Tabs>}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Advisor Tab */}
-        <TabsContent value="advisor" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-                    <Bot className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <CardTitle>{t('nav.advisor')}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {t('dashboard.advisorDescription', 'Your tactical coach for data-driven decisions')}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={loadInsights} disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  {t('dashboard.refreshInsights', 'Refresh insights')}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ScrollArea className="h-[400px] border rounded-lg p-4">
-                <div className="space-y-4">
-                  {messages.length === 0 && <div className="text-center py-8 text-muted-foreground">
-                      <Bot className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">{greeting}</p>
-                    </div>}
-                  
-                  {messages.map(message => <div key={message.id} className={cn("flex w-full", message.role === "user" ? "justify-end" : "justify-start")}>
-                      <div className={cn("max-w-full sm:max-w-xl rounded-2xl border px-4 py-3 overflow-hidden", message.role === "advisor" ? "border-primary/20 bg-background" : "border-primary bg-primary text-primary-foreground")}>
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          {message.role === "advisor" ? <>
-                              <Bot className="h-4 w-4" />
-                              <span>{t('nav.advisor')}</span>
-                            </> : <span>{t('dashboard.you', 'You')}</span>}
-                        </div>
-                        <p className="mt-2 text-sm leading-relaxed break-words">{message.content}</p>
-                        
-                        {message.suggestions && message.suggestions.length > 0 && <div className="mt-4 space-y-2">
-                            {message.suggestions.map(suggestion => <div key={suggestion.id} className="rounded-lg border bg-muted/20 p-3">
-                                <h3 className="text-sm font-semibold">{suggestion.title}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{suggestion.message}</p>
-                                {suggestion.actions.length > 0 && <div className="mt-2 flex flex-wrap gap-2">
-                                    {suggestion.actions.map(action => <Button key={action.href} variant="outline" size="sm" asChild>
-                                        <Link to={action.href}>{action.label}</Link>
-                                      </Button>)}
-                                  </div>}
-                              </div>)}
-                          </div>}
-                      </div>
-                    </div>)}
-                  
-                  {loading && <div className="flex justify-start">
-                      <div className="flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>{t('dashboard.analyzing', 'Analyzing...')}</span>
-                      </div>
-                    </div>}
-                </div>
-              </ScrollArea>
-
-              {advisorError && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {advisorError}
-                </div>}
-
-              <form onSubmit={handleAdvisorSubmit} className="space-y-2">
-                <Textarea value={inputValue} onChange={e => setInputValue(e.target.value)} placeholder="Ask the advisor what to focus on next..." className="min-h-[80px] resize-none" />
-                <Button type="submit" size="sm" disabled={!inputValue.trim() || isStreaming} className="w-full">
-                  {isStreaming ? <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Thinking...
-                    </> : <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Message
-                    </>}
-                </Button>
-              </form>
             </CardContent>
           </Card>
         </TabsContent>
