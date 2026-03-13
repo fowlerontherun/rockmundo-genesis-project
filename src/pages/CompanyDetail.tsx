@@ -18,7 +18,9 @@ import { TransferLabelDialog } from "@/components/company/TransferLabelDialog";
 import { CompanyFinanceDialog } from "@/components/company/CompanyFinanceDialog";
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
+import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { COMPANY_TYPE_INFO } from "@/types/company";
@@ -29,6 +31,7 @@ const CompanyDetailContent = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
+  const { user } = useAuth();
   
   const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
@@ -192,6 +195,7 @@ const CompanyDetailContent = () => {
           <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
+          <TabsTrigger value="shares">Shares</TabsTrigger>
         </TabsList>
 
         {isHolding && (
@@ -348,6 +352,12 @@ const CompanyDetailContent = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+
+
+        <TabsContent value="shares" className="space-y-4">
+          <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === user?.id} />
         </TabsContent>
 
         <TabsContent value="finances" className="space-y-4">
