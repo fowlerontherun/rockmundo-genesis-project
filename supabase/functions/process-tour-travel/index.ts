@@ -203,10 +203,10 @@ Deno.serve(async (req) => {
 
           if (fromCity?.latitude && fromCity?.longitude && toCity?.latitude && toCity?.longitude) {
             const distanceKm = calculateDistance(fromCity.latitude, fromCity.longitude, toCity.latitude, toCity.longitude)
-            durationHours = calculateTravelDuration(distanceKm, leg.travel_mode || 'bus')
+            durationHours = calculateTravelDuration(distanceKm, leg.travel_mode || 'plane')
           } else {
             // Fallback: estimate based on mode
-            durationHours = leg.travel_mode === 'plane' ? 4 : leg.travel_mode === 'train' ? 6 : 8
+            durationHours = leg.travel_mode === 'tour_bus' ? 6 : leg.travel_mode === 'bus' ? 8 : leg.travel_mode === 'train' ? 5 : 4
           }
 
           // Calculate actual arrival based on departure + duration

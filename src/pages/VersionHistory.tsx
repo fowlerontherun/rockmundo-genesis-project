@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.035",
+    date: "2026-03-13",
+    changes: [
+      { type: 'fix', description: "Player Survey: Fixed admin toggle silently failing due to missing onConflict in upsert — survey can now be reliably enabled/disabled" },
+      { type: 'fix', description: "Player Survey: Added AdminRoute wrapper and proper error handling to prevent false success toasts when RLS blocks writes" },
+      { type: 'fix', description: "Player Survey: Hardened config parsing with fallback defaults so malformed config doesn't suppress the survey" },
+      { type: 'fix', description: "Tour Travel: Fixed 'auto' travel mode defaulting to slow bus speed (56 km/h) for all legs — now picks optimal transport per leg (plane >800km, train >200km, bus otherwise)" },
+      { type: 'fix', description: "Tour Travel: Manual travel mode now correctly skips creating blocking travel legs" },
+      { type: 'fix', description: "Travel Completion: Fixed complete-travel edge function referencing non-existent columns (transport_mode, distance_km) causing silent failures" },
+      { type: 'improvement', description: "Tour Travel: Hazard chance now scales by journey duration instead of non-existent distance column" },
+    ],
+  },
+  {
     version: "1.1.034",
     date: "2026-03-12",
     changes: [
