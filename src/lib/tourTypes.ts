@@ -1,7 +1,7 @@
 // Tour system types and constants
 
 export type TourScope = 'country' | 'continent' | 'world';
-export type TravelMode = 'bus' | 'train' | 'plane' | 'ship' | 'tour_bus';
+export type TravelMode = 'auto' | 'manual' | 'bus' | 'train' | 'plane' | 'ship' | 'tour_bus';
 export type StageSetupTier = 'basic' | 'enhanced' | 'professional' | 'premium' | 'spectacular';
 
 export const STAGE_SETUP_TIERS = {
