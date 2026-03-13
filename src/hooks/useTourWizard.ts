@@ -650,7 +650,8 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       }
 
       // Create travel legs between consecutive venues with real durations
-      if (venueMatches.length > 1) {
+      // Skip if manual travel mode — player books their own travel
+      if (venueMatches.length > 1 && state.travelMode !== 'manual') {
         // Fetch city coordinates for duration calculation
         const cityIds = [...new Set(venueMatches.map(v => v.cityId))];
         const { data: citiesData } = await supabase
@@ -661,6 +662,16 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         const cityCoords = new Map(
           (citiesData || []).map(c => [c.id, { lat: c.latitude, lon: c.longitude }])
         );
+
+        // Helper: pick optimal transport mode based on distance
+        const pickOptimalMode = (distanceKm: number): string => {
+          if (distanceKm > 800) return 'plane';
+          if (distanceKm > 200) return 'train';
+          return 'bus';
+        };
+
+        const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
+        const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
 
         const travelLegs = [];
         for (let i = 0; i < venueMatches.length - 1; i++) {
@@ -675,8 +686,8 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           // Calculate real duration from city coordinates
           const from = cityCoords.get(fromVenue.cityId);
           const to = cityCoords.get(toVenue.cityId);
-          let durationHours = 6; // fallback
-          const mode = state.travelMode || 'bus';
+          let durationHours = 4; // fallback
+          let resolvedMode = state.travelMode === 'tour_bus' ? 'tour_bus' : 'plane'; // default for auto
           
           if (from?.lat && from?.lon && to?.lat && to?.lon) {
             const R = 6371;
@@ -685,10 +696,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
             const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
             const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             
-            const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
-            const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
-            const speed = speeds[mode] || 56;
-            const buffer = buffers[mode] || 0.3;
+            // For 'auto' mode, pick optimal transport per leg; for tour_bus, always use tour_bus
+            if (state.travelMode === 'tour_bus') {
+              resolvedMode = 'tour_bus';
+            } else {
+              resolvedMode = pickOptimalMode(distanceKm);
+            }
+            
+            const speed = speeds[resolvedMode] || 200;
+            const buffer = buffers[resolvedMode] || 0.5;
             durationHours = Math.max(1, Math.round((distanceKm / speed + buffer) * 10) / 10);
           }
 
@@ -698,7 +714,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
             tour_id: tour.id,
             from_city_id: fromVenue.cityId,
             to_city_id: toVenue.cityId,
-            travel_mode: mode,
+            travel_mode: resolvedMode,
             travel_cost: 0,
             departure_date: departureDate.toISOString(),
             arrival_date: arrivalDate.toISOString(),

@@ -6,12 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Travel hazard rates by transport mode
+// Travel hazard rates by transport type
 const TRANSPORT_HAZARD_RATES: Record<string, number> = {
   bus: 0.04,
   train: 0.02,
   plane: 0.015,
   ship: 0.03,
+  tour_bus: 0.035,
   private_jet: 0.005,
 };
 
@@ -48,8 +49,8 @@ serve(async (req) => {
         to_city_id,
         from_city_id,
         arrival_time,
-        transport_mode,
-        distance_km,
+        transport_type,
+        travel_duration_hours,
         to_city:to_city_id(name),
         from_city:from_city_id(name)
       `)
@@ -109,11 +110,12 @@ serve(async (req) => {
         });
 
         // === TRAVEL HAZARD ROLL ===
-        const transportMode = (travel as any).transport_mode || "plane";
-        const distanceKm = (travel as any).distance_km || 1000;
-        let hazardChance = TRANSPORT_HAZARD_RATES[transportMode] || 0.02;
-        if (distanceKm > 5000) hazardChance += 0.02;
-        else if (distanceKm > 2000) hazardChance += 0.01;
+        const transportType = travel.transport_type || "plane";
+        const durationHours = travel.travel_duration_hours || 4;
+        let hazardChance = TRANSPORT_HAZARD_RATES[transportType] || 0.02;
+        // Scale hazard by duration (long journeys = slightly higher risk)
+        if (durationHours > 12) hazardChance += 0.02;
+        else if (durationHours > 6) hazardChance += 0.01;
 
         const hazardRoll = Math.random();
         if (hazardRoll < hazardChance) {
@@ -159,7 +161,6 @@ serve(async (req) => {
                   const newMorale = Math.max(0, ((bd as any).morale ?? 50) + moralePenalty);
                   await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
                   console.log(`[complete-travel] Travel hazard morale penalty: severity ${severity} → morale ${moralePenalty}`);
-                  // Health event log (v1.0.998)
                   try { await supabase.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moralePenalty, new_value: newMorale, source: 'travel_hazard', description: `Travel hazard: ${conditionDef.name.replace(/_/g, ' ')} (severity ${severity})` }); } catch (_) {}
                 }
               }

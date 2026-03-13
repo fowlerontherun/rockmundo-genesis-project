@@ -13,6 +13,7 @@ import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AdminRoute } from "@/components/AdminRoute";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { ClipboardList, BarChart3, Users, MessageSquare } from "lucide-react";
@@ -43,44 +44,69 @@ export default function PlayerSurveyAdmin() {
   // Config
   const { data: config } = useQuery({
     queryKey: ["admin-survey-config"],
+    refetchOnMount: "always",
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("game_config")
         .select("config_value")
         .eq("config_key", "player_survey_enabled")
         .maybeSingle();
+      if (error) {
+        console.error("Failed to load survey config:", error);
+        throw error;
+      }
       if (!data?.config_value) return { enabled: false, round: "2026-03", questions_per_session: 10 };
-      return typeof data.config_value === "string"
+      const val = typeof data.config_value === "string"
         ? JSON.parse(data.config_value)
         : data.config_value;
+      return val;
     },
   });
 
   const [localRound, setLocalRound] = useState("");
 
+  const invalidateSurveyKeys = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-survey-config"] });
+    queryClient.invalidateQueries({ queryKey: ["survey-config"] });
+  };
+
   const toggleMutation = useMutation({
     mutationFn: async (newEnabled: boolean) => {
-      const updated = { ...config, enabled: newEnabled };
-      await supabase
+      const updated = { ...(config || { round: "2026-03", questions_per_session: 10 }), enabled: newEnabled };
+      const { error } = await supabase
         .from("game_config")
-        .upsert({ config_key: "player_survey_enabled", config_value: updated as any });
+        .upsert(
+          { config_key: "player_survey_enabled", config_value: updated as any, updated_at: new Date().toISOString() },
+          { onConflict: "config_key" }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-survey-config"] });
+      invalidateSurveyKeys();
       toast({ title: "Survey toggled" });
+    },
+    onError: (err) => {
+      toast({ title: "Failed to toggle survey", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
     },
   });
 
   const updateRoundMutation = useMutation({
     mutationFn: async (round: string) => {
-      const updated = { ...config, round };
-      await supabase
+      const updated = { ...(config || { enabled: false, questions_per_session: 10 }), round };
+      const { error } = await supabase
         .from("game_config")
-        .upsert({ config_key: "player_survey_enabled", config_value: updated as any });
+        .upsert(
+          { config_key: "player_survey_enabled", config_value: updated as any, updated_at: new Date().toISOString() },
+          { onConflict: "config_key" }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-survey-config"] });
+      invalidateSurveyKeys();
       toast({ title: "Round updated" });
+    },
+    onError: (err) => {
+      toast({ title: "Failed to update round", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
     },
   });
 
@@ -181,227 +207,231 @@ export default function PlayerSurveyAdmin() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader title="Player Survey" subtitle="Manage player feedback surveys and view results" />
+    <AdminRoute>
+      <PageLayout>
+        <PageHeader title="Player Survey" subtitle="Manage player feedback surveys and view results" />
 
-      <Tabs defaultValue="settings" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 h-auto">
-          <TabsTrigger value="settings" className="text-xs gap-1"><ClipboardList className="h-3.5 w-3.5" />Settings</TabsTrigger>
-          <TabsTrigger value="ratings" className="text-xs gap-1"><BarChart3 className="h-3.5 w-3.5" />Ratings</TabsTrigger>
-          <TabsTrigger value="choices" className="text-xs gap-1"><Users className="h-3.5 w-3.5" />Choices</TabsTrigger>
-          <TabsTrigger value="freetext" className="text-xs gap-1"><MessageSquare className="h-3.5 w-3.5" />Free Text</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="settings" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsTrigger value="settings" className="text-xs gap-1"><ClipboardList className="h-3.5 w-3.5" />Settings</TabsTrigger>
+            <TabsTrigger value="ratings" className="text-xs gap-1"><BarChart3 className="h-3.5 w-3.5" />Ratings</TabsTrigger>
+            <TabsTrigger value="choices" className="text-xs gap-1"><Users className="h-3.5 w-3.5" />Choices</TabsTrigger>
+            <TabsTrigger value="freetext" className="text-xs gap-1"><MessageSquare className="h-3.5 w-3.5" />Free Text</TabsTrigger>
+          </TabsList>
 
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Survey Control</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Survey Enabled</Label>
-                <Switch
-                  checked={config?.enabled || false}
-                  onCheckedChange={(v) => toggleMutation.mutate(v)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label>Current Round</Label>
-                <Input
-                  value={localRound || config?.round || ""}
-                  onChange={(e) => setLocalRound(e.target.value)}
-                  placeholder="e.g. 2026-03"
-                  className="max-w-[200px]"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => updateRoundMutation.mutate(localRound || config?.round || "")}
-                >
-                  Save
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <Card>
-                  <CardContent className="pt-4 text-center">
-                    <p className="text-2xl font-bold text-foreground">{completions?.length || 0}</p>
-                    <p className="text-xs text-muted-foreground">Completions</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 text-center">
-                    <p className="text-2xl font-bold text-foreground">{totalRespondents || 0}</p>
-                    <p className="text-xs text-muted-foreground">Unique Respondents</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Questions ({questions?.length || 0})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveTable>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Question</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Active</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(questions || []).map((q: any) => (
-                      <TableRow key={q.id}>
-                        <TableCell className="text-xs">{q.display_order}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {CATEGORY_LABELS[q.category] || q.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate">{q.question_text}</TableCell>
-                        <TableCell className="text-xs">{q.question_type}</TableCell>
-                        <TableCell>
-                          <Badge variant={q.is_active ? "default" : "secondary"} className="text-xs">
-                            {q.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ResponsiveTable>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Ratings Tab */}
-        <TabsContent value="ratings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Average Ratings by Question</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {ratingData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={Math.max(300, ratingData.length * 40)}>
-                  <BarChart data={ratingData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" domain={[0, 5]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                    <YAxis dataKey="question" type="category" width={150} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                      formatter={(value: number, name: string) => [value.toFixed(2), "Avg Rating"]}
-                      labelFormatter={(label) => label}
-                    />
-                    <Bar dataKey="average" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">No rating responses yet</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Yes/No Charts */}
-          {ynQuestions.length > 0 && (
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Yes/No Responses</CardTitle>
+                <CardTitle className="text-base">Survey Control</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {ynQuestions.map((q: any) => {
-                    const data = getYnData(q.id);
-                    const total = data.reduce((s, d) => s + d.value, 0);
-                    if (total === 0) return null;
-                    return (
-                      <div key={q.id} className="space-y-2">
-                        <p className="text-xs font-medium text-foreground">{q.question_text}</p>
-                        <ResponsiveContainer width="100%" height={180}>
-                          <PieChart>
-                            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
-                              {data.map((_, i) => (
-                                <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Legend />
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    );
-                  })}
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Survey Enabled</Label>
+                  <Switch
+                    checked={config?.enabled || false}
+                    onCheckedChange={(v) => toggleMutation.mutate(v)}
+                    disabled={toggleMutation.isPending}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label>Current Round</Label>
+                  <Input
+                    value={localRound || config?.round || ""}
+                    onChange={(e) => setLocalRound(e.target.value)}
+                    placeholder="e.g. 2026-03"
+                    className="max-w-[200px]"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => updateRoundMutation.mutate(localRound || config?.round || "")}
+                    disabled={updateRoundMutation.isPending}
+                  >
+                    Save
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <Card>
+                    <CardContent className="pt-4 text-center">
+                      <p className="text-2xl font-bold text-foreground">{completions?.length || 0}</p>
+                      <p className="text-xs text-muted-foreground">Completions</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4 text-center">
+                      <p className="text-2xl font-bold text-foreground">{totalRespondents || 0}</p>
+                      <p className="text-xs text-muted-foreground">Unique Respondents</p>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
 
-        {/* Choices Tab */}
-        <TabsContent value="choices" className="space-y-4">
-          {mcQuestions.map((q: any) => {
-            const data = getMcData(q.id);
-            if (data.length === 0) return null;
-            return (
-              <Card key={q.id}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Questions ({questions?.length || 0})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveTable>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>#</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Question</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Active</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(questions || []).map((q: any) => (
+                        <TableRow key={q.id}>
+                          <TableCell className="text-xs">{q.display_order}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {CATEGORY_LABELS[q.category] || q.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs max-w-[200px] truncate">{q.question_text}</TableCell>
+                          <TableCell className="text-xs">{q.question_type}</TableCell>
+                          <TableCell>
+                            <Badge variant={q.is_active ? "default" : "secondary"} className="text-xs">
+                              {q.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ResponsiveTable>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Ratings Tab */}
+          <TabsContent value="ratings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Average Ratings by Question</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ratingData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={Math.max(300, ratingData.length * 40)}>
+                    <BarChart data={ratingData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis type="number" domain={[0, 5]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                      <YAxis dataKey="question" type="category" width={150} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                      <Tooltip
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                        formatter={(value: number, name: string) => [value.toFixed(2), "Avg Rating"]}
+                        labelFormatter={(label) => label}
+                      />
+                      <Bar dataKey="average" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">No rating responses yet</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Yes/No Charts */}
+            {ynQuestions.length > 0 && (
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">{q.question_text}</CardTitle>
+                  <CardTitle className="text-base">Yes/No Responses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                        {data.map((_, i) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {ynQuestions.map((q: any) => {
+                      const data = getYnData(q.id);
+                      const total = data.reduce((s, d) => s + d.value, 0);
+                      if (total === 0) return null;
+                      return (
+                        <div key={q.id} className="space-y-2">
+                          <p className="text-xs font-medium text-foreground">{q.question_text}</p>
+                          <ResponsiveContainer width="100%" height={180}>
+                            <PieChart>
+                              <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
+                                {data.map((_, i) => (
+                                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Legend />
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
-            );
-          })}
-          {mcQuestions.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">No multiple choice responses yet</p>
-          )}
-        </TabsContent>
+            )}
+          </TabsContent>
 
-        {/* Free Text Tab */}
-        <TabsContent value="freetext">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Free Text Responses ({freeTextResponses.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[400px]">
-                {freeTextResponses.length > 0 ? (
-                  <div className="space-y-3">
-                    {freeTextResponses.map((r: any) => (
-                      <div key={r.id} className="border border-border rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {r.player_survey_questions?.question_text}
-                        </p>
-                        <p className="text-sm text-foreground">{r.answer_value}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(r.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">No free text responses yet</p>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </PageLayout>
+          {/* Choices Tab */}
+          <TabsContent value="choices" className="space-y-4">
+            {mcQuestions.map((q: any) => {
+              const data = getMcData(q.id);
+              if (data.length === 0) return null;
+              return (
+                <Card key={q.id}>
+                  <CardHeader>
+                    <CardTitle className="text-sm">{q.question_text}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
+                          {data.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Legend />
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {mcQuestions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">No multiple choice responses yet</p>
+            )}
+          </TabsContent>
+
+          {/* Free Text Tab */}
+          <TabsContent value="freetext">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Free Text Responses ({freeTextResponses.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  {freeTextResponses.length > 0 ? (
+                    <div className="space-y-3">
+                      {freeTextResponses.map((r: any) => (
+                        <div key={r.id} className="border border-border rounded-lg p-3">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {r.player_survey_questions?.question_text}
+                          </p>
+                          <p className="text-sm text-foreground">{r.answer_value}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(r.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No free text responses yet</p>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </PageLayout>
+    </AdminRoute>
   );
 }

@@ -30,16 +30,30 @@ export function usePlayerSurvey() {
     queryKey: ["survey-config"],
     refetchOnMount: "always",
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("game_config")
         .select("config_value")
         .eq("config_key", "player_survey_enabled")
         .maybeSingle();
+      if (error) {
+        console.error("Survey config fetch error:", error);
+        return null;
+      }
       if (!data?.config_value) return null;
-      const val = typeof data.config_value === "string"
-        ? JSON.parse(data.config_value)
-        : data.config_value;
-      return val as SurveyConfig;
+      try {
+        const val = typeof data.config_value === "string"
+          ? JSON.parse(data.config_value)
+          : data.config_value;
+        // Ensure required fields have defaults
+        return {
+          enabled: val.enabled ?? false,
+          round: val.round || "2026-03",
+          questions_per_session: val.questions_per_session || 10,
+        } as SurveyConfig;
+      } catch (e) {
+        console.error("Survey config parse error:", e);
+        return null;
+      }
     },
   });
 
