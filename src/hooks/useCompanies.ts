@@ -166,6 +166,13 @@ export const useCreateCompany = () => {
         description: "Initial capital investment",
       });
 
+      // Initialize share ownership for founder
+      await supabase.from("company_shareholders" as any).insert({
+        company_id: data.id,
+        user_id: user.id,
+        shares: 100,
+      });
+
       return data as Company;
     },
     onSuccess: (data) => {
