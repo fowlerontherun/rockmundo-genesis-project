@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Globe, Plane, Bus, Building2, Home, Twitter, Video, Heart, HandHeart, UserPlus, Sparkles, Ticket, Radio, Tv, Newspaper, BookOpen, Mic, Film, Dices } from "lucide-react";
+import { Globe, Plane, Bus, Building2, Home, Car, Twitter, Video, Heart, HandHeart, UserPlus, Sparkles, Ticket, Radio, Tv, Newspaper, BookOpen, Mic, Film, Dices } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 
 export default function WorldSocialHub() {
@@ -20,6 +20,7 @@ export default function WorldSocialHub() {
             { icon: Building2, labelKey: "nav.currentCity", path: cityPath, tileImageKey: "current-city", imagePrompt: "A vibrant city skyline with neon signs, music venues, and nightlife" },
             { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse", imagePrompt: "A pulse/heartbeat line overlaid on a globe showing trending music events worldwide" },
             { icon: Home, labelKey: "Housing", path: "/housing", imagePrompt: "A cozy musician apartment with posters, instruments, and city view from the window" },
+            { icon: Car, labelKey: "Cars & Motorbikes", path: "/personal-vehicles", imagePrompt: "A stylish garage with a luxury car and a custom motorbike under neon lights" },
           ],
         },
         {
