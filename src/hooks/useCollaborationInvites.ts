@@ -44,6 +44,35 @@ interface InviteCollaboratorParams {
   royaltyPercentage?: number;
 }
 
+const createInboxNotification = async ({
+  userId,
+  title,
+  message,
+  actionType,
+  actionData,
+}: {
+  userId: string;
+  title: string;
+  message: string;
+  actionType?: string;
+  actionData?: Record<string, unknown>;
+}) => {
+  const { error } = await supabase.from("player_inbox").insert({
+    user_id: userId,
+    category: "social",
+    priority: "high",
+    title,
+    message,
+    action_type: actionType ?? null,
+    action_data: actionData ?? null,
+    metadata: { source: "songwriting_collaboration" },
+  });
+
+  if (error) {
+    console.error("Failed to create collaboration inbox notification:", error);
+  }
+};
+
 export const useCollaborationInvites = (projectId?: string) => {
   const queryClient = useQueryClient();
 
@@ -147,6 +176,44 @@ export const useCollaborationInvites = (projectId?: string) => {
         .single();
 
       if (error) throw error;
+
+      const [{ data: inviteeProfile }, { data: inviterProfile }, { data: project }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, username")
+          .eq("id", params.inviteeProfileId)
+          .single(),
+        supabase
+          .from("profiles")
+          .select("username")
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("songwriting_projects")
+          .select("title")
+          .eq("id", params.projectId)
+          .single(),
+      ]);
+
+      if (inviteeProfile?.user_id) {
+        const compensationLabel = params.compensationType === "flat_fee"
+          ? `for $${(params.flatFeeAmount || 0).toLocaleString()}`
+          : params.compensationType === "royalty"
+            ? `for a ${params.royaltyPercentage || 0}% royalty split`
+            : "as a band collaborator";
+
+        await createInboxNotification({
+          userId: inviteeProfile.user_id,
+          title: "Songwriting collaboration invite",
+          message: `${inviterProfile?.username || "A player"} invited you to co-write \"${project?.title || "Untitled"}\" ${compensationLabel}.`,
+          actionType: "collaboration_invite",
+          actionData: {
+            collaborationId: data.id,
+            projectId: params.projectId,
+          },
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -243,6 +310,27 @@ export const useCollaborationInvites = (projectId?: string) => {
 
         if (updateError) throw updateError;
       }
+
+      const [{ data: inviteeProfile }, { data: project }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", collaboration.invitee_profile_id)
+          .single(),
+        supabase
+          .from("songwriting_projects")
+          .select("title")
+          .eq("id", collaboration.project_id)
+          .single(),
+      ]);
+
+      await createInboxNotification({
+        userId: collaboration.inviter_user_id,
+        title: `Collaboration invite ${accept ? "accepted" : "declined"}`,
+        message: `${inviteeProfile?.username || "A player"} ${accept ? "accepted" : "declined"} your co-writing invitation for \"${project?.title || "Untitled"}\".`,
+        actionType: "navigate",
+        actionData: { route: "/songwriting" },
+      });
 
       return { accepted: accept };
     },
