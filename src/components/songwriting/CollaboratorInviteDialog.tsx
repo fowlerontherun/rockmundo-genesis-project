@@ -344,12 +344,12 @@ export const CollaboratorInviteDialog = ({
             value={[flatFeeAmount]}
             onValueChange={([value]) => setFlatFeeAmount(value)}
             min={50}
-            max={10000}
+            max={1000000}
             step={50}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>$50</span>
-            <span>$10,000</span>
+            <span>$1,000,000</span>
           </div>
           {flatFeeAmount > userCash && (
             <p className="text-sm text-destructive">Insufficient funds</p>
