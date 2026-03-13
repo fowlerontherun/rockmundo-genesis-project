@@ -72,6 +72,7 @@ export const zh: TranslationKeys = {
     dashboard: "仪表盘",
     advisor: "顾问",
     character: "角色",
+    characters: "角色",
     gear: "装备",
     tattoos: "纹身",
     tattooParlour: "纹身店",
