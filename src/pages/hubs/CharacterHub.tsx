@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull, UserPlus } from "lucide-react";
+import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull, Users } from "lucide-react";
 
 export default function CharacterHub() {
   return (
@@ -7,6 +7,7 @@ export default function CharacterHub() {
       titleKey="nav.character"
       description="Manage your avatar, gear, wellness, and personal stats."
       tiles={[
+        { icon: Users, labelKey: "nav.characterSlots", path: "/characters", imagePrompt: "A character roster and slot management screen with multiple avatars and switch controls" },
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer", imagePrompt: "A character customization screen with a rock star avatar and clothing/hair options" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store", imagePrompt: "A colorful shop displaying character skins, outfits, and accessories for purchase" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear", imagePrompt: "A collection of instruments: electric guitar, bass, drums, keyboard, all gleaming" },
@@ -15,7 +16,6 @@ export default function CharacterHub() {
         { icon: History, labelKey: "nav.statistics", path: "/statistics", imagePrompt: "An infographic dashboard showing career statistics, charts, and achievement milestones" },
         { icon: BookOpen, labelKey: "nav.legacy", path: "/legacy", imagePrompt: "A hall of fame book showing a musician's legendary career timeline and achievements" },
         { icon: Skull, labelKey: "nav.hallOfImmortals", path: "/hall-of-immortals", imagePrompt: "A dark memorial hall with ghostly portraits of fallen rock stars, candles, and flowers" },
-        { icon: UserPlus, labelKey: "nav.buySlot", path: "/buy-character-slot", imagePrompt: "A glowing character slot machine with a plus sign, neon lights, and a price tag" },
       ]}
     />
   );

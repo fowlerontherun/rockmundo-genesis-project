@@ -15,6 +15,7 @@ import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator
 import { useUnreadInboxCount } from "@/hooks/useInbox";
 import { RMRadioPlayer } from "@/components/radio/RMRadioPlayer";
 import { VersionHeader } from "@/components/VersionHeader";
+import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
@@ -80,6 +81,7 @@ const HorizontalNavigation = () => {
             <VersionHeader />
           </div>
           <div className="flex items-center gap-1">
+            <CharacterSwitcher />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
@@ -160,6 +162,7 @@ const HorizontalNavigation = () => {
           <img src={logo} alt="RockMundo" className="h-7 w-auto object-contain" />
           
           <div className="flex items-center gap-0.5">
+            <CharacterSwitcher />
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />

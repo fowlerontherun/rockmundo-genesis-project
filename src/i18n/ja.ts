@@ -72,6 +72,8 @@ export const ja: TranslationKeys = {
     dashboard: "ダッシュボード",
     advisor: "アドバイザー",
     character: "キャラクター",
+    characters: "キャラクター一覧",
+    characterSlots: "キャラクタースロット",
     gear: "ギア",
     tattoos: "タトゥー",
     tattooParlour: "タトゥーパーラー",

@@ -320,6 +320,7 @@ function App() {
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />
+                    <Route path="characters" element={<BuyCharacterSlot />} />
                     <Route path="slot-purchase-success" element={<SlotPurchaseSuccess />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
