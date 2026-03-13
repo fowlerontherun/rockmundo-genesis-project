@@ -76,7 +76,6 @@ export const tr: TranslationKeys = {
     advisor: "Danışman",
     character: "Karakter",
     characters: "Karakterler",
-    characterSlots: "Karakter slotları",
     gear: "Ekipman",
     tattoos: "Dövmeler",
     tattooParlour: "Dövme Salonu",

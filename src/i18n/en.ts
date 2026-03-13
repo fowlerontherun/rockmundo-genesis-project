@@ -110,7 +110,6 @@ export const en = {
     home: "Home",
     character: "Character",
     characters: "Characters",
-    characterSlots: "Character Slots",
     music: "Music",
     performance: "Performance",
     live: "Live",
