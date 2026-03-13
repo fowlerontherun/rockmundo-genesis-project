@@ -275,15 +275,24 @@ export const EnhancedSetlistSongManager = ({
           throw new Error('This performance item is already in the setlist');
         }
         
-        // Use atomic RPC to avoid race conditions with position calculation
-        const { error } = await supabase.rpc('add_setlist_item', {
-          p_setlist_id: setlistId,
-          p_song_id: null,
-          p_performance_item_id: item.id,
-          p_item_type: 'performance_item',
-          p_section: 'main',
-          p_notes: null,
-        });
+        // Insert directly so legacy DBs with global (setlist_id, position)
+        // uniqueness still work alongside newer per-section schemas.
+        const nextPosition = (freshItems || []).reduce(
+          (max, setlistItem) => Math.max(max, setlistItem.position || 0),
+          0
+        ) + 1;
+
+        const { error } = await supabase
+          .from('setlist_songs')
+          .insert({
+            setlist_id: setlistId,
+            song_id: null,
+            performance_item_id: item.id,
+            item_type: 'performance_item',
+            section: 'main',
+            position: nextPosition,
+            notes: null,
+          });
         
         if (error) {
           // Handle constraint violations
@@ -318,12 +327,11 @@ export const EnhancedSetlistSongManager = ({
       moveInProgressRef.current = true;
       
       try {
-        // Get max position for encore section only (per-section numbering)
+        // Use global next position for compatibility with both old and new constraints.
         const { data: maxPositionData } = await supabase
           .from("setlist_songs")
           .select("position")
           .eq("setlist_id", setlistId)
-          .eq("section", "encore")
           .order("position", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -370,12 +378,11 @@ export const EnhancedSetlistSongManager = ({
       moveInProgressRef.current = true;
       
       try {
-        // Get max position for main section only (per-section numbering)
+        // Use global next position for compatibility with both old and new constraints.
         const { data: maxPositionData } = await supabase
           .from("setlist_songs")
           .select("position")
           .eq("setlist_id", setlistId)
-          .eq("section", "main")
           .order("position", { ascending: false })
           .limit(1)
           .maybeSingle();
