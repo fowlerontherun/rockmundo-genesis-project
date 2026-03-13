@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useVipStatus } from "@/hooks/useVipStatus";
 
 export interface CharacterSlotInfo {
   maxSlots: number;
@@ -27,7 +26,6 @@ export interface CharacterProfile {
 
 export function useCharacterSlots() {
   const { user } = useAuth();
-  const { data: vipStatus } = useVipStatus();
   const queryClient = useQueryClient();
 
   const slotsQuery = useQuery({
@@ -45,8 +43,8 @@ export function useCharacterSlots() {
       if (error) throw error;
 
       const extraPurchased = slots?.extra_slots_purchased ?? 0;
-      const baseSlots = vipStatus?.isVip ? 2 : 1;
-      const maxSlots = Math.min(baseSlots + extraPurchased, vipStatus?.isVip ? 5 : 2);
+      const baseSlots = 2;
+      const maxSlots = Math.min(baseSlots + extraPurchased, 5);
 
       // Count living profiles
       const { count } = await supabase
