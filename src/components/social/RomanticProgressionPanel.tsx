@@ -1,4 +1,5 @@
 // Romantic Progression Interface — Stage visualization and romance management
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ import {
   Heart, HeartCrack, Crown, Sparkles, Shield, Eye, AlertTriangle,
   ArrowRight, Lock, Check, Flame, TrendingUp,
 } from "lucide-react";
+import { useMarriageStatus, useProposeMarriage } from "@/hooks/useMarriage";
+import { useOptionalGameData } from "@/hooks/useGameData";
+import { ProposalDialog } from "@/components/family/ProposalDialog";
 
 interface RomanticProgressionProps {
   romance?: RomanticRelationship | null;
