@@ -206,6 +206,27 @@ export function RomanticProgressionPanel({
           </div>
         )}
 
+        {/* Plan Wedding Button (Engaged, no active marriage) */}
+        {canPropose && profileId && (
+          <div className="rounded-lg border border-social-love/30 bg-social-love/5 p-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  💍 Ready to Get Married?
+                </p>
+                <p className="text-xs text-muted-foreground">You're engaged! Propose a wedding date.</p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setProposalOpen(true)}
+                className="bg-social-love hover:bg-social-love/90 text-white"
+              >
+                Plan Wedding
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Unlocked Actions */}
         {currentStageDef && (
           <div className="space-y-2">
@@ -220,6 +241,27 @@ export function RomanticProgressionPanel({
           </div>
         )}
       </CardContent>
+
+      {/* Proposal Dialog */}
+      {canPropose && profileId && (
+        <ProposalDialog
+          open={proposalOpen}
+          onOpenChange={setProposalOpen}
+          partnerName={romance.partner_b_name}
+          isPending={proposeMarriage.isPending}
+          onPropose={(weddingDate) => {
+            // partner_b_id from romance needs to be mapped to profile id
+            // For now we use the romance's partner_b_id which should be a profile id
+            proposeMarriage.mutate({
+              partnerAId: profileId,
+              partnerBId: romance.partner_b_id,
+              weddingDate,
+            }, {
+              onSuccess: () => setProposalOpen(false),
+            });
+          }}
+        />
+      )}
     </Card>
   );
 }
