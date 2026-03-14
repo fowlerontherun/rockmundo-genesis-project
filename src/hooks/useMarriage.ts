@@ -49,7 +49,7 @@ export function useMarriageHistory(profileId: string | undefined) {
         .or(`partner_a_id.eq.${profileId},partner_b_id.eq.${profileId}`)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Marriage[];
+      return (data ?? []) as unknown as Marriage[];
     },
     enabled: !!profileId,
   });

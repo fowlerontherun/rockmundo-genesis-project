@@ -70,7 +70,7 @@ export function usePlayerChildren(profileId: string | undefined) {
         .or(`parent_a_id.eq.${profileId},parent_b_id.eq.${profileId}`)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as PlayerChild[];
+      return (data ?? []) as unknown as PlayerChild[];
     },
     enabled: !!profileId,
   });

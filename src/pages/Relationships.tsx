@@ -762,20 +762,7 @@ export default function RelationshipsPage() {
 
         {/* ── FAMILY TAB ──────────────────────────────────────── */}
         <TabsContent value="legacy" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Baby className="h-5 w-5 text-social-loyalty" />
-                Family &amp; Legacy
-              </CardTitle>
-              <CardDescription>Your family tree, legacy pressure, and generational fame</CardDescription>
-            </CardHeader>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <Crown className="h-16 w-16 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium">No family connections yet</p>
-              <p className="text-sm mt-1">Start a romance and build your musical dynasty!</p>
-            </CardContent>
-          </Card>
+          <FamilyDashboard />
         </TabsContent>
       </Tabs>
 
