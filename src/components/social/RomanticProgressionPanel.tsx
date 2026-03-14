@@ -1,4 +1,5 @@
 // Romantic Progression Interface — Stage visualization and romance management
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ import {
   Heart, HeartCrack, Crown, Sparkles, Shield, Eye, AlertTriangle,
   ArrowRight, Lock, Check, Flame, TrendingUp,
 } from "lucide-react";
+import { useMarriageStatus, useProposeMarriage } from "@/hooks/useMarriage";
+import { useOptionalGameData } from "@/hooks/useGameData";
+import { ProposalDialog } from "@/components/family/ProposalDialog";
 
 interface RomanticProgressionProps {
   romance?: RomanticRelationship | null;
@@ -37,6 +41,15 @@ export function RomanticProgressionPanel({
   onInteraction,
   className,
 }: RomanticProgressionProps) {
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const gameData = useOptionalGameData();
+  const profileId = gameData?.profile?.id;
+  const { data: marriage } = useMarriageStatus(profileId);
+  const proposeMarriage = useProposeMarriage();
+
+  const isEngaged = romance?.stage === "engaged";
+  const canPropose = isEngaged && !marriage;
+
   if (!romance) {
     return (
       <Card className={cn("border-border/50", className)}>
@@ -193,6 +206,27 @@ export function RomanticProgressionPanel({
           </div>
         )}
 
+        {/* Plan Wedding Button (Engaged, no active marriage) */}
+        {canPropose && profileId && (
+          <div className="rounded-lg border border-social-love/30 bg-social-love/5 p-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  💍 Ready to Get Married?
+                </p>
+                <p className="text-xs text-muted-foreground">You're engaged! Propose a wedding date.</p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setProposalOpen(true)}
+                className="bg-social-love hover:bg-social-love/90 text-white"
+              >
+                Plan Wedding
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Unlocked Actions */}
         {currentStageDef && (
           <div className="space-y-2">
@@ -207,6 +241,27 @@ export function RomanticProgressionPanel({
           </div>
         )}
       </CardContent>
+
+      {/* Proposal Dialog */}
+      {canPropose && profileId && (
+        <ProposalDialog
+          open={proposalOpen}
+          onOpenChange={setProposalOpen}
+          partnerName={romance.partner_b_name}
+          isPending={proposeMarriage.isPending}
+          onPropose={(weddingDate) => {
+            // partner_b_id from romance needs to be mapped to profile id
+            // For now we use the romance's partner_b_id which should be a profile id
+            proposeMarriage.mutate({
+              partnerAId: profileId,
+              partnerBId: romance.partner_b_id,
+              weddingDate,
+            }, {
+              onSuccess: () => setProposalOpen(false),
+            });
+          }}
+        />
+      )}
     </Card>
   );
 }
