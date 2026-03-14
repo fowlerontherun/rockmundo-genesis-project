@@ -53,7 +53,7 @@ export function useChildRequests(profileId: string | undefined) {
         .in("status", ["pending", "accepted"])
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as ChildRequest[];
+      return (data ?? []) as unknown as ChildRequest[];
     },
     enabled: !!profileId,
   });
