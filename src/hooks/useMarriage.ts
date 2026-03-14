@@ -32,7 +32,7 @@ export function useMarriageStatus(profileId: string | undefined) {
         .in("status", ["proposed", "accepted", "active"])
         .maybeSingle();
       if (error) throw error;
-      return data as Marriage | null;
+      return data as unknown as Marriage | null;
     },
     enabled: !!profileId,
   });
