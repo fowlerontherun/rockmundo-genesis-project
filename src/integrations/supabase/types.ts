@@ -3552,6 +3552,104 @@ export type Database = {
         }
         Relationships: []
       }
+      child_requests: {
+        Row: {
+          controller_parent_id: string | null
+          created_at: string
+          custom_surname: string | null
+          expires_at: string | null
+          gestation_ends_at: string | null
+          id: string
+          marriage_id: string
+          parent_a_id: string
+          parent_b_id: string
+          status: string
+          surname_policy: string | null
+          upbringing_focus: string | null
+          updated_at: string
+        }
+        Insert: {
+          controller_parent_id?: string | null
+          created_at?: string
+          custom_surname?: string | null
+          expires_at?: string | null
+          gestation_ends_at?: string | null
+          id?: string
+          marriage_id: string
+          parent_a_id: string
+          parent_b_id: string
+          status?: string
+          surname_policy?: string | null
+          upbringing_focus?: string | null
+          updated_at?: string
+        }
+        Update: {
+          controller_parent_id?: string | null
+          created_at?: string
+          custom_surname?: string | null
+          expires_at?: string | null
+          gestation_ends_at?: string | null
+          id?: string
+          marriage_id?: string
+          parent_a_id?: string
+          parent_b_id?: string
+          status?: string
+          surname_policy?: string | null
+          upbringing_focus?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_requests_controller_parent_id_fkey"
+            columns: ["controller_parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_requests_controller_parent_id_fkey"
+            columns: ["controller_parent_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_requests_marriage_id_fkey"
+            columns: ["marriage_id"]
+            isOneToOne: false
+            referencedRelation: "marriages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_requests_parent_a_id_fkey"
+            columns: ["parent_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_requests_parent_a_id_fkey"
+            columns: ["parent_a_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_requests_parent_b_id_fkey"
+            columns: ["parent_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_requests_parent_b_id_fkey"
+            columns: ["parent_b_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chord_progressions: {
         Row: {
           created_at: string
@@ -13293,6 +13391,97 @@ export type Database = {
           },
         ]
       }
+      marriages: {
+        Row: {
+          created_at: string
+          end_reason: string | null
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          metadata: Json | null
+          partner_a_id: string
+          partner_b_id: string
+          proposed_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          wedding_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          metadata?: Json | null
+          partner_a_id: string
+          partner_b_id: string
+          proposed_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          wedding_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          metadata?: Json | null
+          partner_a_id?: string
+          partner_b_id?: string
+          proposed_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          wedding_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marriages_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marriages_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marriages_partner_a_id_fkey"
+            columns: ["partner_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marriages_partner_a_id_fkey"
+            columns: ["partner_a_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marriages_partner_b_id_fkey"
+            columns: ["partner_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marriages_partner_b_id_fkey"
+            columns: ["partner_b_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_appearances: {
         Row: {
           air_date: string
@@ -16304,6 +16493,129 @@ export type Database = {
             columns: ["starting_city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_children: {
+        Row: {
+          birth_game_date: Json | null
+          bond_parent_a: number | null
+          bond_parent_b: number | null
+          child_profile_id: string | null
+          child_request_id: string | null
+          controller_user_id: string | null
+          created_at: string
+          current_age: number | null
+          emotional_stability: number | null
+          id: string
+          inherited_potentials: Json | null
+          marriage_id: string | null
+          name: string
+          parent_a_id: string
+          parent_b_id: string
+          playability_state: string | null
+          surname: string
+          traits: Json | null
+          updated_at: string
+        }
+        Insert: {
+          birth_game_date?: Json | null
+          bond_parent_a?: number | null
+          bond_parent_b?: number | null
+          child_profile_id?: string | null
+          child_request_id?: string | null
+          controller_user_id?: string | null
+          created_at?: string
+          current_age?: number | null
+          emotional_stability?: number | null
+          id?: string
+          inherited_potentials?: Json | null
+          marriage_id?: string | null
+          name: string
+          parent_a_id: string
+          parent_b_id: string
+          playability_state?: string | null
+          surname: string
+          traits?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          birth_game_date?: Json | null
+          bond_parent_a?: number | null
+          bond_parent_b?: number | null
+          child_profile_id?: string | null
+          child_request_id?: string | null
+          controller_user_id?: string | null
+          created_at?: string
+          current_age?: number | null
+          emotional_stability?: number | null
+          id?: string
+          inherited_potentials?: Json | null
+          marriage_id?: string | null
+          name?: string
+          parent_a_id?: string
+          parent_b_id?: string
+          playability_state?: string | null
+          surname?: string
+          traits?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_children_child_profile_id_fkey"
+            columns: ["child_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_child_profile_id_fkey"
+            columns: ["child_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_child_request_id_fkey"
+            columns: ["child_request_id"]
+            isOneToOne: false
+            referencedRelation: "child_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_marriage_id_fkey"
+            columns: ["marriage_id"]
+            isOneToOne: false
+            referencedRelation: "marriages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_parent_a_id_fkey"
+            columns: ["parent_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_parent_a_id_fkey"
+            columns: ["parent_a_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_parent_b_id_fkey"
+            columns: ["parent_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_children_parent_b_id_fkey"
+            columns: ["parent_b_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -29167,6 +29479,10 @@ export type Database = {
       calculate_twaater_organic_followers: { Args: never; Returns: undefined }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
+        Returns: Json
+      }
+      check_marriage_eligibility: {
+        Args: { p_profile_id: string }
         Returns: Json
       }
       check_player_in_gig_city: {
