@@ -41,6 +41,15 @@ export function RomanticProgressionPanel({
   onInteraction,
   className,
 }: RomanticProgressionProps) {
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const gameData = useOptionalGameData();
+  const profileId = gameData?.profile?.id;
+  const { data: marriage } = useMarriageStatus(profileId);
+  const proposeMarriage = useProposeMarriage();
+
+  const isEngaged = romance?.stage === "engaged";
+  const canPropose = isEngaged && !marriage;
+
   if (!romance) {
     return (
       <Card className={cn("border-border/50", className)}>

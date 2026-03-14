@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.036",
+    date: "2026-03-14",
+    changes: [
+      { type: 'feature', description: "Marriage & Children System Phase 1 — Proposal, wedding, and marriage lifecycle with dual-consent child planning" },
+      { type: 'feature', description: "Family Dashboard — Live family tab on Relationships page showing marriage status, children, and pending requests" },
+      { type: 'feature', description: "Child Planning — Married players can plan children with controller selection, surname policy, and upbringing focus (±15% skill inheritance)" },
+      { type: 'feature', description: "Child Profiles — Children appear with inherited potentials, emotional stability, and parent bond gauges; playability state (NPC/Guided/Playable) by age" },
+      { type: 'feature', description: "Plan Wedding button on Romance panel when relationship reaches 'Engaged' stage" },
+      { type: 'feature', description: "Marriage proposal and acceptance flow with partner confirmation" },
+    ],
+  },
+  {
     version: "1.1.035",
     date: "2026-03-13",
     changes: [

@@ -32,6 +32,7 @@ import { INTERACTION_PRESETS } from "@/types/character-relationships";
 import type { CharacterRelationship } from "@/types/character-relationships";
 import type { DecoratedFriendship } from "@/features/relationships/types";
 import { formatDistanceToNow } from "date-fns";
+import { FamilyDashboard } from "@/components/family/FamilyDashboard";
 
 // ── Filter categories ─────────────────────────────────────────
 const FILTER_CATEGORIES = [
