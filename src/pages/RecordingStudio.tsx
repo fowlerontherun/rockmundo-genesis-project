@@ -8,6 +8,7 @@ import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordin
 import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic } from "lucide-react";
