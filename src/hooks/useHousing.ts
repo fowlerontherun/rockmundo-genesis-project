@@ -205,7 +205,7 @@ export function useStartRental() {
       country: string;
       weeklyCost: number;
     }) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!user || !profileId) throw new Error("Not authenticated");
 
       // Check no active rental
       const { data: existing } = await supabase
