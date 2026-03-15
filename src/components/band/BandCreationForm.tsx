@@ -64,11 +64,30 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
 
     setLoading(true);
     try {
-      // Check if user is already in an active band (not a touring member)
+      // Get active profile for this user
+      const { data: activeProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .is('died_at', null)
+        .maybeSingle();
+
+      if (!activeProfile) {
+        toast({
+          title: 'No active character',
+          description: 'Please select an active character first.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Check if this profile is already in an active band
       const { data: existingBands } = await supabase
         .from('band_members')
         .select('band_id, is_touring_member, bands!inner(name, status)')
-        .eq('user_id', user.id)
+        .eq('profile_id', activeProfile.id)
         .eq('is_touring_member', false)
         .eq('bands.status', 'active')
         .limit(1);
@@ -84,11 +103,11 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         return;
       }
 
-      // Clean up any orphaned band_member records for disbanded bands
+      // Clean up any orphaned band_member records for this profile
       await supabase
         .from('band_members')
         .delete()
-        .eq('user_id', user.id)
+        .eq('profile_id', activeProfile.id)
         .eq('is_touring_member', false);
 
       const isSolo = creationMode === 'solo';
