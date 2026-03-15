@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.044",
+    date: "2026-03-15",
+    changes: [
+      { type: 'feature', description: "New characters now receive 300 AP and 1000 XP as a starter grant on completing onboarding" },
+      { type: 'fix', description: "Schedule now filters by active profile (profile_id) instead of user_id — each character has its own independent schedule" },
+    ],
+  },
+  {
     version: "1.1.043",
     date: "2026-03-15",
     changes: [
