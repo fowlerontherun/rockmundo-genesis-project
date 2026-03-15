@@ -115,11 +115,11 @@ export const useMediaFacilities = (profileId?: string) => {
       show_format?: string;
       target_audience?: string;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       const { data, error } = await supabase
         .from("media_shows")
-        .insert({ ...show, user_id: userId })
+        .insert({ ...show, profile_id: profileId } as any)
         .select()
         .single();
 
