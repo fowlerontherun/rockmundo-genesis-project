@@ -235,7 +235,8 @@ const RugAlertBanner = ({ ruggedSymbols }: { ruggedSymbols: string[] }) => {
 
 export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoToken[]; tokensLoading: boolean }) => {
   const { user } = useAuth();
-  const { holdings, buyToken, sellToken, isBuying, isSelling } = useCryptoTokens(user?.id);
+  const { profileId } = useActiveProfile();
+  const { holdings, buyToken, sellToken, isBuying, isSelling } = useCryptoTokens(profileId ?? undefined);
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [buyQuantity, setBuyQuantity] = useState("");
   const [sellQuantity, setSellQuantity] = useState("");
