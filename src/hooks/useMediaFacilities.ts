@@ -99,7 +99,7 @@ export const useMediaFacilities = (profileId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-media-facilities", userId] });
+      queryClient.invalidateQueries({ queryKey: ["my-media-facilities", profileId] });
       toast.success("Facility created successfully");
     },
     onError: (error: any) => {
