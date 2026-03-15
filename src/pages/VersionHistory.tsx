@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.037",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "Fixed build errors in useCharacterSlots, useCompanyShares, useCollaborationInvites, useGameData, and PersonalVehicles — added type safety workarounds for auto-generated Supabase types" },
+    ],
+  },
+  {
     version: "1.1.036",
     date: "2026-03-14",
     changes: [
