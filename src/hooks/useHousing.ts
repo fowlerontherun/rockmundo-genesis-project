@@ -191,6 +191,7 @@ export function useBuyProperty() {
 
 export function useStartRental() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
