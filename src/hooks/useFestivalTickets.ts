@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { createScheduledActivity } from "./useActivityBooking";
-import { createScheduledActivity } from "./useActivityBooking";
 
 export interface FestivalTicket {
   id: string;
