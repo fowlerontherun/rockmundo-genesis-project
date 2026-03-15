@@ -8,6 +8,7 @@ import type {
   ProposedPolicies 
 } from "@/types/city-governance";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 // Fetch current or upcoming election for a city
