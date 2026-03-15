@@ -1,73 +1,70 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { AddictionRecord, RecoveryProgram } from "@/utils/addictionSystem";
 import { getRecoveryProgramDetails } from "@/utils/addictionSystem";
 
 export function useAddictions() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  // Fetch active/recovering addictions
   const { data: addictions, isLoading } = useQuery({
-    queryKey: ["addictions", user?.id],
+    queryKey: ["addictions", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("player_addictions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .in("status", ["active", "recovering", "relapsed"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as AddictionRecord[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
-  // Start a recovery program
   const startRecoveryMutation = useMutation({
     mutationFn: async ({ addictionId, program }: { addictionId: string; program: RecoveryProgram }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!user?.id || !profileId) throw new Error("Not authenticated");
 
       const details = getRecoveryProgramDetails(program);
 
-      // Check cost for therapy
       if (program === "therapy") {
         const { data: profile } = await supabase
           .from("profiles")
           .select("cash")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
         if ((profile?.cash ?? 0) < details.costPerSession) {
           throw new Error(`Need $${details.costPerSession} for a therapy session`);
         }
       }
 
-      // Check cost for rehab
       if (program === "rehab") {
         const rehabDetails = details as { costRange: { min: number; max: number }; durationDays: { min: number; max: number } };
         const { data: profile } = await supabase
           .from("profiles")
           .select("cash")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
         const rehabCost = rehabDetails.costRange.min + Math.floor(Math.random() * (rehabDetails.costRange.max - rehabDetails.costRange.min));
         if ((profile?.cash ?? 0) < rehabCost) {
           throw new Error(`Need $${rehabCost} for rehab`);
         }
-        // Deduct cost
-        await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - rehabCost }).eq("user_id", user.id);
+        await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - rehabCost }).eq("id", profileId);
 
-        // Create blocking scheduled activity for rehab
         const rehabDays = rehabDetails.durationDays.min + Math.floor(Math.random() * (rehabDetails.durationDays.max - rehabDetails.durationDays.min));
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + rehabDays);
 
         await (supabase as any).from("player_scheduled_activities").insert({
           user_id: user.id,
+          profile_id: profileId,
           activity_type: "rehab",
           scheduled_start: new Date().toISOString(),
           scheduled_end: endDate.toISOString(),
@@ -98,10 +95,9 @@ export function useAddictions() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Attend a therapy session (reduces severity)
   const therapySessionMutation = useMutation({
     mutationFn: async (addictionId: string) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!user?.id || !profileId) throw new Error("Not authenticated");
 
       const addiction = addictions?.find(a => a.id === addictionId);
       if (!addiction) throw new Error("Addiction not found");
@@ -110,15 +106,15 @@ export function useAddictions() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if ((profile?.cash ?? 0) < 100) throw new Error("Need $100 for therapy session");
 
-      const reduction = 5 + Math.floor(Math.random() * 6); // 5-10
+      const reduction = 5 + Math.floor(Math.random() * 6);
       const newSeverity = Math.max(0, addiction.severity - reduction);
 
-      await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - 100 }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - 100 }).eq("id", profileId);
 
       const updates: any = {
         severity: newSeverity,

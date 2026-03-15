@@ -2,25 +2,27 @@ import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { CasinoGameType } from "@/lib/casino/types";
 
 export function useCasino() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: profile } = useQuery({
-    queryKey: ["profile-cash", user?.id],
+    queryKey: ["profile-cash", profileId],
     queryFn: async () => {
-      if (!user?.id) return { cash: 0 };
+      if (!profileId) return { cash: 0 };
       const { data } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       return data ?? { cash: 0 };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const mutation = useMutation({
@@ -35,13 +37,12 @@ export function useCasino() {
       payout: number;
       metadata: Record<string, unknown>;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!user?.id || !profileId) throw new Error("Not authenticated");
 
-      // Get fresh cash
       const { data: freshProfile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       const currentCash = freshProfile?.cash ?? 0;
@@ -50,16 +51,14 @@ export function useCasino() {
       const netResult = payout - betAmount;
       const newCash = currentCash + netResult;
 
-      // Update cash
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: Math.max(0, newCash) })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
       if (cashError) throw cashError;
 
-      // Log transaction
       await (supabase as any).from("casino_transactions").insert({
-        profile_id: user.id,
+        profile_id: profileId,
         game_type: gameType,
         bet_amount: betAmount,
         payout,
@@ -72,7 +71,7 @@ export function useCasino() {
         const { data: existing } = await (supabase as any)
           .from("player_addictions")
           .select("id, severity")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("addiction_type", "gambling")
           .in("status", ["active", "recovering"])
           .maybeSingle();
@@ -85,6 +84,7 @@ export function useCasino() {
         } else {
           await (supabase as any).from("player_addictions").insert({
             user_id: user.id,
+            profile_id: profileId,
             addiction_type: "gambling",
             severity: 10,
             status: "active",

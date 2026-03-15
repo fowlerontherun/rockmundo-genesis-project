@@ -1,71 +1,73 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export function usePrisonStatus() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: imprisonment, isLoading } = useQuery({
-    queryKey: ["imprisonment", user?.id],
+    queryKey: ["imprisonment", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
+      if (!profileId) return null;
+      const { data, error } = await (supabase as any)
         .from("player_imprisonments")
         .select("*, prisons(name, has_music_program, rehabilitation_rating)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "imprisoned")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: criminalRecord } = useQuery({
-    queryKey: ["criminal-record", user?.id],
+    queryKey: ["criminal-record", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("player_criminal_record")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("recorded_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: pendingEvents } = useQuery({
-    queryKey: ["prison-events", user?.id],
+    queryKey: ["prison-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_prison_events")
         .select("*, prison_events(*)")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .eq("status", "pending");
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id && !!imprisonment,
+    enabled: !!profileId && !!imprisonment && !!user?.id,
   });
 
   const { data: communityService } = useQuery({
-    queryKey: ["community-service", user?.id],
+    queryKey: ["community-service", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("community_service_assignments")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId && !!user?.id,
   });
 
   const payBailMutation = useMutation({

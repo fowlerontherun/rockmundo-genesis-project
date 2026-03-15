@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface FinancialTransaction {
   id: string;
@@ -164,32 +165,33 @@ const INVESTMENT_OPTIONS: InvestmentOption[] = [
 
 export const useFinances = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   // Fetch player's cash from profiles
   const { data: profile } = useQuery({
-    queryKey: ["profile-cash", user?.id],
+    queryKey: ["profile-cash", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("cash, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
-  // Fetch player's bands and their balances
+  // Fetch player's bands and their balances (via profile_id on band_members)
   const { data: bands } = useQuery({
-    queryKey: ["player-bands-finances", user?.id],
+    queryKey: ["player-bands-finances", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data: memberships, error: memberError } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(id, name, band_balance)")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       
       if (memberError) throw memberError;
 
@@ -198,7 +200,6 @@ export const useFinances = () => {
         const band = m.bands as unknown as { id: string; name: string; band_balance: number };
         if (!band) continue;
         
-        // Get member count for share calculation
         const { count } = await supabase
           .from("band_members")
           .select("*", { count: "exact", head: true })
@@ -215,26 +216,25 @@ export const useFinances = () => {
       }
       return bandFinances;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
-  // Fetch transaction history from band_earnings
+  // Fetch transaction history from band_earnings via profile_id
   const { data: transactions } = useQuery({
-    queryKey: ["finance-transactions", user?.id],
+    queryKey: ["finance-transactions", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
-      // Get earnings attributed to user
-      const { data: earnings, error: earningsError } = await supabase
+      const { data: earnings, error: earningsError } = await (supabase as any)
         .from("band_earnings")
         .select("id, created_at, source, amount, description, band_id, bands(name)")
-        .eq("earned_by_user_id", user.id)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
         .limit(100);
       
       if (earningsError) throw earningsError;
 
-      const txns: FinancialTransaction[] = (earnings || []).map((e) => ({
+      const txns: FinancialTransaction[] = (earnings || []).map((e: any) => ({
         id: e.id,
         date: e.created_at,
         type: e.amount >= 0 ? "income" : "expense",
@@ -246,39 +246,39 @@ export const useFinances = () => {
 
       return txns;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch player investments
   const { data: investments } = useQuery({
-    queryKey: ["player-investments", user?.id],
+    queryKey: ["player-investments", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("player_investments")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
       if (error) throw error;
       return data as PlayerInvestment[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch player loans
   const { data: loans } = useQuery({
-    queryKey: ["player-loans", user?.id],
+    queryKey: ["player-loans", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("player_loans")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("started_at", { ascending: false });
       if (error) throw error;
       return data as PlayerLoan[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Calculate monthly ledger from transactions
@@ -320,7 +320,6 @@ export const useFinances = () => {
     const totalEarnings = transactions?.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0) || 0;
     const totalExpenses = transactions?.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0) || 0;
     
-    // Monthly averages from ledger
     const monthlyIncome = monthlyLedger.length 
       ? monthlyLedger.reduce((s, m) => s + m.income, 0) / monthlyLedger.length 
       : 0;
@@ -341,7 +340,6 @@ export const useFinances = () => {
     };
   })();
 
-  // Calculate earnings by source
   const earningsBySource: Record<string, number> = (() => {
     if (!transactions?.length) return {};
     const bySource: Record<string, number> = {};

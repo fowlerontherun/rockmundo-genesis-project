@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import {
   calculateRecoveryTime,
@@ -13,6 +14,7 @@ import {
 export interface PlayerCondition {
   id: string;
   user_id: string;
+  profile_id?: string;
   condition_type: string;
   condition_name: string;
   severity: number;
@@ -29,22 +31,24 @@ export interface PlayerCondition {
 
 export function useConditions() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: conditions = [], isLoading } = useQuery({
-    queryKey: ["player-conditions", user?.id],
+    queryKey: ["player-conditions", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
+      // player_conditions table may not exist — use user_id fallback
       const { data, error } = await (supabase as any)
         .from("player_conditions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .in("status", ["active", "treating"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as PlayerCondition[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId && !!user?.id,
   });
 
   const activeConditions = conditions.filter((c) => c.status === "active" || c.status === "treating");
@@ -57,10 +61,9 @@ export function useConditions() {
     }))
   );
 
-  // Treat a condition
   const treatMutation = useMutation({
     mutationFn: async ({ conditionId, treatmentType }: { conditionId: string; treatmentType: TreatmentType }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!user?.id || !profileId) throw new Error("Not authenticated");
 
       const condition = conditions.find((c) => c.id === conditionId);
       if (!condition) throw new Error("Condition not found");
@@ -72,7 +75,7 @@ export function useConditions() {
         const { data: profile } = await supabase
           .from("profiles")
           .select("cash")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
 
         if (!profile || profile.cash < cost) {
@@ -82,7 +85,7 @@ export function useConditions() {
         await supabase
           .from("profiles")
           .update({ cash: profile.cash - cost })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
       }
 
       const recoveryHours = calculateRecoveryTime(condition.condition_name, condition.severity, treatmentType);
@@ -111,7 +114,6 @@ export function useConditions() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Check and recover treated conditions
   const checkRecoveryMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) return;

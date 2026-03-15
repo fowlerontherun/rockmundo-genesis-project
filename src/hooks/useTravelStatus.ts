@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "@/hooks/use-toast";
 
 interface TravelStatus {
@@ -16,14 +17,14 @@ interface TravelStatus {
 
 export function useTravelStatus() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: travelStatus, isLoading } = useQuery({
-    queryKey: ["travel-status", user?.id],
+    queryKey: ["travel-status", profileId],
     queryFn: async (): Promise<TravelStatus | null> => {
-      if (!user) return null;
+      if (!profileId) return null;
 
-      // Get profile with travel status
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select(`
@@ -32,12 +33,11 @@ export function useTravelStatus() {
           current_city_id,
           cities:current_city_id(name)
         `)
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (profileError || !profile) return null;
 
-      // If traveling, get active travel details
       let travelDetails = null;
       if (profile.is_traveling) {
         const { data: activeTravel } = await supabase
@@ -50,7 +50,7 @@ export function useTravelStatus() {
             to_city:to_city_id(name),
             from_city:from_city_id(name)
           `)
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("status", "in_progress")
           .order("created_at", { ascending: false })
           .limit(1)
@@ -70,27 +70,25 @@ export function useTravelStatus() {
         travel_id: travelDetails?.id || null,
       };
     },
-    enabled: !!user,
-    refetchInterval: 30000, // Check every 30 seconds
+    enabled: !!profileId,
+    refetchInterval: 30000,
   });
 
   const cancelTravelMutation = useMutation({
     mutationFn: async (travelId: string) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!user || !profileId) throw new Error("Not authenticated");
 
-      // Get the travel record to calculate refund
       const { data: travel, error: travelError } = await supabase
         .from("player_travel_history")
         .select("cost_paid")
         .eq("id", travelId)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .single();
 
       if (travelError) throw travelError;
 
       const refundAmount = Math.floor((travel?.cost_paid || 0) * 0.5);
 
-      // Update travel status
       const { error: updateError } = await supabase
         .from("player_travel_history")
         .update({ status: "cancelled" })
@@ -98,29 +96,27 @@ export function useTravelStatus() {
 
       if (updateError) throw updateError;
 
-      // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           is_traveling: false,
           travel_arrives_at: null,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (profileError) throw profileError;
 
-      // Refund player by fetching current cash and adding refund
       if (refundAmount > 0) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("cash")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
 
         await supabase
           .from("profiles")
           .update({ cash: (profile?.cash || 0) + refundAmount })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
       }
 
       return { refundAmount };
