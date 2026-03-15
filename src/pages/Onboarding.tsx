@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useFullCharacterIdentity } from "@/hooks/useCharacterIdentity";
@@ -7,10 +7,8 @@ import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { hasCompletedOnboarding, isLoading } = useFullCharacterIdentity();
-  const forceOnboarding = searchParams.get("newCharacter") === "1";
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -20,10 +18,10 @@ const Onboarding = () => {
 
   useEffect(() => {
     // If onboarding already completed, redirect to dashboard
-    if (!forceOnboarding && !isLoading && hasCompletedOnboarding) {
+    if (!isLoading && hasCompletedOnboarding) {
       navigate("/dashboard");
     }
-  }, [forceOnboarding, hasCompletedOnboarding, isLoading, navigate]);
+  }, [hasCompletedOnboarding, isLoading, navigate]);
 
   if (authLoading || isLoading) {
     return (

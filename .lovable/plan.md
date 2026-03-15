@@ -1,16 +1,15 @@
 
 
-## Fix Plan: Characters Hub Tile Image + `unlock_cost` Column Error
+## Fix: Tutorial World Map Link Goes to 404
 
-### Issue 1: Missing Characters Tile Image
-The `/characters` path maps to key `characters`, but there is no `characters.png` in `public/hub-tiles/`. No exact match exists. The closest relevant image would be `buy-character-slot.png`. We can either add a `tileImageKey` override to reuse that image, or accept the icon fallback. Since no new assets can be created here, the pragmatic fix is to add `tileImageKey: "buy-character-slot"` to the characters tile in `CharacterHub.tsx` so it uses the existing slot image rather than showing a bare icon.
+### Problem
+The tutorial step `visit_world_map` directs players to `/world-map`, but that route is commented out in `App.tsx` (line 532), causing a 404.
 
-### Issue 2: `unlock_cost` Column Does Not Exist
-In `src/hooks/useCharacterSlots.ts` line 137, the insert includes `unlock_cost: 0` but that column does not exist on the `profiles` table. Simply remove that property from the insert object.
+### Solution
+Uncomment the `/world-map` route in `App.tsx` to re-enable the WorldMap page. The component (`WorldMap.tsx`) and its lazy import already exist and are functional.
 
-### Files to Edit
-1. **`src/pages/hubs/CharacterHub.tsx`** — Add `tileImageKey: "buy-character-slot"` to the characters tile.
-2. **`src/hooks/useCharacterSlots.ts`** — Remove `unlock_cost: 0` from the profile insert (line 137).
-
-Two small, targeted fixes. No database changes needed.
+### Files to modify
+- **`src/App.tsx`** — Uncomment line 532: `<Route path="world-map" element={<WorldMap />} />`
+- **`src/components/VersionHeader.tsx`** — Bump to v1.0.890
+- **`src/pages/VersionHistory.tsx`** — Add changelog entry
 

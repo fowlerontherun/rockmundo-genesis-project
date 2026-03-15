@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.039",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "Characters tile on Character Hub now shows an image instead of a bare icon" },
+      { type: 'fix', description: "Fixed 'Could not find unlock_cost column' error when creating a new character" },
+    ],
+  },
+  {
     version: "1.1.038",
     date: "2026-03-15",
     changes: [

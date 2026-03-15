@@ -30,9 +30,9 @@ export default function CreateCharacter() {
 
   useEffect(() => {
     if (createCharacter.isSuccess) {
-      window.location.assign("/onboarding?newCharacter=1");
+      navigate("/onboarding", { replace: true });
     }
-  }, [createCharacter.isSuccess]);
+  }, [createCharacter.isSuccess, navigate]);
 
   return (
     <PageLayout>
@@ -56,21 +56,7 @@ export default function CreateCharacter() {
                   {(createCharacter.error as Error)?.message || "Could not create character."}
                 </p>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() =>
-                      createCharacter.mutate(undefined, {
-                        onError: (error: any) => {
-                          toast({
-                            title: "Unable to create character",
-                            description: error?.message || "Please try again.",
-                            variant: "destructive",
-                          });
-                        },
-                      })
-                    }
-                  >
-                    Try again
-                  </Button>
+                  <Button onClick={() => createCharacter.mutate()}>Try again</Button>
                   <Button variant="outline" onClick={() => navigate("/buy-character-slot")}>Back</Button>
                 </div>
               </div>
