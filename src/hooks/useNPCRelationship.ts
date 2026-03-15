@@ -52,13 +52,7 @@ export function useNPCRelationship(npcId: string | undefined) {
       trustDelta?: number;
       respectDelta?: number;
     }) => {
-      if (!user?.id || !npcId) throw new Error("Missing data");
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      if (!profile) throw new Error("Profile not found");
+      if (!profileId || !npcId) throw new Error("Missing data");
 
       if (relationship) {
         const { error } = await supabase
