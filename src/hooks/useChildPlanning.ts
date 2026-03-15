@@ -185,6 +185,8 @@ export function calculateInheritedPotentials(
 
 export function useCompleteChildBirth() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: async (params: {
       requestId: string;
@@ -222,12 +224,23 @@ export function useCompleteChildBirth() {
         .update(asAny({ status: "completed" }))
         .eq("id", params.requestId);
 
+      // Post activity feed entry
+      if (user?.id) {
+        await supabase.from("activity_feed").insert({
+          user_id: user.id,
+          activity_type: "child_born",
+          message: `👶 Welcome ${params.name} ${params.surname} to the family!`,
+          metadata: { child_id: (data as any)?.id },
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       toast.success("A child is born! 🎉👶");
       queryClient.invalidateQueries({ queryKey: ["player-children"] });
       queryClient.invalidateQueries({ queryKey: ["child-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-feed"] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to complete birth");
