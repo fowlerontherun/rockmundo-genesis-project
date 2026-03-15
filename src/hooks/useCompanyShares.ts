@@ -25,7 +25,7 @@ export const useCompanyShareholders = (companyId: string | undefined) => {
         .order("shares", { ascending: false });
 
       if (error) throw error;
-      const shareholders = (data || []) as CompanyShareholder[];
+      const shareholders = (data || []) as unknown as CompanyShareholder[];
 
       if (shareholders.length === 0) return shareholders;
 
