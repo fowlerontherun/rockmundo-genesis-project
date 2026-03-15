@@ -59,14 +59,14 @@ const createInboxNotification = async ({
 }) => {
   const { error } = await supabase.from("player_inbox").insert({
     user_id: userId,
-    category: "social",
+    category: "social" as any,
     priority: "high",
     title,
     message,
     action_type: actionType ?? null,
     action_data: actionData ?? null,
     metadata: { source: "songwriting_collaboration" },
-  });
+  } as any);
 
   if (error) {
     console.error("Failed to create collaboration inbox notification:", error);

@@ -25,7 +25,7 @@ export const useCompanyShareholders = (companyId: string | undefined) => {
         .order("shares", { ascending: false });
 
       if (error) throw error;
-      const shareholders = (data || []) as CompanyShareholder[];
+      const shareholders = (data || []) as unknown as CompanyShareholder[];
 
       if (shareholders.length === 0) return shareholders;
 
@@ -113,10 +113,11 @@ export const useIssueCompanyShares = () => {
         .maybeSingle();
 
       if (existingShareholder) {
+        const existing = existingShareholder as any;
         const { error: updateSharesError } = await supabase
           .from("company_shareholders" as any)
-          .update({ shares: Number(existingShareholder.shares) + shares })
-          .eq("id", existingShareholder.id);
+          .update({ shares: Number(existing.shares) + shares })
+          .eq("id", existing.id);
         if (updateSharesError) throw updateSharesError;
       } else {
         const { error: insertSharesError } = await supabase
@@ -145,7 +146,7 @@ export const useIssueCompanyShares = () => {
       if (allShareholders && allShareholders.length > 0) {
         await supabase
           .from("companies")
-          .update({ owner_id: allShareholders[0].user_id })
+          .update({ owner_id: (allShareholders[0] as any).user_id })
           .eq("id", companyId);
       }
 
@@ -206,8 +207,8 @@ export const useDistributeAnnualProfit = () => {
         .select("amount")
         .eq("company_id", companyId);
 
-      if (latestDist?.distributed_at) {
-        txQuery = txQuery.gt("created_at", latestDist.distributed_at);
+      if ((latestDist as any)?.distributed_at) {
+        txQuery = txQuery.gt("created_at", (latestDist as any).distributed_at);
       }
 
       const { data: txns, error: txError } = await txQuery;
