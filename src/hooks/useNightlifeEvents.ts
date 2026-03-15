@@ -62,7 +62,7 @@ export function useNightlifeEvents() {
       const { data: playerProfile } = await supabase
         .from("profiles")
         .select("energy, cash, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!playerProfile) throw new Error("Profile not found");
