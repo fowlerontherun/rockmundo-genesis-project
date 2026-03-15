@@ -149,7 +149,7 @@ export const usePlaylists = (profileId?: string) => {
   // Submit song to playlist - requires a song_release ID
   const submitToPlaylist = useMutation({
     mutationFn: async ({ playlistId, releaseId }: { playlistId: string; releaseId: string }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       // Get playlist details for cost
       const playlist = playlists.find(p => p.id === playlistId);
