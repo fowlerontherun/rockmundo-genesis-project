@@ -501,7 +501,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       
       // Log activity
       logGameActivity({
-        userId: userId!,
+        userId: profileId!,
         activityType: 'songwriting_session_completed',
         activityCategory: 'songwriting',
         description: `Completed songwriting session with +${musicGain} music, +${lyricsGain} lyrics progress`,
