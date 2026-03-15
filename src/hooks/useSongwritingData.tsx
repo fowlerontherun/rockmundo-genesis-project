@@ -606,7 +606,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       
       // Log activity
       logGameActivity({
-        userId: userId!,
+        userId: profileId!,
         bandId,
         activityType: 'song_created',
         activityCategory: 'songwriting',
