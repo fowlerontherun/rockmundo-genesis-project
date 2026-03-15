@@ -1050,41 +1050,12 @@ const useProvideGameData = (): UseGameDataReturn => {
         nextProfile = (fallbackProfileData as PlayerProfile | null) ?? null;
 
         if (nextProfile && !nextProfile.is_active) {
-          const { error: switchError } = await supabase.rpc("switch_active_character" as any, {
+          const { error: switchError } = await supabase.rpc("switch_active_character", {
             p_profile_id: nextProfile.id,
           });
 
           if (switchError) {
-            const isMissingSwitchFunction =
-              switchError.code === "PGRST202" ||
-              switchError.message?.includes("Could not find the function public.switch_active_character");
-
-            if (!isMissingSwitchFunction) {
-              throw switchError;
-            }
-
-            const { error: activateTargetError } = await supabase
-              .from("profiles")
-              .update({ is_active: true })
-              .eq("id", nextProfile.id)
-              .eq("user_id", user.id)
-              .is("died_at", null);
-
-            if (activateTargetError) {
-              throw activateTargetError;
-            }
-
-            const { error: deactivateOthersError } = await supabase
-              .from("profiles")
-              .update({ is_active: false })
-              .eq("user_id", user.id)
-              .neq("id", nextProfile.id)
-              .eq("is_active", true)
-              .is("died_at", null);
-
-            if (deactivateOthersError) {
-              throw deactivateOthersError;
-            }
+            throw switchError;
           }
 
           nextProfile = {

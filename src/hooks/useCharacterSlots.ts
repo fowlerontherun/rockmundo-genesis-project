@@ -222,28 +222,44 @@ export function useCharacterSlots() {
     mutationFn: async () => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase.rpc("create_character_profile" as any);
+      const { error } = await supabase.rpc("switch_active_character", {
+        p_profile_id: profileId,
+      });
 
-      if (!error) {
-        const createdProfileId = Array.isArray(data) && data.length > 0 ? (data[0] as any)?.id : null;
-        if (!createdProfileId) {
-          throw new Error("Failed to create character profile");
-        }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["game-data"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-character-identity"] });
+    },
+  });
 
-        return createdProfileId as string;
+  const createCharacter = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.rpc("create_character_profile");
+      if (error) throw error;
+
+      const createdProfileId = Array.isArray(data)
+        ? data[0]?.id
+        : typeof data === "object" && data !== null && "id" in data
+          ? (data as { id?: string }).id
+          : null;
+      if (!createdProfileId) {
+        throw new Error("Failed to create character profile");
       }
 
-      if (!isMissingRpcError(error)) {
-        throw error;
-      }
-
-      return createCharacterProfileFallback(user.id);
+      return createdProfileId as string;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-character-identity"] });
     },
   });
 
