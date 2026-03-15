@@ -30,9 +30,10 @@ export default function CreateCharacter() {
 
   useEffect(() => {
     if (createCharacter.isSuccess) {
-      navigate("/onboarding", { replace: true });
+      // Full page reload to clear cached game data so onboarding sees the NEW profile
+      window.location.href = "/onboarding";
     }
-  }, [createCharacter.isSuccess, navigate]);
+  }, [createCharacter.isSuccess]);
 
   return (
     <PageLayout>
