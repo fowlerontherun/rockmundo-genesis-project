@@ -232,7 +232,7 @@ export const usePlaylists = (profileId?: string) => {
       return { playlistId, releaseId, submissionId: submission.id };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["playlist-submissions", userId] });
+      queryClient.invalidateQueries({ queryKey: ["playlist-submissions", profileId] });
       queryClient.invalidateQueries({ queryKey: ["game-profile"] });
       const playlist = playlists.find(p => p.id === data.playlistId);
       toast({
