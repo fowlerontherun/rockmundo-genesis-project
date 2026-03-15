@@ -218,7 +218,8 @@ export const usePlaylists = (profileId?: string) => {
 
       // Log the activity
       await supabase.from("activity_feed").insert({
-        user_id: userId,
+        user_id: profileId,
+        profile_id: profileId,
         activity_type: "playlist_submission",
         message: `Submitted song to "${playlist.playlist_name}" playlist`,
         metadata: {
@@ -226,7 +227,7 @@ export const usePlaylists = (profileId?: string) => {
           release_id: releaseId,
           cost: submissionCost,
         },
-      });
+      } as any);
 
       return { playlistId, releaseId, submissionId: submission.id };
     },
