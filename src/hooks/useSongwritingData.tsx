@@ -551,8 +551,8 @@ export const useSongwritingData = (profileId?: string | null) => {
       const { data: song, error: songError } = await supabase
         .from('songs')
         .insert({
-          user_id: userId,
-          original_writer_id: userId,
+          user_id: profileId,
+          original_writer_id: profileId,
           title: project.title,
           genre: project.genres?.[0] || null,
           lyrics: project.lyrics,
