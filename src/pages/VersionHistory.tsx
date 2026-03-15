@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.043",
+    date: "2026-03-15",
+    changes: [
+      { type: 'feature', description: "Added Gender selection step (step 2) to the new player onboarding wizard" },
+      { type: 'fix', description: "Onboarding now saves display name, stage name, and gender to the character profile on completion" },
+    ],
+  },
+  {
     version: "1.1.042",
     date: "2026-03-15",
     changes: [
