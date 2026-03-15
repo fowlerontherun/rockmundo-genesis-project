@@ -14,8 +14,11 @@ import {
 import { useCreateReputation } from "@/hooks/useReputation";
 import { useCharacterOrigins, usePersonalityTraits } from "@/hooks/useCharacterIdentity";
 import { getCombinedReputationModifiers } from "@/lib/api/roleplaying";
+import { supabase } from "@/integrations/supabase/client";
+import { useOptionalGameData } from "@/hooks/useGameData";
 
 import { WelcomeStep } from "./steps/WelcomeStep";
+import { GenderStep } from "./steps/GenderStep";
 import { AppearanceStep } from "./steps/AppearanceStep";
 import { OriginStep } from "./steps/OriginStep";
 import { TraitsStep } from "./steps/TraitsStep";
@@ -26,18 +29,20 @@ import { BackstoryStep } from "./steps/BackstoryStep";
 
 const STEPS = [
   { id: 1, title: "Welcome", description: "What should the world call you?" },
-  { id: 2, title: "Appearance", description: "Create your look" },
-  { id: 3, title: "Origin", description: "Where did your journey begin?" },
-  { id: 4, title: "Personality", description: "What defines you?" },
-  { id: 5, title: "Musical Identity", description: "Your sound" },
-  { id: 6, title: "Career Path", description: "How do you want to start?" },
-  { id: 7, title: "Starting City", description: "Choose your home base" },
-  { id: 8, title: "Your Story", description: "Review your backstory" },
+  { id: 2, title: "Gender", description: "Who are you?" },
+  { id: 3, title: "Appearance", description: "Create your look" },
+  { id: 4, title: "Origin", description: "Where did your journey begin?" },
+  { id: 5, title: "Personality", description: "What defines you?" },
+  { id: 6, title: "Musical Identity", description: "Your sound" },
+  { id: 7, title: "Career Path", description: "How do you want to start?" },
+  { id: 8, title: "Starting City", description: "Choose your home base" },
+  { id: 9, title: "Your Story", description: "Review your backstory" },
 ];
 
 export interface OnboardingData {
   displayName: string;
   artistName: string;
+  gender: string;
   originId: string | null;
   traitIds: string[];
   musicalStyle: string;
@@ -50,10 +55,13 @@ export const OnboardingWizard = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const gameData = useOptionalGameData();
+  const profileId = gameData?.profile?.id;
   
   const [data, setData] = useState<OnboardingData>({
     displayName: "",
     artistName: "",
+    gender: "",
     originId: null,
     traitIds: [],
     musicalStyle: "",
@@ -107,18 +115,20 @@ export const OnboardingWizard = () => {
       case 1:
         return data.displayName.trim().length >= 2;
       case 2:
-        return true; // Appearance is optional
+        return data.gender.length > 0;
       case 3:
-        return data.originId !== null;
+        return true; // Appearance is optional
       case 4:
-        return data.traitIds.length >= 2 && data.traitIds.length <= 3;
+        return data.originId !== null;
       case 5:
-        return data.musicalStyle.trim().length > 0;
+        return data.traitIds.length >= 2 && data.traitIds.length <= 3;
       case 6:
-        return data.careerGoal.length > 0;
+        return data.musicalStyle.trim().length > 0;
       case 7:
-        return data.startingCityId !== null;
+        return data.careerGoal.length > 0;
       case 8:
+        return data.startingCityId !== null;
+      case 9:
         return true;
       default:
         return false;
@@ -169,6 +179,21 @@ export const OnboardingWizard = () => {
     try {
       await saveProgress();
       
+      // Save display_name, username, and gender to the profile
+      if (profileId) {
+        const profileUpdates: Record<string, any> = {
+          display_name: data.displayName.trim(),
+          gender: data.gender,
+        };
+        if (data.artistName.trim()) {
+          profileUpdates.username = data.artistName.trim();
+        }
+        await supabase
+          .from("profiles")
+          .update(profileUpdates)
+          .eq("id", profileId);
+      }
+      
       // Create reputation with initial modifiers from origin and traits
       const selectedOrigin = origins.find((o) => o.id === data.originId) ?? null;
       const selectedTraits = traits.filter((t) => data.traitIds.includes(t.id));
@@ -188,18 +213,20 @@ export const OnboardingWizard = () => {
       case 1:
         return <WelcomeStep data={data} updateData={updateData} />;
       case 2:
-        return <AppearanceStep />;
+        return <GenderStep data={data} updateData={updateData} />;
       case 3:
-        return <OriginStep data={data} updateData={updateData} />;
+        return <AppearanceStep />;
       case 4:
-        return <TraitsStep data={data} updateData={updateData} />;
+        return <OriginStep data={data} updateData={updateData} />;
       case 5:
-        return <MusicIdentityStep data={data} updateData={updateData} />;
+        return <TraitsStep data={data} updateData={updateData} />;
       case 6:
-        return <CareerPathStep data={data} updateData={updateData} />;
+        return <MusicIdentityStep data={data} updateData={updateData} />;
       case 7:
-        return <StartingCityStep data={data} updateData={updateData} />;
+        return <CareerPathStep data={data} updateData={updateData} />;
       case 8:
+        return <StartingCityStep data={data} updateData={updateData} />;
+      case 9:
         return (
           <BackstoryStep
             data={data}
