@@ -127,7 +127,7 @@ export const useMediaFacilities = (profileId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["media-shows", userId] });
+      queryClient.invalidateQueries({ queryKey: ["media-shows", profileId] });
       toast.success("Show created successfully");
     },
     onError: (error: any) => {

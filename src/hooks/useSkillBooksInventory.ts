@@ -67,7 +67,7 @@ export const useSkillBooksInventory = (profileId?: string) => {
       if (response.error) throw response.error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["skill-books-inventory", userId] });
+      queryClient.invalidateQueries({ queryKey: ["skill-books-inventory", profileId] });
       toast.success("Book completed! XP awarded.");
     },
     onError: (error: any) => {

@@ -122,27 +122,19 @@ export const useUnderworldInventory = () => {
               .eq("skill_slug", String(effects.skill_slug))
               .single();
 
-        if (profile?.id) {
-          const { data: skillProgress, error: skillFetchError } = await supabase
-            .from("skill_progress")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("skill_slug", String(effects.skill_slug))
-            .single();
+            if (!skillFetchError && skillProgress) {
+              const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
+              const { error: skillUpdateError } = await supabase
+                .from("skill_progress")
+                .update({
+                  current_xp: (skillProgress.current_xp || 0) + skillXpToAdd,
+                })
+                .eq("id", skillProgress.id);
 
-          if (!skillFetchError && skillProgress) {
-            const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
-            const { error: skillUpdateError } = await supabase
-              .from("skill_progress")
-              .update({
-                current_xp: (skillProgress.current_xp || 0) + skillXpToAdd,
-              })
-              .eq("id", skillProgress.id);
-
-            if (skillUpdateError) throw skillUpdateError;
+              if (skillUpdateError) throw skillUpdateError;
+            }
           }
         }
-      }
 
       // Mark item as used
       const { error: markUsedError } = await supabase
