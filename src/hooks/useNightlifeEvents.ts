@@ -86,7 +86,7 @@ export function useNightlifeEvents() {
         const { data: existing } = await supabase
           .from("player_addictions")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("addiction_type", addictionType)
           .in("status", ["active", "recovering", "relapsed"])
           .maybeSingle();
