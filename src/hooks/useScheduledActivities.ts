@@ -285,13 +285,24 @@ export function useWeekScheduledActivities(startDate: Date, userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
 
+      // Get the active profile for this user
+      const { data: activeProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .is('died_at', null)
+        .maybeSingle();
+
+      if (!activeProfile) return [];
+
       const weekStart = startOfDay(startDate);
       const weekEnd = endOfDay(addDays(startDate, 6));
 
       const { data, error } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
-        .eq('user_id', userId)
+        .eq('profile_id', activeProfile.id)
         .gte('scheduled_start', weekStart.toISOString())
         .lte('scheduled_start', weekEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed'])
