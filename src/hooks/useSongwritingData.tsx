@@ -381,7 +381,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       
       // Log activity
       logGameActivity({
-        userId,
+        userId: user!.id,
         activityType: 'songwriting_session_started',
         activityCategory: 'songwriting',
         description: `Started 1-hour songwriting session for project`,
