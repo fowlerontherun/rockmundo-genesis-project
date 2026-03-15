@@ -38,20 +38,20 @@ export const useFanManagement = (profileId?: string) => {
 
   // Fetch campaigns
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
-    queryKey: ["fan-campaigns", userId],
+    queryKey: ["fan-campaigns", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("fan_campaigns")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as FanCampaign[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch segments
