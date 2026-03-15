@@ -58,6 +58,7 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string | null
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id?: string | null
           user_id: string
         }
         Update: {
@@ -76,9 +78,25 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_feed_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       admin_song_gifts: {
         Row: {
@@ -1510,6 +1528,7 @@ export type Database = {
           earned_by_user_id: string | null
           id: string
           metadata: Json | null
+          profile_id: string | null
           source: string
         }
         Insert: {
@@ -1520,6 +1539,7 @@ export type Database = {
           earned_by_user_id?: string | null
           id?: string
           metadata?: Json | null
+          profile_id?: string | null
           source: string
         }
         Update: {
@@ -1530,6 +1550,7 @@ export type Database = {
           earned_by_user_id?: string | null
           id?: string
           metadata?: Json | null
+          profile_id?: string | null
           source?: string
         }
         Relationships: [
@@ -1538,6 +1559,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_earnings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_earnings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -7119,6 +7154,7 @@ export type Database = {
           is_active: boolean | null
           joined_at: string | null
           last_moved_at: string | null
+          profile_id: string | null
           user_id: string
         }
         Insert: {
@@ -7128,6 +7164,7 @@ export type Database = {
           is_active?: boolean | null
           joined_at?: string | null
           last_moved_at?: string | null
+          profile_id?: string | null
           user_id: string
         }
         Update: {
@@ -7137,6 +7174,7 @@ export type Database = {
           is_active?: boolean | null
           joined_at?: string | null
           last_moved_at?: string | null
+          profile_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -7152,6 +7190,20 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendance_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendance_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -13253,6 +13305,7 @@ export type Database = {
           listing_status: string
           listing_type: string
           minimum_bid: number | null
+          profile_id: string | null
           royalty_percentage: number
           seller_band_id: string | null
           seller_user_id: string
@@ -13271,6 +13324,7 @@ export type Database = {
           listing_status?: string
           listing_type?: string
           minimum_bid?: number | null
+          profile_id?: string | null
           royalty_percentage?: number
           seller_band_id?: string | null
           seller_user_id: string
@@ -13289,6 +13343,7 @@ export type Database = {
           listing_status?: string
           listing_type?: string
           minimum_bid?: number | null
+          profile_id?: string | null
           royalty_percentage?: number
           seller_band_id?: string | null
           seller_user_id?: string
@@ -13296,6 +13351,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "marketplace_listings_seller_band_id_fkey"
             columns: ["seller_band_id"]
@@ -13553,6 +13622,7 @@ export type Database = {
           facility_type: string
           id: string
           name: string
+          profile_id: string | null
           reputation: number | null
           specialization: string | null
           sponsor_tier: string | null
@@ -13566,6 +13636,7 @@ export type Database = {
           facility_type: string
           id?: string
           name: string
+          profile_id?: string | null
           reputation?: number | null
           specialization?: string | null
           sponsor_tier?: string | null
@@ -13579,6 +13650,7 @@ export type Database = {
           facility_type?: string
           id?: string
           name?: string
+          profile_id?: string | null
           reputation?: number | null
           specialization?: string | null
           sponsor_tier?: string | null
@@ -13592,6 +13664,20 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_facilities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_facilities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -13650,6 +13736,7 @@ export type Database = {
           facility_id: string
           id: string
           is_active: boolean | null
+          profile_id: string | null
           rating: number | null
           show_format: string | null
           show_name: string
@@ -13664,6 +13751,7 @@ export type Database = {
           facility_id: string
           id?: string
           is_active?: boolean | null
+          profile_id?: string | null
           rating?: number | null
           show_format?: string | null
           show_name: string
@@ -13678,6 +13766,7 @@ export type Database = {
           facility_id?: string
           id?: string
           is_active?: boolean | null
+          profile_id?: string | null
           rating?: number | null
           show_format?: string | null
           show_name?: string
@@ -13692,6 +13781,20 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "media_facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_shows_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_shows_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -15641,6 +15744,7 @@ export type Database = {
         Row: {
           achievement_id: string
           id: string
+          profile_id: string | null
           progress: Json | null
           unlocked_at: string | null
           user_id: string
@@ -15648,6 +15752,7 @@ export type Database = {
         Insert: {
           achievement_id: string
           id?: string
+          profile_id?: string | null
           progress?: Json | null
           unlocked_at?: string | null
           user_id: string
@@ -15655,6 +15760,7 @@ export type Database = {
         Update: {
           achievement_id?: string
           id?: string
+          profile_id?: string | null
           progress?: Json | null
           unlocked_at?: string | null
           user_id?: string
@@ -15674,6 +15780,20 @@ export type Database = {
             referencedRelation: "achievements"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "player_achievements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_achievements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       player_active_boosts: {
@@ -15685,6 +15805,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           product_id: string
+          profile_id: string | null
           started_at: string | null
           user_id: string
         }
@@ -15696,6 +15817,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           product_id: string
+          profile_id?: string | null
           started_at?: string | null
           user_id: string
         }
@@ -15707,6 +15829,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           product_id?: string
+          profile_id?: string | null
           started_at?: string | null
           user_id?: string
         }
@@ -15718,6 +15841,20 @@ export type Database = {
             referencedRelation: "underworld_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "player_active_boosts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_active_boosts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       player_addictions: {
@@ -15726,6 +15863,7 @@ export type Database = {
           created_at: string
           days_clean: number
           id: string
+          profile_id: string | null
           recovered_at: string | null
           recovery_program: string | null
           recovery_started_at: string | null
@@ -15741,6 +15879,7 @@ export type Database = {
           created_at?: string
           days_clean?: number
           id?: string
+          profile_id?: string | null
           recovered_at?: string | null
           recovery_program?: string | null
           recovery_started_at?: string | null
@@ -15756,6 +15895,7 @@ export type Database = {
           created_at?: string
           days_clean?: number
           id?: string
+          profile_id?: string | null
           recovered_at?: string | null
           recovery_program?: string | null
           recovery_started_at?: string | null
@@ -15766,7 +15906,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_addictions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_addictions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_attributes: {
         Row: {
@@ -16810,6 +16965,7 @@ export type Database = {
           imprisonment_id: string
           offense_type: string
           pardoned: boolean
+          profile_id: string | null
           recorded_at: string
           sentence_served_days: number
           user_id: string
@@ -16821,6 +16977,7 @@ export type Database = {
           imprisonment_id: string
           offense_type: string
           pardoned?: boolean
+          profile_id?: string | null
           recorded_at?: string
           sentence_served_days: number
           user_id: string
@@ -16832,6 +16989,7 @@ export type Database = {
           imprisonment_id?: string
           offense_type?: string
           pardoned?: boolean
+          profile_id?: string | null
           recorded_at?: string
           sentence_served_days?: number
           user_id?: string
@@ -16842,6 +17000,20 @@ export type Database = {
             columns: ["imprisonment_id"]
             isOneToOne: false
             referencedRelation: "player_imprisonments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_criminal_record_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_criminal_record_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -17155,6 +17327,7 @@ export type Database = {
           outcome_applied_at: string | null
           outcome_effects: Json | null
           outcome_message: string | null
+          profile_id: string | null
           status: string
           triggered_at: string
           user_id: string
@@ -17169,6 +17342,7 @@ export type Database = {
           outcome_applied_at?: string | null
           outcome_effects?: Json | null
           outcome_message?: string | null
+          profile_id?: string | null
           status?: string
           triggered_at?: string
           user_id: string
@@ -17183,6 +17357,7 @@ export type Database = {
           outcome_applied_at?: string | null
           outcome_effects?: Json | null
           outcome_message?: string | null
+          profile_id?: string | null
           status?: string
           triggered_at?: string
           user_id?: string
@@ -17193,6 +17368,20 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "random_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -17447,6 +17636,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          profile_id: string | null
           target_per_week: number | null
           user_id: string
         }
@@ -17458,6 +17648,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          profile_id?: string | null
           target_per_week?: number | null
           user_id: string
         }
@@ -17469,10 +17660,26 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          profile_id?: string | null
           target_per_week?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_habits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_habits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_holidays: {
         Row: {
@@ -17522,6 +17729,7 @@ export type Database = {
           health_on_admission: number
           hospital_id: string
           id: string
+          profile_id: string | null
           status: string
           total_cost: number
           user_id: string
@@ -17534,6 +17742,7 @@ export type Database = {
           health_on_admission: number
           hospital_id: string
           id?: string
+          profile_id?: string | null
           status?: string
           total_cost?: number
           user_id: string
@@ -17546,6 +17755,7 @@ export type Database = {
           health_on_admission?: number
           hospital_id?: string
           id?: string
+          profile_id?: string | null
           status?: string
           total_cost?: number
           user_id?: string
@@ -17556,6 +17766,20 @@ export type Database = {
             columns: ["hospital_id"]
             isOneToOne: false
             referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_hospitalizations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_hospitalizations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -17576,6 +17800,7 @@ export type Database = {
           imprisoned_at: string
           original_sentence_days: number
           prison_id: string
+          profile_id: string | null
           reason: string
           release_date: string
           released_at: string | null
@@ -17599,6 +17824,7 @@ export type Database = {
           imprisoned_at?: string
           original_sentence_days: number
           prison_id: string
+          profile_id?: string | null
           reason?: string
           release_date: string
           released_at?: string | null
@@ -17622,6 +17848,7 @@ export type Database = {
           imprisoned_at?: string
           original_sentence_days?: number
           prison_id?: string
+          profile_id?: string | null
           reason?: string
           release_date?: string
           released_at?: string | null
@@ -17636,6 +17863,20 @@ export type Database = {
             columns: ["prison_id"]
             isOneToOne: false
             referencedRelation: "prisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_imprisonments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_imprisonments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -17734,6 +17975,7 @@ export type Database = {
           invested_amount: number
           investment_name: string
           notes: string | null
+          profile_id: string | null
           purchased_at: string | null
           updated_at: string | null
           user_id: string
@@ -17747,6 +17989,7 @@ export type Database = {
           invested_amount: number
           investment_name: string
           notes?: string | null
+          profile_id?: string | null
           purchased_at?: string | null
           updated_at?: string | null
           user_id: string
@@ -17760,11 +18003,27 @@ export type Database = {
           invested_amount?: number
           investment_name?: string
           notes?: string | null
+          profile_id?: string | null
           purchased_at?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_investments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_investments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_journal_entries: {
         Row: {
@@ -17850,6 +18109,7 @@ export type Database = {
           interest_rate: number
           loan_name: string
           principal: number
+          profile_id: string | null
           remaining_balance: number
           started_at: string | null
           status: string | null
@@ -17865,6 +18125,7 @@ export type Database = {
           interest_rate: number
           loan_name: string
           principal: number
+          profile_id?: string | null
           remaining_balance: number
           started_at?: string | null
           status?: string | null
@@ -17880,6 +18141,7 @@ export type Database = {
           interest_rate?: number
           loan_name?: string
           principal?: number
+          profile_id?: string | null
           remaining_balance?: number
           started_at?: string | null
           status?: string | null
@@ -17888,7 +18150,22 @@ export type Database = {
           user_id?: string
           weekly_payment?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_loans_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_loans_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_master_discoveries: {
         Row: {
@@ -18525,6 +18802,7 @@ export type Database = {
           id: string
           is_primary: boolean
           is_rented_out: boolean
+          profile_id: string | null
           purchase_price: number
           purchased_at: string
           rental_income_daily: number
@@ -18538,6 +18816,7 @@ export type Database = {
           id?: string
           is_primary?: boolean
           is_rented_out?: boolean
+          profile_id?: string | null
           purchase_price: number
           purchased_at?: string
           rental_income_daily?: number
@@ -18551,6 +18830,7 @@ export type Database = {
           id?: string
           is_primary?: boolean
           is_rented_out?: boolean
+          profile_id?: string | null
           purchase_price?: number
           purchased_at?: string
           rental_income_daily?: number
@@ -18564,6 +18844,20 @@ export type Database = {
             referencedRelation: "housing_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "player_properties_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_properties_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       player_rentals: {
@@ -18573,6 +18867,7 @@ export type Database = {
           ended_at: string | null
           id: string
           last_charged_at: string
+          profile_id: string | null
           rental_type_id: string
           started_at: string
           status: string
@@ -18585,6 +18880,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           last_charged_at?: string
+          profile_id?: string | null
           rental_type_id: string
           started_at?: string
           status?: string
@@ -18597,6 +18893,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           last_charged_at?: string
+          profile_id?: string | null
           rental_type_id?: string
           started_at?: string
           status?: string
@@ -18604,6 +18901,20 @@ export type Database = {
           weekly_cost?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "player_rentals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_rentals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_rentals_rental_type_id_fkey"
             columns: ["rental_type_id"]
@@ -18795,6 +19106,7 @@ export type Database = {
           book_title: string
           completed_at: string | null
           id: string
+          profile_id: string | null
           progress_percentage: number | null
           purchased_at: string | null
           skill_focus: string
@@ -18806,6 +19118,7 @@ export type Database = {
           book_title: string
           completed_at?: string | null
           id?: string
+          profile_id?: string | null
           progress_percentage?: number | null
           purchased_at?: string | null
           skill_focus: string
@@ -18817,13 +19130,29 @@ export type Database = {
           book_title?: string
           completed_at?: string | null
           id?: string
+          profile_id?: string | null
           progress_percentage?: number | null
           purchased_at?: string | null
           skill_focus?: string
           user_id?: string
           xp_reward?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_skill_books_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_skill_books_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_skill_snapshots: {
         Row: {
@@ -21221,6 +21550,7 @@ export type Database = {
           band_id: string | null
           created_at: string | null
           id: string
+          profile_id: string | null
           rejection_reason: string | null
           release_id: string | null
           reviewed_at: string | null
@@ -21235,6 +21565,7 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           id?: string
+          profile_id?: string | null
           rejection_reason?: string | null
           release_id?: string | null
           reviewed_at?: string | null
@@ -21249,6 +21580,7 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           id?: string
+          profile_id?: string | null
           rejection_reason?: string | null
           release_id?: string | null
           reviewed_at?: string | null
@@ -21265,6 +21597,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_submissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_submissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
@@ -21465,6 +21811,7 @@ export type Database = {
           id: string
           player_producer_id: string | null
           producer_id: string | null
+          profile_id: string | null
           quality_improvement: number | null
           recording_type: string
           recording_version: string | null
@@ -21486,6 +21833,7 @@ export type Database = {
           id?: string
           player_producer_id?: string | null
           producer_id?: string | null
+          profile_id?: string | null
           quality_improvement?: number | null
           recording_type?: string
           recording_version?: string | null
@@ -21507,6 +21855,7 @@ export type Database = {
           id?: string
           player_producer_id?: string | null
           producer_id?: string | null
+          profile_id?: string | null
           quality_improvement?: number | null
           recording_type?: string
           recording_version?: string | null
@@ -21546,6 +21895,20 @@ export type Database = {
             columns: ["producer_id"]
             isOneToOne: false
             referencedRelation: "recording_producers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
@@ -25268,6 +25631,7 @@ export type Database = {
           lyrics_progress: number | null
           mode: string | null
           music_progress: number | null
+          profile_id: string | null
           purpose: string | null
           quality_score: number | null
           sessions_completed: number | null
@@ -25295,6 +25659,7 @@ export type Database = {
           lyrics_progress?: number | null
           mode?: string | null
           music_progress?: number | null
+          profile_id?: string | null
           purpose?: string | null
           quality_score?: number | null
           sessions_completed?: number | null
@@ -25322,6 +25687,7 @@ export type Database = {
           lyrics_progress?: number | null
           mode?: string | null
           music_progress?: number | null
+          profile_id?: string | null
           purpose?: string | null
           quality_score?: number | null
           sessions_completed?: number | null
@@ -25340,6 +25706,20 @@ export type Database = {
             columns: ["chord_progression_id"]
             isOneToOne: false
             referencedRelation: "chord_progressions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_projects_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_projects_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
@@ -25389,6 +25769,7 @@ export type Database = {
           lyrics_progress_gained: number | null
           music_progress_gained: number | null
           notes: string | null
+          profile_id: string | null
           project_id: string
           session_end: string | null
           session_start: string
@@ -25405,6 +25786,7 @@ export type Database = {
           lyrics_progress_gained?: number | null
           music_progress_gained?: number | null
           notes?: string | null
+          profile_id?: string | null
           project_id: string
           session_end?: string | null
           session_start?: string
@@ -25421,6 +25803,7 @@ export type Database = {
           lyrics_progress_gained?: number | null
           music_progress_gained?: number | null
           notes?: string | null
+          profile_id?: string | null
           project_id?: string
           session_end?: string | null
           session_start?: string
@@ -25429,6 +25812,20 @@ export type Database = {
           xp_earned?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "songwriting_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "songwriting_sessions_project_id_fkey"
             columns: ["project_id"]
@@ -28175,6 +28572,7 @@ export type Database = {
           is_used: boolean | null
           paid_with: string
           product_id: string
+          profile_id: string | null
           quantity: number | null
           token_amount: number | null
           token_id: string | null
@@ -28190,6 +28588,7 @@ export type Database = {
           is_used?: boolean | null
           paid_with: string
           product_id: string
+          profile_id?: string | null
           quantity?: number | null
           token_amount?: number | null
           token_id?: string | null
@@ -28205,6 +28604,7 @@ export type Database = {
           is_used?: boolean | null
           paid_with?: string
           product_id?: string
+          profile_id?: string | null
           quantity?: number | null
           token_amount?: number | null
           token_id?: string | null
@@ -28216,6 +28616,20 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "underworld_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "underworld_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "underworld_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
