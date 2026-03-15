@@ -63,20 +63,20 @@ export const useMediaFacilities = (profileId?: string) => {
 
   // Fetch shows for a facility
   const { data: shows = [] } = useQuery({
-    queryKey: ["media-shows", userId],
+    queryKey: ["media-shows", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("media_shows")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as MediaShow[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Create facility mutation
