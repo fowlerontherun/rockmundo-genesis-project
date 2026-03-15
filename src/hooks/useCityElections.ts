@@ -161,6 +161,7 @@ export function useCastVote() {
 export function useRegisterCandidate() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({
