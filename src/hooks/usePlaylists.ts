@@ -161,7 +161,7 @@ export const usePlaylists = (profileId?: string) => {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", userId)
+        .eq("id", profileId)
         .single();
 
       if (profileError) throw new Error("Could not fetch profile");
