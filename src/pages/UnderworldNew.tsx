@@ -392,7 +392,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
         <RugAlertBanner ruggedSymbols={ruggedHeldSymbols} />
 
         {/* Portfolio */}
-        {user && <PortfolioPanel userId={user.id} />}
+        {profileId && <PortfolioPanel profileId={profileId} />}
 
         {/* Shadow Store */}
         <section id="store" className="space-y-6">
