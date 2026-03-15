@@ -27,6 +27,66 @@ export interface CharacterProfile {
 const baseSlots = 2;
 const maxAllowedSlots = 5;
 
+function isMissingRpcError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+
+  return (
+    error.code === "PGRST202" ||
+    error.message?.includes("Could not find the function public.create_character_profile") ||
+    error.message?.includes("Could not find the function public.switch_active_character")
+  );
+}
+
+async function switchActiveCharacterFallback(userId: string, profileId: string): Promise<void> {
+  const { data: targetProfile, error: targetError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", profileId)
+    .eq("user_id", userId)
+    .is("died_at", null)
+    .maybeSingle();
+
+  if (targetError) throw targetError;
+  if (!targetProfile?.id) {
+    throw new Error("Character not found or unavailable");
+  }
+
+  const { error: activateTargetError } = await supabase
+    .from("profiles")
+    .update({ is_active: true })
+    .eq("id", profileId)
+    .eq("user_id", userId)
+    .is("died_at", null);
+
+  if (activateTargetError) throw activateTargetError;
+
+  const { error: deactivateOthersError } = await supabase
+    .from("profiles")
+    .update({ is_active: false })
+    .eq("user_id", userId)
+    .neq("id", profileId)
+    .eq("is_active", true)
+    .is("died_at", null);
+
+  if (deactivateOthersError) throw deactivateOthersError;
+}
+
+async function switchActiveCharacter(userId: string, profileId: string): Promise<void> {
+  const { error } = await supabase.rpc("switch_active_character" as any, {
+    p_profile_id: profileId,
+  });
+
+  if (!error) {
+    return;
+  }
+
+  if (!isMissingRpcError(error)) {
+    throw error;
+  }
+
+  await switchActiveCharacterFallback(userId, profileId);
+}
+
 async function createCharacterProfileFallback(userId: string): Promise<string> {
   const { data: slotRow, error: slotError } = await supabase
     .from("character_slots")
@@ -56,14 +116,6 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
   const nextSlot = (existingProfiles?.reduce((max, profile) => Math.max(max, profile.slot_number ?? 0), 0) ?? 0) + 1;
   const generatedUsername = `player-${userId.slice(0, 8)}-${nextSlot}`;
 
-  const { error: deactivateError } = await supabase
-    .from("profiles")
-    .update({ is_active: false })
-    .eq("user_id", userId)
-    .eq("is_active", true);
-
-  if (deactivateError) throw deactivateError;
-
   const { data: insertedProfile, error: insertError } = await supabase
     .from("profiles")
     .insert({
@@ -79,7 +131,7 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
       energy: 100,
       experience: 0,
       age: 16,
-      is_active: true,
+      is_active: false,
       slot_number: nextSlot,
       generation_number: 1,
       unlock_cost: 0,
@@ -93,6 +145,8 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
     throw new Error("Failed to create character profile");
   }
 
+  await switchActiveCharacter(userId, insertedProfile.id);
+
   return insertedProfile.id;
 }
 
@@ -105,7 +159,6 @@ export function useCharacterSlots() {
     queryFn: async (): Promise<CharacterSlotInfo> => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Get or create character_slots row
       const { data: slots, error } = await supabase
         .from("character_slots")
         .select("*")
@@ -117,7 +170,6 @@ export function useCharacterSlots() {
       const extraPurchased = slots?.extra_slots_purchased ?? 0;
       const maxSlots = Math.min(baseSlots + extraPurchased, maxAllowedSlots);
 
-      // Count living profiles
       const { count } = await supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
@@ -157,12 +209,7 @@ export function useCharacterSlots() {
   const switchCharacter = useMutation({
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
-
-      const { error } = await supabase.rpc("switch_active_character" as any, {
-        p_profile_id: profileId,
-      });
-
-      if (error) throw error;
+      await switchActiveCharacter(user.id, profileId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
@@ -186,11 +233,7 @@ export function useCharacterSlots() {
         return createdProfileId as string;
       }
 
-      const isMissingFunctionError =
-        error.message?.includes("Could not find the function public.create_character_profile") ||
-        error.code === "PGRST202";
-
-      if (!isMissingFunctionError) {
+      if (!isMissingRpcError(error)) {
         throw error;
       }
 
