@@ -15,6 +15,7 @@ export const useClothingMarketplace = (filters?: {
   search?: string;
 }) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: listings = [], isLoading } = useQuery({
