@@ -193,6 +193,19 @@ export const OnboardingWizard = () => {
           .update(profileUpdates)
           .eq("id", profileId);
       }
+
+      // Grant starter XP and AP to the new character
+      if (profileId) {
+        await supabase
+          .from("player_xp_wallet")
+          .upsert({
+            profile_id: profileId,
+            xp_balance: 1000,
+            lifetime_xp: 1000,
+            attribute_points_balance: 300,
+            attribute_points_lifetime: 300,
+          }, { onConflict: "profile_id" });
+      }
       
       // Create reputation with initial modifiers from origin and traits
       const selectedOrigin = origins.find((o) => o.id === data.originId) ?? null;
