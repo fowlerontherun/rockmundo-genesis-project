@@ -141,10 +141,10 @@ export const useSongwritingData = (profileId?: string | null) => {
 
   // Fetch projects with sessions and auto-unlock expired locks
   const { data: projects = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useQuery({
-    queryKey: ['songwriting-projects', userId],
-    enabled: !!userId,
+    queryKey: ['songwriting-projects', profileId],
+    enabled: !!profileId,
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from('songwriting_projects')
@@ -165,7 +165,7 @@ export const useSongwritingData = (profileId?: string | null) => {
             notes
           )
         `)
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .order('updated_at', { ascending: false });
       
       if (error) throw error;
