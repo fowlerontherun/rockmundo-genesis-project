@@ -137,12 +137,13 @@ export function usePlayerRental() {
 
 export function useBuyProperty() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ housingType, country, marketMultiplier = 1 }: { housingType: HousingType; country: string; marketMultiplier?: number }) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!user || !profileId) throw new Error("Not authenticated");
 
       const marketPrice = getMarketPrice(housingType.base_price, marketMultiplier);
 
@@ -150,7 +151,7 @@ export function useBuyProperty() {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (profileError) throw profileError;
       if ((profile.cash || 0) < marketPrice) {
@@ -161,7 +162,7 @@ export function useBuyProperty() {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile.cash || 0) - marketPrice })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
       if (cashError) throw cashError;
 
       // Create property record with upkeep based on market price
