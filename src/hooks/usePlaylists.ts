@@ -198,7 +198,8 @@ export const usePlaylists = (profileId?: string) => {
         .insert({
           playlist_id: playlistId,
           release_id: releaseId,
-          user_id: userId,
+          user_id: profileId,
+          profile_id: profileId,
           submission_status: "pending",
         })
         .select("id")
