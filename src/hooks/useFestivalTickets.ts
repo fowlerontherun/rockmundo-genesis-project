@@ -19,6 +19,7 @@ export interface FestivalTicket {
 
 export const useFestivalTickets = (festivalId: string | undefined) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: tickets = [], isLoading } = useQuery<FestivalTicket[]>({
     queryKey: ["festival-tickets", festivalId, user?.id],
