@@ -13,24 +13,24 @@ export interface SkillBookInventory {
   progress_percentage: number;
 }
 
-export const useSkillBooksInventory = (userId?: string) => {
+export const useSkillBooksInventory = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   const { data: books = [], isLoading } = useQuery({
-    queryKey: ["skill-books-inventory", userId],
+    queryKey: ["skill-books-inventory", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("player_skill_books")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
 
       if (error) throw error;
       return data as SkillBookInventory[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const completeBook = useMutation({
