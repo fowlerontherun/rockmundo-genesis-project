@@ -146,7 +146,7 @@ export const useIssueCompanyShares = () => {
       if (allShareholders && allShareholders.length > 0) {
         await supabase
           .from("companies")
-          .update({ owner_id: allShareholders[0].user_id })
+          .update({ owner_id: (allShareholders[0] as any).user_id })
           .eq("id", companyId);
       }
 
