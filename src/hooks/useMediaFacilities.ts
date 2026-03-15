@@ -26,7 +26,7 @@ export interface MediaShow {
   is_active: boolean;
 }
 
-export const useMediaFacilities = (userId?: string) => {
+export const useMediaFacilities = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all facilities
