@@ -170,12 +170,12 @@ export const usePlaylists = (profileId?: string) => {
       }
 
       // Check if already submitted
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from("playlist_submissions")
         .select("id")
         .eq("playlist_id", playlistId)
         .eq("release_id", releaseId)
-        .eq("profile_id", profileId)
+        .eq("user_id", profileId)
         .maybeSingle();
 
       if (existing) {
