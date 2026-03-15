@@ -74,21 +74,21 @@ export const useFanManagement = (profileId?: string) => {
 
   // Fetch interactions
   const { data: interactions = [], isLoading: interactionsLoading } = useQuery({
-    queryKey: ["fan-interactions", userId],
+    queryKey: ["fan-interactions", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("fan_interactions")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
       return data as FanInteraction[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Create campaign
