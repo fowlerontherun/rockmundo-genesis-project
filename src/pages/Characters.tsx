@@ -1,5 +1,6 @@
-import { Loader2, RefreshCw, Users } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Users } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,12 @@ import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 export default function Characters() {
   const { slots, slotsLoading, characters, switchCharacter } = useCharacterSlots();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [switchingToId, setSwitchingToId] = useState<string | null>(null);
 
   const activeCharacter = characters.find((character) => character.is_active);
   const maxSlots = slots?.maxSlots ?? 2;
+  const emptySlotCount = Math.max(maxSlots - characters.length, 0);
 
   const handleSwitch = async (profileId: string) => {
     if (profileId === activeCharacter?.id) return;
@@ -110,6 +113,28 @@ export default function Characters() {
                 </div>
               );
             })}
+
+            {Array.from({ length: emptySlotCount }).map((_, index) => (
+              <div
+                key={`empty-slot-${index}`}
+                className="flex items-center justify-between gap-3 rounded-md border border-dashed p-3"
+              >
+                <div>
+                  <p className="font-medium">Empty Character Slot</p>
+                  <p className="text-xs text-muted-foreground">Create a new character to use this slot.</p>
+                </div>
+                {slots?.canCreateNew ? (
+                  <Button size="sm" onClick={() => navigate("/characters/new")}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Add Character
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => navigate("/buy-character-slot")}>
+                    Buy Slot
+                  </Button>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
