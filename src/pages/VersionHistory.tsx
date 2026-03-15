@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.045",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "Band membership is now isolated per character via profile_id — new characters no longer inherit other characters' bands" },
+      { type: 'improvement', description: "Band creation, invitation acceptance, and band lookups now use active profile_id instead of shared user_id" },
+    ],
+  },
+  {
     version: "1.1.044",
     date: "2026-03-15",
     changes: [
