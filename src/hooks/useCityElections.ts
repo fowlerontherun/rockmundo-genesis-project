@@ -96,32 +96,24 @@ export function useElectionCandidates(electionId: string | undefined) {
 // Check if current user has voted in an election
 export function useUserVote(electionId: string | undefined) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["user-vote", electionId, user?.id],
+    queryKey: ["user-vote", electionId, profileId],
     queryFn: async () => {
-      if (!electionId || !user?.id) return null;
-
-      // Get user's profile ID
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return null;
+      if (!electionId || !profileId) return null;
 
       const { data, error } = await supabase
         .from("city_election_votes")
         .select("*")
         .eq("election_id", electionId)
-        .eq("voter_profile_id", profile.id)
+        .eq("voter_profile_id", profileId)
         .maybeSingle();
 
       if (error) throw error;
       return data as CityElectionVote | null;
     },
-    enabled: !!electionId && !!user?.id,
+    enabled: !!electionId && !!profileId,
   });
 }
 
