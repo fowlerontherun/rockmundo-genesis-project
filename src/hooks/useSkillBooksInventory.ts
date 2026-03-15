@@ -35,7 +35,7 @@ export const useSkillBooksInventory = (profileId?: string) => {
 
   const completeBook = useMutation({
     mutationFn: async (bookId: string) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       const book = books.find((b) => b.id === bookId);
       if (!book) throw new Error("Book not found");
