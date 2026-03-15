@@ -28,20 +28,20 @@ export function useRetirementCheck(): RetirementCheckResult {
 
   // Fetch profile data
   const { data: profile } = useQuery({
-    queryKey: ["retirement-check-profile", user?.id],
+    queryKey: ["retirement-check-profile", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("profiles")
         .select("id, display_name, username, age, fame, cash, last_retirement_prompt_age, created_at")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 
