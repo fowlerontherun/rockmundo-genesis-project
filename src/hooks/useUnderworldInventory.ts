@@ -80,7 +80,7 @@ export const useUnderworldInventory = () => {
         const { data: profile, error: profileFetchError } = await supabase
           .from("profiles")
           .select("health, energy, experience, fame, cash")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
 
         if (profileFetchError) throw profileFetchError;
