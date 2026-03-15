@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.040",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "Re-added unlock_cost column to profiles table to fix schema cache errors on character creation" },
+      { type: 'fix', description: "Dropped UNIQUE(user_id) constraint on profiles to enable multi-character support" },
+      { type: 'fix', description: "Redeployed create-slot-checkout and fulfill-slot-purchase edge functions (were returning 404)" },
+    ],
+  },
+  {
     version: "1.1.039",
     date: "2026-03-15",
     changes: [
