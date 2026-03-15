@@ -207,8 +207,8 @@ export const useDistributeAnnualProfit = () => {
         .select("amount")
         .eq("company_id", companyId);
 
-      if (latestDist?.distributed_at) {
-        txQuery = txQuery.gt("created_at", latestDist.distributed_at);
+      if ((latestDist as any)?.distributed_at) {
+        txQuery = txQuery.gt("created_at", (latestDist as any).distributed_at);
       }
 
       const { data: txns, error: txError } = await txQuery;

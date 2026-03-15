@@ -1050,7 +1050,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         nextProfile = (fallbackProfileData as PlayerProfile | null) ?? null;
 
         if (nextProfile && !nextProfile.is_active) {
-          const { error: switchError } = await supabase.rpc("switch_active_character", {
+          const { error: switchError } = await supabase.rpc("switch_active_character" as any, {
             p_profile_id: nextProfile.id,
           });
 
