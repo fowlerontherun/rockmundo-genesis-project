@@ -56,6 +56,17 @@ export const BandInvitations = () => {
       const invitation = invitations?.find((i) => i.id === invitationId);
       if (!invitation || !user?.id) throw new Error("Invalid invitation");
 
+      // Get active profile
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+
+      if (!activeProfile) throw new Error("No active character found");
+
       // Update invitation status
       const { error: inviteError } = await supabase
         .from("band_invitations")
@@ -64,12 +75,13 @@ export const BandInvitations = () => {
 
       if (inviteError) throw inviteError;
 
-      // Add member to band
+      // Add member to band with profile_id
       const { error: memberError } = await supabase
         .from("band_members")
         .insert({
           band_id: invitation.band_id,
           user_id: user.id,
+          profile_id: activeProfile.id,
           role: "member",
           instrument_role: invitation.instrument_role,
           vocal_role: invitation.vocal_role,

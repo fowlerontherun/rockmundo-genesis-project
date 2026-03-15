@@ -21,20 +21,32 @@ const EnhancedBandManager = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Get active profile, then find band via profile_id
     supabase
-      .from("band_members")
-      .select("band_id")
+      .from("profiles")
+      .select("id")
       .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          supabase
-            .from("bands")
-            .select("*")
-            .eq("id", data.band_id)
-            .single()
-            .then(({ data: bandData }) => setBand(bandData));
-        }
+      .eq("is_active", true)
+      .is("died_at", null)
+      .maybeSingle()
+      .then(({ data: profile }) => {
+        if (!profile) return;
+        supabase
+          .from("band_members")
+          .select("band_id")
+          .eq("profile_id", profile.id)
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) {
+              supabase
+                .from("bands")
+                .select("*")
+                .eq("id", data.band_id)
+                .single()
+                .then(({ data: bandData }) => setBand(bandData));
+            }
+          });
       });
   }, [user]);
 
