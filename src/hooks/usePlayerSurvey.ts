@@ -108,14 +108,7 @@ export function usePlayerSurvey() {
     mutationFn: async (answers: { questionId: string; answerValue: string; answerNumeric?: number }[]) => {
       if (!user || !surveyConfig) throw new Error("Not ready");
 
-      // Get profile_id
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const profileId = profile?.id ?? null;
+      // Use profileId directly
       const round = surveyConfig.round;
 
       // Insert responses
