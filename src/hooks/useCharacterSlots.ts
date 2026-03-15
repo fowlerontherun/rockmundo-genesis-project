@@ -113,8 +113,16 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
     throw new Error("No character slots available");
   }
 
-  const nextSlot = (existingProfiles?.reduce((max, profile) => Math.max(max, profile.slot_number ?? 0), 0) ?? 0) + 1;
-  const generatedUsername = `player-${userId.slice(0, 8)}-${nextSlot}`;
+  // Query ALL profiles (including dead) to find the highest slot number ever used
+  const { data: allProfiles } = await supabase
+    .from("profiles")
+    .select("slot_number")
+    .eq("user_id", userId)
+    .order("slot_number", { ascending: false })
+    .limit(1);
+
+  const nextSlot = ((allProfiles?.[0]?.slot_number as number) ?? 0) + 1;
+  const generatedUsername = `player-${userId.slice(0, 8)}-${nextSlot}-${Date.now().toString(36)}`;
 
   const { data: insertedProfile, error: insertError } = await supabase
     .from("profiles")
