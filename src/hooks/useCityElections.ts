@@ -121,6 +121,7 @@ export function useUserVote(electionId: string | undefined) {
 export function useCastVote() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ electionId, candidateId }: { electionId: string; candidateId: string }) => {
