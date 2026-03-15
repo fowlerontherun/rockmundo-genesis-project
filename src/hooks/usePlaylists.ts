@@ -135,7 +135,7 @@ export const usePlaylists = (profileId?: string) => {
     }
 
     // Refresh submissions
-    queryClient.invalidateQueries({ queryKey: ["playlist-submissions", userId] });
+    queryClient.invalidateQueries({ queryKey: ["playlist-submissions", profileId] });
 
     toast({
       title: accepted ? "🎉 Playlist Accepted!" : "Playlist Rejected",
