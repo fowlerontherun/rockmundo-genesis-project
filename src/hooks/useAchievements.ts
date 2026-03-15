@@ -21,7 +21,7 @@ export interface PlayerAchievement {
   achievement?: Achievement;
 }
 
-export const useAchievements = (userId?: string) => {
+export const useAchievements = (profileId?: string) => {
   const { data: allAchievements = [], isLoading: isLoadingAll } = useQuery({
     queryKey: ["achievements"],
     queryFn: async () => {
