@@ -104,6 +104,7 @@ export function useNightlifeEvents() {
           addictionSeverityGain = 20;
           await supabase.from("player_addictions").insert({
             user_id: user.id,
+            profile_id: profileId,
             addiction_type: addictionType,
             severity: 20,
             status: "active",
