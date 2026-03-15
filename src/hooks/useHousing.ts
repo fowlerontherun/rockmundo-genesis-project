@@ -335,14 +335,14 @@ export function useSellProperty() {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (profileError) throw profileError;
 
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile.cash || 0) + sellPrice })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
       if (cashError) throw cashError;
 
       // Delete property
