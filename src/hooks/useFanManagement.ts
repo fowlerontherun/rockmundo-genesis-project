@@ -33,7 +33,7 @@ export interface FanInteraction {
   created_at: string;
 }
 
-export const useFanManagement = (userId?: string) => {
+export const useFanManagement = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch campaigns
