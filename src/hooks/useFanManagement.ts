@@ -56,20 +56,20 @@ export const useFanManagement = (profileId?: string) => {
 
   // Fetch segments
   const { data: segments = [], isLoading: segmentsLoading } = useQuery({
-    queryKey: ["fan-segments", userId],
+    queryKey: ["fan-segments", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("fan_segments")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("fan_count", { ascending: false });
 
       if (error) throw error;
       return data as FanSegment[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch interactions
