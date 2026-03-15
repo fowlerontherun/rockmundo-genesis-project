@@ -49,18 +49,18 @@ export const useClothingBrand = () => {
   const queryClient = useQueryClient();
 
   const { data: brand, isLoading: brandLoading } = useQuery({
-    queryKey: ["clothing-brand", user?.id],
+    queryKey: ["clothing-brand", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("player_clothing_brands" as never)
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data as ClothingBrand | null;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const { data: items = [], isLoading: itemsLoading } = useQuery({

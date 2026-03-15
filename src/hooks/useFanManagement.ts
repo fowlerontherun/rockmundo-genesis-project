@@ -129,7 +129,7 @@ export const useFanManagement = (profileId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fan-segments", userId] });
+      queryClient.invalidateQueries({ queryKey: ["fan-segments", profileId] });
       toast.success("Segment created successfully");
     },
     onError: (error: any) => {
