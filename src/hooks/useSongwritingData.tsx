@@ -593,7 +593,7 @@ export const useSongwritingData = (profileId?: string | null) => {
           .from('songs')
           .update({
             added_to_repertoire_at: new Date().toISOString(),
-            added_to_repertoire_by: userId,
+            added_to_repertoire_by: profileId,
           })
           .eq('id', song.id);
       }
