@@ -304,19 +304,13 @@ export const useSongwritingData = (profileId?: string | null) => {
       if (!user) throw new Error("Not authenticated");
       
       // Get user's profile for scheduled activities
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (!profile) throw new Error("Profile not found");
+      const profile = { id: profileId };
       
       // Check how many songwriting sessions are currently active (max 2 allowed)
       const { data: activeProjects } = await supabase
         .from('songwriting_projects')
         .select('id')
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .eq('is_locked', true)
         .gt('locked_until', new Date().toISOString());
       
