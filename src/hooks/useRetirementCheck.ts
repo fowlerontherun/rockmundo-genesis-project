@@ -22,6 +22,7 @@ interface RetirementCheckResult {
 
 export function useRetirementCheck(): RetirementCheckResult {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState(false);
 
