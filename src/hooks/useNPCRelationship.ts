@@ -70,7 +70,7 @@ export function useNPCRelationship(npcId: string | undefined) {
         const { error } = await supabase
           .from("npc_relationships")
           .insert({
-            profile_id: profile.id,
+            profile_id: profileId,
             npc_id: npcId,
             npc_name: npcName,
             npc_type: npcType,

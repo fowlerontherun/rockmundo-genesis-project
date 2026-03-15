@@ -158,7 +158,7 @@ export function usePlayerSurvey() {
         .from("player_survey_completions")
         .insert({
           user_id: user.id,
-          profile_id: profileId,
+          profile_id: profileId ?? null,
           survey_round: round,
           xp_awarded: 250,
           attribute_points_awarded: 25,
