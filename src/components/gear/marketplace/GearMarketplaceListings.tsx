@@ -37,8 +37,8 @@ const statusColors: Record<string, string> = {
 
 export const GearMarketplaceListings = () => {
   const { profile } = useGameData();
-  const userId = profile?.user_id;
-  const { inventory } = useEquipmentStore(userId);
+  const profileId = profile?.id;
+  const { inventory } = useEquipmentStore(profileId);
   const { 
     myListings, receivedOffers, isLoading, 
     createListing, cancelListing, respondToOffer,
