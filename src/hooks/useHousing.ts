@@ -117,10 +117,11 @@ export function usePlayerProperties() {
 
 export function usePlayerRental() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ["player-rental", user?.id],
+    queryKey: ["player-rental", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!user || !profileId) return null;
       const { data, error } = await supabase
         .from("player_rentals")
         .select("*, rental_types(*)")
@@ -130,7 +131,7 @@ export function usePlayerRental() {
       if (error) throw error;
       return data as PlayerRental | null;
     },
-    enabled: !!user,
+    enabled: !!user && !!profileId,
   });
 }
 
