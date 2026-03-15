@@ -87,7 +87,7 @@ export function useCharacterSlots() {
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      const { error } = await supabase.rpc("switch_active_character", {
+      const { error } = await supabase.rpc("switch_active_character" as any, {
         p_profile_id: profileId,
       });
 
