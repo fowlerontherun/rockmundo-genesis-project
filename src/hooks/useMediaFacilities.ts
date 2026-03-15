@@ -87,11 +87,11 @@ export const useMediaFacilities = (profileId?: string) => {
       city_id?: string;
       specialization?: string;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       const { data, error } = await supabase
         .from("media_facilities")
-        .insert({ ...facility, user_id: userId })
+        .insert({ ...facility, profile_id: profileId } as any)
         .select()
         .single();
 
