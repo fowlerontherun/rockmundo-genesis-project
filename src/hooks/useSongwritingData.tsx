@@ -581,7 +581,7 @@ export const useSongwritingData = (profileId?: string | null) => {
           .insert({
             song_id: song.id,
             band_id: bandId,
-            user_id: userId,
+            user_id: profileId,
             ownership_percentage: 100,
             original_percentage: 100,
             role: 'writer',
