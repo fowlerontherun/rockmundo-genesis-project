@@ -211,7 +211,7 @@ export const usePlaylists = (profileId?: string) => {
           await supabase
             .from("profiles")
             .update({ cash: (profile?.cash || 0) })
-            .eq("user_id", userId);
+            .eq("id", profileId);
         }
         throw insertError;
       }
