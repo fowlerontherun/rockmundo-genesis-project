@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, HeartCrack, Crown, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Marriage } from "@/hooks/useMarriage";
@@ -9,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 interface MarriageStatusCardProps {
   marriage: Marriage;
   partnerName: string;
+  partnerAvatarUrl?: string | null;
   isPartnerA: boolean;
   onDivorce?: () => void;
   onAcceptProposal?: () => void;
@@ -27,6 +29,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 export function MarriageStatusCard({
   marriage,
   partnerName,
+  partnerAvatarUrl,
   isPartnerA,
   onDivorce,
   onAcceptProposal,
@@ -51,15 +54,23 @@ export function MarriageStatusCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">{partnerName}</p>
-            <p className="text-xs text-muted-foreground">
-              {marriage.started_at
-                ? `Married ${formatDistanceToNow(new Date(marriage.started_at), { addSuffix: true })}`
-                : marriage.proposed_at
-                ? `Proposed ${formatDistanceToNow(new Date(marriage.proposed_at), { addSuffix: true })}`
-                : ""}
-            </p>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9 border border-social-love/30">
+              <AvatarImage src={partnerAvatarUrl ?? undefined} />
+              <AvatarFallback className="bg-social-love/10 text-social-love text-xs">
+                {partnerName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-semibold">{partnerName}</p>
+              <p className="text-xs text-muted-foreground">
+                {marriage.started_at
+                  ? `Married ${formatDistanceToNow(new Date(marriage.started_at), { addSuffix: true })}`
+                  : marriage.proposed_at
+                  ? `Proposed ${formatDistanceToNow(new Date(marriage.proposed_at), { addSuffix: true })}`
+                  : ""}
+              </p>
+            </div>
           </div>
           <Badge variant="outline" className={cn("text-[10px]", config.color)}>
             {config.label}

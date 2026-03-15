@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.038",
+    date: "2026-03-15",
+    changes: [
+      { type: 'feature', description: "Marriage & Children Phase 2 — Partner names now resolve from profiles instead of showing 'Your Partner'" },
+      { type: 'feature', description: "Birth Completion Dialog — When gestation ends, a dialog prompts you to name your child with inherited potential preview" },
+      { type: 'feature', description: "Family Legacy Panel now wired with live data from marriages and children tables (family tree, fame inheritance, legacy pressure)" },
+      { type: 'feature', description: "Marriage StatusCard now shows partner avatar" },
+      { type: 'improvement', description: "Activity feed entries now posted for proposals, marriages, divorces, and child births" },
+      { type: 'improvement', description: "Ready births are highlighted with a glowing card and bounce animation" },
+    ],
+  },
+  {
     version: "1.1.037",
     date: "2026-03-15",
     changes: [
