@@ -134,7 +134,6 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
       is_active: false,
       slot_number: nextSlot,
       generation_number: 1,
-      unlock_cost: 0,
     })
     .select("id")
     .single();
