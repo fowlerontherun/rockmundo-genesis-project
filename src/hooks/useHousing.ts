@@ -405,19 +405,19 @@ export function useToggleRentOut() {
 }
 
 export function usePlayerCash() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ["player-cash-housing", user?.id],
+    queryKey: ["player-cash-housing", profileId],
     queryFn: async () => {
-      if (!user) return 0;
+      if (!profileId) return 0;
       const { data, error } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return (data?.cash ?? 0) as number;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 }
