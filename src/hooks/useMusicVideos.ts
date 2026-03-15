@@ -21,7 +21,7 @@ export interface MusicVideo {
   band?: any;
 }
 
-export const useMusicVideos = (userId?: string) => {
+export const useMusicVideos = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all videos
