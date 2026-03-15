@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBehaviorSettings } from "@/hooks/useBehaviorSettings";
 import { toast } from "sonner";
 import {
@@ -39,6 +40,7 @@ const ACTIVITY_PROFILES: Record<
 
 export function useNightlifeEvents() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { settings } = useBehaviorSettings();
   const queryClient = useQueryClient();
 
@@ -51,6 +53,7 @@ export function useNightlifeEvents() {
       clubName: string;
     }): Promise<NightlifeOutcome> => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
       if (!settings) throw new Error("Behavior settings not loaded");
 
       const profile = ACTIVITY_PROFILES[activityType];
@@ -59,7 +62,7 @@ export function useNightlifeEvents() {
       const { data: playerProfile } = await supabase
         .from("profiles")
         .select("energy, cash, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!playerProfile) throw new Error("Profile not found");
@@ -83,7 +86,7 @@ export function useNightlifeEvents() {
         const { data: existing } = await supabase
           .from("player_addictions")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("addiction_type", addictionType)
           .in("status", ["active", "recovering", "relapsed"])
           .maybeSingle();
@@ -101,6 +104,7 @@ export function useNightlifeEvents() {
           addictionSeverityGain = 20;
           await supabase.from("player_addictions").insert({
             user_id: user.id,
+            profile_id: profileId,
             addiction_type: addictionType,
             severity: 20,
             status: "active",
@@ -122,7 +126,7 @@ export function useNightlifeEvents() {
           cash: Math.max(0, (playerProfile.cash ?? 0) - profile.baseCash),
           fame: (playerProfile.fame ?? 0) + fameGain,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       // Build outcome message
       let message = `Night at ${clubName}: +${fameGain} fame, -${profile.energyCost} energy`;

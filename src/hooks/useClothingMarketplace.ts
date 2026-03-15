@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { ClothingItem, ClothingBrand } from "./useClothingBrand";
 
@@ -14,6 +15,7 @@ export const useClothingMarketplace = (filters?: {
   search?: string;
 }) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: listings = [], isLoading } = useQuery({
@@ -54,7 +56,7 @@ export const useClothingMarketplace = (filters?: {
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!profile || (profile.cash ?? 0) < item.sale_price) {
@@ -65,7 +67,7 @@ export const useClothingMarketplace = (filters?: {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile.cash ?? 0) - item.sale_price } as never)
-        .eq("user_id", user.id);
+        .eq("id", profileId);
       if (cashError) throw cashError;
 
       // Add cash to seller

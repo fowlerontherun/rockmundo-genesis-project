@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { shouldPromptRetirement, RETIREMENT_AGES } from "@/utils/skillDecline";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface RetirementCheckResult {
   shouldShowDialog: boolean;
@@ -21,36 +22,37 @@ interface RetirementCheckResult {
 
 export function useRetirementCheck(): RetirementCheckResult {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState(false);
 
   // Fetch profile data
   const { data: profile } = useQuery({
-    queryKey: ["retirement-check-profile", user?.id],
+    queryKey: ["retirement-check-profile", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("profiles")
         .select("id, display_name, username, age, fame, cash, last_retirement_prompt_age, created_at")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 
   // Fetch career stats
   const { data: careerStats } = useQuery({
-    queryKey: ["retirement-career-stats", user?.id],
+    queryKey: ["retirement-career-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return { totalSongs: 0, totalGigs: 0 };
-      return { totalSongs: 0, totalGigs: 0 }; // Simplified to avoid type issues
+      if (!profileId) return { totalSongs: 0, totalGigs: 0 };
+      return { totalSongs: 0, totalGigs: 0 };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 10,
   });
 

@@ -109,7 +109,7 @@ export const useSongAuctions = (userId?: string) => {
       const { data, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_display, ownership_type")
-        .eq("user_id", userId)
+        .eq("profile_id", userId)
         .eq("ownership_type", "purchased")
         .order("updated_at", { ascending: false });
 
@@ -129,7 +129,7 @@ export const useSongAuctions = (userId?: string) => {
       const { data: songs, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type")
-        .eq("user_id", userId)
+        .eq("profile_id", userId)
         .neq("ownership_type", "purchased")
         .eq("status", "draft")
         .neq("archived", true)

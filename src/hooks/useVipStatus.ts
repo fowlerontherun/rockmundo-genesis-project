@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface VipSubscription {
   id: string;
@@ -25,11 +26,12 @@ export interface VipStatus {
 
 export const useVipStatus = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["vip-status", user?.id],
+    queryKey: ["vip-status", profileId],
     queryFn: async (): Promise<VipStatus> => {
-      if (!user?.id) {
+      if (!profileId) {
         return {
           isVip: false,
           subscriptionType: null,
@@ -39,12 +41,12 @@ export const useVipStatus = () => {
         };
       }
 
-      console.log('[useVipStatus] Checking VIP for user:', user.id);
+      console.log('[useVipStatus] Checking VIP for profile:', profileId);
       
       const { data, error } = await supabase
         .from("vip_subscriptions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .eq("status", "active")
         .gte("expires_at", new Date().toISOString())
         .order("expires_at", { ascending: false })
@@ -80,7 +82,7 @@ export const useVipStatus = () => {
         subscription: data as VipSubscription,
       };
     },
-    enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    enabled: !!profileId,
+    staleTime: 5 * 60 * 1000,
   });
 };

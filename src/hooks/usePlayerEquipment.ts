@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { type EquipmentItemRecord } from "@/types/gear";
 
 export interface PlayerEquipmentWithItem {
@@ -47,11 +48,12 @@ export interface PlayerEquipmentData {
 
 export const usePlayerEquipment = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery<PlayerEquipmentData>({
-    queryKey: ["player-equipment", user?.id],
+    queryKey: ["player-equipment", profileId],
     queryFn: async () => {
-      if (!user?.id) {
+      if (!profileId) {
         return { items: [], poolStatus: [] };
       }
 
@@ -62,12 +64,12 @@ export const usePlayerEquipment = () => {
             `id, equipment_id, condition, is_equipped, created_at, available_for_loadout, available_at, loadout_slot_kind, pool_category,
              equipment:equipment_items!equipment_id (id, name, category, subcategory, price, rarity, description, stat_boosts, stock)`
           )
-          .eq("user_id", user.id)
+          .eq("user_id", user!.id)
           .order("created_at", { ascending: false }),
         supabase
           .from("player_gear_pool_status")
           .select("user_id, category, slot_kind, capacity, used_count, available_slots, default_capacity, catalog_slot_kind, updated_at")
-          .eq("user_id", user.id),
+          .eq("user_id", user!.id),
       ]);
 
       if (equipmentResult.error) {
@@ -87,6 +89,6 @@ export const usePlayerEquipment = () => {
         poolStatus: (poolResult.data as PlayerGearPoolStatus[] | null) ?? [],
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
