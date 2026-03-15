@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.042",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "Fixed 'duplicate key profiles_username_key' error when creating characters after deletion — usernames now include timestamp suffix and slot numbers account for deleted characters" },
+    ],
+  },
+  {
     version: "1.1.041",
     date: "2026-03-15",
     changes: [
