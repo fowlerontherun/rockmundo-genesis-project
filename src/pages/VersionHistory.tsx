@@ -14,6 +14,37 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.038",
+    date: "2026-03-15",
+    changes: [
+      { type: 'feature', description: "Marriage & Children Phase 2 — Partner names now resolve from profiles instead of showing 'Your Partner'" },
+      { type: 'feature', description: "Birth Completion Dialog — When gestation ends, a dialog prompts you to name your child with inherited potential preview" },
+      { type: 'feature', description: "Family Legacy Panel now wired with live data from marriages and children tables (family tree, fame inheritance, legacy pressure)" },
+      { type: 'feature', description: "Marriage StatusCard now shows partner avatar" },
+      { type: 'improvement', description: "Activity feed entries now posted for proposals, marriages, divorces, and child births" },
+      { type: 'improvement', description: "Ready births are highlighted with a glowing card and bounce animation" },
+    ],
+  },
+  {
+    version: "1.1.037",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "Fixed build errors in useCharacterSlots, useCompanyShares, useCollaborationInvites, useGameData, and PersonalVehicles — added type safety workarounds for auto-generated Supabase types" },
+    ],
+  },
+  {
+    version: "1.1.036",
+    date: "2026-03-14",
+    changes: [
+      { type: 'feature', description: "Marriage & Children System Phase 1 — Proposal, wedding, and marriage lifecycle with dual-consent child planning" },
+      { type: 'feature', description: "Family Dashboard — Live family tab on Relationships page showing marriage status, children, and pending requests" },
+      { type: 'feature', description: "Child Planning — Married players can plan children with controller selection, surname policy, and upbringing focus (±15% skill inheritance)" },
+      { type: 'feature', description: "Child Profiles — Children appear with inherited potentials, emotional stability, and parent bond gauges; playability state (NPC/Guided/Playable) by age" },
+      { type: 'feature', description: "Plan Wedding button on Romance panel when relationship reaches 'Engaged' stage" },
+      { type: 'feature', description: "Marriage proposal and acceptance flow with partner confirmation" },
+    ],
+  },
+  {
     version: "1.1.035",
     date: "2026-03-13",
     changes: [

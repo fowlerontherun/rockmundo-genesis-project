@@ -16,7 +16,7 @@ import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
-import { RMRadioPlayer } from "@/components/radio/RMRadioPlayer";
+import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
   History,
@@ -34,7 +34,6 @@ const Navigation = () => {
   const location = useLocation();
   const { signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [radioOpen, setRadioOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdmin } = useUserRole();
@@ -169,6 +168,7 @@ const Navigation = () => {
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
+            <RMRadioButton />
           </div>
         </div>
       </div>
@@ -197,6 +197,7 @@ const Navigation = () => {
             <PrisonStatusIndicator />
             <ActivityStatusIndicator />
             <NotificationBell />
+            <RMRadioButton />
             <ThemeSwitcher />
             <LanguageSwitcher />
             <HowToPlayDialog />
@@ -271,7 +272,6 @@ const Navigation = () => {
           </Button>
         </div>
       </div>
-      <RMRadioPlayer open={radioOpen} onOpenChange={setRadioOpen} />
     </>
   );
 };

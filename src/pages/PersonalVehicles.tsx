@@ -99,7 +99,7 @@ export default function PersonalVehicles() {
         .from("profiles")
         .update({
           cash: cash - vehicle.price,
-          weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles },
+          weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
         })
         .eq("user_id", user.id);
 
@@ -139,7 +139,7 @@ export default function PersonalVehicles() {
         .from("profiles")
         .update({
           cash: (currentProfile.cash ?? 0) + sellPrice,
-          weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles },
+          weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
         })
         .eq("user_id", user.id);
 
