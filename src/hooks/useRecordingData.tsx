@@ -96,9 +96,9 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
   });
 };
 
-export const useRecordingSessions = (userId: string) => {
+export const useRecordingSessions = (profileId: string) => {
   return useQuery({
-    queryKey: ['recording-sessions', userId],
+    queryKey: ['recording-sessions', profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recording_sessions')
@@ -108,7 +108,7 @@ export const useRecordingSessions = (userId: string) => {
           recording_producers (name, tier),
           songs (title, genre)
         `)
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .order('created_at', { ascending: false });
       
       if (error) {
