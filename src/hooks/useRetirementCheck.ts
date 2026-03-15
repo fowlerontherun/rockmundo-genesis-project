@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { shouldPromptRetirement, RETIREMENT_AGES } from "@/utils/skillDecline";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface RetirementCheckResult {
   shouldShowDialog: boolean;

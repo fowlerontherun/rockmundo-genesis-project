@@ -25,6 +25,7 @@ export interface VipStatus {
 
 export const useVipStatus = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: ["vip-status", user?.id],

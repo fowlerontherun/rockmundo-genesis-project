@@ -39,6 +39,7 @@ const ACTIVITY_PROFILES: Record<
 
 export function useNightlifeEvents() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { settings } = useBehaviorSettings();
   const queryClient = useQueryClient();
 
