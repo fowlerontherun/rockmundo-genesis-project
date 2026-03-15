@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
 export interface RandomEvent {
@@ -33,44 +34,40 @@ export interface PlayerEvent {
 
 export function usePlayerEvents() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["player-events", user?.id],
+    queryKey: ["player-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_events")
-        .select(`
-          *,
-          random_events (*)
-        `)
-        .eq("user_id", user.id)
+        .select(`*, random_events (*)`)
+        .eq("profile_id", profileId)
         .order("triggered_at", { ascending: false });
 
       if (error) throw error;
       return data as PlayerEvent[];
     },
-    enabled: !!user?.id,
-    staleTime: 1000 * 60, // 1 minute
+    enabled: !!profileId,
+    staleTime: 1000 * 60,
   });
 }
 
 export function usePendingEvent() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["pending-event", user?.id],
+    queryKey: ["pending-event", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_events")
-        .select(`
-          *,
-          random_events (*)
-        `)
-        .eq("user_id", user.id)
+        .select(`*, random_events (*)`)
+        .eq("profile_id", profileId)
         .eq("status", "pending_choice")
         .order("triggered_at", { ascending: false })
         .limit(1)
@@ -79,16 +76,16 @@ export function usePendingEvent() {
       if (error) throw error;
       return data as PlayerEvent | null;
     },
-    enabled: !!user?.id,
-    staleTime: 1000 * 30, // 30 seconds
-    refetchInterval: 1000 * 60 * 5, // Check every 5 minutes
+    enabled: !!profileId,
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60 * 5,
   });
 }
 
 export function useChooseEventOption() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ playerEventId, choice }: { playerEventId: string; choice: "a" | "b" }) => {
@@ -107,8 +104,8 @@ export function useChooseEventOption() {
         title: "Choice Made!",
         description: data.message || "Your outcome will be applied tomorrow.",
       });
-      queryClient.invalidateQueries({ queryKey: ["pending-event", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["player-events", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["pending-event", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-events", profileId] });
     },
     onError: (error) => {
       toast({
@@ -121,22 +118,19 @@ export function useChooseEventOption() {
 }
 
 export function useRecentEventOutcomes() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["recent-event-outcomes", user?.id],
+    queryKey: ["recent-event-outcomes", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_events")
-        .select(`
-          *,
-          random_events (*)
-        `)
-        .eq("user_id", user.id)
+        .select(`*, random_events (*)`)
+        .eq("profile_id", profileId)
         .eq("status", "completed")
         .gte("outcome_applied_at", threeDaysAgo)
         .order("outcome_applied_at", { ascending: false });
@@ -144,7 +138,7 @@ export function useRecentEventOutcomes() {
       if (error) throw error;
       return data as PlayerEvent[];
     },
-    enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!profileId,
+    staleTime: 1000 * 60 * 5,
   });
 }

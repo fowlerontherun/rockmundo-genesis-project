@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface Hospital {
@@ -15,6 +16,7 @@ export interface Hospital {
 export interface Hospitalization {
   id: string;
   user_id: string;
+  profile_id?: string;
   hospital_id: string;
   admitted_at: string;
   expected_discharge_at: string;
@@ -27,18 +29,17 @@ export interface Hospitalization {
 
 export function useHospitalization() {
   const { user } = useAuth();
+  const { profileId, profile: activeProfile } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  // Get the player's current city hospital
   const { data: nearestHospital, isLoading: hospitalLoading } = useQuery({
-    queryKey: ["nearest-hospital", user?.id],
+    queryKey: ["nearest-hospital", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      // Get player's current city
+      if (!profileId) return null;
       const { data: profile } = await supabase
         .from("profiles")
         .select("current_city_id")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!profile?.current_city_id) return null;
@@ -52,18 +53,17 @@ export function useHospitalization() {
 
       return (hospitals?.[0] as Hospital) || null;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
-  // Get active hospitalization
   const { data: activeHospitalization, isLoading: hospitalizationLoading } = useQuery({
-    queryKey: ["active-hospitalization", user?.id],
+    queryKey: ["active-hospitalization", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
+      if (!profileId) return null;
+      const { data } = await (supabase as any)
         .from("player_hospitalizations")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "admitted")
         .order("admitted_at", { ascending: false })
         .limit(1)
@@ -71,18 +71,17 @@ export function useHospitalization() {
 
       return data as Hospitalization | null;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
-  // Check in to hospital
   const checkInMutation = useMutation({
     mutationFn: async (params?: { conditionId?: string; reason?: string }) => {
-      if (!user?.id || !nearestHospital) throw new Error("No hospital available");
+      if (!user?.id || !profileId || !nearestHospital) throw new Error("No hospital available");
 
       const { data: profile } = await supabase
         .from("profiles")
         .select("health, cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!profile) throw new Error("Profile not found");
@@ -90,12 +89,10 @@ export function useHospitalization() {
       const health = profile.health ?? 100;
       const reason = params?.reason || "health_collapse";
 
-      // Allow check-in for conditions (injury/sickness) even if health > 30
       if (reason === "health_collapse" && health > 30) {
         throw new Error("Health must be below 30 to check in for health collapse");
       }
 
-      // Calculate stay duration: 1-3 days based on how low health is or condition severity
       const stayDays = params?.conditionId ? 2 : (health <= 10 ? 3 : health <= 20 ? 2 : 1);
       const dischargeAt = new Date();
       dischargeAt.setDate(dischargeAt.getDate() + stayDays);
@@ -106,11 +103,11 @@ export function useHospitalization() {
         throw new Error(`Not enough cash for hospital stay ($${totalCost} needed)`);
       }
 
-      // Create hospitalization record
       const { error: hospError } = await (supabase as any)
         .from("player_hospitalizations")
         .insert({
           user_id: user.id,
+          profile_id: profileId,
           hospital_id: nearestHospital.id,
           admitted_at: new Date().toISOString(),
           expected_discharge_at: dischargeAt.toISOString(),
@@ -123,9 +120,9 @@ export function useHospitalization() {
 
       if (hospError) throw hospError;
 
-      // Create a scheduled activity to block everything during stay
       await (supabase as any).from("player_scheduled_activities").insert({
         user_id: user.id,
+        profile_id: profileId,
         activity_type: "hospital",
         scheduled_start: new Date().toISOString(),
         scheduled_end: dischargeAt.toISOString(),
@@ -134,12 +131,11 @@ export function useHospitalization() {
         status: "in_progress",
       });
 
-      // Deduct cost
       if (totalCost > 0) {
         await supabase
           .from("profiles")
           .update({ cash: profile.cash - totalCost })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
       }
 
       return { stayDays, totalCost, hospitalName: nearestHospital.name };
@@ -152,18 +148,15 @@ export function useHospitalization() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Discharge (manual or auto)
   const dischargeMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !activeHospitalization) throw new Error("No active hospitalization");
+      if (!user?.id || !profileId || !activeHospitalization) throw new Error("No active hospitalization");
 
-      // Calculate health recovery based on time spent
       const admittedAt = new Date(activeHospitalization.admitted_at);
       const now = new Date();
       const hoursSpent = (now.getTime() - admittedAt.getTime()) / (1000 * 60 * 60);
 
-      // Recovery rate based on hospital effectiveness (default 50 if unknown)
-      const recoveryPerHour = 50 / 10; // ~5 health per hour
+      const recoveryPerHour = 50 / 10;
       const healthGain = Math.min(100, Math.round(recoveryPerHour * hoursSpent));
 
       await supabase
@@ -174,11 +167,10 @@ export function useHospitalization() {
         })
         .eq("id", activeHospitalization.id);
 
-      // Update health
       const { data: profile } = await supabase
         .from("profiles")
         .select("health")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       const newHealth = Math.min(100, (profile?.health ?? 0) + healthGain);
@@ -189,13 +181,12 @@ export function useHospitalization() {
           rest_required_until: null,
           last_health_update: now.toISOString(),
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
-      // Complete the scheduled activity
       await (supabase as any)
         .from("player_scheduled_activities")
         .update({ status: "completed" })
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("activity_type", "hospital")
         .eq("status", "in_progress");
 
@@ -209,7 +200,6 @@ export function useHospitalization() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Check if discharge is due
   const isDischargeDue = activeHospitalization
     ? new Date() >= new Date(activeHospitalization.expected_discharge_at)
     : false;
@@ -231,11 +221,14 @@ export function useHospitalization() {
  */
 export async function autoHospitalize(userId: string): Promise<void> {
   try {
+    // Get active profile for this user
     const { data: profile } = await supabase
       .from("profiles")
-      .select("current_city_id, health")
+      .select("id, current_city_id, health")
       .eq("user_id", userId)
-      .single();
+      .eq("is_active", true)
+      .is("died_at", null)
+      .maybeSingle();
 
     if (!profile?.current_city_id) return;
 
@@ -249,12 +242,13 @@ export async function autoHospitalize(userId: string): Promise<void> {
     const hospital = hospitals?.[0];
     if (!hospital) return;
 
-    const stayDays = 2; // Default 2-day stay for auto-hospitalization
+    const stayDays = 2;
     const dischargeAt = new Date();
     dischargeAt.setDate(dischargeAt.getDate() + stayDays);
 
     await supabase.from("player_hospitalizations").insert({
       user_id: userId,
+      profile_id: profile.id,
       hospital_id: hospital.id,
       admitted_at: new Date().toISOString(),
       expected_discharge_at: dischargeAt.toISOString(),
@@ -265,6 +259,7 @@ export async function autoHospitalize(userId: string): Promise<void> {
 
     await (supabase as any).from("player_scheduled_activities").insert({
       user_id: userId,
+      profile_id: profile.id,
       activity_type: "hospital",
       scheduled_start: new Date().toISOString(),
       scheduled_end: dischargeAt.toISOString(),
