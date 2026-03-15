@@ -117,11 +117,11 @@ export const useFanManagement = (profileId?: string) => {
   // Create segment
   const createSegment = useMutation({
     mutationFn: async (segment: Partial<FanSegment>) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("User not authenticated");
 
       const { data, error } = await (supabase as any)
         .from("fan_segments")
-        .insert({ ...segment, user_id: userId })
+        .insert({ ...segment, user_id: profileId })
         .select()
         .single();
 
