@@ -18,13 +18,24 @@ export function useUserBand() {
     queryFn: async (): Promise<UserBand | null> => {
       if (!user?.id) return null;
 
-      // First get the band_id from band_members where user is leader or member
+      // Get the active profile for this user
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+
+      if (!activeProfile) return null;
+
+      // Get band membership for the active profile
       const { data: membership, error: memberError } = await supabase
         .from("band_members")
         .select("band_id, role")
-        .eq("user_id", user.id)
+        .eq("profile_id", activeProfile.id)
         .eq("member_status", "active")
-        .order("role", { ascending: true }) // leader comes first
+        .order("role", { ascending: true })
         .limit(1)
         .maybeSingle();
 

@@ -32,6 +32,17 @@ export const usePrimaryBand = () => {
         return null;
       }
 
+      // Get the active profile for this user
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+
+      if (!activeProfile) return null;
+
       const { data, error } = await supabase
         .from("band_members")
         .select(
@@ -55,7 +66,7 @@ export const usePrimaryBand = () => {
             )
           `
         )
-        .eq("user_id", user.id)
+        .eq("profile_id", activeProfile.id)
         .eq("bands.status", "active")
         .order("joined_at", { ascending: false })
         .limit(1)
