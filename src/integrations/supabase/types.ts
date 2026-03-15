@@ -20547,6 +20547,7 @@ export type Database = {
           travel_arrives_at: string | null
           travel_manager_enabled: boolean | null
           travel_manager_expires_at: string | null
+          unlock_cost: number
           updated_at: string | null
           user_id: string
           username: string
@@ -20600,6 +20601,7 @@ export type Database = {
           travel_arrives_at?: string | null
           travel_manager_enabled?: boolean | null
           travel_manager_expires_at?: string | null
+          unlock_cost?: number
           updated_at?: string | null
           user_id: string
           username: string
@@ -20653,6 +20655,7 @@ export type Database = {
           travel_arrives_at?: string | null
           travel_manager_enabled?: boolean | null
           travel_manager_expires_at?: string | null
+          unlock_cost?: number
           updated_at?: string | null
           user_id?: string
           username?: string
