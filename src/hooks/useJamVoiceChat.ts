@@ -64,7 +64,7 @@ export const useJamVoiceChat = (sessionId: string | null): UseJamVoiceChatReturn
         .eq("user_id", user.id)
         .eq("is_active", true)
         .is("died_at", null)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: !!user?.id,

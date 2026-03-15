@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface NPCRelationship {
   id: string;
@@ -18,28 +19,23 @@ export interface NPCRelationship {
 
 export function useNPCRelationship(npcId: string | undefined) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: relationship, isLoading } = useQuery({
-    queryKey: ["npc-relationship", npcId, user?.id],
+    queryKey: ["npc-relationship", npcId, profileId],
     queryFn: async () => {
-      if (!user?.id || !npcId) return null;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      if (!profile) return null;
+      if (!profileId || !npcId) return null;
 
       const { data } = await supabase
         .from("npc_relationships")
         .select("*")
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .eq("npc_id", npcId)
         .maybeSingle();
       return (data as NPCRelationship) ?? null;
     },
-    enabled: !!user?.id && !!npcId,
+    enabled: !!profileId && !!npcId,
   });
 
   const updateRelationship = useMutation({
@@ -56,13 +52,7 @@ export function useNPCRelationship(npcId: string | undefined) {
       trustDelta?: number;
       respectDelta?: number;
     }) => {
-      if (!user?.id || !npcId) throw new Error("Missing data");
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      if (!profile) throw new Error("Profile not found");
+      if (!profileId || !npcId) throw new Error("Missing data");
 
       if (relationship) {
         const { error } = await supabase
@@ -80,7 +70,7 @@ export function useNPCRelationship(npcId: string | undefined) {
         const { error } = await supabase
           .from("npc_relationships")
           .insert({
-            profile_id: profile.id,
+            profile_id: profileId,
             npc_id: npcId,
             npc_name: npcName,
             npc_type: npcType,

@@ -62,10 +62,10 @@ const statIcons: Record<string, any> = {
 export default function Gear() {
   const { t } = useTranslation();
   const { profile } = useGameData();
-  const userId = profile?.user_id;
+  const profileId = profile?.id;
   
   const { catalog, inventory, isLoading, purchaseEquipment, maintainEquipment, isPurchasing, isMaintaining } = 
-    useEquipmentStore(userId);
+    useEquipmentStore(profileId);
   const { equipGear, isUpdating } = useEquipPlayerEquipment();
 
   const [searchQuery, setSearchQuery] = useState("");

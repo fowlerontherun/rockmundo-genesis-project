@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { awardSpecialXp } from "@/utils/progression";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,7 @@ export interface SurveyConfig {
 
 export function usePlayerSurvey() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -106,20 +108,13 @@ export function usePlayerSurvey() {
     mutationFn: async (answers: { questionId: string; answerValue: string; answerNumeric?: number }[]) => {
       if (!user || !surveyConfig) throw new Error("Not ready");
 
-      // Get profile_id
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const profileId = profile?.id ?? null;
+      // Use profileId directly
       const round = surveyConfig.round;
 
       // Insert responses
       const rows = answers.map((a) => ({
         user_id: user.id,
-        profile_id: profileId,
+        profile_id: profileId ?? null,
         question_id: a.questionId,
         survey_round: round,
         answer_value: a.answerValue,
@@ -163,7 +158,7 @@ export function usePlayerSurvey() {
         .from("player_survey_completions")
         .insert({
           user_id: user.id,
-          profile_id: profileId,
+          profile_id: profileId ?? null,
           survey_round: round,
           xp_awarded: 250,
           attribute_points_awarded: 25,

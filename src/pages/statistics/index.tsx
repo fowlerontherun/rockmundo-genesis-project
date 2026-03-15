@@ -3,12 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerStatistics } from "@/hooks/usePlayerStatistics";
 import { Trophy, Music, TrendingUp, Star, Award, Target } from "lucide-react";
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const {
     allAchievements,
     unlockedAchievements,
@@ -16,7 +18,7 @@ const PlayerStatistics = () => {
     progressByCategory,
     completionPercentage,
     isLoading: isLoadingAchievements,
-  } = useAchievements(user?.id);
+  } = useAchievements(profileId ?? undefined);
 
   const { performanceStats, songwritingStats, isLoading: isLoadingStats } = usePlayerStatistics(user?.id);
 

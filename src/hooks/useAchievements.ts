@@ -21,7 +21,7 @@ export interface PlayerAchievement {
   achievement?: Achievement;
 }
 
-export const useAchievements = (userId?: string) => {
+export const useAchievements = (profileId?: string) => {
   const { data: allAchievements = [], isLoading: isLoadingAll } = useQuery({
     queryKey: ["achievements"],
     queryFn: async () => {
@@ -37,9 +37,9 @@ export const useAchievements = (userId?: string) => {
   });
 
   const { data: playerAchievements = [], isLoading: isLoadingPlayer } = useQuery({
-    queryKey: ["player-achievements", userId],
+    queryKey: ["player-achievements", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("player_achievements")
@@ -47,13 +47,13 @@ export const useAchievements = (userId?: string) => {
           *,
           achievement:achievement_id(*)
         `)
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("unlocked_at", { ascending: false });
 
       if (error) throw error;
       return data as any as PlayerAchievement[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const unlockedIds = new Set(playerAchievements.map(pa => pa.achievement_id));

@@ -1,26 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ShoppingCart, Package, Wrench } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const EnhancedEquipmentStore = () => {
-  const [user, setUser] = useState<any>(null);
+  const { profileId } = useActiveProfile();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
-  }, []);
-
   const { catalog, inventory, isLoading, purchaseEquipment, maintainEquipment, isPurchasing, isMaintaining } =
-    useEquipmentStore(user?.id);
+    useEquipmentStore(profileId ?? undefined);
 
   const filteredCatalog = catalog.filter((item) =>
     categoryFilter === "all" || item.category === categoryFilter

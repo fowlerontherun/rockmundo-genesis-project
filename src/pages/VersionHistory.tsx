@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.049",
+    date: "2026-03-15",
+    changes: [
+      { type: 'improvement', description: "Profile isolation extended to equipment store, health impact system, achievements, NPC relationships, and player survey" },
+      { type: 'fix', description: "Equipment purchase/maintenance cash operations now target active profile. Health checks and drains use profile_id" },
+      { type: 'improvement', description: "Callers updated: Gear page, EnhancedEquipmentStore, GearMarketplaceListings, and Statistics page now pass profileId" },
+    ],
+  },
+  {
     version: "1.1.048",
     date: "2026-03-15",
     changes: [

@@ -4,13 +4,14 @@ import { autoHospitalize } from "@/hooks/useHospitalization";
 import { aggregateConditionEffects, type ConditionEffects } from "@/utils/conditionSystem";
 
 /**
- * Fetch active conditions for a user and return aggregated effects
+ * Fetch active conditions for a profile and return aggregated effects.
+ * Now accepts profileId (the active character profile UUID).
  */
-async function getActiveConditionEffects(userId: string): Promise<ConditionEffects> {
+async function getActiveConditionEffects(profileId: string): Promise<ConditionEffects> {
   const { data } = await (supabase as any)
     .from("player_conditions")
     .select("condition_name, severity, effects")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .in("status", ["active", "treating"]);
 
   if (!data || data.length === 0) return {};
@@ -18,18 +19,18 @@ async function getActiveConditionEffects(userId: string): Promise<ConditionEffec
 }
 
 /**
- * Check if user has enough health/energy for an activity
- * Returns error message if check fails, null if ok
+ * Check if the active profile has enough health/energy for an activity.
+ * profileId = the active character's profile UUID.
  */
 export async function checkHealthForActivity(
-  userId: string,
+  profileId: string,
   activityType: string,
   energyCost: number = 0
 ): Promise<{ canPerform: boolean; message: string | null; healthPenalty: number }> {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("health, energy")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .single();
 
   if (error || !profile) {
@@ -40,7 +41,6 @@ export async function checkHealthForActivity(
   const energy = profile.energy ?? 100;
   const healthStatus = getHealthStatus(health);
 
-  // Critical health check
   if (!healthStatus.canPerform) {
     return {
       canPerform: false,
@@ -49,8 +49,7 @@ export async function checkHealthForActivity(
     };
   }
 
-  // Check blocking conditions
-  const conditionEffects = await getActiveConditionEffects(userId);
+  const conditionEffects = await getActiveConditionEffects(profileId);
 
   if (conditionEffects.blocks_gigs && ["gig", "busking", "recording"].includes(activityType)) {
     return { canPerform: false, message: "A condition is blocking you from performing. Check your Wellness page.", healthPenalty: 0 };
@@ -65,7 +64,6 @@ export async function checkHealthForActivity(
     return { canPerform: false, message: "You're too ill to travel. Get treatment first!", healthPenalty: 0 };
   }
 
-  // Energy check (factor in energy cap from conditions)
   const effectiveEnergyCap = conditionEffects.energy_cap ?? 100;
   const effectiveEnergy = Math.min(energy, effectiveEnergyCap);
   if (effectiveEnergy < energyCost) {
@@ -76,7 +74,6 @@ export async function checkHealthForActivity(
     };
   }
 
-  // Calculate performance penalty from health + conditions
   let healthPenalty = 0;
   if (health <= 30) {
     healthPenalty = 50;
@@ -86,17 +83,17 @@ export async function checkHealthForActivity(
     healthPenalty = 10;
   }
 
-  // Add condition XP penalty
   healthPenalty = Math.min(75, healthPenalty + (conditionEffects.xp_penalty || 0));
 
   return { canPerform: true, message: null, healthPenalty };
 }
 
 /**
- * Apply health drain after an activity
+ * Apply health drain after an activity.
+ * profileId = the active character's profile UUID.
  */
 export async function applyHealthDrain(
-  userId: string,
+  profileId: string,
   activityType: string,
   durationMinutes: number,
   energyCost: number = 0
@@ -104,7 +101,7 @@ export async function applyHealthDrain(
   const { data: profile } = await supabase
     .from("profiles")
     .select("health, energy")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .single();
 
   if (!profile) return;
@@ -134,18 +131,19 @@ export async function applyHealthDrain(
       energy: newEnergy,
       last_health_update: new Date().toISOString(),
     })
-    .eq("user_id", userId);
+    .eq("id", profileId);
 
   // Check if user collapsed - auto-hospitalize
   if (newHealth === 0) {
-    await autoHospitalize(userId);
+    await autoHospitalize(profileId);
   }
 }
 
 /**
- * Check for overwork effects (too many activities without rest)
+ * Check for overwork effects (too many activities without rest).
+ * profileId = the active character's profile UUID.
  */
-export async function checkOverworkEffects(userId: string): Promise<{
+export async function checkOverworkEffects(profileId: string): Promise<{
   isOverworked: boolean;
   message: string | null;
 }> {
@@ -155,7 +153,7 @@ export async function checkOverworkEffects(userId: string): Promise<{
   const { data: activities, error } = await supabase
     .from("experience_ledger")
     .select("*")
-    .eq("user_id", userId)
+    .eq("user_id", profileId)
     .gte("created_at", oneDayAgo.toISOString())
     .in("activity_type", ["gig", "recording", "songwriting", "rehearsal", "busking"]);
 
@@ -164,7 +162,6 @@ export async function checkOverworkEffects(userId: string): Promise<{
   const activityCount = activities.length;
   const restCount = activities.filter((a) => a.activity_type === "rest").length;
 
-  // More than 5 activities without rest
   if (activityCount > 5 && restCount === 0) {
     return {
       isOverworked: true,
@@ -172,7 +169,6 @@ export async function checkOverworkEffects(userId: string): Promise<{
     };
   }
 
-  // More than 8 activities even with rest
   if (activityCount > 8) {
     return {
       isOverworked: true,
