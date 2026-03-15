@@ -56,9 +56,9 @@ export const usePlaylists = (profileId?: string) => {
 
   // Fetch user's playlist submissions
   const { data: userSubmissions = [], isLoading: isLoadingSubmissions } = useQuery({
-    queryKey: ["playlist-submissions", userId],
+    queryKey: ["playlist-submissions", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from("playlist_submissions")
@@ -66,7 +66,7 @@ export const usePlaylists = (profileId?: string) => {
           *,
           playlist:playlists(*)
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("submitted_at", { ascending: false });
       
       if (error) {
