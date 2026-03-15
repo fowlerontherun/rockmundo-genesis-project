@@ -43,7 +43,7 @@ export const GearMarketplaceListings = () => {
     myListings, receivedOffers, isLoading, 
     createListing, cancelListing, respondToOffer,
     isCreatingListing, isCancellingListing, calculateSuggestedPrice 
-  } = useGearMarketplace(userId);
+  } = useGearMarketplace(profileId);
 
   const [showNewListing, setShowNewListing] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<PlayerEquipment | null>(null);
