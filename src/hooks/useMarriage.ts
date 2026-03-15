@@ -20,6 +20,15 @@ export interface Marriage {
   updated_at: string;
 }
 
+export interface PartnerProfile {
+  id: string;
+  display_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  fame: number;
+  level: number;
+}
+
 export function useMarriageStatus(profileId: string | undefined) {
   return useQuery({
     queryKey: ["marriage-status", profileId],
@@ -35,6 +44,23 @@ export function useMarriageStatus(profileId: string | undefined) {
       return data as unknown as Marriage | null;
     },
     enabled: !!profileId,
+  });
+}
+
+export function usePartnerProfile(partnerId: string | undefined) {
+  return useQuery({
+    queryKey: ["partner-profile", partnerId],
+    queryFn: async (): Promise<PartnerProfile | null> => {
+      if (!partnerId) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, username, avatar_url, fame, level")
+        .eq("id", partnerId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as PartnerProfile | null;
+    },
+    enabled: !!partnerId,
   });
 }
 
@@ -57,6 +83,8 @@ export function useMarriageHistory(profileId: string | undefined) {
 
 export function useProposeMarriage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: async ({ partnerAId, partnerBId, weddingDate }: {
       partnerAId: string;
@@ -75,11 +103,23 @@ export function useProposeMarriage() {
         .select()
         .single();
       if (error) throw error;
+
+      // Post activity feed entry
+      if (user?.id) {
+        await supabase.from("activity_feed").insert({
+          user_id: user.id,
+          activity_type: "marriage_proposal",
+          message: "💍 Proposed marriage!",
+          metadata: { marriage_id: (data as any)?.id },
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       toast.success("Marriage proposal sent! 💍");
       queryClient.invalidateQueries({ queryKey: ["marriage-status"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-feed"] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to propose");
@@ -89,6 +129,8 @@ export function useProposeMarriage() {
 
 export function useRespondToProposal() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: async ({ marriageId, accept }: { marriageId: string; accept: boolean }) => {
       const updates = accept
@@ -100,10 +142,21 @@ export function useRespondToProposal() {
         .update(asAny(updates))
         .eq("id", marriageId);
       if (error) throw error;
+
+      // Post activity feed
+      if (user?.id && accept) {
+        await supabase.from("activity_feed").insert({
+          user_id: user.id,
+          activity_type: "marriage",
+          message: "💒 Got married!",
+          metadata: { marriage_id: marriageId },
+        });
+      }
     },
     onSuccess: (_, vars) => {
       toast.success(vars.accept ? "You're married! 💒" : "Proposal declined");
       queryClient.invalidateQueries({ queryKey: ["marriage-status"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-feed"] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to respond to proposal");
@@ -113,6 +166,8 @@ export function useRespondToProposal() {
 
 export function useInitiateDivorce() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: async ({ marriageId, profileId }: { marriageId: string; profileId: string }) => {
       const { error } = await supabase
@@ -125,11 +180,21 @@ export function useInitiateDivorce() {
         }))
         .eq("id", marriageId);
       if (error) throw error;
+
+      if (user?.id) {
+        await supabase.from("activity_feed").insert({
+          user_id: user.id,
+          activity_type: "divorce",
+          message: "📝 Filed for divorce",
+          metadata: { marriage_id: marriageId },
+        });
+      }
     },
     onSuccess: () => {
       toast.info("Divorce finalized");
       queryClient.invalidateQueries({ queryKey: ["marriage-status"] });
       queryClient.invalidateQueries({ queryKey: ["marriage-history"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-feed"] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to initiate divorce");
