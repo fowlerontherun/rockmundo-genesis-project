@@ -48,6 +48,7 @@ export interface PlayerEquipmentData {
 
 export const usePlayerEquipment = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery<PlayerEquipmentData>({
     queryKey: ["player-equipment", user?.id],
