@@ -1839,6 +1839,7 @@ export type Database = {
           joined_at: string | null
           leadership_votes: number | null
           member_status: string | null
+          profile_id: string | null
           role: string
           salary: number | null
           skill_contribution: number | null
@@ -1859,6 +1860,7 @@ export type Database = {
           joined_at?: string | null
           leadership_votes?: number | null
           member_status?: string | null
+          profile_id?: string | null
           role: string
           salary?: number | null
           skill_contribution?: number | null
@@ -1879,6 +1881,7 @@ export type Database = {
           joined_at?: string | null
           leadership_votes?: number | null
           member_status?: string | null
+          profile_id?: string | null
           role?: string
           salary?: number | null
           skill_contribution?: number | null
@@ -1901,6 +1904,20 @@ export type Database = {
             columns: ["current_city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
