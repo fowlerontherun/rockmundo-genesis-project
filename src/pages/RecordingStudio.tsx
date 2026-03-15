@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
+  const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { t } = useTranslation();
   const [wizardOpen, setWizardOpen] = useState(false);
