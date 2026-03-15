@@ -298,7 +298,7 @@ export const useSongwritingData = (profileId?: string | null) => {
   // Start session - 1 hour duration, allows 2 concurrent songwriting projects
   const startSession = useMutation({
     mutationFn: async ({ projectId }: StartSessionInput) => {
-      if (!userId) throw new Error("User ID required");
+      if (!profileId) throw new Error("Profile ID required");
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
