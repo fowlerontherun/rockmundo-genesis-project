@@ -114,7 +114,7 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
   }
 
   const nextSlot = (existingProfiles?.reduce((max, profile) => Math.max(max, profile.slot_number ?? 0), 0) ?? 0) + 1;
-  const generatedUsername = `player-${userId.slice(0, 8)}-${nextSlot}`;
+  const generatedUsername = `player-${userId.slice(0, 8)}-${nextSlot}-${Date.now().toString(36)}`;
 
   const { data: insertedProfile, error: insertError } = await supabase
     .from("profiles")
