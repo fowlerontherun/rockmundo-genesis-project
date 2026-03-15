@@ -344,7 +344,7 @@ export const useSongwritingData = (profileId?: string | null) => {
         .from('songwriting_sessions')
         .insert({
           project_id: projectId,
-          user_id: userId,
+          user_id: user!.id,
           session_start: sessionStart.toISOString(),
           locked_until: sessionEndTime.toISOString(),
           music_progress_gained: 0,
