@@ -21,7 +21,7 @@ export interface MusicVideo {
   band?: any;
 }
 
-export const useMusicVideos = (userId?: string) => {
+export const useMusicVideos = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all videos
@@ -42,11 +42,11 @@ export const useMusicVideos = (userId?: string) => {
     },
   });
 
-  // Fetch user's videos
+  // Fetch user's videos by profile_id
   const { data: myVideos = [] } = useQuery({
-    queryKey: ["my-music-videos", userId],
+    queryKey: ["my-music-videos", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await (supabase as any)
         .from("music_videos")
@@ -55,13 +55,13 @@ export const useMusicVideos = (userId?: string) => {
           song:songs(title, genre, mood),
           band:bands(name)
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as MusicVideo[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch trending videos

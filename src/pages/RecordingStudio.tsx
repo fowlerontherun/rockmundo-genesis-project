@@ -8,6 +8,7 @@ import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordin
 import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic } from "lucide-react";
@@ -19,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
+  const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { t } = useTranslation();
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -29,7 +31,7 @@ export default function RecordingStudio() {
   
   const currentCityId = currentCity?.id || "";
   
-  const { data: sessions, isLoading } = useRecordingSessions(session?.user?.id || "");
+  const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
 
   useEffect(() => {
     const loadUserBand = async () => {

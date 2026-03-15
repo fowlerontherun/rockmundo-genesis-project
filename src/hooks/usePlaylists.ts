@@ -28,7 +28,7 @@ export interface PlaylistSubmission {
   playlist?: Playlist;
 }
 
-export const usePlaylists = (userId?: string) => {
+export const usePlaylists = (profileId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -56,17 +56,17 @@ export const usePlaylists = (userId?: string) => {
 
   // Fetch user's playlist submissions
   const { data: userSubmissions = [], isLoading: isLoadingSubmissions } = useQuery({
-    queryKey: ["playlist-submissions", userId],
+    queryKey: ["playlist-submissions", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("playlist_submissions")
         .select(`
           *,
           playlist:playlists(*)
         `)
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("submitted_at", { ascending: false });
       
       if (error) {
@@ -76,7 +76,7 @@ export const usePlaylists = (userId?: string) => {
       
       return (data || []) as PlaylistSubmission[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Auto-process a submission (simulate curator review)
@@ -135,7 +135,7 @@ export const usePlaylists = (userId?: string) => {
     }
 
     // Refresh submissions
-    queryClient.invalidateQueries({ queryKey: ["playlist-submissions", userId] });
+    queryClient.invalidateQueries({ queryKey: ["playlist-submissions", profileId] });
 
     toast({
       title: accepted ? "🎉 Playlist Accepted!" : "Playlist Rejected",
@@ -149,7 +149,7 @@ export const usePlaylists = (userId?: string) => {
   // Submit song to playlist - requires a song_release ID
   const submitToPlaylist = useMutation({
     mutationFn: async ({ playlistId, releaseId }: { playlistId: string; releaseId: string }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       // Get playlist details for cost
       const playlist = playlists.find(p => p.id === playlistId);
@@ -161,7 +161,7 @@ export const usePlaylists = (userId?: string) => {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", userId)
+        .eq("id", profileId)
         .single();
 
       if (profileError) throw new Error("Could not fetch profile");
@@ -170,12 +170,12 @@ export const usePlaylists = (userId?: string) => {
       }
 
       // Check if already submitted
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from("playlist_submissions")
         .select("id")
         .eq("playlist_id", playlistId)
         .eq("release_id", releaseId)
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .maybeSingle();
 
       if (existing) {
@@ -187,7 +187,7 @@ export const usePlaylists = (userId?: string) => {
         const { error: cashError } = await supabase
           .from("profiles")
           .update({ cash: (profile?.cash || 0) - submissionCost })
-          .eq("user_id", userId);
+          .eq("id", profileId);
 
         if (cashError) throw cashError;
       }
@@ -198,7 +198,8 @@ export const usePlaylists = (userId?: string) => {
         .insert({
           playlist_id: playlistId,
           release_id: releaseId,
-          user_id: userId,
+          user_id: profileId,
+          profile_id: profileId,
           submission_status: "pending",
         })
         .select("id")
@@ -210,14 +211,15 @@ export const usePlaylists = (userId?: string) => {
           await supabase
             .from("profiles")
             .update({ cash: (profile?.cash || 0) })
-            .eq("user_id", userId);
+            .eq("id", profileId);
         }
         throw insertError;
       }
 
       // Log the activity
       await supabase.from("activity_feed").insert({
-        user_id: userId,
+        user_id: profileId,
+        profile_id: profileId,
         activity_type: "playlist_submission",
         message: `Submitted song to "${playlist.playlist_name}" playlist`,
         metadata: {
@@ -225,12 +227,12 @@ export const usePlaylists = (userId?: string) => {
           release_id: releaseId,
           cost: submissionCost,
         },
-      });
+      } as any);
 
       return { playlistId, releaseId, submissionId: submission.id };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["playlist-submissions", userId] });
+      queryClient.invalidateQueries({ queryKey: ["playlist-submissions", profileId] });
       queryClient.invalidateQueries({ queryKey: ["game-profile"] });
       const playlist = playlists.find(p => p.id === data.playlistId);
       toast({

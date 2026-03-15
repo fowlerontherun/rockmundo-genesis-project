@@ -13,29 +13,29 @@ export interface SkillBookInventory {
   progress_percentage: number;
 }
 
-export const useSkillBooksInventory = (userId?: string) => {
+export const useSkillBooksInventory = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   const { data: books = [], isLoading } = useQuery({
-    queryKey: ["skill-books-inventory", userId],
+    queryKey: ["skill-books-inventory", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("player_skill_books")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
 
       if (error) throw error;
       return data as SkillBookInventory[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const completeBook = useMutation({
     mutationFn: async (bookId: string) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       const book = books.find((b) => b.id === bookId);
       if (!book) throw new Error("Book not found");
@@ -67,7 +67,7 @@ export const useSkillBooksInventory = (userId?: string) => {
       if (response.error) throw response.error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["skill-books-inventory", userId] });
+      queryClient.invalidateQueries({ queryKey: ["skill-books-inventory", profileId] });
       toast.success("Book completed! XP awarded.");
     },
     onError: (error: any) => {

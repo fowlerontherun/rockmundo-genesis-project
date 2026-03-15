@@ -107,7 +107,7 @@ export const getSongQualityDescriptor = (score: number) => {
 
 export const SONG_RATING_RANGE = { min: 0, max: 1000 } as const;
 
-export const useSongwritingData = (userId?: string | null) => {
+export const useSongwritingData = (profileId?: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -141,10 +141,10 @@ export const useSongwritingData = (userId?: string | null) => {
 
   // Fetch projects with sessions and auto-unlock expired locks
   const { data: projects = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useQuery({
-    queryKey: ['songwriting-projects', userId],
-    enabled: !!userId,
+    queryKey: ['songwriting-projects', profileId],
+    enabled: !!profileId,
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from('songwriting_projects')
@@ -165,7 +165,7 @@ export const useSongwritingData = (userId?: string | null) => {
             notes
           )
         `)
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .order('updated_at', { ascending: false });
       
       if (error) throw error;
@@ -208,12 +208,17 @@ export const useSongwritingData = (userId?: string | null) => {
   // Create project
   const createProject = useMutation({
     mutationFn: async (projectData: CreateProjectInput) => {
-      if (!userId) throw new Error("User ID required");
+      if (!profileId) throw new Error("Profile ID required");
+      
+      // Get the auth user for user_id field
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
       
       const { data, error } = await supabase
         .from('songwriting_projects')
         .insert({
-          user_id: userId,
+          user_id: user.id,
+          profile_id: profileId,
           title: projectData.title.trim(),
           theme_id: projectData.theme_id || null,
           chord_progression_id: projectData.chord_progression_id || null,
@@ -293,25 +298,19 @@ export const useSongwritingData = (userId?: string | null) => {
   // Start session - 1 hour duration, allows 2 concurrent songwriting projects
   const startSession = useMutation({
     mutationFn: async ({ projectId }: StartSessionInput) => {
-      if (!userId) throw new Error("User ID required");
+      if (!profileId) throw new Error("Profile ID required");
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       
       // Get user's profile for scheduled activities
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (!profile) throw new Error("Profile not found");
+      const profile = { id: profileId };
       
       // Check how many songwriting sessions are currently active (max 2 allowed)
       const { data: activeProjects } = await supabase
         .from('songwriting_projects')
         .select('id')
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .eq('is_locked', true)
         .gt('locked_until', new Date().toISOString());
       
@@ -345,7 +344,7 @@ export const useSongwritingData = (userId?: string | null) => {
         .from('songwriting_sessions')
         .insert({
           project_id: projectId,
-          user_id: userId,
+          user_id: user!.id,
           session_start: sessionStart.toISOString(),
           locked_until: sessionEndTime.toISOString(),
           music_progress_gained: 0,
@@ -361,8 +360,8 @@ export const useSongwritingData = (userId?: string | null) => {
       const { error: activityError } = await (supabase as any)
         .from('player_scheduled_activities')
         .insert({
-          user_id: user.id,
-          profile_id: profile.id,
+          user_id: user!.id,
+          profile_id: profileId,
           activity_type: 'songwriting',
           scheduled_start: sessionStart.toISOString(),
           scheduled_end: sessionEndTime.toISOString(),
@@ -382,7 +381,7 @@ export const useSongwritingData = (userId?: string | null) => {
       
       // Log activity
       logGameActivity({
-        userId,
+        userId: user!.id,
         activityType: 'songwriting_session_started',
         activityCategory: 'songwriting',
         description: `Started 1-hour songwriting session for project`,
@@ -502,7 +501,7 @@ export const useSongwritingData = (userId?: string | null) => {
       
       // Log activity
       logGameActivity({
-        userId: userId!,
+        userId: profileId!,
         activityType: 'songwriting_session_completed',
         activityCategory: 'songwriting',
         description: `Completed songwriting session with +${musicGain} music, +${lyricsGain} lyrics progress`,
@@ -535,7 +534,7 @@ export const useSongwritingData = (userId?: string | null) => {
       catalogStatus?: string;
       bandId?: string;
     }) => {
-      if (!userId) throw new Error("User ID required");
+      if (!profileId) throw new Error("Profile ID required");
       
       const { data: project } = await supabase
         .from('songwriting_projects')
@@ -552,8 +551,8 @@ export const useSongwritingData = (userId?: string | null) => {
       const { data: song, error: songError } = await supabase
         .from('songs')
         .insert({
-          user_id: userId,
-          original_writer_id: userId,
+          user_id: profileId,
+          original_writer_id: profileId,
           title: project.title,
           genre: project.genres?.[0] || null,
           lyrics: project.lyrics,
@@ -582,7 +581,7 @@ export const useSongwritingData = (userId?: string | null) => {
           .insert({
             song_id: song.id,
             band_id: bandId,
-            user_id: userId,
+            user_id: profileId,
             ownership_percentage: 100,
             original_percentage: 100,
             role: 'writer',
@@ -594,7 +593,7 @@ export const useSongwritingData = (userId?: string | null) => {
           .from('songs')
           .update({
             added_to_repertoire_at: new Date().toISOString(),
-            added_to_repertoire_by: userId,
+            added_to_repertoire_by: profileId,
           })
           .eq('id', song.id);
       }
@@ -607,7 +606,7 @@ export const useSongwritingData = (userId?: string | null) => {
       
       // Log activity
       logGameActivity({
-        userId: userId!,
+        userId: profileId!,
         bandId,
         activityType: 'song_created',
         activityCategory: 'songwriting',

@@ -26,7 +26,7 @@ export interface MediaShow {
   is_active: boolean;
 }
 
-export const useMediaFacilities = (userId?: string) => {
+export const useMediaFacilities = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all facilities
@@ -45,38 +45,38 @@ export const useMediaFacilities = (userId?: string) => {
 
   // Fetch user's facilities
   const { data: myFacilities = [], isLoading: myFacilitiesLoading } = useQuery({
-    queryKey: ["my-media-facilities", userId],
+    queryKey: ["my-media-facilities", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("media_facilities")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as MediaFacility[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch shows for a facility
   const { data: shows = [] } = useQuery({
-    queryKey: ["media-shows", userId],
+    queryKey: ["media-shows", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("media_shows")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as MediaShow[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Create facility mutation
@@ -87,11 +87,11 @@ export const useMediaFacilities = (userId?: string) => {
       city_id?: string;
       specialization?: string;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       const { data, error } = await supabase
         .from("media_facilities")
-        .insert({ ...facility, user_id: userId })
+        .insert({ ...facility, profile_id: profileId } as any)
         .select()
         .single();
 
@@ -99,7 +99,7 @@ export const useMediaFacilities = (userId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-media-facilities", userId] });
+      queryClient.invalidateQueries({ queryKey: ["my-media-facilities", profileId] });
       toast.success("Facility created successfully");
     },
     onError: (error: any) => {
@@ -115,11 +115,11 @@ export const useMediaFacilities = (userId?: string) => {
       show_format?: string;
       target_audience?: string;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Profile not found");
 
       const { data, error } = await supabase
         .from("media_shows")
-        .insert({ ...show, user_id: userId })
+        .insert({ ...show, profile_id: profileId } as any)
         .select()
         .single();
 
@@ -127,7 +127,7 @@ export const useMediaFacilities = (userId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["media-shows", userId] });
+      queryClient.invalidateQueries({ queryKey: ["media-shows", profileId] });
       toast.success("Show created successfully");
     },
     onError: (error: any) => {

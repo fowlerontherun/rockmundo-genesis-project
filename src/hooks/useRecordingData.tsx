@@ -96,9 +96,9 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
   });
 };
 
-export const useRecordingSessions = (userId: string) => {
+export const useRecordingSessions = (profileId: string) => {
   return useQuery({
-    queryKey: ['recording-sessions', userId],
+    queryKey: ['recording-sessions', profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recording_sessions')
@@ -108,7 +108,7 @@ export const useRecordingSessions = (userId: string) => {
           recording_producers (name, tier),
           songs (title, genre)
         `)
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -310,11 +310,13 @@ export const useCreateRecordingSession = () => {
             }
           });
       } else {
-        // Solo artist - deduct from personal cash
+        // Solo artist - deduct from personal cash via profile_id
         const { data: profile } = await supabase
           .from('profiles')
-          .select('cash')
+          .select('id, cash')
           .eq('user_id', input.user_id)
+          .eq('is_active', true)
+          .is('died_at', null)
           .single();
 
         const currentCash = profile?.cash || 0;
@@ -326,7 +328,7 @@ export const useCreateRecordingSession = () => {
         await supabase
           .from('profiles')
           .update({ cash: currentCash - totalCost })
-          .eq('user_id', input.user_id);
+          .eq('id', profile?.id);
       }
 
       // Create recording session - use null for self-produce since producer_id is a uuid column

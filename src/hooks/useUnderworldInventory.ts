@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import type { UnderworldProduct } from "@/hooks/useUnderworldStore";
 import type { Json } from "@/integrations/supabase/types";
@@ -27,6 +28,7 @@ type EffectsRecord = Record<string, number | string>;
 
 export const useUnderworldInventory = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -78,7 +80,7 @@ export const useUnderworldInventory = () => {
         const { data: profile, error: profileFetchError } = await supabase
           .from("profiles")
           .select("health, energy, experience, fame, cash")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
 
         if (profileFetchError) throw profileFetchError;
@@ -104,41 +106,35 @@ export const useUnderworldInventory = () => {
           const { error: updateError } = await supabase
             .from("profiles")
             .update(updates)
-            .eq("user_id", user.id);
+            .eq("id", profileId);
 
           if (updateError) throw updateError;
         }
       }
 
       // Apply skill XP if applicable
-      if (effects.skill_slug && effects.skill_xp) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (profile?.id) {
-          const { data: skillProgress, error: skillFetchError } = await supabase
-            .from("skill_progress")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("skill_slug", String(effects.skill_slug))
-            .single();
-
-          if (!skillFetchError && skillProgress) {
-            const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
-            const { error: skillUpdateError } = await supabase
+        if (effects.skill_slug && effects.skill_xp) {
+          if (profileId) {
+            const { data: skillProgress, error: skillFetchError } = await supabase
               .from("skill_progress")
-              .update({
-                current_xp: (skillProgress.current_xp || 0) + skillXpToAdd,
-              })
-              .eq("id", skillProgress.id);
+              .select("*")
+              .eq("profile_id", profileId)
+              .eq("skill_slug", String(effects.skill_slug))
+              .single();
 
-            if (skillUpdateError) throw skillUpdateError;
+            if (!skillFetchError && skillProgress) {
+              const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
+              const { error: skillUpdateError } = await supabase
+                .from("skill_progress")
+                .update({
+                  current_xp: (skillProgress.current_xp || 0) + skillXpToAdd,
+                })
+                .eq("id", skillProgress.id);
+
+              if (skillUpdateError) throw skillUpdateError;
+            }
           }
         }
-      }
 
       // Mark item as used
       const { error: markUsedError } = await supabase

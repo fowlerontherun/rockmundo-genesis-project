@@ -202,8 +202,10 @@ export function useClaimPrize() {
       if (ticket.prize_cash > 0 || ticket.prize_fame > 0) {
         const { data: currentProfile } = await supabase
           .from("profiles")
-          .select("cash, fame")
+          .select("id, cash, fame")
           .eq("user_id", user.id)
+          .eq("is_active", true)
+          .is("died_at", null)
           .single();
 
         if (currentProfile) {
@@ -213,7 +215,7 @@ export function useClaimPrize() {
           await supabase
             .from("profiles")
             .update(updates)
-            .eq("user_id", user.id);
+            .eq("id", currentProfile.id);
         }
       }
 
