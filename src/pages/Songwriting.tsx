@@ -416,7 +416,7 @@ const Songwriting = () => {
     completeSession,
     convertToSong,
     refetchProjects,
-  } = useSongwritingData(user?.id);
+  } = useSongwritingData(profile?.id);
 
   // Map attributes to required format
   const attributes = useMemo(() => {

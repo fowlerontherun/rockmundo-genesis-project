@@ -113,8 +113,8 @@ function formatRelativeDate(value?: string | null) {
 
 export default function StudioRecordingDashboard() {
   const { session } = useAuth();
-  const userId = session?.user?.id ?? "";
-  const { data: sessions, isLoading } = useRecordingSessions(userId);
+  const { profileId } = useActiveProfile();
+  const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
   const queryClient = useQueryClient();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 

@@ -29,7 +29,7 @@ export default function RecordingStudio() {
   
   const currentCityId = currentCity?.id || "";
   
-  const { data: sessions, isLoading } = useRecordingSessions(session?.user?.id || "");
+  const { data: sessions, isLoading } = useRecordingSessions(profile?.id || "");
 
   useEffect(() => {
     const loadUserBand = async () => {
