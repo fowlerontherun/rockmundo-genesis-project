@@ -76,7 +76,7 @@ export const usePlaylists = (profileId?: string) => {
       
       return (data || []) as PlaylistSubmission[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Auto-process a submission (simulate curator review)
