@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.047",
+    date: "2026-03-15",
+    changes: [
+      { type: 'improvement', description: "Extended profile isolation to nightlife events, VIP status, clothing marketplace, retirement checks, player equipment, festival tickets, city elections, song auctions, and released songs" },
+      { type: 'fix', description: "Cash operations (nightlife costs, clothing purchases, festival tickets) now correctly target the active character profile" },
+      { type: 'improvement', description: "City election voting and candidacy registration now use profileId directly instead of redundant profile lookups" },
+    ],
+  },
+  {
     version: "1.1.046",
     date: "2026-03-15",
     changes: [

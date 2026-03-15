@@ -27,7 +27,7 @@ export function useReleasedSongs(userId: string | undefined, bandId?: string) {
       if (bandId) {
         releasesQuery = releasesQuery.eq("band_id", bandId);
       } else if (userId) {
-        releasesQuery = releasesQuery.eq("user_id", userId);
+        releasesQuery = releasesQuery.eq("profile_id", userId);
       }
 
       const { data: releases, error: releasesError } = await releasesQuery;
