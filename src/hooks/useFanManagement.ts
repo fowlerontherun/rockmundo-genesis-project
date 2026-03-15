@@ -106,7 +106,7 @@ export const useFanManagement = (profileId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fan-campaigns", userId] });
+      queryClient.invalidateQueries({ queryKey: ["fan-campaigns", profileId] });
       toast.success("Campaign created successfully");
     },
     onError: (error: any) => {
