@@ -47,12 +47,12 @@ export function useRetirementCheck(): RetirementCheckResult {
 
   // Fetch career stats
   const { data: careerStats } = useQuery({
-    queryKey: ["retirement-career-stats", user?.id],
+    queryKey: ["retirement-career-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return { totalSongs: 0, totalGigs: 0 };
-      return { totalSongs: 0, totalGigs: 0 }; // Simplified to avoid type issues
+      if (!profileId) return { totalSongs: 0, totalGigs: 0 };
+      return { totalSongs: 0, totalGigs: 0 };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 10,
   });
 

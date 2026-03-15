@@ -126,7 +126,7 @@ export function useNightlifeEvents() {
           cash: Math.max(0, (playerProfile.cash ?? 0) - profile.baseCash),
           fame: (playerProfile.fame ?? 0) + fameGain,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       // Build outcome message
       let message = `Night at ${clubName}: +${fameGain} fame, -${profile.energyCost} energy`;

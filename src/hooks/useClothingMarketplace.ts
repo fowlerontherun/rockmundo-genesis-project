@@ -67,7 +67,7 @@ export const useClothingMarketplace = (filters?: {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile.cash ?? 0) - item.sale_price } as never)
-        .eq("user_id", user.id);
+        .eq("id", profileId);
       if (cashError) throw cashError;
 
       // Add cash to seller

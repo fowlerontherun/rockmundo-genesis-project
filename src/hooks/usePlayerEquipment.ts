@@ -89,6 +89,6 @@ export const usePlayerEquipment = () => {
         poolStatus: (poolResult.data as PlayerGearPoolStatus[] | null) ?? [],
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
