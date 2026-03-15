@@ -107,7 +107,7 @@ export const getSongQualityDescriptor = (score: number) => {
 
 export const SONG_RATING_RANGE = { min: 0, max: 1000 } as const;
 
-export const useSongwritingData = (userId?: string | null) => {
+export const useSongwritingData = (profileId?: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
