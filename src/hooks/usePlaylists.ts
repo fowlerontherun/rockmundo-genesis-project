@@ -187,7 +187,7 @@ export const usePlaylists = (profileId?: string) => {
         const { error: cashError } = await supabase
           .from("profiles")
           .update({ cash: (profile?.cash || 0) - submissionCost })
-          .eq("user_id", userId);
+          .eq("id", profileId);
 
         if (cashError) throw cashError;
       }
