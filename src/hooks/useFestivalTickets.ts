@@ -58,11 +58,11 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
     }) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Deduct cash from profile
+      // Deduct cash from active profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!profile || profile.cash < price) {
@@ -72,7 +72,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
       await supabase
         .from("profiles")
         .update({ cash: profile.cash - price })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       // Create ticket
       const { data, error } = await (supabase as any)

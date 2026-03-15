@@ -173,13 +173,13 @@ export function useRegisterCandidate() {
       slogan: string;
       proposedPolicies: ProposedPolicies;
     }) => {
-      if (!user?.id) throw new Error("Must be logged in to run for mayor");
+      if (!profileId) throw new Error("Must be logged in to run for mayor");
 
-      // Get user's profile
+      // Get profile fame
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("id, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (profileError || !profile) throw new Error("Profile not found");
