@@ -51,9 +51,9 @@ export const usePlayerEquipment = () => {
   const { profileId } = useActiveProfile();
 
   return useQuery<PlayerEquipmentData>({
-    queryKey: ["player-equipment", user?.id],
+    queryKey: ["player-equipment", profileId],
     queryFn: async () => {
-      if (!user?.id) {
+      if (!profileId) {
         return { items: [], poolStatus: [] };
       }
 
