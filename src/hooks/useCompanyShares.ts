@@ -113,10 +113,11 @@ export const useIssueCompanyShares = () => {
         .maybeSingle();
 
       if (existingShareholder) {
+        const existing = existingShareholder as any;
         const { error: updateSharesError } = await supabase
           .from("company_shareholders" as any)
-          .update({ shares: Number(existingShareholder.shares) + shares })
-          .eq("id", existingShareholder.id);
+          .update({ shares: Number(existing.shares) + shares })
+          .eq("id", existing.id);
         if (updateSharesError) throw updateSharesError;
       } else {
         const { error: insertSharesError } = await supabase
