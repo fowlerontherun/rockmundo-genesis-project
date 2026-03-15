@@ -219,7 +219,7 @@ export function useStartRental() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (!profile || (profile.cash || 0) < weeklyCost) {
         throw new Error("Not enough cash for the first week's rent");
