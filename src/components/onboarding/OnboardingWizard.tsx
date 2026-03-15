@@ -213,18 +213,20 @@ export const OnboardingWizard = () => {
       case 1:
         return <WelcomeStep data={data} updateData={updateData} />;
       case 2:
-        return <AppearanceStep />;
+        return <GenderStep data={data} updateData={updateData} />;
       case 3:
-        return <OriginStep data={data} updateData={updateData} />;
+        return <AppearanceStep />;
       case 4:
-        return <TraitsStep data={data} updateData={updateData} />;
+        return <OriginStep data={data} updateData={updateData} />;
       case 5:
-        return <MusicIdentityStep data={data} updateData={updateData} />;
+        return <TraitsStep data={data} updateData={updateData} />;
       case 6:
-        return <CareerPathStep data={data} updateData={updateData} />;
+        return <MusicIdentityStep data={data} updateData={updateData} />;
       case 7:
-        return <StartingCityStep data={data} updateData={updateData} />;
+        return <CareerPathStep data={data} updateData={updateData} />;
       case 8:
+        return <StartingCityStep data={data} updateData={updateData} />;
+      case 9:
         return (
           <BackstoryStep
             data={data}
