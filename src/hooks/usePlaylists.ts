@@ -60,13 +60,13 @@ export const usePlaylists = (profileId?: string) => {
     queryFn: async () => {
       if (!profileId) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("playlist_submissions")
         .select(`
           *,
           playlist:playlists(*)
         `)
-        .eq("profile_id", profileId)
+        .eq("user_id", profileId)
         .order("submitted_at", { ascending: false });
       
       if (error) {

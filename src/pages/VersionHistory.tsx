@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.046",
+    date: "2026-03-15",
+    changes: [
+      { type: 'improvement', description: "Full character isolation: songwriting, recording, housing, lottery, music videos, skill books, media facilities, playlists, and underworld inventory now use profile_id instead of shared user_id" },
+      { type: 'fix', description: "Profile cash/balance operations (buy property, rent, sell, playlist submissions) now target the active character profile instead of the auth account" },
+      { type: 'improvement', description: "Hooks refactored: useSongwritingData, useRecordingData, useHousing, useLottery, useMusicVideos, useSkillBooksInventory, useMediaFacilities, usePlaylists, useUnderworldInventory" },
+    ],
+  },
+  {
     version: "1.1.045",
     date: "2026-03-15",
     changes: [
