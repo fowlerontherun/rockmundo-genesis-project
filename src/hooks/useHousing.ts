@@ -229,7 +229,7 @@ export function useStartRental() {
       await supabase
         .from("profiles")
         .update({ cash: (profile.cash || 0) - weeklyCost })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       // Create rental
       const { error } = await supabase.from("player_rentals").insert({
