@@ -534,7 +534,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       catalogStatus?: string;
       bandId?: string;
     }) => {
-      if (!userId) throw new Error("User ID required");
+      if (!profileId) throw new Error("Profile ID required");
       
       const { data: project } = await supabase
         .from('songwriting_projects')
