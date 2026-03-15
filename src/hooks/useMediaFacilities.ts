@@ -45,20 +45,20 @@ export const useMediaFacilities = (profileId?: string) => {
 
   // Fetch user's facilities
   const { data: myFacilities = [], isLoading: myFacilitiesLoading } = useQuery({
-    queryKey: ["my-media-facilities", userId],
+    queryKey: ["my-media-facilities", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("media_facilities")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as MediaFacility[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch shows for a facility
