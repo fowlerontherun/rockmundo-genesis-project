@@ -54,14 +54,25 @@ export function useScheduledActivities(date: Date, userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
 
+      // Get the active profile for this user
+      const { data: activeProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .is('died_at', null)
+        .maybeSingle();
+
+      if (!activeProfile) return [];
+
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
 
-      // Fetch scheduled activities
+      // Fetch scheduled activities filtered by profile_id for character isolation
       const { data: scheduledData } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
-        .eq('user_id', userId)
+        .eq('profile_id', activeProfile.id)
         .gte('scheduled_start', dayStart.toISOString())
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
