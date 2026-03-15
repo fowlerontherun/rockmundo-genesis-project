@@ -323,6 +323,7 @@ export function calculateRentalIncome(purchasePrice: number): number {
 
 export function useSellProperty() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
