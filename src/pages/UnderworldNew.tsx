@@ -152,8 +152,8 @@ const PriceCell = ({ price, previousPrice }: { price: number; previousPrice?: nu
 };
 
 // Portfolio panel
-const PortfolioPanel = ({ userId }: { userId: string }) => {
-  const { holdings, isLoading } = useCryptoTokens(userId);
+const PortfolioPanel = ({ profileId }: { profileId: string }) => {
+  const { holdings, isLoading } = useCryptoTokens(profileId);
 
   if (isLoading) return <Skeleton className="h-24 w-full" />;
   if (!holdings || holdings.length === 0) return null;
