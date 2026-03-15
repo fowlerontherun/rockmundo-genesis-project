@@ -125,22 +125,13 @@ export function useCastVote() {
 
   return useMutation({
     mutationFn: async ({ electionId, candidateId }: { electionId: string; candidateId: string }) => {
-      if (!user?.id) throw new Error("Must be logged in to vote");
-
-      // Get user's profile ID
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (profileError || !profile) throw new Error("Profile not found");
+      if (!profileId) throw new Error("Must be logged in to vote");
 
       const { data, error } = await supabase
         .from("city_election_votes")
         .insert({
           election_id: electionId,
-          voter_profile_id: profile.id,
+          voter_profile_id: profileId,
           candidate_id: candidateId,
         })
         .select()
