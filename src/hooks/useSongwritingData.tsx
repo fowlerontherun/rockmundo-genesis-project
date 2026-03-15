@@ -360,8 +360,8 @@ export const useSongwritingData = (profileId?: string | null) => {
       const { error: activityError } = await (supabase as any)
         .from('player_scheduled_activities')
         .insert({
-          user_id: user.id,
-          profile_id: profile.id,
+          user_id: user!.id,
+          profile_id: profileId,
           activity_type: 'songwriting',
           scheduled_start: sessionStart.toISOString(),
           scheduled_end: sessionEndTime.toISOString(),
