@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useRecordingSessions, type RecordingSession } from "@/hooks/useRecordingData";
 import {
   ensureRecordingStage,
