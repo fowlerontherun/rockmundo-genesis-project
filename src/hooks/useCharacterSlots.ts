@@ -24,6 +24,78 @@ export interface CharacterProfile {
   health: number;
 }
 
+const baseSlots = 2;
+const maxAllowedSlots = 5;
+
+async function createCharacterProfileFallback(userId: string): Promise<string> {
+  const { data: slotRow, error: slotError } = await supabase
+    .from("character_slots")
+    .select("extra_slots_purchased")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (slotError) throw slotError;
+
+  const extraPurchased = slotRow?.extra_slots_purchased ?? 0;
+  const maxSlots = Math.min(baseSlots + extraPurchased, maxAllowedSlots);
+
+  const { data: existingProfiles, error: existingError } = await supabase
+    .from("profiles")
+    .select("id, slot_number")
+    .eq("user_id", userId)
+    .is("died_at", null)
+    .order("slot_number", { ascending: true });
+
+  if (existingError) throw existingError;
+
+  const usedSlots = existingProfiles?.length ?? 0;
+  if (usedSlots >= maxSlots) {
+    throw new Error("No character slots available");
+  }
+
+  const nextSlot = (existingProfiles?.reduce((max, profile) => Math.max(max, profile.slot_number ?? 0), 0) ?? 0) + 1;
+  const generatedUsername = `player-${userId.slice(0, 8)}-${nextSlot}`;
+
+  const { error: deactivateError } = await supabase
+    .from("profiles")
+    .update({ is_active: false })
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (deactivateError) throw deactivateError;
+
+  const { data: insertedProfile, error: insertError } = await supabase
+    .from("profiles")
+    .insert({
+      user_id: userId,
+      username: generatedUsername,
+      display_name: null,
+      avatar_url: null,
+      bio: null,
+      cash: 10000,
+      fame: 0,
+      level: 1,
+      health: 100,
+      energy: 100,
+      experience: 0,
+      age: 16,
+      is_active: true,
+      slot_number: nextSlot,
+      generation_number: 1,
+      unlock_cost: 0,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) throw insertError;
+
+  if (!insertedProfile?.id) {
+    throw new Error("Failed to create character profile");
+  }
+
+  return insertedProfile.id;
+}
+
 export function useCharacterSlots() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -43,8 +115,7 @@ export function useCharacterSlots() {
       if (error) throw error;
 
       const extraPurchased = slots?.extra_slots_purchased ?? 0;
-      const baseSlots = 2;
-      const maxSlots = Math.min(baseSlots + extraPurchased, 5);
+      const maxSlots = Math.min(baseSlots + extraPurchased, maxAllowedSlots);
 
       // Count living profiles
       const { count } = await supabase
@@ -105,14 +176,25 @@ export function useCharacterSlots() {
       if (!user?.id) throw new Error("Not authenticated");
 
       const { data, error } = await supabase.rpc("create_character_profile" as any);
-      if (error) throw error;
 
-      const createdProfileId = Array.isArray(data) && data.length > 0 ? (data[0] as any)?.id : null;
-      if (!createdProfileId) {
-        throw new Error("Failed to create character profile");
+      if (!error) {
+        const createdProfileId = Array.isArray(data) && data.length > 0 ? (data[0] as any)?.id : null;
+        if (!createdProfileId) {
+          throw new Error("Failed to create character profile");
+        }
+
+        return createdProfileId as string;
       }
 
-      return createdProfileId as string;
+      const isMissingFunctionError =
+        error.message?.includes("Could not find the function public.create_character_profile") ||
+        error.code === "PGRST202";
+
+      if (!isMissingFunctionError) {
+        throw error;
+      }
+
+      return createCharacterProfileFallback(user.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["character-slots"] });
