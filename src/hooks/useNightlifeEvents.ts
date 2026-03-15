@@ -53,6 +53,7 @@ export function useNightlifeEvents() {
       clubName: string;
     }): Promise<NightlifeOutcome> => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
       if (!settings) throw new Error("Behavior settings not loaded");
 
       const profile = ACTIVITY_PROFILES[activityType];
