@@ -113,12 +113,14 @@ export const useUnderworldInventory = () => {
       }
 
       // Apply skill XP if applicable
-      if (effects.skill_slug && effects.skill_xp) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
+        if (effects.skill_slug && effects.skill_xp) {
+          if (profileId) {
+            const { data: skillProgress, error: skillFetchError } = await supabase
+              .from("skill_progress")
+              .select("*")
+              .eq("profile_id", profileId)
+              .eq("skill_slug", String(effects.skill_slug))
+              .single();
 
         if (profile?.id) {
           const { data: skillProgress, error: skillFetchError } = await supabase
